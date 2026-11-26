@@ -4,43 +4,43 @@
 typedef struct SceNp9660PbpHdr {
     u32 magic;          /* 0x00 */
     u32 version;        /* 0x04 */
-    u32 param_off;      /* 0x08 */
-    u32 icon0_off;      /* 0x0c */
-    u32 icon1_off;      /* 0x10 */
-    u32 pic0_off;       /* 0x14 */
-    u32 pic1_off;       /* 0x18 */
-    u32 snd0_off;       /* 0x1c */
+    u32 sfo_off;        /* 0x08 */
+    u32 icon_png_off;   /* 0x0c */
+    u32 icon_pmf_off;   /* 0x10 */
+    u32 overlay_off;    /* 0x14 */
+    u32 bg_png_off;     /* 0x18 */
+    u32 bgm_at3_off;    /* 0x1c */
     u32 data_psp_off;   /* 0x20 */
     u32 psar_off;       /* 0x24 */
 } SceNp9660PbpHdr;
 
 typedef struct SceNp9660ImgHdr {
-    u32 magic0;         /* 0x00 */
-    u32 magic1;         /* 0x04 */
+    u32 magic_lo;       /* 0x00 */
+    u32 magic_hi;       /* 0x04 */
     int flags;          /* 0x08 */
     u32 block_basis;    /* 0x0c */
     char content_id[0x30]; /* 0x10..0x3f */
-    u8 reserved40[0x14];/* 0x40..0x53 */
+    u8 enc_meta_head[0x14];/* 0x40..0x53 */
     u32 start_sector;   /* 0x54 */
-    u8 reserved58[0x0c];/* 0x58..0x63 */
+    u8 enc_meta_mid[0x0c]; /* 0x58..0x63 */
     u32 end_sector;     /* 0x64 */
     u32 idps_mask;      /* 0x68 */
     u32 table_rel_off;  /* 0x6c */
-    u8 reserved70[0x10];/* 0x70..0x7f */
-    u16 sector_param0;  /* 0x80 */
-    u16 sector_param1;  /* 0x82 */
+    u8 qtgp3_hash[0x10];/* 0x70..0x7f */
+    u16 emu_rate_seek;  /* 0x80 */
+    u16 emu_rate_read;  /* 0x82 */
     u32 disc_param;     /* 0x84 */
 } SceNp9660ImgHdr;
 
 typedef struct SceNp9660CtxInfo {
-    int fd;             /* 0x00 */
+    int file_fd;             /* 0x00 */
     u32 total_sec;      /* 0x04 */
     u32 num_blks;       /* 0x08 */
     u32 basis;          /* 0x0c */
-    u8 reserved10[0x28];/* 0x10..0x37 */
+    u8 disc_meta[0x28]; /* 0x10..0x37 */
     u32 disc_param;     /* 0x38 */
-    u16 sector_param0;  /* 0x3c */
-    u16 sector_param1;  /* 0x3e */
+    u16 emu_rate_seek;  /* 0x3c */
+    u16 emu_rate_read;  /* 0x3e */
 } SceNp9660CtxInfo;
 
 typedef struct SceNp9660TblEntry {
@@ -48,7 +48,7 @@ typedef struct SceNp9660TblEntry {
     u32 rel_off;        /* 0x10 */
     u32 comp_size;      /* 0x14 */
     u32 flags;          /* 0x18 */
-    u32 reserved1c;     /* 0x1c */
+    u32 pad;            /* 0x1c */
 } SceNp9660TblEntry;
 
 typedef struct SceNp9660BlockRef {
@@ -61,10 +61,47 @@ typedef struct SceNp9660BlockRef {
 typedef struct SceNp9660RifHdr {
     u32 version;        /* 0x00 */
     u32 type_be;        /* 0x04 */
-    u8 reserved08[0x60];/* 0x08..0x67 */
+    u8 body[0x60];      /* 0x08..0x67 */
     u32 end_time_lo;    /* 0x68 */
     u32 end_time_hi;    /* 0x6c */
 } SceNp9660RifHdr;
+
+typedef struct SceNp9660Handle {
+    int in_use;
+    int flags;
+} SceNp9660Handle;
+
+typedef struct SceIoIob {
+    u32 iob_flags;      /* 0x00 */
+    int unit;           /* 0x04 */
+    void *drv;          /* 0x08 */
+    u32 drv_pad;        /* 0x0c */
+    SceNp9660Handle *arg; /* 0x10 */
+    u32 iob_pad;        /* 0x14 */
+    SceOff cur_pos;     /* 0x18 */
+} SceIoIob;
+
+typedef struct SceUidControlBlock {
+    void *parent;       /* 0x00 */
+    void *next_child;   /* 0x04 */
+    void *meta;         /* 0x08 */
+    SceUID uid;         /* 0x0c */
+    char *name;         /* 0x10 */
+    u8 size;            /* 0x14 */
+    u8 meta_size;       /* 0x15 */
+    u16 attr;           /* 0x16 */
+} SceUidControlBlock;
+
+typedef struct SceGameInfo {
+    u8 header[0x44];    /* 0x00..0x43 */
+    char game_id[16];   /* 0x44 */
+} SceGameInfo;
+
+typedef struct SceUmdLseekParam {
+    SceOff offset;      /* 0x00 */
+    int reserved;       /* 0x08 */
+    int whence;         /* 0x0c */
+} SceUmdLseekParam;
 
 #define NOINLINE __attribute__((noinline))
 
@@ -77,11 +114,11 @@ static inline int pspSdkSetK1(int k1)
 
 /* Imports */
 extern int sceIoOpen(const char *file, int flags, int mode);
-extern SceOff sceIoLseek(int fd, SceOff offset, int whence);
-extern int sceIoRead(int fd, void *data, SceSize size);
-extern int sceIoClose(int fd);
+extern SceOff sceIoLseek(int file_fd, SceOff offset, int whence);
+extern int sceIoRead(int file_fd, void *data, SceSize size);
+extern int sceIoClose(int file_fd);
 extern int sceIoDevctl(const char *dev, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen);
-extern int sceIoAssign(const char *dev1, const char *dev2, const char *dev3, int mode, void *arg1, long arg2);
+extern int sceIoAssign(const char *alias, const char *block_dev, const char *fs_dev, int mode, void *argv, long arglen);
 extern int sceIoUnassign(const char *dev);
 extern int sceIoAddDrv(const void *drv);
 extern int sceIoDelDrv(const char *drv_name);
@@ -99,10 +136,10 @@ extern int sceKernelSetQTGP3(const void *qtgp3);
 extern void *memset(void *s, int c, u32 n);
 extern int look_ctype_table(int c);
 extern u32 strlen(const char *s);
-extern int strncmp(const char *s1, const char *s2, u32 n);
-extern int memcmp(const void *s1, const void *s2, u32 n);
+extern int strncmp(const char *lhs, const char *rhs, u32 n);
+extern int memcmp(const void *lhs, const void *rhs, u32 n);
 extern char *strncpy(char *dst, const char *src, u32 n);
-extern int strcmp(const char *s1, const char *s2);
+extern int strcmp(const char *lhs, const char *rhs);
 extern int snprintf(char *str, u32 size, const char *fmt, ...);
 
 extern int sceKernelCpuSuspendIntr(void);
@@ -135,7 +172,7 @@ extern int sceKernelLockMutex(SceUID mutexid, int lockCount, u32 *timeout);
 extern SceUID sceKernelCreateMutex(const char *name, u32 attr, int initCount, void *opt);
 extern int sceKernelExtendKernelStack(u32 size, int (*cb)(void *), void *arg);
 extern SceUID sceKernelCreateFpl(const char *name, int part, int attr, u32 size, u32 blocks, void *opt);
-extern int sceKernelNotifyCallback(SceUID cb, int arg2);
+extern int sceKernelNotifyCallback(SceUID cb, int notify_arg);
 extern int sceKernelCancelEventFlag(SceUID evid, u32 setpattern, int *numWaitThreads);
 extern int sceKernelDelayThread(u32 delay);
 extern SceUID sceKernelCreateCallback(const char *name, int (*func)(int, int, void *), void *arg);
@@ -174,7 +211,7 @@ static NOINLINE int np9660OpenImageInternal(const char *path, int flag);
 static NOINLINE int np9660DecryptBlock(void *buf, void *entry);
 static NOINLINE int np9660DecryptBlockSpan(void *buf, u32 base_file_off, u32 total_len, int first_blk, int last_blk, void *entry);
 static NOINLINE void np9660InvalidateTableCache(void);
-static NOINLINE int np9660GetBlockTableEntry(void *a0, int a1);
+static NOINLINE int np9660GetBlockTableEntry(void *out_ref, int blk_idx);
 static NOINLINE int np9660SetTableCacheBuf(void *buf, int size);
 static NOINLINE int np9660CloseImage(void);
 static NOINLINE int np9660LoadRifKey(void *vkey, const char *cid, int flags, void *act_buf);
@@ -203,7 +240,7 @@ static NOINLINE void np9660SetGlobalFlag(int val);
 static NOINLINE int np9660UmdCallbackHandler(int cbid, int count, void *arg);
 static NOINLINE int np9660NotifyInsertEject(int mask, int state);
 static NOINLINE void np9660InvokeUmdManCb(void);
-static NOINLINE void np9660RecordError(u32 a0, u32 a1, u32 a2, u32 a3, u32 a4, u32 a5);
+static NOINLINE void np9660RecordError(u32 err_code, u32 rif_type, u32 exp_lo, u32 exp_hi, u32 ext_hi, u32 ext_lo);
 static NOINLINE int np9660MountImage(int flag);
 static NOINLINE void np9660SetMountStatus(int val);
 static NOINLINE int np9660GetMountStatus(void);
@@ -212,17 +249,17 @@ static NOINLINE int np9660ForceUnmount(void);
 static NOINLINE int np9660SetReplacePermit(int val);
 static NOINLINE int np9660GetReplacePermit(void);
 
-static NOINLINE SceOff np9660IoLseek(void *iot, SceOff ofs, int whence);
+static NOINLINE SceOff np9660IoLseek(SceIoIob *iot, SceOff ofs, int whence);
 static NOINLINE int np9660ReadSectors(int lba, void *buf, int nsectors);
-static NOINLINE int np9660ReadBytes(u32 byte_pos, void *buf, u32 byte_len);
+static NOINLINE int np9660ReadBytes(u32 file_pos, void *buf, u32 read_len);
 static NOINLINE int np9660ReadBytesOnKernelStack(void *arg);
 static NOINLINE void *np9660GetFplBlock(void);
 static NOINLINE int np9660SubmitRead(const u32 *ctx_in);
 static NOINLINE int np9660GetDiscInfo(void *out);
-static NOINLINE int np9660GetDiscParams(int *out0, int *out1, int *out2);
+static NOINLINE int np9660GetDiscParams(int *out_start, int *out_layer, int *out_last);
 static NOINLINE int np9660LockMutex(void);
 static NOINLINE int np9660UnlockMutex(void);
-static NOINLINE int np9660ReadImageFile(void *buf, u32 pos_lo, u32 pos_hi, int size);
+static NOINLINE int np9660ReadImageFile(void *buf, SceOff off, int size);
 static NOINLINE int np9660SeekDiscRaw(int addr);
 static NOINLINE int np9660CloseMountedImage(void);
 static NOINLINE int np9660ReadPvd(void);
@@ -241,7 +278,7 @@ static NOINLINE int np9660DevctlReadSectors(void *outdata, u32 outlen, const u32
 static NOINLINE void np9660SetEmuLba(u32 lba);
 static NOINLINE int np9660SimulateDelay(u32 lba, u32 cnt, int seek_only, int table_sel);
 static NOINLINE int np9660CalcSectorRange(const u32 *in, int *step_out);
-static NOINLINE int np9660GetEmuParam(int idx);
+static NOINLINE void np9660GetEmuParam(int idx);
 static NOINLINE void np9660RecordStartTime(void);
 static NOINLINE int np9660CheckDelayEnabled(void);
 static NOINLINE void np9660SetEmuRate1(u16 val);
@@ -254,7 +291,7 @@ static NOINLINE u32 np9660CalcSeekDistance(u32 lba, u32 prev_lba, int *cross_lay
 static NOINLINE int np9660InitDecThread(void);
 static NOINLINE int np9660TermDecThread(void);
 static NOINLINE int np9660SetDecThreadPrio(int prio);
-static NOINLINE int np9660AsyncDecompress(void *dst, u32 dst_len, const void *src);
+static NOINLINE int np9660AsyncDecompress(void *dst, const void *src, u32 dst_len);
 static NOINLINE int np9660DecThreadEntry(SceSize args, void *argp);
 static NOINLINE void np9660ResetRingCache(void);
 static NOINLINE int np9660LookupRingCache(u32 lba, u32 count, int skip, int table_sel, u32 *rem_lba, u32 *rem_blks);
@@ -310,6 +347,8 @@ static const u8 g_npumdSectorMap[12] = {
     0x10, 0x00, 0x00, 0x00, 0x11, 0x10, 0x7c, 0x11, 0x11, 0x7d, 0x00, 0x00
 };
 
+static const char g_fallback_disc_id[32] = "ULJS-00001|CCCD9317C815B9F5|0001";
+
 static const u8 g_npumd_pub[40] = {
     0x01, 0x21, 0xea, 0x6e, 0xcd, 0xb2, 0x3a, 0x3e,
     0x23, 0x75, 0x67, 0x1c, 0x53, 0x62, 0xe8, 0xe2,
@@ -337,8 +376,6 @@ static const u8 g_clz_tab[256] = {
     8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
 };
 
-static const char g_dummy_disc_id[36] = "ULJS-00001|CCCD9317C815B9F5|0001";
-
 /* .data */
 static int g_np9660InitMode = 2;
 static int g_np9660GlobalFlag = 1;
@@ -347,7 +384,7 @@ static struct {
     const char *name;
     int type_mask;
     int (*handler)(int, char *, void *, int *);
-    int r28;
+    int gp_val;
     int busy;
     void *next;
     int reserved[9];
@@ -361,11 +398,11 @@ static struct {
     NULL,
     { 0, 0, 0, 0, 0, 0, 0, 0, 0 }
 };
-static int g_np9660EmuParam0 = 0x0006c0bf;
-static int g_np9660EmuParam1 = 0x0006c0bf;
-static int g_np9660EmuParam2 = 0x70;
-static int g_np9660EmuParam3 = 0x6ed;
-static int g_np9660EmuParam4 = 0x23d;
+static int g_emu_half_lba_v1 = 0x0006c0bf;
+static int g_emu_half_lba_v2 = 0x0006c0bf;
+static int g_dec_thread_prio = 0x70;
+static int g_emu_mult_max = 0x6ed;
+static int g_emu_mult_step = 0x23d;
 
 /* .bss */
 static u32 *g_np9660TablePtr;
@@ -409,30 +446,28 @@ static SceUID g_nc_mutex;
 static SceUID g_main_mutex;
 static SceUID g_fpl;
 static void *g_fpl_block;
-static struct {
-    int fd;              /* 0x00 (0x8b48) */
+typedef struct SceNp9660UmdCtx {
+    int file_fd;              /* 0x00 (0x8b48) */
     int total_sectors;   /* 0x04 (0x8b4c) */
     int num_blocks;      /* 0x08 (0x8b50) */
     int block_basis;     /* 0x0c (0x8b54) */
     char disc_id[20];    /* 0x10 (0x8b58..0x8b6b) */
     int lba_param;       /* 0x24 (0x8b6c) */
-    int reserved_28;          /* 0x28 (0x8b70) */
-    int disc_param_2c;          /* 0x2c (0x8b74) */
-    int disc_param_30;          /* 0x30 (0x8b78) */
+    int disc_pad;        /* 0x28 (0x8b70) */
+    int layer_break_lba; /* 0x2c (0x8b74) */
+    int total_disc_lba;  /* 0x30 (0x8b78) */
     int last_lba;        /* 0x34 (0x8b7c) */
     int thread_prio;     /* 0x38 (0x8b80) */
-    u16 emu_rate2;       /* 0x3c (0x8b84) */
-    u16 emu_rate1;       /* 0x3e (0x8b86) */
+    u16 emu_rate_seek;   /* 0x3c (0x8b84) */
+    u16 emu_rate_read;   /* 0x3e (0x8b86) */
     u8 emu_flags;        /* 0x40 (0x8b88) */
-    u8 reserved_41;           /* 0x41 (0x8b89) */
-    u8 flags_42;         /* 0x42 (0x8b8a) */
-    u8 reserved_43;           /* 0x43 (0x8b8b) */
-    u32 reserved_44[5];       /* 0x44..0x57 (0x8b8c..0x8b9f) */
-} g_umd_ctx;
-static struct {
-    int in_use;
-    int flags;
-} g_handles[8];
+    u8 emu_pad_a;        /* 0x41 (0x8b89) */
+    u8 image_flags;      /* 0x42 (0x8b8a) */
+    u8 emu_pad_b;        /* 0x43 (0x8b8b) */
+    u32 image_extra[5];  /* 0x44..0x57 (0x8b8c..0x8b9f) */
+} SceNp9660UmdCtx;
+static SceNp9660UmdCtx g_umd_ctx;
+static SceNp9660Handle g_handles[8];
 static int g_mutex_owner_pri;
 static u32 g_part_info[4];
 static void *g_cache_buf;
@@ -454,28 +489,28 @@ static u8 g_pvd_buf[0x800];
 static SceUID g_dec_thid;
 static SceUID g_dec_mbx;
 static SceUID g_dec_evf;
-static int g_ring0_idx;
-static int g_ring1_idx;
+static int g_ring_main_idx;
+static int g_ring_alt_idx;
 static u32 g_ring_elapsed_lo;
 static int g_ring_elapsed_hi;
 static struct {
     u8 valid;
     u8 pad[3];
     u32 lba;
-} g_ring0[0xe8];
+} g_ring_main[0xe8];
 static struct {
     u8 valid;
     u8 pad[3];
     u32 lba;
-} g_ring1[8];
+} g_ring_alt[8];
 static u32 g_emuStatA;
 static int g_emuStatB;
 static u32 g_emuStatC;
 static u32 g_emuStatD;
 static s64 g_emuStatTimeA;
 static s64 g_emuStatTimeB;
-static u16 g_emu_rate1;
-static u16 g_emu_rate2;
+static u16 g_emu_rate_read;
+static u16 g_emu_rate_seek;
 static int g_emuStatE;
 
 /* 0x0000 */
@@ -510,273 +545,287 @@ static NOINLINE int np9660OpenImageInternal(const char *path, int flag)
     u8 ctx_info[0x60];
     u8 digest[0x20];
     u8 pub[0x28];
-    void *work_buf;
+    u8 *work_buf;
 
     for (int i = 0; i < 0x28; i++) {
         pub[i] = g_npumd_pub[i];
     }
-    work_buf = np9660GetFplBlock();
-    int s4 = -1;
-    int s0 = sceNpDrmGetIDps(idps);
-    if (s0 < 0) {
-        return s0;
+    work_buf = (u8 *)np9660GetFplBlock();
+    int file_fd = -1;
+    int ret = sceNpDrmGetIDps(idps);
+    if (ret < 0) {
+        return ret;
     }
     if (np9660CheckDriveReady() == 0) {
         return (int)0x80210003;
     }
     int retry = 0;
     for (;;) {
-        s4 = sceIoOpen(path, 1, 0);
+        file_fd = sceIoOpen(path, 1, 0);
         retry++;
-        if (s4 != (int)0x802e1012 || retry >= 30) {
+        if (file_fd != (int)0x802e1012 || retry >= 30) {
             break;
         }
         sceKernelDelayThread(100000);
     }
-    if (s4 < 0) {
-        s0 = s4;
-        goto fail;
-    }
-    s0 = sceIoRead(s4, pbp_hdr, 0x28);
-    if (s0 < 0x28) {
-        goto fail;
-    }
-    if (((const SceNp9660PbpHdr *)pbp_hdr)->magic != 0x50425000U) {
-        goto fail;
-    }
-    u32 psar_off = ((const SceNp9660PbpHdr *)pbp_hdr)->psar_off;
-    SceOff pos = sceIoLseek(s4, (SceOff)psar_off, 0);
-    s0 = (int)pos;
-    if (pos != (SceOff)psar_off) {
-        goto fail;
-    }
-    s0 = sceIoRead(s4, hdr, 0x100);
-    if (s0 < 0x100) {
-        goto fail;
-    }
-    if (((const SceNp9660ImgHdr *)hdr)->magic0 != 0x4d55504eU || ((const SceNp9660ImgHdr *)hdr)->magic1 != 0x474d4944U) {
-        goto fail;
-    }
-    s0 = sceDdrdbHash(hdr, 0xd8, digest);
-    if (s0 < 0) {
-        goto fail;
-    }
-    s0 = sceDdrdbSigvry(pub, digest, hdr + 0xd8);
-    if (s0 < 0) {
-        goto fail;
-    }
-    int cached_match = 0;
-    if (memcmp(g_np9660WorkBuf, hdr + 0x10, 0x30) == 0 && memcmp(g_np9660KeyB, hdr + 0xa0, 0x10) == 0) {
-        cached_match = 1;
-    } else {
-        if (g_np9660WorkBuf[0] != 0) {
-            if (np9660GetReplacePermit() != 1) {
-                s0 = (int)0x80210007;
-                goto fail;
-            }
+
+    do {
+        if (file_fd < 0) {
+            ret = file_fd;
+            break;
         }
-        np9660SetGlobalFlag(1);
-        np9660InvalidateTableCache();
-        np9660ClearBlockCache();
-    }
-    s0 = np9660LoadRifKey(vkey, ((const SceNp9660ImgHdr *)hdr)->content_id, ((const SceNp9660ImgHdr *)hdr)->flags, work_buf);
-    if (s0 < 0) {
-        *g_np9660TablePtr = (u32)s0;
-        if (cached_match != 0 && s0 == (int)0x80550914 && flag != 0) {
-            sceKernelMemcpy(vkey, g_np9660KeyA, 0x10);
+        ret = sceIoRead(file_fd, pbp_hdr, 0x28);
+        if (ret < 0x28) {
+            break;
+        }
+        if (((const SceNp9660PbpHdr *)pbp_hdr)->magic != 0x50425000U) {
+            break;
+        }
+        u32 psar_off = ((const SceNp9660PbpHdr *)pbp_hdr)->psar_off;
+        SceOff pos = sceIoLseek(file_fd, (SceOff)psar_off, 0);
+        ret = (int)pos;
+        if (pos != (SceOff)psar_off) {
+            break;
+        }
+        ret = sceIoRead(file_fd, hdr, 0x100);
+        if (ret < 0x100) {
+            break;
+        }
+        if (((const SceNp9660ImgHdr *)hdr)->magic_lo != 0x4d55504eU ||
+            ((const SceNp9660ImgHdr *)hdr)->magic_hi != 0x474d4944U) {
+            break;
+        }
+        ret = sceDdrdbHash(hdr, 0xd8, digest);
+        if (ret < 0) {
+            break;
+        }
+        ret = sceDdrdbSigvry(pub, digest, hdr + 0xd8);
+        if (ret < 0) {
+            break;
+        }
+        int cached_match = 0;
+        if (memcmp(g_np9660WorkBuf, hdr + 0x10, 0x30) == 0 && memcmp(g_np9660KeyB, hdr + 0xa0, 0x10) == 0) {
+            cached_match = 1;
         } else {
-            goto fail;
+            if (g_np9660WorkBuf[0] != 0) {
+                if (np9660GetReplacePermit() != 1) {
+                    ret = (int)0x80210007;
+                    break;
+                }
+            }
+            np9660SetGlobalFlag(1);
+            np9660InvalidateTableCache();
+            np9660ClearBlockCache();
         }
-    }
-    if (cached_match != 0) {
-        if (memcmp(vkey, g_np9660KeyA, 0x10) != 0) {
-            s0 = (int)0x80210007;
-            goto fail;
+        ret = np9660LoadRifKey(vkey, ((const SceNp9660ImgHdr *)hdr)->content_id, ((const SceNp9660ImgHdr *)hdr)->flags, work_buf);
+        if (ret < 0) {
+            *g_np9660TablePtr = (u32)ret;
+            if (cached_match != 0 && ret == (int)0x80550914 && flag != 0) {
+                sceKernelMemcpy(vkey, g_np9660KeyA, 0x10);
+            } else {
+                break;
+            }
         }
-    }
-    s0 = sceDrmBBMacInit(mkey, 3);
-    if (s0 < 0) {
-        goto fail;
-    }
-    s0 = sceDrmBBMacUpdate(mkey, hdr, 0xc0);
-    if (s0 < 0) {
-        goto fail;
-    }
-    s0 = sceDrmBBMacFinal2(mkey, hdr + 0xc0, vkey);
-    if (s0 < 0) {
-        goto fail;
-    }
-    s0 = sceDrmBBCipherInit(ckey, 1, 2, hdr + 0xa0, vkey, 0);
-    if (s0 < 0) {
-        goto fail;
-    }
-    s0 = sceDrmBBCipherUpdate(ckey, hdr + 0x40, 0x60);
-    if (s0 < 0) {
-        goto fail;
-    }
-    s0 = sceDrmBBCipherFinal(ckey);
-    if (s0 < 0) {
-        goto fail;
-    }
-    u32 total_sec = ((const SceNp9660ImgHdr *)hdr)->end_sector - ((const SceNp9660ImgHdr *)hdr)->start_sector + 1U;
-    u32 basis = ((const SceNp9660ImgHdr *)hdr)->block_basis;
-    u32 num_blks = (total_sec / basis) + ((total_sec % basis) != 0 ? 1U : 0U);
-    u32 tbl_bytes = num_blks << 5;
-    if ((((const SceNp9660ImgHdr *)hdr)->idps_mask & (1U << idps[5])) == 0) {
-        goto fail;
-    }
-    u32 param_off = ((const SceNp9660PbpHdr *)pbp_hdr)->param_off;
-    u32 icon0_off = ((const SceNp9660PbpHdr *)pbp_hdr)->icon0_off;
-    u32 param_len = icon0_off - param_off;
-    if (param_len != 0) {
+        if (cached_match != 0) {
+            if (memcmp(vkey, g_np9660KeyA, 0x10) != 0) {
+                ret = (int)0x80210007;
+                break;
+            }
+        }
+        ret = sceDrmBBMacInit(mkey, 3);
+        if (ret < 0) {
+            break;
+        }
+        ret = sceDrmBBMacUpdate(mkey, hdr, 0xc0);
+        if (ret < 0) {
+            break;
+        }
+        ret = sceDrmBBMacFinal2(mkey, hdr + 0xc0, vkey);
+        if (ret < 0) {
+            break;
+        }
+        ret = sceDrmBBCipherInit(ckey, 1, 2, hdr + 0xa0, vkey, 0);
+        if (ret < 0) {
+            break;
+        }
+        ret = sceDrmBBCipherUpdate(ckey, hdr + 0x40, 0x60);
+        if (ret < 0) {
+            break;
+        }
+        ret = sceDrmBBCipherFinal(ckey);
+        if (ret < 0) {
+            break;
+        }
+        u32 total_sec = ((const SceNp9660ImgHdr *)hdr)->end_sector - ((const SceNp9660ImgHdr *)hdr)->start_sector + 1U;
+        u32 basis = ((const SceNp9660ImgHdr *)hdr)->block_basis;
+        u32 num_blks = (total_sec / basis) + ((total_sec % basis) != 0 ? 1U : 0U);
+        u32 tbl_bytes = num_blks << 5;
+        if ((((const SceNp9660ImgHdr *)hdr)->idps_mask & (1U << idps[5])) == 0) {
+            break;
+        }
+        u32 sfo_off = ((const SceNp9660PbpHdr *)pbp_hdr)->sfo_off;
+        u32 icon_png_off = ((const SceNp9660PbpHdr *)pbp_hdr)->icon_png_off;
+        u32 sfo_len = icon_png_off - sfo_off;
+        int failed = 0;
+        if (sfo_len != 0) {
+            u32 data_psp_off_sfo = ((const SceNp9660PbpHdr *)pbp_hdr)->data_psp_off;
+            if (sfo_len + 0x30U >= 0x801U) {
+                break;
+            }
+            pos = sceIoLseek(file_fd, (SceOff)sfo_off, 0);
+            ret = (int)pos;
+            if (pos != (SceOff)sfo_off) {
+                break;
+            }
+            ret = sceIoRead(file_fd, work_buf, sfo_len);
+            if ((u32)ret < sfo_len) {
+                break;
+            }
+            sceKernelMemcpy(work_buf + sfo_len, hdr + 0x10, 0x30);
+            pos = sceIoLseek(file_fd, (SceOff)data_psp_off_sfo, 0);
+            ret = (int)pos;
+            if (pos != (SceOff)data_psp_off_sfo) {
+                break;
+            }
+            ret = sceIoRead(file_fd, work_buf + sfo_len + 0x30, 0x28);
+            if (ret < 0x28) {
+                break;
+            }
+            ret = sceDdrdbHash(work_buf, (int)(sfo_len + 0x30U), digest);
+            if (ret < 0) {
+                break;
+            }
+            ret = sceDdrdbSigvry(pub, digest, work_buf + sfo_len + 0x30);
+            if (ret < 0) {
+                break;
+            }
+        }
         u32 data_psp_off = ((const SceNp9660PbpHdr *)pbp_hdr)->data_psp_off;
-        if (param_len + 0x30U >= 0x801U) {
-            goto fail;
+        pos = sceIoLseek(file_fd, (SceOff)data_psp_off + 0x560, 0);
+        ret = (int)pos;
+        if (pos != (SceOff)data_psp_off + 0x560) {
+            break;
         }
-        pos = sceIoLseek(s4, (SceOff)param_off, 0);
-        s0 = (int)pos;
-        if (pos != (SceOff)param_off) {
-            goto fail;
+        ret = sceIoRead(file_fd, work_buf, 0x34);
+        if (ret < 0x34) {
+            break;
         }
-        s0 = sceIoRead(s4, work_buf, param_len);
-        if ((u32)s0 < param_len) {
-            goto fail;
+        if (strcmp((const char *)(hdr + 0x10), (const char *)work_buf) != 0) {
+            break;
         }
-        sceKernelMemcpy((u8 *)work_buf + param_len, hdr + 0x10, 0x30);
-        pos = sceIoLseek(s4, (SceOff)data_psp_off, 0);
-        s0 = (int)pos;
-        if (pos != (SceOff)data_psp_off) {
-            goto fail;
-        }
-        s0 = sceIoRead(s4, (u8 *)work_buf + param_len + 0x30, 0x28);
-        if (s0 < 0x28) {
-            goto fail;
-        }
-        s0 = sceDdrdbHash(work_buf, (int)(param_len + 0x30U), digest);
-        if (s0 < 0) {
-            goto fail;
-        }
-        s0 = sceDdrdbSigvry(pub, digest, (u8 *)work_buf + param_len + 0x30);
-        if (s0 < 0) {
-            goto fail;
-        }
-    }
-    u32 data_psp_off = ((const SceNp9660PbpHdr *)pbp_hdr)->data_psp_off;
-    pos = sceIoLseek(s4, (SceOff)data_psp_off + 0x560, 0);
-    s0 = (int)pos;
-    if (pos != (SceOff)data_psp_off + 0x560) {
-        goto fail;
-    }
-    s0 = sceIoRead(s4, work_buf, 0x34);
-    if (s0 < 0x34) {
-        goto fail;
-    }
-    if (strcmp((const char *)(hdr + 0x10), (const char *)work_buf) != 0) {
-        goto fail;
-    }
-    for (int i = 0; i < 4; i++) {
-        if (hdr[0x08 + i] != ((u8 *)work_buf)[0x33 - i]) {
-            goto fail;
-        }
-    }
-    s0 = sceDrmBBMacInit(mkey, 3);
-    if (s0 < 0) {
-        goto fail;
-    }
-    u32 tbl_rel = ((const SceNp9660ImgHdr *)hdr)->table_rel_off;
-    SceOff tbl_pos = (SceOff)psar_off + (SceOff)tbl_rel;
-    pos = sceIoLseek(s4, tbl_pos, 0);
-    s0 = (int)pos;
-    if (pos != tbl_pos) {
-        goto fail;
-    }
-    if ((int)tbl_bytes > 0) {
-        for (int read_so_far = 0; read_so_far < (int)tbl_bytes; read_so_far += 0x8000) {
-            if (np9660CheckDriveReady() == 0) {
-                s0 = (int)0x80210003;
-                goto fail;
-            }
-            int chunk = (int)tbl_bytes - read_so_far;
-            if (chunk > 0x8000) {
-                chunk = 0x8000;
-            }
-            s0 = sceIoRead(s4, work_buf, 0x8000);
-            if (s0 < 0x8000) {
-                goto fail;
-            }
-            s0 = sceAmctrl_driver_9227EA79(mkey, work_buf, chunk);
-            if (s0 < 0) {
-                goto fail;
+        for (int i = 0; i < 4; i++) {
+            if (hdr[0x08 + i] != work_buf[0x33 - i]) {
+                failed = 1;
+                break;
             }
         }
-    }
-    s0 = sceDrmBBMacFinal2(mkey, hdr + 0xb0, vkey);
-    if (s0 < 0) {
-        goto fail;
-    }
-    sceKernelMemset(ctx_info, 0, 0x58);
-    ((SceNp9660CtxInfo *)ctx_info)->fd = s4;
-    ((SceNp9660CtxInfo *)ctx_info)->total_sec = total_sec;
-    ((SceNp9660CtxInfo *)ctx_info)->num_blks = num_blks;
-    ((SceNp9660CtxInfo *)ctx_info)->basis = basis;
-    sceKernelMemcpy(ctx_info + 0x10, hdr + 0x40, 0x28);
-    ((SceNp9660CtxInfo *)ctx_info)->disc_param = ((const SceNp9660ImgHdr *)hdr)->disc_param;
-    ((SceNp9660CtxInfo *)ctx_info)->sector_param0 = ((const SceNp9660ImgHdr *)hdr)->sector_param0;
-    ((SceNp9660CtxInfo *)ctx_info)->sector_param1 = ((const SceNp9660ImgHdr *)hdr)->sector_param1;
-    sceKernelMemcpy(ctx_info + 0x40, hdr + 0x88, 0x18);
+        if (failed) {
+            break;
+        }
+        ret = sceDrmBBMacInit(mkey, 3);
+        if (ret < 0) {
+            break;
+        }
+        u32 tbl_rel = ((const SceNp9660ImgHdr *)hdr)->table_rel_off;
+        SceOff tbl_pos = (SceOff)psar_off + (SceOff)tbl_rel;
+        pos = sceIoLseek(file_fd, tbl_pos, 0);
+        ret = (int)pos;
+        if (pos != tbl_pos) {
+            break;
+        }
+        if ((int)tbl_bytes > 0) {
+            for (int read_so_far = 0; read_so_far < (int)tbl_bytes; read_so_far += 0x8000) {
+                if (np9660CheckDriveReady() == 0) {
+                    ret = (int)0x80210003;
+                    failed = 1;
+                    break;
+                }
+                int chunk = (int)tbl_bytes - read_so_far;
+                if (chunk > 0x8000) {
+                    chunk = 0x8000;
+                }
+                ret = sceIoRead(file_fd, work_buf, 0x8000);
+                if (ret < 0x8000) {
+                    failed = 1;
+                    break;
+                }
+                ret = sceAmctrl_driver_9227EA79(mkey, work_buf, chunk);
+                if (ret < 0) {
+                    failed = 1;
+                    break;
+                }
+            }
+            if (failed) {
+                break;
+            }
+        }
+        ret = sceDrmBBMacFinal2(mkey, hdr + 0xb0, vkey);
+        if (ret < 0) {
+            break;
+        }
+        sceKernelMemset(ctx_info, 0, 0x58);
+        ((SceNp9660CtxInfo *)ctx_info)->file_fd = file_fd;
+        ((SceNp9660CtxInfo *)ctx_info)->total_sec = total_sec;
+        ((SceNp9660CtxInfo *)ctx_info)->num_blks = num_blks;
+        ((SceNp9660CtxInfo *)ctx_info)->basis = basis;
+        sceKernelMemcpy(ctx_info + 0x10, hdr + 0x40, 0x28);
+        ((SceNp9660CtxInfo *)ctx_info)->disc_param = ((const SceNp9660ImgHdr *)hdr)->disc_param;
+        ((SceNp9660CtxInfo *)ctx_info)->emu_rate_seek = ((const SceNp9660ImgHdr *)hdr)->emu_rate_seek;
+        ((SceNp9660CtxInfo *)ctx_info)->emu_rate_read = ((const SceNp9660ImgHdr *)hdr)->emu_rate_read;
+        sceKernelMemcpy(ctx_info + 0x40, hdr + 0x88, 0x18);
 
-    g_np9660StateA = (int)psar_off;
-    g_np9660StateB = (int)tbl_rel;
-    g_np9660StateC = (int)((const SceNp9660ImgHdr *)hdr)->idps_mask;
-    g_np9660StateD = (int)hdr[0x89];
-    sceKernelMemcpy(g_np9660WorkBuf + 0x00, hdr + 0x10, 0x30);
-    sceKernelMemcpy(g_np9660WorkBuf + 0x30, hdr + 0x70, 0x10);
-    sceKernelMemcpy(g_np9660KeyA, vkey, 0x10);
-    sceKernelMemcpy(g_np9660KeyB, hdr + 0xa0, 0x10);
+        g_np9660StateA = (int)psar_off;
+        g_np9660StateB = (int)tbl_rel;
+        g_np9660StateC = (int)((const SceNp9660ImgHdr *)hdr)->idps_mask;
+        g_np9660StateD = (int)hdr[0x89];
+        sceKernelMemcpy(g_np9660WorkBuf + 0x00, hdr + 0x10, 0x30);
+        sceKernelMemcpy(g_np9660WorkBuf + 0x30, hdr + 0x70, 0x10);
+        sceKernelMemcpy(g_np9660KeyA, vkey, 0x10);
+        sceKernelMemcpy(g_np9660KeyB, hdr + 0xa0, 0x10);
 
-    s0 = np9660SubmitRead(ctx_info);
-    sceKernelMemset(ctx_info, 0, 0x58);
-    if (s0 < 0) {
-        goto fail;
-    }
-    SysMemForKernel_F3BDB718(g_np9660WorkBuf + 0x30);
-    sceKernelSetQTGP3(g_np9660WorkBuf + 0x30);
+        ret = np9660SubmitRead((const u32 *)ctx_info);
+        sceKernelMemset(ctx_info, 0, 0x58);
+        if (ret < 0) {
+            break;
+        }
+        SysMemForKernel_F3BDB718(g_np9660WorkBuf + 0x30);
+        sceKernelSetQTGP3(g_np9660WorkBuf + 0x30);
+        sceKernelMemset(idps, 0, 0x10);
+        sceKernelMemset(vkey, 0, 0x10);
+        sceKernelMemset(hdr, 0, 0x100);
+        sceKernelMemset(&work_buf, 0, 4);
+        return 0;
+    } while (0);
+
     sceKernelMemset(idps, 0, 0x10);
     sceKernelMemset(vkey, 0, 0x10);
     sceKernelMemset(hdr, 0, 0x100);
     sceKernelMemset(&work_buf, 0, 4);
-    return 0;
-
-fail:
-    sceKernelMemset(idps, 0, 0x10);
-    sceKernelMemset(vkey, 0, 0x10);
-    sceKernelMemset(hdr, 0, 0x100);
-    sceKernelMemset(&work_buf, 0, 4);
-    if (s0 >= 0) {
-        s0 = (int)0x80210003;
+    if (ret >= 0) {
+        ret = (int)0x80210003;
     }
-    if (s0 != (int)0x80210007 && s0 != (int)0x80210003) {
-        s0 = (np9660CheckDriveReady() == 0) ? (int)0x80210003 : (int)0x80210001;
+    if (ret != (int)0x80210007 && ret != (int)0x80210003) {
+        ret = (np9660CheckDriveReady() == 0) ? (int)0x80210003 : (int)0x80210001;
     }
-    if (s4 >= 0) {
-        sceIoClose(s4);
+    if (file_fd >= 0) {
+        sceIoClose(file_fd);
     }
-    return s0;
+    return ret;
 }
 
 /* 0x0a34 */
 static NOINLINE int np9660DecryptBlock(void *buf, void *entry)
 {
-    u8 *s0 = (u8 *)entry + 8;
-    u32 comp_size = ((const SceNp9660TblEntry *)s0)->comp_size;
-    u32 rel_off = ((const SceNp9660TblEntry *)s0)->rel_off;
+    const SceNp9660TblEntry *tbl = (const SceNp9660TblEntry *)((const SceNp9660BlockRef *)entry)->tbl_copy;
+    u32 comp_size = tbl->comp_size;
+    u32 rel_off = tbl->rel_off;
     int aligned_size = (int)((comp_size + 15U) & ~15U);
     u32 seed = rel_off >> 4;
-    int r = np9660VerifyMac(buf, aligned_size, s0);
+    int r = np9660VerifyMac(buf, aligned_size, tbl);
     if (r < 0) {
         return r;
     }
-    if ((((const SceNp9660TblEntry *)s0)->flags & 4U) == 0) {
+    if ((tbl->flags & 4U) == 0) {
         r = np9660CipherDecrypt(buf, aligned_size, seed);
         if (r < 0) {
             return r;
@@ -794,22 +843,24 @@ static NOINLINE int np9660DecryptBlockSpan(void *buf, u32 base_file_off, u32 tot
     if (last_blk < first_blk) {
         return 0;
     }
+    u8 *buf_bytes = (u8 *)buf;
     for (int blk = last_blk; blk >= first_blk; blk--) {
         int r = np9660GetBlockTableEntry(entry, blk);
         if (r < 0) {
             return r;
         }
-        u8 *s1 = (u8 *)entry + 8;
-        u32 comp_size = ((const SceNp9660TblEntry *)s1)->comp_size;
-        u32 blk_file_off = *(u32 *)entry;
+        const SceNp9660BlockRef *ref = (const SceNp9660BlockRef *)entry;
+        const SceNp9660TblEntry *tbl = (const SceNp9660TblEntry *)ref->tbl_copy;
+        u32 comp_size = tbl->comp_size;
+        u32 blk_file_off = ref->file_off;
         u32 aligned_size = (comp_size + 15U) & ~15U;
-        r = np9660VerifyMac((u8 *)buf + blk_file_off - base_file_off, (int)aligned_size, s1);
+        r = np9660VerifyMac(buf_bytes + blk_file_off - base_file_off, (int)aligned_size, tbl);
         if (r < 0) {
             return r;
         }
-        if (((const SceNp9660TblEntry *)s1)->flags & 4U) {
+        if (tbl->flags & 4U) {
             if (span_start != 0) {
-                r = np9660CipherDecrypt((u8 *)buf + span_start - base_file_off, (int)(span_end - span_start), (span_start - (u32)g_np9660StateA) >> 4);
+                r = np9660CipherDecrypt(buf_bytes + span_start - base_file_off, (int)(span_end - span_start), (span_start - (u32)g_np9660StateA) >> 4);
                 span_start = 0;
                 span_end = 0;
                 if (r < 0) {
@@ -826,7 +877,7 @@ static NOINLINE int np9660DecryptBlockSpan(void *buf, u32 base_file_off, u32 tot
         }
     }
     if (span_start != 0) {
-        int r = np9660CipherDecrypt((u8 *)buf + span_start - base_file_off, (int)(span_end - span_start), (span_start - (u32)g_np9660StateA) >> 4);
+        int r = np9660CipherDecrypt(buf_bytes + span_start - base_file_off, (int)(span_end - span_start), (span_start - (u32)g_np9660StateA) >> 4);
         if (r < 0) {
             return r;
         }
@@ -841,34 +892,36 @@ static NOINLINE void np9660InvalidateTableCache(void)
 }
 
 /* 0x0c4c */
-static NOINLINE int np9660GetBlockTableEntry(void *a0, int a1)
+static NOINLINE int np9660GetBlockTableEntry(void *out_ref, int blk_idx)
 {
-    int s1 = g_np9660TableSize;
-    if (s1 == -1 || (u32)a1 < (u32)s1 || (u32)a1 >= (u32)(s1 + 16)) {
-        s1 = a1 & ~15;
-        u32 off = (u32)g_np9660StateA + (u32)g_np9660StateB + ((u32)s1 << 5);
-        int rd = np9660ReadImageFile(g_np9660IoBuf, off, 0, 0x200);
+    int base_blk = g_np9660TableSize;
+    if (base_blk == -1 || (u32)blk_idx < (u32)base_blk || (u32)blk_idx >= (u32)(base_blk + 16)) {
+        base_blk = blk_idx & ~15;
+        u32 off = (u32)g_np9660StateA + (u32)g_np9660StateB + ((u32)base_blk << 5);
+        int rd = np9660ReadImageFile(g_np9660IoBuf, (SceOff)off, 0x200);
         if (rd < 0) {
             g_np9660TableSize = -1;
             return rd;
         }
         u32 *words = (u32 *)g_np9660IoBuf;
         for (int i = 15; i >= 0; i--, words += 8) {
-            u32 w0 = words[0];
-            u32 w1 = words[1];
-            u32 w2 = words[2];
-            u32 w3 = words[3];
-            words[4] ^= w3 ^ w2;
-            words[5] ^= w2 ^ w1;
-            words[6] ^= w1 ^ w0;
-            words[7] ^= w0 ^ w3;
+            u32 mac_a = words[0];
+            u32 mac_b = words[1];
+            u32 mac_c = words[2];
+            u32 mac_d = words[3];
+            words[4] ^= mac_d ^ mac_c;
+            words[5] ^= mac_c ^ mac_b;
+            words[6] ^= mac_b ^ mac_a;
+            words[7] ^= mac_a ^ mac_d;
         }
-        g_np9660TableSize = s1;
+        g_np9660TableSize = base_blk;
     }
-    u8 *src = (u8 *)g_np9660IoBuf + (((u32)(a1 - s1)) << 5);
-    sceKernelMemcpy((u8 *)a0 + 8, src, 0x20);
-    ((SceNp9660BlockRef *)a0)->file_off = (u32)g_np9660StateA + ((const SceNp9660TblEntry *)src)->rel_off;
-    ((SceNp9660BlockRef *)a0)->comp_size = ((const SceNp9660TblEntry *)src)->comp_size;
+    const SceNp9660TblEntry *tbl_base = (const SceNp9660TblEntry *)g_np9660IoBuf;
+    const SceNp9660TblEntry *src = &tbl_base[blk_idx - base_blk];
+    SceNp9660BlockRef *dst = (SceNp9660BlockRef *)out_ref;
+    sceKernelMemcpy(dst->tbl_copy, src, 0x20);
+    dst->file_off = (u32)g_np9660StateA + src->rel_off;
+    dst->comp_size = src->comp_size;
     return 0;
 }
 
@@ -901,24 +954,24 @@ static NOINLINE int np9660LoadRifKey(void *vkey, const char *cid, int flags, voi
     }
     if ((flags & 0x01000000) != 0) {
         g_np9660TablePtr[1] = 0x01000003U;
-        return sceNpDrmGetFixedKey(vkey, cid, 0x01000003);
+        return sceNpDrmGetFixedKey(vkey, cid, flags);
     }
     if (strlen(cid) >= 0x2aU) {
         return -1;
     }
     snprintf(path, 0x40, "ms0:/PSP/LICENSE/%s.rif", cid);
-    int fd = sceIoOpen(path, 1, 0);
-    if (fd < 0) {
+    int file_fd = sceIoOpen(path, 1, 0);
+    if (file_fd < 0) {
         return (int)0x80550910;
     }
-    int rd = sceIoRead(fd, rif, 0x98);
+    int rd = sceIoRead(file_fd, rif, 0x98);
     if (rd == 0x98) {
-        if (sceIoRead(fd, ext_words, 8) != 8) {
+        if (sceIoRead(file_fd, ext_words, 8) != 8) {
             ext_words[0] = 0;
             ext_words[1] = 0;
         }
     }
-    sceIoClose(fd);
+    sceIoClose(file_fd);
     if (rd < 0x98) {
         return (int)0x80550910;
     }
@@ -982,7 +1035,7 @@ static NOINLINE int np9660VerifyMac(const void *buf, int size, const void *hash)
     if (r < 0) {
         return r;
     }
-    if ((g_np9660StateD != 0) && (((u32)buf & 3U) == 0)) {
+    if (g_np9660StateD != 0) {
         r = sceAmctrl_driver_9227EA79(mkey, buf, size);
     } else {
         r = sceDrmBBMacUpdate(mkey, buf, size);
@@ -1040,18 +1093,18 @@ static NOINLINE int np9660LzrcDecompress(void *dst, u32 dst_len, const void *src
     u8 *state = probs;
 
     for (;;) {
-        u8 *s0 = state;
+        u8 *state_ptr = state;
         for (;;) {
             if (range < 0x01000000U) {
                 range <<= 8;
                 code = (code << 8) + *in_ptr++;
             }
-            u8 prob = s0[0x9a0];
+            u8 prob = state_ptr[0x9a0];
             u32 bound = (range >> 8) * prob;
             if (code >= bound) {
                 range -= bound;
                 code -= bound;
-                s0[0x9a0] = (u8)(prob - (prob >> 3));
+                state_ptr[0x9a0] = (u8)(prob - (prob >> 3));
                 break;
             }
             if (out >= out_end) {
@@ -1059,7 +1112,7 @@ static NOINLINE int np9660LzrcDecompress(void *dst, u32 dst_len, const void *src
             }
             u32 ctx = prev_byte >> lc;
             range = bound;
-            s0[0x9a0] = (u8)(prob + (((0x100 - (int)prob) >> 3) & 0x1f));
+            state_ptr[0x9a0] = (u8)(prob + (((0x100 - (int)prob) >> 3) & 0x1f));
             u8 *lit_probs = probs + ctx * 0xff;
             u32 sym = 1;
             do {
@@ -1082,7 +1135,7 @@ static NOINLINE int np9660LzrcDecompress(void *dst, u32 dst_len, const void *src
             } while ((sym >> 8) == 0);
             prev_byte = sym & 0xff;
             *out++ = (u8)prev_byte;
-            s0 = probs;
+            state_ptr = probs;
         }
 
         u32 len_cat = 0xffffffffU;
@@ -1281,27 +1334,22 @@ static NOINLINE int np9660LzrcDecompress(void *dst, u32 dst_len, const void *src
 
         state = probs + (dist == 0 ? 4 : 8);
         if (dist >= 3 && (((u32)match_src ^ (u32)out) & 3) == 0) {
-            while (((u32)out & 3) != 0) {
+            while (((u32)out & 3) != 0 && out < match_end) {
                 *out++ = *match_src++;
-                if (out == match_end) {
-                    goto match_done;
+            }
+            if (out < match_end) {
+                u8 *fast_end = match_end - 3;
+                while (out < fast_end) {
+                    u32 w = *(u32 *)match_src;
+                    match_src += 4;
+                    *(u32 *)out = w;
+                    out += 4;
                 }
             }
-            u8 *fast_end = match_end - 3;
-            while (out < fast_end) {
-                u32 w = *(u32 *)match_src;
-                match_src += 4;
-                *(u32 *)out = w;
-                out += 4;
-            }
-            if (out >= match_end) {
-                goto match_done;
-            }
         }
-        do {
+        while (out < match_end) {
             *out++ = *match_src++;
-        } while (out < match_end);
-match_done:
+        }
         prev_byte = match_src[-1];
     }
 }
@@ -1330,17 +1378,17 @@ static NOINLINE s64 np9660Div64(s64 a, s64 b)
                     (lo_b >> 16 ? g_clz_tab[lo_b >> 16] + 16 :
                     (lo_b >> 8 ? g_clz_tab[lo_b >> 8] + 8 : g_clz_tab[lo_b]));
         (void)b_top;
-        u32 q1 = hi_a / lo_b;
-        u32 r1 = hi_a % lo_b;
-        u64 rem = ((u64)r1 << 32) | lo_a;
-        u32 q0 = 0;
+        u32 quot_hi = hi_a / lo_b;
+        u32 rem_hi = hi_a % lo_b;
+        u64 rem = ((u64)rem_hi << 32) | lo_a;
+        u32 quot_lo = 0;
         for (int i = 31; i >= 0; i--) {
             if ((rem >> i) >= lo_b) {
                 rem -= (u64)lo_b << i;
-                q0 |= 1U << i;
+                quot_lo |= 1U << i;
             }
         }
-        q = ((u64)q1 << 32) | q0;
+        q = ((u64)quot_hi << 32) | quot_lo;
     } else {
         for (int i = 31; i >= 0; i--) {
             if ((ua >> i) >= ub) {
@@ -1355,11 +1403,11 @@ static NOINLINE s64 np9660Div64(s64 a, s64 b)
 /* IoDrv table forward declarations */
 static int umd_io_init(void *arg);
 static int umd_io_exit(void *arg);
-static int umd_io_open(void *iot, char *file, int flags, int mode);
-static int umd_io_close(void *iot);
-static int umd_io_read(void *iot, char *data, int len);
-static int umd_io_ioctl(void *iot, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen);
-static int umd_io_devctl(void *iot, const char *dev, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen);
+static int umd_io_open(SceIoIob *iot, char *file, int flags, int mode);
+static int umd_io_close(SceIoIob *iot);
+static int umd_io_read(SceIoIob *iot, char *data, int len);
+static int umd_io_ioctl(SceIoIob *iot, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen);
+static int umd_io_devctl(SceIoIob *iot, const char *dev, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen);
 
 static const void * const g_umd_drv_funcs[22] = {
     umd_io_init,
@@ -1389,7 +1437,7 @@ static const void * const g_umd_drv_funcs[22] = {
 static const struct {
     const char *name;
     u32 dev_type;
-    u32 arg2;
+    u32 block_size;
     const char *desc;
     const void *funcs;
 } g_umd_drv = {
@@ -1437,11 +1485,11 @@ int NOINLINE module_stop(SceSize args, void *argp)
 }
 
 /* 0x21c0 */
-int module_reboot_phase(int phase, void *argp, u32 arg1, u32 arg2)
+int module_reboot_phase(int phase, void *argp, u32 opt_a, u32 opt_b)
 {
     (void)argp;
-    (void)arg1;
-    (void)arg2;
+    (void)opt_a;
+    (void)opt_b;
     if (phase == 1) {
         np9660UnlockMutex();
     } else if (phase == 2) {
@@ -1451,12 +1499,12 @@ int module_reboot_phase(int phase, void *argp, u32 arg1, u32 arg2)
 }
 
 /* 0x220c */
-int module_reboot_before(void *argp, u32 arg1, u32 arg2, u32 arg3)
+int module_reboot_before(void *argp, u32 opt_a, u32 opt_b, u32 opt_c)
 {
     (void)argp;
-    (void)arg1;
-    (void)arg2;
-    (void)arg3;
+    (void)opt_a;
+    (void)opt_b;
+    (void)opt_c;
     np9660SetDriveError();
     return 0;
 }
@@ -1542,8 +1590,9 @@ int sceUmdActivate(int mode, const char *aliasname)
 {
     int k1 = pspSdkSetK1(0);
     int r = (int)0x80010016;
-    if ((((u32)(mode - 1) >= 2U) || aliasname == NULL) == 0 &&
-        ((k1 << 11) & (int)aliasname) >= 0 &&
+    if (((k1 << 11) & (int)aliasname) >= 0 &&
+        (u32)(mode - 1) < 2U &&
+        aliasname != NULL &&
         strcmp(aliasname, "disc0:") == 0) {
         int res = np9660AssignIsofs(mode, aliasname);
         int intr = sceKernelCpuSuspendIntr();
@@ -1583,13 +1632,14 @@ static NOINLINE int np9660AssignIsofs(int mode, const char *aliasname)
 int sceUmdRegisterUMDCallBack(SceUID cbid)
 {
     int k1 = pspSdkSetK1(0);
-    void *cb = NULL;
+    void *cb_raw;
     int r = (int)0x80010016;
     if (sceKernelGetThreadmanIdType(cbid) == 8 &&
-        sceKernelGetUIDcontrolBlock(cbid, &cb) == 0) {
+        sceKernelGetUIDcontrolBlock(cbid, &cb_raw) == 0) {
+        const SceUidControlBlock *cb = (const SceUidControlBlock *)cb_raw;
         int ok = 2;
-        if (((u32)(k1 << 11) >> 31) != 0) {
-            ok = *(u16 *)((u8 *)cb + 0x16) & 2;
+        if ((k1 << 11) < 0) {
+            ok = cb->attr & 2;
         }
         if (ok != 0) {
             int intr = sceKernelCpuSuspendIntr();
@@ -1606,12 +1656,13 @@ int sceUmdRegisterUMDCallBack(SceUID cbid)
 int sceUmdUnRegisterUMDCallBack(SceUID cbid)
 {
     int k1 = pspSdkSetK1(0);
-    void *cb = NULL;
+    void *cb_raw;
     int r = (int)0x80010016;
-    if (sceKernelGetUIDcontrolBlock(cbid, &cb) == 0) {
+    if (sceKernelGetUIDcontrolBlock(cbid, &cb_raw) == 0) {
+        const SceUidControlBlock *cb = (const SceUidControlBlock *)cb_raw;
         int ok = 2;
-        if (((u32)(k1 << 11) >> 31) != 0) {
-            ok = *(u16 *)((u8 *)cb + 0x16) & 2;
+        if ((k1 << 11) < 0) {
+            ok = cb->attr & 2;
         }
         if (ok != 0 && g_umd_cbid == cbid) {
             int intr = sceKernelCpuSuspendIntr();
@@ -1836,7 +1887,7 @@ static NOINLINE int np9660ActivateDrive(int mode, const char *aliasname)
     np9660UnmountDrive(mode);
     g_active_mode = 0;
     memset(g_assign_dev, 0, 0x20);
-    __builtin_memcpy(g_assign_dev, "UMD:", 5);
+    __builtin_memcpy(g_assign_dev, ":DMU", 5);
     return 0;
 }
 
@@ -1853,17 +1904,17 @@ static NOINLINE int np9660MediaManMount(void)
     }
     g_sysevent_reg = 1;
     SceUID evf = sceKernelCreateEventFlag("SceUmdManState", 0x201, 0, NULL);
-    g_umdman_evf = evf;
     if (evf < 0) {
         np9660MediaManSetError();
         return evf;
     }
+    g_umdman_evf = evf;
     SceUID th = sceKernelCreateThread("SceNpUmdMount", np9660MediaManThread, 0x0f, 0x1000, 0x00100001, NULL);
-    g_mount_thid = th;
     if (th < 0) {
         np9660MediaManSetError();
         return th;
     }
+    g_mount_thid = th;
     r = sceKernelStartThread(th, 0, NULL);
     if (r < 0) {
         np9660MediaManSetError();
@@ -1919,10 +1970,10 @@ static NOINLINE int np9660DeactivateDrive(int mode)
             sceUmdSetErrorStatus(0);
             sceKernelSetEventFlag(g_umdman_evf, 1);
         } else if (prev == 1) {
-            if (st == 1) {
+            if (st == 2) {
                 np9660SetUmdManState(4);
                 sceKernelSetEventFlag(g_umdman_evf, 1);
-            } else if (st != prev) {
+            } else if (st != 1) {
                 np9660SetUmdManState(0x10);
             }
         } else {
@@ -2104,71 +2155,72 @@ static int np9660MediaManThread(SceSize args, void *argp)
             }
         }
         if ((out & 1U) != 0) {
-            int intr = sceKernelCpuSuspendIntr();
-            int st = np9660GetUmdManState();
-            if (st == 1) {
-                int r_flag = g_umdman_resume_flag;
-                g_umdman_resume_flag = 0;
-                if (g_np9660InitMode == 0) {
-                    np9660SetUmdManState(0x10);
-                    sceUmdSetErrorStatus((int)0xc0210006);
-                    if (np9660GetMountStatus() != (int)0x80210003) {
-                        np9660CloseMountedImage();
-                    }
-                    sceKernelCpuResumeIntr(intr);
-                    goto check_10;
-                }
-                sceKernelCpuResumeIntr(intr);
-                int mr = np9660MountImage(r_flag);
-                intr = sceKernelCpuSuspendIntr();
-                st = np9660GetUmdManState();
-                if (mr < 0) {
-                    if (st == 1) {
+            do {
+                int intr = sceKernelCpuSuspendIntr();
+                int st = np9660GetUmdManState();
+                if (st == 1) {
+                    int r_flag = g_umdman_resume_flag;
+                    g_umdman_resume_flag = 0;
+                    if (g_np9660InitMode == 0) {
                         np9660SetUmdManState(0x10);
-                        sceUmdSetErrorStatus(mr);
+                        sceUmdSetErrorStatus((int)0xc0210006);
+                        if (np9660GetMountStatus() != (int)0x80210003) {
+                            np9660CloseMountedImage();
+                        }
+                        sceKernelCpuResumeIntr(intr);
+                        break;
                     }
                     sceKernelCpuResumeIntr(intr);
-                    goto check_10;
-                }
-                if (st != 1) {
-                    np9660CloseMountedImage();
-                    sceKernelCpuResumeIntr(intr);
-                    goto check_10;
-                }
-                if (g_np9660InitMode != 2) {
-                    np9660SetUmdManState(2);
-                    sceKernelCpuResumeIntr(intr);
-                    goto check_10;
-                }
-                np9660SetUmdManState(4);
-                st = 4;
-            }
-            if (st == 4) {
-                int arg1 = g_np9660GlobalFlag;
-                sceKernelCpuResumeIntr(intr);
-                int cb_res = np9660NotifyInsertEject(0x20, arg1);
-                if (cb_res != (int)0x80010002) {
+                    int mr = np9660MountImage(r_flag);
                     intr = sceKernelCpuSuspendIntr();
                     st = np9660GetUmdManState();
-                    if (cb_res < 0) {
-                        if (st == 4) {
+                    if (mr < 0) {
+                        if (st == 1) {
                             np9660SetUmdManState(0x10);
-                            sceUmdSetErrorStatus((int)0x80210001);
+                            sceUmdSetErrorStatus(mr);
                         }
-                    } else if (st == 4) {
-                        g_np9660GlobalFlag = 0;
-                        np9660SetUmdManState(8);
-                        sceUmdSetErrorStatus(0);
-                    } else {
-                        sceUmdClearDriveStatus(4);
+                        sceKernelCpuResumeIntr(intr);
+                        break;
                     }
+                    if (st != 1) {
+                        np9660CloseMountedImage();
+                        sceKernelCpuResumeIntr(intr);
+                        break;
+                    }
+                    if (g_np9660InitMode != 2) {
+                        np9660SetUmdManState(2);
+                        sceKernelCpuResumeIntr(intr);
+                        break;
+                    }
+                    np9660SetUmdManState(4);
+                    st = 4;
+                }
+                if (st == 4) {
+                    int notify_state = g_np9660GlobalFlag;
+                    sceKernelCpuResumeIntr(intr);
+                    int cb_res = np9660NotifyInsertEject(0x20, notify_state);
+                    if (cb_res != (int)0x80010002) {
+                        intr = sceKernelCpuSuspendIntr();
+                        st = np9660GetUmdManState();
+                        if (cb_res < 0) {
+                            if (st == 4) {
+                                np9660SetUmdManState(0x10);
+                                sceUmdSetErrorStatus((int)0x80210001);
+                            }
+                        } else if (st == 4) {
+                            g_np9660GlobalFlag = 0;
+                            np9660SetUmdManState(8);
+                            sceUmdSetErrorStatus(0);
+                        } else {
+                            sceUmdClearDriveStatus(4);
+                        }
+                        sceKernelCpuResumeIntr(intr);
+                    }
+                } else {
                     sceKernelCpuResumeIntr(intr);
                 }
-            } else {
-                sceKernelCpuResumeIntr(intr);
-            }
+            } while (0);
         }
-check_10:
         if ((out & 0x10U) != 0) {
             if (np9660GetMountStatus() != (int)0x80210003) {
                 np9660CloseMountedImage();
@@ -2204,7 +2256,7 @@ static NOINLINE int np9660SetDriveError(void)
 /* 0x368c */
 static NOINLINE int np9660CheckDriveReady(void)
 {
-    u32 st = 0;
+    u32 st;
     if ((np9660GetUmdManState() & 0xe0) != 0) {
         return 0;
     }
@@ -2276,13 +2328,13 @@ int sceUmdManRegisterInsertEjectUMDCallBack(int id, void *cb, void *arg)
 }
 
 /* 0x38a8 */
-static NOINLINE int np9660NotifyInsertEject(int mask, int arg2)
+static NOINLINE int np9660NotifyInsertEject(int mask, int state)
 {
     int r = (int)0x80010002;
     if (g_ins_ej_cb != NULL && (g_ins_ej_id & mask) != 0) {
         u32 saved_gp;
         __asm__ volatile ("move %0, $gp\n\tmove $gp, %1" : "=r"(saved_gp) : "r"(g_ins_ej_gp));
-        r = g_ins_ej_cb(g_ins_ej_id, g_ins_ej_arg, arg2);
+        r = g_ins_ej_cb(g_ins_ej_id, g_ins_ej_arg, state);
         __asm__ volatile ("move $gp, %0" : : "r"(saved_gp));
     }
     return r;
@@ -2364,20 +2416,20 @@ int sceNp9660_driver_B925CA6C(void)
 }
 
 /* 0x3b28 */
-static NOINLINE void np9660RecordError(u32 a0, u32 a1, u32 a2, u32 a3, u32 t0, u32 t1)
+static NOINLINE void np9660RecordError(u32 err_code, u32 rif_type, u32 exp_lo, u32 exp_hi, u32 ext_hi, u32 ext_lo)
 {
     int intr = sceKernelCpuSuspendIntr();
-    g_np9660_err[0] = a0;
-    g_np9660_err[1] = a1;
-    g_np9660_err[2] = a2;
-    g_np9660_err[3] = a3;
-    g_np9660_err[4] = t0;
-    g_np9660_err[5] = t1;
+    g_np9660_err[0] = err_code;
+    g_np9660_err[1] = rif_type;
+    g_np9660_err[2] = exp_lo;
+    g_np9660_err[3] = exp_hi;
+    g_np9660_err[4] = ext_hi;
+    g_np9660_err[5] = ext_lo;
     sceKernelCpuResumeIntr(intr);
     if (g_np9660_cb != NULL) {
         u32 saved_gp;
         __asm__ volatile ("move %0, $gp\n\tmove $gp, %1" : "=r"(saved_gp) : "r"(g_np9660_cb_gp));
-        g_np9660_cb(a0, a1, a2, a3, t0, t1);
+        g_np9660_cb(err_code, rif_type, exp_lo, exp_hi, ext_hi, ext_lo);
         __asm__ volatile ("move $gp, %0" : : "r"(saved_gp));
     }
 }
@@ -2385,7 +2437,7 @@ static NOINLINE void np9660RecordError(u32 a0, u32 a1, u32 a2, u32 a3, u32 t0, u
 /* 0x3c14 */
 static NOINLINE int np9660MountImage(int resume_flag)
 {
-    int err_out = 0;
+    int err_out;
     if (np9660GetMountStatus() == 1) {
         return 0;
     }
@@ -2463,29 +2515,29 @@ static int umd_io_init(void *arg)
 {
     (void)arg;
     u32 opt[2];
-    void *blk = NULL;
-    memset(&g_umd_ctx, 0, 0x58);
+    void *blk;
+    memset(&g_umd_ctx, 0, sizeof(g_umd_ctx));
     SceUID fpl = sceKernelCreateFpl("SceNp9660", 1, 0x100, 0x10200, 1, NULL);
     if (fpl >= 0) {
         g_fpl = fpl;
         int r = sceKernelTryAllocateFpl(fpl, &blk);
         if (r >= 0) {
             g_fpl_block = blk;
-            u8 *p1 = (u8 *)blk + 0x8000;
-            r = np9660SetBlockCacheBuf(p1, 0x8000);
+            u8 *cache_buf = (u8 *)blk + 0x8000;
+            r = np9660SetBlockCacheBuf(cache_buf, 0x8000);
             if (r >= 0) {
-                u8 *p2 = p1 + 0x8000;
-                r = np9660SetTableCacheBuf(p2, 0x200);
+                u8 *table_buf = cache_buf + 0x8000;
+                r = np9660SetTableCacheBuf(table_buf, 0x200);
                 if (r >= 0) {
-                    SceUID mtx1 = sceKernelCreateMutex("SceNp9660NC", 0x201, 0, NULL);
-                    if (mtx1 >= 0) {
-                        g_nc_mutex = mtx1;
+                    SceUID nc_mtx = sceKernelCreateMutex("SceNp9660NC", 0x201, 0, NULL);
+                    if (nc_mtx >= 0) {
+                        g_nc_mutex = nc_mtx;
                         opt[0] = 8;
                         opt[1] = 0x0f;
-                        SceUID mtx2 = sceKernelCreateMutex("SceNp9660", 0x601, 0, opt);
-                        if (mtx2 >= 0) {
-                            g_main_mutex = mtx2;
-                            g_cur_mutex = mtx2;
+                        SceUID main_mtx = sceKernelCreateMutex("SceNp9660", 0x601, 0, opt);
+                        if (main_mtx >= 0) {
+                            g_main_mutex = main_mtx;
+                            g_cur_mutex = main_mtx;
                             r = np9660InitDecThread();
                             if (r >= 0) {
                                 g_part_info[0] = 0x10;
@@ -2494,10 +2546,10 @@ static int umd_io_init(void *arg)
                                 return 0;
                             }
                         } else {
-                            r = mtx2;
+                            r = main_mtx;
                         }
                     } else {
-                        r = mtx1;
+                        r = nc_mtx;
                     }
                 }
             }
@@ -2546,7 +2598,7 @@ static int umd_io_exit(void *arg)
         sceKernelDeleteMutex(g_main_mutex);
         g_main_mutex = 0;
     }
-    memset(&g_umd_ctx, 0, 0x58);
+    memset(&g_umd_ctx, 0, sizeof(g_umd_ctx));
     np9660CloseImage();
     np9660ResetBlockCache();
     if (g_fpl > 0) {
@@ -2557,7 +2609,7 @@ static int umd_io_exit(void *arg)
 }
 
 /* 0x4044 */
-static int umd_io_open(void *iot, char *file, int flags, int mode)
+static int umd_io_open(SceIoIob *iot, char *file, int flags, int mode)
 {
     (void)mode;
     if (iot == NULL || file == NULL) {
@@ -2566,7 +2618,7 @@ static int umd_io_open(void *iot, char *file, int flags, int mode)
     if ((flags & 0x0f02) != 0 || (flags & 1) == 0) {
         return (int)0x8001b004;
     }
-    if (*(int *)((u8 *)iot + 4) >= 2) {
+    if (iot->unit >= 2) {
         return (int)0x8001b002;
     }
     int intr = sceKernelCpuSuspendIntr();
@@ -2575,9 +2627,8 @@ static int umd_io_open(void *iot, char *file, int flags, int mode)
         if (g_handles[i].in_use == 0) {
             g_handles[i].in_use = 1;
             g_handles[i].flags = (flags & 0x4000) ? 0xf0 : 0;
-            *(void **)((u8 *)iot + 0x10) = &g_handles[i];
-            *(u32 *)((u8 *)iot + 0x18) = 0;
-            *(u32 *)((u8 *)iot + 0x1c) = 0;
+            iot->arg = &g_handles[i];
+            iot->cur_pos = 0;
             r = 0;
             break;
         }
@@ -2587,19 +2638,19 @@ static int umd_io_open(void *iot, char *file, int flags, int mode)
 }
 
 /* 0x4144 */
-static int umd_io_close(void *iot)
+static int umd_io_close(SceIoIob *iot)
 {
     if (iot == NULL) {
         return (int)0x80010016;
     }
-    int *h = *(int **)((u8 *)iot + 0x10);
+    SceNp9660Handle *h = iot->arg;
     if (h == NULL) {
-        return (int)0x80010009;
+        return (int)0x80010016;
     }
     int r = (int)0x80010009;
     int intr = sceKernelCpuSuspendIntr();
-    if (h[0] != 0) {
-        h[0] = 0;
+    if (h->in_use != 0) {
+        h->in_use = 0;
         r = 0;
     }
     sceKernelCpuResumeIntr(intr);
@@ -2607,21 +2658,21 @@ static int umd_io_close(void *iot)
 }
 
 /* 0x41b0 */
-static NOINLINE SceOff np9660IoLseek(void *iot, SceOff ofs, int whence)
+static NOINLINE SceOff np9660IoLseek(SceIoIob *iot, SceOff ofs, int whence)
 {
     if (iot == NULL) {
         return (SceOff)(u32)0x80010016U;
     }
-    int *h = *(int **)((u8 *)iot + 0x10);
+    SceNp9660Handle *h = iot->arg;
     if (h == NULL) {
         return (SceOff)(u32)0x80010016U;
     }
-    if (h[0] == 0) {
+    if (h->in_use == 0) {
         return (SceOff)(u32)0x80010009U;
     }
     SceOff target;
     if (whence == 1) {
-        target = *(SceOff *)((u8 *)iot + 0x18) + ofs;
+        target = iot->cur_pos + ofs;
     } else if (whence < 2) {
         if (whence == 0) {
             target = ofs;
@@ -2637,31 +2688,31 @@ static NOINLINE SceOff np9660IoLseek(void *iot, SceOff ofs, int whence)
         target > (SceOff)(u64)g_umd_ctx.last_lba) {
         return (SceOff)(int)0x80210002;
     }
-    *(SceOff *)((u8 *)iot + 0x18) = target;
+    iot->cur_pos = target;
     np9660SetEmuLbaV2((u32)target);
     return target;
 }
 
 /* 0x4308 (merged into 0x41b0 by epsp_prx.py because in .rodata) */
-static int umd_io_read(void *iot, char *data, int len)
+static int umd_io_read(SceIoIob *iot, char *data, int len)
 {
     if (iot == NULL) {
         return (int)0x80010016;
     }
-    int *h = *(int **)((u8 *)iot + 0x10);
+    SceNp9660Handle *h = iot->arg;
     if (h == NULL) {
+        return (int)0x80010016;
+    }
+    if (h->in_use == 0) {
         return (int)0x80010009;
     }
-    if (h[0] == 0) {
-        return (int)0x80010009;
-    }
-    u32 lba = *(u32 *)((u8 *)iot + 0x18);
+    u32 lba = (u32)iot->cur_pos;
     np9660RecordStartTime();
     int r = np9660ReadSectors((int)lba, data, len);
     if (r > 0) {
-        *(SceOff *)((u8 *)iot + 0x18) += (SceOff)r;
+        iot->cur_pos += (SceOff)r;
         if (np9660CheckDelayEnabled() != 0) {
-            np9660SimulateDelay(lba, (u32)r, 0, h[1] & 0xf0);
+            np9660SimulateDelay(lba, (u32)r, 0, h->flags & 0xf0);
         }
     }
     return r;
@@ -2675,7 +2726,7 @@ static NOINLINE int np9660ReadSectors(int lba, void *buf, int nsectors)
 }
 
 /* 0x4428 */
-static NOINLINE int np9660ReadBytes(u32 byte_pos, void *buf, u32 byte_len)
+static NOINLINE int np9660ReadBytes(u32 file_pos, void *buf, u32 read_len)
 {
     if (((0x00220202U >> (((u32)buf >> 27) & 0x1fU)) & 1U) == 0) {
         return (int)0x8001b001;
@@ -2689,15 +2740,15 @@ static NOINLINE int np9660ReadBytes(u32 byte_pos, void *buf, u32 byte_len)
         return r;
     }
     u32 req[3];
-    req[0] = byte_pos;
+    req[0] = file_pos;
     req[1] = (u32)buf;
-    req[2] = byte_len;
-    int r1 = sceKernelExtendKernelStack(0x800, (void *)np9660ReadBytesOnKernelStack, req);
-    int r2 = np9660UnlockMutex();
-    if (r1 >= 0 && r2 < 0) {
-        return r2;
+    req[2] = read_len;
+    int read_res = sceKernelExtendKernelStack(0x800, (void *)np9660ReadBytesOnKernelStack, req);
+    int unlock_res = np9660UnlockMutex();
+    if (read_res >= 0 && unlock_res < 0) {
+        return unlock_res;
     }
-    return r1;
+    return read_res;
 }
 
 /* 0x4500 */
@@ -2706,25 +2757,25 @@ static NOINLINE int np9660ReadBytesOnKernelStack(void *arg)
     u8 entry[48];
     void *cache_ptr;
     u32 *req = (u32 *)arg;
-    u32 byte_pos = req[0];
+    u32 file_pos = req[0];
     u8 *cur_dst = (u8 *)req[1];
-    u32 byte_len = req[2];
-    u32 basis = g_umd_ctx.block_basis;
+    u32 read_len = req[2];
+    u32 basis = (u32)g_umd_ctx.block_basis;
     u32 block_bytes = basis << 11;
-    u32 in_blk_off = byte_pos % block_bytes;
-    u32 start_sec = byte_pos >> 11;
-    u32 lba_param = g_umd_ctx.lba_param;
-    u32 last_lba = g_umd_ctx.last_lba;
+    u32 in_blk_off = file_pos % block_bytes;
+    u32 start_sec = file_pos >> 11;
+    u32 lba_param = (u32)g_umd_ctx.lba_param;
+    u32 last_lba = (u32)g_umd_ctx.last_lba;
     u32 done_bytes = 0;
 
     if (start_sec < lba_param || start_sec > last_lba) {
         return (int)0x80210002;
     }
-    u32 max_bytes = ((last_lba << 11) - byte_pos) + 0x800U;
-    if (max_bytes < byte_len) {
-        byte_len = max_bytes;
+    u32 max_bytes = ((last_lba << 11) - file_pos) + 0x800U;
+    if (max_bytes < read_len) {
+        read_len = max_bytes;
     }
-    u32 rel_end_byte = (byte_pos - (lba_param << 11)) + byte_len - 1U;
+    u32 rel_end_byte = (file_pos - (lba_param << 11)) + read_len - 1U;
     u32 end_blk_excl = (rel_end_byte / block_bytes) + 1U;
     u32 blk = (start_sec - lba_param) / basis;
     u32 total_rel_secs = last_lba - lba_param;
@@ -2732,104 +2783,112 @@ static NOINLINE int np9660ReadBytesOnKernelStack(void *arg)
     int r = 0;
     int fp_mode = -1;
 
-    if (blk < end_blk_excl) {
-        do {
-            if (blk == last_disc_blk) {
-                basis = (total_rel_secs % basis) + 1U;
-            }
-            if (in_blk_off == 0 && (((u32)cur_dst & 15U) == 0)) {
-                u32 cur_blk_bytes = g_umd_ctx.block_basis << 11;
-                u32 rem_bytes = byte_len - done_bytes;
-                if (rem_bytes >= cur_blk_bytes) {
-                    r = np9660LookupBlockCache(&cache_ptr, (int)blk);
+    while (blk < end_blk_excl) {
+        if (blk == last_disc_blk) {
+            basis = (total_rel_secs % basis) + 1U;
+        }
+        int used_fast_path = 0;
+        if (in_blk_off == 0 && (((u32)cur_dst & 15U) == 0)) {
+            u32 cur_blk_bytes = (u32)g_umd_ctx.block_basis << 11;
+            u32 rem_bytes = read_len - done_bytes;
+            if (rem_bytes >= cur_blk_bytes) {
+                used_fast_path = 1;
+                r = np9660LookupBlockCache(&cache_ptr, (int)blk);
+                if (r < 0) {
+                    break;
+                }
+                if (r == 1) {
+                    fp_mode = 1;
+                } else {
+                    r = np9660GetBlockTableEntry(entry, (int)blk);
                     if (r < 0) {
-                        goto cleanup;
+                        break;
                     }
-                    if (r == 1) {
-                        fp_mode = 1;
-                    } else {
-                        r = np9660GetBlockTableEntry(entry, (int)blk);
+                    if ((((const SceNp9660BlockRef *)entry)->flags & 8U) != 0) {
+                        r = np9660AcquireBlockCache(&cache_ptr, (int)blk);
                         if (r < 0) {
-                            goto cleanup;
+                            break;
                         }
-                        if ((((const SceNp9660BlockRef *)entry)->flags & 8U) != 0) {
-                            r = np9660AcquireBlockCache(&cache_ptr, (int)blk);
-                            if (r < 0) {
-                                goto cleanup;
-                            }
-                            fp_mode = 0;
-                        } else {
-                            u32 two_blks = g_umd_ctx.block_basis << 12;
-                            fp_mode = (rem_bytes < two_blks) ? 2 : 3;
-                            cache_ptr = cur_dst;
-                        }
+                        fp_mode = 0;
+                    } else {
+                        u32 two_blks = (u32)g_umd_ctx.block_basis << 12;
+                        fp_mode = (rem_bytes < two_blks) ? 2 : 3;
+                        cache_ptr = cur_dst;
                     }
-                    goto process_blk;
                 }
             }
+        }
+        if (!used_fast_path) {
             r = np9660AcquireBlockCache(&cache_ptr, (int)blk);
             if (r < 0) {
-                goto cleanup;
+                break;
             }
             if (r == 1) {
                 fp_mode = 1;
             } else {
                 r = np9660GetBlockTableEntry(entry, (int)blk);
                 if (r < 0) {
-                    goto cleanup;
+                    break;
                 }
                 fp_mode = 0;
             }
+        }
 
-process_blk:
-            if (fp_mode == 3) {
-                u32 b_bytes = g_umd_ctx.block_basis << 11;
-                u32 span_blks = (byte_len - done_bytes) / b_bytes;
-                u32 span_last = blk + span_blks - 1U;
-                u32 first_off = ((const SceNp9660BlockRef *)entry)->file_off;
-                r = np9660GetBlockTableEntry(entry, (int)span_last);
-                if (r < 0) {
-                    goto cleanup;
-                }
-                u32 raw_span = (((const SceNp9660BlockRef *)entry)->file_off + ((const SceNp9660BlockRef *)entry)->comp_size) - first_off;
-                u32 aligned_span = (raw_span + 15U) & ~15U;
-                u32 total_span_bytes = (span_blks * g_umd_ctx.block_basis) << 11;
-                u8 *read_ptr = (u8 *)(((u32)((u8 *)cache_ptr + total_span_bytes - aligned_span)) & ~15U);
-                r = np9660ReadImageFile(read_ptr, first_off, 0, (int)aligned_span);
-                if (r < 0) {
-                    goto cleanup;
-                }
-                r = np9660DecryptBlockSpan(read_ptr, first_off, aligned_span, (int)blk, (int)span_last, entry);
-                if (r < 0) {
-                    goto cleanup;
-                }
-                if (raw_span < ((span_blks * g_umd_ctx.block_basis) << 11)) {
-                    u8 *out_p = (u8 *)cache_ptr;
-                    for (u32 b = blk; b <= span_last; b++) {
-                        r = np9660GetBlockTableEntry(entry, (int)b);
-                        if (r < 0) {
-                            goto cleanup;
-                        }
-                        u32 b_bytes_cur = g_umd_ctx.block_basis << 11;
-                        u32 b_comp = ((const SceNp9660BlockRef *)entry)->comp_size;
-                        u8 *b_src = read_ptr + (((const SceNp9660BlockRef *)entry)->file_off - first_off);
-                        if (b_comp < b_bytes_cur) {
-                            void *tmp = np9660GetFplBlock();
-                            sceKernelMemcpy(tmp, b_src, b_comp);
-                            r = np9660AsyncDecompress(out_p, tmp, (int)(g_umd_ctx.block_basis << 11));
-                            if (r < 0) {
-                                goto cleanup;
-                            }
-                        } else if (out_p != b_src) {
-                            sceKernelMemmove(out_p, b_src, b_bytes_cur);
-                        }
-                        out_p += (g_umd_ctx.block_basis << 11);
+        u32 step_bytes;
+        if (fp_mode == 3) {
+            u32 b_bytes = (u32)g_umd_ctx.block_basis << 11;
+            u32 span_blks = (read_len - done_bytes) / b_bytes;
+            u32 span_last = blk + span_blks - 1U;
+            u32 first_off = ((const SceNp9660BlockRef *)entry)->file_off;
+            r = np9660GetBlockTableEntry(entry, (int)span_last);
+            if (r < 0) {
+                break;
+            }
+            u32 raw_span = (((const SceNp9660BlockRef *)entry)->file_off + ((const SceNp9660BlockRef *)entry)->comp_size) - first_off;
+            u32 aligned_span = (raw_span + 15U) & ~15U;
+            u32 total_span_bytes = (span_blks * (u32)g_umd_ctx.block_basis) << 11;
+            u8 *read_ptr = (u8 *)(((u32)((u8 *)cache_ptr + total_span_bytes - aligned_span)) & ~15U);
+            r = np9660ReadImageFile(read_ptr, (SceOff)first_off, (int)aligned_span);
+            if (r < 0) {
+                break;
+            }
+            r = np9660DecryptBlockSpan(read_ptr, first_off, aligned_span, (int)blk, (int)span_last, entry);
+            if (r < 0) {
+                break;
+            }
+            if (raw_span < ((span_blks * (u32)g_umd_ctx.block_basis) << 11)) {
+                u8 *out_p = (u8 *)cache_ptr;
+                int span_err = 0;
+                for (u32 b = blk; b <= span_last; b++) {
+                    r = np9660GetBlockTableEntry(entry, (int)b);
+                    if (r < 0) {
+                        span_err = 1;
+                        break;
                     }
+                    u32 b_bytes_cur = (u32)g_umd_ctx.block_basis << 11;
+                    u32 b_comp = ((const SceNp9660BlockRef *)entry)->comp_size;
+                    u8 *b_src = read_ptr + (((const SceNp9660BlockRef *)entry)->file_off - first_off);
+                    if (b_comp < b_bytes_cur) {
+                        void *tmp = np9660GetFplBlock();
+                        sceKernelMemcpy(tmp, b_src, b_comp);
+                        r = np9660AsyncDecompress(out_p, tmp, (u32)g_umd_ctx.block_basis << 11);
+                        if (r < 0) {
+                            span_err = 1;
+                            break;
+                        }
+                    } else if (out_p != b_src) {
+                        sceKernelMemmove(out_p, b_src, b_bytes_cur);
+                    }
+                    out_p += ((u32)g_umd_ctx.block_basis << 11);
                 }
-                blk = span_last;
-                u32 step_bytes = (span_blks * g_umd_ctx.block_basis) << 11;
-                goto advance_blk;
-            } else if (fp_mode == 1) {
+                if (span_err) {
+                    break;
+                }
+            }
+            blk = span_last;
+            step_bytes = (span_blks * (u32)g_umd_ctx.block_basis) << 11;
+        } else {
+            if (fp_mode == 1) {
                 sceKernelDelayThread(100);
                 block_bytes = basis << 11;
             } else {
@@ -2837,46 +2896,44 @@ process_blk:
                 block_bytes = basis << 11;
                 u32 aligned_comp = (comp_sz + 15U) & ~15U;
                 void *io_buf = (comp_sz < block_bytes) ? np9660GetFplBlock() : cache_ptr;
-                r = np9660ReadImageFile(io_buf, ((const SceNp9660BlockRef *)entry)->file_off, 0, (int)aligned_comp);
+                r = np9660ReadImageFile(io_buf, (SceOff)((const SceNp9660BlockRef *)entry)->file_off, (int)aligned_comp);
                 if (r < 0) {
-                    goto cleanup;
+                    break;
                 }
                 r = np9660DecryptBlock(io_buf, entry);
                 if (r < 0) {
-                    goto cleanup;
+                    break;
                 }
                 if (((const SceNp9660BlockRef *)entry)->comp_size < block_bytes) {
-                    r = np9660AsyncDecompress(cache_ptr, io_buf, (int)block_bytes);
+                    r = np9660AsyncDecompress(cache_ptr, io_buf, block_bytes);
                     if (r < 0) {
-                        goto cleanup;
+                        break;
                     }
                 }
             }
-            {
-                u32 step_bytes = block_bytes - in_blk_off;
-                u32 rem_req = byte_len - done_bytes;
-                if (rem_req < step_bytes) {
-                    step_bytes = rem_req;
-                }
-            advance_blk:
-                if ((u32)(fp_mode - 2) >= 2U) {
-                    sceKernelMemcpy(cur_dst, (u8 *)cache_ptr + in_blk_off, step_bytes);
-                    r = np9660IsBlockCached((int)blk);
-                    if (r < 0) {
-                        fp_mode = -1;
-                        goto cleanup;
-                    }
-                }
+            step_bytes = block_bytes - in_blk_off;
+            u32 rem_req = read_len - done_bytes;
+            if (rem_req < step_bytes) {
+                step_bytes = rem_req;
+            }
+        }
+
+        if ((u32)(fp_mode - 2) >= 2U) {
+            u8 *cache_bytes = (u8 *)cache_ptr;
+            sceKernelMemcpy(cur_dst, cache_bytes + in_blk_off, step_bytes);
+            r = np9660IsBlockCached((int)blk);
+            if (r < 0) {
                 fp_mode = -1;
-                cur_dst += step_bytes;
-                done_bytes += step_bytes;
-                blk++;
-                in_blk_off = 0;
+                break;
             }
-        } while (blk < end_blk_excl);
+        }
+        fp_mode = -1;
+        cur_dst += step_bytes;
+        done_bytes += step_bytes;
+        blk++;
+        in_blk_off = 0;
     }
 
-cleanup:
     if (fp_mode != -1 && fp_mode != 2 && fp_mode != 3) {
         np9660EvictBlockCache((int)blk);
     }
@@ -2888,16 +2945,16 @@ cleanup:
 }
 
 /* 0x4acc (merged into 0x4500 by epsp_prx.py because in .rodata) */
-static int umd_io_ioctl(void *iot, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen)
+static int umd_io_ioctl(SceIoIob *iot, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen)
 {
     if (iot == NULL) {
         return (int)0x80010016;
     }
-    int *h = *(int **)((u8 *)iot + 0x10);
+    SceNp9660Handle *h = iot->arg;
     if (h == NULL) {
         return (int)0x80010016;
     }
-    if (h[0] == 0) {
+    if (h->in_use == 0) {
         return (int)0x80010009;
     }
     if ((int)cmd > (int)0x00208082U) {
@@ -2909,7 +2966,8 @@ static int umd_io_ioctl(void *iot, unsigned int cmd, void *indata, int inlen, vo
                 if ((u32)inlen < 4U || indata == NULL) {
                     return (int)0x80010016;
                 }
-                return (int)np9660IoLseek(iot, *(SceOff *)indata, *((int *)indata + 3));
+                const SceUmdLseekParam *lp = (const SceUmdLseekParam *)indata;
+                return (int)np9660IoLseek(iot, lp->offset, lp->whence);
             }
             if (cmd != 0x01f30003U) {
                 return (int)0x80010086;
@@ -2921,14 +2979,14 @@ static int umd_io_ioctl(void *iot, unsigned int cmd, void *indata, int inlen, vo
             if (outdata == NULL || outlen < nsec) {
                 return (int)0x80010016;
             }
-            u32 cur_lba = *(u32 *)((u8 *)iot + 0x18);
-            u32 max_sec = (g_umd_ctx.last_lba - cur_lba) + 1U;
+            u32 cur_lba = (u32)iot->cur_pos;
+            u32 max_sec = ((u32)g_umd_ctx.last_lba - cur_lba) + 1U;
             if ((int)max_sec < nsec) {
                 nsec = (int)max_sec;
             }
             int r = np9660ReadSectors((int)cur_lba, outdata, nsec);
             if (r > 0) {
-                *(SceOff *)((u8 *)iot + 0x18) += (SceOff)r;
+                iot->cur_pos += (SceOff)r;
             }
             return r;
         }
@@ -2938,7 +2996,7 @@ static int umd_io_ioctl(void *iot, unsigned int cmd, void *indata, int inlen, vo
         if ((u32)outlen < 4U || outdata == NULL) {
             return (int)0x80010016;
         }
-        *(u32 *)outdata = *(u32 *)((u8 *)iot + 0x18);
+        *(u32 *)outdata = (u32)iot->cur_pos;
         return 0;
     }
     if ((int)cmd >= (int)0x00208081U) {
@@ -2973,7 +3031,8 @@ static NOINLINE int np9660SubmitRead(const u32 *ctx_in)
     if (ctx_in == NULL || (int)ctx_in[0] <= 0) {
         return (int)0x80010016;
     }
-    u8 flg = *((const u8 *)ctx_in + 0x42);
+    const SceNp9660UmdCtx *in_ctx = (const SceNp9660UmdCtx *)ctx_in;
+    u8 flg = in_ctx->image_flags;
     if ((flg & 1U) != 0) {
         if (g_cur_mutex == g_main_mutex) {
             sceKernelLockMutex(g_nc_mutex, 1, NULL);
@@ -2982,7 +3041,7 @@ static NOINLINE int np9660SubmitRead(const u32 *ctx_in)
             g_cur_mutex = g_nc_mutex;
             sceKernelCpuResumeIntr(intr);
             sceKernelUnlockMutex(g_main_mutex, 1);
-            flg = *((const u8 *)ctx_in + 0x42);
+            flg = in_ctx->image_flags;
         }
     }
     if ((flg & 2U) != 0) {
@@ -3003,20 +3062,20 @@ static NOINLINE int np9660SubmitRead(const u32 *ctx_in)
     dst[20] = src[20];
     dst[21] = src[21];
     np9660SetDecThreadPrio((int)g_umd_ctx.thread_prio);
-    void *gi = sceKernelGetGameInfo();
+    const SceGameInfo *gi = (const SceGameInfo *)sceKernelGetGameInfo();
     if (gi != NULL) {
-        const char *id = (const char *)gi + 0x44;
+        const char *id = gi->game_id;
         if (strcmp(id, "ULUS10021") == 0 || strcmp(id, "ULES00108") == 0) {
-            g_umd_ctx.emu_rate2 = 0x44c;
+            g_umd_ctx.emu_rate_seek = 0x44c;
         }
         if (strcmp(id, "ULUS10059") == 0) {
             g_umd_ctx.emu_flags = 8;
-            g_umd_ctx.emu_rate1 = 0x64;
-            g_umd_ctx.emu_rate2 = 0x1f4;
+            g_umd_ctx.emu_rate_read = 0x64;
+            g_umd_ctx.emu_rate_seek = 0x1f4;
         }
     }
-    np9660SetEmuRate1(g_umd_ctx.emu_rate1);
-    np9660SetEmuRate2(g_umd_ctx.emu_rate2);
+    np9660SetEmuRate1(g_umd_ctx.emu_rate_read);
+    np9660SetEmuRate2(g_umd_ctx.emu_rate_seek);
     np9660SetEmuFlags(g_umd_ctx.emu_flags);
     sceKernelCpuResumeIntr(intr);
     return 0;
@@ -3026,7 +3085,7 @@ static NOINLINE int np9660SubmitRead(const u32 *ctx_in)
 static NOINLINE int np9660GetDiscInfo(void *out)
 {
     int intr = sceKernelCpuSuspendIntr();
-    if (g_umd_ctx.fd > 0) {
+    if (g_umd_ctx.file_fd > 0) {
         u32 *dst = (u32 *)out;
         const u32 *src = (const u32 *)g_umd_ctx.disc_id;
         for (int i = 0; i < 8; i += 4) {
@@ -3035,8 +3094,8 @@ static NOINLINE int np9660GetDiscInfo(void *out)
             dst[i + 2] = src[i + 2];
             dst[i + 3] = src[i + 3];
         }
-        dst[8] = g_umd_ctx.disc_param_30;
-        dst[9] = g_umd_ctx.last_lba;
+        dst[8] = (u32)g_umd_ctx.total_disc_lba;
+        dst[9] = (u32)g_umd_ctx.last_lba;
         sceKernelCpuResumeIntr(intr);
         return 0;
     }
@@ -3049,18 +3108,18 @@ static NOINLINE int np9660GetDiscInfo(void *out)
 }
 
 /* 0x4fa4 */
-static NOINLINE int np9660GetDiscParams(int *out0, int *out1, int *out2)
+static NOINLINE int np9660GetDiscParams(int *out_start, int *out_layer, int *out_last)
 {
     int intr = sceKernelCpuSuspendIntr();
-    if (g_umd_ctx.fd > 0) {
-        if (out0 != NULL) {
-            *out0 = (int)g_umd_ctx.lba_param;
+    if (g_umd_ctx.file_fd > 0) {
+        if (out_start != NULL) {
+            *out_start = (int)g_umd_ctx.lba_param;
         }
-        if (out1 != NULL) {
-            *out1 = (int)g_umd_ctx.disc_param_2c;
+        if (out_layer != NULL) {
+            *out_layer = (int)g_umd_ctx.layer_break_lba;
         }
-        if (out2 != NULL) {
-            *out2 = (int)g_umd_ctx.last_lba;
+        if (out_last != NULL) {
+            *out_last = (int)g_umd_ctx.last_lba;
         }
         sceKernelCpuResumeIntr(intr);
         return 0;
@@ -3097,14 +3156,13 @@ static NOINLINE int np9660UnlockMutex(void)
 }
 
 /* 0x50fc */
-static NOINLINE int np9660ReadImageFile(void *buf, u32 pos_lo, u32 pos_hi, int size)
+static NOINLINE int np9660ReadImageFile(void *buf, SceOff off, int size)
 {
-    SceOff off = ((SceOff)pos_hi << 32) | pos_lo;
-    SceOff r = sceIoLseek(g_umd_ctx.fd, off, 0);
+    SceOff r = sceIoLseek(g_umd_ctx.file_fd, off, 0);
     if (r != off) {
-        return (r < 0) ? (int)r : (int)0x80210001;
+        return ((int)r < 0) ? (int)r : (int)0x80210001;
     }
-    int rd = sceIoRead(g_umd_ctx.fd, buf, (SceSize)size);
+    int rd = sceIoRead(g_umd_ctx.file_fd, buf, (SceSize)size);
     if (rd == size) {
         return 0;
     }
@@ -3132,34 +3190,35 @@ static NOINLINE int np9660CloseMountedImage(void)
 {
     np9660SetMountStatus((int)0x80210003);
     int r = 0;
-    if (g_umd_ctx.fd > 0) {
-        r = sceIoClose(g_umd_ctx.fd);
+    if (g_umd_ctx.file_fd > 0) {
+        r = sceIoClose(g_umd_ctx.file_fd);
     }
-    g_umd_ctx.fd = 0;
+    g_umd_ctx.file_fd = 0;
     return r;
 }
 
 /* 0x5268 */
 static NOINLINE int np9660ReadPvd(void)
 {
-    u8 *pvd = NULL;
-    np9660GetPvdBuf((void **)&pvd);
-    return memcmp(pvd + 0x373, g_dummy_disc_id, 0x20) == 0;
+    void *pvd_raw;
+    np9660GetPvdBuf(&pvd_raw);
+    const u8 *pvd = (const u8 *)pvd_raw;
+    return memcmp(pvd + 0x373, g_fallback_disc_id, 0x20) == 0;
 }
 
 /* 0x52a0 */
 static NOINLINE int np9660GetImageFlags(void)
 {
-    return g_umd_ctx.flags_42;
+    return g_umd_ctx.image_flags;
 }
 
 /* 0x52ac */
-static NOINLINE int np9660GetSectorInfo(int *info_out)
+static NOINLINE int np9660GetSectorInfo(int *type_out)
 {
-    if (info_out == NULL) {
+    if (type_out == NULL) {
         return (int)0x80010016;
     }
-    info_out[1] = 0x10;
+    type_out[1] = 0x10;
     return 0;
 }
 
@@ -3233,175 +3292,86 @@ static NOINLINE int np9660EvictBlockCache(int blk)
 }
 
 /* 0x53d0 (merged into 0x53a8 by epsp_prx.py because in .rodata) */
-static int umd_io_devctl(void *iot, const char *dev, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen)
+static int umd_io_devctl(SceIoIob *iot, const char *dev, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen)
 {
     (void)iot;
     (void)dev;
-    if (cmd == 0x01e38012U) {
+    switch (cmd) {
+    case 0x00208810U:
+    case 0x00208811U:
+        return 0;
+    case 0x01e28035U: {
+        if (outdata == NULL || (u32)outlen < 4U) {
+            return (int)0x80010016;
+        }
+        int r = np9660ReadSectors(0x10, g_pvd_buf, 1);
+        if (r == 1) {
+            *(void **)outdata = g_pvd_buf;
+            return 0;
+        }
+        return (r < 0) ? r : (int)0x80010005;
+    }
+    case 0x01e280a9U:
+        if (outdata == NULL || (u32)outlen < 4U) {
+            return (int)0x80010016;
+        }
+        *(int *)outdata = 0x800;
+        return 0;
+    case 0x01e38012U:
         if (outdata == NULL || (u32)outlen < 0x28U) {
             return (int)0x80010016;
         }
         return np9660GetDiscInfo(outdata);
-    }
-    if ((int)cmd > (int)0x01e38012U) {
-        if (cmd == 0x01f100a9U) {
-            if (indata == NULL || (u32)inlen < 4U) {
-                return (int)0x80010016;
-            }
-            return 0;
+    case 0x01e38034U:
+        if (indata == NULL || outdata == NULL || (u32)outlen < 4U) {
+            return (int)0x80010016;
         }
-        if ((int)cmd > (int)0x01f100a9U) {
-            if ((int)cmd > (int)0x01f200a2U) {
-                if (cmd == 0x01f21011U) {
-                    return 0;
-                }
-                if ((int)cmd > (int)0x01f21011U) {
-                    if (cmd == 0x01f300a5U) {
-                        if (indata == NULL || (u32)inlen < 0x10U || outdata == NULL || (u32)outlen < 4U) {
-                            return (int)0x80010016;
-                        }
-                        return 0;
-                    }
-                    if (cmd == 0x01f300a7U) {
-                        if (indata == NULL || (u32)inlen < 4U) {
-                            return (int)0x80010016;
-                        }
-                        return 0;
-                    }
-                    return (int)0x80010086;
-                }
-                if (cmd - 0x01f200a4U < 2U) {
-                    return 0;
-                }
-                return (int)0x80010086;
-            }
-            if ((int)cmd >= (int)0x01f200a0U) {
-                return 0;
-            }
-            if (cmd == 0x01f20002U) {
-                if (outdata == NULL || (u32)outlen < 4U) {
-                    return (int)0x80010016;
-                }
-                return np9660GetDiscParams(NULL, NULL, (int *)outdata);
-            }
-            if ((int)cmd > (int)0x01f20002U) {
-                if (cmd == 0x01f20003U) {
-                    if (outdata == NULL || (u32)outlen < 4U) {
-                        return (int)0x80010016;
-                    }
-                    return np9660GetDiscParams(NULL, (int *)outdata, NULL);
-                }
-                if (cmd == 0x01f20014U) {
-                    return 0;
-                }
-                return (int)0x80010086;
-            }
-            if (cmd != 0x01f20001U) {
-                return (int)0x80010086;
-            }
-            if (outdata == NULL || outlen != 8) {
-                return (int)0x80010016;
-            }
-            return np9660GetSectorInfo((int *)outdata);
+        return np9660ParseUnitNumber((const char *)indata, (int *)outdata);
+    case 0x01e380c0U:
+        if (indata == NULL || inlen != 0x24 || outdata == NULL) {
+            return (int)0x80010016;
         }
-        if (cmd == 0x01f00003U) {
-            np9660SetEmuLba(*(int *)indata);
-            return 0;
+        return np9660DevctlReadSectors(outdata, (u32)outlen, (const u32 *)indata);
+    case 0x01f00003U:
+    case 0x01f100a3U:
+        np9660SetEmuLba(*(int *)indata);
+        return 0;
+    case 0x01f100a4U:
+        if (indata == NULL || (u32)inlen < 0x10U) {
+            return (int)0x80010016;
         }
-        if ((int)cmd > (int)0x01f00003U) {
-            if (cmd == 0x01f100a4U) {
-                if (indata == NULL || (u32)inlen < 0x10U) {
-                    return (int)0x80010016;
-                }
-                return 0;
-            }
-            if ((int)cmd > (int)0x01f100a4U) {
-                if (cmd == 0x01f100a6U || cmd == 0x01f100a8U) {
-                    if (indata == NULL || (u32)inlen < 4U) {
-                        return (int)0x80010016;
-                    }
-                    return 0;
-                }
-                return (int)0x80010086;
-            }
-            if (cmd == 0x01f000a6U) {
-                return 0;
-            }
-            if (cmd == 0x01f100a3U) {
-                np9660SetEmuLba(*(int *)indata);
-                return 0;
-            }
-            return (int)0x80010086;
+        return 0;
+    case 0x01f100a6U:
+    case 0x01f100a8U:
+    case 0x01f100a9U:
+    case 0x01f300a7U:
+        if (indata == NULL || (u32)inlen < 4U) {
+            return (int)0x80010016;
         }
-        if (cmd == 0x01e38034U) {
-            if (indata == NULL || outdata == NULL || (u32)outlen < 4U) {
-                return (int)0x80010016;
-            }
-            return np9660ParseUnitNumber((const char *)indata, (int *)outdata);
+        return 0;
+    case 0x01f20001U:
+        if (outdata == NULL || outlen != 8) {
+            return (int)0x80010016;
         }
-        if ((int)cmd > (int)0x01e38034U) {
-            if (cmd != 0x01e380c0U) {
-                return (int)0x80010086;
-            }
-            if (indata == NULL || inlen != 0x24 || outdata == NULL) {
-                return (int)0x80010016;
-            }
-            return np9660DevctlReadSectors(outdata, (u32)outlen, (const u32 *)indata);
+        return np9660GetSectorInfo((int *)outdata);
+    case 0x01f20002U:
+        if (outdata == NULL || (u32)outlen < 4U) {
+            return (int)0x80010016;
         }
-        if (cmd - 0x01e38031U < 2U) {
-            return 0;
+        return np9660GetDiscParams(NULL, NULL, (int *)outdata);
+    case 0x01f20003U:
+        if (outdata == NULL || (u32)outlen < 4U) {
+            return (int)0x80010016;
         }
+        return np9660GetDiscParams(NULL, (int *)outdata, NULL);
+    case 0x01f300a5U:
+        if (indata == NULL || (u32)inlen < 0x10U || outdata == NULL || (u32)outlen < 4U) {
+            return (int)0x80010016;
+        }
+        return 0;
+    default:
         return (int)0x80010086;
     }
-    if (cmd == 0x01e18033U) {
-        return 0;
-    }
-    if ((int)cmd > (int)0x01e18033U) {
-        if (cmd == 0x01e28035U) {
-            if (outdata == NULL || (u32)outlen < 4U) {
-                return (int)0x80010016;
-            }
-            int r = np9660ReadSectors(0x10, g_pvd_buf, 1);
-            if (r == 1) {
-                *(void **)outdata = g_pvd_buf;
-                return 0;
-            }
-            if (r < 0) {
-                return r;
-            }
-            return (int)0x80010005;
-        }
-        if ((int)cmd > (int)0x01e28035U) {
-            if ((int)cmd > (int)0x01e280d2U) {
-                if (cmd - 0x01e280d9U < 2U) {
-                    return 0;
-                }
-                return (int)0x80010086;
-            }
-            if ((int)cmd >= (int)0x01e280d1U) {
-                return 0;
-            }
-            if (cmd != 0x01e280a9U) {
-                return (int)0x80010086;
-            }
-            if (outdata == NULL || (u32)outlen < 4U) {
-                return (int)0x80010016;
-            }
-            *(int *)outdata = 0x800;
-            return 0;
-        }
-        if (cmd == 0x01e180d3U || cmd == 0x01e180c1U || cmd == 0x01e180d0U || cmd == 0x01e180d6U || cmd == 0x01e28013U) {
-            return 0;
-        }
-        return (int)0x80010086;
-    }
-    if (cmd == 0x01e080d4U || cmd == 0x01e000d5U || cmd == 0x01e080a8U || cmd == 0x01e18021U || cmd == 0x01e18024U || cmd == 0x01e18030U) {
-        return 0;
-    }
-    if (cmd - 0x00208810U < 2U || cmd - 0x01e080d7U < 2U) {
-        return 0;
-    }
-    return (int)0x80010086;
 }
 
 /* 0x58c4 */
@@ -3414,11 +3384,11 @@ static NOINLINE int np9660ParseUnitNumber(const char *name, int *unit_out)
     if (strncmp(p, "umd", 3) != 0) {
         return (int)0x80010013;
     }
-    int c3 = p[3] - '0';
-    if (p[4] != ':' || c3 < 0 || c3 >= 10) {
+    int digit = p[3] - '0';
+    if (p[4] != ':' || digit < 0 || digit >= 10) {
         return (int)0x80010013;
     }
-    *unit_out = c3;
+    *unit_out = digit;
     return 0;
 }
 
@@ -3428,17 +3398,17 @@ static NOINLINE int np9660DevctlReadSectors(void *outdata, u32 outlen, const u32
     if (outlen < in[4]) {
         return (int)0x80010069;
     }
-    u32 byte_pos = in[2] << 11;
+    u32 file_pos = in[2] << 11;
     u32 sector_off = in[6];
     if (sector_off != 0) {
         if (in[5] != 0 || in[7] != 0) {
-            byte_pos = (byte_pos - sector_off) + 0x800U;
+            file_pos = (file_pos - sector_off) + 0x800U;
         } else {
-            byte_pos += sector_off;
+            file_pos += sector_off;
         }
     }
     np9660RecordStartTime();
-    int r = np9660ReadBytes(byte_pos, outdata, in[4]);
+    int r = np9660ReadBytes(file_pos, outdata, in[4]);
     if (r < 0) {
         return r;
     }
@@ -3535,38 +3505,32 @@ static NOINLINE int np9660CalcSectorRange(const u32 *in, int *step_out)
     u32 lba = in[2];
     u16 cnt = (u16)in[3];
     int substep = 0;
+    int matched = 0;
 
     if (lba == g_emuSeekParamE && (*step_out == 1 || *step_out == 4) && cnt == 1) {
-        if (g_emuSeekParamB == 2) {
-            substep = 1;
-            if (lba == g_emuSeekParamE + 1U) {
-                goto check_5ef4;
-            }
-            goto check_5dac;
-        }
-        g_emuSeekParamC = lba;
-        goto check_5e40;
-    }
-    if (lba == g_emuSeekParamE + 1U) {
-check_5ef4:
-        if ((*step_out == 1 || *step_out == 4) && cnt == 1 && g_emuSeekParamB == 5) {
-            substep = 2;
+        substep = 1;
+        if (g_emuSeekParamB != 2) {
             g_emuSeekParamC = lba;
-            goto check_5e40;
+            matched = 1;
         }
     }
-check_5dac:
-    if (lba == g_emuSeekParamE && *step_out == 5 && cnt == 2 && g_emuSeekParamB == 2) {
+    if (!matched && lba == g_emuSeekParamE + 1U && (*step_out == 1 || *step_out == 4) && cnt == 1 && g_emuSeekParamB == 5) {
+        substep = 2;
+        g_emuSeekParamC = lba;
+        matched = 1;
+    }
+    if (!matched && lba == g_emuSeekParamE && *step_out == 5 && cnt == 2 && g_emuSeekParamB == 5) {
         g_emuSeekParamC = lba + 1U;
         substep = 3;
-        goto check_5e40;
+        matched = 1;
     }
-    g_emuSeekParamC = lba + cnt - 1U;
-    g_emuSeekParamE = lba;
-    g_emuSeekParamD = 0x20;
-    return 0;
+    if (!matched) {
+        g_emuSeekParamC = lba + cnt - 1U;
+        g_emuSeekParamE = lba;
+        g_emuSeekParamD = 0x20;
+        return 0;
+    }
 
-check_5e40:
     if (g_emuSeekParamD != 0x10) {
         g_emuSeekParamD = 0x20;
         return 0;
@@ -3584,10 +3548,7 @@ check_5e40:
             return 1;
         }
         if (g_emuSeekParamB == 5) {
-            if (substep == 1) {
-                return 1;
-            }
-            if (substep == 3) {
+            if (substep == 1 || substep == 2) {
                 return 1;
             }
         } else {
@@ -3602,49 +3563,24 @@ check_5e40:
     return 0;
 }
 
-static int np9660EmuReset1(void);
-static int np9660EmuReset2(void);
-static int np9660EmuNoop(void);
-
-static int (* const g_emu_fn_tab[8])(void) = {
-    np9660EmuNoop,
-    np9660EmuReset1,
-    np9660EmuNoop,
-    np9660EmuNoop,
-    np9660EmuReset1,
-    np9660EmuReset2,
-    np9660EmuNoop,
-    np9660EmuNoop,
-};
-
 /* 0x5fac */
-static NOINLINE int np9660GetEmuParam(int idx)
+static NOINLINE void np9660GetEmuParam(int idx)
 {
-    if ((u32)idx >= 8U) {
-        return 0;
-    }
     g_emuSeekParamB = idx;
-    return g_emu_fn_tab[idx]();
-}
-
-/* 0x5fd8 (in .rodata table 0x8960) */
-static int np9660EmuReset1(void)
-{
-    g_emuSeekParamD = 0x10;
-    return 0;
-}
-
-/* 0x5fe8 (in .rodata table 0x8960) */
-static int np9660EmuReset2(void)
-{
-    g_emuSeekParamD = 0x10;
-    return 0;
-}
-
-/* 0x5ff4 (in .rodata table 0x8960) */
-static int np9660EmuNoop(void)
-{
-    return 0;
+    switch (idx) {
+    case 1:
+    case 4:
+    case 5:
+        g_emuSeekParamD = 0x10;
+        break;
+    case 0:
+    case 2:
+    case 3:
+    case 6:
+    case 7:
+    default:
+        break;
+    }
 }
 
 /* 0x5ffc */
@@ -3656,7 +3592,7 @@ static NOINLINE void np9660RecordStartTime(void)
 /* 0x6028 */
 static NOINLINE int np9660CheckDelayEnabled(void)
 {
-    if (g_emu_rate1 != 0 || g_emu_rate2 != 0) {
+    if (g_emu_rate_read != 0 || g_emu_rate_seek != 0) {
         if (sceWlanDrv_driver_7DD3787C() != 1) {
             return 1;
         }
@@ -3670,13 +3606,13 @@ static NOINLINE int np9660CheckDelayEnabled(void)
 /* 0x6098 */
 static NOINLINE void np9660SetEmuRate1(u16 val)
 {
-    g_emu_rate1 = val;
+    g_emu_rate_read = val;
 }
 
 /* 0x60a4 */
 static NOINLINE void np9660SetEmuRate2(u16 val)
 {
-    g_emu_rate2 = val;
+    g_emu_rate_seek = val;
 }
 
 /* 0x60b0 */
@@ -3700,13 +3636,12 @@ static NOINLINE void np9660ApplySeekDelay(u32 lba, u32 cnt, u32 seek_dist, int m
     } else {
         elapsed = ((u64)0 - (u64)g_emuTimeStart) | (~(u64)g_emuStatTimeB);
     }
-    sceUmd9660_driver_887C3193();
+    u32 min_lba = (u32)sceUmd9660_driver_887C3193() + 0x23dU;
     u32 low = sceKernelGetSystemTimeLow();
-    u32 s0 = low + 0x23dU;
-    u32 half = (u32)g_np9660EmuParam0;
+    u32 half = (u32)g_emu_half_lba_v1;
     u32 mult;
     if (lba <= half) {
-        if (lba < s0) {
+        if (lba < min_lba) {
             mult = 0x6edU;
         } else {
             u32 q = (u32)(((u64)lba * 0xe4bf37d9ULL) >> 41);
@@ -3716,11 +3651,11 @@ static NOINLINE void np9660ApplySeekDelay(u32 lba, u32 cnt, u32 seek_dist, int m
             }
         }
     } else {
-        u32 v1 = lba - half;
-        if (v1 < s0) {
+        u32 rel_lba = lba - half;
+        if (rel_lba < min_lba) {
             mult = 0x3e8U;
         } else {
-            u32 q = (u32)(((u64)v1 * 0xe4bf37d9ULL) >> 41);
+            u32 q = (u32)(((u64)rel_lba * 0xe4bf37d9ULL) >> 41);
             mult = q + 0x3e8U;
             if (mult >= 0x6eeU) {
                 mult = 0x6edU;
@@ -3737,12 +3672,12 @@ static NOINLINE void np9660ApplySeekDelay(u32 lba, u32 cnt, u32 seek_dist, int m
         factor = (low & 0x80U) + 0x351U;
     }
 
-    u32 a1 = 0;
+    u32 base_us = 0;
     if (factor != 0 || cnt != 0) {
         u32 prod = (factor * cnt + 0x35b60U) * mult;
-        a1 = (u32)(((u64)prod * 0x10624dd3ULL) >> 38);
+        base_us = (u32)(((u64)prod * 0x10624dd3ULL) >> 38);
     }
-    u32 xfer = (u32)(((u64)(a1 * (u32)g_emu_rate1) * 0x10624dd3ULL) >> 38);
+    u32 xfer = (u32)(((u64)(base_us * (u32)g_emu_rate_read) * 0x10624dd3ULL) >> 38);
     u32 total = xfer;
     if (mode != 1) {
         u32 s_us = seek_dist * 6U;
@@ -3752,7 +3687,7 @@ static NOINLINE void np9660ApplySeekDelay(u32 lba, u32 cnt, u32 seek_dist, int m
         if (cross_layer != 0) {
             s_us += 0xc350U;
         }
-        u32 seek_scaled = (u32)(((u64)(s_us * (u32)g_emu_rate2) * 0x10624dd3ULL) >> 38);
+        u32 seek_scaled = (u32)(((u64)(s_us * (u32)g_emu_rate_seek) * 0x10624dd3ULL) >> 38);
         total = xfer + seek_scaled;
     }
 
@@ -3770,13 +3705,12 @@ static NOINLINE void np9660ApplySeekDelay(u32 lba, u32 cnt, u32 seek_dist, int m
 static NOINLINE void np9660SleepForTransfer(u32 lba, u32 cnt, u32 seek_dist, int mode, int cross_layer)
 {
     u64 elapsed = (u64)g_emuTimeStart - (u64)g_emuStatTimeB;
-    sceUmd9660_driver_887C3193();
+    u32 min_lba = (u32)sceUmd9660_driver_887C3193() + 0x23dU;
     u32 low = sceKernelGetSystemTimeLow();
-    u32 s0 = low + 0x23dU;
-    u32 half = (u32)g_np9660EmuParam0;
+    u32 half = (u32)g_emu_half_lba_v1;
     u32 mult;
     if (lba <= half) {
-        if (lba < s0) {
+        if (lba < min_lba) {
             mult = 0x6edU;
         } else {
             u32 q = (u32)(((u64)lba * 0xe4bf37d9ULL) >> 41);
@@ -3786,11 +3720,11 @@ static NOINLINE void np9660SleepForTransfer(u32 lba, u32 cnt, u32 seek_dist, int
             }
         }
     } else {
-        u32 v1 = lba - half;
-        if (v1 < s0) {
+        u32 rel_lba = lba - half;
+        if (rel_lba < min_lba) {
             mult = 0x3e8U;
         } else {
-            u32 q = (u32)(((u64)v1 * 0xe4bf37d9ULL) >> 41);
+            u32 q = (u32)(((u64)rel_lba * 0xe4bf37d9ULL) >> 41);
             mult = q + 0x3e8U;
             if (mult >= 0x6eeU) {
                 mult = 0x6edU;
@@ -3844,8 +3778,8 @@ static NOINLINE void np9660SleepForTransfer(u32 lba, u32 cnt, u32 seek_dist, int
         mult = 0x3e8U;
     }
 
-    u32 t4 = (u32)(((u64)((factor * cnt + 0x157cU) * mult) * 0x10624dd3ULL) >> 38);
-    u32 xfer = (u32)(((u64)(t4 * (u32)g_emu_rate1) * 0x10624dd3ULL) >> 38);
+    u32 base_us = (u32)(((u64)((factor * cnt + 0x157cU) * mult) * 0x10624dd3ULL) >> 38);
+    u32 xfer = (u32)(((u64)(base_us * (u32)g_emu_rate_read) * 0x10624dd3ULL) >> 38);
     u32 total = xfer;
     if (mode != 1) {
         u32 s_us = seek_dist * 6U;
@@ -3855,9 +3789,9 @@ static NOINLINE void np9660SleepForTransfer(u32 lba, u32 cnt, u32 seek_dist, int
         if (cross_layer != 0) {
             s_us += 0xc350U;
         }
-        u32 xfer2 = (u32)(((u64)(xfer * mult) * 0x10624dd3ULL) >> 38);
-        u32 seek_scaled = (u32)(((u64)(s_us * (u32)g_emu_rate2) * 0x10624dd3ULL) >> 38);
-        total = xfer2 + seek_scaled;
+        u32 scaled_xfer = (u32)(((u64)(xfer * mult) * 0x10624dd3ULL) >> 38);
+        u32 seek_scaled = (u32)(((u64)(s_us * (u32)g_emu_rate_seek) * 0x10624dd3ULL) >> 38);
+        total = scaled_xfer + seek_scaled;
     }
 
     if (elapsed >= (u64)total) {
@@ -3874,23 +3808,23 @@ static NOINLINE void np9660SleepForTransfer(u32 lba, u32 cnt, u32 seek_dist, int
 static NOINLINE u32 np9660CalcSeekDistance(u32 lba, u32 prev_lba, int *cross_layer)
 {
     u32 cur = g_emuReadStateC;
-    u32 half = (u32)g_np9660EmuParam0;
+    u32 half = (u32)g_emu_half_lba_v1;
     if (cur < lba) {
         u32 diff = lba - prev_lba;
         if (lba > half && prev_lba < half) {
             *cross_layer = 1;
-            u32 d1 = lba - half;
-            u32 d2 = half - g_emuReadStateC;
-            diff = (d2 < d1) ? (d1 - d2) : (d2 - d1);
+            u32 outer_dist = lba - half;
+            u32 inner_dist = half - g_emuReadStateC;
+            diff = (inner_dist < outer_dist) ? (outer_dist - inner_dist) : (inner_dist - outer_dist);
         }
         return diff;
     } else {
         u32 diff = prev_lba - lba;
         if (prev_lba > half && lba < half) {
             *cross_layer = 1;
-            u32 d1 = prev_lba - half;
-            u32 d2 = half - lba;
-            diff = (d2 < d1) ? (d1 - d2) : (d2 - d1);
+            u32 outer_dist = prev_lba - half;
+            u32 inner_dist = half - lba;
+            diff = (inner_dist < outer_dist) ? (outer_dist - inner_dist) : (inner_dist - outer_dist);
         }
         return diff;
     }
@@ -3972,23 +3906,23 @@ static NOINLINE int np9660SetDecThreadPrio(int prio)
             return r;
         }
     }
-    g_np9660EmuParam2 = prio;
+    g_dec_thread_prio = prio;
     return r;
 }
 
 /* 0x69dc */
-static NOINLINE int np9660AsyncDecompress(void *dst, u32 dst_len, const void *src)
+static NOINLINE int np9660AsyncDecompress(void *dst, const void *src, u32 dst_len)
 {
     u32 msg[6];
-    if (g_np9660EmuParam2 < 0) {
+    if (g_dec_thread_prio < 0) {
         int r = sceKernelChangeThreadPriority(g_dec_thid, np9660GetMutexOwnerPri());
         if (r < 0) {
             return r;
         }
     }
     msg[2] = (u32)dst;
-    msg[3] = dst_len;
-    msg[4] = (u32)src;
+    msg[3] = (u32)src;
+    msg[4] = dst_len;
     int r = sceKernelSendMbx(g_dec_mbx, msg);
     if (r < 0) {
         return r;
@@ -4002,9 +3936,10 @@ static NOINLINE int np9660DecThreadEntry(SceSize args, void *argp)
 {
     (void)args;
     (void)argp;
-    u32 *msg = NULL;
+    void *raw_msg;
     int r;
-    while ((r = sceKernelReceiveMbx(g_dec_mbx, (void **)&msg, NULL)) >= 0) {
+    while ((r = sceKernelReceiveMbx(g_dec_mbx, &raw_msg, NULL)) >= 0) {
+        u32 *msg = (u32 *)raw_msg;
         u32 dst = msg[2];
         if (dst == 0) {
             break;
@@ -4027,15 +3962,15 @@ static NOINLINE int np9660DecThreadEntry(SceSize args, void *argp)
 static NOINLINE void np9660ResetRingCache(void)
 {
     for (int i = 0; i < 0xe8; i++) {
-        g_ring0[i].lba = 0;
-        g_ring0[i].valid = 0;
+        g_ring_main[i].lba = 0;
+        g_ring_main[i].valid = 0;
     }
     for (int i = 0; i < 8; i++) {
-        g_ring1[i].lba = 0;
-        g_ring1[i].valid = 0;
+        g_ring_alt[i].lba = 0;
+        g_ring_alt[i].valid = 0;
     }
-    g_ring0_idx = 0;
-    g_ring1_idx = 0;
+    g_ring_main_idx = 0;
+    g_ring_alt_idx = 0;
 }
 
 /* 0x6bd4 */
@@ -4087,14 +4022,14 @@ static NOINLINE int np9660ScanRingCache(u32 start_lba, u32 blks, int table_sel, 
     u32 off = 0;
     u32 matched = 0;
     if (table_sel != 0) {
-        int idx = g_ring1_idx;
+        int idx = g_ring_alt_idx;
         for (int step = 0; step < 9; step++, idx++) {
             if (idx >= 8) {
                 idx = 0;
             }
-            if (g_ring1[idx].valid == 1) {
+            if (g_ring_alt[idx].valid == 1) {
                 u32 target = start_lba + off;
-                if (g_ring1[idx].lba == target) {
+                if (g_ring_alt[idx].lba == target) {
                     matched++;
                     off += 0x10U;
                     if (matched == blks) {
@@ -4110,14 +4045,14 @@ static NOINLINE int np9660ScanRingCache(u32 start_lba, u32 blks, int table_sel, 
             }
         }
     } else {
-        int idx = g_ring0_idx;
+        int idx = g_ring_main_idx;
         for (int step = 0; step < 0xe9; step++, idx++) {
             if (idx >= 0xe8) {
                 idx = 0;
             }
-            if (g_ring0[idx].valid == 1) {
+            if (g_ring_main[idx].valid == 1) {
                 u32 target = start_lba + off;
-                if (g_ring0[idx].lba == target) {
+                if (g_ring_main[idx].lba == target) {
                     matched++;
                     off += 0x10U;
                     if (matched == blks) {
@@ -4145,65 +4080,65 @@ static NOINLINE int np9660UpdateRingCache(u32 start_lba, int blks, int table_sel
         int idx = 0;
         for (; idx < 8; idx++) {
             full++;
-            if (g_ring1[idx].valid != 1) {
+            if (g_ring_alt[idx].valid != 1) {
                 full = 0;
                 break;
             }
         }
         if (full != 0) {
-            idx = g_ring1_idx;
+            idx = g_ring_alt_idx;
         }
         if (blks > 0) {
             for (int rem = blks; rem != 0; rem--, idx++) {
                 if (idx >= 8) {
                     idx = 0;
                 }
-                g_ring1_idx = idx;
+                g_ring_alt_idx = idx;
                 if (full != 0) {
-                    g_ring1[idx].lba = start_lba + (u32)off;
-                    g_ring1[idx].valid = 1;
+                    g_ring_alt[idx].lba = start_lba + (u32)off;
+                    g_ring_alt[idx].valid = 1;
                     off += 0x10;
-                } else if (g_ring1[idx].valid != 1) {
-                    g_ring1[idx].valid = 1;
-                    g_ring1[idx].lba = start_lba + (u32)off;
+                } else if (g_ring_alt[idx].valid != 1) {
+                    g_ring_alt[idx].valid = 1;
+                    g_ring_alt[idx].lba = start_lba + (u32)off;
                     off += 0x10;
                     full = 1;
                 }
             }
         }
-        g_ring1_idx++;
+        g_ring_alt_idx++;
         return 0;
     } else {
         int idx = 0;
         for (; idx < 0xe8; idx++) {
             full++;
-            if (g_ring0[idx].valid != 1) {
+            if (g_ring_main[idx].valid != 1) {
                 full = 0;
                 break;
             }
         }
         if (full != 0) {
-            idx = g_ring0_idx;
+            idx = g_ring_main_idx;
         }
         if (blks > 0) {
             for (int rem = blks; rem != 0; rem--, idx++) {
                 if (idx >= 0xe8) {
                     idx = 0;
                 }
-                g_ring0_idx = idx;
+                g_ring_main_idx = idx;
                 if (full != 0) {
-                    g_ring0[idx].lba = start_lba + (u32)off;
-                    g_ring0[idx].valid = 1;
+                    g_ring_main[idx].lba = start_lba + (u32)off;
+                    g_ring_main[idx].valid = 1;
                     off += 0x10;
-                } else if (g_ring0[idx].valid != 1) {
-                    g_ring0[idx].valid = 1;
-                    g_ring0[idx].lba = start_lba + (u32)off;
+                } else if (g_ring_main[idx].valid != 1) {
+                    g_ring_main[idx].valid = 1;
+                    g_ring_main[idx].lba = start_lba + (u32)off;
                     off += 0x10;
                     full = 1;
                 }
             }
         }
-        g_ring0_idx++;
+        g_ring_main_idx++;
         return 0;
     }
 }
@@ -4320,42 +4255,41 @@ static NOINLINE void np9660ApplySeekDelayV2(u32 lba, u32 cnt, u32 seek_dist, int
         elapsed = ((u64)0 - (u64)g_emuStatTimeA) | (~(u64)g_emuStatTimeB);
     }
     if (cnt - 0x81U < 0x80U) {
-        g_np9660EmuParam3 = 0x756;
-        g_np9660EmuParam4 = 0x1f8;
+        g_emu_mult_max = 0x756;
+        g_emu_mult_step = 0x1f8;
     } else if (cnt - 0x41U < 0x40U) {
-        g_np9660EmuParam3 = 0x8b8;
-        g_np9660EmuParam4 = 0x167;
+        g_emu_mult_max = 0x8b8;
+        g_emu_mult_step = 0x167;
     } else {
-        g_np9660EmuParam3 = 0x6ed;
-        g_np9660EmuParam4 = 0x304;
+        g_emu_mult_max = 0x6ed;
+        g_emu_mult_step = 0x304;
     }
-    sceUmd9660_driver_887C3193();
+    u32 min_lba = (u32)g_emu_mult_step + (u32)sceUmd9660_driver_887C3193();
     u32 low = sceKernelGetSystemTimeLow();
-    u32 s1 = (u32)g_np9660EmuParam4 + low;
-    u32 half = (u32)g_np9660EmuParam1;
+    u32 half = (u32)g_emu_half_lba_v2;
     u32 mult;
     if (lba <= half) {
-        if (lba < s1) {
-            mult = (u32)g_np9660EmuParam3;
+        if (lba < min_lba) {
+            mult = (u32)g_emu_mult_max;
         } else {
-            u32 q = lba / (u32)g_np9660EmuParam4;
-            mult = (u32)g_np9660EmuParam3 - q;
+            u32 q = lba / (u32)g_emu_mult_step;
+            mult = (u32)g_emu_mult_max - q;
             if (mult < 0x3e8U) {
                 mult = 0x3e8U;
             }
         }
     } else {
-        u32 v1 = lba - half;
-        if (v1 < s1) {
+        u32 rel_lba = lba - half;
+        if (rel_lba < min_lba) {
             mult = 0x3e8U;
         } else {
-            u32 q = v1 / (u32)g_np9660EmuParam4;
+            u32 q = rel_lba / (u32)g_emu_mult_step;
             mult = q + 0x3e8U;
             if (mult < 0x3e8U) {
                 mult = 0x3e8U;
             }
-            if (mult > (u32)g_np9660EmuParam3) {
-                mult = (u32)g_np9660EmuParam3;
+            if (mult > (u32)g_emu_mult_max) {
+                mult = (u32)g_emu_mult_max;
             }
         }
     }
@@ -4368,34 +4302,34 @@ static NOINLINE void np9660ApplySeekDelayV2(u32 lba, u32 cnt, u32 seek_dist, int
     } else if (cnt >= 0x200U) {
         factor = ((cnt * 5U) >> 8) + 0x384U;
     } else {
-        u32 r31 = low & 0x1fU;
+        u32 jitter = low & 0x1fU;
         if (cnt >= 0x100U) {
-            factor = r31 + 0x35cU;
+            factor = jitter + 0x35cU;
         } else if (cnt >= 0x80U) {
-            factor = r31 + 0x348U;
+            factor = jitter + 0x348U;
         } else if (cnt >= 0x40U) {
-            factor = r31 + 0x334U;
+            factor = jitter + 0x334U;
         } else if (cnt >= 0x20U) {
-            factor = r31 + 0x320U;
+            factor = jitter + 0x320U;
         } else if (cnt >= 8U) {
-            factor = r31 + 0x30cU;
+            factor = jitter + 0x30cU;
         } else {
-            factor = r31 + 0x2eeU;
+            factor = jitter + 0x2eeU;
         }
     }
 
     u32 xfer = 0;
     if (factor != 0 || cnt != 0) {
-        u32 v1 = (u32)(((u64)(factor * cnt) * 0x10624dd3ULL) >> 38);
-        xfer = v1 * mult;
+        u32 scaled_cnt = (u32)(((u64)(factor * cnt) * 0x10624dd3ULL) >> 38);
+        xfer = scaled_cnt * mult;
     }
 
     u32 total;
-    int cf2 = cross_flags & 2;
+    int outer_flag = cross_flags & 2;
     if (mode == 1) {
-        total = (xfer * (u32)g_emu_rate1) >> 10;
+        total = (xfer * (u32)g_emu_rate_read) >> 10;
     } else {
-        xfer += (cnt < 0x80U) ? 0x3bd08U : 0x249f0U;
+        xfer += (cnt < 0x80U) ? 0x249f0U : 0x3bd08U;
         u32 prev_mode = g_emuStatC;
         if ((prev_mode & 1U) != 0 && (prev_mode & 0xf0000000U) != 0 && req_mode == 0) {
             xfer += 0x5000U;
@@ -4404,7 +4338,7 @@ static NOINLINE void np9660ApplySeekDelayV2(u32 lba, u32 cnt, u32 seek_dist, int
         if ((cross_flags & 1) != 0) {
             s_us += 0xc350U;
         }
-        if (g_emuStatB == 0 && cf2 != 0) {
+        if (g_emuStatB == 0 && outer_flag != 0) {
             if (seek_dist - 0x2a01U <= 0xd5feU) {
                 s_us += 0x60000U;
             } else if (seek_dist <= 0x10000U) {
@@ -4413,7 +4347,7 @@ static NOINLINE void np9660ApplySeekDelayV2(u32 lba, u32 cnt, u32 seek_dist, int
                 s_us += 0xa0000U;
             }
         } else {
-            if ((g_emuStatB & 2) != 0 && cf2 == 0) {
+            if ((g_emuStatB & 2) != 0 && outer_flag == 0) {
                 if (seek_dist < 0x3001U) {
                     s_us += 0x30000U;
                 } else if (seek_dist <= 0xffffU) {
@@ -4436,7 +4370,7 @@ static NOINLINE void np9660ApplySeekDelayV2(u32 lba, u32 cnt, u32 seek_dist, int
         if (s_us > 0x28847aU) {
             s_us = 0x28847aU;
         }
-        total = ((xfer * (u32)g_emu_rate1) >> 10) + ((s_us * (u32)g_emu_rate2) >> 10);
+        total = ((xfer * (u32)g_emu_rate_read) >> 10) + ((s_us * (u32)g_emu_rate_seek) >> 10);
     }
 
     if (elapsed < (u64)total) {
@@ -4445,78 +4379,77 @@ static NOINLINE void np9660ApplySeekDelayV2(u32 lba, u32 cnt, u32 seek_dist, int
             sceKernelDelayThread(wait_us);
         }
     }
-    g_emuStatB = (cf2 == 0) ? 0 : 2;
+    g_emuStatB = (outer_flag == 0) ? 0 : 2;
 }
 
 /* 0x78d0 */
 static NOINLINE void np9660SleepForTransferV2(u32 lba, u32 cnt, u32 seek_dist, int mode, int cross_flags)
 {
     u64 elapsed = (u64)g_emuStatTimeA - (u64)g_emuStatTimeB;
-    sceUmd9660_driver_887C3193();
-    u32 old_8a18 = (u32)g_np9660EmuParam4;
+    u32 prev_step = (u32)g_emu_mult_step;
+    u32 min_lba = prev_step + (u32)sceUmd9660_driver_887C3193();
     u32 low = sceKernelGetSystemTimeLow();
-    u32 s3 = old_8a18 + low;
     if (cnt - 0x81U < 0x80U) {
-        g_np9660EmuParam3 = 0x728;
-        g_np9660EmuParam4 = 0x213;
+        g_emu_mult_max = 0x728;
+        g_emu_mult_step = 0x213;
     } else if (cnt - 0x41U < 0x40U) {
-        g_np9660EmuParam3 = 0x8d6;
-        g_np9660EmuParam4 = 0x15e;
+        g_emu_mult_max = 0x8d6;
+        g_emu_mult_step = 0x15e;
     } else if (cnt - 0x21U < 0x20U) {
-        g_np9660EmuParam3 = 0x6b5;
-        g_np9660EmuParam4 = 0x269;
+        g_emu_mult_max = 0x6b5;
+        g_emu_mult_step = 0x269;
     } else {
-        g_np9660EmuParam4 = 0x23d;
+        g_emu_mult_step = 0x23d;
     }
 
-    u32 half = (u32)g_np9660EmuParam1;
+    u32 half = (u32)g_emu_half_lba_v2;
     u32 mult;
     if (lba <= half) {
-        if (lba < s3) {
-            mult = (u32)g_np9660EmuParam3;
+        if (lba < min_lba) {
+            mult = (u32)g_emu_mult_max;
         } else {
-            u32 q = lba / (u32)g_np9660EmuParam4;
-            if ((u32)g_np9660EmuParam3 < q) {
+            u32 q = lba / (u32)g_emu_mult_step;
+            if ((u32)g_emu_mult_max < q) {
                 mult = 0x3e8U;
             } else {
-                mult = (u32)g_np9660EmuParam3 - q;
+                mult = (u32)g_emu_mult_max - q;
                 if (mult < 0x3e8U) {
                     mult = 0x3e8U;
                 }
             }
         }
     } else {
-        u32 v1 = lba - half;
-        if (v1 < s3) {
+        u32 rel_lba = lba - half;
+        if (rel_lba < min_lba) {
             mult = 0x3e8U;
         } else {
-            u32 q = v1 / (u32)g_np9660EmuParam4;
+            u32 q = rel_lba / (u32)g_emu_mult_step;
             mult = q + 0x3e8U;
             if (mult < 0x3e8U) {
                 mult = 0x3e8U;
             }
-            if (mult > (u32)g_np9660EmuParam3) {
-                mult = (u32)g_np9660EmuParam3;
+            if (mult > (u32)g_emu_mult_max) {
+                mult = (u32)g_emu_mult_max;
             }
         }
     }
 
-    u32 s6 = 0;
+    u32 extra_us = 0;
     u32 factor;
     if (cnt >= 0x800U) {
-        s6 = (cnt * 5U) >> 10;
-        factor = s6 + 0x3d4U;
+        extra_us = (cnt * 5U) >> 10;
+        factor = extra_us + 0x3d4U;
     } else if (cnt >= 0x400U) {
-        s6 = (cnt * 5U) >> 9;
-        factor = s6 + 0x366U;
+        extra_us = (cnt * 5U) >> 9;
+        factor = extra_us + 0x366U;
     } else if (cnt >= 0x100U) {
         if (mode == 2) {
-            s6 = (u32)(((int)(cnt * 100U)) / 256) + 0x11170U;
+            extra_us = (u32)(((int)(cnt * 100U)) / 256) + 0x11170U;
         }
         factor = (low & 0x1fU) + 0x352U;
     } else if (cnt >= 0x80U) {
         if (mode == 2) {
-            s6 = (u32)(((int)(cnt * 100U)) / 128) + 0x11170U;
+            extra_us = (u32)(((int)(cnt * 100U)) / 128) + 0x11170U;
         }
         factor = 0x320U;
     } else if (cnt >= 0x40U) {
@@ -4527,10 +4460,10 @@ static NOINLINE void np9660SleepForTransferV2(u32 lba, u32 cnt, u32 seek_dist, i
         factor = 0x280U;
     }
 
-    u32 t6 = (u32)(((u64)(factor * cnt) * 0x10624dd3ULL) >> 38);
-    u32 xfer = t6 * mult;
+    u32 scaled_cnt = (u32)(((u64)(factor * cnt) * 0x10624dd3ULL) >> 38);
+    u32 xfer = scaled_cnt * mult;
     if (mode == 2) {
-        xfer = (cnt < 0x41U) ? (xfer << 3) : (xfer + s6);
+        xfer = (cnt < 0x41U) ? (xfer << 3) : (xfer + extra_us);
     }
     if (g_emuStatB != cross_flags) {
         xfer += (low & 0x4fffU) + 0x1000U;
@@ -4541,7 +4474,7 @@ static NOINLINE void np9660SleepForTransferV2(u32 lba, u32 cnt, u32 seek_dist, i
 
     u32 total;
     if (mode == 1) {
-        total = (xfer * (u32)g_emu_rate1) >> 10;
+        total = (xfer * (u32)g_emu_rate_read) >> 10;
     } else {
         u32 s_us = seek_dist * 5U;
         if (s_us > 0x28847aU) {
@@ -4550,7 +4483,7 @@ static NOINLINE void np9660SleepForTransferV2(u32 lba, u32 cnt, u32 seek_dist, i
         if ((cross_flags & 1) != 0) {
             s_us += 0xc350U;
         }
-        total = ((xfer * (u32)g_emu_rate1) >> 10) + ((s_us * (u32)g_emu_rate2) >> 10);
+        total = ((xfer * (u32)g_emu_rate_read) >> 10) + ((s_us * (u32)g_emu_rate_seek) >> 10);
     }
 
     if (elapsed < (u64)total) {
@@ -4566,15 +4499,15 @@ static NOINLINE u32 np9660CalcSeekDistanceV2(u32 lba, u32 prev_lba, int *cross_f
 {
     *cross_flags = 0;
     u32 ref = g_emuStatD;
-    u32 half = (u32)g_np9660EmuParam1;
+    u32 half = (u32)g_emu_half_lba_v2;
     if (ref < lba) {
         u32 diff = lba - prev_lba;
         if (lba > half) {
             if (prev_lba < half) {
                 *cross_flags = (g_emuReadStateB > half) ? 2 : 3;
-                u32 d1 = lba - half;
-                u32 d2 = half - g_emuStatD;
-                diff = (d2 < d1) ? (d1 - d2) : (d2 - d1);
+                u32 outer_dist = lba - half;
+                u32 inner_dist = half - g_emuStatD;
+                diff = (inner_dist < outer_dist) ? (outer_dist - inner_dist) : (inner_dist - outer_dist);
             } else {
                 *cross_flags = 2;
             }
@@ -4585,9 +4518,9 @@ static NOINLINE u32 np9660CalcSeekDistanceV2(u32 lba, u32 prev_lba, int *cross_f
         if (prev_lba > half) {
             if (lba < half) {
                 *cross_flags = (g_emuReadStateB > half) ? 1 : 0;
-                u32 d1 = prev_lba - half;
-                u32 d2 = half - lba;
-                diff = (d1 < d2) ? (d2 - d1) : (d1 - d2);
+                u32 outer_dist = prev_lba - half;
+                u32 inner_dist = half - lba;
+                diff = (outer_dist < inner_dist) ? (inner_dist - outer_dist) : (outer_dist - inner_dist);
             } else {
                 *cross_flags = 2;
             }
