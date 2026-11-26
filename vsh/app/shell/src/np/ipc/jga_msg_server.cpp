@@ -656,7 +656,7 @@ int npRtCreateStanza(const NpRtJidPair *npIds, const char *stanzaId, int stanzaT
 				if (ret >= 0) {
 					init.stanzaId = stanzaId;
 					init.stanzaType = stanzaType;
-					init.xmlDoc = NULL;
+					init.lang = 0;
 					ret = npRtAllocStanza(&stanza, &init);
 					if (ret >= 0)
 						*outStanza = stanza;

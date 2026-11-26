@@ -14,12 +14,9 @@
 #include <np/np_common.h>
 #include <np/np_auth.h>
 #include <np/np_auth_oauth.h>
+#include "../rt/np_rt_stanza.h"
 
 /* bXCe DOM/XML lightweight types matching sys/internal/usermode/src/bXCe/bxce_internal.h */
-struct BxceDocument;
-struct BxceAttributeList;
-typedef SceUInt32 BxceNodeId;
-
 struct BxceNodeList {
 	const BxceDocument *doc;
 	void *head;
@@ -36,32 +33,6 @@ struct BxceNodeList {
 struct NpRtJidPair {
 	const SceNpId *selfNpId;
 	const SceNpId *peerNpId;
-};
-
-struct NpRtStanza {
-	SceUInt32 refCount;		/* +0x00 */
-	NpJid fromJid;			/* +0x04 (16 bytes) */
-	NpJid toJid;			/* +0x14 (16 bytes) */
-	char *stanzaId;			/* +0x24 */
-	int stanzaType;			/* +0x28 */
-	int reserved;			/* +0x2C */
-	BxceDocument *xmlDoc;		/* +0x30 */
-};
-
-struct NpRtStanzaInit {
-	NpJid fromJid;			/* +0x00 */
-	NpJid toJid;			/* +0x10 */
-	const char *stanzaId;		/* +0x20 */
-	int stanzaType;			/* +0x24 */
-	BxceDocument *xmlDoc;		/* +0x28 */
-};
-
-struct NpXmppErrorStanza {
-	SceUInt32 reserved[3];		/* +0x00 */
-	int errorKind;			/* +0x0C (1: stanza error, 2: app error) */
-	SceUInt8 errorCode;		/* +0x10 */
-	SceUInt8 pad[3];		/* +0x11 */
-	NpRtStanza *origStanza;		/* +0x14 */
 };
 
 struct NpRtHandlerConfig {
