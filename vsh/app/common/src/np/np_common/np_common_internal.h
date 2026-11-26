@@ -16,7 +16,6 @@
 #include <regmgr/regmgr.h>
 
 /* the imports SceNpCommon takes from libraries the tree has no header of yet */
-extern SceUInt64 sceKernelGetSystemTimeWide(void);
 extern int SceThreadmgrCoredumpTime_sceKernelExitThread(int status);
 extern int sceKernelGetSystemSwVersion(SceKernelSystemSwVersion *info);
 extern int sceSblQafMgrIsAllowNpFullTest(void);
