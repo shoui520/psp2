@@ -246,26 +246,47 @@ int dtcpIpSysCloseSession(struct SwSysClient *client)
 	if (client == NULL)
 		return 2;
 	if (dtcpIpIpcSetState(hold, client, 2) != 0) {
-		result = 3;
-	} else {
-		message.command = SW_SYS_CLOSE;
-		message.channel = 0;
-		message.size = 0;
-		message.value0 = client->session;
-		ret = dtcpIpIpcRequest(client->ipc->stream, &message);
-		if (ret != 0)
-			result = dtcpIpMapIpcStatus2(ret);
-		else if (message.result != 0)
-			result = dtcpIpMapIpcStatus2(message.result);
-		else
-			result = 0;
-	}
-	if (hold[0] != 0) {
-		struct SwSysClient *held = (struct SwSysClient *)hold[0];
+		if (hold[0] != 0) {
+			struct SwSysClient *held = (struct SwSysClient *)hold[0];
 
-		sceKernelLockLwMutex(&held->mutex, 1, NULL);
-		held->state &= ~hold[1];
-		sceKernelUnlockLwMutex(&held->mutex, 1);
+			sceKernelLockLwMutex(&held->mutex, 1, NULL);
+			held->state &= ~hold[1];
+			sceKernelUnlockLwMutex(&held->mutex, 1);
+		}
+		return 3;
+	}
+	message.command = SW_SYS_CLOSE;
+	message.channel = 0;
+	message.size = 0;
+	message.value0 = client->session;
+	ret = dtcpIpIpcRequest(client->ipc->stream, &message);
+	if (ret != 0) {
+		result = dtcpIpMapIpcStatus2(ret);
+		if (hold[0] != 0) {
+			struct SwSysClient *held = (struct SwSysClient *)hold[0];
+
+			sceKernelLockLwMutex(&held->mutex, 1, NULL);
+			held->state &= ~hold[1];
+			sceKernelUnlockLwMutex(&held->mutex, 1);
+		}
+	} else if (message.result != 0) {
+		result = dtcpIpMapIpcStatus2(message.result);
+		if (hold[0] != 0) {
+			struct SwSysClient *held = (struct SwSysClient *)hold[0];
+
+			sceKernelLockLwMutex(&held->mutex, 1, NULL);
+			held->state &= ~hold[1];
+			sceKernelUnlockLwMutex(&held->mutex, 1);
+		}
+	} else {
+		if (hold[0] != 0) {
+			struct SwSysClient *held = (struct SwSysClient *)hold[0];
+
+			sceKernelLockLwMutex(&held->mutex, 1, NULL);
+			held->state &= ~hold[1];
+			sceKernelUnlockLwMutex(&held->mutex, 1);
+		}
+		result = 0;
 	}
 	sceKernelDeleteLwMutex(&client->mutex);
 	dtcpIpFree(client);
