@@ -137,10 +137,10 @@ static int formatEnumToString(const XmppEnumEntry *table, int value, char *outBu
 	return NP_RT_CORE_ERR_INVALID_ARG;
 }
 
-static void freeStanzaHeaderFields(NpJid *fromJid, NpJid *toJid, char **stanzaId)
+static void freeStanzaHeaderFields(NpJid *toJid, NpJid *fromJid, char **stanzaId)
 {
-	npRtFreeJid(fromJid);
 	npRtFreeJid(toJid);
+	npRtFreeJid(fromJid);
 	if (*stanzaId != NULL) {
 		npRtHeapFree(*stanzaId, NULL);
 		*stanzaId = NULL;
@@ -364,7 +364,7 @@ int npRtStanzaHeaderInit(NpRtStanzaInit *header, int stanzaType,
 
 	if (ret < 0) {
 		char *idPtr = const_cast<char *>(header->stanzaId);
-		freeStanzaHeaderFields(&header->fromJid, &header->toJid, &idPtr);
+		freeStanzaHeaderFields(&header->toJid, &header->fromJid, &idPtr);
 		header->stanzaId = idPtr;
 	}
 	return ret;
@@ -376,14 +376,14 @@ int npRtStanzaHeaderCopy(NpRtStanzaInit *dst, const NpRtStanzaInit *src)
 	sceClibMemset(dst, 0, sizeof(*dst));
 
 	char *copiedId = NULL;
-	int ret = npRtCopyJid(&dst->fromJid, &src->fromJid);
+	int ret = npRtCopyJid(&dst->toJid, &src->toJid);
 	if (ret >= 0)
-		ret = npRtCopyJid(&dst->toJid, &src->toJid);
+		ret = npRtCopyJid(&dst->fromJid, &src->fromJid);
 	if (ret >= 0)
 		ret = npRtDupString(&copiedId, src->stanzaId, NULL, 0);
 
 	if (ret < 0) {
-		freeStanzaHeaderFields(&dst->fromJid, &dst->toJid, &copiedId);
+		freeStanzaHeaderFields(&dst->toJid, &dst->fromJid, &copiedId);
 		dst->stanzaId = NULL;
 		return ret;
 	}
@@ -414,7 +414,7 @@ void npRtReleaseMessageStanza(NpRtMessageStanza *stanza)
 	if (stanza == NULL)
 		return;
 	if (sceAtomicDecrement32AcqRel(&stanza->refCount) == 0) {
-		freeStanzaHeaderFields(&stanza->fromJid, &stanza->toJid, &stanza->stanzaId);
+		freeStanzaHeaderFields(&stanza->toJid, &stanza->fromJid, &stanza->stanzaId);
 		npRtFreeLangTextList(stanza->subjectList);
 		npRtFreeLangTextList(stanza->bodyList);
 		if (stanza->threadId != NULL)
@@ -430,22 +430,22 @@ void npRtReleasePresenceStanza(NpRtPresenceStanza *stanza)
 	if (stanza == NULL)
 		return;
 	if (sceAtomicDecrement32AcqRel(&stanza->refCount) == 0) {
-		freeStanzaHeaderFields(&stanza->fromJid, &stanza->toJid, &stanza->stanzaId);
+		freeStanzaHeaderFields(&stanza->toJid, &stanza->fromJid, &stanza->stanzaId);
 		npRtFreeLangTextList(stanza->statusList);
 		npRtDestroyBxceDocument(stanza->xmlDoc);
 		npRtHeapFree(stanza, NULL);
 	}
 }
 
-static int copyHeaderFields(NpJid *dstFrom, NpJid *dstTo, char **dstId,
+static int copyHeaderFields(NpJid *dstTo, NpJid *dstFrom, char **dstId,
 			    int *dstType, int *dstLang, const NpRtStanzaInit *src)
 {
 	NpRtStanzaInit copiedHeader;
 	int ret = npRtStanzaHeaderCopy(&copiedHeader, src);
 	if (ret < 0)
 		return ret;
-	*dstFrom = copiedHeader.fromJid;
 	*dstTo = copiedHeader.toJid;
+	*dstFrom = copiedHeader.fromJid;
 	*dstId = const_cast<char *>(copiedHeader.stanzaId);
 	*dstType = copiedHeader.stanzaType;
 	*dstLang = copiedHeader.lang;
@@ -461,7 +461,7 @@ int npRtAllocPresenceStanza(NpRtPresenceStanza **outStanza, const NpRtStanzaInit
 		return NP_RT_CORE_ERR_NO_MEMORY;
 
 	sceClibMemset(stanza, 0, sizeof(*stanza));
-	int ret = copyHeaderFields(&stanza->fromJid, &stanza->toJid, &stanza->stanzaId,
+	int ret = copyHeaderFields(&stanza->toJid, &stanza->fromJid, &stanza->stanzaId,
 				   &stanza->stanzaType, &stanza->lang, init);
 	if (ret < 0) {
 		npRtReleasePresenceStanza(stanza);
@@ -485,7 +485,7 @@ void npRtReleaseStanza(NpRtStanza *stanza)
 	if (stanza == NULL)
 		return;
 	if (sceAtomicDecrement32AcqRel(&stanza->refCount) == 0) {
-		freeStanzaHeaderFields(&stanza->fromJid, &stanza->toJid, &stanza->stanzaId);
+		freeStanzaHeaderFields(&stanza->toJid, &stanza->fromJid, &stanza->stanzaId);
 		npRtDestroyBxceDocument(stanza->xmlDoc);
 		npRtHeapFree(stanza, NULL);
 	}
@@ -500,7 +500,7 @@ int npRtAllocStanza(NpRtStanza **outStanza, const NpRtStanzaInit *init)
 		return NP_RT_CORE_ERR_NO_MEMORY;
 
 	sceClibMemset(stanza, 0, sizeof(*stanza));
-	int ret = copyHeaderFields(&stanza->fromJid, &stanza->toJid, &stanza->stanzaId,
+	int ret = copyHeaderFields(&stanza->toJid, &stanza->fromJid, &stanza->stanzaId,
 				   &stanza->stanzaType, &stanza->lang, init);
 	if (ret < 0) {
 		npRtReleaseStanza(stanza);

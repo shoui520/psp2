@@ -26,7 +26,8 @@ enum NpRtStanzaKind {
 	NP_RT_STANZA_KIND_MESSAGE	= 1,
 	NP_RT_STANZA_KIND_PRESENCE	= 2,
 	NP_RT_STANZA_KIND_IQ		= 3,
-	NP_RT_STANZA_KIND_STREAM	= 4
+	NP_RT_STANZA_KIND_STREAM	= 4,
+	NP_RT_STANZA_KIND_STREAM_END	= 5
 };
 
 /* XMPP stanza "type" attribute enum (0x815461B8) */
@@ -118,8 +119,8 @@ struct NpRtLangTextNode {
 
 /* Common 44-byte XMPP stanza header embedded in Message, Presence, and IQ stanzas */
 struct NpRtStanzaInit {
-	NpJid fromJid;			/* +0x00 (16 bytes) */
-	NpJid toJid;			/* +0x10 (16 bytes) */
+	NpJid toJid;			/* +0x00 (16 bytes) */
+	NpJid fromJid;			/* +0x10 (16 bytes) */
 	const char *stanzaId;		/* +0x20 */
 	int stanzaType;			/* +0x24 */
 	int lang;			/* +0x28 */
@@ -128,8 +129,8 @@ struct NpRtStanzaInit {
 /* XMPP IQ stanza (52 bytes, 0x8130F9C6 / 0x8130FA1E) */
 struct NpRtStanza {
 	volatile SceInt32 refCount;	/* +0x00 */
-	NpJid fromJid;			/* +0x04 (16 bytes) */
-	NpJid toJid;			/* +0x14 (16 bytes) */
+	NpJid toJid;			/* +0x04 (16 bytes) */
+	NpJid fromJid;			/* +0x14 (16 bytes) */
 	char *stanzaId;			/* +0x24 */
 	int stanzaType;			/* +0x28 */
 	int lang;			/* +0x2C */
@@ -139,8 +140,8 @@ struct NpRtStanza {
 /* XMPP Message stanza (64 bytes, 0x8130F89C) */
 struct NpRtMessageStanza {
 	volatile SceInt32 refCount;	/* +0x00 */
-	NpJid fromJid;			/* +0x04 (16 bytes) */
-	NpJid toJid;			/* +0x14 (16 bytes) */
+	NpJid toJid;			/* +0x04 (16 bytes) */
+	NpJid fromJid;			/* +0x14 (16 bytes) */
 	char *stanzaId;			/* +0x24 */
 	int stanzaType;			/* +0x28 */
 	int lang;			/* +0x2C */
@@ -153,15 +154,15 @@ struct NpRtMessageStanza {
 /* XMPP Presence stanza (68 bytes, 0x8130F90A / 0x8130F968) */
 struct NpRtPresenceStanza {
 	volatile SceInt32 refCount;	/* +0x00 */
-	NpJid fromJid;			/* +0x04 (16 bytes) */
-	NpJid toJid;			/* +0x14 (16 bytes) */
+	NpJid toJid;			/* +0x04 (16 bytes) */
+	NpJid fromJid;			/* +0x14 (16 bytes) */
 	char *stanzaId;			/* +0x24 */
 	int stanzaType;			/* +0x28 */
 	int lang;			/* +0x2C */
 	int show;			/* +0x30 */
 	NpRtLangTextNode *statusList;	/* +0x34 */
-	SceInt32 priority;		/* +0x38 */
-	SceUInt32 presenceFlags;	/* +0x3C */
+	SceInt8 priority;		/* +0x38 */
+	SceUInt8 padAfterPriority[7];	/* +0x39 */
 	BxceDocument *xmlDoc;		/* +0x40 */
 };
 
@@ -171,15 +172,15 @@ struct NpRtAnyStanza {
 	void *stanza;			/* +0x04 */
 };
 
-/* Parsed XMPP error payload (24 bytes, 0x8130F3E4) */
+/* Parsed / outbound XMPP error payload (28 bytes, 0x8130F3E4 / 0x813135CA / 0x81316ED4) */
 struct NpXmppErrorStanza {
 	int errorType;			/* +0x00: NpRtXmppErrorType */
 	int condition;			/* +0x04: NpRtXmppErrorCondition */
 	NpRtLangTextNode *textList;	/* +0x08 */
 	int errorKind;			/* +0x0C: NpRtXmppErrorSource (1=server, 2=client) */
 	SceUInt8 errorCode;		/* +0x10: hex code from <x xmlns=".../np/rt/error"> */
-	SceUInt8 padAfterCode[3];	/* +0x11 */
-	NpRtStanza *origStanza;		/* +0x14 */
+	SceUInt8 padAfterCode[7];	/* +0x11 */
+	NpRtStanza *origStanza;		/* +0x18 */
 };
 
 /* XMPP error parsers (0x8130F3E4..0x8130F79F) */

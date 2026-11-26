@@ -110,9 +110,9 @@ static int npJgaSendRtResult(const char *stanzaId, const NpRtJidPair *npIds,
 			     const void *payload, SceSize payloadSize);
 static int npJgaSendRtRequest(const NpRtJidPair *npIds, int timeoutMs, int retryCount,
 			      const void *payload, SceSize payloadSize);
-static void npJgaRtOnConnectNoop(void);
-static void npJgaRtOnRecv(int handlerId, NpRtStanza *stanza);
-static void npJgaRtOnIqResponse(int sessionHandle, int transactionId, int result,
+static void npJgaRtOnStateNoop(const NpRtSessionIdentity *session, int eventState, int resultCode);
+static void npJgaRtOnRecv(const NpRtSessionIdentity *session, NpRtStanza *stanza);
+static void npJgaRtOnIqResponse(const NpRtSessionIdentity *session, int transactionId, int result,
 				NpRtStanza *response, void *userArg);
 
 static void npJgaRemovePendingById(int requestId)
@@ -341,8 +341,11 @@ static int npJgaOnClientMessage(IPMI::Session *session, const void *msgBuf)
 	return NP_JGA_ERR_INVALID_TYPE;
 }
 
-static void npJgaRtOnConnectNoop(void)
+static void npJgaRtOnStateNoop(const NpRtSessionIdentity *session, int eventState, int resultCode)
 {
+	(void)session;
+	(void)eventState;
+	(void)resultCode;
 }
 
 /* 0x8121D6C8 */
@@ -353,10 +356,10 @@ static int npJgaRegisterRt(NpJgaRecvRequestCb onReq, NpJgaRecvResultCb onRes,
 	int ret;
 
 	config.namespaces = s_jgaNamespaces;
-	config.onConnect = npJgaRtOnConnectNoop;
-	config.onRecv = npJgaRtOnRecv;
-	config.reservedFirst = 0;
-	config.reservedSecond = 0;
+	config.onStateChanged = npJgaRtOnStateNoop;
+	config.onIqRecv = npJgaRtOnRecv;
+	config.onMessageRecv = NULL;
+	config.onPresenceRecv = NULL;
 
 	ret = npRtRegisterHandler(&config, &s_jgaRtHandlerId);
 	if (ret >= 0) {
@@ -458,9 +461,12 @@ static int npJgaSendRtRequest(const NpRtJidPair *npIds, int timeoutMs, int retry
 	if (ret >= 0) {
 		ret = npJgaBuildXmlDoc(&stanza->xmlDoc, payload, payloadSize);
 		if (ret >= 0) {
+			SceUInt64 timeoutUsec =
+				static_cast<SceUInt64>(static_cast<SceUInt32>(timeoutMs)) |
+				(static_cast<SceUInt64>(static_cast<SceUInt32>(retryCount)) << 32);
 			ret = npRtSendIqWithTimeout(npIds->peerNpId, stanza, s_jgaRtHandlerId,
-						    0, timeoutMs, retryCount,
-						    npJgaRtOnIqResponse, NULL, &transactionId);
+						    timeoutUsec, npJgaRtOnIqResponse, NULL,
+						    &transactionId);
 			if (ret >= 0)
 				ret = transactionId;
 		}
@@ -523,28 +529,28 @@ static int npJgaParseXmlDoc(const BxceDocument *doc, SceUInt8 *outBuf, SceSize o
 }
 
 /* 0x8121DAAE */
-static void npJgaRtOnRecv(int handlerId, NpRtStanza *stanza)
+static void npJgaRtOnRecv(const NpRtSessionIdentity *session, NpRtStanza *stanza)
 {
 	SceUInt8 payloadBuf[NP_JGA_MSG_MAX_SIZE];
 	SceSize payloadSize = 0;
 	NpRtJidPair npIds;
-	SceNpId fromNpId;
 	SceNpId toNpId;
+	SceNpId fromNpId;
 	int ret;
 
-	(void)handlerId;
+	(void)session;
 	if (stanza->stanzaType != NP_RT_STANZA_TYPE_IQ_GET &&
 	    stanza->stanzaType != NP_RT_STANZA_TYPE_IQ_SET) {
 		return;
 	}
 
 	sceClibMemset(payloadBuf, 0, sizeof(payloadBuf));
-	npIds.selfNpId = &fromNpId;
-	npIds.peerNpId = &toNpId;
+	npIds.selfNpId = &toNpId;
+	npIds.peerNpId = &fromNpId;
 
-	ret = SceNpCommon_9B7CAA67(&fromNpId, &stanza->fromJid);
+	ret = SceNpCommon_9B7CAA67(&toNpId, &stanza->toJid);
 	if (ret >= 0)
-		ret = SceNpCommon_9B7CAA67(&toNpId, &stanza->toJid);
+		ret = SceNpCommon_9B7CAA67(&fromNpId, &stanza->fromJid);
 	if (ret >= 0)
 		ret = npJgaParseXmlDoc(stanza->xmlDoc, payloadBuf, sizeof(payloadBuf), &payloadSize);
 	if (ret >= 0)
@@ -554,7 +560,7 @@ static void npJgaRtOnRecv(int handlerId, NpRtStanza *stanza)
 	if (ret < 0) {
 		SceNpId errTarget;
 		int sessionHandle = 0;
-		if (SceNpCommon_9B7CAA67(&errTarget, &stanza->fromJid) >= 0 &&
+		if (SceNpCommon_9B7CAA67(&errTarget, &stanza->toJid) >= 0 &&
 		    npRtGetSessionByNpId(&errTarget, &sessionHandle) >= 0) {
 			NpXmppErrorStanza errStanza;
 			sceClibMemset(&errStanza, 0, sizeof(errStanza));
@@ -567,10 +573,10 @@ static void npJgaRtOnRecv(int handlerId, NpRtStanza *stanza)
 }
 
 /* 0x8121DBA8 */
-static void npJgaRtOnIqResponse(int sessionHandle, int transactionId, int result,
+static void npJgaRtOnIqResponse(const NpRtSessionIdentity *session, int transactionId, int result,
 				NpRtStanza *response, void *userArg)
 {
-	(void)sessionHandle;
+	(void)session;
 	(void)userArg;
 
 	if (result < 0) {
@@ -583,17 +589,17 @@ static void npJgaRtOnIqResponse(int sessionHandle, int transactionId, int result
 		SceSize payloadSize = 0;
 		const void *payloadPtr = NULL;
 		NpRtJidPair npIds;
-		SceNpId fromNpId;
 		SceNpId toNpId;
+		SceNpId fromNpId;
 		int ret;
 
 		sceClibMemset(payloadBuf, 0, sizeof(payloadBuf));
-		npIds.selfNpId = &fromNpId;
-		npIds.peerNpId = &toNpId;
+		npIds.selfNpId = &toNpId;
+		npIds.peerNpId = &fromNpId;
 
-		ret = SceNpCommon_9B7CAA67(&fromNpId, &response->fromJid);
+		ret = SceNpCommon_9B7CAA67(&toNpId, &response->toJid);
 		if (ret >= 0)
-			ret = SceNpCommon_9B7CAA67(&toNpId, &response->toJid);
+			ret = SceNpCommon_9B7CAA67(&fromNpId, &response->fromJid);
 		if (ret >= 0) {
 			if (ScebXCe_CED6BECF(response->xmlDoc) != 0) {
 				ret = npJgaParseXmlDoc(response->xmlDoc, payloadBuf,
@@ -635,7 +641,7 @@ int npRtCreateStanza(const NpRtJidPair *npIds, const char *stanzaId, int stanzaT
 
 	sceClibMemset(&init, 0, sizeof(init));
 
-	ret = SceNpCommon_40CC4D15(&init.fromJid, npIds->selfNpId, NULL, 0, &required);
+	ret = SceNpCommon_40CC4D15(&init.toJid, npIds->selfNpId, NULL, 0, &required);
 	if (ret < 0)
 		return ret;
 
@@ -643,15 +649,15 @@ int npRtCreateStanza(const NpRtJidPair *npIds, const char *stanzaId, int stanzaT
 	if (fromBuf == NULL)
 		return NP_JGA_ERR_NO_MEMORY;
 
-	ret = SceNpCommon_40CC4D15(&init.fromJid, npIds->selfNpId, fromBuf, required, NULL);
+	ret = SceNpCommon_40CC4D15(&init.toJid, npIds->selfNpId, fromBuf, required, NULL);
 	if (ret >= 0) {
-		ret = SceNpCommon_40CC4D15(&init.toJid, npIds->peerNpId, NULL, 0, &required);
+		ret = SceNpCommon_40CC4D15(&init.fromJid, npIds->peerNpId, NULL, 0, &required);
 		if (ret >= 0) {
 			toBuf = (char *)npRtHeapAlloc(required, NULL);
 			if (toBuf == NULL) {
 				ret = NP_JGA_ERR_NO_MEMORY;
 			} else {
-				ret = SceNpCommon_40CC4D15(&init.toJid, npIds->peerNpId,
+				ret = SceNpCommon_40CC4D15(&init.fromJid, npIds->peerNpId,
 							   toBuf, required, NULL);
 				if (ret >= 0) {
 					init.stanzaId = stanzaId;
@@ -697,21 +703,19 @@ int npRtSendIq(const SceNpId *peerNpId, NpRtStanza *stanza, int handlerId,
 
 /* 0x8121DE68 */
 int npRtSendIqWithTimeout(const SceNpId *peerNpId, NpRtStanza *stanza, int handlerId,
-			  int unusedFlag, int timeoutMs, int retryCount,
-			  NpRtIqResponseCallback callback, void *userArg, int *outTransactionId)
+			  SceUInt64 timeoutUsec, NpRtIqResponseCallback callback,
+			  void *userArg, int *outTransactionId)
 {
 	int sessionHandle = 0;
 	int transactionId = 0;
 	int ret;
 
-	(void)unusedFlag;
 	ret = npRtGetSessionByNpId(peerNpId, &sessionHandle);
 	if (ret >= 0) {
 		ret = npRtAllocTransactionId(sessionHandle, &transactionId);
 		if (ret >= 0) {
 			ret = npRtSendIqRequestEx(sessionHandle, handlerId, transactionId,
-						  stanza, timeoutMs, retryCount,
-						  callback, userArg);
+						  stanza, timeoutUsec, callback, userArg);
 			if (ret >= 0) {
 				*outTransactionId = transactionId;
 				return 0;

@@ -154,6 +154,38 @@ struct NpPollingCalloutNode {
 	SceUInt32 padWord;		/* +0x14 */
 };
 
+/* Callout timeout wrapper (40 bytes, shared by SceNpPolling and SceNpCore) */
+struct NpPollingTimeoutTimer {
+	volatile int timerState;	/* +0x00: 0=idle, -1=armed, -2=firing, 1=fired */
+	SceUInt32 padAlign;		/* +0x04 */
+	NpPollingCalloutNode callout;	/* +0x08 (24 bytes) */
+	void (*onTimeout)(void *arg);	/* +0x20 */
+	void *timeoutArg;		/* +0x24 */
+};
+
+/* Base socket + resolver handle header shared by UDP polling and TCP/TLS XMPP (12 bytes) */
+struct NpRtNetBase {
+	int aborted;			/* +0x00 */
+	int socketId;			/* +0x04 */
+	int resolverId;			/* +0x08 */
+};
+
+/* Shared NP RT/Polling low-level synchronization, thread, net, and callout helpers */
+int npRtDeleteMsgPipe(SceUID *pipeId);						/* 0x8130D172 */
+int npRtLockLwMutex(SceKernelLwMutexWork *mutex);				/* 0x8130D320 */
+int npRtUnlockLwMutex(SceKernelLwMutexWork *mutex, int lockState);		/* 0x8130D334 */
+void npRtNetBaseInit(NpRtNetBase *net);						/* 0x8130D760 */
+int npRtNetBaseIsOpen(const NpRtNetBase *net);					/* 0x8130D784 */
+void npRtResolverFree(void *ptr, int rid, const char *name, void *user);	/* 0x8130DCB4 */
+int npRtStartThread(SceUID *threadId, void *session);				/* 0x8130DD10 */
+void npRtWaitThreadEnd(SceUID *threadId);					/* 0x8130DD46 */
+int npRtStateInvalid(void *session, int *nextState);				/* 0x8130E750 */
+void npRtCalloutInit(NpPollingTimeoutTimer *timer);				/* 0x8130F2B4 */
+void npRtCalloutCancel(NpPollingTimeoutTimer *timer);				/* 0x8130F2C0 */
+int npRtCalloutArm(NpPollingTimeoutTimer *timer, SceUInt64 delayUsec,
+		   void (*onTimeout)(void *), void *timeoutArg);		/* 0x8130F320 */
+int npRtCalloutIsFired(const NpPollingTimeoutTimer *timer);			/* 0x8130F3B8 */
+
 extern "C" {
 int SceNpCommon_540B307E(NpPollingCalloutNode *callout, SceUInt64 delay,
 			 void (*func)(void *arg), void *arg);

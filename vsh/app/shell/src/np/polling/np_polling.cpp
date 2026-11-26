@@ -75,22 +75,10 @@ struct NpPollingHttpClient {
 };
 
 /* UDP socket + resolver context (48 bytes, at session +0x110) */
-struct NpPollingUdpClient {
-	int aborted;			/* +0x00 */
-	int socketId;			/* +0x04 */
-	int resolverId;			/* +0x08 */
+struct NpPollingUdpClient : NpRtNetBase {
 	SceNetSockaddrIn localAddr;	/* +0x0C (16 bytes) */
 	SceNetSockaddrIn remoteAddr;	/* +0x1C (16 bytes) */
 	SceUInt32 lastTxSeq;		/* +0x2C */
-};
-
-/* Callout timeout wrapper (40 bytes, at session +0x140) */
-struct NpPollingTimeoutTimer {
-	volatile int timerState;	/* +0x00: 0=idle, -1=armed, -2=firing, 1=fired */
-	SceUInt32 padAlign;		/* +0x04 */
-	NpPollingCalloutNode callout;	/* +0x08 (24 bytes) */
-	void (*onTimeout)(void *arg);	/* +0x20 */
-	void *timeoutArg;		/* +0x24 */
 };
 
 /* Global callback registry node (20 bytes) */
@@ -393,7 +381,7 @@ static int pipeCreate(SceUID *outPipeId)
 /* 0x8130D172 */
 static int pipeDelete(SceUID *pipeId)
 {
-	return sceKernelDeleteMsgPipe(*pipeId);
+	return npRtDeleteMsgPipe(pipeId);
 }
 
 /* 0x8130D17C */
@@ -457,16 +445,13 @@ static int pipeSendAbort(SceUID *pipeId)
 /* 0x8130D320 */
 static int sessionLock(NpPollingSession *session)
 {
-	int ret = sceKernelLockLwMutex(&session->mutex, 1, NULL);
-	return (ret >= 0) ? 1 : ret;
+	return npRtLockLwMutex(&session->mutex);
 }
 
 /* 0x8130D334 */
 static int sessionUnlock(NpPollingSession *session, int lockState)
 {
-	if (lockState > 0)
-		sceKernelUnlockLwMutex(&session->mutex, 1);
-	return 0;
+	return npRtUnlockLwMutex(&session->mutex, lockState);
 }
 
 /* 0x8130E328 */
@@ -545,62 +530,25 @@ static void sessionRefreshPollTimeout(NpPollingSession *session)
 /* --------------------------------------------------------------------------
  * Timeout callout wrapper (0x8130F2B4..0x8130F3E3)
  * -------------------------------------------------------------------------- */
-/* 0x8130F2B4 */
 static void timeoutTimerInit(NpPollingTimeoutTimer *timer)
 {
-	sceClibMemset(timer, 0, sizeof(*timer));
+	npRtCalloutInit(timer);
 }
 
-/* 0x8130F2C0 */
 static void timeoutTimerCancel(NpPollingTimeoutTimer *timer)
 {
-	if (timer->timerState < 0) {
-		int removed = 0;
-		if (SceNpCommon_38B88BA3(&timer->callout, &removed) >= 0) {
-			if (removed != 0) {
-				timer->timerState = 0;
-			} else {
-				while (timer->timerState < 0)
-					sceKernelDelayThread(100000);
-			}
-		}
-	}
+	npRtCalloutCancel(timer);
 }
 
-/* 0x8130F3CC */
-static void timeoutTimerTrampoline(void *arg)
-{
-	NpPollingTimeoutTimer *timer = reinterpret_cast<NpPollingTimeoutTimer *>(arg);
-	void (*cb)(void *) = timer->onTimeout;
-	void *cbArg = timer->timeoutArg;
-	timer->timerState = -2;
-	cb(cbArg);
-	timer->timerState = 1;
-}
-
-/* 0x8130F320 */
 static int timeoutTimerArm(NpPollingTimeoutTimer *timer, SceUInt64 delayUsec,
 			   void (*onTimeout)(void *), void *timeoutArg)
 {
-	timeoutTimerCancel(timer);
-	timer->onTimeout = onTimeout;
-	timer->timeoutArg = timeoutArg;
-	timer->timerState = 0;
-
-	int ret = SceNpCommon_540B307E(&timer->callout, delayUsec,
-				       timeoutTimerTrampoline, timer);
-	if (ret >= 0) {
-		timer->timerState = -1;
-		return 0;
-	}
-	return ret;
+	return npRtCalloutArm(timer, delayUsec, onTimeout, timeoutArg);
 }
 
-/* 0x8130F3B8 */
 static int timeoutTimerHasExpired(const NpPollingTimeoutTimer *timer)
 {
-	int curState = timer->timerState;
-	return (curState == -2 || curState > 0) ? 1 : 0;
+	return npRtCalloutIsFired(timer);
 }
 
 /* --------------------------------------------------------------------------
@@ -1247,17 +1195,13 @@ static void *resolverAlloc(SceSize size, int rid, const char *name, void *user)
 /* 0x8130DCB4 */
 static void resolverFree(void *ptr, int rid, const char *name, void *user)
 {
-	(void)rid;
-	(void)name;
-	(void)user;
-	npRtHeapFree(ptr, NULL);
+	npRtResolverFree(ptr, rid, name, user);
 }
 
 /* 0x8130D760 */
 static void udpClientInit(NpPollingUdpClient *client)
 {
-	client->socketId = -1;
-	client->resolverId = -1;
+	npRtNetBaseInit(client);
 }
 
 /* 0x8130D76A */
@@ -1272,7 +1216,7 @@ static void udpClientTerm(NpPollingUdpClient *client)
 /* 0x8130D784 */
 static int udpClientIsOpen(const NpPollingUdpClient *client)
 {
-	return (client->resolverId >= 0 || client->socketId >= 0) ? 1 : 0;
+	return npRtNetBaseIsOpen(client);
 }
 
 /* 0x8130D798 */
@@ -1556,14 +1500,13 @@ static int workerThreadCreate(SceUID *outThreadId, const NpPollingThreadParam *p
 /* 0x8130DD10 */
 static int workerThreadStart(SceUID *threadId, NpPollingSession *session)
 {
-	int ret = sceKernelStartThread(*threadId, sizeof(session), &session);
-	return (ret >= 0) ? 0 : ret;
+	return npRtStartThread(threadId, session);
 }
 
 /* 0x8130DD46 */
 static void workerThreadWait(SceUID *threadId)
 {
-	sceKernelWaitThreadEnd(*threadId, NULL, NULL);
+	npRtWaitThreadEnd(threadId);
 }
 
 /* 0x8130E5AA */
@@ -1899,9 +1842,7 @@ static int stateClosingHandler(NpPollingSession *session, int *nextState)
 /* 0x8130E750: State 0 / 5 (ERROR / STOPPED) handler */
 static int stateInvalidHandler(NpPollingSession *session, int *nextState)
 {
-	(void)session;
-	(void)nextState;
-	return NP_POLLING_ERR_BAD_TRANSITION;
+	return npRtStateInvalid(session, nextState);
 }
 
 typedef int (*NpPollingStateHandler)(NpPollingSession *session, int *nextState);
@@ -2417,6 +2358,7 @@ int npPollingStartSession(int sessionId, int checkInitialStatus, int pollingMode
 	return ret;
 }
 
+
 /* 0x813F3EDC */
 int npPollingGetStatusConfig(int sessionId, NpPollingStatusConfig *outConfig)
 {
@@ -2431,6 +2373,7 @@ int npPollingGetStatusConfig(int sessionId, NpPollingStatusConfig *outConfig)
 	return ret;
 }
 
+
 /* 0x813F3F2A */
 int npPollingGetServerStatus(int sessionId, int *outServerStatus)
 {
@@ -2444,6 +2387,7 @@ int npPollingGetServerStatus(int sessionId, int *outServerStatus)
 		sessionRelease(session);
 	return ret;
 }
+
 
 /* 0x813F3F72 */
 int npPollingUpdateMode(int sessionId, int pollingMode, const char *resourceName)
@@ -2466,4 +2410,129 @@ int npPollingUpdateMode(int sessionId, int pollingMode, const char *resourceName
 	if (session != NULL)
 		sessionRelease(session);
 	return ret;
+}
+
+/* --------------------------------------------------------------------------
+ * Shared NP RT / Polling Low-Level Helpers (0x8130D172..0x8130F3E3)
+ * -------------------------------------------------------------------------- */
+/* 0x8130D172 */
+int npRtDeleteMsgPipe(SceUID *pipeId)
+{
+	return sceKernelDeleteMsgPipe(*pipeId);
+}
+
+/* 0x8130D320 */
+int npRtLockLwMutex(SceKernelLwMutexWork *mutex)
+{
+	int ret = sceKernelLockLwMutex(mutex, 1, NULL);
+	return (ret >= 0) ? 1 : ret;
+}
+
+/* 0x8130D334 */
+int npRtUnlockLwMutex(SceKernelLwMutexWork *mutex, int lockState)
+{
+	if (lockState > 0)
+		sceKernelUnlockLwMutex(mutex, 1);
+	return 0;
+}
+
+/* 0x8130D760 */
+void npRtNetBaseInit(NpRtNetBase *net)
+{
+	net->socketId = -1;
+	net->resolverId = -1;
+}
+
+/* 0x8130D784 */
+int npRtNetBaseIsOpen(const NpRtNetBase *net)
+{
+	return (net->resolverId >= 0 || net->socketId >= 0) ? 1 : 0;
+}
+
+/* 0x8130DCB4 */
+void npRtResolverFree(void *ptr, int rid, const char *name, void *user)
+{
+	(void)rid;
+	(void)name;
+	(void)user;
+	npRtHeapFree(ptr, NULL);
+}
+
+/* 0x8130DD10 */
+int npRtStartThread(SceUID *threadId, void *session)
+{
+	int ret = sceKernelStartThread(*threadId, sizeof(session), &session);
+	return (ret >= 0) ? 0 : ret;
+}
+
+/* 0x8130DD46 */
+void npRtWaitThreadEnd(SceUID *threadId)
+{
+	sceKernelWaitThreadEnd(*threadId, NULL, NULL);
+}
+
+/* 0x8130E750 */
+int npRtStateInvalid(void *session, int *nextState)
+{
+	(void)session;
+	(void)nextState;
+	return NP_POLLING_ERR_BAD_TRANSITION;
+}
+
+/* 0x8130F2B4 */
+void npRtCalloutInit(NpPollingTimeoutTimer *timer)
+{
+	sceClibMemset(timer, 0, sizeof(*timer));
+}
+
+/* 0x8130F2C0 */
+void npRtCalloutCancel(NpPollingTimeoutTimer *timer)
+{
+	if (timer->timerState < 0) {
+		int removed = 0;
+		if (SceNpCommon_38B88BA3(&timer->callout, &removed) >= 0) {
+			if (removed != 0) {
+				timer->timerState = 0;
+			} else {
+				while (timer->timerState < 0)
+					sceKernelDelayThread(100000);
+			}
+		}
+	}
+}
+
+/* 0x8130F3CC */
+static void npRtCalloutTrampoline(void *arg)
+{
+	NpPollingTimeoutTimer *timer = reinterpret_cast<NpPollingTimeoutTimer *>(arg);
+	void (*cb)(void *) = timer->onTimeout;
+	void *cbArg = timer->timeoutArg;
+	timer->timerState = -2;
+	cb(cbArg);
+	timer->timerState = 1;
+}
+
+/* 0x8130F320 */
+int npRtCalloutArm(NpPollingTimeoutTimer *timer, SceUInt64 delayUsec,
+		   void (*onTimeout)(void *), void *timeoutArg)
+{
+	npRtCalloutCancel(timer);
+	timer->onTimeout = onTimeout;
+	timer->timeoutArg = timeoutArg;
+	timer->timerState = 0;
+
+	int ret = SceNpCommon_540B307E(&timer->callout, delayUsec,
+				       npRtCalloutTrampoline, timer);
+	if (ret >= 0) {
+		timer->timerState = -1;
+		return 0;
+	}
+	return ret;
+}
+
+/* 0x8130F3B8 */
+int npRtCalloutIsFired(const NpPollingTimeoutTimer *timer)
+{
+	int curState = timer->timerState;
+	return (curState == -2 || curState > 0) ? 1 : 0;
 }

@@ -14,7 +14,7 @@
 #include <np/np_common.h>
 #include <np/np_auth.h>
 #include <np/np_auth_oauth.h>
-#include "../rt/np_rt_stanza.h"
+#include "../rt/np_rt_core.h"
 
 /* bXCe DOM/XML lightweight types matching sys/internal/usermode/src/bXCe/bxce_internal.h */
 struct BxceNodeList {
@@ -29,22 +29,11 @@ struct BxceNodeList {
 #define BXCE_NODE_TYPE_ELEMENT		4
 #define BXCE_NODE_TYPE_EMPTY_ELEMENT	5
 
-/* NP real-time (XMPP IQ) stanza and handler descriptors */
+/* NP real-time (XMPP IQ) JID pair descriptor */
 struct NpRtJidPair {
 	const SceNpId *selfNpId;
 	const SceNpId *peerNpId;
 };
-
-struct NpRtHandlerConfig {
-	const char *const *namespaces;	/* +0x00 */
-	void (*onConnect)(void);	/* +0x04 */
-	void (*onRecv)(int handlerId, NpRtStanza *stanza);	/* +0x08 */
-	int reservedFirst;		/* +0x0C */
-	int reservedSecond;		/* +0x10 */
-};
-
-typedef void (*NpRtIqResponseCallback)(int sessionHandle, int transactionId, int result,
-				       NpRtStanza *response, void *userArg);
 
 /* IMPS raw message channel registration callbacks */
 struct NpImpsRawMsgServerCallbacks {
@@ -202,9 +191,8 @@ extern int npRtCreateStanza(const NpRtJidPair *npIds, const char *stanzaId, int 
 extern int npRtSendIq(const SceNpId *peerNpId, NpRtStanza *stanza, int handlerId,
 		      NpRtIqResponseCallback callback, void *userArg, int *outTransactionId);
 extern int npRtSendIqWithTimeout(const SceNpId *peerNpId, NpRtStanza *stanza, int handlerId,
-				 int unusedFlag, int timeoutMs, int retryCount,
-				 NpRtIqResponseCallback callback, void *userArg,
-				 int *outTransactionId);
+				 SceUInt64 timeoutUsec, NpRtIqResponseCallback callback,
+				 void *userArg, int *outTransactionId);
 extern int npRtSendResult(const SceNpId *peerNpId, NpRtStanza *stanza, int handlerId);
 extern int npRtSendError(const SceNpId *peerNpId, int handlerId, const NpXmppErrorStanza *errStanza);
 
@@ -355,23 +343,6 @@ extern int npManagerEnqueueGetTicketAvatarUrlJob(IPMI::Session *session, SceUInt
 extern int npImpsRawMsgRegisterChannel(int channelId, const NpImpsRawMsgServerCallbacks *callbacks);	/* 0x812F11E4 */
 extern int npImpsRawMsgUnregisterChannel(int channelId);						/* 0x812F1208 */
 extern int npImpsRawMsgSend(IPMI::Session *session, const void *msgBuf, SceSize msgSize, int mode);	/* 0x812F122A */
-
-extern void *npRtHeapAlloc(SceSize size, void *customAlloc);						/* 0x813126E6 */
-extern void npRtHeapFree(void *ptr, void *customAlloc);							/* 0x81312748 */
-extern int npRtRegisterHandler(const NpRtHandlerConfig *config, int *outHandlerId);			/* 0x813109DE */
-extern int npRtUnregisterHandler(int handlerId);							/* 0x81310A14 */
-extern int npRtGetSessionByNpId(const SceNpId *npId, int *outSessionHandle);				/* 0x81310C5E */
-extern int npRtAllocTransactionId(int sessionHandle, int *outTransactionId);				/* 0x81310CA2 */
-extern int npRtSendIqRequest(int sessionHandle, int handlerId, int transactionId, NpRtStanza *stanza,
-			     NpRtIqResponseCallback callback, void *userArg);				/* 0x81310CE6 */
-extern int npRtSendIqRequestEx(int sessionHandle, int handlerId, int transactionId, NpRtStanza *stanza,
-			       int timeoutMs, int retryCount, NpRtIqResponseCallback callback,
-			       void *userArg);								/* 0x81310D64 */
-extern int npRtSendIqResult(int sessionHandle, int handlerId, NpRtStanza *stanza);			/* 0x81310ED0 */
-extern int npRtSendIqError(int sessionHandle, int handlerId, const NpXmppErrorStanza *errStanza);	/* 0x81310F22 */
-extern int npRtParseXmppError(NpXmppErrorStanza *outError, const NpRtStanza *stanza);			/* 0x8130F766 */
-extern void npRtReleaseStanza(NpRtStanza *stanza);							/* 0x8130F9C6 */
-extern int npRtAllocStanza(NpRtStanza **outStanza, const NpRtStanzaInit *init);				/* 0x8130FA1E */
 
 /* NpAuth internal service (0x81324874..0x81324D76) */
 extern int npAuthCoreAbortRequest(int reqId);								/* 0x81324874 */

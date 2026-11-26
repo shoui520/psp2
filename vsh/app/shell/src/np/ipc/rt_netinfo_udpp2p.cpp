@@ -179,10 +179,11 @@ static int npRtSignalingSendUdpP2p(const NpRtJidPair *npIds, int opCode,
 				   const NpUdpP2pPayload *payload);
 static int npRtSignalingSendNetInfo(const char *stanzaId, const NpRtJidPair *npIds, int opCode,
 				    const NpRtNetInfoPayload *payload);
-static void npRtSignalingRtOnConnectNoop(void);
-static void npRtSignalingRtOnRecv(int handlerId, NpRtStanza *stanza);
-static void npRtSignalingRtOnIqResponse(int sessionHandle, int transactionId, int result,
-					NpRtStanza *response, void *userArg);
+static void npRtSignalingRtOnStateNoop(const NpRtSessionIdentity *session, int eventState,
+				       int resultCode);
+static void npRtSignalingRtOnRecv(const NpRtSessionIdentity *session, NpRtStanza *stanza);
+static void npRtSignalingRtOnIqResponse(const NpRtSessionIdentity *session, int transactionId,
+					int result, NpRtStanza *response, void *userArg);
 static int npRtNetInfoOnRequest(const NpRtStanza *stanza);
 static int npRtNetInfoOnResponse(const NpRtStanza *stanza, int transactionId);
 static int npRtUdpP2pOnRequest(const NpRtStanza *stanza);
@@ -490,8 +491,12 @@ static int npRtSignalingSendError(const char *stanzaId, const NpRtJidPair *npIds
 	return ret;
 }
 
-static void npRtSignalingRtOnConnectNoop(void)
+static void npRtSignalingRtOnStateNoop(const NpRtSessionIdentity *session, int eventState,
+				       int resultCode)
 {
+	(void)session;
+	(void)eventState;
+	(void)resultCode;
 }
 
 /* 0x812259FC */
@@ -510,10 +515,10 @@ static int npRtSignalingRegister(NpRtRecvRequestCb onReq, NpRtRecvResultCb onRes
 	int ret;
 
 	config.namespaces = s_rtNamespaces;
-	config.onConnect = npRtSignalingRtOnConnectNoop;
-	config.onRecv = npRtSignalingRtOnRecv;
-	config.reservedFirst = 0;
-	config.reservedSecond = 0;
+	config.onStateChanged = npRtSignalingRtOnStateNoop;
+	config.onIqRecv = npRtSignalingRtOnRecv;
+	config.onMessageRecv = NULL;
+	config.onPresenceRecv = NULL;
 
 	ret = npRtRegisterHandler(&config, &s_rtHandlerId);
 	if (ret < 0)
@@ -634,12 +639,12 @@ static int npRtSignalingSendNetInfo(const char *stanzaId, const NpRtJidPair *npI
 }
 
 /* 0x812258A6 */
-static void npRtSignalingRtOnRecv(int handlerId, NpRtStanza *stanza)
+static void npRtSignalingRtOnRecv(const NpRtSessionIdentity *session, NpRtStanza *stanza)
 {
 	const NpRtNamespaceEntry *nsEntry = NULL;
 	int ret;
 
-	(void)handlerId;
+	(void)session;
 	if (stanza->stanzaType != NP_RT_STANZA_IQ_GET &&
 	    stanza->stanzaType != NP_RT_STANZA_IQ_SET) {
 		return;
@@ -650,10 +655,10 @@ static void npRtSignalingRtOnRecv(int handlerId, NpRtStanza *stanza)
 		ret = nsEntry->onRecvRequest(stanza);
 
 	if (ret < 0) {
-		SceNpId fromNpId;
+		SceNpId localNpId;
 		int sessionHandle = 0;
-		if (SceNpCommon_9B7CAA67(&fromNpId, &stanza->fromJid) >= 0 &&
-		    npRtGetSessionByNpId(&fromNpId, &sessionHandle) >= 0) {
+		if (SceNpCommon_9B7CAA67(&localNpId, &stanza->toJid) >= 0 &&
+		    npRtGetSessionByNpId(&localNpId, &sessionHandle) >= 0) {
 			NpXmppErrorStanza errStanza;
 			sceClibMemset(&errStanza, 0, sizeof(errStanza));
 			errStanza.errorKind = 2;
@@ -665,11 +670,11 @@ static void npRtSignalingRtOnRecv(int handlerId, NpRtStanza *stanza)
 }
 
 /* 0x8122593E */
-static void npRtSignalingRtOnIqResponse(int sessionHandle, int transactionId, int result,
-					NpRtStanza *response, void *userArg)
+static void npRtSignalingRtOnIqResponse(const NpRtSessionIdentity *session, int transactionId,
+					int result, NpRtStanza *response, void *userArg)
 {
 	const NpRtNamespaceEntry *nsEntry = (const NpRtNamespaceEntry *)userArg;
-	(void)sessionHandle;
+	(void)session;
 
 	if (result < 0) {
 		s_rtOnError(transactionId, result);
@@ -1042,9 +1047,9 @@ static int npRtNetInfoOnRequest(const NpRtStanza *stanza)
 	npIds.selfNpId = &fromNpId;
 	npIds.peerNpId = &toNpId;
 
-	ret = SceNpCommon_9B7CAA67(&fromNpId, &stanza->fromJid);
+	ret = SceNpCommon_9B7CAA67(&fromNpId, &stanza->toJid);
 	if (ret >= 0)
-		ret = SceNpCommon_9B7CAA67(&toNpId, &stanza->toJid);
+		ret = SceNpCommon_9B7CAA67(&toNpId, &stanza->fromJid);
 	if (ret >= 0) {
 		ret = s_rtOnRequest(stanza->stanzaType, stanza->stanzaId, &npIds,
 				    NP_RT_OP_NETINFO_REQ, NULL, 0);
@@ -1091,10 +1096,10 @@ static int npRtNetInfoOnResponse(const NpRtStanza *stanza, int transactionId)
 	npIds.selfNpId = &fromNpId;
 	npIds.peerNpId = &toNpId;
 
-	ret = SceNpCommon_9B7CAA67(&fromNpId, &stanza->fromJid);
+	ret = SceNpCommon_9B7CAA67(&fromNpId, &stanza->toJid);
 	if (ret < 0)
 		return ret;
-	ret = SceNpCommon_9B7CAA67(&toNpId, &stanza->toJid);
+	ret = SceNpCommon_9B7CAA67(&toNpId, &stanza->fromJid);
 	if (ret < 0)
 		return ret;
 
@@ -1280,9 +1285,9 @@ static int npRtUdpP2pOnRequest(const NpRtStanza *stanza)
 	npIds.selfNpId = &fromNpId;
 	npIds.peerNpId = &toNpId;
 
-	ret = SceNpCommon_9B7CAA67(&fromNpId, &stanza->fromJid);
+	ret = SceNpCommon_9B7CAA67(&fromNpId, &stanza->toJid);
 	if (ret >= 0)
-		ret = SceNpCommon_9B7CAA67(&toNpId, &stanza->toJid);
+		ret = SceNpCommon_9B7CAA67(&toNpId, &stanza->fromJid);
 	if (ret >= 0)
 		ret = npRtParseUdpP2pXml(stanza->xmlDoc, &opCode, &payload);
 	if (ret >= 0) {
@@ -1305,9 +1310,9 @@ static int npRtUdpP2pOnResponse(const NpRtStanza *stanza, int transactionId)
 	npIds.selfNpId = &fromNpId;
 	npIds.peerNpId = &toNpId;
 
-	ret = SceNpCommon_9B7CAA67(&fromNpId, &stanza->fromJid);
+	ret = SceNpCommon_9B7CAA67(&fromNpId, &stanza->toJid);
 	if (ret >= 0)
-		ret = SceNpCommon_9B7CAA67(&toNpId, &stanza->toJid);
+		ret = SceNpCommon_9B7CAA67(&toNpId, &stanza->fromJid);
 	if (ret >= 0) {
 		ret = s_rtOnResult(transactionId, &npIds, NP_RT_OP_ACK, NULL, 0);
 		if (ret >= 0)
