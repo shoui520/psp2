@@ -48,7 +48,7 @@ static bool s_blinkOff;
 static bool s_displayReady;
 static char s_progressBar[CUI_PROGRESS_BAR_MAX_DOTS + 2];
 
-static void ClearFrameBuffer(void *frameBuf)
+static inline void ClearFrameBuffer(void *frameBuf)
 {
 	SceUInt32 *row = static_cast<SceUInt32 *>(frameBuf);
 
@@ -70,7 +70,7 @@ static void ClearFrameBuffer(void *frameBuf)
 	}
 }
 
-static void PresentCurrentFrameBuffer()
+static inline void PresentCurrentFrameBuffer()
 {
 	SceDisplayFrameBuf frameBuf;
 

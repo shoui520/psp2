@@ -16,36 +16,35 @@ UpdateViewBase::~UpdateViewBase()
 
 SceInt32 UpdateViewBase::ExecuteUpdate()
 {
-	SwuApplication *app = SwuApplication::GetInstance();
-	const char *pupPath = app->GetPupPath();
-	SceInt32 ret = app->VerifyData(pupPath);
+	const char *pupPath = SwuApplication::GetInstance()->GetPupPath();
+	SceInt32 ret = SwuApplication::GetInstance()->VerifyData(pupPath);
 
 	if (ret != 0) {
-		app->RecordFirstError(ret);
-		app->UpdateModeFlag();
+		SwuApplication::GetInstance()->RecordFirstError(ret);
+		SwuApplication::GetInstance()->UpdateModeFlag();
 		return ret;
 	}
 
 	ret = OnVerifyFinished();
 	if (ret != 0) {
 		CuiInformUpdateFinished(ret, "verify notification failed.", 27);
-		app->RecordFirstError(ret);
-		app->UpdateModeFlag();
+		SwuApplication::GetInstance()->RecordFirstError(ret);
+		SwuApplication::GetInstance()->UpdateModeFlag();
 		return ret;
 	}
 
-	ret = app->UpdateFirmware(pupPath);
+	ret = SwuApplication::GetInstance()->UpdateFirmware(pupPath);
 	if (ret != 0) {
-		app->RecordFirstError(ret);
-		app->UpdateModeFlag();
+		SwuApplication::GetInstance()->RecordFirstError(ret);
+		SwuApplication::GetInstance()->UpdateModeFlag();
 		return ret;
 	}
 
-	ret = app->UpdateModeFlag();
+	ret = SwuApplication::GetInstance()->UpdateModeFlag();
 	if (ret == 0) {
 		ret = OnUpdateFinished();
 		if (ret != 0) {
-			app->RecordFirstError(ret);
+			SwuApplication::GetInstance()->RecordFirstError(ret);
 			CuiInformUpdateFinished(ret, "update notification failed.", 27);
 			return ret;
 		}

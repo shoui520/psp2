@@ -31,11 +31,11 @@ extern uint8_t g_chineseFontTtf[];
 
 UpdateGuiView *UpdateGuiView::s_instance;
 
-static void OnCommonResourceLoaded()
+static void OnPluginLoaded(paf::Plugin *plugin)
 {
 }
 
-static void OnPluginLoaded(paf::Plugin *plugin)
+static void OnCommonResourceLoaded()
 {
 }
 
@@ -62,10 +62,9 @@ SceInt32 UpdateGuiView::GetProgress(SceInt32 *outRate, SceUInt64 *outRemainingMs
 
 SceInt32 UpdateGuiView::GetEstimateUpdateTime(SceUInt64 *outUpdateMs)
 {
-	SwuApplication *app = SwuApplication::GetInstance();
-	const char *pupPath = app->GetPupPath();
+	const char *pupPath = SwuApplication::GetInstance()->GetPupPath();
 
-	return app->GetEstimateUpdateTime(pupPath, outUpdateMs);
+	return SwuApplication::GetInstance()->GetEstimateUpdateTime(pupPath, outUpdateMs);
 }
 
 SceInt32 UpdateGuiView::Initialize()

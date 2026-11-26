@@ -69,7 +69,7 @@ static void ClearSensitiveBuffer(void *buffer, SceSize size)
 	}
 }
 
-static void ClearFirstIndexEntry(IndexDatEntry *entry)
+static inline void ClearFirstIndexEntry(IndexDatEntry *entry)
 {
 	if (entry->key.c_str() != NULL)
 		entry->key = "";
@@ -79,8 +79,8 @@ static void ClearFirstIndexEntry(IndexDatEntry *entry)
 		entry->detail = "";
 }
 
-static SceInt32 DecryptIndexDatBuffer(SceUInt8 *buffer, SceSize bufferSize,
-				      const SceUInt8 wrappedKey[INDEX_DAT_KEY_SIZE])
+static inline SceInt32 DecryptIndexDatBuffer(SceUInt8 *buffer, SceSize bufferSize,
+					     const SceUInt8 wrappedKey[INDEX_DAT_KEY_SIZE])
 {
 	SceUInt8 *plainKey = static_cast<SceUInt8 *>(sce_paf_memalign(64, INDEX_DAT_KEY_SIZE));
 

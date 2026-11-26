@@ -148,7 +148,7 @@ static SceInt32 AppendErrorCode(SceInt32 errorCode, paf::wstring *outText)
 
 static bool IsCorruptDataError(SceUInt32 code)
 {
-	if (code == 0x8025C026U || code == 0x80180105U || code == 0x80180106U ||
+	if (code == 0x8025BFA6U || code == 0x80180105U || code == 0x80180106U ||
 	    code == 0x80180617U)
 		return true;
 	if (code >= 0x80180210U && code <= 0x801802E7U && (code & 0xFU) == 0x7U)
@@ -196,7 +196,7 @@ static SceInt32 GetErrorMessage(paf::wstring *outText, SceInt32 errorCode)
 	return AppendErrorCode(errorCode, outText);
 }
 
-static void FocusRestartButton(SceInt32 dialogId)
+static inline void FocusRestartButton(SceInt32 dialogId)
 {
 	if (dialogId < 0)
 		return;
