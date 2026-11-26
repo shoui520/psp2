@@ -21,6 +21,7 @@
 #include <datetime/datetime.h>
 #include <thread/thread.h>
 #include "np_imps_svc.h"
+#include "np_imps_core.h"
 #include "../roster/np_roster.h"
 
 /* SceNpImpsCache-specific error codes (0x80551400 range) */
@@ -49,39 +50,9 @@ enum NpImpsCoreNotifyAction {
 	NP_IMPS_CORE_NOTIFY_FRIEND_REMOVED	= 1
 };
 
-/* SceNpImpsCore roster push item passed to cache callback */
-struct NpImpsCoreRosterItem {
-	SceNpId npId;
-	int subscription;
-};
-
-/* SceNpImpsCore friend list notification batch */
-struct NpImpsCoreRosterBatch {
-	int reserved;
-	NpImpsCoreRosterItem **items;
-	SceUInt32 count;
-};
-
-/* SceNpImpsCore in-game data message notification */
-struct NpImpsCoreInGameMessage {
-	SceNpCommunicationId commId;
-	void *payload;
-	SceSize payloadSize;
-};
-
-/* SceNpImpsCore callback registration table (7 callbacks + userArg) */
-struct NpImpsCoreCallbacks {
-	void (*onSessionState)(void *userArg, int coreState, int errorCode);
-	void (*onFriendRosterPush)(void *userArg, int action, const NpImpsCoreRosterBatch *batch);
-	void (*onBlockListPush)(void *userArg, int action);
-	void (*onPresencePush)(void *userArg, const SceNpId *npId,
-			       const NpImpsCorePresenceUpdate *update);
-	void (*onInGameDataMessage)(void *userArg, const SceNpId *senderNpId,
-				    const NpImpsCoreInGameMessage *msg);
-	void (*onNotification)(void *userArg, int notifyCode);
-	void (*onError)(void *userArg, int errorCode);
-	void *userArg;
-};
+/* SceNpImpsCore roster push aliases matching SceNpBasic ref-counted types */
+typedef NpBasicRosterItem NpImpsCoreRosterItem;
+typedef NpBasicRosterList NpImpsCoreRosterBatch;
 
 /* Dynamic array of ref-counted pointers (friend handles or roster data) */
 template <typename T>
@@ -534,7 +505,7 @@ public:
 	int EnqueueBlockListRefresh();
 	int EnqueuePresenceUpdate(const SceNpId *npId, const NpImpsCorePresenceUpdate *update);
 	int EnqueueInGameDataMessage(const SceNpId *senderNpId,
-				     const NpImpsCoreInGameMessage *msg);
+				     const NpImpsCoreMessage *msg);
 	int EnqueueNotification(int notifyCode);
 	int EnqueueRetrySync();
 	int EnqueueSignInSync();
@@ -549,16 +520,20 @@ private:
 	int EnqueueFriendAddOrUpdate(const SceNpId *npId, int relation);
 	int EnqueueFriendRemove(const SceNpId *npId);
 
-	static void OnCoreSessionState(void *userArg, int coreState, int errorCode);
-	static void OnCoreFriendRosterPush(void *userArg, int action,
-					   const NpImpsCoreRosterBatch *batch);
-	static void OnCoreBlockListPush(void *userArg, int action);
-	static void OnCorePresencePush(void *userArg, const SceNpId *npId,
+	static void OnCoreCtlEvent(int eventType);
+	static void OnCoreSessionState(const NpImpsSessionIdentity *session, int coreState,
+				       int errorCode);
+	static void OnCoreFriendRosterPush(const NpImpsSessionIdentity *session, int action,
+					   const NpBasicRosterList *batch);
+	static void OnCoreBlockListPush(const NpImpsSessionIdentity *session, int action,
+					const NpBasicPrivacyList *privacyList);
+	static void OnCorePresencePush(const NpImpsSessionIdentity *session, const SceNpId *npId,
 				       const NpImpsCorePresenceUpdate *update);
-	static void OnCoreInGameDataMessage(void *userArg, const SceNpId *senderNpId,
-					    const NpImpsCoreInGameMessage *msg);
-	static void OnCoreNotification(void *userArg, int notifyCode);
-	static void OnCoreError(void *userArg, int errorCode);
+	static void OnCoreInGameDataMessage(const NpImpsSessionIdentity *session,
+					    const SceNpId *senderNpId,
+					    const NpImpsCoreMessage *msg);
+	static void OnCoreNotification(const NpImpsSessionIdentity *session, int notifyCode,
+				       const SceRtcTick *timestamp);
 	static void OnAccountSessionCallback(int eventId, int stateGroup, int stateCode,
 					     int detailA, int detailB, void *userArg);
 
@@ -610,7 +585,7 @@ extern int npImpsCacheCreatePresenceUpdateEvent(NpImpsCacheEvent **outEvent,
 						const NpImpsCorePresenceUpdate *update);
 extern int npImpsCacheCreateInGameMessageEvent(NpImpsCacheEvent **outEvent,
 					       const SceNpId *senderNpId,
-					       const NpImpsCoreInGameMessage *msg,
+					       const NpImpsCoreMessage *msg,
 					       NpImpsCacheStoreSink *sink);
 extern int npImpsCacheCreateRetrySyncEvent(NpImpsCacheEvent **outEvent,
 					   NpImpsCacheCoreImpl *core,
@@ -642,11 +617,7 @@ extern bool npImpsCacheRosterListContains(const SceNpId *npId,
 					  const NpImpsCacheRefVector<NpImpsCacheRosterData> *list);
 extern bool npImpsCacheArrayContains(const SceNpId *npId, const SceNpId *array, SceUInt32 count);
 
-/* External bridges to SceNpImpsCore (Batch G) and Shell account event service */
-extern int npImpsCoreRegisterCallbacks(const NpImpsCoreCallbacks *callbacks, int *outId); /* 0x8131E5DA */
-extern int npImpsCoreUnregisterCallbacks(int callbackId);				  /* 0x8131E626 */
-extern int npImpsCoreResyncSession(void);						  /* 0x8131B632 */
-
+/* External bridge to Shell account event service */
 typedef void (*ShellAccountEventCallback)(int eventId, int stateGroup, int stateCode,
 					  int detailA, int detailB, void *userArg);
 extern "C" {

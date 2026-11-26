@@ -218,14 +218,13 @@ int NpImpsCacheCoreImpl::Init(int threadPriority, SceSize stackSize,
 
 	NpImpsCoreCallbacks coreCallbacks;
 	sce_paf_memset(&coreCallbacks, 0, sizeof(coreCallbacks));
+	coreCallbacks.onCtlEvent = OnCoreCtlEvent;
 	coreCallbacks.onSessionState = OnCoreSessionState;
-	coreCallbacks.onFriendRosterPush = OnCoreFriendRosterPush;
-	coreCallbacks.onBlockListPush = OnCoreBlockListPush;
-	coreCallbacks.onPresencePush = OnCorePresencePush;
-	coreCallbacks.onInGameDataMessage = OnCoreInGameDataMessage;
-	coreCallbacks.onNotification = OnCoreNotification;
-	coreCallbacks.onError = OnCoreError;
-	coreCallbacks.userArg = core;
+	coreCallbacks.onRosterUpdate = OnCoreFriendRosterPush;
+	coreCallbacks.onPrivacyUpdate = OnCoreBlockListPush;
+	coreCallbacks.onPresenceUpdate = OnCorePresencePush;
+	coreCallbacks.onMessageRecv = OnCoreInGameDataMessage;
+	coreCallbacks.onPollingNotify = OnCoreNotification;
 
 	int ret = npImpsCoreRegisterCallbacks(&coreCallbacks, &core->m_impsCoreCallbackId);
 	if (ret < 0) {
@@ -645,7 +644,7 @@ int NpImpsCacheCoreImpl::EnqueuePresenceUpdate(const SceNpId *npId,
 }
 
 int NpImpsCacheCoreImpl::EnqueueInGameDataMessage(const SceNpId *senderNpId,
-						  const NpImpsCoreInGameMessage *msg)
+						  const NpImpsCoreMessage *msg)
 {
 	NpImpsCacheEvent *event = NULL;
 	int ret = npImpsCacheCreateInGameMessageEvent(&event, senderNpId, msg, this);
@@ -792,19 +791,33 @@ int NpImpsCacheCoreImpl::ForceFullSync(int syncFlags)
 }
 
 /* 0x81300E60..0x813017D5: static callback trampolines from SceNpImpsCore & Account */
-void NpImpsCacheCoreImpl::OnCoreSessionState(void *userArg, int coreState, int errorCode)
+void NpImpsCacheCoreImpl::OnCoreCtlEvent(int eventType)
 {
-	(void)userArg;
+	if (s_cacheCore == NULL)
+		return;
+	if (eventType == 0) {
+		if (s_cacheCore->EnqueueSignInSync() >= 0)
+			s_cacheCore->SignalWorker();
+	} else if (eventType == 1) {
+		if (s_cacheCore->EnqueueSignOutClear() >= 0)
+			s_cacheCore->SignalWorker();
+	}
+}
+
+void NpImpsCacheCoreImpl::OnCoreSessionState(const NpImpsSessionIdentity *session, int coreState,
+					     int errorCode)
+{
+	(void)session;
 	if (s_cacheCore == NULL)
 		return;
 	if (s_cacheCore->EnqueueImpsCoreState(coreState, errorCode) >= 0)
 		s_cacheCore->SignalWorker();
 }
 
-void NpImpsCacheCoreImpl::OnCoreFriendRosterPush(void *userArg, int action,
-						 const NpImpsCoreRosterBatch *batch)
+void NpImpsCacheCoreImpl::OnCoreFriendRosterPush(const NpImpsSessionIdentity *session, int action,
+						 const NpBasicRosterList *batch)
 {
-	(void)userArg;
+	(void)session;
 	if (s_cacheCore == NULL || batch == NULL)
 		return;
 	if (action == NP_IMPS_CORE_NOTIFY_FRIEND_ADDED) {
@@ -816,19 +829,22 @@ void NpImpsCacheCoreImpl::OnCoreFriendRosterPush(void *userArg, int action,
 	}
 }
 
-void NpImpsCacheCoreImpl::OnCoreBlockListPush(void *userArg, int action)
+void NpImpsCacheCoreImpl::OnCoreBlockListPush(const NpImpsSessionIdentity *session, int action,
+					      const NpBasicPrivacyList *privacyList)
 {
-	(void)userArg;
+	(void)session;
+	(void)privacyList;
 	if (s_cacheCore == NULL)
 		return;
 	if (action == 0 && s_cacheCore->EnqueueBlockListRefresh() >= 0)
 		s_cacheCore->SignalWorker();
 }
 
-void NpImpsCacheCoreImpl::OnCorePresencePush(void *userArg, const SceNpId *npId,
+void NpImpsCacheCoreImpl::OnCorePresencePush(const NpImpsSessionIdentity *session,
+					     const SceNpId *npId,
 					     const NpImpsCorePresenceUpdate *update)
 {
-	(void)userArg;
+	(void)session;
 	if (s_cacheCore == NULL || update == NULL)
 		return;
 	int status = update->onlineStatus;
@@ -838,37 +854,26 @@ void NpImpsCacheCoreImpl::OnCorePresencePush(void *userArg, const SceNpId *npId,
 	}
 }
 
-void NpImpsCacheCoreImpl::OnCoreInGameDataMessage(void *userArg, const SceNpId *senderNpId,
-						  const NpImpsCoreInGameMessage *msg)
+void NpImpsCacheCoreImpl::OnCoreInGameDataMessage(const NpImpsSessionIdentity *session,
+						  const SceNpId *senderNpId,
+						  const NpImpsCoreMessage *msg)
 {
-	(void)userArg;
+	(void)session;
 	if (s_cacheCore == NULL)
 		return;
 	if (s_cacheCore->EnqueueInGameDataMessage(senderNpId, msg) >= 0)
 		s_cacheCore->SignalWorker();
 }
 
-void NpImpsCacheCoreImpl::OnCoreNotification(void *userArg, int notifyCode)
+void NpImpsCacheCoreImpl::OnCoreNotification(const NpImpsSessionIdentity *session, int notifyCode,
+					     const SceRtcTick *timestamp)
 {
-	(void)userArg;
+	(void)session;
+	(void)timestamp;
 	if (s_cacheCore == NULL)
 		return;
 	if (s_cacheCore->EnqueueNotification(notifyCode) >= 0)
 		s_cacheCore->SignalWorker();
-}
-
-void NpImpsCacheCoreImpl::OnCoreError(void *userArg, int errorCode)
-{
-	(void)userArg;
-	if (s_cacheCore == NULL)
-		return;
-	if (errorCode == 1) {
-		if (s_cacheCore->EnqueueSignInSync() >= 0)
-			s_cacheCore->SignalWorker();
-	} else if (errorCode == 2) {
-		if (s_cacheCore->EnqueueSignOutClear() >= 0)
-			s_cacheCore->SignalWorker();
-	}
 }
 
 /* 0x813017B6 */

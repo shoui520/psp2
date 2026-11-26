@@ -917,15 +917,16 @@ int npImpsCacheCreatePresenceUpdateEvent(NpImpsCacheEvent **outEvent,
 
 int npImpsCacheCreateInGameMessageEvent(NpImpsCacheEvent **outEvent,
 					const SceNpId *senderNpId,
-					const NpImpsCoreInGameMessage *msg,
+					const NpImpsCoreMessage *msg,
 					NpImpsCacheStoreSink *sink)
 {
-	if (msg == NULL)
+	if (msg == NULL || msg->extData == NULL || msg->extData->valid == 0)
 		return NP_IMPS_SVC_ERROR_INVALID_ARGUMENT;
 
 	NpImpsSvcInGameDataMessage *wrapped = NULL;
-	int ret = NpImpsSvcInGameDataMessage::Create(&wrapped, senderNpId, &msg->commId,
-						     msg->payload, msg->payloadSize);
+	int ret = NpImpsSvcInGameDataMessage::Create(&wrapped, senderNpId, &msg->extData->commId,
+						     msg->extData->dataPtr,
+						     msg->extData->dataSize);
 	if (ret < 0)
 		return ret;
 

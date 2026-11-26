@@ -12,6 +12,7 @@
 #include <common/shared_ptr.h>
 #include <job/job.h>
 #include "np_imps_util.h"
+#include "np_imps_core.h"
 
 /* External shell / NP / AppMgr bridges */
 extern "C" {
@@ -22,24 +23,6 @@ extern int SceNpCommon_256670D6(SceNpId *npId, int platformType);
 extern int SceNpCommon_E426FEE8(const SceNpCommunicationId *commId, char *outStr, SceSize maxLen);
 extern int SceNpManager_9554802B(const char *tag, const char *detail, const char *extra);
 }
-
-/* SceNpImpsCore bridges (implemented in Batch G: np_imps_core) */
-typedef void (*NpImpsCoreConnectCallback)(SceUID processId, int errorCode);
-typedef void (*NpImpsCoreSendMsgCallback)(int result, void *userArg);
-
-struct NpImpsCoreInGameMessage {
-	SceUInt32 flags;			/* +0x00 */
-	SceUInt32 reservedWords[3];		/* +0x04 */
-	NpImpsCoreDataNode *dataNode;		/* +0x10 */
-	SceUInt32 reservedTail[6];		/* +0x14 */
-};
-
-extern int npImpsCoreConnectProcess(SceUID processId, NpImpsCoreConnectCallback cb);	/* 0x8131B526 */
-extern int npImpsCoreDisconnectProcess(SceUID processId);				/* 0x8131B5B4 */
-extern int npImpsCoreSendInGameMessage(const SceNpId *targetNpId,
-				       const NpImpsCoreInGameMessage *msg,
-				       NpImpsCoreSendMsgCallback cb,
-				       void *userArg);					/* 0x8131B706 */
 
 /* SceNpManager / SceNpCommonPs4 / Shell job-queue bridges */
 extern int npAccountGetLegacySignInStatus(SceUInt32 sdkVersion);			/* 0x81326D30 */
@@ -299,8 +282,11 @@ static void onCoreConnectNoop(SceUID processId, int errorCode)
 	(void)processId;
 	(void)errorCode;
 }
-static void onCoreSendInGameMsgNoop(int result, void *userArg)
+static void onCoreSendInGameMsgNoop(const NpImpsSessionIdentity *session, int transactionId,
+				    int result, void *userArg)
 {
+	(void)session;
+	(void)transactionId;
 	(void)result;
 	(void)userArg;
 }
@@ -2909,9 +2895,9 @@ int npImpsUtilHandleSendInGameData(IPMI::Session *session, const SceNpId *target
 	dataNode.commId = *commId;
 	dataNode.targetCommId = *commId;
 
-	NpImpsCoreInGameMessage coreMsg;
+	NpImpsCoreMessage coreMsg;
 	sce_paf_memset(&coreMsg, 0, sizeof(coreMsg));
-	coreMsg.dataNode = &dataNode;
+	coreMsg.extData = &dataNode;
 
 	SceNpId resolvedNpId = *targetNpId;
 	if (sdkVersion >= 0x01600000u) {

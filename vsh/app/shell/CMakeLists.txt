@@ -453,6 +453,9 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/np/rt/np_rt_util.cpp
 	src/np/rt/np_rt_xmpp.cpp
 	src/np/rt/np_rt_basic.cpp
+	src/np/imps/np_imps_core_session.cpp
+	src/np/imps/np_imps_core_ctl.cpp
+	src/np/imps/np_imps_core_notif.cpp
 	src/nsx/nsx_clock_updater.cpp
 	src/nsx/nsx_push_info.cpp
 	src/nsx/nsx_whats_new.cpp
