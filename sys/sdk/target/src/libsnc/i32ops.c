@@ -63,6 +63,7 @@ int __divsi3(int n, int d)
 	return q;
 }
 
+#ifndef LIBSNC_OMIT_MODULO
 unsigned int __umodsi3(unsigned int n, unsigned int d)
 {
 	return n - __udivsi3(n, d) * d;
@@ -83,6 +84,7 @@ int __modsi3(int n, int d)
 		q = -q;
 	return n - q * d;
 }
+#endif
 #endif
 
 #ifndef __SNC__
