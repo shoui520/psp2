@@ -661,6 +661,13 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/npdrm_package/npdrm_pkg_meta.cpp
 	src/npdrm_package/npdrm_pkg_unpack.cpp
 	src/npdrm_package/npdrm_install_api.cpp
+	src/host_collabo/account_link_checker/bind_job.cpp
+	src/np/asm/np_asm_client_vsh.cpp
+	src/applauncher_plugin/src/icon_capture_manager.cpp
+	src/bgapputil/bgapputil_server.cpp
+	exclusive_func_auth_reset.cpp
+	exclusive_func_location.cpp
+	src/patch_chk_plugin/patch_chk_cache_enqueue.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
