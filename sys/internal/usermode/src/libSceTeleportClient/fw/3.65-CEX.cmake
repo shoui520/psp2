@@ -1,8 +1,10 @@
 # 3.65-CEX: vs0:sys/external/libSceTeleportClient.suprx (generated)
 set(MODULE_NID 0x3AC75515)
+set(MODULE_AUTH_ID 0x28000000000280A3)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_EXPORT_ORDER 0x00000000 0xE68FB26D)
 set(MODULE_IMPORT_LIBS
 	0xCAE9ACE6:5:0x0
 	0x37FE725A:2:0x0
@@ -10,65 +12,64 @@ set(MODULE_IMPORT_LIBS
 	0x0B351269:1:0x0
 	0x6BF8B2A2:1:0x8
 )
-set(MODULE_IMPORT_FUNCS
-	sceClibMemcpyChk
-	sceKernelDeleteLwMutex
-	sceKernelCancelEventFlag
-	sceClibStrlcpy
-	sceClibMemcpy_safe
-	__stack_chk_fail
-	sceClibMspaceCreate
-	sceKernelLockLwMutex
-	sceClibTolower
-	sceClibMemset
-	sceClibStrncmp
-	sceClibMemmove
-	sceKernelWaitEventFlag
-	sceKernelCreateEventFlag
-	sceClibMspaceMalloc
-	sceClibSnprintf
-	sceKernelUnlockLwMutex
-	sceClibMspaceFree
-	sceClibMemcmp
-	sceClibStrcmp
-	sceClibStrnlen
-	sceClibMspaceDestroy
-	sceClibToupper
-	sceClibStrncasecmp
-	sceClibStrncpy
-	sceKernelCreateThread
-	sceKernelCreateLwMutex
-	sceKernelWaitThreadEnd
-	sceClibStrstr
-	sceKernelStartThread
-	sceClibVsnprintf
-	sceKernelCheckModelCapability
-	sceKernelFreeMemBlock
-	sceKernelGetMemBlockBase
-	sceKernelAllocMemBlock
-	sceKernelDeleteThread
-	sceKernelDelayThread
-	sceKernelDeleteEventFlag
-	sceKernelGetSystemTimeWide
-	sceRegMgrSystemParamGetInt
-	sceRegMgrSystemParamGetBin
-	sceRegMgrSystemParamGetStr
-	sceRegMgrSystemParamSetInt
-	sceRegMgrSystemParamSetStr
-	sceRegMgrSystemParamSetBin
-	sceNetRecv
-	sceNetSetsockopt
-	sceNetConnect
-	sceNetSocketClose
-	sceNetSendto
-	sceNetSocketAbort
-	sceNetHtons
-	sceNetGetSockInfo
-	sceNetRecvfrom
-	sceNetInetPton
-	sceNetSend
-	sceNetSocket
-)
-set(MODULE_IMPORT_VARS
-	__stack_chk_guard
+set(MODULE_IMPORT_FORMAT 0x34)
+set(MODULE_IMPORT_NIDS
+	0xCAE9ACE6:F:0x1F94EF45
+	0xCAE9ACE6:F:0x244E76D2
+	0xCAE9ACE6:F:0x2A12D9B7
+	0xCAE9ACE6:F:0x2CDFCD1C
+	0xCAE9ACE6:F:0x2E3B02A1
+	0xCAE9ACE6:F:0x37691BF8
+	0xCAE9ACE6:F:0x3B9E301A
+	0xCAE9ACE6:F:0x46E7BE7B
+	0xCAE9ACE6:F:0x4C5471BC
+	0xCAE9ACE6:F:0x632980D7
+	0xCAE9ACE6:F:0x660D1F6D
+	0xCAE9ACE6:F:0x736753C8
+	0xCAE9ACE6:F:0x83C0E2AF
+	0xCAE9ACE6:F:0x8516D040
+	0xCAE9ACE6:F:0x86EF7680
+	0xCAE9ACE6:F:0x8CBA03D5
+	0xCAE9ACE6:F:0x91FA6614
+	0xCAE9ACE6:F:0x9C56B4D1
+	0xCAE9ACE6:F:0x9CC2BFDF
+	0xCAE9ACE6:F:0xA2FB4D9D
+	0xCAE9ACE6:F:0xAC595E68
+	0xCAE9ACE6:F:0xAE1A21EC
+	0xCAE9ACE6:F:0xB0335388
+	0xCAE9ACE6:F:0xB54C0BE4
+	0xCAE9ACE6:F:0xC458D60A
+	0xCAE9ACE6:F:0xC5C11EE7
+	0xCAE9ACE6:F:0xDA6EC8EF
+	0xCAE9ACE6:F:0xDDB395A9
+	0xCAE9ACE6:F:0xE265498B
+	0xCAE9ACE6:F:0xF08DE149
+	0xCAE9ACE6:F:0xFA6BE467
+	0xCAE9ACE6:V:0x93B8AA67
+	0x37FE725A:F:0x0144FBD9
+	0x37FE725A:F:0xA91E15EE
+	0x37FE725A:F:0xB8EF5818
+	0x37FE725A:F:0xB9D5EBDE
+	0x859A24B1:F:0x1BBDE3D9
+	0x859A24B1:F:0x4B675D05
+	0x859A24B1:F:0x5840162C
+	0x859A24B1:F:0xF4EE4FA9
+	0x0B351269:F:0x347C1BDB
+	0x0B351269:F:0x7FFE2CDF
+	0x0B351269:F:0x877ADB3F
+	0x0B351269:F:0xC8F73311
+	0x0B351269:F:0xCB3246E3
+	0x0B351269:F:0xD5A73557
+	0x6BF8B2A2:F:0x023643B7
+	0x6BF8B2A2:F:0x065505CA
+	0x6BF8B2A2:F:0x11E5B6F6
+	0x6BF8B2A2:F:0x29822B4D
+	0x6BF8B2A2:F:0x52DB31D5
+	0x6BF8B2A2:F:0x891C1B9B
+	0x6BF8B2A2:F:0x9FA3207B
+	0x6BF8B2A2:F:0xB1AF6840
+	0x6BF8B2A2:F:0xB226138B
+	0x6BF8B2A2:F:0xD5EEB048
+	0x6BF8B2A2:F:0xE3DD8CD9
+	0x6BF8B2A2:F:0xF084FCE3
 )
