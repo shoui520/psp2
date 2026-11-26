@@ -53,6 +53,10 @@ int SwMwManagerCloseKeyBin(int keyBin);
 struct SwMwManager *SwMwManagerFree(struct SwMwManager *manager);
 int SwMwManagerFlushRecords(struct SwMwManager *manager);
 int SwMwManagerCancelDownload(void);
+int SwMwCoreRecordWrite(int keyBin, void *data, int size, int type);
+
+/* the shared status mapper (SwMwContent.h) */
+int SwMwStatus(int status);
 }
 
 /* the manager the ensure path keeps for the process (0x8109e0e0) */
@@ -550,4 +554,107 @@ extern "C" int SwMwManagerTeardown(struct SwMwManager *manager)
 	::operator delete(SwMwManagerFree(manager));
 	g_swMwManager = NULL;
 	return 0;
+}
+
+/* write one record through the session (0x8100376a) */
+extern "C" int SwMwManagerWriteRecord(struct SwMwManager *manager, int value, int size)
+{
+	int status;
+	int failed;
+
+	if (manager == NULL)
+		swMwTrace("[SWMW] Assertion Failed in %s:%d\n", SWMW_MANAGER_SOURCE, 1454);
+	if (manager->object == NULL)
+		swMwTrace("[SWMW] Assertion Failed in %s:%d\n", SWMW_MANAGER_SOURCE, 1455);
+	status = manager->object->write(value, size);
+	failed = 0;
+	if (status != 0) {
+		swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MANAGER_SOURCE, 1458);
+		failed = 1;
+	}
+	if (failed != 0)
+		return SwMwStatus(status);
+	return 0;
+}
+
+/* write one record and mark it done (0x810036e4) */
+extern "C" int SwMwManagerWriteRecordDone(struct SwMwManager *manager, int value, int size,
+					  int *done)
+{
+	int status;
+
+	if (manager->object == NULL)
+		swMwTrace("[SWMW] Assertion Failed in %s:%d\n", SWMW_MANAGER_SOURCE, 1432);
+	status = manager->object->write(value, size);
+	if (status != 0) {
+		swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MANAGER_SOURCE, 1435);
+		return SwMwStatus(status);
+	}
+	*done = 1;
+	return 0;
+}
+
+/* exchange a record buffer with the session (0x81003802) */
+extern "C" int SwMwManagerExchangeRecord(struct SwMwManager *manager, void *buffer,
+					 unsigned int size, int *value)
+{
+	int local;
+	int status;
+	int failed;
+
+	if (manager == NULL)
+		swMwTrace("[SWMW] Assertion Failed in %s:%d\n", SWMW_MANAGER_SOURCE, 1480);
+	if (manager->object == NULL)
+		swMwTrace("[SWMW] Assertion Failed in %s:%d\n", SWMW_MANAGER_SOURCE, 1481);
+	if (size < 0xC10)
+		swMwTrace("[SWMW] Assertion Failed in %s:%d\n", SWMW_MANAGER_SOURCE, 1482);
+	status = manager->object->exchange(8, buffer, &local, manager);
+	failed = 0;
+	if (status != 0) {
+		swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MANAGER_SOURCE, 1488);
+		failed = 1;
+	}
+	if (failed != 0)
+		return SwMwStatus(status);
+	*value = local;
+	return 0;
+}
+
+/* flush the session's records into the key bin (0x810039d2) */
+extern "C" int SwMwManagerFlushRecords(struct SwMwManager *manager)
+{
+	unsigned char *buffer;
+	int value;
+	int status;
+	int failed;
+
+	buffer = (unsigned char *)malloc(0x1000);
+	failed = 0;
+	if (buffer == NULL) {
+		swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MANAGER_SOURCE, 1546);
+		failed = 1;
+	}
+	if (failed != 0) {
+		status = 12008;
+	} else {
+		status = SwMwManagerExchangeRecord(manager, buffer, 4096, &value);
+		failed = 0;
+		if (status != 0) {
+			swMwTrace("[SWMW] Error %d in %s:%d\n", status,
+				  SWMW_MANAGER_SOURCE, 1549);
+			failed = 1;
+		}
+		if (failed == 0) {
+			status = SwMwCoreRecordWrite(manager->keyBin, buffer, value, 3);
+			failed = 0;
+			if (status != 0) {
+				swMwTrace("[SWMW] Error %d in %s:%d\n", status,
+					  SWMW_MANAGER_SOURCE, 1554);
+				failed = 1;
+			}
+		}
+		if (buffer != NULL)
+			free(buffer);
+	}
+	return status;
 }

@@ -7,13 +7,19 @@
 
 #include <scetypes.h>
 
-/* the session object the manager keeps in its first word: only its close slot (+0x0c) is
- * called (the manager teardown's release) */
+/* the session object the manager keeps in its first word (the SWS content session's
+ * library class): start, close, the record write and exchange, and the three interface
+ * operations the middleware does not call (their names are ours) */
 struct SwMwManagerObject {
-	virtual void destroy();		/* 0x00 */
-	virtual void dispose();		/* 0x04 */
-	virtual void discard();		/* 0x08 */
-	virtual void close();		/* 0x0c */
+	virtual void destroy();				/* 0x00 */
+	virtual void dispose();				/* 0x04 */
+	virtual int start();				/* 0x08 */
+	virtual void close();				/* 0x0c */
+	virtual void discard();				/* 0x10 */
+	virtual void notify();				/* 0x14 */
+	virtual void poll();				/* 0x18 */
+	virtual int write(int value, int size);		/* 0x1c */
+	virtual int exchange(int size, void *buffer, int *value, void *owner);	/* 0x20 */
 };
 
 /* the activation worker's state: its flag, the worker's status and the activation result */
@@ -88,6 +94,10 @@ int SwMwManagerParamTblThread(void *argument);
 int SwMwManagerDownloadParamTbl(void);
 int SwMwManagerEnsureSession(struct SwMwManager *manager, int mode);
 int SwMwManagerTeardown(struct SwMwManager *manager);
+int SwMwManagerWriteRecord(struct SwMwManager *manager, int value, int size);
+int SwMwManagerWriteRecordDone(struct SwMwManager *manager, int value, int size, int *done);
+int SwMwManagerExchangeRecord(struct SwMwManager *manager, void *buffer, unsigned int size,
+			      int *value);
 int SwMwManagerThreadCreate(struct SwMwManagerThread *thread, int (*entry)(void *),
 			    void *argument, int type);
 int SwMwManagerSessionStart(struct SwMwManagerSinkSlots *slots, int mode);
