@@ -625,6 +625,29 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/sysupchk_plugin/sysupchk_plugin.cpp
 	src/sysupchk_plugin/sysupchk_np.cpp
 	src/rtc_util/rtc_util.cpp
+	${PSP2_SRC}/sys/internal/usermode/src/libScePhotoExport/photo_export.cpp
+	${PSP2_SRC}/sys/sdk/target/src/sha1/libsha1.c
+	src/dbsetup/dbrecovery_notify.cpp
+	src/livespace_db/addcont_emu_util.cpp
+	src/remotedownload/remote_download_lib.cpp
+	${PSP2_SRC}/vsh/app/common/src/console_info/console_info_file.cpp
+	${PSP2_SRC}/sys/internal/kernel/src/gcauthmgr/rsa_verify.c
+	${PSP2_SRC}/sys/internal/kernel/src/gcauthmgr/rsa_digest.c
+	${PSP2_SRC}/sys/internal/driver/src/marlin_hci/rsa_exponent.c
+	${PSP2_SRC}/sys/internal/driver/src/marlin_hci/rsa_montgomery.c
+	${PSP2_SRC}/sys/internal/driver/src/marlin_hci/rsa_integer_arithmetic.c
+	${PSP2_SRC}/sys/internal/driver/src/marlin_hci/rsa_integer_multiply.c
+	${PSP2_SRC}/sys/internal/driver/src/marlin_hci/rsa_integer_remainder.c
+	${PSP2_SRC}/sys/internal/driver/src/marlin_hci/rsa_integer_square.c
+	${PSP2_SRC}/sys/internal/usermode/src/updater_core/pup_controller.cpp
+	${PSP2_SRC}/sys/internal/usermode/src/updater_core/update_utility.cpp
+	${PSP2_SRC}/sys/internal/usermode/src/updater_core/segment_analysis.cpp
+	${PSP2_SRC}/sys/sdk/target/src/sha256/libsha256.c
+	${PSP2_SRC}/sys/sdk/target/src/hmac/libhmac.c
+	${PSP2_SRC}/sys/sdk/target/src/hmac/sha1.c
+	${PSP2_SRC}/sys/sdk/target/src/hmac/sha256.c
+	${PSP2_SRC}/sys/internal/usermode/src/fsutil/fs_util.c
+	${PSP2_SRC}/sys/internal/usermode/src/fsutil/partition.c
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
@@ -645,3 +668,9 @@ set_source_files_properties(src/applauncher_plugin/src/applauncher_iconinfo_game
 # the 3.65 SDK's start code
 set_source_files_properties(${PSP2_SRC}/sys/sdk/target/src/crt0/crt0_main.c PROPERTIES
 	COMPILE_DEFINITIONS SCE_CRT0_SDK_VERSION=0x03650011)
+# SNC C mode does not implement C11 _Static_assert used in marlin_hci/rsa.h
+set_source_files_properties(
+	${PSP2_SRC}/sys/internal/kernel/src/gcauthmgr/rsa_verify.c
+	${PSP2_SRC}/sys/internal/kernel/src/gcauthmgr/rsa_digest.c
+	${PSP2_SRC}/sys/internal/driver/src/marlin_hci/rsa_exponent.c
+	PROPERTIES COMPILE_DEFINITIONS "_Static_assert(c,m)=")
