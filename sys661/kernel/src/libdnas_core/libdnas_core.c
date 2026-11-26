@@ -17,18 +17,18 @@ extern int look_ctype_table(int c);
 extern long strtol(const char *nptr, char **endptr, int base);
 extern size_t strlen(const char *s);
 extern int sprintf(char *str, const char *format, ...);
-extern int strncmp(const char *s1, const char *s2, size_t n);
-extern int memcmp(const void *s1, const void *s2, size_t n);
+extern int strncmp(const char *lhs, const char *rhs, size_t n);
+extern int memcmp(const void *lhs, const void *rhs, size_t n);
 extern void *memcpy(void *dest, const void *src, size_t n);
 extern char *strchr(const char *s, int c);
 extern char *strncpy(char *dest, const char *src, size_t n);
 
 extern int sceChkregGetPsCode(uint8_t *pscode);
 
-extern int sceMcctrl_3EF531DB(void *ctx, void *arg1, void *arg2, void *arg3, void *arg4);
+extern int sceMcctrl_3EF531DB(void);
 extern int sceMcctrl_877CD3A5(void);
 extern int sceMcctrl_1EDFD6BB(void *ctx, void *out);
-extern int sceMcctrl_7CAC25B2(void *ctx, void *in, void *a2, void *a3, void *a4, void *a5);
+extern int sceMcctrl_7CAC25B2(void *ctx, void *payload, void *regionParam, void *gameAuthParam, void *deviceParam, void *tokenOut);
 extern int sceMcctrl_9618EE57(void *ctx, void *in, int len);
 extern int sceMcctrl_61550814(void *ctx, void *in, int len, void *out);
 
@@ -53,6 +53,22 @@ typedef struct DnasRespHeader {
 	char location[0x80];     /* 0x404 */
 } DnasRespHeader;                /* size 0x484 */
 
+typedef struct DnasRegionParam {
+	uint8_t header[0x1c];    /* 0x00 */
+	uint32_t flag_be;        /* 0x1c */
+} DnasRegionParam;               /* size 0x20 */
+
+typedef struct DnasGameAuthParam {
+	uint8_t header[0x20];    /* 0x00 */
+	uint8_t game_id[0x10];   /* 0x20 */
+	uint8_t game_key[0x10];  /* 0x30 */
+} DnasGameAuthParam;             /* size 0x40 */
+
+typedef struct DnasDeviceParam {
+	uint8_t header[0x08];    /* 0x00 */
+	uint8_t game_param[0x08];/* 0x08 */
+} DnasDeviceParam;               /* size 0x10 */
+
 typedef struct DnasCtx {
 	int mode;                /* 0x000 (0x2ff8) */
 	char host[0x80];         /* 0x004 (0x2ffc) */
@@ -62,17 +78,26 @@ typedef struct DnasCtx {
 	uint8_t token[0x130];    /* 0x5b8 (0x35b0..0x36e0) */
 	uint8_t mc_ctx[0x120];   /* 0x6e8 (0x36e0..0x3800) */
 	int mc_res_len;          /* 0x808 (0x3800) */
-	uint8_t key1[0x14];      /* 0x80c (0x3804) */
-	uint32_t flag_be;        /* 0x820 (0x3818) */
-	uint8_t reserved824[0x08];   /* 0x824 */
-	uint8_t key2[0x18];      /* 0x82c (0x3824) */
-	uint8_t game_id[0x10];   /* 0x844 (0x383c) */
-	uint8_t game_key[0x10];  /* 0x854 (0x384c) */
-	uint8_t reserved864[0x08];   /* 0x864 */
-	uint8_t key3[0x08];      /* 0x86c (0x3864) */
-	uint8_t game_param[0x08];/* 0x874 (0x386c) */
+	DnasRegionParam regionParam;     /* 0x80c (0x3804..0x3824) */
+	DnasGameAuthParam gameAuthParam; /* 0x82c (0x3824..0x3864) */
+	DnasDeviceParam deviceParam;     /* 0x86c (0x3864..0x3874) */
 	int chkreg_modid;        /* 0x87c (0x3874) */
 } DnasCtx;                       /* size 0x880 */
+
+typedef struct DnasPktFlags {
+	uint8_t headerReserved[3];
+	uint8_t packetType;
+} DnasPktFlags;
+
+typedef struct DnasPacketHeader {
+	uint32_t magic;
+	uint8_t version;
+	uint8_t subVersion;
+	uint16_t flags;
+	DnasPktFlags typeWord;
+	uint8_t sessionId[0x20];
+	uint32_t payloadLen;
+} DnasPacketHeader;
 
 static int g_redirected;         /* 0x2fe0 */
 static uint32_t g_proxy_len;     /* 0x2fe4 */
@@ -88,7 +113,7 @@ static uint8_t g_rtc_buf[0x1d0]; /* 0x48f8..0x50c8 */
 static int dnasBuildHttpHeader(DnasCtx *ctx, int content_len, char *out_buf, uint32_t max_len);
 static int dnasParseHttpResponse(DnasRespHeader *resp, char *in_buf, uint32_t in_len);
 static int dnasParsePacketHeader(int expected_state, DnasCtx *ctx, const uint8_t *pkt, uint32_t *out_val);
-static void dnasWritePacketHeader(uint8_t *pkt_out, uint32_t hdr_flags, const uint8_t *sess_id, uint32_t payload_len);
+static int dnasWritePacketHeader(uint8_t *pkt_out, DnasPktFlags pktFlags, const uint8_t *sess_id, uint32_t payload_len);
 static int dnasProcessFinalResponse(int state, DnasCtx *ctx, char *buf, uint32_t len);
 static int dnasBuildProxyConnect(DnasCtx *ctx, char *buf, uint32_t max_len);
 static int dnasCheckProxyResponse(DnasCtx *ctx, const char *buf, uint32_t len);
@@ -345,12 +370,12 @@ int sceDNASCore_lib_FA571A75(int mode, int region_mode)
 		flag = __builtin_bswap32(0x80000003);
 	}
 
-	g_ctx.flag_be = flag;
-	memcpy(g_ctx.game_id, game_info + 0x08, 16);
-	memcpy(g_ctx.game_key, game_info + 0x44, 16);
-	memcpy(g_ctx.game_param, game_info + 0x28, 8);
+	g_ctx.regionParam.flag_be = flag;
+	memcpy(g_ctx.gameAuthParam.game_id, game_info + 0x08, 16);
+	memcpy(g_ctx.gameAuthParam.game_key, game_info + 0x44, 16);
+	memcpy(g_ctx.deviceParam.game_param, game_info + 0x28, 8);
 
-	res = sceMcctrl_3EF531DB(&g_ctx.mc_ctx, &g_ctx.key1, &g_ctx.key2, &g_ctx.key3, &g_ctx.game_param);
+	res = sceMcctrl_3EF531DB();
 	if (res < 0) {
 		pspSetK1(k1);
 		return res;
@@ -600,20 +625,7 @@ int sceDNASCore_lib_15096ECD(char *out_host)
 	}
 
 	memset(out_host, 0, 0x80);
-	if (((uintptr_t)out_host | (uintptr_t)g_ctx.host) & 3) {
-		for (int i = 0; i < 0x80; i++) {
-			((volatile char *)out_host)[i] = g_ctx.host[i];
-		}
-	} else {
-		uint32_t *dst = (uint32_t *)out_host;
-		const uint32_t *src = (const uint32_t *)g_ctx.host;
-		for (int i = 0; i < 32; i += 4) {
-			dst[i] = src[i];
-			dst[i + 1] = src[i + 1];
-			dst[i + 2] = src[i + 2];
-			dst[i + 3] = src[i + 3];
-		}
-	}
+	memcpy(out_host, g_ctx.host, 0x80);
 	pspSetK1(k1);
 	return 0;
 }
@@ -899,9 +911,7 @@ static int dnasBuildHttpHeader(DnasCtx *ctx, int content_len, char *out_buf, uin
 		return 0x80530404;
 	}
 
-	out_buf[off] = '\r';
-	out_buf[off + 1] = '\n';
-	out_buf[off + 2] = '\0';
+	memcpy(out_buf + off, "\r\n", 3);
 	return off + 2;
 }
 
@@ -1015,57 +1025,49 @@ static int dnasParseHttpResponse(DnasRespHeader *resp, char *in_buf, uint32_t in
 
 static int dnasParsePacketHeader(int expected_state, DnasCtx *ctx, const uint8_t *pkt, uint32_t *out_val)
 {
-	uint32_t magic;
-	memcpy(&magic, pkt, 4);
-	uint8_t b4 = pkt[4];
-	uint8_t b5 = pkt[5];
-	uint16_t b6_7 = (uint16_t)pkt[6] | ((uint16_t)pkt[7] << 8);
-	uint8_t pkt_type = pkt[11];
-	uint8_t sess_id[0x20];
-	memcpy(sess_id, pkt + 0x0c, 0x20);
-	uint32_t pkt_len;
-	memcpy(&pkt_len, pkt + 0x2c, 4);
+	DnasPacketHeader hdr;
+	memcpy(&hdr, pkt, sizeof(hdr));
+	uint8_t pkt_type = hdr.typeWord.packetType;
 
 	if (out_val != NULL) {
-		*out_val = pkt_len;
+		*out_val = hdr.payloadLen;
 	}
 
-	if (magic != 0xeddefffaU) {
+	if (hdr.magic != 0xeddefffaU) {
 		return 0x80530441;
 	}
-	if (b5 != 0) {
+	if (hdr.subVersion != 0) {
 		return 0x80530442;
 	}
-	if (b6_7 != 0) {
+	if (hdr.flags != 0) {
 		return 0x80530443;
 	}
 
-	(void)b4;
 	if (pkt_type == 5) {
 		if (expected_state != 7) {
 			return 0x80530444;
 		}
-		if (pkt_len != 0x120) {
+		if (hdr.payloadLen != 0x120) {
 			return 0x80530447;
 		}
-		memcpy(ctx->session_id, sess_id, 0x20);
-		return (int)pkt_len;
+		memcpy(ctx->session_id, hdr.sessionId, 0x20);
+		return (int)hdr.payloadLen;
 	} else if (pkt_type == 6) {
 		if (expected_state != 13) {
 			return 0x80530444;
 		}
-		if (pkt_len >= 0x7d1) {
+		if (hdr.payloadLen >= 0x7d1) {
 			return 0x80530447;
 		}
-		if (memcmp(ctx->session_id, sess_id, 0x20) != 0) {
+		if (memcmp(ctx->session_id, hdr.sessionId, 0x20) != 0) {
 			return 0x80530445;
 		}
-		return (int)pkt_len;
+		return (int)hdr.payloadLen;
 	} else if (pkt_type == 4) {
 		if (expected_state != 7 && expected_state != 13) {
 			return 0x80530402;
 		}
-		if (pkt_len != 4) {
+		if (hdr.payloadLen != 4) {
 			return 0x80530447;
 		}
 		int err_code;
@@ -1076,17 +1078,18 @@ static int dnasParsePacketHeader(int expected_state, DnasCtx *ctx, const uint8_t
 	return 0x80530444;
 }
 
-static void dnasWritePacketHeader(uint8_t *pkt_out, uint32_t hdr_flags, const uint8_t *sess_id, uint32_t payload_len)
+static int dnasWritePacketHeader(uint8_t *pkt_out, DnasPktFlags pktFlags, const uint8_t *sess_id, uint32_t payload_len)
 {
-	uint32_t magic = 0xeddefffaU;
-	memcpy(pkt_out, &magic, 4);
-	pkt_out[4] = 0;
-	pkt_out[5] = 0;
-	pkt_out[6] = 0;
-	pkt_out[7] = 0;
-	memcpy(pkt_out + 8, &hdr_flags, 4);
-	memcpy(pkt_out + 0x0c, sess_id, 0x20);
-	memcpy(pkt_out + 0x2c, &payload_len, 4);
+	DnasPacketHeader hdr;
+	hdr.magic = 0xeddefffaU;
+	hdr.version = 0;
+	hdr.subVersion = 0;
+	hdr.flags = 0;
+	hdr.typeWord = pktFlags;
+	memcpy(hdr.sessionId, sess_id, 0x20);
+	hdr.payloadLen = payload_len;
+	memcpy(pkt_out, &hdr, sizeof(hdr));
+	return 0;
 }
 
 static int dnasProcessFinalResponse(int state, DnasCtx *ctx, char *buf, uint32_t len)
@@ -1200,9 +1203,11 @@ static int dnasBuildAuthRequest1(DnasCtx *ctx, char *buf, uint32_t max_len)
 		return 0x80530404;
 	}
 
+	DnasPktFlags pktFlags;
 	uint8_t zero_sess[0x20];
+	memset(&pktFlags, 0, sizeof(pktFlags));
 	memset(zero_sess, 0, sizeof(zero_sess));
-	dnasWritePacketHeader((uint8_t *)buf + hdr_len, 0, zero_sess, 0xb0);
+	dnasWritePacketHeader((uint8_t *)buf + hdr_len, pktFlags, zero_sess, 0xb0);
 
 	uint8_t mc_out[0xb0];
 	int res = sceMcctrl_1EDFD6BB(ctx->mc_ctx, mc_out);
@@ -1250,7 +1255,7 @@ static int dnasProcessAuthResponse1(int state, DnasCtx *ctx, char *buf, uint32_t
 
 	uint8_t payload[0x120];
 	memcpy(payload, body + 0x30, 0x120);
-	res = sceMcctrl_7CAC25B2(ctx->mc_ctx, payload, ctx->key1, ctx->key2, ctx->key3, ctx->token);
+	res = sceMcctrl_7CAC25B2(ctx->mc_ctx, payload, &ctx->regionParam, &ctx->gameAuthParam, &ctx->deviceParam, ctx->token);
 	pspSetK1(k1);
 	return res;
 }
@@ -1271,9 +1276,12 @@ static int dnasBuildAuthRequest2(DnasCtx *ctx, char *buf, uint32_t max_len)
 		return 0x80530404;
 	}
 
+	DnasPktFlags pktFlags;
 	uint8_t sess_copy[0x20];
+	memset(&pktFlags, 0, sizeof(pktFlags));
+	pktFlags.packetType = 1;
 	memcpy(sess_copy, ctx->session_id, 0x20);
-	dnasWritePacketHeader((uint8_t *)buf + hdr_len, 0x01000000U, sess_copy, 0x130);
+	dnasWritePacketHeader((uint8_t *)buf + hdr_len, pktFlags, sess_copy, 0x130);
 	memcpy(buf + hdr_len + 0x30, ctx->token, 0x130);
 
 	pspSetK1(k1);
