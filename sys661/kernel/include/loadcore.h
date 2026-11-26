@@ -169,8 +169,8 @@ enum SceLibAttr {
 typedef s32 (*SceKernelBootCallbackFunction)(void *data, s32 arg, void *opt);
 
 /** Reboot preparation functions */
-typedef s32 (*SceKernelRebootBeforeForKernel)(void *arg1, s32 arg2, s32 arg3, s32 arg4);
-typedef s32 (*SceKernelRebootPhaseForKernel)(s32 arg1, void *arg2, s32 arg3, s32 arg4);
+typedef s32 (*SceKernelRebootBeforeForKernel)(void *param, s32 status, s32 flags, s32 extra);
+typedef s32 (*SceKernelRebootPhaseForKernel)(s32 phase, void *param, s32 flags, s32 extra);
 
 /** 
  * This structure represents a function stub belonging to same privilege-level linked libraries, 
@@ -302,8 +302,8 @@ typedef struct {
  * stub library entry table internal.
  */
 typedef struct SceStubLibrary {
-    /** Reserved. */
-    u32 reserved0; //0
+    /** Free-list link used when the control block is in the pre-allocated pool. */
+    struct SceStubLibrary *freeNext; //0
     /** 
      * A linked list of stub libraries belonging to the same group, i.e. the same resident library.
      */
@@ -503,7 +503,7 @@ typedef struct {
     /** The modules to boot. */
     SceLoadCoreBootModuleInfo *modules; // 16
     /** Reserved. */
-    s32 reserved20; //20
+    s32 reservedAfterModules; //20
     /** Boot mode (0 = normal, >= 3 = special). */
     u8 bootMode; //24
     /** Reserved - padding. */
@@ -517,19 +517,19 @@ typedef struct {
     /** The ID of a module's arguments? */
     SceUID modArgProtId; // 40
     /** Reserved. */
-    s32 reserved44;
+    s32 reservedAfterModArg;
     /** Build version. */
     s32 buildVersion;
     /** Reserved. */
-    s32 reserved52;
+    s32 reservedAfterBuildVer;
     /** The path/name of a boot configuration file. */
     char *configFile; // 56
     /** Reserved. */
-    s32 reserved60[4]; // 60..72
+    s32 reservedAfterConfig[4]; // 60..72
     /** LPT summary. */
     s32 lptSummary; // 76
     /** Reserved. */
-    u32 reserved80[12]; // 80..124
+    u32 reservedTail[12]; // 80..124
 } SceLoadCoreBootInfo; //size = 128
 
 #define SCE_KERNEL_MAX_MODULE_SEGMENT   (4) /** The maximum number of segments a module can have. */
@@ -539,7 +539,7 @@ typedef struct {
  */
 typedef struct {
     /** Reserved. */
-    u32 reserved0;
+    u32 reservedHead;
     /** The mode attribute of the executable file. One of ::SceExecFileModeAttr. */
     u32 modeAttribute; //4
     /** The API type. */
@@ -564,7 +564,7 @@ typedef struct {
      */
     u32 entryAddr; //40
     /** Reserved. */
-    u32 reserved44;
+    u32 reservedAfterEntry;
     /** 
      * The total size of the loadable segments of the executable. Contains for example the size
      * of the .text, .data and .bss segment.
@@ -608,7 +608,7 @@ typedef struct {
      * be seen. 
      */
     u32 isSignChecked; //100
-    /** Unknown. */
+    /** Pointer to secure install ID string. */
     char *secureInstallId; // 104
     /** The size of the GZIP compression overlap. */
     SceSize overlapSize; //108
@@ -742,7 +742,7 @@ typedef struct SceModule {
     /** The number of segments the module consists of. */
 	u8 	nSegments; //124
     /** Reserved. */
-	u8	padding2[3]; //125
+	u8	segmentPadding[3]; //125
     /** An array containing the start address of each segment. */
 	u32 segmentAddr[SCE_KERNEL_MAX_MODULE_SEGMENT]; //128
     /** An array containing the size of each segment. */
@@ -813,8 +813,8 @@ typedef struct {
     SceSyscallTable *sysCallTable; //512
     /** The seed of the system call table. Used to locate a table entry. */
     u32 sysCallTableSeed; //516
-    /** Reserved. */
-    u32 reserved520;
+    /** Unused padding word after syscall table pointer. */
+    u32 unusedAfterSyscallTable;
     /** A linked list of loaded modules. */
     SceModule *registeredMods; //524
     /** Pointer to the latest loaded module.*/

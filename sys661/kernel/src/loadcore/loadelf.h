@@ -136,7 +136,7 @@ typedef struct {
     /* The size of the compressed ELF. */
     u32 compSize; //176
     /* Reserved. */
-    u32 reserved180[3]; //180..188
+    u32 headerReserved[3]; //180..188
     /* The CMAC Data hash. */
     u8 cmacDataHash[CMAC_DATA_HASH_SIZE]; //192
     /* Tag value. */

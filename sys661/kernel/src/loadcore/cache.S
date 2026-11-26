@@ -16,17 +16,18 @@ sceKernelDcacheWBinvAll:
     addiu   $v0, $a1, 12
     sllv    $a1, $a0, $v0
     srl     $a0, $a1, 1
-    beqz    $a0, exit
-    move    $v1, $zero
+    beqz    $a0, .Ldcache_exit
+    addu    $v1, $zero, $zero
 
-loc_0000746C:
+.Ldcache_loop:
     cache   0x14, 0($v1)
     cache   0x14, 0($v1)
     addiu   $v1, $v1, 64
-    sltu    $a3, $v1, $a0 
-    bnez    $a3, loc_0000746C
+    sltu    $a3, $v1, $a0
+    bnez    $a3, .Ldcache_loop
+    nop
 
-exit:
+.Ldcache_exit:
     jr      $ra
     nop
     .end sceKernelDcacheWBinvAll
@@ -34,26 +35,24 @@ exit:
 
     .ent sceKernelIcacheClearAll
 sceKernelIcacheClearAll:
-    mfc0       $a2, COP0_STATE_CONFIG
-    ext        $a1, $a2, 9, 3
-    li         $a0, 1
-    addiu      $v0, $a1, 12
-    sllv       $a1, $a0, $v0
-    srl        $a0, $a1, 1
-    beqz       $a0, exit1
-    move       $v1, $zero
+    mfc0    $a2, COP0_STATE_CONFIG
+    ext     $a1, $a2, 9, 3
+    li      $a0, 1
+    addiu   $v0, $a1, 12
+    sllv    $a1, $a0, $v0
+    srl     $a0, $a1, 1
+    beqz    $a0, .Licache_exit
+    addu    $v1, $zero, $zero
 
-loc_000074AC:		
-    cache      0x4, 0($v1)
-    cache      0x4, 0($v1)
-    addiu      $v1, $v1, 64
-    sltu       $a3, $v1, $a0
-    bnez       $a3, loc_000074AC
-    nop        
+.Licache_loop:
+    cache   0x4, 0($v1)
+    cache   0x4, 0($v1)
+    addiu   $v1, $v1, 64
+    sltu    $a3, $v1, $a0
+    bnez    $a3, .Licache_loop
+    nop
 
-exit1:
-    jr         $ra
-    nop  
+.Licache_exit:
+    jr      $ra
+    nop
     .end sceKernelIcacheClearAll
-
-

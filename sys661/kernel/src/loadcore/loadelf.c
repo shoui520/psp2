@@ -51,11 +51,12 @@
 
 static s32 sceKernelApplyPspRelSegment2(u32 *segmentAddr, u32 nSegments, u8 *relocData, u32 relocSize);
 static s32 sceKernelApplyPspRelSection(u32 *segmentAddr, u32 nSegments, Elf32_Rel *relocInfo, u32 fileSize);
-static s32 PspUncompress(u8 *modBuf, SceLoadCoreExecFileInfo *execInfo, u32 *arg2);
+static s32 PspUncompress(u8 *modBuf, SceLoadCoreExecFileInfo *execInfo, u32 *outSize);
 static void readElfSegmentInfo(PspHeader *header, SceLoadCoreExecFileInfo *execInfo);
 static s32 CheckElfSection(Elf32_Ehdr *elfHeader, SceLoadCoreExecFileInfo *execInfo);
 static s32 CheckElfSectionPRX(Elf32_Ehdr *elfHeader, SceLoadCoreExecFileInfo *execInfo);
-static s32 CheckElfImage(Elf32_Ehdr *elfHeader1 __attribute((unused)), Elf32_Ehdr *elfHeader2, Elf32_Phdr *progHeader);
+static s32 __attribute__((noinline)) CheckModInfo(u8 *buf, SceLoadCoreExecFileInfo *execInfo, u32 startOff, u32 endOff);
+static s32 __attribute__((noinline)) CheckElfImage(Elf32_Ehdr *elfHeader1 __attribute((unused)), Elf32_Ehdr *elfHeader2, Elf32_Phdr *progHeader, u32 *pFileEnd);
 static s32 CheckTick(u8 *modBuf);
 
 //LoadCoreForKernel_D3353EC4 - Address 0x00003FAC
@@ -202,11 +203,11 @@ s32 sceKernelCheckExecFile(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
                 execInfo->moduleInfoOffset = elfProgHeader->p_paddr & 0x1FFFFFFF; //0x00004184
             }
             execInfo->topAddr = (void *)elfProgHeader->p_vaddr; //0x0000418C
+            lowAddr = elfProgHeader->p_vaddr;
 
-            // TODO: Fix the loop condition: != PT_LOAD -> == PT_LOAD
             if (nSegments > 0 && elfProgHeader->p_type == PT_LOAD) { //0x00004190 & 0x000041A0
                 //0x00004200 - (0x00004244) - 0x0000425C
-                for (i = 0; i < nSegments && elfProgHeader->p_type != PT_LOAD; i++, elfProgHeader++) {
+                for (i = 0; i < nSegments && elfProgHeader->p_type == PT_LOAD; i++, elfProgHeader++) {
                      if (elfProgHeader->p_vaddr < lowAddr) { //0x000041A4 & 0x000041FC
                          execInfo->topAddr = (void *)elfProgHeader->p_vaddr; //0x00004204
                          lowAddr = elfProgHeader->p_vaddr;
@@ -298,7 +299,8 @@ s32 sceKernelProbeExecutableObject(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
         execInfo->elfType = SCE_EXEC_FILE_TYPE_INVALID_ELF; //0x00004528
         return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
     }    
-    status = CheckElfImage(elfHeader, elfHeader, elfProgHeader); //0x0000445C
+    u32 fileEnd = 0;
+    status = CheckElfImage(elfHeader, elfHeader, elfProgHeader, &fileEnd); //0x0000445C
     if (status < SCE_ERROR_OK) { //0x00004464
         execInfo->elfType = SCE_EXEC_FILE_TYPE_INVALID_ELF; //0x00004528
         return status;
@@ -330,27 +332,10 @@ s32 sceKernelProbeExecutableObject(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
             execInfo->elfType = SCE_EXEC_FILE_TYPE_INVALID_ELF; //0x00004528
             return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         }
-        modInfo = (SceModuleInfo *)(buf + execInfo->moduleInfoOffset); //0x000044C8
-        execInfo->moduleInfoOffset = (u32)modInfo;
-        execInfo->exportsInfo = modInfo->entTop; //0x000044E0
-        execInfo->exportsSize = modInfo->entEnd - modInfo->entTop;
-        execInfo->importsSize = modInfo->stubEnd - modInfo->stubTop; //0x000044F0
-        execInfo->importsInfo = modInfo->stubTop; //0x000044F8
-        
-        if (!execInfo->isDecrypted) { //0x000044F4
-            if (modInfo->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) { //0x0000469C
-                execInfo->elfType = SCE_EXEC_FILE_TYPE_INVALID_ELF; //0x00004528
-                return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
-            }
+        if (CheckModInfo(buf, execInfo, 0, fileEnd) != SCE_ERROR_OK) {
+            execInfo->elfType = SCE_EXEC_FILE_TYPE_INVALID_ELF;
+            return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
         }
-        else {
-            if ((modInfo->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS) && (execInfo->modInfoAttribute & SCE_MODULE_PRIVILEGE_LEVELS)) { //0x00004504 & 0x00004514
-                execInfo->elfType = SCE_EXEC_FILE_TYPE_INVALID_ELF; //0x00004528
-                return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
-            }
-        }
-        
-        execInfo->modInfoAttribute |= (modInfo->modAttribute & ~SCE_MODULE_PRIVILEGE_LEVELS); //0x00004554
         if (execInfo->isDecrypted) //0x00004550
             return SCE_ERROR_OK;  
            
@@ -398,30 +383,10 @@ s32 sceKernelProbeExecutableObject(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
         execInfo->elfType = SCE_EXEC_FILE_TYPE_INVALID_ELF; //0x00004528
         return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE; 
     }
-    /* Copy ModuleInfo. */
-    modInfo = (SceModuleInfo *)(buf + execInfo->moduleInfoOffset); //0x000046C8
-    execInfo->moduleInfo = modInfo; //0x000046CC
-    execInfo->exportsInfo = modInfo->entTop; //0x000046E0
-    execInfo->exportsSize = modInfo->entEnd - modInfo->entTop; //0x000046EC
-    execInfo->importsSize = modInfo->stubEnd - modInfo->stubTop; //0x000046F0
-    execInfo->importsInfo = modInfo->stubTop; //0x000046F8
-    
-    tmpModAttr = modInfo->modAttribute & SCE_MODULE_PRIVILEGE_LEVELS;
-    if (!execInfo->isDecrypted) { //0x000046F4
-        if (tmpModAttr) { //0x000048A4
-            execInfo->elfType = SCE_EXEC_FILE_TYPE_INVALID_ELF; //0x00004528
-            return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE; 
-        }        
+    if (CheckModInfo(buf, execInfo, (u32)execInfo->topAddr, (u32)execInfo->topAddr + fileEnd) != SCE_ERROR_OK) {
+        execInfo->elfType = SCE_EXEC_FILE_TYPE_INVALID_ELF;
+        return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
     }
-    else { 
-        /* Module privilege level mismatch! Don't load ELF. */
-        if (tmpModAttr && tmpModAttr != execInfo->modInfoAttribute) { //0x00004704 & 0x00004714
-            execInfo->elfType = SCE_EXEC_FILE_TYPE_INVALID_ELF; //0x00004528
-            return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
-        }
-    }
-    
-    execInfo->modInfoAttribute |= (tmpModAttr & ~SCE_MODULE_PRIVILEGE_LEVELS); //0x00004730
     /* Don't load ELF into Kernel memory. */
     if (IS_KERNEL_ADDR(execInfo->topAddr)) { //0x0000472C
         execInfo->elfType = SCE_EXEC_FILE_TYPE_INVALID_ELF; //0x00004528
@@ -648,7 +613,7 @@ s32 sceKernelLoadExecutableObject(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
             
                 if ((s32)elfProgHeader->p_offset < 0 || 
                   (((s32)elfProgHeader->p_offset + (s32)elfHeader) >> 31) != ((s32)elfHeader >> 31)) { //0x00004B04
-                    backUpSegments = execInfo->numSegments - 1; //0x00004BF8 -- $s4
+                    backUpSegments = execInfo->numSegments - 1; //0x00004BF8
                     return SCE_ERROR_KERNEL_ERROR; //0x00004C00
                 }
             }
@@ -730,7 +695,7 @@ static s32 sceKernelApplyPspRelSegment2(u32 *segmentAddr, u32 nSegments, u8 *rel
 {
     u32 type;
     u32 addr, addrBase, vAddr;
-    u32 tmp, tmp2;
+    u32 tmp, relocatedVal;
     u32 data;
     u8 *block1;
     u8 *block2;
@@ -794,8 +759,8 @@ static s32 sceKernelApplyPspRelSegment2(u32 *segmentAddr, u32 nSegments, u8 *rel
              if ((part1 & 0x4) != 4) //0x00005264
                  return SCE_ERROR_KERNEL_ERROR;
              
+             offset = *(u32 *)pos; //0x00005270
              pos = nData + 6; //0x0000526C
-             offset = *(u32 *)(nData + 2); //0x00005270
          } else if ((part1 & 0x1) != 1)  //0x00004F34
              return SCE_ERROR_KERNEL_ERROR;
          else {
@@ -817,15 +782,15 @@ static s32 sceKernelApplyPspRelSegment2(u32 *segmentAddr, u32 nSegments, u8 *rel
                  break;                   
              case 2: //0x00004F98
                  cmd = (cmd << 16) >> (u32)(relocData + nBits + part1s); //0x0000520C - 0x0000521C
-                 cmd = (cmd & 0xFFFF0000) | *(u16 *)(nData + 2); //0x00005220 & 0x00005224
+                 cmd = (cmd & 0xFFFF0000) | *(u16 *)pos; //0x00005220 & 0x00005224
                  offset += cmd; //0x00005228
                  pos = nData + 4; //0x00005230
                  break;
              case 4: //0x00004FA4 & 0x000051F0
+                 offset = *(u32 *)pos; //0x000051FC - 0x00005200
                  pos = nData + 6; //0x000051F8
-                 offset = *(u32 *)(nData + 2); //0x000051FC - 0x00005200
                  break;    
-             /* Unknown OD: (part1 & 0x6)[part1 & 0x1] */    
+             /* Unsupported OD encoding */
              default: 
                  return SCE_ERROR_KERNEL_ERROR;
              }
@@ -846,7 +811,7 @@ static s32 sceKernelApplyPspRelSegment2(u32 *segmentAddr, u32 nSegments, u8 *rel
                  addend = *(u16 *)pos; //0x000051C0
                  pos += 2; //0x000051C8
                  break;
-             /* unknown ADDEND: (part1 & 0x38)[part1] */
+             /* Unsupported ADDEND encoding */
              default:
                  return SCE_ERROR_KERNEL_ERROR;    
              }
@@ -861,9 +826,9 @@ static s32 sceKernelApplyPspRelSegment2(u32 *segmentAddr, u32 nSegments, u8 *rel
                  continue;
              case R_MIPS_16: case R_MIPS_HI16: //0x00005128
                  tmp = *(u32 *)addr; //0x00005128
-                 tmp2 = (data + (s16)tmp) & 0xFFFF; //0x00005134 & 0x00005138
+                 relocatedVal = (data + (s16)tmp) & 0xFFFF; //0x00005134 & 0x00005138
                  tmp &= 0xFFFF0000; //0x00005140
-                 *(u32 *)addr = tmp | tmp2; //0x000050E8 & 0x00005064
+                 *(u32 *)addr = tmp | relocatedVal; //0x000050E8 & 0x00005064
                  break;
              case R_MIPS_32: //0x00005058
                  tmp = *(u32 *)addr; //0x00005058
@@ -871,29 +836,29 @@ static s32 sceKernelApplyPspRelSegment2(u32 *segmentAddr, u32 nSegments, u8 *rel
                  continue;
              case R_MIPS_REL32: //0x000050B0
                  tmp = *(u32 *)addr; //0x000050B8 & 0x000050BC
-                 tmp2 = tmp & 0x3FFFFFFF; //0x000050C4
-                 tmp2 = ((segmentAddr[offsetBase] + offset) & 0xF0000000) | (tmp2 << 2); //0x000050B4 & 0x000050C8 & 0x000050CC & 0x000050D4
-                 tmp2 += data; //0x000050D8
-                 *(u32 *)addr = (tmp2 & 0x0FFFFFFC) | (tmp & 0xFC000000); //0x000050DC - 0x000050E8 & 0x00005064
+                 relocatedVal = tmp & 0x3FFFFFFF; //0x000050C4
+                 relocatedVal = ((segmentAddr[offsetBase] + offset) & 0xF0000000) | (relocatedVal << 2); //0x000050B4 & 0x000050C8 & 0x000050CC & 0x000050D4
+                 relocatedVal += data; //0x000050D8
+                 *(u32 *)addr = (relocatedVal & 0x0FFFFFFC) | (tmp & 0xFC000000); //0x000050DC - 0x000050E8 & 0x00005064
                  continue;
              case R_MIPS_26: //0x000050EC
                  tmp = *(u32 *)addr; //0x000050EC
-                 tmp2 = (((s16)addend) + (tmp << 16)) + data; //0x000050F4 -- 0x00005100
-                 tmp2 >>= 15; //0x00005104
-                 tmp2 = ((tmp2 + 1) >> 1) & 0xFFFF; //0x00005108 & 0x0000510C
-                 *(u32 *)data = (tmp2 | (tmp & 0xFFFF0000)); //0x00005110 & 0x00005114 &0x00005118 & 0x00005064
+                 relocatedVal = (((s16)addend) + (tmp << 16)) + data; //0x000050F4 -- 0x00005100
+                 relocatedVal >>= 15; //0x00005104
+                 relocatedVal = ((relocatedVal + 1) >> 1) & 0xFFFF; //0x00005108 & 0x0000510C
+                 *(u32 *)data = (relocatedVal | (tmp & 0xFFFF0000)); //0x00005110 & 0x00005114 &0x00005118 & 0x00005064
                  continue;
              case R_MIPS_LO16: //0x00005144
                  tmp = (*(u32 *)addr) & 0x3FFFFFFF; //0x0000514C - 0x00005154
-                 tmp2 = (segmentAddr[offsetBase] + offset) & 0xF0000000; //0x00005144 & 0x00005148 & 0x00005158 & 0x00005160
-                 tmp2 = (tmp2 | (tmp << 2)) + data; //0x00005168
-                 *(u32 *)data = (tmp2 & 0x0FFFFFFC) | 0x08000000; //0x0000516C & 0x00005174 & 0x000050E8 & 0x00005064
+                 relocatedVal = (segmentAddr[offsetBase] + offset) & 0xF0000000; //0x00005144 & 0x00005148 & 0x00005158 & 0x00005160
+                 relocatedVal = (relocatedVal | (tmp << 2)) + data; //0x00005168
+                 *(u32 *)data = (relocatedVal & 0x0FFFFFFC) | 0x08000000; //0x0000516C & 0x00005174 & 0x000050E8 & 0x00005064
                  continue;
              case R_MIPS_GPREL16: //0x00005178
                  tmp = (*(u32 *)addr) &  0x3FFFFFFF; //0x00005180 - 0x00005188
-                 tmp2 = (segmentAddr[offsetBase] + offset) & 0xF0000000; //0x00005178 & 0x0000517C & 0x0000518C & 0x00005194
-                 tmp2 = (tmp2 | (tmp << 2)) + data; //0x00005190 & 0x00005198 & 0x0000519C
-                 *(u32 *)data = (tmp2 & 0x0FFFFFFC) | 0x0C000000; //0x000051A0 & 0x000051A8 & 0x000050E8 & 0x00005064
+                 relocatedVal = (segmentAddr[offsetBase] + offset) & 0xF0000000; //0x00005178 & 0x0000517C & 0x0000518C & 0x00005194
+                 relocatedVal = (relocatedVal | (tmp << 2)) + data; //0x00005190 & 0x00005198 & 0x0000519C
+                 *(u32 *)data = (relocatedVal & 0x0FFFFFFC) | 0x0C000000; //0x000051A0 & 0x000051A8 & 0x000050E8 & 0x00005064
                  continue;
              default:
                  /* unacceptable relocation type. */
@@ -1515,33 +1480,77 @@ static s32 CheckElfSectionPRX(Elf32_Ehdr *elfHeader, SceLoadCoreExecFileInfo *ex
 
 
 /*
+ * Validate SceModuleInfo offset, export/import table bounds, and privilege level.
+ */
+static s32 __attribute__((noinline)) CheckModInfo(u8 *buf, SceLoadCoreExecFileInfo *execInfo, u32 startOff, u32 endOff)
+{
+    u32 modInfoOff = execInfo->moduleInfoOffset;
+    if (endOff - startOff < modInfoOff)
+        return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
+
+    SceModuleInfo *modInfo = (SceModuleInfo *)(buf + modInfoOff);
+    execInfo->moduleInfo = modInfo;
+
+    u32 entTop = (u32)modInfo->entTop;
+    u32 stubTop = (u32)modInfo->stubTop;
+    u32 entSize = (u32)modInfo->entEnd - entTop;
+    u32 stubSize = (u32)modInfo->stubEnd - stubTop;
+    execInfo->exportsInfo = modInfo->entTop;
+    execInfo->exportsSize = entSize;
+    execInfo->importsInfo = modInfo->stubTop;
+    execInfo->importsSize = stubSize;
+
+    if (entTop < startOff || entTop >= endOff || entTop + entSize < startOff || entTop + entSize >= endOff)
+        return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
+    if (stubTop < startOff || stubTop >= endOff || stubTop + stubSize < startOff || stubTop + stubSize >= endOff)
+        return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
+
+    u16 attr = modInfo->modAttribute;
+    if (execInfo->isDecrypted) {
+        if ((attr & SCE_MODULE_PRIVILEGE_LEVELS) != 0 &&
+            (execInfo->modInfoAttribute & SCE_MODULE_PRIVILEGE_LEVELS) != (attr & SCE_MODULE_PRIVILEGE_LEVELS))
+            return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
+    } else {
+        if ((attr & SCE_MODULE_PRIVILEGE_LEVELS) != 0)
+            return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
+    }
+
+    execInfo->modInfoAttribute |= (attr & ~SCE_MODULE_PRIVILEGE_LEVELS);
+    return SCE_ERROR_OK;
+}
+
+/*
  * Count the loadable segments of an object file.  A segment can 
  * contain several sections (such as .text, .data, .rodata, .bss).  
  * The object file cannot have more than SCE_KERNEL_MAX_MODULE_SEGMENT 
  * loadable segments.
  */
-static s32 CheckElfImage(Elf32_Ehdr *elfHeader1 __attribute((unused)), Elf32_Ehdr *elfHeader2, Elf32_Phdr *progHeader) 
+static s32 __attribute__((noinline)) CheckElfImage(Elf32_Ehdr *elfHeader1 __attribute((unused)), Elf32_Ehdr *elfHeader2, Elf32_Phdr *progHeader, u32 *pFileEnd) 
 { 
     u32 i;
-    u32 offset;
+    u32 maxLimit;
+    u32 maxEnd;
     u32 segCount;
     
-    offset = (sceKernelDipsw(10) == 0) ? 0x02000000 : 0x08000000; //0x000066FC 
+    maxLimit = (sceKernelDipsw(10) == 0) ? 0x02000000 : 0x08000000; //0x000066FC 
+    maxEnd = 0;
     segCount = 0;           
     
     //0x00006718
     for (i = 0; i < elfHeader2->e_phnum; i++, progHeader++) {
          if (progHeader->p_type == PT_LOAD) { //0x00006738              
-             if (offset < progHeader->p_offset || offset < progHeader->p_filesz || 
-               offset < (progHeader->p_offset + progHeader->p_filesz)) //0x00006780
+             u32 segEnd = progHeader->p_offset + progHeader->p_filesz;
+             if (maxLimit < progHeader->p_offset || maxLimit < progHeader->p_filesz || maxLimit < segEnd) //0x00006780
                  return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
-             
+             if (maxEnd < segEnd)
+                 maxEnd = segEnd;
              segCount++;    
         }
     }
     if (segCount >= SCE_KERNEL_MAX_MODULE_SEGMENT)
         return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
     
+    *pFileEnd = maxEnd;
     return SCE_ERROR_OK;
 }
 

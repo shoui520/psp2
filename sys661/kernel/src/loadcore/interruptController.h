@@ -3,11 +3,9 @@
 */
 
 #ifndef INTERRUPTCONTROLLER_H
-#define	INTERRUPTCONTROLLER_H
+#define INTERRUPTCONTROLLER_H
 
 s32 loadCoreCpuSuspendIntr(void);
 void loadCoreCpuResumeIntr(s32 intr);
-void loadCoreBreakHalt(void);
 
-#endif	/* INTERRUPTCONTROLLER_H */
-
+#endif /* INTERRUPTCONTROLLER_H */

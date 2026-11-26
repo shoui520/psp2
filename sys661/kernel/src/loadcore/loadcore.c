@@ -192,10 +192,10 @@ enum SceStubLibraryStatus {
     STUB_LIBRARY_LINKED = 0x2,
 };
 
-static s32 aVariableLinkApply(u32 *arg1, u32 exportedVar, u32 linkOption, u32 isUserLib);
+static s32 aVariableLinkApply(u32 *varRelocs, u32 exportedVar, u32 linkOption, u32 isUserLib);
 static s32 aLinkVariableStub_sub(SceResidentLibrary *lib, SceStubLibraryEntryTable *stubLibEntryTable, u32 linkOption, 
                                  u32 isUserLib);
-static s32 search_nid_in_entrytable(SceResidentLibrary *lib, u32 nid, u32 arg2, u32 nidSearchOption);
+static s32 search_nid_in_entrytable(SceResidentLibrary *lib, u32 nid, u32 groupMask, u32 nidSearchOption);
 static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadConfig);
 
 static void LoadCoreHeapStatic(void); //0x00002678
@@ -213,7 +213,7 @@ static s32 doRegisterLibrary(SceResidentLibraryEntryTable *libEntryTable, u32 is
 static SceResidentLibrary **FoundLibrary(SceResidentLibraryEntryTable *libEntryTable);
 static s32 ReleaseLibEntCB(SceResidentLibrary *lib, SceResidentLibrary **prevLibSlot);
 static s32 doLinkLibraryEntries(SceStubLibraryEntryTable *stubLibEntryTable, u32 size, u32 isUserMode, 
-                                u32 arg4 __attribute__((unused)));
+                                u32 unusedParam __attribute__((unused)));
 static s32 UnLinkLibraryEntry(SceStubLibraryEntryTable *stubLibEntryTable);
 static s32 aLinkLibEntries(SceStubLibrary *stubLib);
 static s32 aLinkClient(SceStubLibrary *stubLib, SceResidentLibrary *lib);
@@ -303,17 +303,46 @@ static u32 g_systemStatus; //0x0000A118
 /* Loadcore's internal control block. */
 SceLoadCore g_loadCore; //0x0000A11C
 
+typedef struct {
+    s16 count;
+    u8 shift;
+    u8 unused;
+} SceNidHashInfo;
+
 //0x00007F2C
-const u32 g_hashinfo[8] = {
-    0x00000000,
-    0x001E0004,
-    0x001C0010,
-    0x001B0020,
-    0x001A0040,
-    0x00190080,
-    0x00180100,
-    0x00170200
+const SceNidHashInfo g_hashinfo[8] = {
+    { 0x0000, 0x00, 0 },
+    { 0x0004, 0x1E, 0 },
+    { 0x0010, 0x1C, 0 },
+    { 0x0020, 0x1B, 0 },
+    { 0x0040, 0x1A, 0 },
+    { 0x0080, 0x19, 0 },
+    { 0x0100, 0x18, 0 },
+    { 0x0200, 0x17, 0 },
 };
+
+/* Stop the system initialization. */
+static __inline__ void __attribute__((always_inline)) StopLoadCore(void)
+{
+    s32 intrState;
+    u32 hwRamType;
+
+    intrState = loadCoreCpuSuspendIntr();
+
+    hwRamType = HW(HW_RAM_SIZE) & ~(RAM_TYPE_32_MB | RAM_TYPE_64_MB);
+    hwRamType |= (g_MemSize > RAM_SIZE_32_MB) ? RAM_TYPE_64_MB : RAM_TYPE_32_MB;
+    HW(HW_RAM_SIZE) = hwRamType;
+
+    sceKernelMemset32((void *)HWPTR(HW_RESET_VECTOR), 0, HW_RESET_VECTOR_SIZE);
+    memcpy((void *)HWPTR(HW_RESET_VECTOR), loadCoreClearMem, 0x28);
+    g_MemClearFun = (void (*)(void *, u32))HWPTR(HW_RESET_VECTOR);
+    g_MemClearFun(g_MemBase, g_MemSize);
+
+    loadCoreCpuResumeIntr(intrState);
+
+    while (1)
+        ;
+}
 
 /*
  * Loadcore's exported functions and their NIDs.
@@ -481,9 +510,9 @@ static u32 LibStubTableInit(void)
 {
     u32 i;   
     
-    g_LoadCoreLibStubs[0].next = NULL;    
+    g_LoadCoreLibStubs[0].freeNext = NULL;    
     for (i = 0; i < TOP_STUB_LIBRARY_CONTROL_BLOCK; i++)    
-         g_LoadCoreLibStubs[i + 1].next = &g_LoadCoreLibStubs[i];
+         g_LoadCoreLibStubs[i + 1].freeNext = &g_LoadCoreLibStubs[i];
     
     g_FreeLibStub = &g_LoadCoreLibStubs[TOP_STUB_LIBRARY_CONTROL_BLOCK];
     return SCE_ERROR_OK;
@@ -505,7 +534,7 @@ static SceStubLibrary *NewLibStubCB(void)
     if (g_FreeLibStub == NULL) //0x0000024C
         return sceKernelAllocHeapMemory(g_loadCoreHeap(), sizeof(SceStubLibrary));
 
-    g_FreeLibStub = g_FreeLibStub->next;
+    g_FreeLibStub = g_FreeLibStub->freeNext;
     return curFreeLibStub;
 }
 
@@ -526,7 +555,7 @@ static SceStubLibrary *FreeLibStubCB(SceStubLibrary *stubLib)
         stubLib->libNameInHeap = SCE_FALSE;
     }           
     if (stubLib >= &g_LoadCoreLibStubs[0] && stubLib <= &g_LoadCoreLibStubs[TOP_STUB_LIBRARY_CONTROL_BLOCK]) { //0x000002C0 & 0x000002CC
-        stubLib->next = g_FreeLibStub;
+        stubLib->freeNext = g_FreeLibStub;
         g_FreeLibStub = stubLib;
         
         return stubLib;
@@ -599,51 +628,51 @@ static s32 aLinkVariableStub_sub(SceResidentLibrary *lib, SceStubLibraryEntryTab
 
 
 /* Link a variable stub. */
-static s32 aVariableLinkApply(u32 *arg1, u32 exportedVar, u32 linkOption, u32 isUserLib) 
+static s32 aVariableLinkApply(u32 *varRelocs, u32 exportedVar, u32 linkOption, u32 isUserLib) 
 {
     u32 i;
     u32 j;
     u32 k;
     u32 *addr;
-    u32 val2;
+    u32 combinedVal;
     s32 tmp;
-    u32 tmp1;
-    u32 tmp2;
+    u32 linkedVal;
+    u32 unlinkedVal;
     
-    if (isUserLib && ((s32)(((s32)arg1) & 0xF0000000)) < 0) //0x0000092C & 0x00000938
+    if (isUserLib && ((s32)(((s32)varRelocs) & 0xF0000000)) < 0) //0x0000092C & 0x00000938
         return SCE_ERROR_KERNEL_ERROR;
     
     k = 1; //0x00000964
-    for (i = 0; arg1[i] != 0; i += k) { //0x00000944
-         addr = (u32 *)(((u32)arg1 & 0xF0000000) | ((arg1[i] & 0x03FFFFFF) << 2)); //0x0000097C
-         if (arg1[i] >> 26 == 5) { //0x00000978
-             val2 = (*addr) << 16; //0x00000A2C
+    for (i = 0; varRelocs[i] != 0; i += k) { //0x00000944
+         addr = (u32 *)(((u32)varRelocs & 0xF0000000) | ((varRelocs[i] & 0x03FFFFFF) << 2)); //0x0000097C
+         if (varRelocs[i] >> 26 == 5) { //0x00000978
+             combinedVal = (*addr) << 16; //0x00000A2C
              
              j = i + 1; //0x00000A10
-             if (arg1[j] != 0 && (arg1[j] >> 26 == arg1[i] >> 26)) { //0x00000A34
-                 while (arg1[++j] != 0 && arg1[++j] >> 26 == 5)
+             if (varRelocs[j] != 0 && (varRelocs[j] >> 26 == varRelocs[i] >> 26)) { //0x00000A34
+                 while (varRelocs[++j] != 0 && varRelocs[++j] >> 26 == 5)
                      k++;
              }
-             tmp = *(s16 *)((((u32)arg1) & 0xF0000000) | ((arg1[i] & 0x03FFFFFF) << 2)); //0x00000A48 - 0x00000A5C
-             tmp1 = val2 + tmp + exportedVar; //0x00000A58 & 0x00000A64
-             tmp2 = val2 + tmp - exportedVar; //0x00000A68
-             val2 = (linkOption == VARIABLE_STUB_LINK) ? tmp1 : tmp2; //0x00000A6C            
+             tmp = *(s16 *)((((u32)varRelocs) & 0xF0000000) | ((varRelocs[i] & 0x03FFFFFF) << 2)); //0x00000A48 - 0x00000A5C
+             linkedVal = combinedVal + tmp + exportedVar; //0x00000A58 & 0x00000A64
+             unlinkedVal = combinedVal + tmp - exportedVar; //0x00000A68
+             combinedVal = (linkOption == VARIABLE_STUB_LINK) ? linkedVal : unlinkedVal; //0x00000A6C            
              
              //0x00000A78 & 0x00000A88 - 0x00000AB8
              for (j = 0; j < k; j++) {
-                  tmp = *(u32 *)((arg1[j] & 0x03FFFFFF) << 2) | (((u32)arg1) & 0xF0000000); //0x00000A98
-                  arg1[j] = tmp | (((val2 >> 15) + 1) & 0x1FFFE); //0x00000A7C & 0x00000AA4 & 0x00000AAC
+                  tmp = *(u32 *)((varRelocs[j] & 0x03FFFFFF) << 2) | (((u32)varRelocs) & 0xF0000000); //0x00000A98
+                  varRelocs[j] = tmp | (((combinedVal >> 15) + 1) & 0x1FFFE); //0x00000A7C & 0x00000AA4 & 0x00000AAC
              }
          }
-         else if ((arg1[i] >> 26) > 5) { //0x00000984
-             if ((arg1[i] >> 26) != 6) //0x000009E0
+         else if ((varRelocs[i] >> 26) > 5) { //0x00000984
+             if ((varRelocs[i] >> 26) != 6) //0x000009E0
                  continue;
              
              tmp = *(s16 *)addr;
-             val2 = (linkOption == VARIABLE_STUB_LINK) ? tmp + exportedVar : tmp - exportedVar; //0x000009FC
-             *addr = (val2 & 0xFFFF) | (tmp & 0xFFFF0000); //0x00000A0C & 0x000009D0
+             combinedVal = (linkOption == VARIABLE_STUB_LINK) ? tmp + exportedVar : tmp - exportedVar; //0x000009FC
+             *addr = (combinedVal & 0xFFFF) | (tmp & 0xFFFF0000); //0x00000A0C & 0x000009D0
          }
-         else if ((arg1[i] >> 26) == 2) { //0x0000098C
+         else if ((varRelocs[i] >> 26) == 2) { //0x0000098C
              *addr = (linkOption == VARIABLE_STUB_LINK) ? *addr + exportedVar : *addr - exportedVar; //0x000009C4
          }
     }
@@ -700,7 +729,7 @@ s32 loadCoreInit(SceSize argSize __attribute__((unused)), const void *argBlock)
     g_loadCore.loadCoreHeapId = SCE_KERNEL_VALUE_UNITIALIZED;
     g_loadCore.linkedLoadCoreStubs = SCE_FALSE;
     g_loadCore.sysCallTable = NULL;
-    g_loadCore.reserved520 = 0;
+    g_loadCore.unusedAfterSyscallTable = 0;
     g_loadCore.unLinkedStubLibs = NULL;
     g_loadCore.registeredMods = NULL;
     g_loadCore.lastRegMod = NULL;
@@ -769,7 +798,7 @@ s32 loadCoreInit(SceSize argSize __attribute__((unused)), const void *argBlock)
  * 
  * Returns the NID position (greater than 0) on success.
  */
-static s32 search_nid_in_entrytable(SceResidentLibrary *lib, u32 nid, u32 arg2, u32 nidSearchOption) 
+static s32 search_nid_in_entrytable(SceResidentLibrary *lib, u32 nid, u32 groupMask, u32 nidSearchOption) 
 {
     u16 endNidPos; 
     u16 startIndex;
@@ -808,7 +837,7 @@ static s32 search_nid_in_entrytable(SceResidentLibrary *lib, u32 nid, u32 arg2, 
     //0x00000ED4 - 0x00000F80
     for (i = 0; i < counter; i++) {  
          tmpOff = 1 << i; //0x00000EF8
-         if ((arg2 & tmpOff) == 0) { //0x00000F00     
+         if ((groupMask & tmpOff) == 0) { //0x00000F00     
              tableOffset += lib->nidTableStride; //0x00000F04 & 0x00000F84 & 0x00000F88
              entryTable += tableOffset; //0x00000F8C
              tableOffset = lib->midFuncIndex; //0x00000F94                       
@@ -1112,7 +1141,7 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
           *         module. 
           */
          for (curExportTable = execInfo.exportsInfo; curExportTable < exportsEnd; 
-            curExportTable = (void *)curExportTable + curExportTable->len * sizeof(u32)) {
+            curExportTable = (SceResidentLibraryEntryTable *)((u32 *)curExportTable + curExportTable->len)) {
               if (curExportTable->attribute & SCE_LIB_AUTO_EXPORT) {              
                   if (sceKernelRegisterLibrary(curExportTable) < SCE_ERROR_OK) //0x0000216C
                       StopLoadCore(); //0x0000217C   
@@ -1153,7 +1182,7 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
              exportsEnd = (execInfo.exportsSize & ~0x3) + execInfo.exportsInfo; //0x00001F30 - 0x00001F3C         
              //0x00001F44 & 0x00001F60 - 0x00001F78
              for (curExportTable = execInfo.exportsInfo; curExportTable < exportsEnd; 
-                curExportTable = (void *)curExportTable + curExportTable->len * sizeof(u32)) {
+                curExportTable = (SceResidentLibraryEntryTable *)((u32 *)curExportTable + curExportTable->len)) {
                   if (curExportTable->attribute & SCE_LIB_AUTO_EXPORT) {                
                       intrState = loadCoreCpuSuspendIntr(); //0x00001F80
                    
@@ -1182,7 +1211,7 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
             //0x000018C4 - 0x00001904
             exportsEnd = (execInfo.exportsSize & ~0x3) + execInfo.exportsInfo; //0x000018C4 - 0x000018D0
             for (curExportTable = execInfo.exportsInfo; curExportTable < exportsEnd; 
-               curExportTable = (void *)curExportTable + curExportTable->len * sizeof(u32)) {
+               curExportTable = (SceResidentLibraryEntryTable *)((u32 *)curExportTable + curExportTable->len)) {
                  if ((curExportTable->attribute & SCE_LIB_IS_SYSLIB) == SCE_LIB_IS_SYSLIB)
                      ProcessModuleExportEnt(mod, curExportTable); //0x00001F14
             }           
@@ -1211,7 +1240,7 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
                 
                 exportsEnd = (execInfo.exportsSize & ~0x3) + execInfo.exportsInfo; //0x00001C98 - 0x00001CA4
                 for (curExportTable = execInfo.exportsInfo; curExportTable < exportsEnd; 
-                   curExportTable = (void *)curExportTable + curExportTable->len * sizeof(u32)) {
+                   curExportTable = (SceResidentLibraryEntryTable *)((u32 *)curExportTable + curExportTable->len)) {
                      if ((curExportTable->attribute & SCE_LIB_AUTO_EXPORT) == SCE_LIB_AUTO_EXPORT) { //0x00001CBC
                           intrState = loadCoreCpuSuspendIntr(); //0x00001D28
                           
@@ -1228,6 +1257,11 @@ static void SysBoot(SceLoadCoreBootInfo *bootInfo, SysMemThreadConfig *threadCon
                           loadCoreCpuResumeIntr(intrState); //0x00001DCC or 0x00001DE8        
                      }
                 }
+                sceKernelMemset32((void *)mod->textAddr, MAKE_BREAKCODE_INSTR(SCE_BREAKCODE_ONE), mod->textSize);
+                sceKernelMemset((void *)(mod->textAddr + mod->textSize), 0xFF, mod->dataSize + mod->bssSize);
+                sceKernelReleaseModule(mod);
+                sceKernelFreePartitionMemory(mod->moduleBlockId);
+                mod = NULL;
             }
             else 
                 mod = NULL; //0x0000195C
@@ -1479,6 +1513,12 @@ static void UpdateCacheRangeDataDynamic(const void *addr, u32 size)
  * 
  * Returns 0 on success.
  */
+static void loadCoreBreakHalt(void)
+{
+    for (;;)
+        __asm__ __volatile__("break");
+}
+
 static s32 doRegisterLibrary(SceResidentLibraryEntryTable *libEntryTable, u32 isUserLib) 
 {
     SceResidentLibrary *nLib = NULL;
@@ -1829,7 +1869,7 @@ static SceResidentLibrary **FoundLibrary(SceResidentLibraryEntryTable *libEntryT
  * Returns 0 on success.
  */
 static s32 doLinkLibraryEntries(SceStubLibraryEntryTable *stubLibEntryTable, u32 size, u32 isUserMode, 
-                                u32 arg4 __attribute__((unused)))
+                                u32 unusedParam __attribute__((unused)))
 {
     u32 i;
     s32 status;
@@ -2311,20 +2351,20 @@ s32 sceKernelLoadRebootBin(u8 *file, u32 size)
  */
 static s32 CopyLibEnt(SceResidentLibrary *lib, SceResidentLibraryEntryTable *libEntryTable, u32 isUserLib) 
 {
-    u32 *addr;
-    u32 *addr2;
+    const SceNidHashInfo *funcHashInfo;
+    const SceNidHashInfo *varHashInfo;
     s32 len;
     u32 exports;
-    
+
+    lib->isUserLib = isUserLib;
     /* Protect Kernel memory from User Mode. */
     if (isUserLib && (IS_KERNEL_ADDR(libEntryTable) || IS_KERNEL_ADDR(libEntryTable->libName) || 
       IS_KERNEL_ADDR(libEntryTable->entryTable))) //0x00003698        
         return SCE_KERNEL_VALUE_UNITIALIZED;
       
-    addr = (u32 *)g_hashinfo;
-    addr2 = (u32 *)g_hashinfo;
+    funcHashInfo = g_hashinfo;
+    varHashInfo = g_hashinfo;
     
-    lib->isUserLib = isUserLib;
     lib->libEntryTable = libEntryTable; //0x000036E4
     
     lib->version[LIBRARY_VERSION_MINOR] = libEntryTable->version[LIBRARY_VERSION_MINOR];
@@ -2343,22 +2383,22 @@ static s32 CopyLibEnt(SceResidentLibrary *lib, SceResidentLibraryEntryTable *lib
                            ? libEntryTable->vStubCount : libEntryTable->vStubCount16; //0x00003820
         lib->exportGroupCount = libEntryTable->nidTableCount + 1; 
         
-        addr += libEntryTable->nidTableInfo & 0xF;
-        addr2 += libEntryTable->nidTableInfo >> 4; //0x0000384C
+        funcHashInfo += libEntryTable->nidTableInfo & 0xF;
+        varHashInfo += libEntryTable->nidTableInfo >> 4; //0x0000384C
     }
     //0x00003724
-    lib->funcGroupShift = *(u8 *)(addr + 2);
-    lib->varGroupShift = *(u8 *)(addr2 + 2); //0x00003740
+    lib->funcGroupShift = funcHashInfo->shift;
+    lib->varGroupShift = varHashInfo->shift; //0x00003740
     
     exports = lib->stubCount + lib->vStubCount; //0x00003744
     lib->exportsBaseAddr = &libEntryTable->entryTable[exports]; 
-    lib->funcNidCount = *(s16 *)addr; 
-    lib->nidTableStride = (*(s16 *)addr + *(s16 *)addr2) << 1;
+    lib->funcNidCount = funcHashInfo->count; 
+    lib->nidTableStride = (funcHashInfo->count + varHashInfo->count) << 1;
     lib->exportsSize = exports << 1;
     lib->midFuncIndex = exports + ((exports + 1) >> 1); //0x00003784
     lib->numExports = exports;
     lib->entryTable = libEntryTable->entryTable;
-    lib->varNidCount = *(s16 *)addr2;
+    lib->varNidCount = varHashInfo->count;
     lib->refCount = 0;
     
     /*
@@ -2400,13 +2440,13 @@ static s32 CopyLibStub(SceStubLibrary *stubLib, SceStubLibraryEntryTable *stubLi
 {       
     u32 len; 
     
+    stubLib->isUserLib = isUserLib;
     /* Protect Kernel memory from User Mode. */   
     if (isUserLib && (IS_KERNEL_ADDR(stubLibEntryTable) || IS_KERNEL_ADDR(stubLibEntryTable->libName) || 
       IS_KERNEL_ADDR(stubLibEntryTable->nidTable) || IS_KERNEL_ADDR(stubLibEntryTable->stubTable) || 
       IS_KERNEL_ADDR(stubLibEntryTable->vStubTable))) //0x0000386C
         return SCE_KERNEL_VALUE_UNITIALIZED;     
     
-    stubLib->isUserLib = isUserLib;
     stubLib->libStubTable = stubLibEntryTable;
     stubLib->stubEntryTableLen = stubLibEntryTable->len; //0x000038D0
     stubLib->libName = stubLibEntryTable->libName;
@@ -2448,7 +2488,7 @@ static s32 CopyLibStub(SceStubLibrary *stubLib, SceStubLibraryEntryTable *stubLi
     //0x00003944
     len = strlen(stubLibEntryTable->libName);           
     stubLib->libName2 = sceKernelAllocHeapMemory(g_loadCoreHeap(), len + 1);            
-    if (stubLib->libName == NULL) 
+    if (stubLib->libName2 == NULL) 
         return SCE_KERNEL_VALUE_UNITIALIZED;
             
     memcpy(stubLib->libName2, stubLibEntryTable->libName, len + 1);
@@ -2502,27 +2542,4 @@ s32 sceKernelSegmentChecksum(SceModule *mod)
              break;
     }
     return checkSum;
-}
-
-/* Stop the system initialization. */
-static __inline__ void __attribute__((always_inline)) StopLoadCore(void)
-{
-    s32 intrState;
-    u32 hwRamType;
-    
-    intrState = loadCoreCpuSuspendIntr();
-        
-    hwRamType = HW(HW_RAM_SIZE) & ~(RAM_TYPE_32_MB | RAM_TYPE_64_MB); //0x00001584
-    hwRamType |= (g_MemSize > RAM_SIZE_32_MB) ? RAM_TYPE_64_MB : RAM_TYPE_32_MB; //0x00001598          
-    HW(HW_RAM_SIZE) = hwRamType; //0x000015B4
-            
-    sceKernelMemset32((void *)HWPTR(HW_RESET_VECTOR), 0, HW_RESET_VECTOR_SIZE); //0x000015B8
-    memcpy((void *)HWPTR(HW_RESET_VECTOR), loadCoreClearMem, 0x28); //0x000015D4
-    g_MemClearFun = (void (*)(void *, u32))HWPTR(HW_RESET_VECTOR); //0x000015F0
-    g_MemClearFun(g_MemBase, g_MemSize); //0x000015EC
-        
-    loadCoreCpuResumeIntr(intrState); //0x000015F4
-            
-     while(1)
-         ;
 }

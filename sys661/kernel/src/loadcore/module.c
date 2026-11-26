@@ -28,11 +28,15 @@
  * 
  */
 
+#define sceKernelCallUIDObjCommonFunction _hdr_sceKernelCallUIDObjCommonFunction
 #include <sysmem_kernel.h>
+#undef sceKernelCallUIDObjCommonFunction
 #include <sysmem_utils_kernel.h>
 #include <modulemgr_nids.h>
 #include "clibUtils.h"
 #include "module.h"
+
+extern s32 sceKernelCallUIDObjCommonFunction(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, void *ap);
 
 #define UID_MODULE_DO_INITIALIZE                (0xD310D2D9)
 #define UID_MODULE_DO_DELETE                    (0x87089863)
@@ -55,9 +59,9 @@
 #define MODULE_IFHANDLE_NAME_NEW                "sceNetInterface_Service"
 
 static SceUID module_do_initialize(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFunc, s32 funcId, 
-                                   va_list ap);
+                                   void *ap);
 static SceUID module_do_delete(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFunc, s32 funcId, 
-                               va_list ap);
+                               void *ap);
 static SceUID __attribute__((noinline)) getModuleUid(SceSysmemUidCB *cb);
 static s32 __attribute__((noinline)) CheckDevkitVersion(SceModuleInfo *modInfo, u32 *fileDevKitVersion);
 static void __attribute__((noinline)) updateUIDName(SceModule *mod);
@@ -70,8 +74,8 @@ static void __attribute__((noinline)) updateUIDName(SceModule *mod);
  * module.
  */
 static SceSysmemUidLookupFunc ModuleFuncs[] = { 
-    { .id = UID_MODULE_DO_INITIALIZE, .func = module_do_initialize },
-    { .id = UID_MODULE_DO_DELETE,     .func = module_do_delete },
+    { .id = UID_MODULE_DO_INITIALIZE, .func = (SceSysmemUidFunc)(void *)module_do_initialize },
+    { .id = UID_MODULE_DO_DELETE,     .func = (SceSysmemUidFunc)(void *)module_do_delete },
     { .id = 0,                        .func = NULL }
 };
 
@@ -316,20 +320,20 @@ s32 ModuleServiceInit(void)
 SceModule *sceKernelGetModuleFromUID(SceUID uid)
 {
     u32 intrState; 
-    u32 intrState2;   
+    u32 nestedIntrState;   
     SceModule *mod = NULL;
     SceSysmemUidCB *block = NULL;
     
     intrState = loadCoreCpuSuspendIntr(); //0x00006D80
     
     if (sceKernelGetUIDcontrolBlockWithType(uid, g_ModuleType, &block) < SCE_ERROR_OK) { //0x00006D94 & 0x00006D9C
-        intrState2 = loadCoreCpuSuspendIntr(); //0x00006DD8
+        nestedIntrState = loadCoreCpuSuspendIntr(); //0x00006DD8
         
         for (mod = g_loadCore.registeredMods; mod; mod = mod->next) { //0x00006DF4 - 0x00006E10
              if (mod->modId == uid || mod->secId == uid) //0x00006DF4 & 0x00006E00
                  break;
         }
-        loadCoreCpuResumeIntr(intrState2); //0x00006E14
+        loadCoreCpuResumeIntr(nestedIntrState); //0x00006E14
     }
     else {
         mod = UID_CB_TO_DATA(block, g_ModuleType, SceModule);
@@ -357,7 +361,7 @@ s32 sceKernelDeleteModule(SceModule *mod)
 SceModule *sceKernelCreateAssignModule(SceLoadCoreExecFileInfo *execFileInfo)
 {
     u32 intrState;
-    u32 intrState2; 
+    u32 nestedIntrState; 
     SceModule *mod = NULL;    
           
     intrState = loadCoreCpuSuspendIntr(); //0x00006E94
@@ -365,12 +369,12 @@ SceModule *sceKernelCreateAssignModule(SceLoadCoreExecFileInfo *execFileInfo)
     mod = sceKernelCreateModule(); //0x00006E9C
     if (mod != NULL) { //0x00006EAC
         if (sceKernelAssignModule(mod, execFileInfo) < SCE_ERROR_OK) { //0x00006EB4 - 0x00006EC0            
-            intrState2 = loadCoreCpuSuspendIntr(); //0x00006EE8
+            nestedIntrState = loadCoreCpuSuspendIntr(); //0x00006EE8
             
             sceKernelDeleteUID(mod->modId); //0x00006EF8
             mod = NULL; //0x00006EFC
             
-            loadCoreCpuResumeIntr(intrState2); //0x00006F00
+            loadCoreCpuResumeIntr(nestedIntrState); //0x00006F00
         }
     }   
     loadCoreCpuResumeIntr(intrState); //0x00006EC4
@@ -502,35 +506,36 @@ SceUID sceKernelGetModuleListWithAlloc(u32 *modCount)
  * linked-list of the UID type of "module" objects?
  */
 static SceUID module_do_initialize(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFunc, s32 funcId, 
-                                   va_list ap)
+                                   void *ap)
 {
     SceModule *mod;
+    SceUID modId;
     
     sceKernelCallUIDObjCommonFunction(cb, uidWithFunc, funcId, ap); //0x00007174
     
     mod = UID_CB_TO_DATA(cb, g_ModuleType, SceModule);
-    
-    mod->modId = getModuleUid(cb); //0x00007190
+    modId = getModuleUid(cb); //0x00007190
     mod->entryAddr = SCE_KERNEL_VALUE_UNITIALIZED; //0x0000719c
-    mod->version[MODULE_VERSION_MINOR] = 0; //0x00007264
-    mod->version[MODULE_VERSION_MAJOR] = 0; //0x00007268
-    mod->terminal = 0; //0x0000726C
+    mod->entTop = (void *)SCE_KERNEL_VALUE_UNITIALIZED; //0x000072B0
+    mod->stubTop = (void *)SCE_KERNEL_VALUE_UNITIALIZED; //0x000072B4
     mod->moduleStart = (SceKernelThreadEntry)SCE_KERNEL_VALUE_UNITIALIZED; //0x00007270
     mod->moduleStop = (SceKernelThreadEntry)SCE_KERNEL_VALUE_UNITIALIZED; //0x00007274
     mod->moduleBootstart = (SceKernelThreadEntry)SCE_KERNEL_VALUE_UNITIALIZED; //0x00007278
     mod->moduleRebootBefore = (SceKernelRebootBeforeForKernel)SCE_KERNEL_VALUE_UNITIALIZED; //0x0000727C
     mod->moduleRebootPhase = (SceKernelRebootPhaseForKernel)SCE_KERNEL_VALUE_UNITIALIZED; //0x00007280
+    mod->modId = modId;
+    mod->status = 0; //0x000072A4
+    mod->next = NULL; //0x000072A8
+    mod->attribute = 0; //0x000072AC
+    mod->version[MODULE_VERSION_MINOR] = 0; //0x00007264
+    mod->version[MODULE_VERSION_MAJOR] = 0; //0x00007268
+    mod->terminal = 0; //0x0000726C
     mod->textSize = 0; //0x00007284
     mod->dataSize = 0; //0x00007288
     mod->bssSize = 0; //0x0000728C
     mod->segmentChecksum = 0; //0x00007290
     mod->textSegmentChecksum = 0; //0x00007294
     mod->computeTextSegmentChecksum = 0; //0x00007298
-    mod->status = 0; //0x000072A4
-    mod->next = NULL; //0x000072A8
-    mod->attribute = 0; //0x000072AC
-    mod->entTop = (void *)SCE_KERNEL_VALUE_UNITIALIZED; //0x000072B0
-    mod->stubTop = (void *)SCE_KERNEL_VALUE_UNITIALIZED; //0x000072B4
     
     return getModuleUid(cb);
 }
@@ -541,7 +546,7 @@ static SceUID module_do_initialize(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFu
  * from the linked-list of the UID type of "module" objects?
  */
 static SceUID module_do_delete(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFunc, s32 funcId, 
-                               va_list ap)
+                               void *ap)
 {
     sceKernelCallUIDObjCommonFunction(cb, uidWithFunc, funcId, ap);
     return getModuleUid(cb);
@@ -569,7 +574,7 @@ static s32 __attribute__((noinline)) CheckDevkitVersion(SceModuleInfo *modInfo, 
     
     //0x000072F4 - 0x00007320
     for (curEntryTable = modInfo->entTop; (void *)curEntryTable < modInfo->entEnd; 
-       curEntryTable = (void *)curEntryTable + curEntryTable->len * sizeof(u32)) {
+       curEntryTable = (SceResidentLibraryEntryTable *)((u32 *)curEntryTable + curEntryTable->len)) {
          if ((curEntryTable->attribute & SCE_LIB_IS_SYSLIB) == SCE_LIB_IS_SYSLIB) { //0x00007300
              //0x0000732C - 0x00007370
              for (i = 0; i < curEntryTable->vStubCount; i++) {
@@ -595,18 +600,16 @@ static s32 __attribute__((noinline)) CheckDevkitVersion(SceModuleInfo *modInfo, 
  */
 static void __attribute__((noinline)) updateUIDName(SceModule *mod)
 {
-    if ((mod->status & 0x2000) == 0 && mod->moduleBlockId > 0) { //0x000073D0 & 0x000073DC
-        if ((mod->attribute & (SCE_MODULE_KIRK_MEMLMD_LIB | SCE_MODULE_KIRK_SEMAPHORE_LIB)) == 0) {
-            sceKernelRenameUID(mod->moduleBlockId, (const char *)mod->modName);
-            sceKernelRenameUID(mod->modId, (const char *)mod->modName);
-        } 
-        else {
-            /*
-             * The module uses KIRK libraries and thus is classified as a system
-             * module.
-             */
-            sceKernelRenameUID(mod->moduleBlockId, MODULE_SYSTEM_BLOCK_NAME);
-            sceKernelRenameUID(mod->modId, MODULE_SYSTEM_MODULE_NAME);
+    if ((mod->status & 0x2000) == 0) { //0x000073D0
+        if (mod->moduleBlockId > 0) { //0x000073DC
+            if ((mod->attribute & (SCE_MODULE_KIRK_MEMLMD_LIB | SCE_MODULE_KIRK_SEMAPHORE_LIB)) == 0)
+                sceKernelRenameUID(mod->moduleBlockId, (const char *)mod->modName);
+            else
+                sceKernelRenameUID(mod->moduleBlockId, MODULE_SYSTEM_BLOCK_NAME);
         }
+        if ((mod->attribute & (SCE_MODULE_KIRK_MEMLMD_LIB | SCE_MODULE_KIRK_SEMAPHORE_LIB)) == 0)
+            sceKernelRenameUID(mod->modId, (const char *)mod->modName);
+        else
+            sceKernelRenameUID(mod->modId, MODULE_SYSTEM_MODULE_NAME);
     }
 }

@@ -553,11 +553,11 @@ int ApplyPspRelSection(const SceLoadCoreExecFileInfo *execInfo,
 		int advance = 1;
 
 		if (offsetSegment >= (s32)execInfo->numSegments ||
-		    addressSegment >= (s32)execInfo->numSegments)
-			goto internalError;
-		offset = relocations->r_offset;
-		if (offset >= segments->fileSize[offsetSegment])
-			goto internalError;
+		    addressSegment >= (s32)execInfo->numSegments ||
+		    (offset = relocations->r_offset) >= segments->fileSize[offsetSegment]) {
+			Kprintf(g_fmtInternalError, g_strApplyPspRelSection);
+			return SCE_ERROR_ERROR;
+		}
 		target = (u8 *)((u32)segments->source[offsetSegment] + offset);
 		base = (u32)segments->destination[addressSegment];
 		switch (type) {
@@ -634,10 +634,6 @@ int ApplyPspRelSection(const SceLoadCoreExecFileInfo *execInfo,
 		relocations += advance;
 	}
 	return 0;
-
-internalError:
-	Kprintf(g_fmtInternalError, g_strApplyPspRelSection);
-	return SCE_ERROR_ERROR;
 }
 
 int getRelocationSegmentBits(u32 value)
