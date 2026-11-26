@@ -14,7 +14,9 @@ int __aeabi_idiv0(int return_value)
 	return __sce_aeabi_idiv0(return_value);
 }
 
+#ifndef LIBSNC_OMIT_LDIV0
 long long __aeabi_ldiv0(long long return_value)
 {
 	return __sce_aeabi_ldiv0(return_value);
 }
+#endif

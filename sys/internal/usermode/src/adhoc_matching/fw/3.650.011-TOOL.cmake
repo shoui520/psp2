@@ -3,6 +3,7 @@ set(MODULE_NID 0xD6EAA30C)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_EXPORT_ORDER 0x00000000 0x00962A4A)
 set(MODULE_IMPORT_LIBS
 	0xCAE9ACE6:5:0x0
 	0x859A24B1:2:0x0
@@ -11,54 +12,53 @@ set(MODULE_IMPORT_LIBS
 	0xC6083AE1:1:0x8
 	0x5E8D0E22:1:0x0
 )
-set(MODULE_IMPORT_FUNCS
-	sceKernelCreateMsgPipe
-	sceKernelSendMsgPipe
-	sceKernelLockMutex
-	sceKernelDeleteLwMutex
-	sceClibMemcpy_safe
-	__stack_chk_fail
-	sceClibMspaceCreate
-	__sce_aeabi_idiv0
-	sceKernelLockLwMutex
-	sceKernelReceiveMsgPipe
-	sceKernelCreateCond
-	sceClibMemset
-	sceClibMspaceMalloc
-	sceKernelUnlockLwMutex
-	sceClibMspaceFree
-	SceLibKernel_9F793F84
-	sceClibMspaceDestroy
-	sceKernelCreateThread
-	sceKernelWaitCond
-	sceKernelCreateLwMutex
-	sceKernelWaitThreadEnd
-	sceKernelCreateMutex
-	sceKernelStartThread
-	__sce_aeabi_ldiv0
-	sceKernelUnlockMutex
-	sceKernelDeleteThread
-	sceKernelSignalCond
-	sceKernelDeleteCond
-	sceKernelDeleteMutex
-	sceKernelDeleteMsgPipe
-	sceKernelGetSystemTimeWide
-	sceNetSetsockopt
-	sceNetNtohs
-	sceNetBind
-	sceNetSocketClose
-	sceNetHtonl
-	sceNetSendto
-	sceNetShutdown
-	sceNetSocketAbort
-	sceNetHtons
-	sceNetRecvfrom
-	sceNetNtohl
-	sceNetSocket
-	SceNetInternal_689B9D7D
-	sceNetCtlAdhocGetInAddr
-	SceThreadmgrCoredumpTime_sceKernelExitThread
-)
-set(MODULE_IMPORT_VARS
-	__stack_chk_guard
+set(MODULE_IMPORT_FORMAT 0x34)
+set(MODULE_IMPORT_NIDS
+	0xCAE9ACE6:F:0x0A10C1C8
+	0xCAE9ACE6:F:0x0CA71EA2
+	0xCAE9ACE6:F:0x1D8D7945
+	0xCAE9ACE6:F:0x244E76D2
+	0xCAE9ACE6:F:0x2E3B02A1
+	0xCAE9ACE6:F:0x37691BF8
+	0xCAE9ACE6:F:0x3B9E301A
+	0xCAE9ACE6:F:0x4373B548
+	0xCAE9ACE6:F:0x46E7BE7B
+	0xCAE9ACE6:F:0x4E81DD5C
+	0xCAE9ACE6:F:0x50572FDA
+	0xCAE9ACE6:F:0x632980D7
+	0xCAE9ACE6:F:0x86EF7680
+	0xCAE9ACE6:F:0x91FA6614
+	0xCAE9ACE6:F:0x9C56B4D1
+	0xCAE9ACE6:F:0x9F793F84
+	0xCAE9ACE6:F:0xAE1A21EC
+	0xCAE9ACE6:F:0xC5C11EE7
+	0xCAE9ACE6:F:0xC88D44AD
+	0xCAE9ACE6:F:0xDA6EC8EF
+	0xCAE9ACE6:F:0xDDB395A9
+	0xCAE9ACE6:F:0xED53334A
+	0xCAE9ACE6:F:0xF08DE149
+	0xCAE9ACE6:F:0xFB235848
+	0xCAE9ACE6:V:0x93B8AA67
+	0x859A24B1:F:0x1A372EC8
+	0x859A24B1:F:0x1BBDE3D9
+	0x859A24B1:F:0x6ED2E2DC
+	0x859A24B1:F:0x879E6EBD
+	0x859A24B1:F:0xCB78710D
+	0x859A24B1:F:0xE78BCCF7
+	0x859A24B1:F:0xF4EE4FA9
+	0x6BF8B2A2:F:0x065505CA
+	0x6BF8B2A2:F:0x07845128
+	0x6BF8B2A2:F:0x1296A94B
+	0x6BF8B2A2:F:0x29822B4D
+	0x6BF8B2A2:F:0x4C30B03C
+	0x6BF8B2A2:F:0x52DB31D5
+	0x6BF8B2A2:F:0x69E50BB5
+	0x6BF8B2A2:F:0x891C1B9B
+	0x6BF8B2A2:F:0x9FA3207B
+	0x6BF8B2A2:F:0xB226138B
+	0x6BF8B2A2:F:0xD2EAA645
+	0x6BF8B2A2:F:0xF084FCE3
+	0x9E8A69FD:F:0x689B9D7D
+	0xC6083AE1:F:0x7118C99D
+	0x5E8D0E22:F:0x0C8A38E1
 )

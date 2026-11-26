@@ -25,6 +25,8 @@ int SceNetInternal_EF421A65(int threadId, int *mode, int flags);
 int SceNetInternal_DEF2357F(void *counts, int count, int flags);
 /* the threads in the stack: up to COUNT SceNetPsThreadInfo */
 int SceNetInternal_46E28336(void *list, int count, int flags);
+/* generates a random 32-bit unsigned value */
+int SceNetInternal_689B9D7D(unsigned int *out);
 
 #ifdef __cplusplus
 }
