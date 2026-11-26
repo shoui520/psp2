@@ -29,6 +29,8 @@ int SwMwMoveSinkStreamEventSet(struct SwMwSinkStream *stream, void *handler, voi
 int SwMwMoveSinkStreamOnEvent(struct SwMwSinkStream *stream, int *message);
 int SwMwMoveSinkStreamKxExpiring(void);
 int SwMwMoveSinkStreamConnect(struct SwMwSinkStream *stream);
+int SwMwMoveSinkStreamStop(struct SwMwSinkStream *stream, int mode);
+int SwMwMoveSinkStreamSetParameter(struct SwMwSinkStream *stream, int parameter);
 int SwMwMoveSinkStreamAbort(struct SwMwSinkStream *stream);
 int SwMwMoveSinkStreamDestroy(struct SwMwSinkStream *stream);
 int SwMwMoveSinkStreamCompleteLabel(struct SwMwSinkStream *stream);

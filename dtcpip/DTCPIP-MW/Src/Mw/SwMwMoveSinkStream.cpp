@@ -440,6 +440,89 @@ extern "C" int SwMwMoveSinkStreamCompleteLabel(struct SwMwSinkStream *stream)
 	return 0;
 }
 
+/* stop the move stream: drain the reader when asked, then release the transfer and the
+ * reader and notify the sink (0x8100aa1e) */
+extern "C" int SwMwMoveSinkStreamStop(struct SwMwSinkStream *stream, int mode)
+{
+	struct SwMwStreamChunk *chunks;
+	struct SwMwContentManager *manager;
+	struct SwMwTransfer *interface;
+	int list = 0;
+	unsigned int count = 0;
+	int total;
+	int status;
+	int drained;
+	unsigned int i;
+
+	if (stream->empty == 0) {
+		status = SwMwMoveSinkStreamSetFinished(stream, 12015);
+		if (status != 0)
+			swMwTrace("[SWMW] Error %d in %s:%d\n", status,
+				  SWMW_MOVESTREAM_SOURCE, 529);
+	}
+	status = SwMwMoveSinkStreamAbort(stream);
+	if (status == 12007)
+		return status;
+	SwMwMoveSinkStreamMutexLock(&stream->mutex);
+	if (stream->downloader != NULL) {
+		if (stream->receiving != 0 || stream->parameterBusy != 0) {
+			status = 12007;
+		} else {
+			drained = 0;
+			if (mode == 0) {
+				if (stream->receiveHave != 0) {
+					stream->receiveHave = 0;
+					total = 0;
+					for (i = 0; i < (unsigned int)stream->receiveCount; ++i)
+						total += stream->receiveChunks[i].size;
+					stream->reader->consume(total);
+				}
+				if (stream->reader->isEndOfStream() == 0 ||
+				    stream->reader->available() != 0) {
+					count = stream->reader->getReadChunkList((void **)&list);
+					if (count != 0xFFFFFFFFu) {
+						chunks = (struct SwMwStreamChunk *)list;
+						total = 0;
+						for (i = 0; i < count; ++i)
+							total += chunks[i].size;
+						stream->reader->consume(total);
+						status = 12007;
+						drained = 1;
+					}
+				}
+				if (drained == 0) {
+					if (stream->downloader->getSessionData(
+							(int *)&stream->connectData[0]) == 0)
+						stream->resume = 1;
+				}
+			}
+			if (drained == 0) {
+				manager = stream->manager;
+				interface = (struct SwMwTransfer *)((unsigned char *)stream->downloader +
+						(*(int **)(void *)stream->downloader)[-13]);
+				status = manager->releaseTransfer(interface);
+				if (status != 0)
+					swMwTrace("[SWMW] Error %d in %s:%d\n", status,
+						  SWMW_MOVESTREAM_SOURCE, 584);
+				stream->downloader = NULL;
+				stream->reader = NULL;
+				stream->connected = 0;
+				if (stream->empty == 0)
+					status = SwMwCoreNotifyLabel(*(int *)stream->sink,
+								      stream->contentId, 41);
+			}
+		}
+	}
+	SwMwMoveSinkStreamMutexUnlock(&stream->mutex);
+	return status;
+}
+
+/* the set-parameter command is the stop body with its mode (0x8100ac9a) */
+extern "C" int SwMwMoveSinkStreamSetParameter(struct SwMwSinkStream *stream, int parameter)
+{
+	return SwMwMoveSinkStreamStop(stream, parameter);
+}
+
 /* the stream's gate (0x8100b7ea) */
 extern "C" struct SwMwGate *SwMwMoveSinkStreamGate(struct SwMwSinkStream *stream)
 {

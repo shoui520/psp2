@@ -52,7 +52,7 @@ struct SwMwSinkStream {
 	int sink;			/* 0x004: the sink that created the stream */
 	int contentId;			/* 0x008: the content the stream plays */
 	struct SwMwTransfer *downloader;	/* 0x00C: the download object */
-	struct SwMwTransfer *reader;	/* 0x010: the read object */
+	struct SwSdiBuffer *reader;	/* 0x010: the SdiBuffer the stream drains */
 	struct SwMwStreamWindow window;	/* 0x014: the shared-memory windows */
 	struct SwMwStreamEvent event;	/* 0x02C: the reader's event object */
 	unsigned char work[0x498];	/* 0x040: the reader's work area */

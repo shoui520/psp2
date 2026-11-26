@@ -91,6 +91,28 @@ struct SwMwTransfer {
  * device+0x12c, dispatch table 0x8109a300): its destructors, the plain transfer factory
  * 0x81016cb4, the release 0x81016e40 and the factory with the event/work areas
  * 0x81016e58 that getInfo calls */
+/* the content library's buffer reader (its debug name, "SdiBuffer(" at 0x8104fd04): the
+ * ring the stream commands drain. The called slots are consume (+0x10), available
+ * (+0x14), isEndOfStream (+0x1c) and getReadChunkList (+0x38); the others are named from
+ * their bodies (reset, size, read, write and the write-side chunk list). Ours. */
+struct SwSdiBuffer {
+	virtual void destroy();				/* 0x00 */
+	virtual void dispose();				/* 0x04 */
+	virtual void setEndOfStream();			/* 0x08 */
+	virtual int append(unsigned int size);		/* 0x0c */
+	virtual int consume(unsigned int size);		/* 0x10 */
+	virtual int available();			/* 0x14 */
+	virtual int size();				/* 0x18 */
+	virtual int isEndOfStream();			/* 0x1c */
+	virtual int setName(const struct SwMwUri *uri);	/* 0x20 */
+	virtual void reset();				/* 0x24 */
+	virtual int setSize(unsigned int size);		/* 0x28 */
+	virtual int read(void *buffer, unsigned int size);	/* 0x2c */
+	virtual int write(const void *buffer, unsigned int size);/* 0x30 */
+	virtual int getWriteChunkList(void **list);	/* 0x34 */
+	virtual int getReadChunkList(void **list);	/* 0x38 */
+};
+
 struct SwMwContentManager {
 	virtual void destroy();						/* 0x00 */
 	virtual void dispose();						/* 0x04 */
