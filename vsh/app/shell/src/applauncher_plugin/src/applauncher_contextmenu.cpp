@@ -323,7 +323,7 @@ void DispInfomationDialogJob::Finish(int result)
 		const wchar_t *label = plugin->GetString(s_items[menu->m_items[i]].label);
 
 		item.text.assign(label, label != NULL ? sce_paf_wcslen(label) : 0);
-		item.flag1 = s_items[menu->m_items[i]].flag;
+		item.hasSubMenu = s_items[menu->m_items[i]].flag;
 		param.items.push_back(item);
 	}
 	shellPopupListOpen(&param, 0, 0);
