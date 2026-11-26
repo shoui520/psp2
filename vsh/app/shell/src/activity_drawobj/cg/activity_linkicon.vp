@@ -1,0 +1,14 @@
+void main(float4 position : POSITION,
+	  float4 texcoord : TEXCOORD0,
+	  uniform float4x4 MVP,
+	  uniform float4 Region0,
+	  out float4 oPosition : POSITION,
+	  out float4 oTexcoord : TEXCOORD0)
+{
+	float2 scale = Region0.zw * 1.3125f;
+	float2 offset = Region0.xy - 0.15625f;
+
+	oTexcoord.xy = texcoord.xy * scale + offset;
+	oTexcoord.zw = texcoord.xy;
+	oPosition = mul(float4(position.xyz, 1), MVP);
+}

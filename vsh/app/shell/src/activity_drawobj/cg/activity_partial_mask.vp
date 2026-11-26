@@ -1,0 +1,11 @@
+void main(float4 position : POSITION,
+	  float4 texcoord : TEXCOORD0,
+	  uniform float4x4 MVP,
+	  uniform float4 Region0,
+	  out float4 oPosition : POSITION,
+	  out float4 oTexcoord : TEXCOORD0)
+{
+	oTexcoord.xy = texcoord.xy * Region0.zw + Region0.xy;
+	oTexcoord.zw = texcoord.zw;
+	oPosition = mul(float4(position.xyz, 1), MVP);
+}

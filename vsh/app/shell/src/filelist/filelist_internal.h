@@ -87,16 +87,7 @@ int SceActivityDb_2A7ABB45(void *syncHandle, const SceInt64 *statusRowid,
 			   const SceInt64 *commentRowid);
 }
 
-/* ActivityDrawObj (vsh/app/common/src/activity_drawobj/, 0x8138B178..0x8138BC26) */
-class ActivityDrawObj : public paf::graph::DrawObj {
-public:
-	static const char *DrawObjType();
-	ActivityDrawObj();
-	virtual ~ActivityDrawObj();
-
-	void SetMode(int mode);
-	void SetVariant(int variant);
-};
+#include "../activity_drawobj/activity_drawobj.h"
 
 /* External shell helpers used by the filelist / activity UI framework */
 extern paf::wstring shellTickText(const paf::rtc::Tick *tick, bool flag);
@@ -106,8 +97,6 @@ extern paf::wstring shellFormatText(const wchar_t *format, const wchar_t *first 
 				    const wchar_t *sixth = L"", const wchar_t *seventh = L"",
 				    const wchar_t *eighth = L"", const wchar_t *ninth = L"",
 				    const wchar_t *tenth = L"", const wchar_t *eleventh = L"");
-extern paf::common::SharedPtr<paf::graph::Shader> *activityUiGetIconShader(void);
-extern paf::common::SharedPtr<paf::graph::Shader> *activityUiGetPanelShader(void);
 extern paf::job::JobQueue *activityUiGetNetworkJobQueue(void);
 extern void activityUiDialogManagerInit(void);
 extern void activityUiDialogManagerTerm(void);

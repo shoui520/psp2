@@ -675,6 +675,9 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/np/ipc/npparty/server/np_party_ipc_server.cpp
 	src/np/profile/np_utility_profile.cpp
 	src/nsx/nsx_xml_dom.cpp
+	src/activity_drawobj/activity_drawobj.cpp
+	src/activity_drawobj/activity_shader.cpp
+	src/activity_drawobj/cg/programs.S
 	${PSP2_SRC}/sys/sdk/target/src/md5/libmd5.c
 	${PSP2_SRC}/sys/internal/usermode/src/ces/libces/src/ces_context.c
 	${PSP2_SRC}/sys/internal/usermode/src/ces/libces/src/UCS/ces_ucs_context.c
@@ -692,6 +695,8 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
 	"${PSP2_SRC}/vsh/paf" "${PSP2_SRC}/contrib/sqlite-3.7.6.3" "${PSP2_SRC}/vsh/app/common/src"
 	"${PSP2_SRC}/sys/internal/usermode/src" "${PSP2_SRC}/vsh/lowlayer/src")
+include("${PSP2_SRC}/vsh/paf/cg/cg.cmake")
+psp2_paf_cg(vs0_vsh_shell_shell src/activity_drawobj/cg)
 # SNC's inlining budget: map::operator[] (0x814096ac) stays out of line in Sony's callers
 set_source_files_properties(boot.cpp lsdb_start.cpp net.cpp event_server.cpp app_event_server.cpp
 	process_event_server.cpp

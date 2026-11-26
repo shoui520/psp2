@@ -19,6 +19,7 @@
 #include "../../applauncher_plugin/src/applauncher_home.h"
 #include "../../../plugins.h"
 #include "../../../../game/game_plugin/game_plugin.h"
+#include "../../activity_drawobj/activity_drawobj.h"
 #include "impose.h"
 
 using namespace paf;
@@ -77,7 +78,7 @@ void ImposeParentalControl::SetIcon(const intrusive_ptr<cache::CacheImageInterfa
 					graph::DrawObj *obj = power->GetDrawObj(0);
 
 					if (obj != NULL)
-						obj->SetShader(Shell_8139303C());
+						obj->SetShader(*activityUiGetIconShader());
 				}
 			}
 		}

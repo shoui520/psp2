@@ -786,9 +786,6 @@ extern ImposeNotification *g_imposeNotification;
 int imposeNotificationShowNotice(ImposeNotice *notice);
 extern ImposeTouchEmulation *g_imposeTouchEmulation;
 
-/* PLACEHOLDER: a shader the shell keeps (0x8139303C, in the shell's own code) */
-const paf::common::SharedPtr<paf::graph::Shader> &Shell_8139303C(void);
-
 /* the plugin's object (impose.cpp) */
 extern Impose *g_impose;
 
