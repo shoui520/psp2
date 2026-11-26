@@ -26,6 +26,9 @@ int _sceDtcpIpCheckActivation(int *activated);
 int SwsGetToolMode(void);
 int SwsGetAffinity(void);
 int SwMwThreadTrampoline(SceSize args, void *argument);
+
+/* the activation's worker entry (the manager's thread, not written yet) */
+int SwMwManagerActivationThread(void *argument);
 }
 
 extern "C" int SwMwManagerThreadCreate(struct SwMwManagerThread *thread, int (*entry)(void *),
@@ -265,4 +268,64 @@ extern "C" int SwMwManagerCheckActivation(void)
 	if (activated == 1)
 		return 0;
 	return 13001;
+}
+
+/* the activation's worker state, its result and its thread (the flag doubles as the
+ * worker's argument) */
+static unsigned char g_swMwActivationState;
+static int g_swMwActivationStatus;
+static int g_swMwActivationResult;
+static struct SwMwManagerThread g_swMwActivationThread;
+
+/* wait for a manager thread and delete it (0x810044bc) */
+extern "C" int SwMwManagerJoinThread(struct SwMwManagerThread *thread)
+{
+	int result;
+
+	result = sceKernelWaitThreadEnd(thread->id, NULL, NULL);
+	sceKernelDeleteThread(thread->id);
+	return result;
+}
+
+/* start the activation's worker thread (0x8100444c) */
+extern "C" int SwMwManagerStartActivation(void)
+{
+	int status;
+	int failed;
+
+	g_swMwActivationState = 0;
+	status = SwMwManagerThreadCreate(&g_swMwActivationThread,
+					 SwMwManagerActivationThread,
+					 &g_swMwActivationState, 0);
+	failed = 0;
+	if (status != 0) {
+		swMwTrace("[SWMW] Error %d in %s:%d\n", status, SWMW_MANAGER_SOURCE, 2317);
+		failed = 1;
+	}
+	if (failed != 0)
+		return status;
+	return 0;
+}
+
+/* the activation's outcome: 12007 while it runs, 12004 if it did not start (0x810044ea) */
+extern "C" int SwMwManagerGetActivationResult(int *result)
+{
+	int failed;
+
+	if (g_swMwActivationState == 0)
+		return 12007;
+	if (g_swMwActivationState != 1)
+		return 12004;
+	SwMwManagerJoinThread(&g_swMwActivationThread);
+	if (result != NULL)
+		*result = g_swMwActivationResult;
+	failed = 0;
+	if (g_swMwActivationStatus != 0) {
+		swMwTrace("[SWMW] Error %d in %s:%d\n", g_swMwActivationStatus,
+			  SWMW_MANAGER_SOURCE, 2340);
+		failed = 1;
+	}
+	if (failed != 0)
+		return SwMwManagerMapStatus(g_swMwActivationStatus);
+	return 0;
 }

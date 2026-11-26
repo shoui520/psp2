@@ -38,6 +38,9 @@ extern "C" {
 int SwMwManagerMapStatus(int status);
 int SwMwManagerCancel(void);
 int SwMwManagerCheckActivation(void);
+int SwMwManagerJoinThread(struct SwMwManagerThread *thread);
+int SwMwManagerStartActivation(void);
+int SwMwManagerGetActivationResult(int *result);
 int SwMwManagerThreadCreate(struct SwMwManagerThread *thread, int (*entry)(void *),
 			    void *argument, int type);
 int SwMwManagerSessionStart(struct SwMwManagerSinkSlots *slots, int mode);
