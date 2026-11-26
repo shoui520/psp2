@@ -630,7 +630,8 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/dbsetup/dbrecovery_notify.cpp
 	src/livespace_db/addcont_emu_util.cpp
 	src/remotedownload/remote_download_lib.cpp
-	${PSP2_SRC}/vsh/app/common/src/console_info/console_info_file.cpp
+	src/liblocation/src/location_service/gps_emulator.cpp
+	console_info/console_info_store.cpp
 	${PSP2_SRC}/sys/internal/kernel/src/gcauthmgr/rsa_verify.c
 	${PSP2_SRC}/sys/internal/kernel/src/gcauthmgr/rsa_digest.c
 	${PSP2_SRC}/sys/internal/driver/src/marlin_hci/rsa_exponent.c
