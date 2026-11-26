@@ -708,6 +708,15 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/np/np_push_vsh/core/np_push_get_server_addr_trans.cpp
 	src/np/np_push_vsh/service/np_push_dispatcher.cpp
 	src/np/np_push_vsh/service/np_push_ipc_context.cpp
+	src/np/np_ipc2/np_ipc2_server.cpp
+	src/np/np_ipc2/np_ipc2_service_server.cpp
+	src/np/np_ipc2/np_ipc2_ipmi_server.cpp
+	src/np/np_ipc2/np_ipc2_server_blocking.cpp
+	src/np/np_ipc2/np_ipc2_server_eventflag.cpp
+	src/np/np_ipc2/np_ipc2_server_eventqueue.cpp
+	src/np/asm/np_service_base_url_cache.cpp
+	src/np/game_presence/np_game_presence.cpp
+	src/np/csla/np_csla.cpp
 	${PSP2_SRC}/sys/sdk/target/src/mt19937/libmt19937.c
 	${PSP2_SRC}/sys/sdk/target/src/mt19937/mtrand.S
 	${PSP2_SRC}/sys/sdk/target/src/md5/libmd5.c
