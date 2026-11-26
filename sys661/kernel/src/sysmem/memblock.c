@@ -1,4 +1,5 @@
 #include <sysmem_kernel.h>
+#include "memory.h"
 
 SceUID sceKernelAllocMemoryBlock(char *name, u32 type, u32 size, SceSysmemMemoryBlockAllocOption *opt)
 {
@@ -24,7 +25,11 @@ SceUID sceKernelAllocMemoryBlock(char *name, u32 type, u32 size, SceSysmemMemory
 s32 sceKernelFreeMemoryBlock(SceUID id)
 {
     s32 oldK1 = pspShiftK1();
-    s32 ret = sceKernelFreePartitionMemory(id);
+    s32 ret;
+    if (pspK1IsUserMode())
+        ret = sceKernelFreePartitionMemoryForUser(id);
+    else
+        ret = sceKernelFreePartitionMemory(id);
     pspSetK1(oldK1);
     return ret;
 }
@@ -36,7 +41,10 @@ s32 sceKernelGetMemoryBlockAddr(SceUID id, void **addrPtr)
         pspSetK1(oldK1);
         return 0x800200D3;
     }
-    *addrPtr = sceKernelGetBlockHeadAddr(id);
+    if (pspK1IsUserMode())
+        *addrPtr = sceKernelGetBlockHeadAddrForUser(id);
+    else
+        *addrPtr = sceKernelGetBlockHeadAddr(id);
     pspSetK1(oldK1);
     return 0;
 }

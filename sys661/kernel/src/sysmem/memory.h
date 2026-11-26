@@ -7,12 +7,16 @@
 void initheap(SceSysmemLowheap *lowh, u32 size);
 void *hmalloc(SceSysmemHeap *heap, SceSysmemLowheap *lowh, u32 size, u32 align);
 s32 hfree(SceSysmemHeap *heap, SceSysmemLowheap *lowh, void *ptr);
+s32 hcheckblock(SceSysmemLowheap *lowh, void *ptr);
 s32 checkheapnouse(SceSysmemLowheap *lowh);
 u32 htotalfreesize(SceSysmemLowheap *lowh);
 s32 hmaxfreesize(SceSysmemHeap *heap, SceSysmemLowheap *lowh);
+void hcheck(SceSysmemLowheap *lowh, SceSysmemLowheapBlock *block, SceSysmemLowheapBlock *next, u32 units);
 
 void *_AllocPartitionMemory(SceSysmemMemoryPartition *part, int type, int size, int addr);
 s32 _FreePartitionMemory(void *addr);
+s32 sceKernelFreePartitionMemoryForUser(SceUID id);
+void *sceKernelGetBlockHeadAddrForUser(SceUID id);
 void _QueryMemoryInfo(u32 address, SceUID *partitionId, SceUID *memoryBlockId);
 
 void *_allocSysMemory(SceSysmemMemoryPartition *part, int type, u32 size, u32 addr, SceSysmemCtlBlk **ctlBlkOut);

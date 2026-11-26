@@ -4,6 +4,7 @@
 
 #include "intr.h"
 #include "memory.h"
+#include "misc.h"
 #include "partition.h"
 
 #include "heap.h"
@@ -28,59 +29,55 @@ SceUID sceKernelCreateHeap(SceUID mpid, SceSize size, int flag, const char *name
     if (part == NULL) {
         // 300C
         resumeIntr(oldIntr);
-        return SCE_ERROR_KERNEL_PARTITION_IN_USE ;
+        return SCE_ERROR_KERNEL_ILLEGAL_PARTITION_ID;
     }
-    s32 ret = sceKernelCreateUID(g_HeapType, name, (pspGetK1() >> 31) & 0xFF, &uid);
+    s32 ret = sceKernelCreateUID(g_HeapType, name, ((s32)pspGetK1() >> 31) & 0xFF, &uid);
     if (ret != 0) {
-        // 2FFC
         resumeIntr(oldIntr);
         return ret;
     }
+    u32 alignedSize = (size + 7) & 0xFFFFFFF8;
     int realSize = 0;
     if ((flag & 1) != 0)
-        realSize = (size + 7) & 0xFFFFFFF8;
+        realSize = alignedSize;
     SceSysmemHeap *heap = UID_CB_TO_DATA(uid, g_HeapType, SceSysmemHeap);
     SceSysmemPartitionInfo partInfo;
-    heap->size = realSize | ((flag >> 1) & 1);
+    heap->size = realSize | ((flag & 2) != 0);
     heap->partId = mpid;
     partInfo.size = 16;
     sceKernelQueryMemoryPartitionInfo(mpid, &partInfo);
     heap->partAddr = partInfo.startAddr;
     heap->partSize = partInfo.memSize;
-    // 2F68
-    SceSysmemHeapBlock *block = _AllocPartitionMemory(part, ((flag & 2) == 0) ? 0 : 1, size, 0); // 2FF0
+    SceSysmemHeapBlock *block = _AllocPartitionMemory(part, (flag & 2) != 0, alignedSize, 0);
     if (block == NULL) {
-        // 2FD0
-        sceKernelDeleteUID(uid->uid);
+        sceKernelDeleteUID(uid->uid ^ gSysmemRandomValue);
         resumeIntr(oldIntr);
         return SCE_ERROR_KERNEL_FAILED_ALLOC_HEAPBLOCK;
     }
     block->next = block;
     block->prev = block;
-    initheap((SceSysmemLowheap*)(block + 1), size - 8);
+    initheap((SceSysmemLowheap*)(block + 1), alignedSize - 8);
     heap->firstBlock = block;
     resumeIntr(oldIntr);
-    return uid->uid;
+    return uid->uid ^ gSysmemRandomValue;
 }
 
 void *_AllocHeapMemory(SceSysmemHeap *heap, u32 size, u32 align)
 {
     if (size > 0x20000000)
-        return 0;
+        return NULL;
     if (align != 0 && ((align & 3) != 0 || align > 0x80 || ((align - 1) & align) != 0))
-        return 0;
-    // 30A8
-    SceSysmemHeapBlock *block = heap->firstBlock;
-    // 30B4
+        return NULL;
+    SceSysmemHeapBlock *block = heap->firstBlock->next;
     for (;;) {
-        if ((int)block - heap->partAddr >= heap->partSize) {
-            if (!sceKernelIsToolMode())
-                for (;;) // 321C
-                    ;
-            Kprintf("Heap memory is in illegal memory partition\n");
-            pspBreak(0);
+        if ((u32)block - heap->partAddr >= heap->partSize) {
+            if (sceKernelIsToolMode() != 0) {
+                Kprintf("Heap memory is in illegal memory partition\n");
+                pspBreak(0);
+            }
+            for (;;)
+                ;
         }
-        // 30F4
         void *ret = hmalloc(heap, (SceSysmemLowheap*)(block + 1), size, align);
         if (ret != NULL)
             return ret;
@@ -88,34 +85,32 @@ void *_AllocHeapMemory(SceSysmemHeap *heap, u32 size, u32 align)
             break;
         block = block->next;
     }
-    if (heap->size < 4) // 312C
-        return heap;
+    if (heap->size < 4)
+        return NULL;
     u32 newSize = heap->size & 0xFFFFFFFE;
     if (align == 0) {
-        // 31FC
         if (newSize - 40 < size) {
             size = UPALIGN8(size);
             newSize = size + 40;
         }
     } else {
         size = UPALIGN8(size);
-        // 3160
-        int shift = align - (32 % align);
+        u32 shift = align - (32 % align);
         if ((32 % align) == 0)
             shift = 0;
         if (newSize - 40 < size + shift)
             newSize = size + shift + 40;
     }
-    // 317C
     block = _AllocPartitionMemory(MpidToCB(heap->partId), 0, newSize, 0);
     if (block == NULL)
-        return 0;
+        return NULL;
     block->next = block;
     block->prev = block;
     initheap((SceSysmemLowheap*)(block + 1), newSize - 8);
-    block->next = heap->firstBlock;
-    block->prev = heap->firstBlock->prev;
-    heap->firstBlock->prev = block;
+    SceSysmemHeapBlock *headNext = heap->firstBlock->next;
+    block->next = headNext;
+    block->prev = headNext->prev;
+    headNext->prev = block;
     block->prev->next = block;
     return hmalloc(heap, (SceSysmemLowheap*)(block + 1), size, align);
 }
@@ -123,29 +118,24 @@ void *_AllocHeapMemory(SceSysmemHeap *heap, u32 size, u32 align)
 s32 _FreeHeapMemory(SceSysmemHeap *heap, void *addr)
 {
     SceSysmemHeapBlock *block = heap->firstBlock->next;
-    // 3254
     for (;;) {
         if ((u32)block - heap->partAddr >= heap->partSize) {
-            if (sceKernelIsToolMode() == 0)
-                for (;;) // 3324
-                    ;
-            Kprintf("Heap memory is in illegal memory partition\n");
-            pspBreak(0);
+            if (sceKernelIsToolMode() != 0) {
+                Kprintf("Heap memory is in illegal memory partition\n");
+                pspBreak(0);
+            }
+            for (;;)
+                ;
         }
         SceSysmemLowheap *lowh = (SceSysmemLowheap*)(block + 1);
-        // 328C
         if (hfree(heap, lowh, addr) == 0) {
-            // 32DC
-            if (block != heap->firstBlock) {
-                if (checkheapnouse(lowh) != 0) {
-                    // 3300
-                    lowh->addr = 0;
-                    block->next->prev = block->prev;
-                    block->prev->next = block->next;
-                    _FreePartitionMemory(block);
-                }
-                return 0;
+            if (block != heap->firstBlock && checkheapnouse(lowh) != 0) {
+                lowh->addr = 0;
+                block->next->prev = block->prev;
+                block->prev->next = block->next;
+                _FreePartitionMemory(block);
             }
+            return 0;
         }
         if (block == heap->firstBlock)
             return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
@@ -161,20 +151,16 @@ int sceKernelQueryHeapInfo(SceUID id, SceSysmemHeapInfo *info)
     SceSysmemUidCB *uid;
     int ret = sceKernelGetUIDcontrolBlockWithType(id, g_HeapType, &uid);
     if (ret != 0) {
-        // 3530
         resumeIntr(oldIntr);
         return ret;
     }
     SceSysmemHeap *heap = UID_CB_TO_DATA(uid, g_HeapType, SceSysmemHeap);
-    // 33B8
     int i;
-    for (i = 0; i < 6; i++)
+    for (i = 0; i < 8; i++)
         ((int*)info->name)[i] = 0;
     if (uid->name != NULL) {
-        // 3520
         strncpy(info->name, uid->name, 31);
     }
-    // 33D0
     info->perm = uid->attr;
     info->heapSize = heap->size & 0xFFFFFFFE;
     if (heap->size >= 4) {
@@ -184,18 +170,16 @@ int sceKernelQueryHeapInfo(SceUID id, SceSysmemHeapInfo *info)
             info->attr = 3;
     } else
         info->attr = 0;
-    // 3408
     int totalSize = 0;
     int totalFreeSize = 0;
     SceSysmemHeapBlock *curBlock = heap->firstBlock->next;
-    SceSysmemLowheap *cur = (SceSysmemLowheap*)(curBlock + 1);
     int maxFreeSize = 0;
     int numHeaps = 0;
-    // 3420
     for (;;)
     {
         if ((u32)curBlock - heap->partAddr >= heap->partSize)
             break;
+        SceSysmemLowheap *cur = (SceSysmemLowheap*)(curBlock + 1);
         numHeaps++;
         totalSize += ((cur->size - 16) & 0xFFFFFFF8) - 8;
         totalFreeSize += htotalfreesize(cur);
@@ -204,7 +188,6 @@ int sceKernelQueryHeapInfo(SceUID id, SceSysmemHeapInfo *info)
             break;
         curBlock = curBlock->next;
     }
-    // 347C
     info->totalsize = totalSize;
     u32 size = 64;
     info->totalfreesize = totalFreeSize;
@@ -214,7 +197,6 @@ int sceKernelQueryHeapInfo(SceUID id, SceSysmemHeapInfo *info)
     SceSysmemHeapBlock **heaps = (SceSysmemHeapBlock **)&info->heaps;
     if (info->size >= 68)
     {
-        // 34A8
         do
         {
             if ((u32)curBlock - heap->partAddr >= heap->partSize)
@@ -226,9 +208,7 @@ int sceKernelQueryHeapInfo(SceUID id, SceSysmemHeapInfo *info)
             curBlock = curBlock->next;
         } while (size + 4 <= info->size);
     }
-    // (34DC)
     info->size = size;
-    // 34E0
     resumeIntr(oldIntr);
     return 0;
 }
@@ -370,6 +350,38 @@ s32 sceKernelFreeHeapMemory(SceUID id, void *addr)
     return ret;
 }
 
+s32 _CheckHeapMemory(SceSysmemHeap *heap, void *addr)
+{
+    if ((u32)addr - heap->partAddr >= heap->partSize) {
+        if (!sceKernelIsToolMode()) {
+            for (;;)
+                ;
+        }
+        Kprintf("Heap memory is in illegal memory partition\n");
+        pspBreak(0);
+    }
+    SceSysmemHeapBlock *block = heap->firstBlock->next;
+    for (;;) {
+        if ((u32)block - heap->partAddr >= heap->partSize) {
+            if (sceKernelIsToolMode() != 0) {
+                Kprintf("Heap memory is in illegal memory partition\n");
+                pspBreak(0);
+            }
+            for (;;)
+                ;
+        }
+        if (hcheckblock((SceSysmemLowheap *)(block + 1), addr) == 0)
+            return 0;
+        if (block == heap->firstBlock) {
+            if (sceKernelIsToolMode() != 0)
+                pspBreak(0);
+            for (;;)
+                ;
+        }
+        block = block->next;
+    }
+}
+
 s32 sceKernelHeapTotalFreeSize(SceUID id)
 {
     s32 oldIntr = suspendIntr();
@@ -377,7 +389,6 @@ s32 sceKernelHeapTotalFreeSize(SceUID id)
     s32 ret = sceKernelGetUIDcontrolBlockWithType(id, g_HeapType, &uid);
     if (ret == 0)
         ret = _TotalFreeSize(UID_CB_TO_DATA(uid, g_HeapType, SceSysmemHeap));
-    // 39D0
     resumeIntr(oldIntr);
     return ret;
 }
@@ -389,7 +400,7 @@ s32 heap_do_initialize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 fun
     heap->size = 0;
     heap->partId = 0;
     heap->firstBlock = NULL;
-    return uid->uid;
+    return uid->uid ^ gSysmemRandomValue;
 }
 
 s32 heap_do_delete(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap)
@@ -398,7 +409,7 @@ s32 heap_do_delete(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId,
     if (heap->firstBlock != NULL)
         _DeleteHeap(heap);
     sceKernelCallUIDObjCommonFunction(uid, uidWithFunc, funcId, ap);
-    return uid->uid;
+    return uid->uid ^ gSysmemRandomValue;
 }
 
 s32 heap_do_alloc(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), s32 funcId __attribute__((unused)), va_list ap)
@@ -407,9 +418,8 @@ s32 heap_do_alloc(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__
     SceSysmemHeapAllocOption *opt = va_arg(ap, SceSysmemHeapAllocOption *);
     void **retPtr = va_arg(ap, void**);
     SceSysmemHeap *heap = UID_CB_TO_DATA(uid, g_HeapType, SceSysmemHeap);
-    // 3B10
     *retPtr = _AllocHeapMemory(heap, size, (opt != NULL) ? opt->align : 0);
-    return uid->uid;
+    return uid->uid ^ gSysmemRandomValue;
 }
 
 s32 heap_do_free(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), s32 funcId __attribute__((unused)), va_list ap)
@@ -417,13 +427,14 @@ s32 heap_do_free(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__(
     s32 ret = _FreeHeapMemory(UID_CB_TO_DATA(uid, g_HeapType, SceSysmemHeap), va_arg(ap, void*));
     if (ret != 0)
         return ret;
-    return uid->uid;
+    return uid->uid ^ gSysmemRandomValue;
 }
 
 s32 heap_do_totalfreesize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), s32 funcId __attribute__((unused)), va_list ap)
 {
-    *va_arg(ap, s32*) = _TotalFreeSize(UID_CB_TO_DATA(uid, g_HeapType, SceSysmemHeap));
-    return uid->uid;
+    s32 *outSize = va_arg(ap, s32 *);
+    *outSize = _TotalFreeSize(UID_CB_TO_DATA(uid, g_HeapType, SceSysmemHeap));
+    return uid->uid ^ gSysmemRandomValue;
 }
 
 s32 _DeleteHeap(SceSysmemHeap *heap)
@@ -431,22 +442,21 @@ s32 _DeleteHeap(SceSysmemHeap *heap)
     SceSysmemHeapBlock *firstBlock = heap->firstBlock;
     SceSysmemHeapBlock *cur = firstBlock->next;
     if (cur != firstBlock) {
-        // 3C04
         do {
             if ((u32)cur - heap->partAddr >= heap->partSize) {
-                if (sceKernelIsToolMode() == 0)
-                    for (;;) // 3C7C
-                        ;
-                Kprintf("Heap memory is in illegal memory partition\n");
-                pspBreak(0);
+                if (sceKernelIsToolMode() != 0) {
+                    Kprintf("Heap memory is in illegal memory partition\n");
+                    pspBreak(0);
+                }
+                for (;;)
+                    ;
             }
-            // 3C38
+            SceSysmemHeapBlock *next = cur->next;
             ((SceSysmemLowheap*)(cur + 1))->addr = 0;
             _FreePartitionMemory(cur);
-            cur = cur->next;
+            cur = next;
         } while (cur != firstBlock);
     }
-    // 3C50
     ((SceSysmemLowheap*)(firstBlock + 1))->addr = 0;
     return _FreePartitionMemory(firstBlock);
 }
@@ -454,16 +464,16 @@ s32 _DeleteHeap(SceSysmemHeap *heap)
 s32 _TotalFreeSize(SceSysmemHeap *heap)
 {
     s32 size = 0;
-    SceSysmemHeapBlock *cur = heap->firstBlock;
+    SceSysmemHeapBlock *cur = heap->firstBlock->next;
     for (;;) {
         if ((u32)cur - heap->partAddr >= heap->partSize) {
-            if (sceKernelIsToolMode() == 0)
-                for (;;) // 3D20
-                    ;
-            Kprintf("Heap memory is in illegal memory partition\n");
-            pspBreak(0);
+            if (sceKernelIsToolMode() != 0) {
+                Kprintf("Heap memory is in illegal memory partition\n");
+                pspBreak(0);
+            }
+            for (;;)
+                ;
         }
-        // 3CE4
         size += htotalfreesize((SceSysmemLowheap*)(cur + 1));
         if (cur == heap->firstBlock)
             return size;

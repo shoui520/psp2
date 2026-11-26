@@ -88,8 +88,7 @@ s32 SysMemForKernel_807179E7(char *gameId, int parentalLevel, char *gameDataId, 
         SystemGameInfo.vsh_version[7] = '\0';
     }
     // 9014
-    if (gameId != NULL || parentalLevel != 0 || gameDataId != NULL || appVer != NULL || vshVersion != NULL) {
-        // 907C
+    if (gameId != NULL || parentalLevel != 0 || ((u32)gameDataId | (u32)appVer | (u32)vshVersion) != 0) {
         SystemGameInfo.flags |= 0x100;
     } else
         SystemGameInfo.flags &= (~0x100);
@@ -598,6 +597,7 @@ s32 sceKernelGetCompilerVersion(void)
 s32 sceKernelSetCompilerVersion(s32 version)
 {
     SystemGameInfo.compiler_version = version;
+    SystemGameInfo.flags |= 0x2000;
     return 0;
 }
 
@@ -611,6 +611,7 @@ s32 sceKernelGetDNAS(void)
 s32 sceKernelSetDNAS(s32 DNAS)
 {
     SystemGameInfo.DNAS = DNAS;
+    SystemGameInfo.flags |= 0x10000;
     return 0;
 }
 

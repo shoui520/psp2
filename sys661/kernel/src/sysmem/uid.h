@@ -1,7 +1,9 @@
 #ifndef UID_H
 #define UID_H
 
-void InitUid(void);
+#include "sysmem.h"
+
+void InitUid(SysMemConfig *config);
 
 #endif
 

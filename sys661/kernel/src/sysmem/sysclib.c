@@ -14,7 +14,7 @@
 #define CTYPE_LETTER (CTYPE_DOWNCASE_LETTER | CTYPE_UPCASE_LETTER)
 
 // 135F0
-u8 _ctype_[] =
+s8 _ctype_[] =
 {
     0,
     CTYPE_CTRL, // 0
@@ -147,9 +147,9 @@ u8 _ctype_[] =
     CTYPE_CTRL
 };
 
-int bcmp(void *s1, void *s2, int n)
+int bcmp(void *lhs, void *rhs, int n)
 {
-    return memcmp(s1, s2, n);
+    return memcmp(lhs, rhs, n);
 }
 
 void bcopy(void *src, void *dst, int n)
@@ -166,14 +166,14 @@ int toupper(int c)
 {
     if ((_ctype_[c + 1] & CTYPE_UPCASE_LETTER) == 0)
         return c;
-    return (char)c - 32;
+    return (u8)c - 32;
 }
 
 int tolower(int c)
 {
     if ((_ctype_[c + 1] & CTYPE_DOWNCASE_LETTER) == 0)
         return c;
-    return (char)c + 32;
+    return (u8)c + 32;
 }
 
 int look_ctype_table(int c)
@@ -184,7 +184,7 @@ int look_ctype_table(int c)
 char *index(char *s, int c)
 {
     char match = (char)c;
-    if (match == '\0')
+    if (s == NULL)
         return NULL;
     char cur;
     do
@@ -197,116 +197,86 @@ char *index(char *s, int c)
     return NULL;
 }
 
-u64 __udivmoddi4(u64 arg01, u64 arg23, u64 *v)
+u64 __udivmoddi4(u64 dividend, u64 divisor, u64 *remOut)
 {
-    u64 or = arg01 | arg23;
-    if (arg23 == 0)
+    u64 combined = dividend | divisor;
+    if (divisor == 0)
         return 0;
     int shift = 0;
-    // D288
-    while ((or & 1) == 0) {
-        or >>= 1;
+    while ((combined & 1) == 0) {
+        combined >>= 1;
         shift++;
     }
-    // D2A4
-    int shift2 = 0;
-    if ((or & 0xFFFFFFFF00000000) != 0)
+    int shiftCount = 0;
+    if ((combined & 0xFFFFFFFF00000000ULL) != 0)
     {
-        // D380
         for (;;)
         {
-            // D3A8
-            if (arg23 >= arg01 || (s64)arg23 < 0)
+            if (divisor >= dividend || (s64)divisor < 0)
                 break;
-            arg23 <<= 1;
-            shift2++;
+            divisor <<= 1;
+            shiftCount++;
         }
-        // D3C4
-        u64 t01 = (u64)1 << shift2;
-        // D3FC
-        u64 b12 = 0;
-        // D414
-        while (t01 != 0)
+        u64 bit = (u64)1 << shiftCount;
+        u64 quotient = 0;
+        while (bit != 0)
         {
-            if (arg01 >= arg23)
+            if (dividend >= divisor)
             {
-                // D42C
-                arg01 -= arg23;
-                b12 |= t01;
+                dividend -= divisor;
+                quotient |= bit;
             }
-            // D444
-            t01 >>= 1;
-            arg23 >>= 1;
+            bit >>= 1;
+            divisor >>= 1;
         }
-        // D468
-        *v = arg01;
-        return b12;
+        *remOut = dividend;
+        return quotient;
     }
-    int div1, div2;
-    div2 = arg23 >> shift;
-    div1 = arg01 >> shift;
-    // D318
-    // D330
-    u64 shifted = div1 % div2;
-    // D368
-    *v = shifted << shift;
-    return div1 / div2;
+    u32 divLo = (u32)(divisor >> shift);
+    u32 numLo = (u32)(dividend >> shift);
+    u64 rem = numLo % divLo;
+    *remOut = rem << shift;
+    return numLo / divLo;
 }
 
-u64 __udivdi3(u64 arg01, u64 arg23)
+u64 __udivdi3(u64 dividend, u64 divisor)
 {
     int shift;
     u64 num, result;
-    if (arg23 == 0)
+    if (divisor == 0)
         return 0;
-    shift = 0;
-    // D4B0
-    for (shift = 0; (arg23 & 1) == 0; shift++)
-        arg23 >>= 1;
-    // D4CC
-    num = arg01 >> shift;
-    // D4FC
-    arg01 = num;
-    if (((num | arg23) >> 32) == 0) {
-        // D524
-        return (u32)arg01 / (u32)arg23;
+    for (shift = 0; (divisor & 1) == 0; shift++)
+        divisor >>= 1;
+    num = dividend >> shift;
+    dividend = num;
+    if (((num | divisor) >> 32) == 0) {
+        return (u32)dividend / (u32)divisor;
     }
-    // D53C
-    num = arg01;
-    if ((s64)arg01 < 0) {
-        // D660
-        num = -1;
+    num = dividend;
+    if ((s64)dividend < 0) {
+        num = (u64)-1;
     }
-    // D554
-    // (D55C)
-    // D560
-    for (shift = 0; arg23 < num; shift++)
-        arg23 <<= 1;
-    // D58C
+    for (shift = 0; divisor < num; shift++)
+        divisor <<= 1;
     num = (u64)1 << shift;
-    // D5C4
     result = 0;
-    // D5D8
     while (num != 0)
     {
-        if (arg01 >= arg23)
+        if (dividend >= divisor)
         {
-            // D5F0
-            arg01 -= arg23;
+            dividend -= divisor;
             result |= num;
         }
-        // D608
         num >>= 1;
-        arg23 >>= 1;
+        divisor >>= 1;
     }
-    // D630
     return result;
 }
 
-u64 __umoddi3(u64 arg01, u64 arg23)
+u64 __umoddi3(u64 dividend, u64 divisor)
 {
     u64 mod;
-    __udivmoddi4(arg01, arg23, &mod);
+    __udivmoddi4(dividend, divisor, &mod);
     return mod;
 }
 
@@ -314,27 +284,26 @@ void *memchr(const void *s, int c, int n)
 {
     if (s != NULL)
     {
-        // D6A8
         while ((n--) > 0)
         {
-            if (*(char*)s == (c & 0xFF))
+            if (*(const u8 *)s == (u8)(c & 0xFF))
                 return (void *)s;
-            s++;
+            s = (const u8 *)s + 1;
         }
     }
     return NULL;
 }
 
-int memcmp(const void *s1, const void *s2, int n)
+int memcmp(const void *lhs, const void *rhs, int n)
 {
-    // D6D8
+    const u8 *left = lhs;
+    const u8 *right = rhs;
     while ((n--) > 0)
     {
-        u8 a = *((u8*)s1++);
-        u8 b = *((u8*)s2++);
+        u8 a = *left++;
+        u8 b = *right++;
         if (a != b)
         {
-            // D700
             if (a >= b)
                 return 1;
             return -1;
@@ -343,120 +312,103 @@ int memcmp(const void *s1, const void *s2, int n)
     return 0;
 }
 
+typedef struct __attribute__((packed)) {
+    u32 val;
+} UnalignedU32;
+
 void *sceKernelMemcpy(void *dst, const void *src, u32 n)
 {
-    const char *curSrc = (const char*)src;
-    char *curDst = (char*)dst;
-    char *end = (char*)dst + n;
-
-    asm(".set noat");
+    const u8 *curSrc = (const u8 *)src;
+    u8 *curDst = (u8 *)dst;
+    u8 *end = (u8 *)dst + n;
 
     if (dst == src)
         return dst;
     if (n >= 8)
     {
-        // D754
-        if (((int)dst & 3) != 0)
+        if (((u32)dst & 3) != 0)
         {
-            // D96C
-            int align = 4 - ((int)dst & 3);
-            asm("lwl $at, 3(%0)\n \
-                 lwr $at, 0(%0)\n \
-                 swr $at, 0(%1)" : : "r" (src), "r" (dst) : "at");
-            curSrc = src + align;
-            curDst = dst + align;
+            u32 align = 4 - ((u32)dst & 3);
+            u32 word = ((const UnalignedU32 *)src)->val;
+            asm("swr %0, 0(%1)" : : "r"(word), "r"(dst) : "memory");
+            curSrc += align;
+            curDst += align;
         }
-        // D75C
-        if ((((int)curDst >> 29) & 3) == 0 && n >= 128)
+        if ((((u32)curDst >> 29) & 3) == 0 && n >= 128)
         {
-            if (((int)curSrc & 3) != 0)
+            u8 *alignedHead = (u8 *)UPALIGN64((u32)curDst);
+            u8 *alignedEnd = (u8 *)((u32)end & 0xFFFFFFC0);
+            if (((u32)curSrc & 3) != 0)
             {
-                // D86C
-                // D874
-                while ((u32)curDst != UPALIGN64((int)curDst))
+                while (curDst != alignedHead)
                 {
-                    asm("lwl $at, 3(%0)\n \
-                         lwr $at, 0(%0)\n \
-                         addiu %0, %0, 4\n \
-                         addiu %1, %1, 4\n \
-                         sw $at, -4(%1)" : : "r" (curSrc), "r" (curDst) : "at");
+                    *(u32 *)curDst = ((const UnalignedU32 *)curSrc)->val;
+                    curSrc += 4;
+                    curDst += 4;
                 }
-                // D890
-                // D894
-                do
+                while (curDst != alignedEnd)
                 {
                     pspCache(0x18, curDst);
                     int i;
                     for (i = 0; i < 4; i++)
                     {
-                        asm("lwl $at, 3(%0)\n \
-                             lwr $at, 0(%0)\n \
-                             lwr $a3, 7(%0)\n \
-                             lwr $a3, 4(%0)\n \
-                             lwr $t0, 11(%0)\n \
-                             lwr $t0, 8(%0)\n \
-                             lwr $t1, 15(%0)\n \
-                             lwr $t1, 12(%0)\n \
-                             sw  $at, 0(%1)\n \
-                             sw  $a3, 4(%1)\n \
-                             sw  $t0, 8(%1)\n \
-                             sw  $t1, 12(%1)" : : "r" (curSrc + i * 16), "r" (curDst + i * 16) : "at", "a3", "t0", "t1");
-                        curSrc += 64;
-                        curDst += 64;
+                        const UnalignedU32 *srcWords = (const UnalignedU32 *)curSrc;
+                        u32 *dstWords = (u32 *)curDst;
+                        u32 wordA = srcWords[0].val;
+                        u32 wordB = srcWords[1].val;
+                        u32 wordC = srcWords[2].val;
+                        u32 wordD = srcWords[3].val;
+                        dstWords[0] = wordA;
+                        dstWords[1] = wordB;
+                        dstWords[2] = wordC;
+                        dstWords[3] = wordD;
+                        curSrc += 16;
+                        curDst += 16;
                     }
-                } while (curDst != (void*)((int)end & 0xFFFFFFC0));
+                }
             }
             else
             {
-                // D784
-                while ((u32)curDst != UPALIGN64((int)curDst))
+                while (curDst != alignedHead)
                 {
-                    asm("lw $at, 0(%0)\n \
-                         addiu %0, %0, 4\n \
-                         sw $at, 0(%1)\n \
-                         addiu %1, %1, 4" : : "r" (curSrc), "r" (curDst) : "at");
+                    *(u32 *)curDst = *(const u32 *)curSrc;
+                    curSrc += 4;
+                    curDst += 4;
                 }
-                // D79C
-                // D7A0
-                do
+                while (curDst != alignedEnd)
                 {
                     pspCache(0x18, curDst);
                     int i;
                     for (i = 0; i < 4; i++)
                     {
-                        asm("lw $at, 0(%0)\n \
-                             lw $a3, 4(%0)\n \
-                             lw $t0, 8(%0)\n \
-                             lw $t1, 12(%0)\n \
-                             sw $at, 0(%1)\n \
-                             sw $a3, 4(%1)\n \
-                             sw $t0, 8(%1)\n \
-                             sw $t1, 12(%1)" : : "r" (curSrc + i * 16), "r" (curDst + i * 16) : "at", "a3", "t0", "t1");
-                        curSrc += 64;
-                        curDst += 64;
+                        const u32 *srcWords = (const u32 *)curSrc;
+                        u32 *dstWords = (u32 *)curDst;
+                        u32 wordA = srcWords[0];
+                        u32 wordB = srcWords[1];
+                        u32 wordC = srcWords[2];
+                        u32 wordD = srcWords[3];
+                        dstWords[0] = wordA;
+                        dstWords[1] = wordB;
+                        dstWords[2] = wordC;
+                        dstWords[3] = wordD;
+                        curSrc += 16;
+                        curDst += 16;
                     }
-                } while (curDst != (void*)((int)end & 0xFFFFFFC0));
+                }
             }
-            // D830
-            if ((void*)((int)end & 0xFFFFFFC0) == end)
+            if (alignedEnd == end)
                 return dst;
-            curDst = (void*)((int)end & 0xFFFFFFC0);
         }
-        // D83C
-        // D84C
-        while (curDst != (void*)((int)end & 0xFFFFFFFC))
+        u8 *wordEnd = (u8 *)((u32)end & 0xFFFFFFFC);
+        while (curDst != wordEnd)
         {
-            asm("lwl %0, 3(%1)\n \
-                 lwr %0, 0(%1)" : "=r" (curDst) : "r" (curSrc));
+            *(u32 *)curDst = ((const UnalignedU32 *)curSrc)->val;
             curDst += 4;
             curSrc += 4;
         }
-        // D864
     }
-    // D730
-    // D738
     while (curDst != end)
-        *(curDst++) = *(curSrc++);
+        *curDst++ = *curSrc++;
     return dst;
 }
 
@@ -469,22 +421,19 @@ void *memcpy(void *dst, const void *src, u32 n)
 
 void *memmove(void *dst, const void *src, int n)
 {
-    char *dst2 = dst;
-    const char *src2 = src;
+    char *dstCur = dst;
+    const char *srcCur = src;
     if (dst == NULL)
         return NULL;
     if (dst < src)
     {
-        // D9E4
-        // D9EC
         while ((n--) > 0)
-            *(dst2++) = *(src2++);
+            *(dstCur++) = *(srcCur++);
     }
     else
     {
-        // D9C0
         while ((--n) >= 0)
-            dst2[n] = src2[n];
+            dstCur[n] = srcCur[n];
     }
     return dst;
 }
@@ -498,53 +447,46 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
     int count = 0;
     char string[21];
 
-    // DA74
     for (;;)
     {
         if (*fmt == '\0')
         {
-            // DB08 dup
             cb(ctx, 513);
             return count;
         }
         if (*fmt == '%')
         {
             int flag = 0;
-            // DAAC
             int precision = -1;
             int usedPrecision = 0;
-            int numAlign = 0; // with %* or %0123456789
+            int numAlign = 0;
             int sign = '\0';
-            int base;
-            int number;
-            int stringLen;
-            char *s;
-            int len;
-            // DABC
-            do
+            int base = 10;
+            u32 number = 0;
+            u64 longNum = 0;
+            int stringLen = 0;
+            char *s = NULL;
+            int formatKind = 0; /* 0: done, 1: 32-bit int, 2: 64-bit int, 3: string */
+
+            for (;;)
             {
                 fmt++;
-                // DAC0
-                switch (*fmt) // jump table at 0x13674
+                switch (*fmt)
                 {
                 case ' ':
-                    // DAF0
                     if (sign == '\0')
                         sign = ' ';
                     continue;
 
                 case '\0':
-                    // DB08 dup
                     cb(ctx, 513);
                     return count;
 
                 case '#':
-                    // DB48
                     flag |= 8;
                     continue;
 
                 case '*':
-                    // DB58
                     numAlign = va_arg(args, int);
                     if (numAlign >= 0)
                         continue;
@@ -552,21 +494,17 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
                     /* FALLTHRU */
 
                 case '-':
-                    // DB70
                     flag |= 0x10;
                     continue;
 
                 case '+':
-                    // DB80
                     sign = '+';
                     continue;
 
                 case '.':
-                    // DB8C
                     precision = 0;
                     if (*(++fmt) == '*')
                     {
-                        // DBF8
                         precision = va_arg(args, int);
                     }
                     else
@@ -579,24 +517,20 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
                                 break;
                             precision = precision * 10 + *(fmt++) - '0';
                         }
-                        // (DBE8)
                         fmt--;
                     }
-                    // DBEC
                     precision = pspMax(precision, -1);
                     continue;
 
                 case '0':
-                    // DC04
                     flag |= 0x20;
                     continue;
 
                 case '1': case '2': case '3':
                 case '4': case '5': case '6':
-                case '7': case '8': case '9': {
-                    // DC14
+                case '7': case '8': case '9':
+                {
                     int cur = 0;
-                    // DC18
                     for (;;)
                     {
                         cur = cur * 10 + *fmt - '0';
@@ -605,163 +539,146 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
                         if ((look_ctype_table(*fmt) & CTYPE_CIPHER) == 0)
                             break;
                     }
-                    // DC58
                     fmt--;
                     numAlign = cur;
-                }
                     continue;
+                }
 
                 case 'D':
-                    // DC64
                     flag |= 1;
                     /* FALLTHRU */
 
                 case 'd':
-                case 'i': {
-                    // DC70
+                case 'i':
                     base = 10;
                     if ((flag & 2) == 0)
                     {
-                        // DF00
-                        number = va_arg(args, int);
-                        if (number < 0)
+                        int signedVal = va_arg(args, int);
+                        if (signedVal < 0)
                         {
-                            // DFBC
-                            number = -number;
+                            signedVal = -signedVal;
                             sign = '-';
                         }
-                        goto print_base;
+                        number = (u32)signedVal;
+                        formatKind = 1;
                     }
-                    s64 num = va_arg(args, s64);
-                    if (num < 0)
+                    else
                     {
-                        // DEE4
-                        num = -num;
-                        sign = '-';
-                    }
-                    // DC98
-                    if (precision >= 0)
-                        flag &= 0xFFFFFFDF;
-                    s = &string[21];
-                    usedPrecision = precision;
-                    if (precision != 0)
-                    {
-                        // DCCC
-                        while (num != 0) {
-                            *(--s) = ciphers[__umoddi3(num, 10)];
-                            num = __udivdi3(num, 10);
+                        s64 signedLong = va_arg(args, s64);
+                        if (signedLong < 0)
+                        {
+                            signedLong = -signedLong;
+                            sign = '-';
                         }
-                        ciphers = "0123456789abcdef";
+                        longNum = (u64)signedLong;
+                        formatKind = 2;
                     }
-                    // DD30
-                    stringLen = &string[21] - s;
-                }
-                    goto print_string;
+                    break;
 
                 case 'L':
-                    // DFD4
                     flag |= 2;
                     continue;
 
                 case 'O':
-                    // DFE0
                     flag |= 1;
                     /* FALLTHRU */
 
                 case 'o':
-                    // DFEC
                     base = 8;
-                    goto print_base_unsigned;
+                    sign = '\0';
+                    if ((flag & 2) == 0)
+                    {
+                        number = va_arg(args, u32);
+                        formatKind = 1;
+                    }
+                    else
+                    {
+                        longNum = va_arg(args, u64);
+                        formatKind = 2;
+                    }
+                    break;
 
                 case 'U':
-                    // E028
                     flag |= 1;
                     /* FALLTHRU */
 
                 case 'u':
-                    // E034
                     base = 10;
-                    goto print_base_unsigned;
+                    sign = '\0';
+                    if ((flag & 2) == 0)
+                    {
+                        number = va_arg(args, u32);
+                        formatKind = 1;
+                    }
+                    else
+                    {
+                        longNum = va_arg(args, u64);
+                        formatKind = 2;
+                    }
+                    break;
 
                 case 'X':
-                    // E044
                     ciphers = "0123456789ABCDEF";
                     /* FALLTHRU */
 
                 case 'x':
-                    // E050
                     base = 16;
+                    sign = '\0';
                     if ((flag & 2) == 0)
                     {
-                        // E0A8
-                        number = va_arg(args, int);
+                        number = va_arg(args, u32);
                         if (((flag >> 3) & 1) && number != 0)
                             flag |= 0x40;
+                        formatKind = 1;
                     }
                     else
                     {
-                        u64 num = va_arg(args, u64);
-                        if (num != 0 && ((flag >> 3) & 1) != 0)
+                        longNum = va_arg(args, u64);
+                        if (longNum != 0 && ((flag >> 3) & 1) != 0)
                             flag |= 0x40;
+                        formatKind = 2;
                     }
-                    // E010
-                    // E014
-                    sign = '\0';
-                    goto print_base;
+                    break;
 
                 case 'c':
-                    // E0D8
                     s = string;
                     stringLen = 1;
                     sign = '\0';
                     string[0] = (char)va_arg(args, int);
-                    goto print_string;
+                    formatKind = 3;
+                    break;
 
                 case 'h':
-                    // E0F8
                     flag |= 4;
                     continue;
 
                 case 'l':
-                    // E104
-                    if ((flag & 1) == 0) {
-                        // E124
+                    if ((flag & 1) == 0)
                         flag |= 1;
-                    }
                     else
                         flag = (flag & 0xFFFFFFFE) | 2;
                     continue;
 
                 case 'n':
-                    // E12C
-                    if ((flag & 1) != 0 || (flag & 4) == 0) {
-                        // E160
+                    if ((flag & 1) != 0 || (flag & 4) == 0)
                         *va_arg(args, int*) = count;
-                    }
                     else
                         *va_arg(args, short*) = count;
                     break;
 
                 case 'p':
-                    // E170
                     base = 16;
-                    // E01C dup
-                    number = va_arg(args, int);
-                    // E010
-                    // E014
+                    number = va_arg(args, u32);
                     sign = '\0';
-                    goto print_base;
+                    formatKind = 1;
+                    break;
 
                 case 's':
-                    // E17C
                     s = va_arg(args, char*);
-                    if (s == NULL) {
-                        // E1DC
+                    if (s == NULL)
                         s = "(null)";
-                    }
-                    // E188
-                    if (precision < 0) {
-                        // E1C8
+                    if (precision < 0)
+                    {
                         stringLen = strlen(s);
                     }
                     else
@@ -775,60 +692,64 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
                                 stringLen = precision;
                         }
                     }
-                    // E1C0
                     sign = '\0';
-                    goto print_string;
+                    formatKind = 3;
+                    break;
 
                 default:
-                    // E1E8
                     cb(ctx, *fmt);
                     count++;
-                    // DAA0 dup
                     break;
                 }
                 break;
+            }
 
-                print_base_unsigned:
-                // DFF8
-                if ((flag & 2) == 0) {
-                    // E01C dup
-                    number = va_arg(args, int);
-                }
-                else
-                {
-                    (void)va_arg(args, u64);
-                }
-                // E010
-                // E014
-                sign = '\0';
-
-                print_base:
-                // DF18
-                usedPrecision = precision;
-                s = &string[21];
-                if (flag >= 0)
+            if (formatKind == 2)
+            {
+                if (precision >= 0)
                     flag &= 0xFFFFFFDF;
-                if (number != 0 || precision != 0)
+                s = &string[21];
+                usedPrecision = precision;
+                if (longNum != 0 || precision != 0)
                 {
-                    // DF48
-                    // DF50
                     char lastC;
                     do
                     {
-                        lastC = ciphers[number % base];
-                        number /= base;
+                        lastC = ciphers[__umoddi3(longNum, base)];
+                        *(--s) = lastC;
+                        longNum = __udivdi3(longNum, base);
+                    } while (longNum != 0);
+                    ciphers = "0123456789abcdef";
+                    if (((flag >> 3) & 1) && base == 8 && lastC != '0')
+                        *(--s) = '0';
+                }
+                stringLen = &string[21] - s;
+            }
+            else if (formatKind == 1)
+            {
+                usedPrecision = precision;
+                s = &string[21];
+                if (precision >= 0)
+                    flag &= 0xFFFFFFDF;
+                if (number != 0 || precision != 0)
+                {
+                    char lastC;
+                    do
+                    {
+                        lastC = ciphers[number % (u32)base];
+                        number /= (u32)base;
                         *(--s) = lastC;
                     } while (number != 0);
                     ciphers = "0123456789abcdef";
                     if (((flag >> 3) & 1) && base == 8 && lastC != '0')
                         *(--s) = '0';
                 }
-                // DD30
                 stringLen = &string[21] - s;
+            }
 
-                print_string:
-                // DD38
-                len = stringLen;
+            if (formatKind != 0)
+            {
+                int len = stringLen;
                 if (sign != '\0')
                     len = stringLen + 1;
                 if ((flag & 0x40) != 0)
@@ -837,58 +758,38 @@ int prnt(prnt_callback cb, void *ctx, const char *fmt, va_list args)
                 int i;
                 if ((flag & 0x30) == 0 && numAlign != 0)
                 {
-                    // DD8C
                     for (i = 0; i < numAlign - maxSize; i++)
                         cb(ctx, ' ');
                 }
-                // DDA8
-                // DDAC
                 if (sign != '\0')
-                {
-                    // DED0
                     cb(ctx, sign);
-                }
-                // DDB4
-                if (number != 0)
+                if ((flag & 0x40) != 0)
                 {
-                    // DEB0
                     cb(ctx, '0');
                     cb(ctx, *fmt);
                 }
-                // DDBC
                 if ((flag & 0x30) == 0x20)
                 {
-                    // DE7C, DE8C
                     for (i = 0; i < numAlign - maxSize; i++)
                         cb(ctx, '0');
                 }
-                // DDCC
-                // DDD8
                 for (i = 0; i < usedPrecision - len; i++)
                     cb(ctx, '0');
-                // DDF4
-                // DE04
                 for (i = 0; i < stringLen; i++)
                     cb(ctx, *(s++));
-                // DE28
                 if ((flag & 0x10) != 0)
                 {
-                    // DE48
                     for (i = 0; i < numAlign - maxSize; i++)
                         cb(ctx, ' ');
                 }
-                // DE68
-                // DE6C
                 count += pspMax(maxSize, numAlign);
-            } while (0);
+            }
         }
         else
         {
             cb(ctx, *fmt);
             count++;
-            // DAA0 dup
         }
-        // DAA4
         fmt++;
     }
 }
@@ -980,20 +881,18 @@ char *strchr(const char *s, char c)
     return NULL;
 }
 
-int strcmp(const char *s1, const char *s2)
+int strcmp(const char *lhs, const char *rhs)
 {
-    if (s1 != NULL && s2 != NULL)
+    if (lhs != NULL && rhs != NULL)
     {
-        // E444, E464, E468
-        while (*(s1++) == *(s2++))
-            if (*(s1 - 1) == '\0')
+        while (*(lhs++) == *(rhs++))
+            if (*(lhs - 1) == '\0')
                 return 0;
-        // E458
-        return *(s1 - 1) - *(s2 - 1);
+        return *(lhs - 1) - *(rhs - 1);
     }
-    if (s1 == s2)
+    if (lhs == rhs)
         return 0;
-    if (s1 != NULL)
+    if (lhs != NULL)
         return 1;
     return -1;
 }
@@ -1003,7 +902,6 @@ char *strcpy(char *dest, const char *src)
     char *curDest = dest;
     if (dest == NULL || src == NULL)
         return NULL;
-    // E4AC
     char c;
     do
     {
@@ -1019,24 +917,19 @@ int strtol(const char *nptr, char **endptr, int base)
     int num = 0;
     if (nptr == NULL)
         return 0;
-    // E508
     while ((look_ctype_table(*nptr) & CTYPE_TRANSPARENT) != 0)
         nptr++;
-    // E524, E6C8, E6CC
     while (*nptr == '-') {
         nptr++;
         sign = -sign;
     }
-    // E534
     if (base < 2 || base > 36)
         base = 0;
     if (*nptr == '0')
     {
-        // E61C
         nptr++;
         if (*nptr == 'x' || *nptr == 'X')
         {
-            // E6A0
             if (base == 0 || base == 16) {
                 nptr++;
                 base = 16;
@@ -1044,80 +937,62 @@ int strtol(const char *nptr, char **endptr, int base)
         }
         else if (*nptr == 'b' || *nptr == 'B')
         {
-            // E668
-            // E66C
             if (base == 2 || base == 0) {
                 nptr++;
                 base = 2;
             }
         }
-        else if (base == 0 || base == 8) // E64C
+        else if (base == 0 || base == 8)
             base = 8;
     }
-    else
+    else if (toupper(*nptr) == 'O')
     {
-        if (toupper(*nptr) == '0')
-        {
-            nptr++;
-            // E610
-            base = 8;
-        }
+        nptr++;
+        base = 8;
     }
-    // E560
     if (base == 0)
         base = 10;
-    // E568
     for (;;)
     {
-        int cipher = *nptr - '0';
-        nptr++;
-        if ((look_ctype_table(*nptr) & CTYPE_CIPHER) == 0)
+        char ch = *nptr++;
+        int cipher = ch - '0';
+        if ((look_ctype_table(ch) & CTYPE_CIPHER) == 0)
         {
-            // E5E4
             cipher = 9999999;
-            if ((look_ctype_table(*nptr) & CTYPE_LETTER) != 0)
-                cipher = tolower(*nptr) - 'a' + 10;
+            if ((look_ctype_table(ch) & CTYPE_LETTER) != 0)
+                cipher = tolower(ch) - 'a' + 10;
         }
-        // E588
-        if (base < cipher)
+        if (cipher >= base)
         {
-            // E5AC
             if (endptr != NULL)
                 *endptr = (char*)nptr - 1;
-            // E5B8
             return num * sign;
         }
-        // E59C
         num = num * base + cipher;
     }
 }
 
 u32 strtoul(char *nptr, char **endptr, int base)
 {
-    int num = 0;
+    u32 num = 0;
     if (nptr == NULL)
         return 0;
-    // E71C
-    while ((look_ctype_table(*nptr) & CTYPE_TRANSPARENT) == 0)
+    while ((look_ctype_table(*nptr) & CTYPE_TRANSPARENT) != 0)
         nptr++;
-    // E738
     if (base < 2 || base > 36)
         base = 0;
     if (base == 0)
         base = 10;
     if (*nptr == '0')
     {
-        // E810
         nptr++;
         if (*nptr == 'x' || *nptr == 'X')
         {
-            // E85C
             nptr++;
             base = 16;
         }
         else if (*nptr == 'b' || *nptr == 'B')
         {
-            // E83C
             nptr++;
             base = 2;
         }
@@ -1125,54 +1000,44 @@ u32 strtoul(char *nptr, char **endptr, int base)
     else if (toupper(*nptr) == 'O')
     {
         nptr++;
-        // E804
         base = 8;
     }
-    // E76C
     for (;;)
     {
-        // E770
-        int cipher = *nptr - '0';
-        nptr++;
-        if ((look_ctype_table(*nptr) & CTYPE_CIPHER) == 0)
+        char ch = *nptr++;
+        int cipher = ch - '0';
+        if ((look_ctype_table(ch) & CTYPE_CIPHER) == 0)
         {
-            // E7D8
             cipher = 9999999;
-            if ((look_ctype_table(*nptr) & CTYPE_LETTER) != 0)
-                cipher = tolower(*nptr) - 'a' + 10;
+            if ((look_ctype_table(ch) & CTYPE_LETTER) != 0)
+                cipher = tolower(ch) - 'a' + 10;
         }
-        // E78C
         if (cipher >= base)
         {
-            // E7A8
             if (endptr != NULL)
                 *endptr = nptr - 1;
-            // E7B4
             return num;
         }
         num = num * base + cipher;
     }
 }
 
-int strncmp(const char *s1, const char *s2, int n)
+int strncmp(const char *lhs, const char *rhs, int n)
 {
-    if (s1 != NULL && s2 != NULL)
+    if (lhs != NULL && rhs != NULL)
     {
-        // E89C
         if ((--n) < 0)
             return 0;
-        // E8D0, E8D4
-        while (*(s1++) == *(s2++))
-            if (*s1 == '\0' || (--n) < 0)
+        while (*(lhs++) == *(rhs++))
+            if (*(lhs - 1) == '\0' || (--n) < 0)
                 return 0;
-        // E8B4
         if (n < 0)
             return 0;
-        return *(s1 - 1) - *(s2 - 1);
+        return *(lhs - 1) - *(rhs - 1);
     }
-    if (s1 == s2)
+    if (lhs == rhs)
         return 0;
-    if (s1 != NULL)
+    if (lhs != NULL)
         return 1;
     return -1;
 }
@@ -1204,11 +1069,8 @@ char *strncpy(char *dest, const char *src, int n)
 u32 strnlen(const char *s, u32 maxlen)
 {
     u32 len = 0;
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wnonnull-compare"
     if (s == NULL || maxlen == 0)
         return 0;
-#pragma GCC diagnostic pop
 
     // E9A4
     while (*(s++) != '\0')

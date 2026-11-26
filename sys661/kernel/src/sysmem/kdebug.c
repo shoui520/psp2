@@ -6,7 +6,7 @@
 #include "intr.h"
 #include "start.h"
 
-int kprnt(short *arg0, const char *fmt, va_list ap, int userMode);
+int kprnt(short *work, const char *fmt, va_list ap, int userMode);
 
 // 14434
 char kprnt_outbuf[260];
@@ -114,15 +114,25 @@ int sceKernelIsDVDMode()
     return gIsDvdMode;
 }
 
+typedef struct {
+    int reservedBeforeGpi[7];
+    int getGpi;
+    int setGpo;
+    int reservedBeforePtrig[4];
+    int getPtrig;
+    int setPtrig;
+} SceSm1Ops;
+
 int sceKernelSm1RegisterOperations(void *arg)
 {
+    SceSm1Ops *ops = (SceSm1Ops *)arg;
     g_pSm1Ops = arg;
-    if (arg != NULL)
+    if (ops != NULL)
     {
-        g_GetGPI = *(int*)(arg + 28);
-        g_SetGPO = *(int*)(arg + 32);
-        g_GetPTRIG = *(int*)(arg + 52);
-        g_SetPTRIG = *(int*)(arg + 56);
+        g_GetGPI = ops->getGpi;
+        g_SetGPO = ops->setGpo;
+        g_GetPTRIG = ops->getPtrig;
+        g_SetPTRIG = ops->setPtrig;
     }
     return 0;
 }
@@ -200,64 +210,57 @@ void SetIsDvdMode(void)
     }
 }
 
-int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
+int kprnt(short *work, const char *fmt, va_list ap, int userMode)
 {
-    char str[20];
+    char str[21];
     void (*func)(short*, int) = kprintf_putchar_handler;
-    *(short*)(arg0 + 0) = 1;
-    int base = 10;
-    *(short*)(arg0 + 2) = 0;
-    int curArg = 0;
-    s64 longVar;
-    if (kprintf_putchar_handler == NULL || fmt == NULL)
+    work[0] = 1;
+    work[1] = 0;
+    if (func == NULL || fmt == NULL)
         return 0;
-    func(arg0, 512);
+    func(work, 512);
     char *hexNumChars = "0123456789abcdef";
     int numChars = 0;
-    int stringLen;
-    // FF00
     for (;;)
     {
         if (*fmt == '\0')
         {
-            // 0FF94 dup
-            func(arg0, 513);
+            func(work, 513);
             return numChars;
         }
         if (*fmt == '%')
         {
             int oldStrSize = 0;
-            // FF38
             int attr = 0;
             int strSize = -1;
             int argWidth = 0;
             char sign = '\0';
-            char *curStr;
-            // FF48
-            do
+            int base = 10;
+            u32 curArg = 0;
+            u64 longVar = 0;
+            char *curStr = NULL;
+            int stringLen = 0;
+            int formatKind = 0; /* 0: done, 1: 32-bit int, 2: 64-bit int, 3: string */
+
+            for (;;)
             {
                 fmt++;
-                // FF4C
-                switch (*fmt) // jump table at 0x13900
+                switch (*fmt)
                 {
                 case ' ':
-                    // 0FF7C
                     if (sign == '\0')
                         sign = ' ';
                     continue;
 
                 case '\0':
-                    // 0FF94 dup
-                    func(arg0, 513);
+                    func(work, 513);
                     return numChars;
 
                 case '#':
-                    // 0FFD8
                     attr |= 8;
                     continue;
 
                 case '*':
-                    // 0FFE0
                     argWidth = va_arg(ap, int);
                     if (argWidth < 0) {
                         argWidth = -argWidth;
@@ -266,92 +269,82 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                     continue;
 
                 case '-':
-                    // 0FFF8
                     attr |= 0x10;
                     continue;
 
                 case '+':
-                    // 10000
                     sign = '+';
                     continue;
 
                 case '.':
-                    // 1000C
+                {
                     fmt++;
                     int val;
                     if (*fmt == '*')
                     {
-                        // 10074
                         val = va_arg(ap, int);
                     }
                     else
                     {
                         val = 0;
-                        // 10034
                         while (*fmt >= '0' && *fmt <= '9')
                             val = val * 10 + *(fmt++) - '0';
-                        // 10064
                         fmt--;
                     }
-                    // 10068
                     strSize = pspMax(val, -1);
                     continue;
+                }
 
                 case '0':
-                    // 10080
                     attr |= 0x20;
                     continue;
 
-                case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': {
-                    // 10088
+                case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9':
+                {
                     int val = 0;
-                    // 10090
                     do
                     {
                         val = val * 10 + (*(fmt++) - '0');
                         if (*fmt < 0)
                             break;
                     } while (*fmt >= '0' && *fmt <= '9');
-                    // 100CC
                     fmt--;
                     argWidth = val;
-                }
                     continue;
+                }
 
                 case 'D':
-                    // 100D8
                     attr |= 1;
                     /* FALLTHRU */
 
                 case 'd':
                 case 'i':
-                    // 100DC
+                    base = 10;
                     if ((attr & 2) == 0)
                     {
-                        // 103F4
-                        curArg = va_arg(ap, int);
-                        if (curArg < 0)
+                        int signedArg = va_arg(ap, int);
+                        if (signedArg < 0)
                         {
-                            // 104A0
-                            curArg = -curArg;
+                            signedArg = -signedArg;
                             sign = '-';
                         }
-                        // 10404
-                        base = 10;
-                        goto print_num2;
+                        curArg = (u32)signedArg;
+                        formatKind = 1;
                     }
-                    longVar = va_arg(ap, s64);
-                    if (longVar < 0)
+                    else
                     {
-                        // 103C8
-                        longVar = -longVar;
-                        sign = '-';
+                        s64 signedLong = va_arg(ap, s64);
+                        if (signedLong < 0)
+                        {
+                            signedLong = -signedLong;
+                            sign = '-';
+                        }
+                        longVar = (u64)signedLong;
+                        formatKind = 2;
                     }
-                    // 10108
-                    goto print_num1;
+                    break;
 
                 case 'L':
-                    // 104B4
                     attr |= 2;
                     continue;
 
@@ -360,88 +353,75 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                     /* FALLTHRU */
 
                 case 'o':
-                    // 104C0
+                    base = 8;
+                    sign = '\0';
                     if ((attr & 2) == 0)
                     {
-                        // 10500
-                        curArg = va_arg(ap, int);
-                        // 1050C dup
-                        base = 8;
+                        curArg = va_arg(ap, u32);
+                        formatKind = 1;
                     }
                     else
                     {
-                        longVar = va_arg(ap, s64);
-                        // 104EC dup
-                        base = 8;
+                        longVar = va_arg(ap, u64);
+                        formatKind = 2;
                     }
-                    goto print_base;
+                    break;
 
                 case 'U':
-                    // 10514
                     attr |= 1;
                     /* FALLTHRU */
 
                 case 'u':
-                    // 10518
+                    base = 10;
+                    sign = '\0';
                     if ((attr & 2) == 0)
                     {
-                        // 10548
-                        curArg = va_arg(ap, int);
-                        // 1050C dup
-                        base = 10;
+                        curArg = va_arg(ap, u32);
+                        formatKind = 1;
                     }
                     else
                     {
-                        longVar = va_arg(ap, s64);
-                        // 104EC dup
-                        base = 10;
+                        longVar = va_arg(ap, u64);
+                        formatKind = 2;
                     }
-                    goto print_base;
+                    break;
 
                 case 'X':
-                    // 10558
                     hexNumChars = "0123456789ABCDEF";
                     /* FALLTHRU */
 
                 case 'x':
-                    // 10564
                     base = 16;
+                    sign = '\0';
                     if ((attr & 2) == 0)
                     {
-                        // 105B0
-                        curArg = va_arg(ap, int);
+                        curArg = va_arg(ap, u32);
                         if (((attr >> 3) & 1) != 0 && curArg != 0)
-                        {
                             attr |= 0x40;
-                            // 105A8 dup
-                        }
+                        formatKind = 1;
                     }
                     else
                     {
-                        longVar = va_arg(ap, s64);
+                        longVar = va_arg(ap, u64);
                         if (longVar != 0 && ((attr >> 3) & 1) != 0)
-                        {
                             attr |= 0x40;
-                            // 105A8 dup
-                        }
+                        formatKind = 2;
                     }
-                    goto print_base;
+                    break;
 
                 case 'c':
-                    // 105D8
                     curStr = str;
                     stringLen = 1;
                     sign = '\0';
-                    *str = (u8)va_arg(ap, int);
-                    goto print_str;
+                    str[0] = (char)va_arg(ap, int);
+                    formatKind = 3;
+                    break;
 
                 case 'h':
-                    // 105F8
                     attr |= 0x4;
                     continue;
 
                 case 'l':
-                    // 10600
                     if ((attr & 1) == 0)
                         attr |= 1;
                     else
@@ -449,102 +429,72 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                     continue;
 
                 case 'n':
-                    // 10614
-                    if ((attr & 1) == 0)
+                    if ((attr & 1) == 0 && (attr & 4) != 0)
                     {
-                        // 1064C
-                        if ((attr & 4) == 0)
-                        {
-                            // 10680
-                            int *ptr = va_arg(ap, int*);
-                            if (userMode != 0 && !pspK1PtrOk(ptr))
-                                return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
-                            // 1069C
-                            *ptr = numChars;
-                        }
-                        else
-                        {
-                            short *ptr = va_arg(ap, short*);
-                            if (userMode != 0 && !pspK1PtrOk(ptr))
-                                return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
-                            // 10674
-                            *ptr = numChars;
-                        }
+                        short *ptr = va_arg(ap, short*);
+                        if (userMode != 0 && !pspK1PtrOk(ptr))
+                            return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+                        *ptr = numChars;
                     }
                     else
                     {
                         int *ptr = va_arg(ap, int*);
                         if (userMode != 0 && !pspK1PtrOk(ptr))
                             return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
-                        // 10640
                         *ptr = numChars;
                     }
                     break;
 
                 case 'p':
-                    // 106A8
-                    curArg = va_arg(ap, int);
+                    curArg = va_arg(ap, u32);
                     base = 16;
-                    // 105A8 dup
-                    goto print_base;
+                    sign = '\0';
+                    formatKind = 1;
+                    break;
 
-                case 's': {
-                    // 106C0
+                case 's':
+                {
                     curStr = va_arg(ap, char*);
                     if (curStr == NULL)
-                    {
-                        // 10748
                         curStr = "(null)";
-                    }
-                    // 106CC
                     if (userMode != 0 && !pspK1PtrOk(curStr))
                         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
-                    // 106E4
                     if (strSize < 0)
                     {
-                        // 1072C
                         stringLen = strlen(curStr);
                     }
                     else
                     {
-                        char *s2 = memchr(curStr, '\0', strSize);
+                        char *nulPos = memchr(curStr, '\0', strSize);
                         stringLen = strSize;
-                        if (s2 != NULL)
+                        if (nulPos != NULL)
                         {
-                            stringLen = s2 - curStr;
-                            if (strSize < s2 - curStr)
+                            stringLen = nulPos - curStr;
+                            if (strSize < nulPos - curStr)
                                 stringLen = strSize;
                         }
                     }
-                    // 10724
                     sign = '\0';
+                    formatKind = 3;
+                    break;
                 }
-                    goto print_str;
 
                 default:
-                    // 10754
-                    func(arg0, *fmt);
+                    func(work, *fmt);
                     numChars++;
-                    // FF2C dup
                     break;
                 }
                 break;
+            }
 
-                print_base:
-                // 104F0
-                sign = '\0';
-                if ((attr & 2) == 0)
-                    goto print_num2;
-
-                print_num1:
-                // 1010C
+            if (formatKind == 2)
+            {
                 oldStrSize = strSize;
                 if (strSize >= 0)
                     attr &= 0xFFFFFFDF;
                 curStr = str + 21;
                 if (longVar != 0 || strSize != 0)
                 {
-                    // 10144
                     char lastChar;
                     do
                     {
@@ -554,13 +504,13 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                         longVar = __udivdi3(longVar, base);
                     } while (longVar != 0);
                     hexNumChars = "0123456789abcdef";
-                    if (((attr >> 3) & 1) != 0 && base == 8 && lastChar != '0') // 101D4 dup
+                    if (((attr >> 3) & 1) != 0 && base == 8 && lastChar != '0')
                         *(--curStr) = '0';
                 }
-                goto print_num;
-
-                print_num2:
-                // 1040C
+                stringLen = &str[21] - curStr;
+            }
+            else if (formatKind == 1)
+            {
                 oldStrSize = strSize;
                 if (strSize >= 0)
                     attr &= 0xFFFFFFDF;
@@ -568,27 +518,21 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                 if (curArg != 0 || strSize != 0)
                 {
                     char lastC;
-                    // 1043C
                     do
                     {
-                        curStr--;
-                        // 1044C
-                        curArg /= base;
-                        *curStr = hexNumChars[curArg % base];
-                        lastC = *curStr;
-                    } while (strSize != 0);
+                        lastC = hexNumChars[curArg % (u32)base];
+                        curArg /= (u32)base;
+                        *(--curStr) = lastC;
+                    } while (curArg != 0);
                     hexNumChars = "0123456789abcdef";
-                    if (((attr >> 3) & 1) != 0 && base == 8 && lastC != '0') // 101D4 dup
+                    if (((attr >> 3) & 1) != 0 && base == 8 && lastC != '0')
                         *(--curStr) = '0';
                 }
-
-                print_num:
-                // 101E8
-                // 101EC
                 stringLen = &str[21] - curStr;
+            }
 
-                print_str:
-                // 101F4
+            if (formatKind != 0)
+            {
                 strSize = stringLen;
                 if (sign != 0)
                     strSize = stringLen + 1;
@@ -598,51 +542,34 @@ int kprnt(short *arg0, const char *fmt, va_list ap, int userMode)
                 int i;
                 if ((attr & 0x30) == 0 && argWidth != 0)
                     for (i = 0; i < argWidth - maxSize; i++)
-                        func(arg0, ' ');
-                // (10268)
-                // 1026C
+                        func(work, ' ');
                 if (sign != '\0')
-                {
-                    // 103AC
-                    func(arg0, sign);
-                }
-                // 10274
+                    func(work, sign);
                 if ((attr & 0x40) != 0)
                 {
-                    // 10384
-                    func(arg0, '0');
-                    func(arg0, *fmt);
+                    func(work, '0');
+                    func(work, *fmt);
                 }
-                // 1027C
                 if ((attr & 0x30) == 0x20)
                 {
-                    // 1034C
-                    for (i = 0; i < argWidth - maxSize; i++) // 10358
-                        func(arg0, '0');
+                    for (i = 0; i < argWidth - maxSize; i++)
+                        func(work, '0');
                 }
-                // (10288)
-                // 1028C
-                for (i = 0; i < oldStrSize - strSize; i++) // 1029C
-                    func(arg0, '0');
-                // 102C0
-                for (i = stringLen - 1; i >= 0; i--) // 102D0
-                    func(arg0, *(curStr++));
-                // 102FC
+                for (i = 0; i < oldStrSize - strSize; i++)
+                    func(work, '0');
+                for (i = stringLen - 1; i >= 0; i--)
+                    func(work, *(curStr++));
                 if ((attr & 0x10) != 0)
-                    for (i = 0; i < argWidth - maxSize; i++) // 10318
-                        func(arg0, ' ');
-                // (10338)
-                // 1033C
+                    for (i = 0; i < argWidth - maxSize; i++)
+                        func(work, ' ');
                 numChars += pspMax(maxSize, argWidth);
-            } while (0);
+            }
         }
         else
         {
-            func(arg0, *fmt);
+            func(work, *fmt);
             numChars++;
-            // FF2C dup
         }
-        // FF30
         fmt++;
     }
 }

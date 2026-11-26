@@ -3,6 +3,7 @@
 
 #include "intr.h"
 #include "memory.h"
+#include "misc.h"
 
 #include "partition.h"
 
@@ -144,7 +145,7 @@ s32 sceKernelCreateMemoryPartition(const char *name, u32 attr, u32 addr, u32 siz
 {
     s32 oldIntr = suspendIntr();
     SceSysmemUidCB *uid;
-    s32 ret = sceKernelCreateUID(g_PartType, name, (pspGetK1() >> 31) & 0xFF, &uid);
+    s32 ret = sceKernelCreateUID(g_PartType, name, ((s32)pspGetK1() >> 31) & 0xFF, &uid);
     if (ret != 0) {
         resumeIntr(oldIntr);
         return ret;
@@ -153,14 +154,12 @@ s32 sceKernelCreateMemoryPartition(const char *name, u32 attr, u32 addr, u32 siz
     SceSysmemMemoryPartition *part = UID_CB_TO_DATA(uid, g_PartType, SceSysmemMemoryPartition);
     ret = _CreateMemoryPartition(part, attr, addr, size);
     if (ret != 0) {
-        // 40E0
-        sceKernelDeleteUID(uid->uid);
+        sceKernelDeleteUID(uid->uid ^ gSysmemRandomValue);
         resumeIntr(oldIntr);
         return SCE_ERROR_KERNEL_MEMORY_AREA_IS_OVERLAP;
     }
     if (size != 0 && part->size != 0) {
         SceSysmemCtlBlk *ctlBlk = part->firstCtlBlk;
-        // 4078
         InitSmemCtlBlk(ctlBlk);
         ctlBlk->segs[0].used = 0;
         ctlBlk->segs[0].next = 0x3F;
@@ -178,9 +177,8 @@ s32 sceKernelCreateMemoryPartition(const char *name, u32 attr, u32 addr, u32 siz
         ctlBlk->usedSeg = 0;
         ctlBlk->next = NULL;
     }
-    // 4064
     resumeIntr(oldIntr);
-    return uid->uid;
+    return uid->uid ^ gSysmemRandomValue;
 }
 
 s32 sceKernelQueryMemoryPartitionInfo(s32 mpid, SceSysmemPartitionInfo *info)
@@ -194,7 +192,7 @@ s32 sceKernelQueryMemoryPartitionInfo(s32 mpid, SceSysmemPartitionInfo *info)
         resumeIntr(oldIntr);
         return SCE_ERROR_KERNEL_ILLEGAL_ARGUMENT;
     }
-    /* Note: there was unused $sp storing here, probably unoptimized crap */
+    info->size = 16;
     info->attr = part->attr & 0xF;
     info->startAddr = part->addr;
     info->memSize = part->size;
@@ -233,11 +231,9 @@ u32 PartitionQueryMaxFreeMemSize(SceSysmemMemoryPartition *part)
     while (curCtlBlk != NULL) {
         SceSysmemSeg *curSeg = &curCtlBlk->segs[curCtlBlk->firstSeg];
         u32 i;
-        // 426C
         for (i = 0; i < curCtlBlk->segCount; i++) {
             if (curSeg->used == 0 && maxSize < curSeg->size)
-                maxSize = curSeg->size >> 9;
-            // 429C
+                maxSize = curSeg->size;
             curSeg = &curCtlBlk->segs[curSeg->next];
         }
         // 42A4
@@ -389,7 +385,7 @@ s32 partition_do_initialize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s3
     part->firstCtlBlk = NULL;
     part->next = NULL;
     part->addr = 0;
-    return uid->uid;
+    return uid->uid ^ gSysmemRandomValue;
 }
 
 s32 partition_do_delete(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap)
@@ -400,7 +396,6 @@ s32 partition_do_delete(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 fu
     if (part->firstCtlBlk->usedSeg != 0)
         return SCE_ERROR_KERNEL_PARTITION_IN_USE;
     SceSysmemMemoryPartition *cur = g_MemInfo.main;
-    // 4750
     for (;;) {
         if (cur == NULL)
             return SCE_ERROR_KERNEL_ERROR;
@@ -408,21 +403,20 @@ s32 partition_do_delete(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 fu
             break;
         cur = cur->next;
     }
-    // 476C
     cur->next = part->next;
     _FreePartitionMemory(part->firstCtlBlk);
     sceKernelCallUIDObjCommonFunction(uid, uidWithFunc, funcId, ap);
-    return uid->uid;
+    return uid->uid ^ gSysmemRandomValue;
 }
 
 s32 partition_do_resize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), s32 funcId __attribute__((unused)), va_list ap __attribute__((unused)))
 {
-    return uid->uid;
+    return uid->uid ^ gSysmemRandomValue;
 }
 
 s32 partition_do_querypartinfo(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), s32 funcId __attribute__((unused)), va_list ap __attribute__((unused)))
 {
-    return uid->uid;
+    return uid->uid ^ gSysmemRandomValue;
 }
 
 s32 partition_do_maxfreememsize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), s32 funcId __attribute__((unused)), va_list ap)
@@ -431,23 +425,18 @@ s32 partition_do_maxfreememsize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc
     SceSysmemMemoryPartition *part = UID_CB_TO_DATA(uid, g_PartType, SceSysmemMemoryPartition);
     SceSysmemCtlBlk *curCtlBlk = part->firstCtlBlk;
     u32 maxSize = 0;
-    // 47F4
     while (curCtlBlk != NULL) {
         SceSysmemSeg *curSeg = &curCtlBlk->segs[curCtlBlk->firstSeg];
         u32 i;
-        // 4810
         for (i = 0; i < curCtlBlk->segCount; i++) {
             if (curSeg->used == 0 && maxSize < curSeg->size)
                 maxSize = curSeg->size;
-            // 4840
             curSeg = &curCtlBlk->segs[curSeg->next];
         }
-        // 4848
         curCtlBlk = curCtlBlk->next;
     }
-    // 4854
     *size = maxSize << 8;
-    return uid->uid;
+    return uid->uid ^ gSysmemRandomValue;
 }
 
 s32 _CreateMemoryPartition(SceSysmemMemoryPartition *part, u32 attr, u32 addr, u32 size)
@@ -537,7 +526,7 @@ SceUID sceKernelAllocPartitionMemory(s32 mpid, char *name, u32 type, u32 size, u
     if (!pspK1IsUserMode())
         flag = 0;
     SceSysmemUidCB *uid;
-    s32 ret = sceKernelCreateUID(g_MemBlockType, name, (flag | pspK1IsUserMode()) & 0xFF, &uid);
+    s32 ret = sceKernelCreateUID(g_MemBlockType, name, (flag | ((s32)pspGetK1() >> 31)) & 0xFF, &uid);
     if (ret != 0) {
         // 4C9C
         resumeIntr(oldIntr);
@@ -555,7 +544,7 @@ SceUID sceKernelAllocPartitionMemory(s32 mpid, char *name, u32 type, u32 size, u
         Kprintf("system memory allocation failed\n");
         Kprintf("\tmpid 0x%08x, name [%s], request size 0x%x\n", mpid, name, size);
         Kprintf("\tmax size 0x%x\n", PartitionQueryMaxFreeMemSize(part));
-        sceKernelDeleteUID(uid->uid);
+        sceKernelDeleteUID(uid->uid ^ gSysmemRandomValue);
         resumeIntr(oldIntr);
         return SCE_ERROR_KERNEL_FAILED_ALLOC_MEMBLOCK;
     }
@@ -563,7 +552,7 @@ SceUID sceKernelAllocPartitionMemory(s32 mpid, char *name, u32 type, u32 size, u
     memBlock->part = part;
     memBlock->addr = outAddr;
     resumeIntr(oldIntr);
-    return uid->uid;
+    return uid->uid ^ gSysmemRandomValue;
 }
 
 SceUID sceKernelAllocPartitionMemoryForUser(s32 mpid, char *name, u32 type, u32 size, u32 addr)

@@ -52,35 +52,6 @@ SceSysmemMemoryBlock memblk_memman;
 // 14574
 u32 SysmemRegSave[12];
 
-typedef struct {
-    u32 addr; // 0
-    u32 size; // 4
-    u32 attr; // 8
-    SceUID partId; // 12
-} SceMemoryProtect;
-
-typedef struct {
-    u32 reserved0;
-    u32 memAddr; // 4
-    u32 kernelPartSize; // 8
-    u32 kernelPartMode; // 12
-    u32 userPartMode; // 16
-    u32 model; // 20
-    u32 memLayoutMode; // 24
-    u32 reserved28[8];
-    u32 dipsLo; // 60
-    u32 dipsHi; // 64
-    u32 cpTime; // 68
-    u32 nBlocks; // 72
-    SceMemoryProtect *memBlocks; // 76
-    void (*debugPutchar)(short*, int); // 80
-    u32 reserved84;
-    SysMemThreadConfig *threadConf; // 88
-    u32 reserved92;
-    u32 realMemSize; // 96
-    u32 randomValue; // 100
-} SysMemConfig;
-
 int SysMemInitMain(SysMemConfig *config, SceSysmemMemoryPartition *mainPart, SceSysmemPartTable *table);
 int SysMemPostInit(SceSysmemMemoryPartition *mainPart, SceSysmemPartTable *partTable);
 int SysMemReInit(SceSysmemMemoryPartition *mainPart);
@@ -99,44 +70,37 @@ int SysMemInit(SceSize argSize __attribute__((unused)), const void *argBlock)
     g_MemInfo.realMemSize = config->realMemSize;
     gSysmemModel = config->model;
     SysMemInitMain(config, &mainPart, &table);
-    InitUid();
+    InitUid(config);
     SysMemPostInit(&mainPart, &table);
     sceKernelSuspendInit();
     sceKernelSysEventInit();
     InitGameInfo();
     InitSystemIdString();
-    // 10B54
     u32 i;
     for (i = 0; i < config->nBlocks; i++) {
         SceMemoryProtect *curBlock = &config->memBlocks[i];
         if ((curBlock->attr & 0xFFFF) == 0x20) {
-            // 10CFC
             CopyGameInfo((void *)curBlock->addr);
         } else if ((curBlock->attr & 0xFFFF) == 0x200) {
-            // 10CD4
             SceUID id = sceKernelAllocPartitionMemory(1, "SceSysmemProtectSystem", 2, curBlock->size, curBlock->addr);
             curBlock->partId = id;
             if (id >= 0)
                 curBlock->attr |= 0x10000;
-            // 10CF4
         }
-        // 10B78
     }
-    // 10B88
     SysMemThreadConfig *threadConf = config->threadConf;
     gSysmemRestrictionFlags = 0xFFFFFFFF;
-    gSysmemRandomValue = config->randomValue;
-    threadConf->kernelLibs[2] = &__library_exports_5; // 0x11EE0 sceSuspendForKernel
-    threadConf->kernelLibs[3] = &__library_exports_4; // 0x11ED0 sceSysEventForKernel
-    threadConf->kernelLibs[5] = &__library_exports_8; // 0x11F18 UtilsForKernel
+    threadConf->kernelLibs[2] = &__library_exports_5; // sceSuspendForKernel
+    threadConf->kernelLibs[3] = &__library_exports_4; // sceSysEventForKernel
+    threadConf->kernelLibs[5] = &__library_exports_8; // UtilsForKernel
     threadConf->numKernelLibs = 6;
-    threadConf->userLibs[0] = &__library_exports_2; // 0x11EA8 SysMemUserForUser
-    threadConf->userLibs[1] = &__library_exports_6; // 0x11EF4 sceSuspendForUser
+    threadConf->userLibs[0] = &__library_exports_2; // SysMemUserForUser
+    threadConf->userLibs[1] = &__library_exports_6; // sceSuspendForUser
     threadConf->ResizeMemoryBlock = sceKernelResizeMemoryBlock;
-    threadConf->kernelLibs[4] = &__library_exports_3; // 0x11EBC SysclibForKernel
-    threadConf->kernelLibs[0] = &__library_exports_1; // 0x11E94 SysMemForKernel
-    threadConf->kernelLibs[1] = &__library_exports_9; // 0x11F2C KDebugForKernel
-    threadConf->userLibs[3] = &__library_exports_7; // 0x11F04 UtilsForUser
+    threadConf->kernelLibs[4] = &__library_exports_3; // SysclibForKernel
+    threadConf->kernelLibs[0] = &__library_exports_1; // SysMemForKernel
+    threadConf->kernelLibs[1] = &__library_exports_9; // KDebugForKernel
+    threadConf->userLibs[3] = &__library_exports_7; // UtilsForUser
     threadConf->numExportLibs = 9;
     threadConf->AllocPartitionMemory = sceKernelAllocPartitionMemory;
     threadConf->GetBlockHeadAddr = sceKernelGetBlockHeadAddr;
@@ -153,13 +117,12 @@ int SysMemInitMain(SysMemConfig *config, SceSysmemMemoryPartition *mainPart, Sce
     table->userPartMode = config->userPartMode;
     SetMemoryPartitionTable(config, table);
     SceSysmemCtlBlk *ctlBlk = (SceSysmemCtlBlk*)(((u32)&end + 0xFF) & 0xFFFFFF00);
-    if (table->memSize >= 0xFFFFFF00)
+    if (table->memSize >= 0xFFFFFF01)
         table->memSize = 0xFFFFFF00;
 
-    // 10D6C
     MemoryProtectInit(table->other1.size + table->other2.size, table->extSc2Kernel.size + table->extScKernel.size + table->extMeKernel.size);
     g_MemInfo.memSize = table->memSize;
-    g_MemInfo.reserved64 = 0;
+    g_MemInfo.reserved = 0;
     g_MemInfo.memAddr = config->memAddr;
     SceSysmemPartInfo *info;
     if (table->kernelPartMode != 3)
@@ -199,10 +162,11 @@ int SysMemReInit(SceSysmemMemoryPartition *mainPart)
             addr = _AllocPartitionMemory(mainPart, 2, 0x100, (u32)mainPart->firstCtlBlk);
             if (addr != NULL) {
                 if (((u32)addr & 0x1FFFFFFF) == ((u32)mainPart->firstCtlBlk & 0x1FFFFFFF)) {
+                    SceSysmemCtlBlk *lastCtlBlk = mainPart->lastCtlBlk;
                     memblk_memman.size = 0x100;
                     memblk_memman.addr = addr;
                     resumeIntr(oldIntr);
-                    return mainPart->lastCtlBlk->segs[mainPart->lastCtlBlk->freeSeg].offset << 8;
+                    return lastCtlBlk->segs[lastCtlBlk->freeSeg].offset << 8;
                 }
                 // 10F60
                 mainPart->firstCtlBlk = NULL;
@@ -223,28 +187,28 @@ int SysMemPostInit(SceSysmemMemoryPartition *mainPart, SceSysmemPartTable *partT
     SceSysmemUidCB *uidKernel, *uidOther, *uidVsh, *uidScUser, *uidMeUser,
                  *uidExtScKernel, *uidExtSc2Kernel, *uidExtMeKernel, *uidExtVsh;
     PartitionServiceInit();
-    sceKernelCreateUID(g_PartType, "SceMyKernelPartition", (pspGetK1() >> 31) & 0xFF, &uidKernel);
+    sceKernelCreateUID(g_PartType, "SceMyKernelPartition", ((s32)pspGetK1() >> 31) & 0xFF, &uidKernel);
     SceSysmemMemoryPartition *kernelPart = UID_CB_TO_DATA(uidKernel, g_PartType, SceSysmemMemoryPartition);
     SceSysmemMemoryPartition *part;
     kernelPart->next = NULL;
     kernelPart->addr = mainPart->addr;
     kernelPart->size = mainPart->size;
     SceSysmemPartInfo *info = &partTable->other2;
-    kernelPart->attr = (kernelPart->attr & 0xFFFFFFF0) | (mainPart->addr & 0xF);
+    kernelPart->attr = (kernelPart->attr & 0xFFFFFFF0) | (mainPart->attr & 0xF);
     g_MemInfo.kernel = kernelPart;
     kernelPart->firstCtlBlk = mainPart->firstCtlBlk;
     kernelPart->ctlBlkCount = mainPart->ctlBlkCount;
     kernelPart->lastCtlBlk = mainPart->firstCtlBlk;
     g_MemInfo.main = kernelPart;
     MemoryBlockServiceInit();
-    sceKernelCreateUID(g_MemBlockType, "sceSystemMemoryManager", (pspGetK1() >> 31) & 0xFF, &uidKernel);
+    sceKernelCreateUID(g_MemBlockType, "sceSystemMemoryManager", ((s32)pspGetK1() >> 31) & 0xFF, &uidKernel);
     SceSysmemMemoryBlock *memBlock = UID_CB_TO_DATA(uidKernel, g_MemBlockType, SceSysmemMemoryBlock);
     memblk_kernel.part = kernelPart;
     memBlock->addr = memblk_kernel.addr;
     memBlock->size = memblk_kernel.size;
     memBlock->part = memblk_kernel.part;
     sceKernelProtectMemoryBlock(memblk_kernel.part, memblk_kernel.addr);
-    sceKernelCreateUID(g_MemBlockType, "SceSystemBlock", (pspGetK1() >> 31) & 0xFF, &uidKernel);
+    sceKernelCreateUID(g_MemBlockType, "SceSystemBlock", ((s32)pspGetK1() >> 31) & 0xFF, &uidKernel);
     memBlock = UID_CB_TO_DATA(uidKernel, g_MemBlockType, SceSysmemMemoryBlock);
     memblk_memman.part = kernelPart;
     memBlock->addr = memblk_memman.addr;
@@ -403,51 +367,46 @@ void sceKernelGetSysMemoryInfo(s32 mpid, u32 needsInit, SceSysMemoryInfo *info)
 
 s32 sceKernelGetSysmemIdList(s32 id, s32 *uids, s32 maxCount, s32 *totalCount)
 {
+    SceSysmemUidCB *typeUid;
     switch (id) {
     case 0:
+        typeUid = g_PartType;
+        break;
     case 1:
+        typeUid = g_MemBlockType;
+        break;
     case 2:
+        typeUid = g_HeapType;
         break;
     default:
-        // 115FC
         return SCE_ERROR_KERNEL_ILLEGAL_TYPE;
     }
-    // 11624
-    SceSysmemUidCB *heapUid = g_HeapType;
-    // 11628
     s32 oldK1 = pspShiftK1();
     if (!pspK1DynBufOk(uids, maxCount * 4) || !pspK1StaBufOk(totalCount, 4)) {
-        // 11660
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
-    // 11670
     s32 storedIdCount = 0;
     s32 oldIntr = suspendIntr();
-    SceSysmemUidCB *curUid = heapUid->PARENT0;
+    SceSysmemUidCB *curUid = typeUid->PARENT0;
     s32 idCount = 0;
-    if (curUid != heapUid) {
-        // 11690
+    if (curUid != typeUid) {
         do {
-            u8 size = curUid->size;
+            u8 attr = curUid->attr;
             if (!pspK1IsUserMode())
-                size = 0xFF;
-            if (size != 0) {
-                // 116C8
+                attr = 0xFF;
+            if (attr != 0) {
                 idCount++;
                 if (storedIdCount < maxCount) {
                     storedIdCount++;
-                    *(uids++) = curUid->uid;
+                    *(uids++) = curUid->uid ^ gSysmemRandomValue;
                 }
             }
-            // 116A0
             curUid = curUid->PARENT0;
-        } while (curUid != heapUid);
+        } while (curUid != typeUid);
     }
-    // 116AC
     if (totalCount != NULL)
         *totalCount = idCount;
-    // 116B4
     resumeIntr(oldIntr);
     pspSetK1(oldK1);
     return storedIdCount;
@@ -752,10 +711,9 @@ s32 *wmemset(s32 *src, s32 c, u32 n)
             *cur = c;
             cur++;
         }
-        // 11E14
         while (end != cur) {
-            *(cur + 0) = c;
-            *(cur + 1) = c;
+            cur[0] = c;
+            cur[1] = c;
             cur += 2;
         }
     }

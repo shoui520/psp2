@@ -85,6 +85,36 @@ typedef struct {
     SceSysmemPartInfo extVshell; // 76
 } SceSysmemPartTable;
 
+typedef struct {
+    u32 addr; // 0
+    u32 size; // 4
+    u32 attr; // 8
+    SceUID partId; // 12
+    u32 pad[3]; // 16..27 (stride 28 bytes)
+} SceMemoryProtect;
+
+typedef struct {
+    u32 headerSize; // 0
+    u32 memAddr; // 4
+    u32 kernelPartSize; // 8
+    u32 kernelPartMode; // 12
+    u32 userPartMode; // 16
+    u32 model; // 20
+    u32 memLayoutMode; // 24
+    u32 bootParams[8]; // 28
+    u32 dipsLo; // 60
+    u32 dipsHi; // 64
+    u32 cpTime; // 68
+    u32 nBlocks; // 72
+    SceMemoryProtect *memBlocks; // 76
+    void (*debugPutchar)(short*, int); // 80
+    u32 putcharParam; // 84
+    SysMemThreadConfig *threadConf; // 88
+    u32 threadConfParam; // 92
+    u32 realMemSize; // 96
+    u32 randomValue; // 100
+} SysMemConfig;
+
 s32 *wmemset(s32 *src, s32 c, u32 n);
 
 #endif

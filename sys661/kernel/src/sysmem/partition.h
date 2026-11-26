@@ -46,7 +46,7 @@ typedef struct {
     SceSysmemMemoryPartition *user; // 52
     SceSysmemMemoryPartition *extKernel; // 56
     u32 realMemSize; // 60
-    u32 reserved64; // 64
+    u32 reserved; // 64
 } SceSysmemMemInfo;
 
 typedef struct {

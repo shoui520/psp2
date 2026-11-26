@@ -93,29 +93,24 @@ int sceKernelUtilsMd5BlockUpdate(SceKernelUtilsMd5Context *ctx, u8 *data, u32 si
     }
     ctx->ullTotalLen += size;
     int numTotal = ctx->usRemains + size;
-    // EDB0
     while (numTotal >= 64)
     {
         if (remaining == 0)
         {
-            // EE1C
-            data += 64;
             memcpy(ctx->buf, data, 64);
+            data += 64;
         }
         else
         {
+            memcpy(ctx->buf + remaining, data, 64 - remaining);
             data += 64 - remaining;
-            memcpy(ctx + remaining + 32, data, 64 - remaining);
             remaining = 0;
         }
-        // EDD4
         numTotal -= 64;
         md5BlockUpdate(ctx, ctx->buf);
     }
-    // EDEC
     if (numTotal != 0) {
-        // EE04
-        memcpy(ctx + remaining + 32, data, numTotal - remaining);
+        memcpy(ctx->buf + remaining, data, numTotal - remaining);
     }
     ctx->usRemains = numTotal;
     // EDF8
@@ -135,7 +130,7 @@ int sceKernelUtilsMd5BlockResult(SceKernelUtilsMd5Context *ctx, u8 *digest)
     // EED0
     if (ctx->usComputed == 0)
     {
-        short remain = ctx->usRemains;
+        u16 remain = ctx->usRemains;
         if (remain >= 64)
         {
             // EFE4
@@ -184,7 +179,7 @@ int sceKernelUtilsMd5Digest(u8 *data, u32 size, u8 *digest)
     {
         ctx.h[0] = 0x67452301;
         ctx.h[1] = 0xEFCDAB89;
-        ctx.h[2] = 0x89BADCFE;
+        ctx.h[2] = 0x98BADCFE;
         ctx.h[3] = 0x10325476;
         ctx.ullTotalLen = 0;
         ctx.usRemains = 0;
@@ -253,8 +248,8 @@ int sceKernelUtilsSha1BlockUpdate(SceKernelUtilsSha1Context *ctx, u8 *data, u32 
         else
         {
             memcpy(buf, ctx->buf, remaining);
+            memcpy((u8 *)buf + remaining, data, 64 - remaining);
             data += 64 - remaining;
-            memcpy(buf + remaining, data, 64 - remaining);
             remaining = 0;
         }
         // F264
@@ -296,20 +291,20 @@ int sceKernelUtilsSha1BlockResult(SceKernelUtilsSha1Context *ctx, u8 *digest)
             pspSetK1(oldK1);
             return SCE_ERROR_KERNEL_ILLEGAL_SIZE;
         }
+        u8 *byteBuf = (u8 *)buf;
         memset(buf, 0, 64);
         memcpy(buf, ctx->buf, ctx->usRemains);
-        buf[ctx->usRemains] = 0x80;
+        byteBuf[ctx->usRemains] = 0x80;
         if (ctx->usRemains >= 56)
         {
-            // F3D8
             for (i = 0; i < 16; i++)
                 buf[i] = pspWsbw(buf[i]);
             sha1BlockUpdate((u8 *)buf, ctx);
             memset(buf, 0, 64);
         }
-        // F410
+        u64 totalBits = ctx->ullTotalLen * 8;
         for (i = 0; i < 8; i++)
-            ((char*)buf)[i + 56] = ctx->ullTotalLen >> (56 - i * 8);
+            byteBuf[i + 56] = totalBits >> (56 - i * 8);
         // F480
         for (i = 0; i < 16; i++)
             buf[i] = pspWsbw(buf[i]);
@@ -329,9 +324,8 @@ int sceKernelUtilsSha1BlockResult(SceKernelUtilsSha1Context *ctx, u8 *digest)
 int sceKernelUtilsSha1Digest(u8 *data, u32 size, u8 *digest)
 {
     int oldK1 = pspShiftK1();
-    if (!pspK1PtrOk(digest) || !pspK1DynBufOk(data, size))
+    if (!pspK1DynBufOk(data, size) || !pspK1PtrOk(digest))
     {
-        // F550
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
@@ -374,7 +368,7 @@ int sceKernelUtilsMt19937Init(SceKernelUtilsMt19937Context *ctx, u32 seed)
     // F640
     int i;
     for (i = 1; i < 624; i++)
-        ctx->state[i] = (ctx->state[i - 1] ^ (ctx->state[i - 1] >> 30)) * 0x6C078965 + 1;
+        ctx->state[i] = (ctx->state[i - 1] ^ (ctx->state[i - 1] >> 30)) * 0x6C078965 + i;
     ctx->count = 0;
     // F678
     for (i = 0; i < 624; i++)
@@ -487,9 +481,10 @@ int sceKernelGzipDecompress(u8 *dest, u32 destSize, const void *src, u32 *crc32)
         u32 inSize;
     } info;
 
+    const u8 *srcBytes = src;
     if (buf == NULL)
         return SCE_ERROR_KERNEL_ERROR;
-    if (((char*)src)[2] != 8)
+    if (srcBytes[2] != 8)
         return SCE_ERROR_NOT_SUPPORTED;
     int ret = sceKernelDeflateDecompress(dest, destSize, buf, &next);
     if (ret < 0)
@@ -577,7 +572,8 @@ const void *sceKernelGzipGetCompressedData(const void *buf)
 
 int sceKernelGzipIsValid(const void *buf)
 {
-    if (((u8*)buf)[0] == 0x1F && ((u8*)buf)[1] == 0x8B)
+    const u8 *bytes = buf;
+    if (bytes[0] == 0x1F && bytes[1] == 0x8B)
         return 1;
     return 0;
 }

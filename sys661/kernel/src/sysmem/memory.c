@@ -3,6 +3,7 @@
 #include <sysmem_sysclib.h>
 
 #include "intr.h"
+#include "misc.h"
 #include "sysmem.h"
 
 #include "memory.h"
@@ -43,66 +44,52 @@ s32 sceKernelResizeMemoryBlock(SceUID id, s32 leftShift, s32 rightShift)
     SceSysmemMemoryBlock *memBlock = UID_CB_TO_DATA(uid, g_MemBlockType, SceSysmemMemoryBlock);
     SceSysmemMemoryPartition *part = memBlock->part;
     SceSysmemSeg *seg = AddrToSeg(part, memBlock->addr);
-    if (seg == NULL)
-        goto fail;
-    if (seg->used == 0)
-        goto fail;
+    if (seg == NULL || seg->used == 0) {
+        resumeIntr(oldIntr);
+        return SCE_ERROR_KERNEL_FAILED_RESIZE_MEMBLOCK;
+    }
     if (seg->sizeLocked) {
-        // 53D4
         resumeIntr(oldIntr);
         return SCE_ERROR_KERNEL_INHIBITED_RESIZE_MEMBLOCK;
     }
     u32 newLeftOff;
     if (leftShift <= 0) {
-        // 53C4
         newLeftOff = seg->offset + leftSegs;
     } else {
         newLeftOff = seg->offset - leftSegs;
     }
-    // 4EEC
     u32 newLeftAddr = part->addr + (newLeftOff << 8);
     u32 newRightOff;
     if (rightShift <= 0) {
-        // 53B0
         newRightOff = seg->offset + seg->size - rightSegs;
     } else
         newRightOff = seg->offset + seg->size + rightSegs;
-    // 4F08
-    if (newLeftAddr >= part->addr + (newRightOff << 8))
-        goto fail;
-    if (newLeftAddr < part->addr)
-        goto fail;
-    if (newLeftAddr >= part->addr + part->size)
-        goto fail;
+    if (newLeftAddr >= part->addr + (newRightOff << 8) ||
+        newLeftAddr < part->addr ||
+        newLeftAddr >= part->addr + part->size) {
+        resumeIntr(oldIntr);
+        return SCE_ERROR_KERNEL_FAILED_RESIZE_MEMBLOCK;
+    }
     SceSysmemCtlBlk *ctlBlk = (SceSysmemCtlBlk*)(((u32)seg >> 8) << 8);
     SceSysmemSeg *prevSeg = &ctlBlk->segs[seg->prev];
     if (seg->prev == 0x3F) {
-        // 5394
         prevSeg = NULL;
         if (ctlBlk->prev != NULL)
-            prevSeg = &ctlBlk->prev->segs[ctlBlk->lastSeg];
+            prevSeg = &ctlBlk->prev->segs[ctlBlk->prev->lastSeg];
     }
-    // 4F60
     SceSysmemSeg *nextSeg = &ctlBlk->segs[seg->next];
     if (seg->next == 0x3F) {
-        // 5378
         nextSeg = NULL;
         if (ctlBlk->next != NULL)
-            nextSeg = &ctlBlk->next->segs[ctlBlk->firstSeg];
+            nextSeg = &ctlBlk->next->segs[ctlBlk->next->firstSeg];
     }
-    // 4F84
-    if (leftShift > 0) {
-        if (prevSeg->used != 0)
-            goto fail;
-        if (prevSeg->size < leftSegs)
-            goto fail;
+    if (leftShift > 0 && (prevSeg == NULL || prevSeg->used != 0 || prevSeg->size < leftSegs)) {
+        resumeIntr(oldIntr);
+        return SCE_ERROR_KERNEL_FAILED_RESIZE_MEMBLOCK;
     }
-    // 4FB0
-    if (rightShift > 0) {
-        if (nextSeg->used != 0)
-            goto fail;
-        if (nextSeg->size < rightSegs)
-            goto fail;
+    if (rightShift > 0 && (nextSeg == NULL || nextSeg->used != 0 || nextSeg->size < rightSegs)) {
+        resumeIntr(oldIntr);
+        return SCE_ERROR_KERNEL_FAILED_RESIZE_MEMBLOCK;
     }
     // 4FF0
     seg->checkOverflow = 0;
@@ -193,11 +180,6 @@ s32 sceKernelResizeMemoryBlock(SceUID id, s32 leftShift, s32 rightShift)
     }
     resumeIntr(oldIntr);
     return 0;
-
-    // 4FE0
-fail:
-    resumeIntr(oldIntr);
-    return SCE_ERROR_KERNEL_FAILED_RESIZE_MEMBLOCK;
 }
 
 s32 sceKernelJointMemoryBlock(SceUID id1, SceUID id2)
@@ -205,37 +187,37 @@ s32 sceKernelJointMemoryBlock(SceUID id1, SceUID id2)
     s32 oldIntr = suspendIntr();
     SceSysmemUidCB *uid1, *uid2;
     s32 ret = sceKernelGetUIDcontrolBlockWithType(id1, g_MemBlockType, &uid1);
-    if (ret != 0)
-        goto fail;
+    if (ret != 0) {
+        resumeIntr(oldIntr);
+        return ret;
+    }
     ret = sceKernelGetUIDcontrolBlockWithType(id2, g_MemBlockType, &uid2);
-    if (ret != 0)
-        goto fail;
+    if (ret != 0) {
+        resumeIntr(oldIntr);
+        return ret;
+    }
     SceSysmemMemoryBlock *memBlock1 = UID_CB_TO_DATA(uid1, g_MemBlockType, SceSysmemMemoryBlock);
     SceSysmemSeg *seg1 = AddrToSeg(memBlock1->part, memBlock1->addr);
     SceSysmemMemoryBlock *memBlock2 = UID_CB_TO_DATA(uid2, g_MemBlockType, SceSysmemMemoryBlock);
     SceSysmemSeg *seg2 = AddrToSeg(memBlock2->part, memBlock2->addr);
     if (memBlock1->part != memBlock2->part || seg1->offset + seg1->size != seg2->offset) {
-        // 54B8
         resumeIntr(oldIntr);
         return SCE_ERROR_KERNEL_MEMBLOCK_FRAGMENTED;
     }
-    // 54F0
     if (seg1->sizeLocked || seg2->sizeLocked) {
-        // 550C
         resumeIntr(oldIntr);
         return SCE_ERROR_KERNEL_INHIBITED_RESIZE_MEMBLOCK;
     }
-    // 551C
     if (uid1->attr != uid2->attr) {
-        // 5674
         resumeIntr(oldIntr);
         return SCE_ERROR_KERNEL_MEMBLOCK_CANNOT_JOINT;
     }
     SceSysmemUidCB *newUid;
-    ret = sceKernelCreateUID(g_MemBlockType, uid1->name, (uid1->attr | (pspGetK1() >> 31)) & 0xFF, &newUid);
-    if (ret != 0)
-        goto fail;
-    // 5560
+    ret = sceKernelCreateUID(g_MemBlockType, uid1->name, (uid1->attr | ((s32)pspGetK1() >> 31)) & 0xFF, &newUid);
+    if (ret != 0) {
+        resumeIntr(oldIntr);
+        return ret;
+    }
     seg1->size += seg2->size;
     SceSysmemCtlBlk *ctlBlk = (SceSysmemCtlBlk*)((u32)seg2 & 0xFFFFFF00);
     ctlBlk->usedSeg--;
@@ -243,28 +225,22 @@ s32 sceKernelJointMemoryBlock(SceUID id1, SceUID id2)
     newMemBlock->addr = memBlock1->addr;
     newMemBlock->size = seg1->size << 8;
     newMemBlock->part = memBlock1->part;
-    if (sceKernelIsToolMode() != 0 && sceKernelDipsw(24) == 1) { // 5614
+    if (sceKernelIsToolMode() != 0 && sceKernelDipsw(24) == 1) {
         if (newMemBlock->part == MpidToCB(2)) {
             newMemBlock->size -= 256;
             s32 i;
-            // 5658
-            for (i = 0; i < 256; i += 4)
-                *(u32*)(newMemBlock->addr + newMemBlock->size + i) = (u32)newMemBlock->addr - 1;
+            u32 *guard = (u32 *)((u8 *)newMemBlock->addr + newMemBlock->size);
+            for (i = 0; i < 64; i++)
+                guard[i] = (u32)newMemBlock->addr - 1;
             seg1->checkOverflow = 1;
         }
     }
-    // 55CC
     _ReturnSegBlankList(seg2);
     updateSmemCtlBlk(newMemBlock->part, ctlBlk);
     sceKernelCallUIDObjFunction(uid1, 0x2430FC6B);
     sceKernelCallUIDObjFunction(uid2, 0x2430FC6B);
     resumeIntr(oldIntr);
-    return newUid->uid;;
-
-    // 5550
-fail:
-    resumeIntr(oldIntr);
-    return ret;
+    return newUid->uid ^ gSysmemRandomValue;
 }
 
 s32 sceKernelSeparateMemoryBlock(SceUID id, u32 cutBefore, u32 size)
@@ -272,40 +248,39 @@ s32 sceKernelSeparateMemoryBlock(SceUID id, u32 cutBefore, u32 size)
     s32 oldIntr = suspendIntr();
     SceSysmemUidCB *uid;
     s32 ret = sceKernelGetUIDcontrolBlockWithType(id, g_MemBlockType, &uid);
-    if (ret != 0)
-        goto fail;
+    if (ret != 0) {
+        resumeIntr(oldIntr);
+        return ret;
+    }
     SceSysmemMemoryBlock *memBlock = UID_CB_TO_DATA(uid, g_MemBlockType, SceSysmemMemoryBlock);
     SceSysmemSeg *seg = AddrToSeg(memBlock->part, memBlock->addr);
     SceSysmemCtlBlk *ctlBlk = (SceSysmemCtlBlk*)((u32)seg & 0xFFFFFF00);
     if (seg->sizeLocked) {
-        // 5A58
         resumeIntr(oldIntr);
         return SCE_ERROR_KERNEL_INHIBITED_RESIZE_MEMBLOCK;
     }
     u32 cutSegSize = (size + 0xFF) >> 8;
     if (cutSegSize >= seg->size) {
-        // 5A44
         resumeIntr(oldIntr);
         return SCE_ERROR_KERNEL_MEMBLOCK_CANNOT_SEPARATE;
     }
     SceSysmemUidCB *newUid;
-    ret = sceKernelCreateUID(g_MemBlockType, uid->name, (uid->attr | (pspGetK1() >> 31)) & 0xFF, &newUid);
-    if (ret != 0)
-        goto fail;
+    ret = sceKernelCreateUID(g_MemBlockType, uid->name, (uid->attr | ((s32)pspGetK1() >> 31)) & 0xFF, &newUid);
+    if (ret != 0) {
+        resumeIntr(oldIntr);
+        return ret;
+    }
     SceSysmemSeg *freeSeg;
     if (cutBefore) {
         u32 freeId = ctlBlk->freeSeg;
-        // 596C
         freeSeg = &ctlBlk->segs[freeId];
         ctlBlk->freeSeg = freeSeg->next;
         freeSeg->next = (((u32)seg & 0xFF) - 16) >> 3;
         freeSeg->prev = seg->prev;
         if (freeSeg->prev == 0x3F) {
-            // 5A2C
             ctlBlk->firstSeg = freeId;
         } else
             ctlBlk->segs[seg->prev].next = freeId;
-        // 59D8
         seg->prev = freeId;
         ctlBlk->segCount++;
         freeSeg->offset = seg->offset;
@@ -320,12 +295,10 @@ s32 sceKernelSeparateMemoryBlock(SceUID id, u32 cutBefore, u32 size)
             ctlBlk->lastSeg = freeId;
         else
             ctlBlk->segs[seg->next].prev = freeId;
-        // 57DC
         seg->next = freeId;
         ctlBlk->segCount++;
         freeSeg->offset = seg->offset + cutSegSize;
     }
-    // 5814
     freeSeg->size = seg->size - cutSegSize;
     freeSeg->used = 1;
     seg->size = cutSegSize;
@@ -338,86 +311,67 @@ s32 sceKernelSeparateMemoryBlock(SceUID id, u32 cutBefore, u32 size)
     newMemBlock->size = freeSeg->size << 8;
     newMemBlock->part = memBlock->part;
     if (sceKernelIsToolMode() != 0) {
-        // 590C
         if (sceKernelDipsw(24) == 1) {
             if (newMemBlock->part == MpidToCB(2)) {
                 newMemBlock->size -= 256;
-                // 5950
                 s32 i;
-                for (i = 0; i < 256; i += 4)
-                    *(u32*)(newMemBlock->addr + newMemBlock->size + i) = (u32)newMemBlock->addr - 1;
+                u32 *guard = (u32 *)((u8 *)newMemBlock->addr + newMemBlock->size);
+                for (i = 0; i < 64; i++)
+                    guard[i] = (u32)newMemBlock->addr - 1;
                 freeSeg->checkOverflow = 1;
             }
         }
     }
-    // 58C0
     updateSmemCtlBlk(newMemBlock->part, ctlBlk);
     resumeIntr(oldIntr);
-    return newUid->uid;
-
-    // 5A34
-fail:
-    resumeIntr(oldIntr);
-    return ret;
+    return newUid->uid ^ gSysmemRandomValue;
 }
 
 s32 sceKernelQueryMemoryInfoForUser(u32 address, SceUID *partitionId, SceUID *memoryBlockId)
 {
     s32 oldK1 = pspShiftK1();
     if (!pspK1PtrOk((void *)address) || !pspK1PtrOk(partitionId) || !pspK1PtrOk(memoryBlockId)) {
-        // 5AC0
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION;
     }
-    // 5AEC
     s32 oldIntr = suspendIntr();
     s32 partId;
-    SceUID memBlockId = 0; // not in original code but avoids the compiler from complaining
-    SceUID *memBlockPtr = &memBlockId; // TODO: check: looks useless, but the test at 5B44 cannot exist without this..
+    SceUID memBlockId = 0;
+    SceUID *memBlockPtr = &memBlockId;
     if (memoryBlockId == NULL) {
-        // 5C68
         SceSysmemMemoryPartition *part = AddrToCB(address);
         SceSysmemUidCB *curUid = g_PartType->PARENT0;
         partId = -1;
-        // 5C88
         while (curUid != g_PartType) {
             if (UID_CB_TO_DATA(curUid, g_PartType, SceSysmemMemoryPartition) == part) {
-                // 5CB4
-                partId = curUid->uid;
+                partId = curUid->uid ^ gSysmemRandomValue;
                 break;
             }
             curUid = curUid->PARENT0;
         }
-        // 5CAC
     } else {
         SceSysmemMemoryPartition *part = AddrToCB(address);
         SceSysmemUidCB *curUid = g_PartType->PARENT0;
         partId = -1;
-        // 5B20
         while (curUid != g_PartType) {
             if (UID_CB_TO_DATA(curUid, g_PartType, SceSysmemMemoryPartition) == part) {
-                // 5C60
-                partId = curUid->uid;
+                partId = curUid->uid ^ gSysmemRandomValue;
                 break;
             }
             curUid = curUid->PARENT0;
         }
-        // 5B44
         if (memBlockPtr != NULL) {
             curUid = g_MemBlockType->PARENT0;
             SceUID foundId = -1;
-            // 5B68
             while (curUid != g_MemBlockType) {
                 SceSysmemMemoryBlock *memBlock = UID_CB_TO_DATA(curUid, g_MemBlockType, SceSysmemMemoryBlock);
                 if (address >= (u32)memBlock->addr && address < (u32)memBlock->addr + memBlock->size) {
-                    foundId = curUid->uid;
+                    foundId = curUid->uid ^ gSysmemRandomValue;
                     break;
                 }
-                // 5B94
                 curUid = curUid->PARENT0;
             }
             *memBlockPtr = foundId;
-            // 5BA4
         }
     }
     // 5BA8
@@ -467,28 +421,95 @@ s32 sceKernelQueryMemoryBlockInfo(SceUID id, SceSysmemMemoryBlockInfo *infoPtr)
         resumeIntr(oldIntr);
         return ret;
     }
-    // 5D4C
     SceSysmemMemoryBlock *memBlock = UID_CB_TO_DATA(uid, g_MemBlockType, SceSysmemMemoryBlock);
     SceSysmemSeg *seg = AddrToSeg(memBlock->part, memBlock->addr);
-    // TODO: check if it uses inline memset
-    memset(&info, 0, sizeof info);
-    // 5D78
+    u32 *infoWords = (u32 *)&info;
+    u32 i;
+    for (i = 0; i < sizeof(info) / 4; i++)
+        infoWords[i] = 0;
     info.size = sizeof info;
     if (uid->name != 0) {
-        // 5E24
         strncpy(info.name, uid->name, 31);
     }
-    // 5D9C
     info.attr = uid->attr;
     info.sizeLocked = seg->sizeLocked;
     info.addr = (u32)memBlock->addr;
     info.memSize = memBlock->size;
     info.used = seg->used;
-    // 5DD8
-    // TODO: check if it uses inline memcpy
-    memcpy(infoPtr, &info, sizeof info);
+    *infoPtr = info;
     resumeIntr(oldIntr);
     return 0;
+}
+
+static inline __attribute__((always_inline)) void allocSplitTailSeg(SceSysmemSeg *curSeg, u32 numSegs)
+{
+    SceSysmemCtlBlk *ctlBlk = (SceSysmemCtlBlk *)((u32)curSeg & 0xFFFFFF00);
+    u32 freeSegId = ctlBlk->freeSeg;
+    SceSysmemSeg *firstSeg = &ctlBlk->segs[freeSegId];
+    ctlBlk->freeSeg = firstSeg->next;
+    u32 curSegId = (((u32)curSeg & 0xFF) - 16) / 8;
+    firstSeg->next = curSeg->next;
+    firstSeg->prev = curSegId;
+    if (firstSeg->next == 0x3F)
+        ctlBlk->lastSeg = freeSegId;
+    else
+        ctlBlk->segs[curSeg->next].prev = freeSegId;
+    curSeg->next = freeSegId;
+    ctlBlk->segCount++;
+    firstSeg->offset = curSeg->offset + numSegs;
+    firstSeg->size = curSeg->size - numSegs;
+    curSeg->size = numSegs;
+}
+
+static inline __attribute__((always_inline)) void *allocFinishSeg(SceSysmemMemoryPartition *part, SceSysmemCtlBlk *curCtlBlk,
+                                   u32 addr, u32 numSegs, SceSysmemCtlBlk **ctlBlkOut)
+{
+    if (sceKernelIsToolMode() && sceKernelDipsw(24) == 1 && part == MpidToCB(2)) {
+        u32 i;
+        s32 *ptr = (s32 *)(addr + (numSegs << 8) - 0x100);
+        for (i = 0; i < 64; i++)
+            ptr[i] = addr - 1;
+    }
+    if (ctlBlkOut == NULL) {
+        updateSmemCtlBlk(part, curCtlBlk);
+    } else
+        *ctlBlkOut = curCtlBlk;
+    return (void *)addr;
+}
+
+static inline __attribute__((always_inline)) void *allocCommitAddr(SceSysmemMemoryPartition *part, SceSysmemCtlBlk *curCtlBlk,
+                                    SceSysmemSeg *curSeg, u32 blockOff, u32 numSegs,
+                                    SceSysmemCtlBlk **ctlBlkOut)
+{
+    u32 addr = part->addr + (blockOff << 8);
+    curCtlBlk->usedSeg++;
+    if (curSeg->offset < blockOff)
+    {
+        SceSysmemCtlBlk *ctlBlk = (SceSysmemCtlBlk *)((u32)curSeg & 0xFFFFFF00);
+        u16 freeSegId = ctlBlk->freeSeg;
+        SceSysmemSeg *freeSeg = &ctlBlk->segs[freeSegId];
+        ctlBlk->freeSeg = freeSeg->next;
+        freeSeg->next = (u32)(((u32)curSeg & 0xFF) - 16) / 8;
+        freeSeg->prev = curSeg->prev;
+        if (curSeg->prev == 0x3F) {
+            ctlBlk->firstSeg = freeSegId;
+        } else
+            ctlBlk->segs[curSeg->prev].next = freeSegId;
+        curSeg->prev = freeSegId;
+        ctlBlk->segCount++;
+        freeSeg->offset = curSeg->offset;
+        freeSeg->size = blockOff - curSeg->offset;
+        curSeg->offset = blockOff;
+        curSeg->size -= freeSeg->size;
+    }
+    curSeg->used = 1;
+    curSeg->isProtected = 0;
+    curSeg->sizeLocked = 0;
+    if (sceKernelIsToolMode() && sceKernelDipsw(24) == 1 && part == MpidToCB(2))
+        curSeg->checkOverflow = 1;
+    if (numSegs < curSeg->size)
+        allocSplitTailSeg(curSeg, numSegs);
+    return allocFinishSeg(part, curCtlBlk, addr, numSegs, ctlBlkOut);
 }
 
 void *_allocSysMemory(SceSysmemMemoryPartition *part, int type, u32 size, u32 addr, SceSysmemCtlBlk **ctlBlkOut)
@@ -497,7 +518,6 @@ void *_allocSysMemory(SceSysmemMemoryPartition *part, int type, u32 size, u32 ad
     if (numSegs == 0)
         return 0;
     if (sceKernelIsToolMode()) {
-        // 6868
         if (sceKernelDipsw(24) == 1 && part == MpidToCB(2) &&
             (type != 0 || part->firstCtlBlk->segs[part->firstCtlBlk->firstSeg].used == 1))
             numSegs++;
@@ -505,140 +525,117 @@ void *_allocSysMemory(SceSysmemMemoryPartition *part, int type, u32 size, u32 ad
     SceSysmemCtlBlk *curCtlBlk;
     SceSysmemSeg *curSeg;
     u32 blockOff;
-    // (5E84)
-    // 5E88
-    switch (type) // jump table at 0x1355C
+    int doLow = 0;
+    int doHigh = 0;
+    switch (type)
     {
-    case 0: // low
-        // 5EAC
+    case 0:
         curCtlBlk = part->firstCtlBlk;
-        goto alloc_lo;
+        doLow = 1;
+        break;
 
-    case 1: // hi
-        // 6158
+    case 1:
         curCtlBlk = part->lastCtlBlk;
-        goto alloc_hi;
+        doHigh = 1;
+        break;
 
-    case 2: // addr
-        // 6364
+    case 2:
         if (addr < part->addr || addr >= part->addr + part->size) {
-            // 638C
             Kprintf("ADDR: 0x%08x doesn't reside in this partition.\n", addr);
             return 0;
         }
-        // 63A0
-        u32 off = (addr & 0x1FFFFFFF) - (part->addr & 0x1FFFFFFF);
-        if ((off & 0xFF) != 0)
         {
-            // 6658
-            Kprintf("%s: Illegal alloc address or size, offset=0x%x\n", "SCE_KERNEL_SMEM_ADDR", off);
-            return 0;
+            u32 off = (addr & 0x1FFFFFFF) - (part->addr & 0x1FFFFFFF);
+            if ((off & 0xFF) != 0)
+            {
+                Kprintf("%s: Illegal alloc address or size, offset=0x%x\n", "SCE_KERNEL_SMEM_ADDR", off);
+                return 0;
+            }
+            curCtlBlk = part->firstCtlBlk;
+            blockOff = off >> 8;
         }
-        curCtlBlk = part->firstCtlBlk;
-        blockOff = off >> 8;
-        // 63CC
         while (curCtlBlk != NULL) {
             SceSysmemSeg *firstSeg = &curCtlBlk->segs[curCtlBlk->firstSeg];
             SceSysmemSeg *lastSeg = &curCtlBlk->segs[curCtlBlk->lastSeg];
             if (blockOff >= firstSeg->offset && blockOff < (u32)lastSeg->offset + lastSeg->size) {
                 curSeg = firstSeg;
                 u32 i;
-                // 642C
                 for (i = 0; i < curCtlBlk->segCount; i++) {
                     if (blockOff >= curSeg->offset && blockOff < (u32)curSeg->offset + curSeg->size) {
-                        // 6488
                         if (curSeg->used) {
-                            // 6644
                             Kprintf("ADDR: relevant block is already used, can not alloc\n");
                             Kprintf("ADDR: request nblocks %u ,addr 0x%08x\n", numSegs, addr);
                             return 0;
                         }
-                        if (numSegs >= curSeg->size) {
-                            // 661C
+                        if (numSegs > (u32)curSeg->offset + curSeg->size - blockOff) {
                             Kprintf("ADDR: relevant block is smaller than requested, can not alloc\n");
                             Kprintf("ADDR: request nblocks %u, addr 0x%08x\n", numSegs, addr);
                             return 0;
                         }
-                        goto alloc_addr;
+                        return allocCommitAddr(part, curCtlBlk, curSeg, blockOff, numSegs, ctlBlkOut);
                     }
-                    // 6458
                     curSeg = &curCtlBlk->segs[curSeg->next];
                 }
             }
-            // 6474
             curCtlBlk = curCtlBlk->next;
-            // 6478
         }
         return 0;
 
-    case 3: // ?
-        // 6668
+    case 3:
         curCtlBlk = part->firstCtlBlk;
-        if (addr < 0x101)
-            goto alloc_lo;
-        // 6680
+        if (addr < 0x101) {
+            doLow = 1;
+            break;
+        }
         while (curCtlBlk != NULL) {
             curSeg = &curCtlBlk->segs[curCtlBlk->firstSeg];
             u32 i = 0, j = 0;
-            // 66BC
             while (i < curCtlBlk->segCount && j < (u32)curCtlBlk->segCount - curCtlBlk->usedSeg) {
                 if (curSeg->used == 0) {
                     if (curSeg->size >= numSegs) {
-                        // 66F8
                         u32 freeSize = (part->addr + (curSeg->offset << 8)) % addr;
                         blockOff = (u32)(addr - freeSize) >> 8;
                         if (freeSize == 0)
                             blockOff = 0;
-                        // 670C
                         if (curSeg->size >= numSegs + blockOff) {
-                            // 675C
                             blockOff += curSeg->offset;
-                            goto alloc_addr;
+                            return allocCommitAddr(part, curCtlBlk, curSeg, blockOff, numSegs, ctlBlkOut);
                         }
                     }
                     j++;
                 }
-                // 6720
                 i++;
                 curSeg = &curCtlBlk->segs[curSeg->next];
             }
-            // (6748)
             curCtlBlk = curCtlBlk->next;
-            // 674C
         }
         return 0;
 
-    case 4: // ?
-        // 6768
+    case 4:
         curCtlBlk = part->lastCtlBlk;
-        if (addr < 0x101)
-            goto alloc_hi;
-        // 6780
+        if (addr < 0x101) {
+            doHigh = 1;
+            break;
+        }
         while (curCtlBlk != NULL) {
             curSeg = &curCtlBlk->segs[curCtlBlk->lastSeg];
             u32 i = 0, j = 0;
-            // 67BC
             while (i < curCtlBlk->segCount && j < (u32)curCtlBlk->segCount - curCtlBlk->usedSeg) {
                 if (curSeg->used == 0) {
                     j++;
                     if (curSeg->size >= numSegs) {
                         u32 endOff = curSeg->offset + curSeg->size;
                         u32 hi = (part->addr + ((endOff - numSegs) << 8)) % addr;
-                        // 6804
                         u32 segSize = numSegs + (hi >> 8);
-                        j++;
-                        if (curSeg->size >= numSegs + segSize) {
-                            // 6858
-                            blockOff = endOff - numSegs;
-                            goto alloc_addr;
+                        if (curSeg->size >= segSize) {
+                            blockOff = endOff - segSize;
+                            return allocCommitAddr(part, curCtlBlk, curSeg, blockOff, numSegs, ctlBlkOut);
                         }
                     }
                 }
-                // 681C
                 i++;
                 curSeg = &curCtlBlk->segs[curSeg->prev];
             }
-            // 6844
             curCtlBlk = curCtlBlk->prev;
         }
         return 0;
@@ -647,171 +644,79 @@ void *_allocSysMemory(SceSysmemMemoryPartition *part, int type, u32 size, u32 ad
         return 0;
     }
 
-alloc_lo:
-    // 5EB0
-    // 5EBC
-    while (curCtlBlk != NULL) {
-        curSeg = &curCtlBlk->segs[curCtlBlk->firstSeg];
-        u32 i = 0, j = 0;
-        // 5EF8
-        while (j < (u32)curCtlBlk->segCount - curCtlBlk->usedSeg && i < curCtlBlk->segCount) {
-            if (curSeg->used == 0) {
-                j++;
-                if (curSeg->size >= numSegs) {
-                    // 5F78
-                    curCtlBlk->usedSeg++;
-                    curSeg->used = 1;
-                    addr = part->addr + (curSeg->offset << 8);
-                    curSeg->isProtected = 0;
-                    curSeg->sizeLocked = 0;
-                    if (sceKernelIsToolMode() && sceKernelDipsw(24) == 1 &&
-                        part == MpidToCB(2) && curSeg != &part->firstCtlBlk->segs[part->firstCtlBlk->firstSeg]) // 6108
-                        curSeg->checkOverflow = 1;
-                    // 5FAC
-                    // 5FB0
-                    if (curSeg->size == numSegs)
-                        goto alloc_success;
-                    goto alloc_enlargeBlock;
-                }
-            }
-            // 5F1C
-            i++;
-            curSeg = &curCtlBlk->segs[curSeg->next];
-        }
-        // 5F40
-        curCtlBlk = curCtlBlk->next;
-    }
-    return 0;
-
-alloc_enlargeBlock:
-    {
-        SceSysmemCtlBlk *ctlBlk = (SceSysmemCtlBlk*)((u32)curSeg & 0xFFFFFF00);
-        // 5FC0
-        u32 freeSegId = ctlBlk->freeSeg;
-        SceSysmemSeg *firstSeg = &ctlBlk->segs[freeSegId];
-        ctlBlk->freeSeg = firstSeg->next;
-        u32 curSegId = (((u32)curSeg & 0xFF) - 16) / 8;
-        firstSeg->next = curSeg->next;
-        firstSeg->prev = curSegId;
-        if (firstSeg->next == 0x3F)
-            ctlBlk->lastSeg = freeSegId;
-        else
-            ctlBlk->segs[curSeg->next].prev = freeSegId;
-        // 603C
-        curSeg->next = freeSegId;
-        ctlBlk->segCount++;
-        firstSeg->offset = curSeg->offset + numSegs;
-        firstSeg->size = curSeg->size - numSegs;
-        curSeg->size = numSegs;
-    }
-
-alloc_success:
-    if (sceKernelIsToolMode() && sceKernelDipsw(24) == 1 && part == MpidToCB(2)) { // 60C0
-        u32 i;
-        s32 *ptr = (s32*)(addr + (numSegs << 8) - 0x100);
-        for (i = 0; i < 256; i += 4)
-            ptr[i] = addr - 1;
-    }
-    // 609C
-    if (ctlBlkOut == NULL) {
-        // 60B0
-        updateSmemCtlBlk(part, curCtlBlk);
-    } else
-        *ctlBlkOut = curCtlBlk;
-    return (void *)addr;
-
-alloc_hi:
-    // 6168
-    while (curCtlBlk != NULL) {
-        SceSysmemSeg *curSeg = &curCtlBlk->segs[curCtlBlk->lastSeg];
-        u32 i = 0, j = 0;
-        // 61A4
-        while (i < curCtlBlk->segCount && j < (u32)curCtlBlk->segCount - curCtlBlk->usedSeg) {
-            if (curSeg->used == 0) {
-                j++;
-                if (curSeg->size >= numSegs) {
-                    // 61FC
-                    curCtlBlk->usedSeg++;
-                    curSeg->used = 1;
-                    addr = part->addr + ((curSeg->offset + curSeg->size - numSegs) << 8);
-                    curSeg->isProtected = 0;
-                    curSeg->sizeLocked = 0;
-                    if (sceKernelIsToolMode() && sceKernelDipsw(24) == 1 && part == MpidToCB(2)) // 6330
-                        curSeg->checkOverflow = 1;
-                    // (6238)
-                    // 623C
-                    if (curSeg->size != numSegs) {
-                        SceSysmemCtlBlk *ctlBlk = (SceSysmemCtlBlk*)((u32)curSeg & 0xFFFFFF00);
-                        u16 freeSegId = ctlBlk->freeSeg;
-                        u32 curSegId = (((u32)curSeg & 0xFF) - 16) / 8;
-                        SceSysmemSeg *freeSeg = &ctlBlk->segs[freeSegId];
-                        ctlBlk->freeSeg = freeSeg->next;
-                        freeSeg->next = curSegId;
-                        freeSeg->prev = curSeg->prev;
-                        if (curSeg->prev == 0x3F) {
-                            // 6328
-                            ctlBlk->firstSeg = freeSegId;
-                        } else
-                            ctlBlk->segs[curSeg->prev].next = freeSegId;
-                        // 62BC
-                        curSeg->prev = freeSegId;
-                        ctlBlk->segCount++;
-                        freeSeg->offset = curSeg->offset;
-                        freeSeg->size = curSeg->size - numSegs;
-                        curSeg->size = numSegs;
-                        curSeg->offset += curSeg->size - numSegs;
+    if (doLow) {
+        while (curCtlBlk != NULL) {
+            curSeg = &curCtlBlk->segs[curCtlBlk->firstSeg];
+            u32 i = 0, j = 0;
+            while (j < (u32)curCtlBlk->segCount - curCtlBlk->usedSeg && i < curCtlBlk->segCount) {
+                if (curSeg->used == 0) {
+                    j++;
+                    if (curSeg->size >= numSegs) {
+                        curCtlBlk->usedSeg++;
+                        curSeg->used = 1;
+                        addr = part->addr + (curSeg->offset << 8);
+                        curSeg->isProtected = 0;
+                        curSeg->sizeLocked = 0;
+                        if (sceKernelIsToolMode() && sceKernelDipsw(24) == 1 &&
+                            part == MpidToCB(2) && curSeg != &part->firstCtlBlk->segs[part->firstCtlBlk->firstSeg])
+                            curSeg->checkOverflow = 1;
+                        if (curSeg->size != numSegs)
+                            allocSplitTailSeg(curSeg, numSegs);
+                        return allocFinishSeg(part, curCtlBlk, addr, numSegs, ctlBlkOut);
                     }
-                    goto alloc_success;
                 }
+                i++;
+                curSeg = &curCtlBlk->segs[curSeg->next];
             }
-            // 61C0
-            i++;
-            curSeg = &curCtlBlk->segs[curSeg->prev];
+            curCtlBlk = curCtlBlk->next;
         }
-        // 61E8
-        curCtlBlk = curCtlBlk->prev;
+        return 0;
+    }
+
+    if (doHigh) {
+        while (curCtlBlk != NULL) {
+            SceSysmemSeg *hiSeg = &curCtlBlk->segs[curCtlBlk->lastSeg];
+            u32 i = 0, j = 0;
+            while (i < curCtlBlk->segCount && j < (u32)curCtlBlk->segCount - curCtlBlk->usedSeg) {
+                if (hiSeg->used == 0) {
+                    j++;
+                    if (hiSeg->size >= numSegs) {
+                        curCtlBlk->usedSeg++;
+                        hiSeg->used = 1;
+                        addr = part->addr + ((hiSeg->offset + hiSeg->size - numSegs) << 8);
+                        hiSeg->isProtected = 0;
+                        hiSeg->sizeLocked = 0;
+                        if (sceKernelIsToolMode() && sceKernelDipsw(24) == 1 && part == MpidToCB(2))
+                            hiSeg->checkOverflow = 1;
+                        if (hiSeg->size != numSegs) {
+                            SceSysmemCtlBlk *ctlBlk = (SceSysmemCtlBlk *)((u32)hiSeg & 0xFFFFFF00);
+                            u16 freeSegId = ctlBlk->freeSeg;
+                            u32 curSegId = (((u32)hiSeg & 0xFF) - 16) / 8;
+                            SceSysmemSeg *freeSeg = &ctlBlk->segs[freeSegId];
+                            ctlBlk->freeSeg = freeSeg->next;
+                            freeSeg->next = curSegId;
+                            freeSeg->prev = hiSeg->prev;
+                            if (hiSeg->prev == 0x3F) {
+                                ctlBlk->firstSeg = freeSegId;
+                            } else
+                                ctlBlk->segs[hiSeg->prev].next = freeSegId;
+                            hiSeg->prev = freeSegId;
+                            ctlBlk->segCount++;
+                            freeSeg->offset = hiSeg->offset;
+                            freeSeg->size = hiSeg->size - numSegs;
+                            hiSeg->offset += hiSeg->size - numSegs;
+                            hiSeg->size = numSegs;
+                        }
+                        return allocFinishSeg(part, curCtlBlk, addr, numSegs, ctlBlkOut);
+                    }
+                }
+                i++;
+                hiSeg = &curCtlBlk->segs[hiSeg->prev];
+            }
+            curCtlBlk = curCtlBlk->prev;
+        }
     }
     return 0;
-
-alloc_addr:
-    // 64A0
-    addr = part->addr + (blockOff << 8);
-    curCtlBlk->usedSeg++;
-    if (curSeg->offset < blockOff)
-    {
-        SceSysmemCtlBlk *ctlBlk = (SceSysmemCtlBlk*)((u32)curSeg & 0xFFFFFF00);
-        u16 freeSegId = ctlBlk->freeSeg;
-        SceSysmemSeg *freeSeg = &ctlBlk->segs[freeSegId];
-        /* Insert freeSeg before curSeg */
-        ctlBlk->freeSeg = freeSeg->next;
-        freeSeg->next = (u32)(((u32)curSeg & 0xFF) - 16) / 8;
-        freeSeg->prev = curSeg->prev;
-        /* If curSeg is the first block (?) */
-        if (curSeg->prev == 0x3F) {
-            // 6614
-            /* First block is now freeSeg */
-            ctlBlk->firstSeg = freeSegId;
-        } else
-            ctlBlk->segs[curSeg->prev].next = freeSegId;
-        // 6534
-        curSeg->prev = freeSegId;
-        ctlBlk->segCount++;
-        freeSeg->offset = curSeg->offset;
-        freeSeg->size = blockOff - curSeg->offset;
-        curSeg->offset = blockOff;
-        curSeg->size -= freeSeg->size;
-    }
-    // 65A0
-    curSeg->used = 1;
-    curSeg->isProtected = 0;
-    curSeg->sizeLocked = 0;
-    if (sceKernelIsToolMode() && sceKernelDipsw(24) == 1 && part == MpidToCB(2)) // 65E0
-        curSeg->checkOverflow = 1;
-    // (65C4)
-    // 65C8
-    if (numSegs < curSeg->size)
-        goto alloc_success;
-    goto alloc_enlargeBlock;
 }
 
 s32 FreeUsedSeg(SceSysmemMemoryPartition *part, SceSysmemSeg *seg)
@@ -909,10 +814,13 @@ void SeparateSmemCtlBlk(SceSysmemMemoryPartition *part, SceSysmemCtlBlk *ctlBlk)
     SceSysmemCtlBlk *newCtlBlk = _allocSysMemory(kernel, 3, 256, 256, &allocedCtlBlk);
     if (newCtlBlk == NULL)
         return;
-    // 6BD8
-    // TODO: check if it uses inline memset
-    memset(newCtlBlk, 0, 256);
-    SceSysmemSeg *curSeg = &ctlBlk->segs[0];
+    {
+        u32 *words = (u32 *)newCtlBlk;
+        s32 k;
+        for (k = 0; k < 64; k++)
+            words[k] = 0;
+    }
+    SceSysmemSeg *curSeg = &newCtlBlk->segs[0];
     // 6BEC
     s32 i;
     for (i = 0; i < 30; i++) {
@@ -1001,9 +909,9 @@ void MemoryBlockServiceInit(void)
 void InitSmemCtlBlk(SceSysmemCtlBlk *ctlBlk)
 {
     int i;
-    // 6E84
-    memset(ctlBlk, 0, 256);
-    // 6E98
+    u32 *words = (u32 *)ctlBlk;
+    for (i = 0; i < 64; i++)
+        words[i] = 0;
     for (i = 0; i < 30; i++)
         ctlBlk->segs[i].next = i + 1;
     ctlBlk->lastSeg = 0x3F;
@@ -1079,8 +987,10 @@ s32 sceKernelFreePartitionMemoryForUser(SceUID id)
     SceSysmemUidCB *uid;
     s32 ret = sceKernelGetUIDcontrolBlockWithType(id, g_MemBlockType, &uid);
     if (ret == 0) {
-        if (pspK1IsUserMode() && (uid->attr & 0x10) == 0) {
-            // 7148
+        u32 perm = uid->attr & 0x10;
+        if (!pspK1IsUserMode())
+            perm = 0x10;
+        if (perm == 0) {
             resumeIntr(oldIntr);
             pspSetK1(oldK1);
             return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION;
@@ -1134,15 +1044,21 @@ void *sceKernelGetBlockHeadAddrForUser(SceUID id)
     s32 oldK1 = pspShiftK1();
     s32 oldIntr = suspendIntr();
     SceSysmemUidCB *uid;
-    if (sceKernelGetUIDcontrolBlockWithType(id, g_MemBlockType, &uid) != 0
-     || (pspK1IsUserMode() && (uid->attr & 1) == 0)) {
-        // 735C
+    if (sceKernelGetUIDcontrolBlockWithType(id, g_MemBlockType, &uid) != 0) {
         resumeIntr(oldIntr);
         pspSetK1(oldK1);
         return 0;
     }
-    resumeIntr(oldIntr);
+    u32 perm = uid->attr & 1;
+    if (!pspK1IsUserMode())
+        perm = 1;
+    if (perm == 0) {
+        resumeIntr(oldIntr);
+        pspSetK1(oldK1);
+        return 0;
+    }
     void *addr = UID_CB_TO_DATA(uid, g_MemBlockType, SceSysmemMemoryBlock)->addr;
+    resumeIntr(oldIntr);
     pspSetK1(oldK1);
     return addr;
 }
@@ -1176,14 +1092,12 @@ s32 _freeSysMemory(SceSysmemMemoryPartition *part, void *addr)
                             // 7570
                             SceSysmemUidCB *curUid = g_MemBlockType->PARENT0;
                             SceUID foundId = -1;
-                            // 758C
                             while (curUid != g_MemBlockType) {
                                 SceSysmemMemoryBlock *memBlock = UID_CB_TO_DATA(curUid, g_MemBlockType, SceSysmemMemoryBlock);
                                 if (addr >= memBlock->addr && addr < memBlock->addr + memBlock->size) {
-                                    foundId = curUid->uid;
+                                    foundId = curUid->uid ^ gSysmemRandomValue;
                                     break;
                                 }
-                                // 75B8
                                 curUid = curUid->PARENT0;
                             }
                             // 75C8
@@ -1229,7 +1143,7 @@ s32 block_do_initialize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 fu
     memBlock->size = 0;
     memBlock->part = NULL;
     memBlock->addr = 0;
-    return uid->uid;
+    return uid->uid ^ gSysmemRandomValue;
 }
 
 s32 block_do_delete(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap)
@@ -1240,68 +1154,62 @@ s32 block_do_delete(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId
         if (part == MpidToCB(1))
         {
             SceSysmemCtlBlk *curCtlBlk = part->firstCtlBlk;
-            // 76FC
-            // 7704
             while (curCtlBlk != NULL) {
                 if (addr == curCtlBlk) {
-                    // 7720
                     return SCE_ERROR_KERNEL_ERROR;
                 }
                 curCtlBlk = curCtlBlk->next;
             }
         }
-        // 76AC
         s32 ret = _freeSysMemory(part, addr);
         if (ret != 0)
             return ret;
     }
-    // 76E0
     sceKernelCallUIDObjCommonFunction(uid, uidWithFunc, funcId, ap);
-    return uid->uid;
+    return uid->uid ^ gSysmemRandomValue;
 }
 
 s32 block_do_delete_super(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId __attribute__((unused)), va_list ap)
 {
     sceKernelCallUIDObjCommonFunction(uid, uidWithFunc, 0x87089863, ap);
-    return uid->uid;
+    return uid->uid ^ gSysmemRandomValue;
 }
 
 s32 block_do_resize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), s32 funcId __attribute__((unused)), va_list ap)
 {
-    s32 ret = sceKernelResizeMemoryBlock(uid->uid, va_arg(ap, s32), va_arg(ap, s32));
+    s32 ret = sceKernelResizeMemoryBlock(uid->uid ^ gSysmemRandomValue, va_arg(ap, s32), va_arg(ap, s32));
     if (ret != 0)
         return ret;
-    return uid->uid;
+    return uid->uid ^ gSysmemRandomValue;
 }
 
 s32 block_do_sizelock(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), s32 funcId __attribute__((unused)), va_list ap __attribute__((unused)))
 {
     s32 oldIntr = suspendIntr();
     SceSysmemUidCB *uid2;
-    s32 ret = sceKernelGetUIDcontrolBlockWithType(uid->uid, g_MemBlockType, &uid2);
+    s32 ret = sceKernelGetUIDcontrolBlockWithType((SceUID)uid, g_MemBlockType, &uid2);
     if (ret != 0) {
         resumeIntr(oldIntr);
         return ret;
     }
-    // 7818
     SceSysmemMemoryBlock *memBlock = UID_CB_TO_DATA(uid2, g_MemBlockType, SceSysmemMemoryBlock);
     AddrToSeg(memBlock->part, memBlock->addr)->sizeLocked = 1;
     resumeIntr(oldIntr);
-    return uid->uid;
+    return uid->uid ^ gSysmemRandomValue;
 }
 
 s32 block_do_querymeminfo(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), s32 funcId __attribute__((unused)), va_list ap)
 {
     _QueryMemoryInfo(va_arg(ap, u32), va_arg(ap, SceUID*), va_arg(ap, SceUID*));
-    return uid->uid;
+    return uid->uid ^ gSysmemRandomValue;
 }
 
 s32 block_do_queryblkinfo(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), s32 funcId __attribute__((unused)), va_list ap)
 {
-    s32 ret = sceKernelQueryMemoryBlockInfo(uid->uid, va_arg(ap, SceSysmemMemoryBlockInfo *));
+    s32 ret = sceKernelQueryMemoryBlockInfo(uid->uid ^ gSysmemRandomValue, va_arg(ap, SceSysmemMemoryBlockInfo *));
     if (ret != 0)
         return ret;
-    return uid->uid;
+    return uid->uid ^ gSysmemRandomValue;
 }
 
 s32 block_do_getheadaddr(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attribute__((unused)), s32 funcId __attribute__((unused)), va_list ap)
@@ -1309,11 +1217,10 @@ s32 block_do_getheadaddr(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc __attr
     void **addrPtr = va_arg(ap, void**);
     SceSysmemUidCB *uid2;
     void *addr = NULL;
-    if (sceKernelGetUIDcontrolBlockWithType(uid->uid, g_MemBlockType, &uid2) == 0)
+    if (sceKernelGetUIDcontrolBlockWithType(uid->uid ^ gSysmemRandomValue, g_MemBlockType, &uid2) == 0)
         addr = UID_CB_TO_DATA(uid2, g_MemBlockType, SceSysmemMemoryBlock)->addr;
-    // 791C
     *addrPtr = addr;
-    return uid->uid;
+    return uid->uid ^ gSysmemRandomValue;
 }
 
 void _ReturnSegBlankList(SceSysmemSeg *seg)
@@ -1334,9 +1241,11 @@ void _ReturnSegBlankList(SceSysmemSeg *seg)
         ctlBlk->segs[seg->prev].next = seg->next;
         ctlBlk->segs[seg->next].prev = seg->prev;
     }
-    // 79C4
-    // TODO: verify that it uses inline memset
-    memset(seg, 0, 8);
+    {
+        u32 *segWords = (u32 *)seg;
+        segWords[0] = 0;
+        segWords[1] = 0;
+    }
     seg->next = ctlBlk->freeSeg;
     ctlBlk->freeSeg = segId;
     ctlBlk->segCount--;
@@ -1348,33 +1257,26 @@ void _QueryMemoryInfo(u32 address, SceUID *partitionId, SceUID *memoryBlockId)
         SceSysmemMemoryPartition *part = AddrToCB(address);
         SceSysmemUidCB *curUid = g_PartType->PARENT0;
         SceUID foundId = -1;
-        // 7A80
         while (curUid != g_PartType) {
             if (UID_CB_TO_DATA(curUid, g_PartType, SceSysmemMemoryPartition) == part) {
-                // 7B24
-                foundId = curUid->uid;
+                foundId = curUid->uid ^ gSysmemRandomValue;
                 break;
             }
             curUid = curUid->PARENT0;
         }
-        // 7AA4
         *partitionId = foundId;
     }
-    // 7AA8
     if (memoryBlockId != NULL) {
         SceSysmemUidCB *curUid = g_MemBlockType->PARENT0;
         SceUID foundId = -1;
-        // 7ACC
         while (curUid != g_MemBlockType) {
             SceSysmemMemoryBlock *memBlock = UID_CB_TO_DATA(curUid, g_MemBlockType, SceSysmemMemoryBlock);
             if (address >= (u32)memBlock->addr && address < (u32)memBlock->addr + memBlock->size) {
-                foundId = curUid->uid;
+                foundId = curUid->uid ^ gSysmemRandomValue;
                 break;
             }
-            // 7AF8
             curUid = curUid->PARENT0;
         }
-        // 7B08
         *memoryBlockId = foundId;
     }
 }
@@ -1547,195 +1449,157 @@ void JointSmemCtlBlk(SceSysmemMemoryPartition *part, SceSysmemCtlBlk *ctlBlk)
 }
 
 /* Allocates blocks in this format:
+ *   [ Free space ] [ Allocated space (8-byte aligned) ] [ Padding blocks (for alignment) ]
+ * Returns NULL when no fitting block exists in this lowheap. */
 
-+----------------------------------------------------------------------------+
-|                                                                            |
-|     Free block (must be 'align'-aligned, otherwise won't be used)          |
-|                                                                            |
-+----------------------------------------------------------------------------+
-
-+------------+-------------------------+-------------------------------------+
-|            |                         |                                     |
-| Free space |     Allocated space     | Padding blocks (so the end of the   |
-|            | ('size' upaligned to 8) | allocated space is 'align'-aligned) |
-+------------+-------------------------+-------------------------------------+
-
-Note: if allocation fails, results are probably unknown. */
-
-void *hmalloc(SceSysmemHeap *heap, SceSysmemLowheap *lowh, u32 size, u32 align)
+static inline __attribute__((always_inline)) void checkLowheapBounds(SceSysmemLowheap *lowh, const void *ptr)
 {
-    if (lowh == NULL)
-        return NULL;
-    if (lowh->addr != (u32)lowh - 1)
-        return NULL;
-    // 82B0
-    if (size < 8)
-        size = 8;
-    u32 paddingBlocks;
-    u32 allocBlocks = (size / 8) + 1;
-    if ((size & 7) != 0)
-        allocBlocks = (size / 8) + 2;
-    if ((u32)lowh->firstBlock - heap->partAddr >= heap->partSize) {
-        // 8444
-        if (sceKernelIsToolMode() == 0) {
-            // 8454
+    if ((u32)ptr - (u32)lowh - sizeof(*lowh) >= lowh->size) {
+        if (!sceKernelIsToolMode()) {
             for (;;)
                 ;
         }
-        // 845C
         Kprintf("Heap memory is in illegal memory partition\n");
         pspBreak(0);
     }
-    // 82E8
-    SceSysmemLowheapBlock *curBlock = lowh->firstBlock->next;
-    SceSysmemLowheapBlock *prevBlock = lowh->firstBlock;
-    SceSysmemLowheapBlock *prevFreeBlock;
-    u32 reservedBlockCount;
-    // 82F8
+}
+
+void *hmalloc(SceSysmemHeap *heap __attribute__((unused)), SceSysmemLowheap *lowh, u32 size, u32 align)
+{
+    if (lowh == NULL || lowh->addr != (u32)lowh - 1)
+        return NULL;
+    SceSysmemLowheapBlock *startBlock = lowh->firstBlock;
+    if (size < 8)
+        size = 8;
+    u32 allocBlocks = (size >> 3) + 1;
+    if ((size & 7) != 0)
+        allocBlocks = (size >> 3) + 2;
+    checkLowheapBounds(lowh, startBlock);
+
+    SceSysmemLowheapBlock *curBlock = startBlock->next;
+    SceSysmemLowheapBlock *prevBlock = startBlock;
+    SceSysmemLowheapBlock *prevFreeBlock = NULL;
+    u32 paddingBlocks = 0;
+    u32 reservedBlockCount = 0;
+    int needsResize = 0;
     for (;;)
     {
-        if ((u32)curBlock - heap->partAddr >= heap->partSize) {
-            // 8418
-            if (sceKernelIsToolMode() == 0) {
-                // 843C
-                for (;;)
-                    ;
+        if ((u32)curBlock - (u32)lowh - sizeof(*lowh) >= lowh->size) {
+            if (sceKernelIsToolMode() != 0) {
+                Kprintf("Heap memory is in illegal memory partition\n");
+                pspBreak(0);
             }
-            Kprintf("Heap memory is in illegal memory partition\n");
-            pspBreak(0);
+            for (;;)
+                ;
         }
-        // 830C
         if (curBlock->count >= allocBlocks) {
-            prevFreeBlock = NULL;
             if (curBlock->count == allocBlocks) {
-                // 83EC
-                if (align == 0 || ((u32)(curBlock + 1) % align) == 0) { // 8400
-                    // 840C
+                if (align == 0 || ((u32)(curBlock + 1) % align) == 0) {
+                    checkLowheapBounds(lowh, curBlock->next);
                     prevBlock->next = curBlock->next;
-                    goto end_noresize;
+                    needsResize = 0;
+                    break;
                 }
             } else {
+                prevFreeBlock = NULL;
                 paddingBlocks = 0;
-                SceSysmemLowheapBlock *firstAllocBlock = curBlock + curBlock->count - allocBlocks + 1;
-                if (align == 0 || ((u32)firstAllocBlock % align) == 0) { // 8344
-                    // 83E4
+                if (align == 0) {
                     reservedBlockCount = allocBlocks;
-                    goto end_resize;
-                }
-                paddingBlocks = ((u32)firstAllocBlock % align) >> 3;
-                reservedBlockCount = allocBlocks + paddingBlocks;
-                if (curBlock->count >= reservedBlockCount)
+                    needsResize = 1;
                     break;
+                }
+                SceSysmemLowheapBlock *firstAllocBlock = curBlock + curBlock->count - allocBlocks + 1;
+                u32 misalign = (u32)firstAllocBlock % align;
+                if (misalign == 0) {
+                    reservedBlockCount = allocBlocks;
+                    needsResize = 1;
+                    break;
+                }
+                paddingBlocks = misalign >> 3;
+                reservedBlockCount = allocBlocks + paddingBlocks;
+                if (curBlock->count >= reservedBlockCount) {
+                    prevFreeBlock = curBlock;
+                    if (curBlock->count == reservedBlockCount) {
+                        prevFreeBlock = prevBlock;
+                        checkLowheapBounds(lowh, curBlock->next);
+                        prevBlock->next = curBlock->next;
+                    }
+                    needsResize = 1;
+                    break;
+                }
             }
         }
-        // 8364
-        if (curBlock == lowh->firstBlock)
+        if (curBlock == startBlock)
             return NULL;
         prevBlock = curBlock;
         curBlock = curBlock->next;
     }
-    // 8380
-    prevFreeBlock = curBlock;
-    if (curBlock->count == reservedBlockCount) {
-        // 83D4
-        prevFreeBlock = prevBlock;
-        prevBlock->next = curBlock->next;
+
+    if (needsResize) {
+        u32 remain = curBlock->count - reservedBlockCount;
+        hcheck(lowh, curBlock, NULL, remain);
+        curBlock->count = remain;
+        curBlock += remain;
+        curBlock->count = allocBlocks;
+        hcheck(lowh, curBlock, NULL, allocBlocks);
+        if (paddingBlocks != 0) {
+            SceSysmemLowheapBlock *paddingBlock = curBlock + curBlock->count;
+            checkLowheapBounds(lowh, paddingBlock);
+            paddingBlock->count = paddingBlocks;
+            checkLowheapBounds(lowh, prevFreeBlock->next);
+            paddingBlock->next = prevFreeBlock->next;
+            prevFreeBlock->next = paddingBlock;
+        }
     }
-    // 8388
-end_resize:
-    curBlock->count -= reservedBlockCount;
-    curBlock += curBlock->count;
-    curBlock->count = allocBlocks;
-    if (paddingBlocks != 0) {
-        SceSysmemLowheapBlock *paddingBlock = curBlock + allocBlocks;
-        paddingBlock->count = paddingBlocks;
-        paddingBlock->next = prevFreeBlock->next;
-        prevFreeBlock->next = paddingBlock;
-    }
-    // 83B8
-end_noresize:
+
     lowh->firstBlock = prevBlock;
-    curBlock->next = (void *)lowh;
+    curBlock->next = (SceSysmemLowheapBlock *)lowh;
     lowh->busyBlocks += curBlock->count;
+    hcheck(lowh, prevBlock, prevBlock->next, prevBlock->count);
+    hcheck(lowh, curBlock, curBlock->next, curBlock->count);
     return curBlock + 1;
 }
 
-s32 hfree(SceSysmemHeap *heap, SceSysmemLowheap *lowh, void *ptr)
+s32 hfree(SceSysmemHeap *heap __attribute__((unused)), SceSysmemLowheap *lowh, void *ptr)
 {
-    SceSysmemLowheapBlock *allocatedBlock = (SceSysmemLowheapBlock *)(ptr - 8);
+    SceSysmemLowheapBlock *allocatedBlock = (SceSysmemLowheapBlock *)ptr - 1;
     if (lowh == NULL || lowh->addr != (u32)lowh - 1)
         return -4;
-    // 84DC
-    if ((u32)allocatedBlock < (u32)lowh + sizeof *lowh || (u32)allocatedBlock >= (u32)lowh + lowh->size)
+    if ((u32)allocatedBlock < (u32)(lowh + 1) || (u32)allocatedBlock >= (u32)lowh + lowh->size)
         return -2;
-    if (ptr == NULL)
+    if (ptr == NULL || allocatedBlock->next != (SceSysmemLowheapBlock *)lowh || allocatedBlock->count <= 0)
         return -1;
-    if (allocatedBlock->next != (void *)lowh)
-        return -1;
-    // 8518
-    if (allocatedBlock->count <= 0)
-        return -1;
+    hcheck(lowh, allocatedBlock, allocatedBlock->next, allocatedBlock->count);
     SceSysmemLowheapBlock *curBlock = lowh->firstBlock;
-    // 8534, 86C4
-    while (curBlock >= allocatedBlock || allocatedBlock >= curBlock->next) {
-        if ((u32)curBlock - heap->partAddr >= heap->partSize) {
-            // 8698
-            if (sceKernelIsToolMode() == 0) {
-                // 86BC
-                for (;;)
-                    ;
-            }
-            Kprintf("Heap memory is in illegal memory partition\n");
-            pspBreak(0);
-        }
-        // 854C
+    for (;;) {
+        hcheck(lowh, curBlock, curBlock->next, curBlock->count);
+        if (curBlock < allocatedBlock && allocatedBlock < curBlock->next)
+            break;
         if (allocatedBlock == curBlock)
             return -3;
         if (curBlock >= curBlock->next && (allocatedBlock < curBlock->next || curBlock < allocatedBlock))
             break;
-        // 8570
         curBlock = curBlock->next;
     }
-    // 8594
-    if (curBlock->next > allocatedBlock && curBlock->next < allocatedBlock + allocatedBlock->count)
+    if (allocatedBlock < curBlock->next && curBlock->next < allocatedBlock + allocatedBlock->count)
         return -3;
-    // 85B8
-    if (allocatedBlock > curBlock && allocatedBlock < curBlock + curBlock->count)
+    if (curBlock < allocatedBlock && allocatedBlock < curBlock + curBlock->count)
         return -3;
-    // 85DC
     lowh->busyBlocks -= allocatedBlock->count;
-    if ((u32)curBlock->next - heap->partAddr >= heap->partSize) {
-        // 866C
-        if (sceKernelIsToolMode() == 0) {
-            // 867C
-            for (;;)
-                ;
-        }
-        // 8684
-        Kprintf("Heap memory is in illegal memory partition\n");
-        pspBreak(0);
+    SceSysmemLowheapBlock *nextBlock = curBlock->next;
+    hcheck(lowh, nextBlock, nextBlock->next, nextBlock->count);
+    if (allocatedBlock + allocatedBlock->count == nextBlock && nextBlock->count > 0) {
+        allocatedBlock->count += nextBlock->count;
+        allocatedBlock->next = nextBlock->next;
+    } else {
+        allocatedBlock->next = nextBlock;
     }
-    // 8604
-    if (allocatedBlock + allocatedBlock->count == curBlock->next)
-    {
-        // 8654
-        if (curBlock->next->count <= 0)
-            allocatedBlock->next = curBlock->next;
-        else {
-            allocatedBlock->count += curBlock->next->count;
-            allocatedBlock->next = curBlock->next->next;
-        }
-    }
-    else
-        allocatedBlock->next = curBlock->next;
-    // 861C
+    hcheck(lowh, allocatedBlock, allocatedBlock->next, allocatedBlock->count);
     curBlock->next = allocatedBlock;
     if (allocatedBlock == curBlock + curBlock->count) {
-        // 863C
         curBlock->count += allocatedBlock->count;
         curBlock->next = allocatedBlock->next;
     }
-    // 8630
     lowh->firstBlock = curBlock;
     return 0;
 }
@@ -1755,6 +1619,18 @@ void initheap(SceSysmemLowheap *lowh, u32 size)
         end->next = start;
         end->count = 0;
     }
+}
+
+s32 hcheckblock(SceSysmemLowheap *lowh, void *ptr)
+{
+    SceSysmemLowheapBlock *block = (SceSysmemLowheapBlock *)ptr - 1;
+    if (lowh == NULL || lowh->addr != (u32)lowh - 1)
+        return -4;
+    if ((u32)block < (u32)(lowh + 1) || (u32)block >= (u32)lowh + lowh->size)
+        return -2;
+    if (ptr == NULL || block->next != (SceSysmemLowheapBlock *)lowh || (s32)block->count <= 0)
+        return -1;
+    return 0;
 }
 
 s32 checkheapnouse(SceSysmemLowheap *lowh)
@@ -1778,7 +1654,6 @@ s32 hmaxfreesize(SceSysmemHeap *heap, SceSysmemLowheap *lowh)
     if ((u32)firstBlock - heap->partAddr >= heap->partSize)
         return -1;
     SceSysmemLowheapBlock *curBlock = firstBlock->next;
-    // 879C
     for (;;) {
         if ((u32)curBlock - heap->partAddr >= heap->partSize)
             return -1;
@@ -1787,6 +1662,43 @@ s32 hmaxfreesize(SceSysmemHeap *heap, SceSysmemLowheap *lowh)
         if (curBlock == firstBlock)
             return (maxfreeblocks - 1) * 8;
         curBlock = curBlock->next;
+    }
+}
+
+void hcheck(SceSysmemLowheap *lowh, SceSysmemLowheapBlock *block, SceSysmemLowheapBlock *next, u32 units)
+{
+    if ((u32)block - (u32)lowh - sizeof(*lowh) >= lowh->size) {
+        if (!sceKernelIsToolMode()) {
+            for (;;)
+                ;
+        }
+        Kprintf("Heap memory is in illegal memory partition\n");
+        pspBreak(0);
+    }
+    if (next != (SceSysmemLowheapBlock *)lowh && next != NULL &&
+        (u32)next - (u32)lowh - sizeof(*lowh) >= lowh->size) {
+        if (!sceKernelIsToolMode()) {
+            for (;;)
+                ;
+        }
+        Kprintf("Heap memory (next) is in illegal memory partition\n");
+        pspBreak(0);
+    }
+    if (units > 0x800000) {
+        if (!sceKernelIsToolMode()) {
+            for (;;)
+                ;
+        }
+        Kprintf("Heap memory (units) is in illegal memory partition\n");
+        pspBreak(0);
+    }
+    if ((u32)(block + units) - (u32)lowh - sizeof(*lowh) > lowh->size) {
+        if (!sceKernelIsToolMode()) {
+            for (;;)
+                ;
+        }
+        Kprintf("Heap memory (pn) is in illegal memory partition\n");
+        pspBreak(0);
     }
 }
 
@@ -1801,21 +1713,18 @@ void *sceKernelMemset(void *src, s8 c, u32 size)
 {
     void *end = src + size;
     if (size >= 8) {
-        // 8824
-        u32 value = c | (c << 8) | (c << 12) | (c << 16);
+        u8 b = (u8)c;
+        u32 value = b | (b << 8) | (b << 16) | (b << 24);
         void *alignedSrc = (void *)(((u32)src + 3) & 0xFFFFFFFC);
         if (alignedSrc != src) {
             asm("swr %0, 0(%1)" : : "r" (value), "r" (src));
             size -= alignedSrc - src;
         }
-        // 8844
         if (((u32)end & 3) != 0)
             asm("swl %0, -1(%1)" : : "r" (value), "r" (end));
-        // 8854
         sceKernelMemset32(alignedSrc, value, size);
     } else {
         s8 *cur = src;
-        // 8804
         while (cur != end)
             *(cur++) = c;
     }
@@ -1827,35 +1736,29 @@ void *sceKernelMemset32(void *src, s32 c, u32 size)
     size = size & 0xFFFFFFFC;
     if (((u32)src & 3) != 0)
         return NULL;
-    if (((0x2C >> (((u32)src >> 29) & 0x7)) & 1) != 0) { // accepts first 4 bits 0x4, 0x5, 0x6, 0x7, 0xA, 0xB
-        // 8964
+    if (((0x2C >> (((u32)src >> 29) & 0x7)) & 1) != 0) {
         return wmemset(src, c, size);
     }
     if (size < 257) {
-        // 8964
         return wmemset(src, c, size);
     }
     void *alignedSrc = (void *)(((u32)src + 0x3F) & 0xFFFFFFC0);
     s32 *end = (void*)src + size;
     if (alignedSrc != src)
         wmemset(src, c, alignedSrc - src);
-    // 88C8
     if (((u32)end & 0x3F) != 0) {
-        // 8954
-        end = wmemset((void*)end - ((u32)end & 0x3F), c, size);
+        u32 tail = (u32)end & 0x3F;
+        end = wmemset((void *)end - tail, c, tail);
     }
-    // 88D4
     s32 *curSrc = alignedSrc;
-    // 88E0
     while (curSrc != end) {
         pspCache(0x18, curSrc);
-        *(curSrc +  0) = *(curSrc +  1) = *(curSrc +  2) = *(curSrc +  3) = c;
-        *(curSrc +  4) = *(curSrc +  5) = *(curSrc +  6) = *(curSrc +  7) = c;
-        *(curSrc +  8) = *(curSrc +  9) = *(curSrc + 10) = *(curSrc + 11) = c;
-        *(curSrc + 12) = *(curSrc + 13) = *(curSrc + 14) = *(curSrc + 15) = c;
+        curSrc[0] = curSrc[1] = curSrc[2] = curSrc[3] = c;
+        curSrc[4] = curSrc[5] = curSrc[6] = curSrc[7] = c;
+        curSrc[8] = curSrc[9] = curSrc[10] = curSrc[11] = c;
+        curSrc[12] = curSrc[13] = curSrc[14] = curSrc[15] = c;
         curSrc += 16;
     }
-    // 8930
     return src;
 }
 
