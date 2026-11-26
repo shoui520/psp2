@@ -334,10 +334,13 @@ int dtcpIpIpcConnect(void **outConnection)
 		return 5;
 	object->session = NULL;
 	object->stream = NULL;
-	if (dtcpIpIpcInitSession(object, config, 140) != 0 ||
-	    dtcpIpIpcInitStream(&object->stream, object->session, 0, 0, 0, 0x80000) != 0 ||
-	    dtcpIpIpcInitShared(object->stream, &object->shared) != 0) {
-		ret = dtcpIpMapIpcStatus(0);
+	ret = dtcpIpIpcInitSession(object, config, 140);
+	if (ret == 0)
+		ret = dtcpIpIpcInitStream(&object->stream, object->session, 0, 0, 0, 0x80000);
+	if (ret == 0)
+		ret = dtcpIpIpcInitShared(object->stream, &object->shared);
+	if (ret != 0) {
+		ret = dtcpIpMapIpcStatus(ret);
 		if (object->stream != NULL)
 			dtcpIpIpcFiniStream(object->stream, 0);
 		if (object->session != NULL)
