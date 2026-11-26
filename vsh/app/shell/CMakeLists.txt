@@ -629,6 +629,9 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/sysupchk_plugin/sysupchk_plugin.cpp
 	src/sysupchk_plugin/sysupchk_np.cpp
 	src/rtc_util/rtc_util.cpp
+	src/picture_file_creator/picture_stream.cpp
+	src/picture_file_creator/picture_exif_writer.cpp
+	src/picture_file_creator/picture_encoder.cpp
 	src/photo_export/photo_export_convert.cpp
 	${PSP2_SRC}/sys/sdk/target/src/sha1/libsha1.c
 	src/dbsetup/dbrecovery_notify.cpp

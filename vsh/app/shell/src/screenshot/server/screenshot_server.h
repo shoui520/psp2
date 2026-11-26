@@ -122,11 +122,11 @@ struct PictureSourceInfo {
 
 struct PictureEncodeConfig {
 	const PictureSourceInfo *source;
-	SceInt32 rotation;
-	SceInt32 outputFormat;		/* 0 = JPEG, 1 = BMP, 2 = PNG */
-	SceUInt32 outputFlags;		/* bit 0 = file output, bit 1 = external thumb work */
-	SceUInt8 quality;
-	SceUInt8 jpegSubsampling;
+	const PictureSourceInfo *overlay;
+	SceInt32 outputFormat;		/* 0 = JPEG, 1 = BMP, 2 = RAW */
+	SceUInt32 outputFlags;		/* bit 0 = file output, bit 1 = external thumb temp file */
+	SceUInt8 overlayAlpha;
+	SceUInt8 jpegCompressionRatio;
 	SceUInt8 padBytes[2];
 	float scaleX;
 	float scaleY;

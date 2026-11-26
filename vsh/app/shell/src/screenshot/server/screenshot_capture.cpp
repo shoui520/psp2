@@ -520,11 +520,11 @@ int CaptureJob::EncodePictureFile(const char *capturePath, paf::rtc::Tick tick)
 	PictureEncodeConfig encodeConfig;
 	sce_paf_memset(&encodeConfig, 0, sizeof(encodeConfig));
 	encodeConfig.source = &sourceInfo;
-	encodeConfig.rotation = 0;
+	encodeConfig.overlay = NULL;
 	encodeConfig.outputFormat = (m_outputFormat == 1) ? 1 : 0;
 	encodeConfig.outputFlags = 1U;
-	encodeConfig.quality = 0xFF;
-	encodeConfig.jpegSubsampling = 25;
+	encodeConfig.overlayAlpha = 0xFF;
+	encodeConfig.jpegCompressionRatio = 25;
 	encodeConfig.scaleX = 1.0f;
 	encodeConfig.scaleY = 1.0f;
 
