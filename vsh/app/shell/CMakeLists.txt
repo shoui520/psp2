@@ -411,6 +411,10 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/netctl/netctl_core.cpp
 	src/netctl/netctl_config.cpp
 	src/netctl/netctl_icm.cpp
+	src/netctl/net_config.cpp
+	src/netctl/net_dhcp.cpp
+	src/netctl/net_wlan.cpp
+	src/netctl/net_pppoe.cpp
 	src/netctl/net_stun.cpp
 	src/netctl/net_upnp.cpp
 	src/netctl/net_wispr.cpp
