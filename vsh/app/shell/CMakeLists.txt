@@ -717,6 +717,10 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/np/asm/np_service_base_url_cache.cpp
 	src/np/game_presence/np_game_presence.cpp
 	src/np/csla/np_csla.cpp
+	np_friend_importer.cpp
+	np_friend_profile_importer.cpp
+	src/patch_chk_plugin/bgdl_patch_client.cpp
+	ex_sound_out_mgr.cpp
 	${PSP2_SRC}/sys/sdk/target/src/mt19937/libmt19937.c
 	${PSP2_SRC}/sys/sdk/target/src/mt19937/mtrand.S
 	${PSP2_SRC}/sys/sdk/target/src/md5/libmd5.c
