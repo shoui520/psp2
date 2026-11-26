@@ -653,6 +653,12 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	${PSP2_SRC}/sys/sdk/target/src/hmac/sha256.c
 	${PSP2_SRC}/sys/internal/usermode/src/fsutil/fs_util.c
 	${PSP2_SRC}/sys/internal/usermode/src/fsutil/partition.c
+	${PSP2_SRC}/sys/sdk/target/src/aes/libaes.c
+	${PSP2_SRC}/sys/sdk/target/src/aes/aes.S
+	src/npdrm_package/npdrm_syscalls.cpp
+	src/npdrm_package/npdrm_pkg_meta.cpp
+	src/npdrm_package/npdrm_pkg_unpack.cpp
+	src/npdrm_package/npdrm_install_api.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
@@ -679,3 +685,9 @@ set_source_files_properties(
 	${PSP2_SRC}/sys/internal/kernel/src/gcauthmgr/rsa_digest.c
 	${PSP2_SRC}/sys/internal/driver/src/marlin_hci/rsa_exponent.c
 	PROPERTIES COMPILE_DEFINITIONS "_Static_assert(c,m)=")
+# SDK AES library (handwritten Thumb-2 assembly in aes.S)
+set_source_files_properties(${PSP2_SRC}/sys/sdk/target/src/aes/libaes.c
+	PROPERTIES COMPILE_DEFINITIONS PSP2_COMPILER_GCC48
+	COMPILE_OPTIONS "-fno-stack-protector;-fno-toplevel-reorder;-ffunction-sections")
+set_source_files_properties(${PSP2_SRC}/sys/sdk/target/src/aes/aes.S
+	PROPERTIES COMPILE_DEFINITIONS PSP2_COMPILER_GCC48)
