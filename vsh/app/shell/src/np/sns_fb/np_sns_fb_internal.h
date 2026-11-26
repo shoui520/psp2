@@ -11,7 +11,8 @@
 #include <rtc.h>
 #include <np/np_sns_facebook.h>
 
-/* SceNpSnsFb internal error codes (0x80559401..0x80559418) */
+/* SceNpSnsFb internal error codes (0x80559400..0x80559418) */
+#define NP_SNS_FB_ERR_GENERIC			-2141875200	/* 0x80559400 */
 #define NP_SNS_FB_ERR_ALREADY_INITIALIZED	-2141875199	/* 0x80559401 */
 #define NP_SNS_FB_ERR_NOT_INITIALIZED		-2141875198	/* 0x80559402 */
 #define NP_SNS_FB_ERR_INVALID_ARGUMENT		-2141875197	/* 0x80559403 */
@@ -368,5 +369,28 @@ int npSnsFbUtilIsShareTrophyEnabled(SceInt32 *outEnabled);
 int npSnsFbUtilIsSharePurchaseEnabled(SceInt32 *outEnabled);
 int npSnsFbUtilIsShareRatingEnabled(SceInt32 *outEnabled);
 SceBool npSnsFbUtilIsAccountBound(void);
+
+/* Trophy entry passed to npSnsFbShareTrophy (16 bytes) */
+struct NpSnsFbTrophyShareItem {
+	SceInt32 isHidden;					/* +0x00 */
+	SceInt32 grade;						/* +0x04 (1=platinum..4=bronze) */
+	const char *name;					/* +0x08 */
+	const char *detail;					/* +0x0C */
+};
+
+/* SceNpSnsFb share feed formatters (np_sns_fb_share.cpp, 0x8133C994..0x8133F63F) */
+int npSnsFbSharePurchase(SceInt32 reqId, SceInt32 serviceType, const char *titleName,
+			 const char *contentId, SceInt32 isRental, const char *imageUrl,
+			 SceInt32 contentType, SceInt32 isPreOrder, SceInt32 *outFbError);
+int npSnsFbShareRating(SceInt32 reqId, SceInt32 serviceType, const char *titleName,
+		       const char *imageUrl, SceUInt32 ratingScore, SceInt32 *outFbError);
+int npSnsFbShareTrophy(SceInt32 reqId, const char *titleName, const char *iconUrl,
+		       const NpSnsFbTrophyShareItem *trophies, SceUInt32 trophyCount,
+		       SceInt32 *outFbError);
+
+/* SceNpSnsFb IPMI server lifecycle (np_sns_fb_server.cpp, 0x8133F6B0..0x8134258F) */
+int npSnsFbServerStart(void);
+int npSnsFbServerSuspend(SceUID processId);
+int npSnsFbServerResume(SceUID processId);
 
 #endif /* SHELL_NP_SNS_FB_INTERNAL_H */
