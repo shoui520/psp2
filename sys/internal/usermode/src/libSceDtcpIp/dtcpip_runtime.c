@@ -138,3 +138,15 @@ unsigned long long __udivdi3(unsigned long long n, unsigned long long d)
 	quotient.w.hi = high;
 	return quotient.v;
 }
+
+/* the 64-bit division the HTTP seek code uses (the original lowers it to the runtime) */
+SceUInt64 dtcpIpDivide64(SceUInt64 value, SceUInt64 divisor)
+{
+	return value / divisor;
+}
+
+/* the unsigned 64-bit remainder, from the division above (the runtime's own shape) */
+unsigned long long __umoddi3(unsigned long long n, unsigned long long d)
+{
+	return n - __udivdi3(n, d) * d;
+}

@@ -103,6 +103,12 @@ const struct SceDtcpIpSinkManager *dtcpIpGetMoveSinkManager(void)
 /* the sink session, through the middleware's shared memory */
 struct SceDtcpIpSession g_session;
 
+/* the library state and the command the worker is running (the original keeps both in
+ * cleared data words) */
+struct SceDtcpIpContext g_dtcpIp;
+union SceDtcpIpCommand g_command;
+int g_dtcpIpIpcFlag;
+
 /* the HTTP worker thread, and its status words */
 struct SceDtcpIpHttpWorker g_httpWorker = {
 	.thread = -1,

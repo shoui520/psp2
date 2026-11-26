@@ -1091,3 +1091,9 @@ handled:
 		sceKernelExitDeleteThread(-2147319802);
 	return ret;
 }
+
+/* The two 35-word configuration blocks the middleware's IPC create takes: the stream
+ * connection's block is all zero, the activation's ends with its type 3 (read from the
+ * original's data words at 0x8100921C and 0x81009190). */
+const unsigned int g_dtcpIpIpcConfig[35] = { 0 };
+const unsigned int g_dtcpIpActivateConfig[35] = { [34] = 3 };

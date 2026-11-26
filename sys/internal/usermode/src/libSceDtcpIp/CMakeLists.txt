@@ -2,7 +2,7 @@ enable_language(CXX)
 # SceDtcpIp (vs0:sys/external/libSceDtcpIp.suprx), built by Sony with SNC 3.57 in C. No
 # debug record names its files; the files are named by what they hold (ours). The SNC
 # runtime objects the original carries link after the library's files.
-psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
+psp2_module(${PSP2_TARGET} KIND user COMPILER snc SOURCES
 	dtcpip.c
 	dtcpip_locks.c
 	dtcpip_core.c
