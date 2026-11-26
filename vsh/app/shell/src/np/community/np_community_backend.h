@@ -31,8 +31,10 @@
 #define NP_COMMUNITY_ERR_TX_NOT_FOUND		-2141911282	/* 0x8055070E */
 #define NP_COMMUNITY_ERR_CLIENT_NOT_FOUND	-2141911281	/* 0x8055070F */
 #define NP_COMMUNITY_ERR_INVALID_ENDPOINT	-2141911279	/* 0x80550711 */
+#define NP_COMMUNITY_ERR_ALREADY_COMPLETE	-2141911278	/* 0x80550712 */
 #define NP_COMMUNITY_ERR_UNEXPECTED_PARAM	-2141911276	/* 0x80550714 */
 #define NP_COMMUNITY_ERR_CLIENT_EXISTS		-2141911275	/* 0x80550715 */
+#define NP_COMMUNITY_ERR_NO_SERVER_FOUND	-2141911274	/* 0x80550716 */
 
 #define NP_COMMUNITY_ERR_SERVER_BASE		-2141911040	/* 0x80550800 */
 #define NP_COMMUNITY_ERR_PROFILE_NOT_REGISTERED	-2141911027	/* 0x8055080D */
@@ -70,6 +72,7 @@ enum NpCommunityEndpointId {
 	NP_COMMUNITY_EP_GET_PROFILE			= 3,
 	NP_COMMUNITY_EP_SEARCH_JID_RES			= 4,
 	NP_COMMUNITY_EP_SEARCH_JID			= 5,
+	NP_COMMUNITY_EP_LOBBY_SERVER_LIST		= 6,
 	NP_COMMUNITY_EP_TROPHY_STATUS			= 7,
 	NP_COMMUNITY_EP_RANKING_SERVER_LIST		= 8,
 	NP_COMMUNITY_EP_STORAGE_SERVER_LIST		= 9,
@@ -112,6 +115,7 @@ enum NpCommunityEndpointId {
 	NP_COMMUNITY_EP_GET_PANEL_LIST			= 48,
 	NP_COMMUNITY_EP_UPDATE_SELF_PROFILE		= 49,
 	NP_COMMUNITY_EP_BASIC_TTL			= 50,
+	NP_COMMUNITY_EP_REPORT_SERVER_LIST		= 52,
 	NP_COMMUNITY_EP_FRIENDLIST_STATUS		= 53,
 	NP_COMMUNITY_EP_GET_AVATAR_CATEGORY_LIST	= 55,
 	NP_COMMUNITY_EP_GET_AVAILABLE_AVATAR_LIST	= 56,
@@ -133,6 +137,21 @@ enum NpCommunityXmlSigMode {
 	NP_COMMUNITY_SIG_COMMENT_FRIEND_STATUS	= 8,
 	NP_COMMUNITY_SIG_COMMENT_EXTRA		= 9,
 	NP_COMMUNITY_SIG_COMMENT_SKIP_HMAC	= 10
+};
+
+/* Chunked binary upload/download state attached to NpCommunityBackendTx::serviceParam (16 bytes) */
+enum NpCommunityTransferState {
+	NP_COMMUNITY_XFER_IDLE			= 0,
+	NP_COMMUNITY_XFER_ACTIVE		= 1,
+	NP_COMMUNITY_XFER_COMPLETE		= 2,
+	NP_COMMUNITY_XFER_FAILED		= 3
+};
+
+struct NpCommunityChunkedTransfer {
+	SceInt32 state;				/* +0x00 */
+	SceSize totalSize;			/* +0x04 */
+	SceSize remainingSize;			/* +0x08 */
+	SceInt32 lastError;			/* +0x0C */
 };
 
 /* TSS URL parameter bundle passed to npCommunityBuildUrl for EP_TSS_GET_DATA */
@@ -240,6 +259,10 @@ int npCommunityHttpOpen(NpCommunityBackendTx *tx, int endpointId, const void *en
 int npProfileFetchOwnProfile(int profileReqHandle, void *outProfile, int *outStatus,
 			     int *outFlags, SceUInt64 *outTimestamp, void *outStamp,
 			     const void *ticketBuf, SceSize ticketSize, int mode);
+
+/* Server list & service status lookup (np_community_server_list.cpp, 0x8133820C..0x81338ADB) */
+int npCommunityGetServerListEx(SceInt32 txId, NpCommunityServerNode **outList,
+			       SceInt64 *outIntervals);
 
 /* XML, HTTP response, formatting & HMAC helpers (np_community_xml.cpp, 0x813F5194..0x813F85B3) */
 void npCommunityHmacSha1(const void *key, SceSize keyLen, const void *data, SceSize dataLen,

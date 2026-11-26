@@ -213,7 +213,8 @@ struct NpTusRequestEnv {
 /* TUS server host list node returned by npCommunityGetServerList (16 bytes) */
 struct NpCommunityServerNode {
 	const char *hostName;			/* +0x00 */
-	SceUInt32 padWord;			/* +0x04 */
+	SceUInt16 reservedHeader;		/* +0x04 */
+	SceUInt16 serviceRole;			/* +0x06 (0 = update, 1 = view for npfriend) */
 	SceUInt32 statusCode;			/* +0x08 */
 	NpCommunityServerNode *next;		/* +0x0C */
 };
@@ -269,7 +270,7 @@ struct NpTusVariable {
 	SceNpId ownerId;			/* +0x00 (36 bytes) */
 	SceInt32 hasData;			/* +0x24 */
 	SceRtcTick lastChangedDate;		/* +0x28 (8 bytes) */
-	SceUInt8 padBeforeAuthor[4];		/* +0x30 */
+	SceInt32 slotId;			/* +0x30 */
 	SceNpId lastChangedAuthorId;		/* +0x34 (36 bytes) */
 	SceInt64 variable;			/* +0x58 (8 bytes) */
 	SceInt64 oldVariable;			/* +0x60 (8 bytes) */
@@ -289,7 +290,7 @@ struct NpTusDataStatus {
 	SceNpId lastChangedAuthorId;		/* +0x30 (36 bytes) */
 	void *dataPtr;				/* +0x54 */
 	SceSize dataSize;			/* +0x58 */
-	SceUInt8 padBeforeInfo[4];		/* +0x5C */
+	SceInt32 slotId;			/* +0x5C */
 	NpTusDataInfo info;			/* +0x60 (392 bytes -> 488 bytes total) */
 };
 
