@@ -7,6 +7,13 @@
 
 #include <scetypes.h>
 
+/* one of the manager's threads: its entry, its id once started and its argument */
+struct SwMwManagerThread {
+	int (*entry)(void *argument);	/* 0x00 */
+	SceUID id;			/* 0x04 */
+	void *argument;			/* 0x08 */
+};
+
 /* the device's two 35-entry session tables (the manager keeps its sinks and move sinks) */
 struct SwMwManagerSinkSlots {
 	int reserved;		/* 0x000 */
@@ -31,6 +38,8 @@ extern "C" {
 int SwMwManagerMapStatus(int status);
 int SwMwManagerCancel(void);
 int SwMwManagerCheckActivation(void);
+int SwMwManagerThreadCreate(struct SwMwManagerThread *thread, int (*entry)(void *),
+			    void *argument, int type);
 int SwMwManagerSessionStart(struct SwMwManagerSinkSlots *slots, int mode);
 int SwMwContentSupportCreate(struct SwMwContentSupport **support);
 int SwMwManagerRegisterMoveSink(struct SwMwManagerSinkSlots *slots, int sink);

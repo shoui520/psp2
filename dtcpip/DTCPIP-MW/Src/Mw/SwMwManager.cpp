@@ -6,6 +6,7 @@
  */
 
 #include <stddef.h>
+#include <string.h>
 #include <stdlib.h>
 #include <scetypes.h>
 #include <kernel/threadmgr.h>
@@ -20,7 +21,118 @@ int swMwTrace(const char *format, ...);
 int _sceDtcpIpCancelActivation(void);
 int _sceDtcpIpCancelDownload(void);
 int _sceDtcpIpCheckActivation(int *activated);
+
+/* the thread helpers (SwMwCommServer.cpp) */
+int SwsGetToolMode(void);
+int SwsGetAffinity(void);
+int SwMwThreadTrampoline(SceSize args, void *argument);
 }
+
+extern "C" int SwMwManagerThreadCreate(struct SwMwManagerThread *thread, int (*entry)(void *),
+				void *argument, int type)
+{
+	char name[20];
+	SceSize stackSize;
+	int priority;
+	int affinity;
+	int id;
+	struct SwMwThreadAttr {
+		int reserved[3];
+		int priority;
+	} attr;
+
+	thread->entry = entry;
+	thread->argument = argument;
+	stackSize = 0x4000;
+	memcpy(name, "SWS_THREAD_NO_NAME", 0x13);
+	name[19] = 0;
+	attr.reserved[0] = 0;
+	attr.reserved[1] = 0;
+	attr.reserved[2] = 0;
+	attr.priority = 111;
+	if (SwsGetToolMode() == 0)
+		attr.priority = 0x10000100;
+	priority = attr.priority;
+	affinity = 0;
+	switch (type) {
+	case 0:
+		strncpy(name, "SWS_THREAD_TYPE_ANONYMOUS", 0x1F);
+		break;
+	case 1:
+		strncpy(name, "SWS_THREAD_TYPE_AKE_CMD_TIMER", 0x1F);
+		break;
+	case 2:
+		strncpy(name, "SWS_THREAD_TYPE_KX_EXP", 0x1F);
+		break;
+	case 3:
+		strncpy(name, "SWS_THREAD_TYPE_SINK_AUTH", 0x1F);
+		stackSize = 0x8000;
+		break;
+	case 4:
+		strncpy(name, "SWS_THREAD_TYPE_SINK_AKE_TIMER", 0x1F);
+		break;
+	case 5:
+		strncpy(name, "SWS_THREAD_TYPE_SINK_CKC", 0x1F);
+		break;
+	case 6:
+		strncpy(name, "SWS_THREAD_TYPE_SRC_AUTH", 0x1F);
+		stackSize = 0x8000;
+		break;
+	case 7:
+		strncpy(name, "SWS_THREAD_TYPE_SRC_AUTH_SERVER", 0x1F);
+		stackSize = 0x8000;
+		break;
+	case 8:
+		strncpy(name, "SWS_THREAD_TYPE_SRC_AKE_TIMER", 0x1F);
+		stackSize = 0x8000;
+		break;
+	case 9:
+		strncpy(name, "SWS_THREAD_TYPE_RTT_REG", 0x1F);
+		stackSize = 0x8000;
+		break;
+	case 10:
+		strncpy(name, "SWS_THREAD_TYPE_TTL_CHECK", 0x1F);
+		break;
+	case 11:
+		strncpy(name, "SWS_THREAD_TYPE_MEDIA_DISCONNECT", 0x1F);
+		break;
+	case 16:
+		strncpy(name, "SWS_THREAD_TYPE_SW_TIMER", 0x1F);
+		break;
+	case 17:
+		strncpy(name, "SWS_THREAD_TYPE_SW_DEP", 0x1F);
+		affinity = SwsGetAffinity();
+		if (affinity != 0) {
+			affinity |= 0x80000;
+			if (affinity != 0x80000)
+				priority = 192;
+		}
+		break;
+	case 18:
+		stackSize = 0x20000;
+		strncpy(name, "SWS_THREAD_TYPE_TOOL", 0x1F);
+		break;
+	case 19:
+		strncpy(name, "SWS_THREAD_TYPE_ANONYMOUS", 0x1F);
+		affinity = SwsGetAffinity();
+		if (affinity != 0) {
+			affinity |= 0x80000;
+			if (affinity != 0x80000)
+				priority = 192;
+		}
+		break;
+	default:
+		break;
+	}
+	id = sceKernelCreateThread(name, SwMwThreadTrampoline, priority, stackSize, 0,
+				   affinity, NULL);
+	if (id >= 0) {
+		thread->id = id;
+		return sceKernelStartThread(id, 0xC, thread);
+	}
+	return id;
+}
+
 
 /* the manager's error translation: -7..0 map to the manager statuses, anything else to
  * 12001 (0x81005776, the jump table at 0x8100578e) */
