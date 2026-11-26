@@ -65,7 +65,7 @@ extern "C" struct SwMwSinkStream *SwMwMoveSinkStreamConstruct(struct SwMwSinkStr
 	stream->sending = 0;
 	stream->sendingMessage = 0;
 	stream->receiving = 0;
-	stream->parameterBusy = 0;
+	stream->releasing = 0;
 	stream->endOfStream = 0;
 	stream->empty = 0;
 	stream->finished = 0;
@@ -440,6 +440,343 @@ extern "C" int SwMwMoveSinkStreamCompleteLabel(struct SwMwSinkStream *stream)
 	return 0;
 }
 
+/* hand the sink one of the reader's chunks (0x8100acf6) */
+extern "C" int SwMwMoveSinkStreamReceive(struct SwMwSinkStream *stream, int *offset,
+					 int *size, unsigned char *type)
+{
+	struct SwMwMoveSink *sink = (struct SwMwMoveSink *)stream->sink;
+	struct SwMwStreamChunk *chunks;
+	int chunkSize;
+	int finished;
+	int status;
+	int done;
+	int failed;
+
+	*type = 0xFF;
+	SwMwMoveSinkStreamMutexLock(&stream->mutex);
+	stream->receiving = 1;
+	if (sink->moveResult != 0)
+		stream->finished = 1;
+	finished = stream->finished;
+	SwMwMoveSinkStreamMutexUnlock(&stream->mutex);
+	failed = 0;
+	done = 0;
+	if (finished != 0) {
+		status = stream->status;
+		if (status != 12015 && status != 0)
+			swMwTrace("[SWMW] Error %d in %s:%d\n", status,
+				  SWMW_MOVESTREAM_SOURCE, 661);
+		*size = 0;
+		*offset = 0;
+		failed = 1;
+	}
+	if (failed == 0 && stream->reader == NULL) {
+		status = 12004;
+		swMwTrace("[SWMW] Error %d in %s:%d\n", status, SWMW_MOVESTREAM_SOURCE, 669);
+		*size = 0;
+		*offset = 0;
+		failed = 1;
+	}
+	if (failed == 0) {
+		if (stream->receiveHave == 0) {
+			stream->receiveCount = stream->reader->getReadChunkList(
+								(void **)&stream->receiveChunks);
+			if (stream->receiveCount == -1) {
+				*size = 0;
+				stream->reader->consume(0);
+				stream->empty = 1;
+				status = stream->emptyStatus;
+				if (status != 0)
+					swMwTrace("[SWMW] Error %d in %s:%d\n", status,
+						  SWMW_MOVESTREAM_SOURCE, 684);
+				failed = 1;
+			} else if (stream->receiveCount == 0) {
+				stream->reader->consume(0);
+				*size = 0;
+				*offset = 0;
+				done = 1;
+			} else {
+				stream->receiveIndex = 0;
+				stream->receiveConsumed = 0;
+				chunkSize = 0;
+				while (stream->receiveIndex < stream->receiveCount) {
+					chunkSize = stream->receiveChunks[stream->receiveIndex].size;
+					if (chunkSize != 0)
+						break;
+					++stream->receiveIndex;
+				}
+				if (chunkSize == 0) {
+					stream->reader->consume(0);
+					status = 12014;
+					swMwTrace("[SWMW] Error %d in %s:%d\n", status,
+						  SWMW_MOVESTREAM_SOURCE, 711);
+					failed = 1;
+				} else {
+					stream->receiveHave = 1;
+				}
+			}
+		}
+		if (failed == 0) {
+			if (done == 0) {
+				chunks = stream->receiveChunks;
+				chunkSize = chunks[stream->receiveIndex].size;
+				*offset = chunks[stream->receiveIndex].offset +
+					  stream->receiveConsumed;
+				*size = chunkSize - stream->receiveConsumed;
+				if (*size == 0)
+					swMwTrace("[SWMW] ERROR in %s:%d\n",
+						  SWMW_MOVESTREAM_SOURCE, 721);
+			}
+			*type = SwMwStreamEventType(&stream->event);
+			SwMwMoveSinkStreamMutexLock(&stream->mutex);
+			stream->receiving = 0;
+			SwMwMoveSinkStreamMutexUnlock(&stream->mutex);
+			return 0;
+		}
+	}
+	SwMwMoveSinkStreamMutexLock(&stream->mutex);
+	stream->receiving = 0;
+	SwMwMoveSinkStreamMutexUnlock(&stream->mutex);
+	return status;
+}
+
+/* release the bytes the sink consumed from its chunk (0x8100aff8) */
+extern "C" int SwMwMoveSinkStreamRelease(struct SwMwSinkStream *stream, int size)
+{
+	struct SwMwMoveSink *sink = (struct SwMwMoveSink *)stream->sink;
+	struct SwMwStreamChunk *chunks;
+	int chunkSize;
+	int finished;
+	int status;
+	int failed;
+	int total;
+	unsigned int i;
+
+	SwMwMoveSinkStreamMutexLock(&stream->mutex);
+	stream->releasing = 1;
+	if (sink->moveResult != 0)
+		stream->finished = 1;
+	finished = stream->finished;
+	SwMwMoveSinkStreamMutexUnlock(&stream->mutex);
+	failed = 0;
+	status = 0;
+	if (finished != 0) {
+		status = stream->status;
+		if (status != 12015 && status != 0)
+			swMwTrace("[SWMW] Error %d in %s:%d\n", status,
+				  SWMW_MOVESTREAM_SOURCE, 763);
+		failed = 1;
+	}
+	if (failed == 0 && stream->reader == NULL) {
+		status = 12004;
+		swMwTrace("[SWMW] Error %d in %s:%d\n", status, SWMW_MOVESTREAM_SOURCE, 769);
+		failed = 1;
+	}
+	if (failed == 0) {
+		if (stream->receiveHave != 0) {
+			chunks = stream->receiveChunks;
+			chunkSize = chunks[stream->receiveIndex].size;
+			stream->receiveConsumed += size;
+			if (stream->receiveConsumed >= chunkSize) {
+				++stream->receiveIndex;
+				while (stream->receiveIndex < stream->receiveCount &&
+				       chunks[stream->receiveIndex].size == 0)
+					++stream->receiveIndex;
+				if (stream->receiveIndex >= stream->receiveCount) {
+					stream->receiveHave = 0;
+					total = 0;
+					for (i = 0; i < (unsigned int)stream->receiveCount; ++i)
+						total += chunks[i].size;
+					if (stream->reader->consume(total) == 0) {
+						swMwTrace("[SWMW] ERROR in %s:%d\n",
+							  SWMW_MOVESTREAM_SOURCE, 796);
+						status = 12003;
+						failed = 1;
+					}
+				} else {
+					stream->receiveConsumed = 0;
+				}
+			}
+		}
+	}
+	if (failed == 0) {
+		SwMwMoveSinkStreamMutexLock(&stream->mutex);
+		stream->releasing = 0;
+		SwMwMoveSinkStreamMutexUnlock(&stream->mutex);
+		return 0;
+	}
+	SwMwMoveSinkStreamMutexLock(&stream->mutex);
+	stream->releasing = 0;
+	SwMwMoveSinkStreamMutexUnlock(&stream->mutex);
+	return status;
+}
+
+/* hand the sink the next send chunk (0x8100b22e) */
+extern "C" int SwMwMoveSinkStreamSend(struct SwMwSinkStream *stream, int *offset, int *size)
+{
+	struct SwMwMoveSink *sink = (struct SwMwMoveSink *)stream->sink;
+	struct SwMwStreamChunk *chunks;
+	int chunkSize;
+	int finished;
+	int endOfStream;
+	int status;
+	int failed;
+	int done;
+
+	SwMwMoveSinkStreamMutexLock(&stream->mutex);
+	stream->sending = 1;
+	if (sink->moveResult != 0)
+		stream->finished = 1;
+	finished = stream->finished;
+	endOfStream = stream->endOfStream;
+	SwMwMoveSinkStreamMutexUnlock(&stream->mutex);
+	failed = 0;
+	done = 0;
+	status = 0;
+	if (finished != 0) {
+		status = stream->status;
+		if (status != 12015 && status != 0)
+			swMwTrace("[SWMW] Error %d in %s:%d\n", status,
+				  SWMW_MOVESTREAM_SOURCE, 843);
+		*size = 0;
+		*offset = 0;
+		failed = 1;
+	} else if (endOfStream != 0) {
+		status = 12004;
+		swMwTrace("[SWMW] Error %d in %s:%d\n", status, SWMW_MOVESTREAM_SOURCE, 851);
+		*size = 0;
+		*offset = 0;
+		failed = 1;
+	} else if (stream->downloader == NULL) {
+		status = 12004;
+		swMwTrace("[SWMW] Error %d in %s:%d\n", status, SWMW_MOVESTREAM_SOURCE, 859);
+		*size = 0;
+		*offset = 0;
+		failed = 1;
+	} else {
+		if (stream->sendHave == 0) {
+			status = stream->downloader->getChunkList((void **)&stream->sendChunks,
+							   &stream->sendCount);
+			if (status == 0) {
+				if (stream->sendCount == 0) {
+					stream->downloader->release(0);
+					*size = 0;
+					*offset = 0;
+					done = 1;
+				} else {
+					stream->sendIndex = 0;
+					stream->sendConsumed = 0;
+					chunkSize = 0;
+					while (stream->sendIndex < stream->sendCount) {
+						chunkSize = stream->sendChunks[stream->sendIndex].size;
+						if (chunkSize != 0)
+							break;
+						++stream->sendIndex;
+					}
+					if (chunkSize == 0) {
+						stream->downloader->release(0);
+						status = 12014;
+						swMwTrace("[SWMW] Error %d in %s:%d\n", status,
+							  SWMW_MOVESTREAM_SOURCE, 902);
+						failed = 1;
+					} else {
+						stream->sendHave = 1;
+					}
+				}
+			} else {
+				*size = 0;
+				if (status == 102)
+					status = 12401;
+				else
+					status = SwMwStatus(status);
+				if (status != 0)
+					swMwTrace("[SWMW] Error %d in %s:%d\n", status,
+						  SWMW_MOVESTREAM_SOURCE, 877);
+				failed = 1;
+			}
+		}
+		if (failed == 0 && done == 0) {
+			chunks = stream->sendChunks;
+			chunkSize = chunks[stream->sendIndex].size;
+			*offset = chunks[stream->sendIndex].offset + stream->sendConsumed;
+			*size = chunkSize - stream->sendConsumed;
+			if (*size == 0)
+				swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MOVESTREAM_SOURCE, 912);
+		}
+	}
+	if (failed == 0) {
+		SwMwMoveSinkStreamMutexLock(&stream->mutex);
+		stream->sending = 0;
+		SwMwMoveSinkStreamMutexUnlock(&stream->mutex);
+		return 0;
+	}
+	if ((status > 11007 && status <= 11012) ||
+	    (status <= 11007 && status > 1005 && status == 1016) ||
+	    (status <= 1005 && status > 1004))
+		stream->emptyStatus = status;
+	SwMwMoveSinkStreamMutexLock(&stream->mutex);
+	stream->sending = 0;
+	SwMwMoveSinkStreamMutexUnlock(&stream->mutex);
+	return status;
+}
+
+/* release the pending send bytes when the message is sent (0x8100b59e) */
+extern "C" int SwMwMoveSinkStreamSendMessage(struct SwMwSinkStream *stream, int size)
+{
+	struct SwMwMoveSink *sink = (struct SwMwMoveSink *)stream->sink;
+	int finished;
+	int endOfStream;
+	int status;
+	int failed;
+
+	SwMwMoveSinkStreamMutexLock(&stream->mutex);
+	stream->sendingMessage = 1;
+	if (sink->moveResult != 0)
+		stream->finished = 1;
+	finished = stream->finished;
+	endOfStream = stream->endOfStream;
+	SwMwMoveSinkStreamMutexUnlock(&stream->mutex);
+	status = 0;
+	failed = 0;
+	if (finished != 0) {
+		status = stream->status;
+		if (status != 12015 && status != 0)
+			swMwTrace("[SWMW] Error %d in %s:%d\n", status,
+				  SWMW_MOVESTREAM_SOURCE, 965);
+		failed = 1;
+	} else if (endOfStream != 0) {
+		status = 12004;
+		swMwTrace("[SWMW] Error %d in %s:%d\n", status, SWMW_MOVESTREAM_SOURCE, 971);
+		failed = 1;
+	} else if (stream->downloader == NULL) {
+		status = 12004;
+		swMwTrace("[SWMW] Error %d in %s:%d\n", status, SWMW_MOVESTREAM_SOURCE, 977);
+		failed = 1;
+	} else if (stream->sendHave != 0) {
+		int result;
+
+		stream->sendConsumed += size;
+		stream->sendHave = 0;
+		result = stream->downloader->release(stream->sendConsumed);
+		stream->sendTotal += stream->sendConsumed;
+		if (result != 0) {
+			swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MOVESTREAM_SOURCE, 987);
+			status = 12003;
+			failed = 1;
+		}
+	}
+	if (failed == 0) {
+		SwMwMoveSinkStreamMutexLock(&stream->mutex);
+		stream->sendingMessage = 0;
+		SwMwMoveSinkStreamMutexUnlock(&stream->mutex);
+		return 0;
+	}
+	SwMwMoveSinkStreamMutexLock(&stream->mutex);
+	stream->sendingMessage = 0;
+	SwMwMoveSinkStreamMutexUnlock(&stream->mutex);
+	return status;
+}
+
 /* stop the move stream: drain the reader when asked, then release the transfer and the
  * reader and notify the sink (0x8100aa1e) */
 extern "C" int SwMwMoveSinkStreamStop(struct SwMwSinkStream *stream, int mode)
@@ -465,7 +802,7 @@ extern "C" int SwMwMoveSinkStreamStop(struct SwMwSinkStream *stream, int mode)
 		return status;
 	SwMwMoveSinkStreamMutexLock(&stream->mutex);
 	if (stream->downloader != NULL) {
-		if (stream->receiving != 0 || stream->parameterBusy != 0) {
+		if (stream->receiving != 0 || stream->releasing != 0) {
 			status = 12007;
 		} else {
 			drained = 0;

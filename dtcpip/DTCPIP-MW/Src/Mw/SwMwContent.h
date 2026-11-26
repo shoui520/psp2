@@ -75,7 +75,7 @@ struct SwMwTransfer {
 	virtual int attach(int value);			/* 0x20 */
 	virtual int transfer(int value);		/* 0x24 */
 	virtual int write(int offset, int size);	/* 0x28 */
-	virtual int getChunkList(int *out);		/* 0x2C */
+	virtual int getChunkList(void **chunks, int *count);	/* 0x2C */
 	virtual int release(int size);			/* 0x30 */
 	virtual int setSessionData(const void *data);	/* 0x34 */
 	virtual int getSessionData(int *out);		/* 0x38 */

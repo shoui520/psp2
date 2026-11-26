@@ -233,7 +233,7 @@ extern "C" struct SwMwSinkStream *SwMwSinkStreamConstruct(struct SwMwSinkStream 
 	stream->sending = 0;
 	stream->sendingMessage = 0;
 	stream->receiving = 0;
-	stream->parameterBusy = 0;
+	stream->releasing = 0;
 	stream->endOfStream = 0;
 	stream->empty = 0;
 	stream->finished = 0;

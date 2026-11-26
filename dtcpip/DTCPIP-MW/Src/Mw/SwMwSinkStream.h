@@ -72,7 +72,7 @@ struct SwMwSinkStream {
 	int sending;			/* 0x528: a send is in flight */
 	int sendingMessage;		/* 0x52C: a message send is in flight */
 	int receiving;			/* 0x530: a receive is in flight */
-	int parameterBusy;		/* 0x534: a parameter set is in flight */
+	int releasing;		/* 0x534: a release is in flight */
 	int endOfStream;		/* 0x538 */
 	int empty;			/* 0x53C */
 	int finished;			/* 0x540 */
@@ -132,6 +132,7 @@ int SwMwSinkStreamSetFinished(struct SwMwSinkStream *stream, int status);
 int SwMwSinkStreamSetHandler(struct SwMwSinkStream *stream, void *handler, void *argument);
 int SwMwStreamEventSet(struct SwMwStreamEvent *event, void *handler, void *context,
 		       void *argument);
+int SwMwStreamEventType(const struct SwMwStreamEvent *event);
 int SwMwSinkStreamSetName(struct SwMwSinkStream *stream, const char *name);
 int SwMwSinkStreamNoop(void);
 
