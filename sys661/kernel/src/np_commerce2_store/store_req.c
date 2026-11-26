@@ -127,210 +127,175 @@ const char * const g_comic_query_keys[7] = {
     "comicAll", "XXX", "XXX", "XXX", "comicTitle", "XXX", "XXX",
 };
 
-const char * const g_country_table[59] = {
+const char * const g_country_tier_full[2] = {
     "us", "",
+};
+
+const char * const g_country_tier_mid[33] = {
     "ca", "mx", "gb", "ie", "be", "lu", "nl", "fr", "de", "at", "ch",
     "it", "pt", "dk", "fi", "no", "se", "au", "nz", "es", "ru", "ae",
     "za", "pl", "gr", "sa", "cz", "hk", "tw", "sg", "kr", "jp", "",
+};
+
+const char * const g_country_tier_basic[24] = {
     "cl", "pe", "ar", "co", "br", "my", "bg", "hr", "ro", "si", "hu",
     "sk", "tr", "bh", "kw", "lb", "om", "qa", "il", "mt", "is", "cy",
     "in", "",
 };
 
-/* =========================================================================
- * Two-pass form payload writer (pass 0 measures length, pass 1 streams HTTP)
- * ========================================================================= */
+/* Forward declarations for internal builders and low-level writers */
+static int store_emit_str_field(int write_pass, int http_req, u32 key_id,
+                                const char *val, int need_amp) __attribute__((noinline));
+static int store_emit_uint_field(int write_pass, int http_req, u32 key_id,
+                                 u32 val, int need_amp) __attribute__((noinline));
+static int store_build_get_cat(int write_pass, int http_req, u64 *len_out, u32 svc_type,
+                               const char *cat_id, const char * const *reward_id, u32 has_reward,
+                               u32 start_pos, u32 max_cnt) __attribute__((noinline));
+static int store_build_get_prod(int write_pass, int http_req, u64 *len_out, u32 svc_type,
+                                const char *cat_id, const char *prod_id,
+                                const char * const *reward_id, u32 has_reward) __attribute__((noinline));
+static int store_build_add_cart(int write_pass, int http_req, u64 *len_out, u32 svc_type,
+                                const char * const *sku_ids, u32 sku_cnt,
+                                const char * const *reward_ids, u32 reward_cnt) __attribute__((noinline));
+static int store_build_purchase(int write_pass, int http_req, u64 *len_out, u16 cmd_id,
+                                const char *password, int quick_purchase,
+                                int auto_deposit) __attribute__((noinline));
+static int store_build_get_drm(int write_pass, int http_req, u64 *len_out,
+                               const char * const *sku_ids, u32 sku_cnt, const char *svc_id,
+                               const char *reward_ids, u32 start_pos, u32 max_cnt,
+                               u32 drm_type) __attribute__((noinline));
+static int store_build_billing(int write_pass, int http_req, u64 *len_out, int is_account,
+                               const StoreBillingInfo *billing, int with_save,
+                               int save_flag) __attribute__((noinline));
+static int store_build_edy_result(int write_pass, int http_req, u64 *len_out,
+                                  const char *receipt_id, int is_ok) __attribute__((noinline));
+static int store_build_voucher(int write_pass, int http_req, u64 *len_out,
+                               const char *code_a, const char *code_b, const char *code_c,
+                               int auto_deposit) __attribute__((noinline));
+static int store_build_event_log(int write_pass, int http_req, u64 *len_out, u32 svc_type,
+                                 u32 event_type, const char *id_str,
+                                 const char *url_str) __attribute__((noinline));
+static int store_build_search_prod(int write_pass, int http_req, u64 *len_out, u32 svc_type,
+                                   u32 start_pos, u32 max_cnt, const StoreSearchQuery *queries,
+                                   u32 query_cnt, u32 sort_method) __attribute__((noinline));
+static int store_build_guest_sess(int write_pass, int http_req, u64 *len_out, u32 ver,
+                                  const char *country, const char *lang, u32 yob, u32 mob,
+                                  u32 dob, const char *console_id) __attribute__((noinline));
+static int store_build_prod_list(int write_pass, int http_req, u64 *len_out, u32 svc_type,
+                                 const char * const *prod_ids,
+                                 u32 prod_cnt) __attribute__((noinline));
+static int store_build_recom_prods(int write_pass, int http_req, u64 *len_out, u32 svc_type,
+                                   const char * const *prod_ids, u32 prod_cnt,
+                                   u32 start_pos, u32 max_cnt,
+                                   u32 recom_type) __attribute__((noinline));
+static int store_build_prod_ids(int write_pass, int http_req, u64 *len_out,
+                                const char *content_id,
+                                const char *file_id) __attribute__((noinline));
+static int store_write_prefixed(int http_req, const char * const *prefixes, u32 prefix_cnt,
+                                u32 key_id, const char *val, u32 val_len,
+                                int need_amp) __attribute__((noinline));
+static int store_write_str_list(int http_req, u32 key_id, const char * const *list, u32 count,
+                                char *enc_buf, u32 enc_size, int repeat_first,
+                                int need_amp) __attribute__((noinline));
+static int store_write_query_vals(int http_req, u32 key_id, const StoreSearchQuery *queries,
+                                  u32 count, char *enc_buf, u32 enc_size,
+                                  int need_amp) __attribute__((noinline));
+static int store_write_query_keys(int http_req, u32 key_id, const StoreSearchQuery *queries,
+                                  const char * const *key_table, u32 count, char *enc_buf,
+                                  u32 enc_size, int need_amp) __attribute__((noinline));
+static int store_write_uint(int http_req, u32 key_id, u32 val,
+                            int need_amp) __attribute__((noinline));
+static int store_measure_str_list(u32 key_id, const char * const *list, u32 count,
+                                  char *enc_buf, u32 enc_size, int repeat_first,
+                                  int need_amp) __attribute__((noinline));
 
-typedef struct {
-    int write_pass;
-    int http_req;
-    u64 total_len;
-    int has_field;
-} StoreFormWriter;
-
-static int fw_raw(StoreFormWriter *fw, const void *data, u32 len)
+/* Inline helpers matching Sony's inlined field emission & HTTP request creation */
+static inline __attribute__((always_inline)) int
+store_open_http(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id,
+                int *http_req_out, u64 content_len)
 {
-    if (fw->write_pass)
-        return sceNpCommerce2_AE614CC6(fw->http_req, data, len);
-    fw->total_len += len;
-    return 0;
-}
-
-static int fw_sep(StoreFormWriter *fw)
-{
-    if (fw->has_field) {
-        int ret = fw_raw(fw, "&", 1);
-        if (ret < 0)
-            return ret;
+    const char *prefix = NULL;
+    const char *endpoint = NULL;
+    int ret = store_resolve_endpoint(svc_type, cmd_id, &prefix, &endpoint);
+    if (ret >= 0) {
+        ret = sceNpCommerce2_382803C8(http_tmpl, svc_type, cmd_id, prefix, endpoint, 0,
+                                      url_buf, http_req_out,
+                                      (u32)(content_len & 0xFFFFFFFFULL),
+                                      (u32)(content_len >> 32));
     }
-    fw->has_field = 1;
-    return 0;
+    return ret;
 }
 
-static int fw_prefixed_val(StoreFormWriter *fw, const char * const *prefixes, u32 prefix_cnt,
-                           u32 key_id, const char *val, u32 val_len)
+static inline __attribute__((always_inline)) int
+store_inline_str(int write_pass, int http_req, u32 key_id, const char *val, int need_amp)
 {
-    u32 idx;
-    int ret = fw_sep(fw);
-    if (ret < 0)
-        return ret;
-    for (idx = 0; idx < prefix_cnt; idx++) {
-        if (prefixes[idx]) {
-            ret = fw_raw(fw, prefixes[idx], sceNet_lib_D8722983(prefixes[idx]));
+    if (write_pass == 1) {
+        if (need_amp == 1) {
+            int ret = sceNpCommerce2_AE614CC6(http_req, g_form_keys[SFKEY_AMP].str, g_form_keys[SFKEY_AMP].len);
             if (ret < 0)
                 return ret;
         }
+        {
+            int ret = sceNpCommerce2_AE614CC6(http_req, g_form_keys[key_id].str,
+                                              g_form_keys[key_id].len);
+            if (ret < 0)
+                return ret;
+        }
+        return sceNpCommerce2_AE614CC6(http_req, val, sceNet_lib_D8722983(val));
     }
-    ret = fw_raw(fw, g_form_keys[key_id].str, g_form_keys[key_id].len);
-    if (ret < 0)
-        return ret;
-    return fw_raw(fw, val, val_len);
+    return (int)(g_form_keys[key_id].len + (u32)(need_amp == 1) + sceNet_lib_D8722983(val));
 }
 
-static int fw_str(StoreFormWriter *fw, u32 key_id, const char *val)
-{
-    return fw_prefixed_val(fw, NULL, 0, key_id, val, sceNet_lib_D8722983(val));
-}
-
-static int fw_encoded_str(StoreFormWriter *fw, u32 key_id, const char *val)
-{
-    char enc[784];
-    int ret = sceNpCommerce2_66EC0829(enc, 769, val, sceNet_lib_D8722983(val), 0);
-    if (ret < 0)
-        return ret;
-    return fw_str(fw, key_id, enc);
-}
-
-static int fw_prefixed_encoded(StoreFormWriter *fw, const char * const *prefixes, u32 prefix_cnt,
-                               u32 key_id, const char *val, u32 val_len)
-{
-    char enc[784];
-    int ret = sceNpCommerce2_66EC0829(enc, 769, val, val_len, 0);
-    if (ret < 0)
-        return ret;
-    return fw_prefixed_val(fw, prefixes, prefix_cnt, key_id, enc, sceNet_lib_D8722983(enc));
-}
-
-static int fw_uint(StoreFormWriter *fw, u32 key_id, u32 val)
+static inline __attribute__((always_inline)) int
+store_inline_uint(int write_pass, int http_req, u32 key_id, u32 val, int need_amp)
 {
     char num[16];
-    int len = sceNet_lib_CF705E46(num, "%u", val);
+    int len;
+    if (write_pass == 1)
+        return store_write_uint(http_req, key_id, val, need_amp);
+    len = sceNet_lib_CF705E46(num, "%u", val);
     if (len >= (int)sizeof(num))
         return STORE_ERR_BUF_OVERFLOW;
-    return fw_prefixed_val(fw, NULL, 0, key_id, num, (u32)len);
+    return len + (int)g_form_keys[key_id].len + (need_amp == 1);
 }
 
-static int fw_prefixed_uint(StoreFormWriter *fw, const char * const *prefixes, u32 prefix_cnt,
-                            u32 key_id, u32 val)
+static inline __attribute__((always_inline)) int
+store_inline_prefixed(int write_pass, int http_req, const char * const *prefixes, u32 prefix_cnt,
+                      u32 key_id, const char *val, u32 val_len, int need_amp)
 {
-    char num[16];
-    int len = sceNet_lib_CF705E46(num, "%u", val);
-    if (len >= (int)sizeof(num))
-        return STORE_ERR_BUF_OVERFLOW;
-    return fw_prefixed_val(fw, prefixes, prefix_cnt, key_id, num, (u32)len);
-}
-
-static int fw_bool(StoreFormWriter *fw, u32 key_id, int flag)
-{
-    return fw_str(fw, key_id, flag == 1 ? "true" : "false");
-}
-
-static int fw_str_list(StoreFormWriter *fw, u32 key_id, const char * const *list,
-                       u32 count, int repeat_first)
-{
-    char enc[784];
     u32 idx;
-    int ret = fw_sep(fw);
-    if (ret < 0)
-        return ret;
-    ret = fw_raw(fw, g_form_keys[key_id].str, g_form_keys[key_id].len);
-    if (ret < 0)
-        return ret;
-    for (idx = 0; idx < count; idx++) {
-        const char *item = repeat_first ? list[0] : list[idx];
-        if (idx != 0) {
-            ret = fw_raw(fw, ",", 1);
-            if (ret < 0)
-                return ret;
-        }
-        if (item && item[0] != '\0') {
-            ret = sceNpCommerce2_66EC0829(enc, 769, item, sceNet_lib_D8722983(item), 0);
-            if (ret < 0)
-                return ret;
-            ret = fw_raw(fw, enc, sceNet_lib_D8722983(enc));
-            if (ret < 0)
-                return ret;
-        }
-    }
-    return 0;
+    int total;
+    if (write_pass == 1)
+        return store_write_prefixed(http_req, prefixes, prefix_cnt, key_id, val, val_len, need_amp);
+    total = need_amp;
+    for (idx = 0; idx < prefix_cnt; idx++)
+        total += (int)sceNet_lib_D8722983(prefixes[idx]);
+    return total + (int)val_len + (int)g_form_keys[key_id].len;
 }
 
-static int fw_query_keys(StoreFormWriter *fw, u32 key_id, const StoreSearchQuery *queries,
-                         const char * const *key_table, u32 count)
+static inline __attribute__((always_inline)) int
+store_send_empty_body(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out)
 {
-    char enc[784];
-    u32 idx;
-    int ret = fw_sep(fw);
+    int ret = store_open_http(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, 0ULL);
     if (ret < 0)
         return ret;
-    ret = fw_raw(fw, g_form_keys[key_id].str, g_form_keys[key_id].len);
-    if (ret < 0)
-        return ret;
-    for (idx = 0; idx < count; idx++) {
-        const char *kname = key_table[queries[idx].key_index];
-        if (idx != 0) {
-            ret = fw_raw(fw, ",", 1);
-            if (ret < 0)
-                return ret;
-        }
-        ret = sceNpCommerce2_66EC0829(enc, 769, kname, sceNet_lib_D8722983(kname), 0);
-        if (ret < 0)
-            return ret;
-        ret = fw_raw(fw, enc, sceNet_lib_D8722983(enc));
-        if (ret < 0)
-            return ret;
-    }
-    return 0;
-}
-
-static int fw_query_vals(StoreFormWriter *fw, u32 key_id, const StoreSearchQuery *queries, u32 count)
-{
-    char enc[784];
-    u32 idx;
-    int ret = fw_sep(fw);
-    if (ret < 0)
-        return ret;
-    ret = fw_raw(fw, g_form_keys[key_id].str, g_form_keys[key_id].len);
-    if (ret < 0)
-        return ret;
-    for (idx = 0; idx < count; idx++) {
-        if (idx != 0) {
-            ret = fw_raw(fw, ",", 1);
-            if (ret < 0)
-                return ret;
-        }
-        ret = sceNpCommerce2_66EC0829(enc, 769, queries[idx].value, queries[idx].value_len, 0);
-        if (ret < 0)
-            return ret;
-        ret = fw_raw(fw, enc, sceNet_lib_D8722983(enc));
-        if (ret < 0)
-            return ret;
-    }
-    return 0;
+    return store_min_s32(sceNpCommerce2_AE614CC6(*http_req_out, NULL, 0), 0);
 }
 
 /* =========================================================================
- * Endpoint resolution & HTTP request creation
+ * Endpoint resolution (0x005534)
  * ========================================================================= */
 
-int store_resolve_endpoint(u32 svc_type, u16 cmd_id, const char **prefix_out, const char **endpoint_out)
+int store_resolve_endpoint(u32 svc_type, u16 cmd_id, const char **prefix_out,
+                           const char **endpoint_out)
 {
     int env_ver;
     int ret;
+    u32 idx = cmd_id;
 
-    if (cmd_id >= 87)
+    if (idx >= 87U)
         return STORE_ERR_INVALID_CMD;
-    if (svc_type < 1 || svc_type > 8)
+    if (svc_type - 1U >= 8U)
         return STORE_ERR_INVALID_SERVICE;
 
     ret = sceNpCommerce2_460A1D92(&env_ver, 9);
@@ -338,58 +303,34 @@ int store_resolve_endpoint(u32 svc_type, u16 cmd_id, const char **prefix_out, co
         return ret;
 
     *prefix_out = g_service_prefixes[svc_type];
-    if (svc_type == 7) {
-        if (cmd_id == 31)
-            cmd_id = 74;
-        else if (cmd_id == 48)
-            cmd_id = 75;
+    if (svc_type == 7U) {
+        if (idx == 31U)
+            idx = 74U;
+        else if (idx == 48U)
+            idx = 75U;
     }
-    *endpoint_out = g_endpoint_names[cmd_id - 1];
-    return 0;
-}
-
-static int store_open_http_req(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id,
-                               int *http_req_out, u64 content_len)
-{
-    const char *prefix = NULL;
-    const char *endpoint = NULL;
-    int ret = store_resolve_endpoint(svc_type, cmd_id, &prefix, &endpoint);
-    if (ret < 0)
-        return ret;
-    return sceNpCommerce2_382803C8(http_tmpl, svc_type, cmd_id, prefix, endpoint, 0, url_buf,
-                                   http_req_out, (u32)content_len, (u32)(content_len >> 32));
+    *endpoint_out = g_endpoint_names[idx - 1U];
+    return ret;
 }
 
 /* =========================================================================
- * Store request senders
+ * Per-command request senders (0x005610 .. 0x00707C)
  * ========================================================================= */
-
-int store_send_empty(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out)
-{
-    return store_open_http_req(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, 0);
-}
 
 int store_send_get_cat(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
                        const char *cat_id, const char * const *reward_id, u32 has_reward,
                        u32 start_pos, u32 max_cnt)
 {
-    int pass;
-    u32 eff_svc = (reward_id && has_reward) ? 1 : svc_type;
+    u64 content_len = 0ULL;
+    u32 pass;
 
-    for (pass = 0; pass < 2; pass++) {
-        StoreFormWriter fw = { pass, *http_req_out, 0, 0 };
-        int ret;
-
-        ret = fw_uint(&fw, SFKEY_STORE_TYPE, eff_svc);
-        if (ret >= 0) ret = fw_encoded_str(&fw, SFKEY_CATEGORY_ID, cat_id);
-        if (ret >= 0 && reward_id && has_reward)
-            ret = fw_encoded_str(&fw, SFKEY_REWARD_ID, *reward_id);
-        if (ret >= 0) ret = fw_uint(&fw, SFKEY_START_POSITION, start_pos);
-        if (ret >= 0) ret = fw_uint(&fw, SFKEY_MAX_COUNT, max_cnt);
+    for (pass = 0; pass < 2U; pass++) {
+        int ret = store_build_get_cat(pass != 0U, *http_req_out, &content_len, svc_type,
+                                      cat_id, reward_id, has_reward, start_pos, max_cnt);
         if (ret < 0)
             return ret;
-        if (pass == 0) {
-            ret = store_open_http_req(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, fw.total_len);
+        if (pass == 0U) {
+            ret = store_open_http(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, content_len);
             if (ret < 0)
                 return ret;
         }
@@ -401,23 +342,16 @@ int store_send_get_prod(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, 
                         const char *cat_id, const char *prod_id,
                         const char * const *reward_id, u32 has_reward)
 {
-    int pass;
-    u32 eff_svc = (reward_id && has_reward) ? 1 : svc_type;
+    u64 content_len = 0ULL;
+    u32 pass;
 
-    for (pass = 0; pass < 2; pass++) {
-        StoreFormWriter fw = { pass, *http_req_out, 0, 0 };
-        int ret;
-
-        ret = fw_uint(&fw, SFKEY_STORE_TYPE, eff_svc);
-        if (ret >= 0) ret = fw_encoded_str(&fw, SFKEY_PRODUCT_ID, prod_id);
-        if (ret >= 0 && cat_id && cat_id[0] != '\0')
-            ret = fw_encoded_str(&fw, SFKEY_CATEGORY_ID, cat_id);
-        if (ret >= 0 && reward_id && has_reward)
-            ret = fw_encoded_str(&fw, SFKEY_REWARD_ID, *reward_id);
+    for (pass = 0; pass < 2U; pass++) {
+        int ret = store_build_get_prod(pass != 0U, *http_req_out, &content_len, svc_type,
+                                       cat_id, prod_id, reward_id, has_reward);
         if (ret < 0)
             return ret;
-        if (pass == 0) {
-            ret = store_open_http_req(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, fw.total_len);
+        if (pass == 0U) {
+            ret = store_open_http(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, content_len);
             if (ret < 0)
                 return ret;
         }
@@ -429,31 +363,16 @@ int store_send_add_cart(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, 
                         const char * const *sku_ids, u32 sku_cnt,
                         const char * const *reward_ids, u32 reward_cnt)
 {
-    int pass;
-    int has_nonempty_reward = 0;
+    u64 content_len = 0ULL;
+    u32 pass;
 
-    if (reward_ids && reward_cnt != 0 && reward_cnt == sku_cnt) {
-        u32 idx;
-        for (idx = 0; idx < reward_cnt; idx++) {
-            if (reward_ids[idx] && reward_ids[idx][0] != '\0') {
-                has_nonempty_reward = 1;
-                break;
-            }
-        }
-    }
-
-    for (pass = 0; pass < 2; pass++) {
-        StoreFormWriter fw = { pass, *http_req_out, 0, 0 };
-        int ret;
-
-        ret = fw_uint(&fw, SFKEY_STORE_TYPE, svc_type);
-        if (ret >= 0) ret = fw_str_list(&fw, SFKEY_SKU_ID, sku_ids, sku_cnt, 0);
-        if (ret >= 0 && has_nonempty_reward)
-            ret = fw_str_list(&fw, SFKEY_REWARD_IDS, reward_ids, reward_cnt, 0);
+    for (pass = 0; pass < 2U; pass++) {
+        int ret = store_build_add_cart(pass != 0U, *http_req_out, &content_len, svc_type,
+                                       sku_ids, sku_cnt, reward_ids, reward_cnt);
         if (ret < 0)
             return ret;
-        if (pass == 0) {
-            ret = store_open_http_req(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, fw.total_len);
+        if (pass == 0U) {
+            ret = store_open_http(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, content_len);
             if (ret < 0)
                 return ret;
         }
@@ -461,40 +380,58 @@ int store_send_add_cart(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, 
     return 0;
 }
 
-int store_send_sku_id(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
-                      const char *sku_id)
+int store_send_rem_cart(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                        const char *sku_id)
 {
-    int pass;
-    for (pass = 0; pass < 2; pass++) {
-        StoreFormWriter fw = { pass, *http_req_out, 0, 0 };
-        int ret = fw_encoded_str(&fw, SFKEY_SKU_ID, sku_id);
+    char enc[784];
+    u64 content_len = 0ULL;
+    u32 pass;
+
+    for (pass = 0; pass < 2U; pass++) {
+        int http_req = *http_req_out;
+        int ret = sceNpCommerce2_66EC0829(enc, 769U, sku_id, sceNet_lib_D8722983(sku_id), 0);
+        if (ret >= 0) {
+            ret = store_emit_str_field(pass != 0U, http_req, SFKEY_SKU_ID, enc, 0);
+            if (ret >= 0) {
+                if (pass == 0U)
+                    content_len = (u64)(s64)ret;
+                ret = 0;
+            }
+        }
         if (ret < 0)
             return ret;
-        if (pass == 0) {
-            ret = store_open_http_req(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, fw.total_len);
+        if (pass == 0U) {
+            ret = store_open_http(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, content_len);
             if (ret < 0)
                 return ret;
         }
     }
     return 0;
+}
+
+int store_send_clear_cart(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out)
+{
+    return store_send_empty_body(svc_type, http_tmpl, url_buf, cmd_id, http_req_out);
+}
+
+int store_send_get_cart(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out)
+{
+    return store_send_empty_body(svc_type, http_tmpl, url_buf, cmd_id, http_req_out);
 }
 
 int store_send_purchase(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
                         const char *password, int quick_purchase, int auto_deposit)
 {
-    int pass;
-    for (pass = 0; pass < 2; pass++) {
-        StoreFormWriter fw = { pass, *http_req_out, 0, 0 };
-        int ret = 0;
+    u64 content_len = 0ULL;
+    u32 pass;
 
-        if (password && password[0] != '\0')
-            ret = fw_encoded_str(&fw, SFKEY_PASSWORD, password);
-        if (ret >= 0) ret = fw_bool(&fw, SFKEY_QUICK_PURCHASE, quick_purchase);
-        if (ret >= 0) ret = fw_bool(&fw, SFKEY_AUTO_DEPOSIT_FLAG, auto_deposit);
+    for (pass = 0; pass < 2U; pass++) {
+        int ret = store_build_purchase(pass != 0U, *http_req_out, &content_len, cmd_id,
+                                       password, quick_purchase, auto_deposit);
         if (ret < 0)
             return ret;
-        if (pass == 0) {
-            ret = store_open_http_req(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, fw.total_len);
+        if (pass == 0U) {
+            ret = store_open_http(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, content_len);
             if (ret < 0)
                 return ret;
         }
@@ -502,20 +439,35 @@ int store_send_purchase(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, 
     return 0;
 }
 
-int store_send_payment_type(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
-                            u32 pay_type)
+int store_send_get_cc(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out)
 {
-    int pass;
-    if (pay_type != 0)
-        return STORE_ERR_INVALID_PAYMENT;
+    return store_send_empty_body(svc_type, http_tmpl, url_buf, cmd_id, http_req_out);
+}
 
-    for (pass = 0; pass < 2; pass++) {
-        StoreFormWriter fw = { pass, *http_req_out, 0, 0 };
-        int ret = fw_str(&fw, SFKEY_PAYMENT_TYPE, "CC");
+int store_send_get_prov(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out)
+{
+    return store_send_empty_body(svc_type, http_tmpl, url_buf, cmd_id, http_req_out);
+}
+
+static const char *g_payment_types[1] = { "CC" };
+
+int store_send_payment_type(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id,
+                            int *http_req_out, u32 pay_type)
+{
+    u64 content_len = 0ULL;
+    u32 pass;
+
+    for (pass = 0; pass < 2U; pass++) {
+        int ret;
+        if (pay_type != 0U)
+            return STORE_ERR_INVALID_PAYMENT;
+        ret = store_emit_str_field(pass != 0U, *http_req_out, SFKEY_PAYMENT_TYPE,
+                                   g_payment_types[pay_type], 0);
         if (ret < 0)
             return ret;
-        if (pass == 0) {
-            ret = store_open_http_req(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, fw.total_len);
+        if (pass == 0U) {
+            content_len = (u64)(s64)ret;
+            ret = store_open_http(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, content_len);
             if (ret < 0)
                 return ret;
         }
@@ -527,82 +479,41 @@ int store_send_get_drm(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, i
                        const char * const *sku_ids, u32 sku_cnt, const char *svc_id,
                        const char *reward_ids, u32 start_pos, u32 max_cnt, u32 drm_type)
 {
-    int pass;
-    for (pass = 0; pass < 2; pass++) {
-        StoreFormWriter fw = { pass, *http_req_out, 0, 0 };
-        int ret = 0;
+    u64 content_len = 0ULL;
+    u32 pass;
 
-        if (sku_ids && sku_cnt != 0)
-            ret = fw_str_list(&fw, SFKEY_SKU_IDS, sku_ids, sku_cnt, 0);
-        if (ret >= 0 && svc_id && svc_id[0] != '\0')
-            ret = fw_encoded_str(&fw, SFKEY_SERVICE_ID, svc_id);
-        if (ret >= 0 && reward_ids)
-            ret = fw_encoded_str(&fw, SFKEY_REWARD_IDS, reward_ids);
-        if (ret >= 0) ret = fw_uint(&fw, SFKEY_START_POSITION, start_pos);
-        if (ret >= 0) ret = fw_uint(&fw, SFKEY_MAX_COUNT, max_cnt);
-        if (ret >= 0) ret = fw_uint(&fw, SFKEY_DRM_CONTENT_TYPE, drm_type);
+    for (pass = 0; pass < 2U; pass++) {
+        int ret = store_build_get_drm(pass != 0U, *http_req_out, &content_len,
+                                      sku_ids, sku_cnt, svc_id, reward_ids,
+                                      start_pos, max_cnt, drm_type);
         if (ret < 0)
             return ret;
-        if (pass == 0) {
-            ret = store_open_http_req(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, fw.total_len);
+        if (pass == 0U) {
+            ret = store_open_http(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, content_len);
             if (ret < 0)
                 return ret;
         }
     }
     return 0;
+}
+
+int store_send_get_bill(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out)
+{
+    return store_send_empty_body(svc_type, http_tmpl, url_buf, cmd_id, http_req_out);
 }
 
 int store_send_billing(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
-                       const StoreBillingInfo *info)
+                       const StoreBillingInfo *billing)
 {
-    static const char * const cc_pfx[1]   = { "creditCard." };
-    static const char * const addr_pfx[2] = { "creditCard.", "address." };
-    static const char * const street_pfx[2] = { "creditCard.", "address" };
-    int pass;
+    u64 content_len = 0ULL;
+    u32 pass;
 
-    for (pass = 0; pass < 2; pass++) {
-        StoreFormWriter fw = { pass, *http_req_out, 0, 0 };
-        int ret = 0;
-
-        if (info->payment_method_id && info->payment_method_id_len)
-            ret = fw_prefixed_encoded(&fw, cc_pfx, 1, SFKEY_PAYMENT_METHOD_ID,
-                                      info->payment_method_id, info->payment_method_id_len);
-        if (ret >= 0 && info->holder_name && info->holder_name_len)
-            ret = fw_prefixed_encoded(&fw, cc_pfx, 1, SFKEY_HOLDER_NAME,
-                                      info->holder_name, info->holder_name_len);
-        if (ret >= 0 && info->card_number && info->card_number[0] != '\0')
-            ret = fw_prefixed_encoded(&fw, cc_pfx, 1, SFKEY_CARD_NUMBER,
-                                      info->card_number, sceNet_lib_D8722983(info->card_number));
-        if (ret >= 0 && info->start_year != 0)
-            ret = fw_prefixed_uint(&fw, cc_pfx, 1, SFKEY_START_YEAR, info->start_year);
-        if (ret >= 0 && info->start_month != 0)
-            ret = fw_prefixed_uint(&fw, cc_pfx, 1, SFKEY_START_MONTH, info->start_month);
-        if (ret >= 0 && info->expire_year != 0)
-            ret = fw_prefixed_uint(&fw, cc_pfx, 1, SFKEY_EXPIRE_YEAR, info->expire_year);
-        if (ret >= 0 && info->expire_month != 0)
-            ret = fw_prefixed_uint(&fw, cc_pfx, 1, SFKEY_EXPIRE_MONTH, info->expire_month);
-        if (ret >= 0 && info->security_code && info->security_code[0] != '\0')
-            ret = fw_prefixed_encoded(&fw, cc_pfx, 1, SFKEY_SECURITY_CODE,
-                                      info->security_code, sceNet_lib_D8722983(info->security_code));
-        if (ret >= 0 && info->issue_number && info->issue_number[0] != '\0')
-            ret = fw_prefixed_encoded(&fw, cc_pfx, 1, SFKEY_ISSUE_NUMBER,
-                                      info->issue_number, sceNet_lib_D8722983(info->issue_number));
-        if (ret >= 0 && info->street1 && info->street1_len)
-            ret = fw_prefixed_encoded(&fw, street_pfx, 2, SFKEY_1, info->street1, info->street1_len);
-        if (ret >= 0 && info->street2 && info->street2_len)
-            ret = fw_prefixed_encoded(&fw, street_pfx, 2, SFKEY_2, info->street2, info->street2_len);
-        if (ret >= 0 && info->street3 && info->street3_len)
-            ret = fw_prefixed_encoded(&fw, street_pfx, 2, SFKEY_3, info->street3, info->street3_len);
-        if (ret >= 0 && info->city && info->city_len)
-            ret = fw_prefixed_encoded(&fw, addr_pfx, 2, SFKEY_CITY, info->city, info->city_len);
-        if (ret >= 0 && info->province && info->province_len)
-            ret = fw_prefixed_encoded(&fw, addr_pfx, 2, SFKEY_PROVINCE, info->province, info->province_len);
-        if (ret >= 0 && info->postal_code && info->postal_code_len)
-            ret = fw_prefixed_encoded(&fw, addr_pfx, 2, SFKEY_POSTAL_CODE, info->postal_code, info->postal_code_len);
+    for (pass = 0; pass < 2U; pass++) {
+        int ret = store_build_billing(pass != 0U, *http_req_out, &content_len, 0, billing, 0, 0);
         if (ret < 0)
             return ret;
-        if (pass == 0) {
-            ret = store_open_http_req(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, fw.total_len);
+        if (pass == 0U) {
+            ret = store_open_http(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, content_len);
             if (ret < 0)
                 return ret;
         }
@@ -610,17 +521,29 @@ int store_send_billing(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, i
     return 0;
 }
 
-int store_send_postal_code(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
-                           const char *postal_code)
+int store_send_postal_code(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id,
+                           int *http_req_out, const char *postal_code)
 {
-    int pass;
-    for (pass = 0; pass < 2; pass++) {
-        StoreFormWriter fw = { pass, *http_req_out, 0, 0 };
-        int ret = fw_encoded_str(&fw, SFKEY_POSTAL_CODE, postal_code);
+    char enc[784];
+    u64 content_len = 0ULL;
+    u32 pass;
+
+    for (pass = 0; pass < 2U; pass++) {
+        int http_req = *http_req_out;
+        int ret = sceNpCommerce2_66EC0829(enc, 769U, postal_code,
+                                          sceNet_lib_D8722983(postal_code), 0);
+        if (ret >= 0) {
+            ret = store_emit_str_field(pass != 0U, http_req, SFKEY_POSTAL_CODE, enc, 0);
+            if (ret >= 0) {
+                if (pass == 0U)
+                    content_len = (u64)(s64)ret;
+                ret = 0;
+            }
+        }
         if (ret < 0)
             return ret;
-        if (pass == 0) {
-            ret = store_open_http_req(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, fw.total_len);
+        if (pass == 0U) {
+            ret = store_open_http(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, content_len);
             if (ret < 0)
                 return ret;
         }
@@ -628,17 +551,24 @@ int store_send_postal_code(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_i
     return 0;
 }
 
-int store_send_topup_amount(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
-                            u32 amount)
+int store_send_get_wal(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out)
 {
-    int pass;
-    for (pass = 0; pass < 2; pass++) {
-        StoreFormWriter fw = { pass, *http_req_out, 0, 0 };
-        int ret = fw_uint(&fw, SFKEY_TOPUP_AMOUNT, amount);
+    return store_send_empty_body(svc_type, http_tmpl, url_buf, cmd_id, http_req_out);
+}
+
+int store_send_topup_amount(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id,
+                            int *http_req_out, u32 amount)
+{
+    u64 content_len = 0ULL;
+    u32 pass;
+
+    for (pass = 0; pass < 2U; pass++) {
+        int ret = store_emit_uint_field(pass != 0U, *http_req_out, SFKEY_TOPUP_AMOUNT, amount, 0);
         if (ret < 0)
             return ret;
-        if (pass == 0) {
-            ret = store_open_http_req(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, fw.total_len);
+        if (pass == 0U) {
+            content_len = (u64)(s64)ret;
+            ret = store_open_http(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, content_len);
             if (ret < 0)
                 return ret;
         }
@@ -649,15 +579,16 @@ int store_send_topup_amount(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_
 int store_send_edy_result(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
                           const char *receipt_id, int is_ok)
 {
-    int pass;
-    for (pass = 0; pass < 2; pass++) {
-        StoreFormWriter fw = { pass, *http_req_out, 0, 0 };
-        int ret = fw_encoded_str(&fw, SFKEY_EDY_RECEIPT_ID, receipt_id);
-        if (ret >= 0) ret = fw_str(&fw, SFKEY_RESULT_EDY_TOPUP, is_ok == 1 ? "OK" : "NG");
+    u64 content_len = 0ULL;
+    u32 pass;
+
+    for (pass = 0; pass < 2U; pass++) {
+        int ret = store_build_edy_result(pass != 0U, *http_req_out, &content_len,
+                                         receipt_id, is_ok);
         if (ret < 0)
             return ret;
-        if (pass == 0) {
-            ret = store_open_http_req(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, fw.total_len);
+        if (pass == 0U) {
+            ret = store_open_http(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, content_len);
             if (ret < 0)
                 return ret;
         }
@@ -666,23 +597,19 @@ int store_send_edy_result(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id
 }
 
 int store_send_voucher(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
-                       const char *code1, const char *code2, const char *code3, int auto_deposit)
+                       const char *code_a, const char *code_b, const char *code_c,
+                       int auto_deposit)
 {
-    static const char * const vchr_pfx[1] = { "voucherCode" };
-    int pass;
+    u64 content_len = 0ULL;
+    u32 pass;
 
-    for (pass = 0; pass < 2; pass++) {
-        StoreFormWriter fw = { pass, *http_req_out, 0, 0 };
-        int ret;
-
-        ret = fw_prefixed_encoded(&fw, vchr_pfx, 1, SFKEY_1, code1, sceNet_lib_D8722983(code1));
-        if (ret >= 0) ret = fw_prefixed_encoded(&fw, vchr_pfx, 1, SFKEY_2, code2, sceNet_lib_D8722983(code2));
-        if (ret >= 0) ret = fw_prefixed_encoded(&fw, vchr_pfx, 1, SFKEY_3, code3, sceNet_lib_D8722983(code3));
-        if (ret >= 0) ret = fw_bool(&fw, SFKEY_AUTO_DEPOSIT_FLAG, auto_deposit);
+    for (pass = 0; pass < 2U; pass++) {
+        int ret = store_build_voucher(pass != 0U, *http_req_out, &content_len,
+                                      code_a, code_b, code_c, auto_deposit);
         if (ret < 0)
             return ret;
-        if (pass == 0) {
-            ret = store_open_http_req(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, fw.total_len);
+        if (pass == 0U) {
+            ret = store_open_http(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, content_len);
             if (ret < 0)
                 return ret;
         }
@@ -693,20 +620,16 @@ int store_send_voucher(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, i
 int store_send_event_log(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
                          u32 event_type, const char *id_str, const char *url_str)
 {
-    int pass;
-    for (pass = 0; pass < 2; pass++) {
-        StoreFormWriter fw = { pass, *http_req_out, 0, 0 };
-        int ret;
+    u64 content_len = 0ULL;
+    u32 pass;
 
-        ret = fw_uint(&fw, SFKEY_STORE_TYPE, svc_type);
-        if (ret >= 0) ret = fw_uint(&fw, SFKEY_EVENT_TYPE, event_type);
-        if (ret >= 0) ret = fw_str(&fw, SFKEY_ID, id_str);
-        if (ret >= 0 && url_str && url_str[0] != '\0')
-            ret = fw_str(&fw, SFKEY_URL, url_str);
+    for (pass = 0; pass < 2U; pass++) {
+        int ret = store_build_event_log(pass != 0U, *http_req_out, &content_len, svc_type,
+                                        event_type, id_str, url_str);
         if (ret < 0)
             return ret;
-        if (pass == 0) {
-            ret = store_open_http_req(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, fw.total_len);
+        if (pass == 0U) {
+            ret = store_open_http(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, content_len);
             if (ret < 0)
                 return ret;
         }
@@ -714,74 +637,46 @@ int store_send_event_log(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id,
     return 0;
 }
 
-int store_send_search_prod(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
-                           u32 start_pos, u32 max_cnt, const StoreSearchQuery *queries, u32 query_cnt)
+int store_send_search_prod(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id,
+                           int *http_req_out, u32 start_pos, u32 max_cnt,
+                           const StoreSearchQuery *queries, u32 query_cnt, u32 sort_method)
 {
-    const char * const *key_table;
-    int pass;
+    u64 content_len = 0ULL;
+    u32 pass;
 
-    if (svc_type == 1 || svc_type == 3)
-        key_table = g_game_query_keys;
-    else if (svc_type == 4)
-        key_table = g_comic_query_keys;
-    else
-        key_table = g_video_query_keys;
-
-    for (pass = 0; pass < 2; pass++) {
-        StoreFormWriter fw = { pass, *http_req_out, 0, 0 };
-        int ret;
-
-        ret = fw_uint(&fw, SFKEY_STORE_TYPE, svc_type);
-        if (ret >= 0) ret = fw_uint(&fw, SFKEY_START_POSITION, start_pos);
-        if (ret >= 0) ret = fw_uint(&fw, SFKEY_MAX_COUNT, max_cnt);
-        if (ret >= 0) ret = fw_query_keys(&fw, SFKEY_QUERY_KEY, queries, key_table, query_cnt);
-        if (ret >= 0) ret = fw_query_vals(&fw, SFKEY_QUERY_VALUE, queries, query_cnt);
+    for (pass = 0; pass < 2U; pass++) {
+        int ret = store_build_search_prod(pass != 0U, *http_req_out, &content_len, svc_type,
+                                          start_pos, max_cnt, queries, query_cnt, sort_method);
         if (ret < 0)
             return ret;
-        if (pass == 0) {
-            ret = store_open_http_req(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, fw.total_len);
+        if (pass == 0U) {
+            ret = store_open_http(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, content_len);
             if (ret < 0)
                 return ret;
         }
     }
     return 0;
+}
+
+int store_send_get_epw(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out)
+{
+    return store_send_empty_body(svc_type, http_tmpl, url_buf, cmd_id, http_req_out);
 }
 
 int store_send_guest_sess(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
                           u32 ver, const char *country, const char *lang,
                           u32 yob, u32 mob, u32 dob, const char *console_id)
 {
-    static const char * const acct_pfx[1] = { "account." };
-    char upper_cc[16];
-    char lower_lang[16];
-    u32 idx, len;
-    int pass;
+    u64 content_len = 0ULL;
+    u32 pass;
 
-    len = sceNet_lib_D8722983(country);
-    for (idx = 0; idx < len && idx < 15; idx++)
-        upper_cc[idx] = (char)sceNet_lib_C13C9307((u8)country[idx]);
-    upper_cc[idx] = '\0';
-
-    len = sceNet_lib_D8722983(lang);
-    for (idx = 0; idx < len && idx < 15; idx++)
-        lower_lang[idx] = (char)sceNet_lib_96EF9DA1((u8)lang[idx]);
-    lower_lang[idx] = '\0';
-
-    for (pass = 0; pass < 2; pass++) {
-        StoreFormWriter fw = { pass, *http_req_out, 0, 0 };
-        int ret;
-
-        ret = fw_uint(&fw, SFKEY_VERSION, ver);
-        if (ret >= 0) ret = fw_prefixed_val(&fw, acct_pfx, 1, SFKEY_COUNTRY, upper_cc, sceNet_lib_D8722983(upper_cc));
-        if (ret >= 0) ret = fw_prefixed_val(&fw, acct_pfx, 1, SFKEY_LANGUAGE, lower_lang, sceNet_lib_D8722983(lower_lang));
-        if (ret >= 0) ret = fw_prefixed_uint(&fw, acct_pfx, 1, SFKEY_YOB, yob);
-        if (ret >= 0) ret = fw_prefixed_uint(&fw, acct_pfx, 1, SFKEY_MOB, mob);
-        if (ret >= 0) ret = fw_prefixed_uint(&fw, acct_pfx, 1, SFKEY_DOB, dob);
-        if (ret >= 0) ret = fw_str(&fw, SFKEY_CONSOLE_ID, console_id);
+    for (pass = 0; pass < 2U; pass++) {
+        int ret = store_build_guest_sess(pass != 0U, *http_req_out, &content_len, ver,
+                                         country, lang, yob, mob, dob, console_id);
         if (ret < 0)
             return ret;
-        if (pass == 0) {
-            ret = store_open_http_req(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, fw.total_len);
+        if (pass == 0U) {
+            ret = store_open_http(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, content_len);
             if (ret < 0)
                 return ret;
         }
@@ -792,17 +687,16 @@ int store_send_guest_sess(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id
 int store_send_prod_list(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
                          const char * const *prod_ids, u32 prod_cnt)
 {
-    int pass;
-    for (pass = 0; pass < 2; pass++) {
-        StoreFormWriter fw = { pass, *http_req_out, 0, 0 };
-        int ret;
+    u64 content_len = 0ULL;
+    u32 pass;
 
-        ret = fw_uint(&fw, SFKEY_STORE_TYPE, svc_type);
-        if (ret >= 0) ret = fw_str_list(&fw, SFKEY_PRODUCT_IDS, prod_ids, prod_cnt, 0);
+    for (pass = 0; pass < 2U; pass++) {
+        int ret = store_build_prod_list(pass != 0U, *http_req_out, &content_len, svc_type,
+                                        prod_ids, prod_cnt);
         if (ret < 0)
             return ret;
-        if (pass == 0) {
-            ret = store_open_http_req(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, fw.total_len);
+        if (pass == 0U) {
+            ret = store_open_http(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, content_len);
             if (ret < 0)
                 return ret;
         }
@@ -810,25 +704,20 @@ int store_send_prod_list(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id,
     return 0;
 }
 
-int store_send_recom_prods(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
-                           const char * const *prod_ids, u32 prod_cnt,
-                           u32 start_pos, u32 max_cnt, u32 recom_type)
+int store_send_recom_prods(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id,
+                            int *http_req_out, const char * const *prod_ids, u32 prod_cnt,
+                            u32 start_pos, u32 max_cnt, u32 recom_type)
 {
-    int pass;
-    for (pass = 0; pass < 2; pass++) {
-        StoreFormWriter fw = { pass, *http_req_out, 0, 0 };
-        int ret;
+    u64 content_len = 0ULL;
+    u32 pass;
 
-        ret = fw_uint(&fw, SFKEY_STORE_TYPE, svc_type);
-        if (ret >= 0 && prod_ids && prod_cnt != 0)
-            ret = fw_str_list(&fw, SFKEY_PRODUCT_IDS, prod_ids, prod_cnt, 0);
-        if (ret >= 0) ret = fw_uint(&fw, SFKEY_START_POSITION, start_pos);
-        if (ret >= 0) ret = fw_uint(&fw, SFKEY_MAX_COUNT, max_cnt);
-        if (ret >= 0) ret = fw_uint(&fw, SFKEY_RECOM_TYPE, recom_type);
+    for (pass = 0; pass < 2U; pass++) {
+        int ret = store_build_recom_prods(pass != 0U, *http_req_out, &content_len, svc_type,
+                                          prod_ids, prod_cnt, start_pos, max_cnt, recom_type);
         if (ret < 0)
             return ret;
-        if (pass == 0) {
-            ret = store_open_http_req(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, fw.total_len);
+        if (pass == 0U) {
+            ret = store_open_http(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, content_len);
             if (ret < 0)
                 return ret;
         }
@@ -836,22 +725,19 @@ int store_send_recom_prods(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_i
     return 0;
 }
 
-int store_send_get_prod_ids(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
-                            const char *content_id, const char *file_id)
+int store_send_get_prod_ids(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id,
+                            int *http_req_out, const char *content_id, const char *file_id)
 {
-    int pass;
-    for (pass = 0; pass < 2; pass++) {
-        StoreFormWriter fw = { pass, *http_req_out, 0, 0 };
-        int ret;
+    u64 content_len = 0ULL;
+    u32 pass;
 
-        if (content_id)
-            ret = fw_encoded_str(&fw, SFKEY_CONTENT_ID, content_id);
-        else
-            ret = fw_encoded_str(&fw, SFKEY_FILE_ID, file_id);
+    for (pass = 0; pass < 2U; pass++) {
+        int ret = store_build_prod_ids(pass != 0U, *http_req_out, &content_len,
+                                       content_id, file_id);
         if (ret < 0)
             return ret;
-        if (pass == 0) {
-            ret = store_open_http_req(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, fw.total_len);
+        if (pass == 0U) {
+            ret = store_open_http(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, content_len);
             if (ret < 0)
                 return ret;
         }
@@ -860,97 +746,1032 @@ int store_send_get_prod_ids(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_
 }
 
 /* =========================================================================
- * SDK-checked high-level wrappers (with NP debug ID prefix logging)
+ * Out-of-line field emitters (0x0071A4, 0x007294)
  * ========================================================================= */
 
-static void store_log_id_prefix(const char *tag, const char * const *ids, u32 count)
+static int store_emit_str_field(int write_pass, int http_req, u32 key_id,
+                                const char *val, int need_amp)
 {
-    char snippet[32];
-    u32 idx;
+    return store_inline_str(write_pass, http_req, key_id, val, need_amp);
+}
 
-    if (!sceNp_2E4769C3() || !tag || !ids || count == 0)
-        return;
+static int store_emit_uint_field(int write_pass, int http_req, u32 key_id,
+                                 u32 val, int need_amp)
+{
+    return store_inline_uint(write_pass, http_req, key_id, val, need_amp);
+}
 
-    for (idx = 0; idx < count; idx++) {
-        const char *id = ids[idx];
-        const char *p = id;
-        u32 len;
+/* =========================================================================
+ * Two-pass form body builders (0x007328 .. 0x00A4D4)
+ * ========================================================================= */
 
-        while (*p && *p != '-')
-            p++;
-        if (*p)
-            p++;
-        while (*p && *p != '-')
-            p++;
-        len = (u32)(p - id);
-        if (len > 31)
-            len = 31;
-        sceKernelMemcpy(snippet, id, len);
-        snippet[len] = '\0';
+static int store_build_get_cat(int write_pass, int http_req, u64 *len_out, u32 svc_type,
+                               const char *cat_id, const char * const *reward_id, u32 has_reward,
+                               u32 start_pos, u32 max_cnt)
+{
+    char enc[784];
+    s64 total = 0;
+    int ret;
 
-        if (count < 2) {
-            KprintfForUser("%s: %s\n", tag, snippet);
-        } else if (idx == 0) {
-            KprintfForUser("%s: %s", tag, snippet);
-        } else {
-            KprintfForUser(", %s", snippet);
+    if (reward_id && has_reward)
+        svc_type = 1U;
+
+    sceNet_lib_CF705E46(enc, "%u", svc_type);
+    ret = store_inline_str(write_pass, http_req, SFKEY_STORE_TYPE, enc, 0);
+    if (ret < 0)
+        return ret;
+    total = (s64)ret;
+
+    ret = sceNpCommerce2_66EC0829(enc, 769U, cat_id, sceNet_lib_D8722983(cat_id), 0);
+    if (ret < 0)
+        return ret;
+    ret = store_inline_str(write_pass, http_req, SFKEY_CATEGORY_ID, enc, 1);
+    if (ret < 0)
+        return ret;
+    total += (s64)ret;
+
+    if (reward_id && has_reward) {
+        ret = sceNpCommerce2_66EC0829(enc, 769U, *reward_id, sceNet_lib_D8722983(*reward_id), 0);
+        if (ret < 0)
+            return ret;
+        ret = store_inline_str(write_pass, http_req, SFKEY_REWARD_ID, enc, 1);
+        if (ret < 0)
+            return ret;
+        total += (s64)ret;
+    }
+
+    ret = store_inline_uint(write_pass, http_req, SFKEY_START_POSITION, start_pos, 1);
+    if (ret < 0)
+        return ret;
+    total += (s64)ret;
+
+    ret = store_inline_uint(write_pass, http_req, SFKEY_MAX_COUNT, max_cnt, 1);
+    if (ret < 0)
+        return ret;
+    total += (s64)ret;
+
+    if (write_pass != 1)
+        *len_out = (u64)total;
+    return 0;
+}
+
+static int store_build_get_prod(int write_pass, int http_req, u64 *len_out, u32 svc_type,
+                                const char *cat_id, const char *prod_id,
+                                const char * const *reward_id, u32 has_reward)
+{
+    char enc[784];
+    s64 total = 0;
+    int ret;
+
+    if (reward_id && has_reward)
+        svc_type = 1U;
+
+    sceNet_lib_CF705E46(enc, "%u", svc_type);
+    ret = store_inline_str(write_pass, http_req, SFKEY_STORE_TYPE, enc, 0);
+    if (ret < 0)
+        return ret;
+    total = (s64)ret;
+
+    ret = sceNpCommerce2_66EC0829(enc, 769U, prod_id, sceNet_lib_D8722983(prod_id), 0);
+    if (ret < 0)
+        return ret;
+    ret = store_inline_str(write_pass, http_req, SFKEY_PRODUCT_ID, enc, 1);
+    if (ret < 0)
+        return ret;
+    total += (s64)ret;
+
+    if (cat_id && cat_id[0] != '\0') {
+        ret = sceNpCommerce2_66EC0829(enc, 769U, cat_id, sceNet_lib_D8722983(cat_id), 0);
+        if (ret < 0)
+            return ret;
+        ret = store_inline_str(write_pass, http_req, SFKEY_CATEGORY_ID, enc, 1);
+        if (ret < 0)
+            return ret;
+        total += (s64)ret;
+    }
+
+    if (reward_id && has_reward) {
+        ret = sceNpCommerce2_66EC0829(enc, 769U, *reward_id, sceNet_lib_D8722983(*reward_id), 0);
+        if (ret < 0)
+            return ret;
+        ret = store_inline_str(write_pass, http_req, SFKEY_REWARD_ID, enc, 1);
+        if (ret < 0)
+            return ret;
+        total += (s64)ret;
+    }
+
+    if (write_pass != 1)
+        *len_out = (u64)total;
+    return 0;
+}
+
+static int store_build_add_cart(int write_pass, int http_req, u64 *len_out, u32 svc_type,
+                                const char * const *sku_ids, u32 sku_cnt,
+                                const char * const *reward_ids, u32 reward_cnt)
+{
+    char enc[784];
+    s64 total = 0;
+    int ret;
+
+    sceNet_lib_CF705E46(enc, "%u", svc_type);
+    ret = store_inline_str(write_pass, http_req, SFKEY_STORE_TYPE, enc, 0);
+    if (ret < 0)
+        return ret;
+    total = (s64)ret;
+
+    if (write_pass == 1)
+        ret = store_write_str_list(http_req, SFKEY_SKU_ID, sku_ids, sku_cnt, enc, 769U, 0, 1);
+    else
+        ret = store_measure_str_list(SFKEY_SKU_ID, sku_ids, sku_cnt, enc, 769U, 0, 1);
+    if (ret < 0)
+        return ret;
+    total += (s64)ret;
+
+    if (reward_ids && reward_cnt != 0U && sku_cnt == reward_cnt) {
+        u32 idx;
+        for (idx = 0; idx < reward_cnt; idx++) {
+            if (reward_ids[idx] && reward_ids[idx][0] != '\0')
+                break;
+        }
+        if (idx != reward_cnt) {
+            if (write_pass == 1) {
+                ret = store_write_str_list(http_req, SFKEY_REWARD_IDS, reward_ids, reward_cnt,
+                                           enc, 769U, 0, 1);
+            } else {
+                ret = store_measure_str_list(SFKEY_REWARD_IDS, reward_ids, reward_cnt,
+                                             enc, 769U, 0, 1);
+            }
+            if (ret < 0)
+                return ret;
+            total += (s64)ret;
         }
     }
-    if (count >= 2)
-        KprintfForUser("\n");
+
+    if (write_pass != 1)
+        *len_out = (u64)total;
+    return 0;
 }
 
-int store_checked_recv(u32 req_id, u8 *buf, u32 buf_size, u32 *recv_size_out, int strict_size)
+static int store_build_purchase(int write_pass, int http_req, u64 *len_out, u16 cmd_id,
+                                const char *password, int quick_purchase, int auto_deposit)
 {
-    int sdk_ver = sceKernelGetCompiledSdkVersion();
-    if (sdk_ver > STORE_SDK_VER_550 && _sceKernelCheckThreadStack() < STORE_MIN_STACK_LARGE)
-        return STORE_ERR_STACK_OVERFLOW;
-    if (!g_store_init)
-        return STORE_ERR_NOT_INITIALIZED;
-    if (sdk_ver > STORE_SDK_VER_550 && strict_size == 1 && buf_size < 0x40000U)
-        return STORE_ERR_RESP_BUF_LIMIT;
-    return store_recv_response(req_id, buf, buf_size, recv_size_out);
+    char enc[784];
+    s64 total = 0;
+    int has_field = 0;
+    int ret;
+    const char *bool_str;
+
+    (void)cmd_id;
+
+    if (password && password[0] != '\0') {
+        ret = sceNpCommerce2_66EC0829(enc, 769U, password, sceNet_lib_D8722983(password), 0);
+        if (ret < 0)
+            return ret;
+        ret = store_inline_str(write_pass, http_req, SFKEY_PASSWORD, enc, 0);
+        if (ret < 0)
+            return ret;
+        has_field = 1;
+        total = (s64)ret;
+    }
+
+    bool_str = (quick_purchase == 1) ? "true" : "false";
+    ret = store_inline_str(write_pass, http_req, SFKEY_QUICK_PURCHASE, bool_str, has_field);
+    if (ret < 0)
+        return ret;
+    total += (s64)ret;
+
+    bool_str = (auto_deposit == 1) ? "true" : "false";
+    ret = store_inline_str(write_pass, http_req, SFKEY_AUTO_DEPOSIT_FLAG, bool_str, 1);
+    if (ret < 0)
+        return ret;
+    total += (s64)ret;
+
+    if (write_pass != 1)
+        *len_out = (u64)total;
+    return 0;
 }
 
-int store_checked_get_cat(u32 req_id, const char *cat_id, const char * const *reward_id,
-                          u32 has_reward, u32 start_pos, u32 max_cnt, int strict_check)
+static int store_build_get_drm(int write_pass, int http_req, u64 *len_out,
+                               const char * const *sku_ids, u32 sku_cnt, const char *svc_id,
+                               const char *reward_ids, u32 start_pos, u32 max_cnt, u32 drm_type)
 {
-    int sdk_ver = sceKernelGetCompiledSdkVersion();
-    if (sdk_ver > STORE_SDK_VER_550 && _sceKernelCheckThreadStack() < STORE_MIN_STACK_LARGE)
-        return STORE_ERR_STACK_OVERFLOW;
-    if (!g_store_init)
-        return STORE_ERR_NOT_INITIALIZED;
-    if (!cat_id || (strict_check == 1 && sdk_ver > STORE_SDK_VER_550 && max_cnt >= 61))
-        return STORE_ERR_INVALID_ARG;
-    if (strict_check == 1)
-        store_log_id_prefix("GetCategoryContents", &cat_id, 1);
-    return store_start_get_cat(req_id, cat_id, reward_id, has_reward, start_pos, max_cnt);
+    char enc[784];
+    s64 total = 0;
+    int has_field = 0;
+    int ret;
+
+    if (sku_ids && sku_cnt != 0U) {
+        if (write_pass == 1)
+            ret = store_write_str_list(http_req, SFKEY_SKU_IDS, sku_ids, sku_cnt, enc, 769U, 0, 0);
+        else
+            ret = store_measure_str_list(SFKEY_SKU_IDS, sku_ids, sku_cnt, enc, 769U, 0, 0);
+        if (ret < 0)
+            return ret;
+        has_field = 1;
+        total = (s64)ret;
+    }
+
+    if (svc_id && svc_id[0] != '\0') {
+        ret = sceNpCommerce2_66EC0829(enc, 769U, svc_id, sceNet_lib_D8722983(svc_id), 0);
+        if (ret < 0)
+            return ret;
+        ret = store_inline_str(write_pass, http_req, SFKEY_SERVICE_ID, enc, has_field);
+        if (ret < 0)
+            return ret;
+        total += (s64)ret;
+        has_field = 1;
+    }
+
+    if (reward_ids) {
+        ret = sceNpCommerce2_66EC0829(enc, 769U, reward_ids, sceNet_lib_D8722983(reward_ids), 0);
+        if (ret < 0)
+            return ret;
+        ret = store_inline_str(write_pass, http_req, SFKEY_REWARD_IDS, enc, has_field);
+        if (ret < 0)
+            return ret;
+        total += (s64)ret;
+        has_field = 1;
+    }
+
+    ret = store_inline_uint(write_pass, http_req, SFKEY_START_POSITION, start_pos, has_field);
+    if (ret < 0)
+        return ret;
+    total += (s64)ret;
+
+    ret = store_inline_uint(write_pass, http_req, SFKEY_MAX_COUNT, max_cnt, 1);
+    if (ret < 0)
+        return ret;
+    total += (s64)ret;
+
+    ret = store_inline_uint(write_pass, http_req, SFKEY_DRM_CONTENT_TYPE, drm_type, 1);
+    if (ret < 0)
+        return ret;
+    total += (s64)ret;
+
+    if (write_pass != 1)
+        *len_out = (u64)total;
+    return 0;
 }
 
-int store_checked_get_prod(u32 req_id, const char *cat_id, const char *prod_id,
-                           const char * const *reward_id, u32 has_reward, int strict_check)
+static int store_build_billing(int write_pass, int http_req, u64 *len_out, int is_account,
+                               const StoreBillingInfo *billing, int with_save, int save_flag)
 {
-    if (sceKernelGetCompiledSdkVersion() > STORE_SDK_VER_550 &&
-        _sceKernelCheckThreadStack() < STORE_MIN_STACK_LARGE)
-        return STORE_ERR_STACK_OVERFLOW;
-    if (!g_store_init)
-        return STORE_ERR_NOT_INITIALIZED;
-    if (!prod_id)
-        return STORE_ERR_INVALID_ARG;
-    if (strict_check == 1)
-        store_log_id_prefix("GetProductInfo", &prod_id, 1);
-    return store_start_get_prod(req_id, cat_id, prod_id, reward_id, has_reward);
+    char enc[784];
+    const char *prefixes[8];
+    char num_sy[16];
+    char num_sm[16];
+    char num_ey[16];
+    char num_em[16];
+    s64 total = 0;
+    int has_field = 0;
+    int ret;
+
+    sceKernelMemset(prefixes, 0, sizeof(prefixes));
+    if (is_account == 0)
+        prefixes[0] = "creditCard.";
+    else if (is_account == 1)
+        prefixes[0] = "account.";
+    prefixes[1] = "address.";
+    prefixes[2] = "address";
+
+    if (billing->payment_method_id && billing->payment_method_id[0] != '\0' &&
+        billing->payment_method_id_len != 0U) {
+        u32 plen = billing->payment_method_id_len;
+        if (billing->payment_method_id[plen - 1U] == '\0')
+            plen--;
+        ret = store_inline_prefixed(write_pass, http_req, prefixes, 1U,
+                                    SFKEY_PAYMENT_METHOD_ID, billing->payment_method_id,
+                                    plen, 0);
+        if (ret < 0)
+            return ret;
+        total = (s64)ret;
+        has_field = 1;
+    }
+
+    if (billing->holder_name && billing->holder_name[0] != '\0' &&
+        billing->holder_name_len != 0U) {
+        u32 elen;
+        ret = sceNpCommerce2_66EC0829(enc, 769U, billing->holder_name,
+                                      billing->holder_name_len, 0);
+        if (ret < 0)
+            return ret;
+        elen = sceNet_lib_D8722983(enc);
+        ret = store_inline_prefixed(write_pass, http_req, prefixes, 1U,
+                                    SFKEY_HOLDER_NAME, enc, elen, has_field);
+        if (ret < 0)
+            return ret;
+        total += (s64)ret;
+        has_field = 1;
+    }
+
+    if (billing->card_number && billing->card_number[0] != '\0') {
+        u32 clen = sceNet_lib_D8722983(billing->card_number);
+        ret = store_inline_prefixed(write_pass, http_req, prefixes, 1U,
+                                    SFKEY_CARD_NUMBER, billing->card_number, clen, has_field);
+        if (ret < 0)
+            return ret;
+        total += (s64)ret;
+        has_field = 1;
+    }
+
+    if (billing->start_year != 0U) {
+        u32 nlen;
+        if (sceNet_lib_CF705E46(num_sy, "%u", billing->start_year) >= (int)sizeof(num_sy))
+            return STORE_ERR_BUF_OVERFLOW;
+        nlen = sceNet_lib_D8722983(num_sy);
+        ret = store_inline_prefixed(write_pass, http_req, prefixes, 1U,
+                                    SFKEY_START_YEAR, num_sy, nlen, has_field);
+        if (ret < 0)
+            return ret;
+        total += (s64)ret;
+        has_field = 1;
+    }
+
+    if (billing->start_month != 0U) {
+        u32 nlen;
+        if (sceNet_lib_CF705E46(num_sm, "%u", billing->start_month) >= (int)sizeof(num_sm))
+            return STORE_ERR_BUF_OVERFLOW;
+        nlen = sceNet_lib_D8722983(num_sm);
+        ret = store_inline_prefixed(write_pass, http_req, prefixes, 1U,
+                                    SFKEY_START_MONTH, num_sm, nlen, has_field);
+        if (ret < 0)
+            return ret;
+        total += (s64)ret;
+        has_field = 1;
+    }
+
+    if (billing->expire_year != 0U) {
+        u32 nlen;
+        if (sceNet_lib_CF705E46(num_ey, "%u", billing->expire_year) >= (int)sizeof(num_ey))
+            return STORE_ERR_BUF_OVERFLOW;
+        nlen = sceNet_lib_D8722983(num_ey);
+        ret = store_inline_prefixed(write_pass, http_req, prefixes, 1U,
+                                    SFKEY_EXPIRE_YEAR, num_ey, nlen, has_field);
+        if (ret < 0)
+            return ret;
+        total += (s64)ret;
+        has_field = 1;
+    }
+
+    if (billing->expire_month != 0U) {
+        u32 nlen;
+        if (sceNet_lib_CF705E46(num_em, "%u", billing->expire_month) >= (int)sizeof(num_em))
+            return STORE_ERR_BUF_OVERFLOW;
+        nlen = sceNet_lib_D8722983(num_em);
+        ret = store_inline_prefixed(write_pass, http_req, prefixes, 1U,
+                                    SFKEY_EXPIRE_MONTH, num_em, nlen, has_field);
+        if (ret < 0)
+            return ret;
+        total += (s64)ret;
+        has_field = 1;
+    }
+
+    if (billing->security_code && billing->security_code[0] != '\0') {
+        u32 slen = sceNet_lib_D8722983(billing->security_code);
+        ret = store_inline_prefixed(write_pass, http_req, prefixes, 1U,
+                                    SFKEY_SECURITY_CODE, billing->security_code, slen, has_field);
+        if (ret < 0)
+            return ret;
+        total += (s64)ret;
+        has_field = 1;
+    }
+
+    if (billing->issue_number && billing->issue_number[0] != '\0') {
+        u32 ilen = sceNet_lib_D8722983(billing->issue_number);
+        ret = store_inline_prefixed(write_pass, http_req, prefixes, 1U,
+                                    SFKEY_ISSUE_NUMBER, billing->issue_number, ilen, has_field);
+        if (ret < 0)
+            return ret;
+        total += (s64)ret;
+        has_field = 1;
+    }
+
+    if (billing->street_a && billing->street_a[0] != '\0' && billing->street_a_len != 0U) {
+        u32 elen;
+        ret = sceNpCommerce2_66EC0829(enc, 769U, billing->street_a, billing->street_a_len, 0);
+        if (ret < 0)
+            return ret;
+        elen = sceNet_lib_D8722983(enc);
+        ret = store_inline_prefixed(write_pass, http_req, prefixes, 3U,
+                                    SFKEY_SUFFIX_A, enc, elen, has_field);
+        if (ret < 0)
+            return ret;
+        total += (s64)ret;
+        has_field = 1;
+    }
+
+    if (billing->street_b && billing->street_b[0] != '\0' && billing->street_b_len != 0U) {
+        u32 elen;
+        ret = sceNpCommerce2_66EC0829(enc, 769U, billing->street_b, billing->street_b_len, 0);
+        if (ret < 0)
+            return ret;
+        elen = sceNet_lib_D8722983(enc);
+        ret = store_inline_prefixed(write_pass, http_req, prefixes, 3U,
+                                    SFKEY_SUFFIX_B, enc, elen, has_field);
+        if (ret < 0)
+            return ret;
+        total += (s64)ret;
+        has_field = 1;
+    }
+
+    if (billing->street_c && billing->street_c[0] != '\0' && billing->street_c_len != 0U) {
+        u32 elen;
+        ret = sceNpCommerce2_66EC0829(enc, 769U, billing->street_c, billing->street_c_len, 0);
+        if (ret < 0)
+            return ret;
+        elen = sceNet_lib_D8722983(enc);
+        ret = store_inline_prefixed(write_pass, http_req, prefixes, 3U,
+                                    SFKEY_SUFFIX_C, enc, elen, has_field);
+        if (ret < 0)
+            return ret;
+        total += (s64)ret;
+        has_field = 1;
+    }
+
+    if (billing->city && billing->city[0] != '\0' && billing->city_len != 0U) {
+        u32 elen;
+        ret = sceNpCommerce2_66EC0829(enc, 769U, billing->city, billing->city_len, 0);
+        if (ret < 0)
+            return ret;
+        elen = sceNet_lib_D8722983(enc);
+        ret = store_inline_prefixed(write_pass, http_req, prefixes, 2U,
+                                    SFKEY_CITY, enc, elen, has_field);
+        if (ret < 0)
+            return ret;
+        total += (s64)ret;
+        has_field = 1;
+    }
+
+    if (billing->province && billing->province[0] != '\0' && billing->province_len != 0U) {
+        u32 elen;
+        ret = sceNpCommerce2_66EC0829(enc, 769U, billing->province, billing->province_len, 0);
+        if (ret < 0)
+            return ret;
+        elen = sceNet_lib_D8722983(enc);
+        ret = store_inline_prefixed(write_pass, http_req, prefixes, 2U,
+                                    SFKEY_PROVINCE, enc, elen, has_field);
+        if (ret < 0)
+            return ret;
+        total += (s64)ret;
+        has_field = 1;
+    }
+
+    if (billing->postal_code && billing->postal_code[0] != '\0' &&
+        billing->postal_code_len != 0U) {
+        u32 elen;
+        ret = sceNpCommerce2_66EC0829(enc, 769U, billing->postal_code,
+                                      billing->postal_code_len, 0);
+        if (ret < 0)
+            return ret;
+        elen = sceNet_lib_D8722983(enc);
+        ret = store_inline_prefixed(write_pass, http_req, prefixes, 2U,
+                                    SFKEY_POSTAL_CODE, enc, elen, has_field);
+        if (ret < 0)
+            return ret;
+        total += (s64)ret;
+        has_field = 1;
+    }
+
+    if (with_save == 1) {
+        const char *save_str = (save_flag == 1) ? "true" : "false";
+        ret = store_inline_str(write_pass, http_req, SFKEY_SAVE, save_str, has_field);
+        if (ret < 0)
+            return ret;
+        total += (s64)ret;
+    }
+
+    if (write_pass != 1)
+        *len_out = (u64)total;
+    return 0;
 }
 
-int store_checked_get_prod_list(u32 req_id, const char * const *prod_ids, u32 prod_cnt, int strict_check)
+static int store_build_edy_result(int write_pass, int http_req, u64 *len_out,
+                                  const char *receipt_id, int is_ok)
 {
-    if (_sceKernelCheckThreadStack() < STORE_MIN_STACK_STD)
-        return STORE_ERR_STACK_OVERFLOW;
-    if (!g_store_init)
-        return STORE_ERR_NOT_INITIALIZED;
-    if (!prod_ids || prod_cnt == 0 || (strict_check == 1 && prod_cnt >= 61))
-        return STORE_ERR_INVALID_ARG;
-    if (strict_check == 1)
-        store_log_id_prefix("GetProductInfoList", prod_ids, prod_cnt);
-    return store_start_prod_list(req_id, prod_ids, prod_cnt);
+    char enc[784];
+    s64 total = 0;
+    const char *res_str;
+    int ret;
+
+    ret = sceNpCommerce2_66EC0829(enc, 769U, receipt_id, sceNet_lib_D8722983(receipt_id), 0);
+    if (ret < 0)
+        return ret;
+    ret = store_inline_str(write_pass, http_req, SFKEY_EDY_RECEIPT_ID, enc, 0);
+    if (ret < 0)
+        return ret;
+    total = (s64)ret;
+
+    res_str = (is_ok == 1) ? "OK" : "NG";
+    ret = store_inline_str(write_pass, http_req, SFKEY_RESULT_EDY_TOPUP, res_str, 1);
+    if (ret < 0)
+        return ret;
+    total += (s64)ret;
+
+    if (write_pass != 1)
+        *len_out = (u64)total;
+    return 0;
+}
+
+static int store_build_voucher(int write_pass, int http_req, u64 *len_out,
+                               const char *code_a, const char *code_b, const char *code_c,
+                               int auto_deposit)
+{
+    char enc[784];
+    const char *prefixes[1];
+    s64 total = 0;
+    u32 elen;
+    const char *dep_str;
+    int ret;
+
+    sceKernelMemset(prefixes, 0, sizeof(prefixes));
+    prefixes[0] = "voucherCode";
+
+    ret = sceNpCommerce2_66EC0829(enc, 769U, code_a, sceNet_lib_D8722983(code_a), 0);
+    if (ret < 0)
+        return ret;
+    elen = sceNet_lib_D8722983(enc);
+    ret = store_inline_prefixed(write_pass, http_req, prefixes, 1U,
+                                SFKEY_SUFFIX_A, enc, elen, 0);
+    if (ret < 0)
+        return ret;
+    total = (s64)ret;
+
+    ret = sceNpCommerce2_66EC0829(enc, 769U, code_b, sceNet_lib_D8722983(code_b), 0);
+    if (ret < 0)
+        return ret;
+    elen = sceNet_lib_D8722983(enc);
+    ret = store_inline_prefixed(write_pass, http_req, prefixes, 1U,
+                                SFKEY_SUFFIX_B, enc, elen, 1);
+    if (ret < 0)
+        return ret;
+    total += (s64)ret;
+
+    ret = sceNpCommerce2_66EC0829(enc, 769U, code_c, sceNet_lib_D8722983(code_c), 0);
+    if (ret < 0)
+        return ret;
+    elen = sceNet_lib_D8722983(enc);
+    ret = store_inline_prefixed(write_pass, http_req, prefixes, 1U,
+                                SFKEY_SUFFIX_C, enc, elen, 1);
+    if (ret < 0)
+        return ret;
+    total += (s64)ret;
+
+    dep_str = (auto_deposit == 1) ? "true" : "false";
+    ret = store_inline_str(write_pass, http_req, SFKEY_AUTO_DEPOSIT_FLAG, dep_str, 1);
+    if (ret < 0)
+        return ret;
+    total += (s64)ret;
+
+    if (write_pass != 1)
+        *len_out = (u64)total;
+    return 0;
+}
+
+static int store_build_event_log(int write_pass, int http_req, u64 *len_out, u32 svc_type,
+                                 u32 event_type, const char *id_str, const char *url_str)
+{
+    char num[16];
+    s64 total = 0;
+    int ret;
+
+    sceNet_lib_CF705E46(num, "%u", svc_type);
+    ret = store_inline_str(write_pass, http_req, SFKEY_STORE_TYPE, num, 0);
+    if (ret < 0)
+        return ret;
+    total = (s64)ret;
+
+    sceNet_lib_CF705E46(num, "%u", event_type);
+    ret = store_inline_str(write_pass, http_req, SFKEY_EVENT_TYPE, num, 1);
+    if (ret < 0)
+        return ret;
+    total += (s64)ret;
+
+    ret = store_inline_str(write_pass, http_req, SFKEY_ID, id_str, 1);
+    if (ret < 0)
+        return ret;
+    total += (s64)ret;
+
+    if (url_str && url_str[0] != '\0') {
+        ret = store_inline_str(write_pass, http_req, SFKEY_URL, url_str, 1);
+        if (ret < 0)
+            return ret;
+        total += (s64)ret;
+    }
+
+    if (write_pass != 1)
+        *len_out = (u64)total;
+    return 0;
+}
+
+static int store_build_search_prod(int write_pass, int http_req, u64 *len_out, u32 svc_type,
+                                   u32 start_pos, u32 max_cnt, const StoreSearchQuery *queries,
+                                   u32 query_cnt, u32 sort_method)
+{
+    char enc[784];
+    const char * const *key_table;
+    s64 total = 0;
+    int ret;
+
+    (void)sort_method;
+
+    sceNet_lib_CF705E46(enc, "%u", svc_type);
+    ret = store_inline_str(write_pass, http_req, SFKEY_STORE_TYPE, enc, 0);
+    if (ret < 0)
+        return ret;
+    total = (s64)ret;
+
+    ret = store_inline_uint(write_pass, http_req, SFKEY_START_POSITION, start_pos, 1);
+    if (ret < 0)
+        return ret;
+    total += (s64)ret;
+
+    ret = store_inline_uint(write_pass, http_req, SFKEY_MAX_COUNT, max_cnt, 1);
+    if (ret < 0)
+        return ret;
+    total += (s64)ret;
+
+    if (svc_type == 1U || svc_type == 3U)
+        key_table = g_game_query_keys;
+    else if (svc_type == 4U)
+        key_table = g_comic_query_keys;
+    else
+        key_table = g_video_query_keys;
+
+    if (write_pass == 1) {
+        ret = store_write_query_keys(http_req, SFKEY_QUERY_KEY, queries, key_table,
+                                     query_cnt, enc, 769U, 1);
+    } else {
+        u32 idx;
+        int sum = 10;
+        for (idx = 0; idx < query_cnt; idx++) {
+            const char *kname = key_table[queries[idx].key_index];
+            sum += (idx != 0U);
+            ret = sceNpCommerce2_66EC0829(enc, 769U, kname, sceNet_lib_D8722983(kname), 0);
+            if (ret < 0)
+                return ret;
+            sum += (int)sceNet_lib_D8722983(enc);
+        }
+        ret = sum;
+    }
+    if (ret < 0)
+        return ret;
+    total += (s64)ret;
+
+    if (write_pass == 1) {
+        ret = store_write_query_vals(http_req, SFKEY_QUERY_VALUE, queries,
+                                     query_cnt, enc, 769U, 1);
+    } else {
+        u32 idx;
+        int sum = 12;
+        for (idx = 0; idx < query_cnt; idx++) {
+            sum += (idx != 0U);
+            ret = sceNpCommerce2_66EC0829(enc, 769U, queries[idx].value,
+                                          queries[idx].value_len, 0);
+            if (ret < 0)
+                return ret;
+            sum += (int)sceNet_lib_D8722983(enc);
+        }
+        ret = sum;
+    }
+    if (ret < 0)
+        return ret;
+    total += (s64)ret;
+
+    if (write_pass != 1)
+        *len_out = (u64)total;
+    return 0;
+}
+
+static int store_build_guest_sess(int write_pass, int http_req, u64 *len_out, u32 ver,
+                                  const char *country, const char *lang, u32 yob, u32 mob,
+                                  u32 dob, const char *console_id)
+{
+    const char *prefixes[2];
+    char work[16];
+    s64 total = 0;
+    u32 idx;
+    u32 wlen;
+    int ret;
+
+    sceKernelMemset(prefixes, 0, sizeof(prefixes));
+    prefixes[0] = "account.";
+
+    ret = store_inline_uint(write_pass, http_req, SFKEY_VERSION, ver, 0);
+    if (ret < 0)
+        return ret;
+    total = (s64)ret;
+
+    for (idx = 0; idx < sceNet_lib_D8722983(country) && idx < sizeof(work); idx++)
+        work[idx] = (char)sceNet_lib_C13C9307((int)country[idx]);
+    work[idx == sizeof(work) ? sizeof(work) - 1U : idx] = '\0';
+    wlen = sceNet_lib_D8722983(work);
+    ret = store_inline_prefixed(write_pass, http_req, prefixes, 1U, SFKEY_COUNTRY, work, wlen, 1);
+    if (ret < 0)
+        return ret;
+    total += (s64)ret;
+
+    for (idx = 0; idx < sceNet_lib_D8722983(lang) && idx < sizeof(work); idx++)
+        work[idx] = (char)sceNet_lib_96EF9DA1((int)lang[idx]);
+    work[idx == sizeof(work) ? sizeof(work) - 1U : idx] = '\0';
+    wlen = sceNet_lib_D8722983(work);
+    ret = store_inline_prefixed(write_pass, http_req, prefixes, 1U, SFKEY_LANGUAGE, work, wlen, 1);
+    if (ret < 0)
+        return ret;
+    total += (s64)ret;
+
+    sceNet_lib_CF705E46(work, "%u", yob);
+    wlen = sceNet_lib_D8722983(work);
+    ret = store_inline_prefixed(write_pass, http_req, prefixes, 1U, SFKEY_YOB, work, wlen, 1);
+    if (ret < 0)
+        return ret;
+    total += (s64)ret;
+
+    sceNet_lib_CF705E46(work, "%u", mob);
+    wlen = sceNet_lib_D8722983(work);
+    ret = store_inline_prefixed(write_pass, http_req, prefixes, 1U, SFKEY_MOB, work, wlen, 1);
+    if (ret < 0)
+        return ret;
+    total += (s64)ret;
+
+    sceNet_lib_CF705E46(work, "%u", dob);
+    wlen = sceNet_lib_D8722983(work);
+    ret = store_inline_prefixed(write_pass, http_req, prefixes, 1U, SFKEY_DOB, work, wlen, 1);
+    if (ret < 0)
+        return ret;
+    total += (s64)ret;
+
+    ret = store_inline_str(write_pass, http_req, SFKEY_CONSOLE_ID, console_id, 1);
+    if (ret < 0)
+        return ret;
+    total += (s64)ret;
+
+    if (write_pass != 1)
+        *len_out = (u64)total;
+    return 0;
+}
+
+static int store_build_prod_list(int write_pass, int http_req, u64 *len_out, u32 svc_type,
+                                 const char * const *prod_ids, u32 prod_cnt)
+{
+    char enc[784];
+    s64 total;
+    int ret;
+
+    sceNet_lib_CF705E46(enc, "%u", svc_type);
+    ret = store_emit_str_field(write_pass, http_req, SFKEY_STORE_TYPE, enc, 0);
+    if (ret < 0)
+        return ret;
+    total = (s64)ret;
+
+    if (write_pass == 1)
+        ret = store_write_str_list(http_req, SFKEY_PRODUCT_IDS, prod_ids, prod_cnt, enc, 769U, 0, 1);
+    else
+        ret = store_measure_str_list(SFKEY_PRODUCT_IDS, prod_ids, prod_cnt, enc, 769U, 0, 1);
+    if (ret < 0)
+        return ret;
+    total += (s64)ret;
+
+    if (write_pass != 1)
+        *len_out = (u64)total;
+    return 0;
+}
+
+static int store_build_recom_prods(int write_pass, int http_req, u64 *len_out, u32 svc_type,
+                                   const char * const *prod_ids, u32 prod_cnt,
+                                   u32 start_pos, u32 max_cnt, u32 recom_type)
+{
+    char enc[784];
+    s64 total;
+    int ret;
+
+    sceNet_lib_CF705E46(enc, "%u", svc_type);
+    ret = store_inline_str(write_pass, http_req, SFKEY_STORE_TYPE, enc, 0);
+    if (ret < 0)
+        return ret;
+    total = (s64)ret;
+
+    if (prod_ids && prod_cnt != 0U) {
+        if (write_pass == 1) {
+            ret = store_write_str_list(http_req, SFKEY_PRODUCT_IDS, prod_ids, prod_cnt,
+                                       enc, 769U, 0, 1);
+        } else {
+            ret = store_measure_str_list(SFKEY_PRODUCT_IDS, prod_ids, prod_cnt,
+                                         enc, 769U, 0, 1);
+        }
+        if (ret < 0)
+            return ret;
+        total += (s64)ret;
+    }
+
+    ret = store_inline_uint(write_pass, http_req, SFKEY_START_POSITION, start_pos, 1);
+    if (ret < 0)
+        return ret;
+    total += (s64)ret;
+
+    ret = store_inline_uint(write_pass, http_req, SFKEY_MAX_COUNT, max_cnt, 1);
+    if (ret < 0)
+        return ret;
+    total += (s64)ret;
+
+    ret = store_inline_uint(write_pass, http_req, SFKEY_RECOM_TYPE, recom_type, 1);
+    if (ret < 0)
+        return ret;
+    total += (s64)ret;
+
+    if (write_pass != 1)
+        *len_out = (u64)total;
+    return 0;
+}
+
+static int store_build_prod_ids(int write_pass, int http_req, u64 *len_out,
+                                const char *content_id, const char *file_id)
+{
+    char enc[784];
+    int ret;
+
+    if (content_id) {
+        ret = sceNpCommerce2_66EC0829(enc, 769U, content_id, sceNet_lib_D8722983(content_id), 0);
+        if (ret < 0)
+            return ret;
+        ret = store_inline_str(write_pass, http_req, SFKEY_CONTENT_ID, enc, 0);
+    } else {
+        ret = sceNpCommerce2_66EC0829(enc, 769U, file_id, sceNet_lib_D8722983(file_id), 0);
+        if (ret < 0)
+            return ret;
+        ret = store_inline_str(write_pass, http_req, SFKEY_FILE_ID, enc, 0);
+    }
+    if (ret < 0)
+        return ret;
+    if (write_pass != 1)
+        *len_out = (u64)(s64)ret;
+    return 0;
+}
+
+/* =========================================================================
+ * Low-level HTTP form writers & measurer (0x00A638 .. 0x00AC4C)
+ * ========================================================================= */
+
+static int store_write_prefixed(int http_req, const char * const *prefixes, u32 prefix_cnt,
+                                u32 key_id, const char *val, u32 val_len, int need_amp)
+{
+    u32 idx;
+    int ret;
+
+    if (need_amp == 1) {
+        ret = sceNpCommerce2_AE614CC6(http_req, g_form_keys[SFKEY_AMP].str, g_form_keys[SFKEY_AMP].len);
+        if (ret < 0)
+            return ret;
+    }
+    for (idx = 0; idx < prefix_cnt; idx++) {
+        if (prefixes[idx]) {
+            ret = sceNpCommerce2_AE614CC6(http_req, prefixes[idx],
+                                          sceNet_lib_D8722983(prefixes[idx]));
+            if (ret < 0)
+                return ret;
+        }
+    }
+    ret = sceNpCommerce2_AE614CC6(http_req, g_form_keys[key_id].str, g_form_keys[key_id].len);
+    if (ret < 0)
+        return ret;
+    return sceNpCommerce2_AE614CC6(http_req, val, val_len);
+}
+
+static int store_write_str_list(int http_req, u32 key_id, const char * const *list, u32 count,
+                                char *enc_buf, u32 enc_size, int repeat_first, int need_amp)
+{
+    u32 idx;
+    int ret;
+
+    if (need_amp == 1) {
+        ret = sceNpCommerce2_AE614CC6(http_req, g_form_keys[SFKEY_AMP].str, g_form_keys[SFKEY_AMP].len);
+        if (ret < 0)
+            return ret;
+    }
+    ret = sceNpCommerce2_AE614CC6(http_req, g_form_keys[key_id].str, g_form_keys[key_id].len);
+    if (ret < 0)
+        return ret;
+
+    for (idx = 0; idx < count; idx++) {
+        const char *str = (repeat_first == 1) ? list[0] : list[idx];
+        if (idx != 0U) {
+            ret = sceNpCommerce2_AE614CC6(http_req, g_form_keys[SFKEY_COMMA].str, g_form_keys[SFKEY_COMMA].len);
+            if (ret < 0)
+                return ret;
+        }
+        if (str && str[0] != '\0') {
+            ret = sceNpCommerce2_66EC0829(enc_buf, enc_size, str, sceNet_lib_D8722983(str), 0);
+            if (ret < 0)
+                return ret;
+            ret = sceNpCommerce2_AE614CC6(http_req, enc_buf, sceNet_lib_D8722983(enc_buf));
+            if (ret < 0)
+                return ret;
+        }
+    }
+    return ret;
+}
+
+static int store_write_query_vals(int http_req, u32 key_id, const StoreSearchQuery *queries,
+                                  u32 count, char *enc_buf, u32 enc_size, int need_amp)
+{
+    u32 idx;
+    int ret;
+
+    if (need_amp == 1) {
+        ret = sceNpCommerce2_AE614CC6(http_req, g_form_keys[SFKEY_AMP].str, g_form_keys[SFKEY_AMP].len);
+        if (ret < 0)
+            return ret;
+    }
+    ret = sceNpCommerce2_AE614CC6(http_req, g_form_keys[key_id].str, g_form_keys[key_id].len);
+    if (ret < 0)
+        return ret;
+
+    for (idx = 0; idx < count; idx++) {
+        if (idx != 0U) {
+            ret = sceNpCommerce2_AE614CC6(http_req, g_form_keys[SFKEY_COMMA].str, g_form_keys[SFKEY_COMMA].len);
+            if (ret < 0)
+                return ret;
+        }
+        ret = sceNpCommerce2_66EC0829(enc_buf, enc_size, queries[idx].value,
+                                      queries[idx].value_len, 0);
+        if (ret < 0)
+            return ret;
+        ret = sceNpCommerce2_AE614CC6(http_req, enc_buf, sceNet_lib_D8722983(enc_buf));
+        if (ret < 0)
+            return ret;
+    }
+    return ret;
+}
+
+static int store_write_query_keys(int http_req, u32 key_id, const StoreSearchQuery *queries,
+                                  const char * const *key_table, u32 count, char *enc_buf,
+                                  u32 enc_size, int need_amp)
+{
+    u32 idx;
+    int ret;
+
+    if (need_amp == 1) {
+        ret = sceNpCommerce2_AE614CC6(http_req, g_form_keys[SFKEY_AMP].str, g_form_keys[SFKEY_AMP].len);
+        if (ret < 0)
+            return ret;
+    }
+    ret = sceNpCommerce2_AE614CC6(http_req, g_form_keys[key_id].str, g_form_keys[key_id].len);
+    if (ret < 0)
+        return ret;
+
+    for (idx = 0; idx < count; idx++) {
+        const char *kname = key_table[queries[idx].key_index];
+        if (idx != 0U) {
+            ret = sceNpCommerce2_AE614CC6(http_req, g_form_keys[SFKEY_COMMA].str, g_form_keys[SFKEY_COMMA].len);
+            if (ret < 0)
+                return ret;
+        }
+        ret = sceNpCommerce2_66EC0829(enc_buf, enc_size, kname, sceNet_lib_D8722983(kname), 0);
+        if (ret < 0)
+            return ret;
+        ret = sceNpCommerce2_AE614CC6(http_req, enc_buf, sceNet_lib_D8722983(enc_buf));
+        if (ret < 0)
+            return ret;
+    }
+    return ret;
+}
+
+static int store_write_uint(int http_req, u32 key_id, u32 val, int need_amp)
+{
+    char num[16];
+    int len;
+    int ret;
+
+    if (need_amp == 1) {
+        ret = sceNpCommerce2_AE614CC6(http_req, g_form_keys[SFKEY_AMP].str, g_form_keys[SFKEY_AMP].len);
+        if (ret < 0)
+            return ret;
+    }
+    ret = sceNpCommerce2_AE614CC6(http_req, g_form_keys[key_id].str, g_form_keys[key_id].len);
+    if (ret < 0)
+        return ret;
+    len = sceNet_lib_CF705E46(num, "%u", val);
+    if (len >= (int)sizeof(num))
+        return STORE_ERR_BUF_OVERFLOW;
+    return sceNpCommerce2_AE614CC6(http_req, num, sceNet_lib_D8722983(num));
+}
+
+static int store_measure_str_list(u32 key_id, const char * const *list, u32 count,
+                                  char *enc_buf, u32 enc_size, int repeat_first, int need_amp)
+{
+    u32 idx;
+    int total = (int)g_form_keys[key_id].len + (need_amp == 1);
+
+    for (idx = 0; idx < count; idx++) {
+        const char *str = (repeat_first == 1) ? list[0] : list[idx];
+        if (idx != 0U)
+            total += 1;
+        if (str && str[0] != '\0') {
+            int ret = sceNpCommerce2_66EC0829(enc_buf, enc_size, str,
+                                              sceNet_lib_D8722983(str), 0);
+            if (ret < 0)
+                return ret;
+            total += (int)sceNet_lib_D8722983(enc_buf);
+        }
+    }
+    return total;
 }

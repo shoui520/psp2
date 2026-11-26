@@ -1,8 +1,233 @@
 #include "store_internal.h"
 
+u32 g_store_mgr;
+
+/* Inline helpers matching Sony's context/request locking and keepalive check */
+static inline __attribute__((always_inline)) int
+store_lock_ctx_req(u32 req_id, StoreContext **ctx_out, StoreRequest **req_out)
+{
+    int ret;
+
+    *ctx_out = NULL;
+    *req_out = NULL;
+    ret = sceNpCommerce2_0A6AB496(&g_store_mgr, req_id >> 16, ctx_out, 1);
+    if (ret < 0)
+        return ret;
+    return sceNpCommerce2_851E7844(&g_store_mgr, req_id, req_out);
+}
+
+static inline __attribute__((always_inline)) void
+store_refresh_keepalive(StoreContext *ctx)
+{
+    u64 now_us;
+    if (sceNpCommerce2_FC47B63C(&now_us) >= 0) {
+        if ((now_us - ctx->last_activity_us) > STORE_KEEPALIVE_LIMIT_US)
+            sceNpCommerce2_75DF99A9(ctx->http_tmpl_id, ctx->url_buf);
+    }
+}
+
+static inline __attribute__((always_inline)) int
+store_unlock_ctx_req(StoreContext *ctx, StoreRequest *req, int ret)
+{
+    if (req) {
+        if (req->req_flags & 2U)
+            ret = STORE_ERR_ABORTED;
+        sceNpCommerce2_8642C532(&g_store_mgr);
+    }
+    if (ctx)
+        sceNpCommerce2_77BE411B(&g_store_mgr);
+    return ret;
+}
+
 /* =========================================================================
- * Core manager lifecycle, country capabilities, and HTTP response receive
+ * Response receive & dispatch (0x015264)
  * ========================================================================= */
+
+int store_recv_response(u32 req_id, u8 *resp, u32 buf_size, u32 *recv_size_out)
+{
+    u8 status_byte[4];
+    StoreContext *ctx = NULL;
+    StoreRequest *req = NULL;
+    int trunc_flag;
+    u32 err_flag;
+    int ret;
+
+    if (!resp || buf_size == 0U || !recv_size_out)
+        return STORE_ERR_INVALID_ARG;
+
+    ret = store_lock_ctx_req(req_id, &ctx, &req);
+    if (ret >= 0) {
+        int allow = 1;
+        if ((u32)(req->cmd_id - 3U) < 2U && ctx->no_size_check != 1U && buf_size <= 0x3FFFFU) {
+            ret = STORE_ERR_RESP_BUF_LIMIT;
+            allow = 0;
+        }
+        if (allow)
+            ret = sceNpCommerce2_4D43B84D(req->http_req_id, &ctx->http_status);
+        if (ret >= 0) {
+            int hdr_len = sceNpCommerce2_C27FEAB1(ctx, req->http_req_id, req->cmd_id,
+                                                  status_byte, resp, buf_size);
+            ret = hdr_len;
+            if (hdr_len >= 0) {
+                int body_len = sceNpCommerce2_D4C319C6(req->http_req_id, resp, resp + hdr_len,
+                                                       buf_size, &trunc_flag);
+                ret = body_len;
+                if (body_len >= 0) {
+                    u32 total_len = (u32)(hdr_len + body_len);
+                    int trunc_ok = 1;
+                    if (trunc_flag == 1) {
+                        u32 cid = req->cmd_id;
+                        if (cid != STORE_CMD_GET_CAT && cid != STORE_CMD_GET_DRM &&
+                            cid != STORE_CMD_SRCH_PROD && cid != 53U && cid != 54U &&
+                            cid != 55U && cid != STORE_CMD_RECOM_PRODS) {
+                            ret = STORE_ERR_TRUNCATED;
+                            trunc_ok = 0;
+                        }
+                    }
+                    if (trunc_ok) {
+                        ret = sceNpCommerce2_ADAA054C(resp, buf_size, (u32)body_len);
+                        if (ret >= 0) {
+                            *recv_size_out = total_len;
+                            if (status_byte[0] == 0U) {
+                                ret = 0;
+                                store_post_process_response(ctx, req, resp, buf_size,
+                                                            *recv_size_out);
+                            } else {
+                                u32 cid = req->cmd_id;
+                                int check_maint = 1;
+                                ret = (int)((u32)status_byte[0] | (u32)STORE_ERR_SERVER_BASE);
+                                if (cid == STORE_CMD_SET_RES_ADDR) {
+                                    if (ret == STORE_ERR_SERVER_GENERIC) {
+                                        ret = STORE_ERR_SERVER_ADDR_INVALID;
+                                        check_maint = 0;
+                                    }
+                                } else if (cid == STORE_CMD_REG_CC || cid == 64U) {
+                                    if (ret == STORE_ERR_SERVER_GENERIC) {
+                                        ret = STORE_ERR_SERVER_CARD_INVALID;
+                                        check_maint = 0;
+                                    }
+                                }
+                                if (check_maint) {
+                                    store_tlv_parse_err_flag(resp, *recv_size_out, &err_flag);
+                                    if (err_flag == 1U)
+                                        ret = STORE_ERR_MAINTENANCE;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+/* =========================================================================
+ * Request start dispatchers & creators (0x015564 .. 0x018064)
+ * ========================================================================= */
+
+int store_start_get_cat(u32 req_id, const char *cat_id, const char * const *reward_id,
+                        u32 has_reward, u32 start_pos, u32 max_cnt)
+{
+    StoreContext *ctx;
+    StoreRequest *req;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+
+    if (ret >= 0) {
+        if (ctx->no_size_check == 0U && max_cnt >= 61U) {
+            ret = STORE_ERR_INVALID_ARG;
+        } else {
+            store_refresh_keepalive(ctx);
+            ret = store_send_get_cat(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                     req->cmd_id, &req->http_req_id,
+                                     cat_id, reward_id, has_reward, start_pos, max_cnt);
+            if (ret >= 0)
+                sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+        }
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_start_guest_sess(u32 req_id, const char *country, const char *lang,
+                           u32 yob, u32 mob, u32 dob)
+{
+    char console_id[80];
+    StoreContext *ctx;
+    StoreRequest *req;
+    u32 proto_ver;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+
+    if (ret >= 0) {
+        ret = sceNpCommerce2_F0900551(ctx, &proto_ver);
+        if (ret >= 0) {
+            ret = sceNpCommerce2_157FA8AA(console_id, 65U);
+            if (ret >= 0) {
+                store_refresh_keepalive(ctx);
+                ret = store_send_guest_sess(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                            req->cmd_id, &req->http_req_id, proto_ver,
+                                            country, lang, yob, mob, dob, console_id);
+                if (ret >= 0)
+                    sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+            }
+        }
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_get_country_caps(u32 ctx_id, const char *country, StoreCountryCaps *out_caps)
+{
+    char fallback_country[16];
+    StoreContext *ctx = NULL;
+    int ret;
+
+    ret = sceNpCommerce2_0A6AB496(&g_store_mgr, ctx_id, &ctx, 1);
+    if (ret >= 0) {
+        sceKernelMemset(out_caps, 0, sizeof(*out_caps));
+        if (!country) {
+            ret = sceNpCommerce2_D5932A6C(ctx, fallback_country, 3U, 0);
+            if (ret >= 0)
+                country = fallback_country;
+        }
+        if (ret >= 0) {
+            const char * const *scan;
+            int found = 0;
+
+            for (scan = g_country_tier_full; sceNet_lib_D8722983(*scan) != 0U; scan++) {
+                if (sceNet_lib_A0F16ABD(*scan, country) == 0) {
+                    out_caps->cap_flags = 7U;
+                    sceNet_lib_B5CE388A(out_caps->country, *scan, 3U);
+                    found = 1;
+                    break;
+                }
+            }
+            if (!found) {
+                for (scan = g_country_tier_mid; sceNet_lib_D8722983(*scan) != 0U; scan++) {
+                    if (sceNet_lib_A0F16ABD(*scan, country) == 0) {
+                        out_caps->cap_flags = 3U;
+                        sceNet_lib_B5CE388A(out_caps->country, *scan, 3U);
+                        found = 1;
+                        break;
+                    }
+                }
+            }
+            if (!found) {
+                for (scan = g_country_tier_basic; sceNet_lib_D8722983(*scan) != 0U; scan++) {
+                    if (sceNet_lib_A0F16ABD(*scan, country) == 0) {
+                        out_caps->cap_flags = 1U;
+                        sceNet_lib_B5CE388A(out_caps->country, *scan, 3U);
+                        found = 1;
+                        break;
+                    }
+                }
+            }
+            if (!found)
+                ret = STORE_ERR_COUNTRY_NOT_FOUND;
+        }
+    }
+    if (ctx)
+        sceNpCommerce2_77BE411B(&g_store_mgr);
+    return ret;
+}
 
 int store_init_mgr(void)
 {
@@ -10,883 +235,653 @@ int store_init_mgr(void)
     return 0;
 }
 
-int store_get_country_caps(u32 ctx_id, const char *country, u32 *out_info)
+void store_term_mgr(void)
+{
+}
+
+int store_start_get_prod(u32 req_id, const char *cat_id, const char *prod_id,
+                         const char * const *reward_id, u32 has_reward)
+{
+    StoreContext *ctx;
+    StoreRequest *req;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_get_prod(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                  req->cmd_id, &req->http_req_id,
+                                  cat_id, prod_id, reward_id, has_reward);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_disp_create_add_cart(u32 ctx_id, u32 *req_id_out)
+{
+    return store_create_req(ctx_id, STORE_CMD_ADD_CART, req_id_out);
+}
+
+int store_start_add_cart(u32 req_id, const char * const *sku_ids, u32 sku_cnt,
+                         const char * const *reward_ids, u32 reward_cnt)
+{
+    StoreContext *ctx;
+    StoreRequest *req;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_add_cart(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                  req->cmd_id, &req->http_req_id,
+                                  sku_ids, sku_cnt, reward_ids, reward_cnt);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_disp_create_rem_cart(u32 ctx_id, u32 *req_id_out)
+{
+    return store_create_req(ctx_id, STORE_CMD_REM_CART, req_id_out);
+}
+
+int store_start_rem_cart(u32 req_id, const char *sku_id)
+{
+    StoreContext *ctx;
+    StoreRequest *req;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_rem_cart(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                  req->cmd_id, &req->http_req_id, sku_id);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_disp_create_clear_cart(u32 ctx_id, u32 *req_id_out)
+{
+    return store_create_req(ctx_id, STORE_CMD_CLEAR_CART, req_id_out);
+}
+
+int store_start_clear_cart(u32 req_id)
+{
+    StoreContext *ctx;
+    StoreRequest *req;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_clear_cart(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                    req->cmd_id, &req->http_req_id);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_disp_create_get_cart(u32 ctx_id, u32 *req_id_out)
+{
+    return store_create_req(ctx_id, STORE_CMD_GET_CART, req_id_out);
+}
+
+int store_start_get_cart(u32 req_id)
+{
+    StoreContext *ctx;
+    StoreRequest *req;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_get_cart(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                  req->cmd_id, &req->http_req_id);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_disp_create_pur_prev(u32 ctx_id, u32 *req_id_out)
+{
+    return store_create_req(ctx_id, STORE_CMD_PUR_PREV, req_id_out);
+}
+
+int store_disp_create_purch(u32 ctx_id, u32 *req_id_out)
+{
+    return store_create_req(ctx_id, STORE_CMD_PURCH, req_id_out);
+}
+
+int store_start_purchase(u32 req_id, const char *password, int quick_purchase, int auto_deposit)
+{
+    StoreContext *ctx;
+    StoreRequest *req;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_purchase(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                  req->cmd_id, &req->http_req_id,
+                                  password, quick_purchase, auto_deposit);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_disp_create_get_cc(u32 ctx_id, u32 *req_id_out)
+{
+    return store_create_req(ctx_id, STORE_CMD_GET_CC, req_id_out);
+}
+
+int store_start_get_cc(u32 req_id)
+{
+    StoreContext *ctx;
+    StoreRequest *req;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_get_cc(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                req->cmd_id, &req->http_req_id);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_disp_create_get_prov(u32 ctx_id, u32 *req_id_out)
+{
+    return store_create_req(ctx_id, STORE_CMD_GET_PROV, req_id_out);
+}
+
+int store_start_get_prov(u32 req_id)
+{
+    StoreContext *ctx;
+    StoreRequest *req;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_get_prov(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                  req->cmd_id, &req->http_req_id);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_disp_create_get_pay(u32 ctx_id, u32 *req_id_out)
+{
+    return store_create_req(ctx_id, STORE_CMD_GET_PAY, req_id_out);
+}
+
+int store_disp_create_get_bill_info(u32 ctx_id, u32 *req_id_out)
+{
+    return store_create_req(ctx_id, STORE_CMD_GET_BILL_INFO, req_id_out);
+}
+
+int store_start_payment_type(u32 req_id, u32 pay_type)
+{
+    StoreContext *ctx;
+    StoreRequest *req;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_payment_type(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                      req->cmd_id, &req->http_req_id, pay_type);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_disp_create_get_drm(u32 ctx_id, u32 *req_id_out)
+{
+    return store_create_req(ctx_id, STORE_CMD_GET_DRM, req_id_out);
+}
+
+int store_start_get_drm(u32 req_id, const char * const *sku_ids, u32 sku_cnt, const char *svc_id,
+                        const char *reward_ids, u32 start_pos, u32 max_cnt, u32 drm_type)
+{
+    StoreContext *ctx;
+    StoreRequest *req;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_get_drm(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                 req->cmd_id, &req->http_req_id,
+                                 sku_ids, sku_cnt, svc_id, reward_ids,
+                                 start_pos, max_cnt, drm_type);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_disp_create_get_bill(u32 ctx_id, u32 *req_id_out)
+{
+    return store_create_req(ctx_id, STORE_CMD_GET_BILL, req_id_out);
+}
+
+int store_disp_create_get_res_addr(u32 ctx_id, u32 *req_id_out)
+{
+    return store_create_req(ctx_id, STORE_CMD_GET_RES_ADDR, req_id_out);
+}
+
+int store_start_get_bill(u32 req_id)
+{
+    StoreContext *ctx;
+    StoreRequest *req;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_get_bill(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                  req->cmd_id, &req->http_req_id);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_disp_create_reg_cc(u32 ctx_id, u32 *req_id_out)
+{
+    return store_create_req(ctx_id, STORE_CMD_REG_CC, req_id_out);
+}
+
+int store_start_billing(u32 req_id, const StoreBillingInfo *billing)
+{
+    StoreContext *ctx;
+    StoreRequest *req;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_billing(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                 req->cmd_id, &req->http_req_id, billing);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_disp_create_get_addr(u32 ctx_id, u32 *req_id_out)
+{
+    return store_create_req(ctx_id, STORE_CMD_GET_ADDR, req_id_out);
+}
+
+int store_start_postal_code(u32 req_id, const char *postal_code)
+{
+    StoreContext *ctx;
+    StoreRequest *req;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_postal_code(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                     req->cmd_id, &req->http_req_id, postal_code);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_disp_create_get_wal(u32 ctx_id, u32 *req_id_out)
+{
+    return store_create_req(ctx_id, STORE_CMD_GET_WAL, req_id_out);
+}
+
+int store_start_get_wal(u32 req_id)
+{
+    StoreContext *ctx;
+    StoreRequest *req;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_get_wal(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                 req->cmd_id, &req->http_req_id);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_disp_create_topup_cc(u32 ctx_id, u32 *req_id_out)
+{
+    return store_create_req(ctx_id, STORE_CMD_TOPUP_CC, req_id_out);
+}
+
+int store_disp_create_top_edy(u32 ctx_id, u32 *req_id_out)
+{
+    return store_create_req(ctx_id, STORE_CMD_TOP_EDY, req_id_out);
+}
+
+int store_start_topup_amount(u32 req_id, u32 amount)
+{
+    StoreContext *ctx;
+    StoreRequest *req;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_topup_amount(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                      req->cmd_id, &req->http_req_id, amount);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_disp_create_top_edy_res(u32 ctx_id, u32 *req_id_out)
+{
+    return store_create_req(ctx_id, STORE_CMD_TOP_EDY_RES, req_id_out);
+}
+
+int store_start_edy_result(u32 req_id, const char *receipt_id, int is_ok)
+{
+    StoreContext *ctx;
+    StoreRequest *req;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_edy_result(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                    req->cmd_id, &req->http_req_id, receipt_id, is_ok);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_disp_create_vchr_prev(u32 ctx_id, u32 *req_id_out)
+{
+    return store_create_req(ctx_id, STORE_CMD_VCHR_RED_PREV, req_id_out);
+}
+
+int store_disp_create_vchr_red(u32 ctx_id, u32 *req_id_out)
+{
+    return store_create_req(ctx_id, STORE_CMD_VCHR_RED, req_id_out);
+}
+
+int store_start_voucher(u32 req_id, const char *code_a, const char *code_b,
+                        const char *code_c, int auto_deposit)
+{
+    StoreContext *ctx;
+    StoreRequest *req;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_voucher(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                 req->cmd_id, &req->http_req_id,
+                                 code_a, code_b, code_c, auto_deposit);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_disp_create_event_log(u32 ctx_id, u32 *req_id_out)
+{
+    return store_create_req(ctx_id, STORE_CMD_EVENT_LOG, req_id_out);
+}
+
+int store_start_event_log(u32 req_id, u32 event_type, const char *id_str, const char *url_str)
+{
+    StoreContext *ctx;
+    StoreRequest *req;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_event_log(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                   req->cmd_id, &req->http_req_id,
+                                   event_type, id_str, url_str);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_disp_create_srch_prod(u32 ctx_id, u32 *req_id_out)
+{
+    return store_create_req(ctx_id, STORE_CMD_SRCH_PROD, req_id_out);
+}
+
+int store_start_search_prod(u32 req_id, u32 svc_type, u32 start_pos, u32 max_cnt,
+                            const StoreSearchQuery *queries, u32 query_cnt, u32 sort_method)
+{
+    StoreContext *ctx;
+    StoreRequest *req;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_search_prod(svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                     req->cmd_id, &req->http_req_id,
+                                     start_pos, max_cnt, queries, query_cnt, sort_method);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_disp_create_get_cnsl_act(u32 ctx_id, u32 *req_id_out)
+{
+    return store_create_req(ctx_id, STORE_CMD_GET_CNSL_ACT, req_id_out);
+}
+
+int store_start_get_cnsl_act(u32 req_id)
+{
+    StoreContext *ctx;
+    StoreRequest *req;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_get_prov(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                  req->cmd_id, &req->http_req_id);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_disp_create_get_epw(u32 ctx_id, u32 *req_id_out)
+{
+    return store_create_req(ctx_id, STORE_CMD_GET_EPW, req_id_out);
+}
+
+int store_start_get_epw(u32 req_id)
+{
+    StoreContext *ctx;
+    StoreRequest *req;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_get_epw(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                 req->cmd_id, &req->http_req_id);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_disp_create_guest_sess(u32 ctx_id, u32 *req_id_out)
+{
+    return store_create_req(ctx_id, STORE_CMD_CR_GUEST_SESS, req_id_out);
+}
+
+int store_disp_create_prod_list(u32 ctx_id, u32 *req_id_out)
+{
+    return store_create_req(ctx_id, STORE_CMD_GET_PROD_LIST, req_id_out);
+}
+
+int store_start_prod_list(u32 req_id, const char * const *prod_ids, u32 prod_cnt)
+{
+    StoreContext *ctx;
+    StoreRequest *req;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_prod_list(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                   req->cmd_id, &req->http_req_id, prod_ids, prod_cnt);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_disp_create_recom_prods(u32 ctx_id, u32 *req_id_out)
+{
+    return store_create_req(ctx_id, STORE_CMD_RECOM_PRODS, req_id_out);
+}
+
+int store_start_recom_prods(u32 req_id, const char * const *prod_ids, u32 prod_cnt,
+                            u32 start_pos, u32 max_cnt, u32 recom_type)
+{
+    StoreContext *ctx;
+    StoreRequest *req;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_recom_prods(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                     req->cmd_id, &req->http_req_id,
+                                     prod_ids, prod_cnt, start_pos, max_cnt, recom_type);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_disp_create_prod_ids(u32 ctx_id, u32 *req_id_out)
+{
+    return store_create_req(ctx_id, STORE_CMD_GET_PROD_IDS, req_id_out);
+}
+
+int store_start_get_prod_ids(u32 req_id, const char *content_id, const char *file_id)
+{
+    StoreContext *ctx;
+    StoreRequest *req;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_get_prod_ids(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                      req->cmd_id, &req->http_req_id, content_id, file_id);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+/* =========================================================================
+ * Context configuration & request lifecycle (0x0181DC .. 0x018484)
+ * ========================================================================= */
+
+int store_set_ctx_option(u32 ctx_id, u32 option_val)
 {
     StoreContext *ctx = NULL;
-    char default_cc[16];
-    const char * const *entry;
-    int ret;
+    int ret = sceNpCommerce2_0A6AB496(&g_store_mgr, ctx_id, &ctx, 1);
 
-    ret = sceNpCommerce2_0A6AB496(&g_store_mgr, ctx_id, &ctx, 1);
-    if (ret >= 0) {
-        sceKernelMemset(out_info, 0, 8);
-        if (!country) {
-            ret = sceNpCommerce2_D5932A6C(ctx, default_cc, 3, 0);
-            if (ret < 0)
-                goto done;
-            country = default_cc;
-        }
-
-        for (entry = &g_country_table[0]; sceNet_lib_D8722983(*entry) != 0; entry++) {
-            if (sceNet_lib_A0F16ABD(*entry, country) == 0) {
-                out_info[1] = 7;
-                sceNet_lib_B5CE388A((char *)out_info, *entry, 3);
-                goto done;
-            }
-        }
-        for (entry = &g_country_table[2]; sceNet_lib_D8722983(*entry) != 0; entry++) {
-            if (sceNet_lib_A0F16ABD(*entry, country) == 0) {
-                out_info[1] = 3;
-                sceNet_lib_B5CE388A((char *)out_info, *entry, 3);
-                goto done;
-            }
-        }
-        for (entry = &g_country_table[35]; sceNet_lib_D8722983(*entry) != 0; entry++) {
-            if (sceNet_lib_A0F16ABD(*entry, country) == 0) {
-                out_info[1] = 1;
-                sceNet_lib_B5CE388A((char *)out_info, *entry, 3);
-                goto done;
-            }
-        }
-        ret = STORE_ERR_COUNTRY_NOT_FOUND;
-    }
-
-done:
+    if (ret >= 0)
+        ret = sceNpCommerce2_EE7255FE(ctx, option_val);
     if (ctx)
         sceNpCommerce2_77BE411B(&g_store_mgr);
     return ret;
 }
 
-int store_recv_response(u32 req_id, u8 *buf, u32 buf_size, u32 *recv_size_out)
+int store_set_svc_type(u32 ctx_id, u32 svc_type)
 {
     StoreContext *ctx = NULL;
-    StoreRequest *req = NULL;
-    u8 srv_status = 0;
-    int truncated = 0;
-    u32 err_flag = 0;
-    int hdr_len, body_len;
-    int ret;
+    int ret = sceNpCommerce2_0A6AB496(&g_store_mgr, ctx_id, &ctx, 1);
 
-    if (!buf || buf_size == 0 || !recv_size_out)
-        return STORE_ERR_INVALID_ARG;
+    if (ret >= 0)
+        ctx->svc_type = svc_type;
+    if (ctx)
+        sceNpCommerce2_77BE411B(&g_store_mgr);
+    return ret;
+}
 
-    ret = store_lock_ctx_req(req_id, &ctx, &req);
-    if (ret < 0)
-        return store_unlock_ctx_req(ctx, req, ret);
+int store_get_http_status(u32 ctx_id, u32 *status_out)
+{
+    StoreContext *ctx = NULL;
+    int ret = sceNpCommerce2_0A6AB496(&g_store_mgr, ctx_id, &ctx, 1);
 
-    if ((req->cmd_id == STORE_CMD_GET_CAT || req->cmd_id == STORE_CMD_GET_PROD) &&
-        ctx->no_size_check != 1 && buf_size < 0x40000U) {
-        return store_unlock_ctx_req(ctx, req, STORE_ERR_RESP_BUF_LIMIT);
-    }
+    if (ret >= 0)
+        *status_out = ctx->http_status;
+    if (ctx)
+        sceNpCommerce2_77BE411B(&g_store_mgr);
+    return ret;
+}
 
-    ret = sceNpCommerce2_4D43B84D(req->http_req_id, &ctx->http_status);
-    if (ret < 0)
-        return store_unlock_ctx_req(ctx, req, ret);
+int store_create_req(u32 ctx_id, u16 cmd_id, u32 *req_id_out)
+{
+    StoreContext *ctx = NULL;
+    int ret = sceNpCommerce2_0A6AB496(&g_store_mgr, ctx_id, &ctx, 1);
 
-    hdr_len = sceNpCommerce2_C27FEAB1(ctx, req->http_req_id, req->cmd_id, &srv_status, buf, buf_size);
-    if (hdr_len < 0)
-        return store_unlock_ctx_req(ctx, req, hdr_len);
-
-    body_len = sceNpCommerce2_D4C319C6(req->http_req_id, buf, buf + hdr_len, buf_size, &truncated);
-    if (body_len < 0)
-        return store_unlock_ctx_req(ctx, req, body_len);
-
-    if (truncated == 1) {
-        u16 cmd = req->cmd_id;
-        if (cmd != STORE_CMD_GET_CAT && cmd != STORE_CMD_GET_DRM &&
-            cmd != STORE_CMD_SRCH_PROD && cmd != 53 && cmd != 54 && cmd != 55 &&
-            cmd != STORE_CMD_RECOM_PRODS) {
-            return store_unlock_ctx_req(ctx, req, STORE_ERR_RESP_TOO_SMALL);
+    if (ret >= 0) {
+        StoreRequest *req = (StoreRequest *)sceNetIfhandle_lib_15CFE3C0(sizeof(StoreRequest));
+        if (!req) {
+            ret = STORE_ERR_OUT_OF_MEMORY;
+        } else {
+            sceKernelMemset(req, 0, sizeof(StoreRequest));
+            req->cmd_id = cmd_id;
+            ret = sceNpCommerce2_06618C81(&g_store_mgr, req, ctx_id, req_id_out);
+            if (ret < 0)
+                sceNetIfhandle_lib_76BAD213(req);
         }
     }
+    if (ctx)
+        sceNpCommerce2_77BE411B(&g_store_mgr);
+    return ret;
+}
 
-    ret = sceNpCommerce2_ADAA054C(buf, buf_size, (u32)body_len);
-    if (ret < 0)
-        return store_unlock_ctx_req(ctx, req, ret);
+int store_post_process_response(StoreContext *ctx, StoreRequest *req,
+                                const u8 *resp, u32 buf_size, u32 resp_size)
+{
+    u32 acct[24];
+    u32 sess_root[12];
+    u32 auth_root[16];
+    u16 cid = req->cmd_id;
 
-    *recv_size_out = (u32)(hdr_len + body_len);
-    if (srv_status == 0) {
-        store_post_process_response(ctx, req, buf, buf_size, *recv_size_out);
-        return store_unlock_ctx_req(ctx, req, 0);
+    if (cid == STORE_CMD_AUTHENTICATE || cid == STORE_CMD_CR_SESS || cid == STORE_CMD_CR_GUEST_SESS) {
+        u32 *root_ptr;
+        int parse_ret;
+        if (cid == STORE_CMD_AUTHENTICATE) {
+            root_ptr = auth_root;
+            parse_ret = store_tlv_parse_auth_root(auth_root, resp, resp_size);
+        } else {
+            root_ptr = sess_root;
+            parse_ret = store_tlv_init_sess_root(sess_root, resp, resp_size);
+        }
+        if (parse_ret >= 0 && store_tlv_parse_account_info(root_ptr, acct) >= 0) {
+            sceNet_lib_B5CE388A(ctx->country_code, (const char *)(u32)acct[16], 4U);
+            ctx->country_code[3] = '\0';
+            sceNet_lib_B5CE388A(ctx->lang_code, (const char *)(u32)acct[17], 4U);
+            ctx->country_code[3] = '\0';
+            sceNpCommerce2_F8D175FA(resp, buf_size, ctx->country_code, ctx->lang_code);
+        }
+        cid = req->cmd_id;
     }
 
-    ret = (int)(STORE_ERR_SERVER_BASE | (u32)srv_status);
-    if (req->cmd_id == STORE_CMD_SET_RES_ADDR && ret == STORE_ERR_SERVER_GENERIC)
-        return store_unlock_ctx_req(ctx, req, STORE_ERR_SERVER_ADDR_INVALID);
-    if ((req->cmd_id == STORE_CMD_REG_CC || req->cmd_id == 64) && ret == STORE_ERR_SERVER_GENERIC)
-        return store_unlock_ctx_req(ctx, req, STORE_ERR_SERVER_CARD_INVALID);
-
-    store_tlv_parse_err_flag(buf, *recv_size_out, &err_flag);
-    if (err_flag == 1)
-        ret = STORE_ERR_MAINTENANCE;
-
-    return store_unlock_ctx_req(ctx, req, ret);
-}
-
-/* =========================================================================
- * Low-level TLV scanning & cursor helpers
- * ========================================================================= */
-
-static void store_tlv_reset_hdr(u32 *out, u32 total_struct_size, u32 ver, const u8 *base,
-                                const u8 *data, u32 data_size, const u8 *body)
-{
-    sceKernelMemset(out, 0, total_struct_size);
-    out[0] = ver;
-    out[1] = (u32)(size_t)base;
-    out[3] = (u32)(size_t)data;
-    out[4] = data_size;
-    out[5] = (u32)(size_t)body;
-}
-
-static int store_tlv_read_str(const u8 *scan, u32 scan_len, u16 tag, const u8 *base, u32 *out_ptr)
-{
-    u16 tlen = 0;
-    int off;
-
-    *out_ptr = (u32)(size_t)(base + 4);
-    off = sceNpCommerce2_E3455E27(scan, scan_len, tag, 0, &tlen);
-    if (off >= 0 && tlen != 0)
-        *out_ptr = (u32)(size_t)(scan + off);
-    return off;
-}
-
-static void store_tlv_store_rtc(const u8 *ptr, u32 *out_pair)
-{
-    u64 rtc = store_unix_ms_to_rtc(store_read_be64(ptr));
-    if (rtc != 0) {
-        out_pair[0] = (u32)rtc;
-        out_pair[1] = (u32)(rtc >> 32);
-    } else {
-        out_pair[0] = 0;
-        out_pair[1] = 0;
-    }
-}
-
-int store_tlv_parse_root(const u8 *buf, u32 buf_size, u32 *ver_out, u32 *body_size_out, u32 *extra_out)
-{
-    u32 hdr[14];
-    u8 magic[4];
-
-    if (buf_size < 60)
-        return (int)0x80550F14;
-
-    sceKernelMemcpy(hdr, buf, 56);
-    sceKernelMemcpy(magic, buf + 56, 4);
-    if (buf_size < hdr[1] + 56)
-        return (int)0x80550F14;
-
-    *body_size_out = hdr[1] - 4;
-    if (ver_out)
-        *ver_out = hdr[0];
-    if (extra_out)
-        *extra_out = hdr[2];
-    return 60;
-}
-
-int store_tlv_find_nth(const u8 *buf, u32 buf_size, u16 tag, u16 min_len, u32 index, u16 *len_out)
-{
-    u16 span_len = 0;
-    u32 count = 0;
-    int base_off = sceNpCommerce2_3F6D413C(buf, buf_size, tag, (u32)(size_t)&span_len, &count);
-    const u8 *start, *cur;
-    u32 idx;
-    u16 item_len = 0;
-
-    if (base_off < 0)
-        return base_off;
-    if (index >= count)
-        return (int)0x80550F06;
-
-    start = buf + base_off;
-    cur = start;
-    for (idx = 0; idx <= index; idx++) {
-        int rel;
-        if (idx != 0)
-            cur += item_len;
-        rel = sceNpCommerce2_E3455E27(cur, span_len - (u32)(cur - start), tag, min_len, &item_len);
-        if (rel < 0)
-            return rel;
-        cur += rel;
-    }
-    *len_out = item_len;
-    return (int)(cur - buf);
-}
-
-int store_tlv_find_nth_ex(const u8 *buf, u32 buf_size, u16 tag, u16 min_len,
-                          u32 index, u16 *len_out, int extra_mode)
-{
-    u32 count = 0;
-    int base_off = sceNpCommerce2_3546C737(buf, buf_size, tag, 0, &count);
-    const u8 *cur;
-    u32 idx;
-    u16 item_len = 0;
-
-    (void)extra_mode;
-    if (base_off < 0)
-        return base_off;
-    if (index >= count)
-        return (int)0x80550F06;
-
-    cur = buf + base_off;
-    for (idx = 0; idx <= index; idx++) {
-        int rel;
-        if (idx != 0)
-            cur += item_len;
-        rel = sceNpCommerce2_E3455E27(cur, buf_size - (u32)(cur - buf), tag, min_len, &item_len);
-        if (rel < 0)
-            return rel;
-        cur += rel;
-    }
-    *len_out = item_len;
-    return (int)(cur - buf);
-}
-
-int store_tlv_find_nth_paged(const u8 *buf, u32 buf_size, u16 tag, u16 min_len,
-                             u32 index, u16 *len_out, u32 extra)
-{
-    u32 range[4];
-    int base_off = sceNpCommerce2_69FEA1C8(buf, buf_size, tag, 0, range, extra);
-    const u8 *cur;
-    u32 idx;
-    u16 item_len = 0;
-
-    if (base_off < 0)
-        return base_off;
-    if (index >= range[1])
-        return (int)0x80550F06;
-
-    cur = buf + base_off;
-    for (idx = 0; idx <= index; idx++) {
-        int rel;
-        if (idx != 0)
-            cur += item_len;
-        rel = sceNpCommerce2_E3455E27(cur, buf_size - (u32)(cur - buf), tag, min_len, &item_len);
-        if (rel < 0)
-            return rel;
-        cur += rel;
-    }
-    *len_out = item_len;
-    return (int)(cur - buf);
-}
-
-int store_tlv_clamp_paged(const u32 *cursor, u16 tag, u16 min_len, u32 *range_out)
-{
-    u32 idx;
-    u16 item_len = 0;
-    int ret = 0;
-
-    for (idx = 0; idx < range_out[1]; idx++) {
-        ret = store_tlv_find_nth_paged((const u8 *)(size_t)cursor[3], cursor[4],
-                                       tag, min_len, idx, &item_len, cursor[6]);
-        if (ret < 0) {
-            if (idx != 0) {
-                range_out[1] = idx;
-                return 0;
-            }
-            return ret;
+    if (cid == STORE_CMD_CR_SESS || cid == STORE_CMD_START_REG ||
+        cid == STORE_CMD_AUTHENTICATE || cid == STORE_CMD_VERIFY_DOB ||
+        cid == STORE_CMD_CR_GUEST_SESS) {
+        if (resp_size <= sizeof(ctx->session_buf)) {
+            ctx->session_len = resp_size;
+            sceKernelMemcpy(ctx->session_buf, resp, resp_size);
+        } else {
+            ctx->session_len = 0U;
         }
     }
-    return ret;
-}
-
-/* =========================================================================
- * Store response root & sub-item TLV parsers
- * ========================================================================= */
-
-int store_tlv_parse_simple_root(u32 *out, const u8 *buf, u32 buf_size)
-{
-    u32 ver = 0, body_size = 0;
-    int off = store_tlv_parse_root(buf, buf_size, &ver, &body_size, NULL);
-    if (off < 0)
-        return off;
-    store_tlv_reset_hdr(out, 40, ver, buf, buf + off, body_size, NULL);
-    out[2] = (u32)off + body_size;
     return 0;
-}
-
-int store_tlv_parse_counted_root(u32 *out, const u8 *buf, u32 buf_size, u32 tag)
-{
-    u32 ver = 0, body_size = 0;
-    int off = store_tlv_parse_root(buf, buf_size, &ver, &body_size, NULL);
-    if (off < 0)
-        return off;
-    store_tlv_reset_hdr(out, 44, ver, buf, buf + off, body_size, NULL);
-    out[2] = (u32)off + body_size;
-    return store_min_s32(sceNpCommerce2_3F6D413C(buf + off, body_size, tag, 0, &out[10]), 0);
-}
-
-int store_tlv_parse_paged_root(u32 *out, const u8 *buf, u32 buf_size, u16 tag, u16 min_len)
-{
-    u32 ver = 0, body_size = 0, extra = 0;
-    int off = store_tlv_parse_root(buf, buf_size, &ver, &body_size, &extra);
-    int ret;
-    if (off < 0)
-        return off;
-    store_tlv_reset_hdr(out, 52, ver, buf, buf + off, body_size, NULL);
-    out[2] = (u32)off + body_size;
-    out[6] = extra;
-    ret = sceNpCommerce2_69FEA1C8(buf + off, body_size, tag, 0, &out[10], extra);
-    if (ret < 0)
-        return ret;
-    return store_min_s32(store_tlv_clamp_paged(out, tag, min_len, &out[10]), 0);
-}
-
-int store_tlv_parse_cart_root(u32 *out, const u8 *buf, u32 buf_size, int optional_tags)
-{
-    u32 ver = 0, body_size = 0, extra = 0;
-    int off = store_tlv_parse_root(buf, buf_size, &ver, &body_size, optional_tags ? NULL : &extra);
-    int ret;
-    if (off < 0)
-        return off;
-    store_tlv_reset_hdr(out, 48, ver, buf, buf + off, body_size, NULL);
-    out[2] = (u32)off + body_size;
-    if (!optional_tags)
-        out[6] = extra;
-
-    ret = sceNpCommerce2_E3455E27(buf + off, body_size, 45, 4, NULL);
-    if (ret >= 0)
-        out[10] = store_read_be32(buf + off + ret);
-    else if (!optional_tags || ret != STORE_ERR_TAG_NOT_FOUND)
-        return ret;
-
-    ret = sceNpCommerce2_E3455E27(buf + off, body_size, 21, 4, NULL);
-    if (ret >= 0)
-        out[11] = store_read_be32(buf + off + ret);
-    else if (ret != STORE_ERR_TAG_NOT_FOUND)
-        return ret;
-    return 0;
-}
-
-int store_tlv_parse_purchase_root(u32 *out, const u8 *buf, u32 buf_size)
-{
-    u32 ver = 0, body_size = 0;
-    int off = store_tlv_parse_root(buf, buf_size, &ver, &body_size, NULL);
-    int ret;
-    if (off < 0)
-        return off;
-    store_tlv_reset_hdr(out, 56, ver, buf, buf + off, body_size, NULL);
-    out[2] = (u32)off + body_size;
-
-    ret = sceNpCommerce2_E3455E27(buf + off, body_size, 21, 4, NULL);
-    if (ret >= 0)
-        out[10] = store_read_be32(buf + off + ret);
-    else if (ret != STORE_ERR_TAG_NOT_FOUND)
-        return ret;
-
-    ret = sceNpCommerce2_E3455E27(buf + off, body_size, 3, 8, NULL);
-    if (ret >= 0) {
-        u64 val = store_read_be64(buf + off + ret);
-        out[12] = (u32)val;
-        out[13] = (u32)(val >> 32);
-    } else if (ret != STORE_ERR_TAG_NOT_FOUND) {
-        return ret;
-    }
-    return 0;
-}
-
-int store_tlv_parse_topup_root(u32 *out, const u8 *buf, u32 buf_size)
-{
-    u32 ver = 0, body_size = 0;
-    int off = store_tlv_parse_root(buf, buf_size, &ver, &body_size, NULL);
-    int ret;
-    if (off < 0)
-        return off;
-    store_tlv_reset_hdr(out, 56, ver, buf, buf + off, body_size, NULL);
-    out[2] = (u32)off + body_size;
-
-    ret = sceNpCommerce2_E3455E27(buf + off, body_size, 21, 4, NULL);
-    if (ret < 0)
-        return ret;
-    out[10] = store_read_be32(buf + off + ret);
-
-    ret = sceNpCommerce2_E3455E27(buf + off, body_size, 45, 4, NULL);
-    if (ret < 0)
-        return ret;
-    out[11] = store_read_be32(buf + off + ret);
-
-    ret = sceNpCommerce2_E3455E27(buf + off, body_size, 3, 8, NULL);
-    if (ret >= 0) {
-        u64 val = store_read_be64(buf + off + ret);
-        out[12] = (u32)val;
-        out[13] = (u32)(val >> 32);
-    }
-    return store_min_s32(ret, 0);
-}
-
-int store_tlv_parse_voucher_root(u32 *out, const u8 *buf, u32 buf_size, int with_tx_id)
-{
-    u32 ver = 0, body_size = 0;
-    int off = store_tlv_parse_root(buf, buf_size, &ver, &body_size, NULL);
-    int ret;
-    if (off < 0)
-        return off;
-    store_tlv_reset_hdr(out, with_tx_id ? 56 : 44, ver, buf, buf + off, body_size, NULL);
-    out[2] = (u32)off + body_size;
-
-    ret = sceNpCommerce2_E3455E27(buf + off, body_size, 49, 4, NULL);
-    if (ret >= 0)
-        out[10] = store_read_be32(buf + off + ret);
-    if (!with_tx_id || ret < 0)
-        return store_min_s32(ret, 0);
-
-    ret = sceNpCommerce2_E3455E27(buf + off, body_size, 3, 8, NULL);
-    if (ret >= 0) {
-        u64 val = store_read_be64(buf + off + ret);
-        out[12] = (u32)val;
-        out[13] = (u32)(val >> 32);
-    }
-    return store_min_s32(ret, 0);
-}
-
-int store_tlv_parse_addr_lookup_root(u32 *out, const u8 *buf, u32 buf_size)
-{
-    u32 ver = 0, body_size = 0;
-    int off = store_tlv_parse_root(buf, buf_size, &ver, &body_size, NULL);
-    int ret;
-    if (off < 0)
-        return off;
-    store_tlv_reset_hdr(out, 52, ver, buf, buf + off, body_size, NULL);
-    out[2] = (u32)off + body_size;
-
-    ret = store_tlv_read_str(buf + off, body_size, 79, buf, &out[10]);
-    if (ret >= 0) ret = store_tlv_read_str(buf + off, body_size, 82, buf, &out[11]);
-    if (ret >= 0) ret = store_tlv_read_str(buf + off, body_size, 54, buf, &out[12]);
-    return store_min_s32(ret, 0);
-}
-
-int store_tlv_parse_epw_root(u32 *out, const u8 *buf, u32 buf_size)
-{
-    u32 ver = 0, body_size = 0;
-    int off = store_tlv_parse_root(buf, buf_size, &ver, &body_size, NULL);
-    int ret;
-    if (off < 0)
-        return off;
-    store_tlv_reset_hdr(out, 44, ver, buf, buf + off, body_size, NULL);
-    out[2] = (u32)off + body_size;
-    ret = store_tlv_read_str(buf + off, body_size, 118, buf, &out[10]);
-    return store_min_s32(ret, 0);
-}
-
-int store_tlv_parse_prod_list_root(u32 *out, const u8 *buf, u32 buf_size)
-{
-    u32 ver = 0, body_size = 0, extra = 0;
-    int off = store_tlv_parse_root(buf, buf_size, &ver, &body_size, &extra);
-    if (off < 0)
-        return off;
-    store_tlv_reset_hdr(out, 44, ver, buf, buf + off, body_size, NULL);
-    out[2] = (u32)off + body_size;
-    out[6] = extra;
-    return store_min_s32(sceNpCommerce2_3546C737(buf + off, body_size, 40, 0, &out[10]), 0);
-}
-
-int store_tlv_parse_recom_root(u32 *out, const u8 *buf, u32 buf_size)
-{
-    u32 ver = 0, body_size = 0, extra = 0;
-    int off = store_tlv_parse_root(buf, buf_size, &ver, &body_size, &extra);
-    int ret;
-    if (off < 0)
-        return off;
-    store_tlv_reset_hdr(out, 56, ver, buf, buf + off, body_size, NULL);
-    out[2] = (u32)off + body_size;
-    out[6] = extra;
-
-    ret = store_tlv_read_str(buf + off, body_size, 148, buf, &out[13]);
-    if (ret < 0 && ret != STORE_ERR_TAG_NOT_FOUND)
-        return ret;
-    ret = sceNpCommerce2_69FEA1C8(buf + off, body_size, 40, 0, &out[10], extra);
-    if (ret < 0)
-        return ret;
-    return store_min_s32(store_tlv_clamp_paged(out, 40, 4, &out[10]), 0);
-}
-
-int store_tlv_parse_tag_ptr_item(const u32 *parent, u32 index, u16 tag, int from_body, u32 *out_ptr)
-{
-    const u8 *scan = (const u8 *)(size_t)(from_body ? parent[5] : parent[3]);
-    u32 scan_len = from_body ? (parent[4] - (u32)(scan - (const u8 *)(size_t)parent[3])) : parent[4];
-    u16 tlen = 0;
-    int off = store_tlv_find_nth(scan, scan_len, tag, 0, index, &tlen);
-    if (off >= 0)
-        *out_ptr = (u32)(size_t)(scan + off);
-    return off;
-}
-
-int store_tlv_parse_search_item(const u32 *parent, u32 index, int use_paged, u32 *out)
-{
-    const u8 *data = (const u8 *)(size_t)parent[3];
-    u16 tlen = 0;
-    int off = use_paged
-        ? store_tlv_find_nth_paged(data, parent[4], 40, 4, index, &tlen, parent[6])
-        : store_tlv_find_nth_ex(data, parent[4], 40, 4, index, &tlen, (int)parent[6]);
-    if (off < 0)
-        return off;
-    store_tlv_reset_hdr(out, 44, parent[0], (const u8 *)(size_t)parent[1],
-                        data + off, tlen, data + off + 4);
-    out[10] = store_read_be32(data + off);
-    return off;
-}
-
-int store_tlv_parse_cart_item(const u32 *parent, int indexed, u32 index, u32 *out)
-{
-    const u8 *body = (const u8 *)(size_t)parent[5];
-    u32 rem = parent[4] - (u32)(body - (const u8 *)(size_t)parent[3]);
-    u16 tlen = 0;
-    int off = indexed
-        ? store_tlv_find_nth(body, rem, 78, 105, index, &tlen)
-        : sceNpCommerce2_E3455E27(body, rem, 78, 105, &tlen);
-    if (off < 0)
-        return off;
-    store_tlv_reset_hdr(out, 44, parent[0], (const u8 *)(size_t)parent[1],
-                        body + off, tlen, body + off + 4);
-    out[10] = store_read_be32(body + off);
-    return off;
-}
-
-int store_tlv_parse_wallet_info(const u32 *parent, u32 *out)
-{
-    const u8 *data = (const u8 *)(size_t)parent[3];
-    u16 tlen = 0;
-    int off = sceNpCommerce2_E3455E27(data, parent[4], 44, 12, &tlen);
-    if (off < 0)
-        return off;
-    store_tlv_reset_hdr(out, 56, parent[0], (const u8 *)(size_t)parent[1],
-                        data + off, tlen, data + off + 12);
-    out[10] = store_read_be32(data + off);
-    store_tlv_store_rtc(data + off + 4, &out[12]);
-    return off;
-}
-
-int store_tlv_parse_cart_summary(const u32 *parent, u32 *out)
-{
-    const u8 *data = (const u8 *)(size_t)parent[3];
-    u16 tlen = 0;
-    int off = sceNpCommerce2_E3455E27(data, parent[4], 47, 16, &tlen);
-    if (off < 0)
-        return off;
-    store_tlv_reset_hdr(out, 56, parent[0], (const u8 *)(size_t)parent[1],
-                        data + off, tlen, data + off + 12);
-    out[10] = store_read_be32(data + off);
-    out[11] = store_read_be32(data + off + 4);
-    out[12] = store_read_be32(data + off + 8);
-    return sceNpCommerce2_3546C737(data + off + 12, tlen - 12, 46, 0, &out[13]);
-}
-
-int store_tlv_parse_tax_info(const u32 *parent, const u8 *scan, u32 scan_len, u32 *out)
-{
-    u16 tlen = 0;
-    int off = sceNpCommerce2_E3455E27(scan, scan_len, 88, 8, &tlen);
-    if (off < 0)
-        return off;
-    store_tlv_reset_hdr(out, 48, parent[0], (const u8 *)(size_t)parent[1],
-                        scan + off, tlen, scan + off + 8);
-    out[10] = store_read_be32(scan + off);
-    out[11] = store_read_be32(scan + off + 4);
-    return off;
-}
-
-int store_tlv_parse_voucher_summary(const u32 *parent, u32 *out)
-{
-    const u8 *data = (const u8 *)(size_t)parent[3];
-    u16 tlen = 0;
-    int off = sceNpCommerce2_E3455E27(data, parent[4], 50, 8, &tlen);
-    if (off < 0)
-        return off;
-    store_tlv_reset_hdr(out, 48, parent[0], (const u8 *)(size_t)parent[1],
-                        data + off, tlen, data + off + 8);
-    out[10] = store_read_be32(data + off);
-    out[11] = store_read_be32(data + off + 4);
-    return off;
-}
-
-int store_tlv_parse_voucher_items(const u32 *parent, u32 *out)
-{
-    const u8 *data = (const u8 *)(size_t)parent[3];
-    u16 tlen = 0;
-    int off = sceNpCommerce2_E3455E27(data, parent[4], 51, 4, &tlen);
-    if (off < 0)
-        return off;
-    store_tlv_reset_hdr(out, 44, parent[0], (const u8 *)(size_t)parent[1],
-                        data + off, tlen, data + off);
-    return sceNpCommerce2_3F6D413C(data + off, tlen, 122, 0, &out[10]);
-}
-
-int store_tlv_parse_province_info(const u32 *parent, u32 index, u32 *out)
-{
-    const u8 *data = (const u8 *)(size_t)parent[3];
-    u16 tlen = 0;
-    int off = store_tlv_find_nth(data, parent[4], 55, 73, index, &tlen);
-    const u8 *item, *sub;
-    int ret;
-    if (off < 0)
-        return off;
-    item = data + off;
-    sub = item + 65;
-    store_tlv_reset_hdr(out, 52, parent[0], (const u8 *)(size_t)parent[1], item, tlen, sub);
-    out[10] = (u32)(size_t)item;
-    ret = store_tlv_read_str(sub, tlen - 65, 54, (const u8 *)(size_t)parent[1], &out[11]);
-    if (ret < 0)
-        return ret;
-    return sceNpCommerce2_3F6D413C(sub, tlen - 65, 59, 0, &out[12]);
-}
-
-int store_tlv_parse_city_info(const u32 *parent, u32 index, u32 *out)
-{
-    const u8 *body = (const u8 *)(size_t)parent[5];
-    u32 rem = parent[4] - (u32)(body - (const u8 *)(size_t)parent[3]);
-    u16 tlen = 0;
-    int off = store_tlv_find_nth(body, rem, 59, 69, index, &tlen);
-    const u8 *item, *sub;
-    if (off < 0)
-        return off;
-    item = body + off;
-    sub = item + 65;
-    store_tlv_reset_hdr(out, 48, parent[0], (const u8 *)(size_t)parent[1], item, tlen, sub);
-    out[10] = (u32)(size_t)item;
-    return store_tlv_read_str(sub, tlen - 65, 58, (const u8 *)(size_t)parent[1], &out[11]);
-}
-
-int store_tlv_parse_pay_method(const u32 *parent, u32 index, u32 *out)
-{
-    const u8 *data = (const u8 *)(size_t)parent[3];
-    u16 tlen = 0;
-    int off = store_tlv_find_nth(data, parent[4], 57, 25, index, &tlen);
-    const u8 *item, *sub;
-    int ret;
-    if (off < 0)
-        return off;
-    item = data + off;
-    sub = item + 17;
-    store_tlv_reset_hdr(out, 52, parent[0], (const u8 *)(size_t)parent[1], item, tlen, sub);
-    out[10] = (u32)(size_t)item;
-    ret = store_tlv_read_str(sub, tlen - 17, 15, (const u8 *)(size_t)parent[1], &out[11]);
-    if (ret >= 0)
-        ret = store_tlv_read_str(sub, tlen - 17, 16, (const u8 *)(size_t)parent[1], &out[12]);
-    return ret;
-}
-
-int store_tlv_parse_currency(const u32 *parent, u32 index, u32 *out)
-{
-    const u8 *data = (const u8 *)(size_t)parent[3];
-    u16 tlen = 0;
-    int off = store_tlv_find_nth(data, parent[4], 22, 42, index, &tlen);
-    const u8 *item, *sub;
-    int ret;
-    if (off < 0)
-        return off;
-    item = data + off;
-    sub = item + 30;
-    store_tlv_reset_hdr(out, 84, parent[0], (const u8 *)(size_t)parent[1], item, tlen, sub);
-    out[10] = (u32)(size_t)item;
-    out[11] = (u32)(size_t)(item + 4);
-    *(u16 *)&out[12] = store_bswap16((u16)((item[8] << 8) | item[9]));
-    out[13] = store_read_be32(item + 10);
-    out[14] = store_read_be32(item + 14);
-    out[16] = store_read_be32(item + 18);
-    out[17] = store_read_be32(item + 22);
-    out[18] = store_read_be32(item + 26);
-
-    ret = sceNpCommerce2_3F6D413C(sub, tlen - 30, 21, 0, &out[15]);
-    if (ret < 0)
-        return ret;
-    ret = store_tlv_read_str(sub, tlen - 30, 125, (const u8 *)(size_t)parent[1], &out[19]);
-    if (ret >= 0)
-        ret = store_tlv_read_str(sub, tlen - 30, 126, (const u8 *)(size_t)parent[1], &out[20]);
-    return ret;
-}
-
-int store_tlv_parse_rating_item(const u32 *parent, int indexed, u32 index, u32 *out)
-{
-    const u8 *body = (const u8 *)(size_t)parent[5];
-    u32 rem = parent[4] - (u32)(body - (const u8 *)(size_t)parent[3]);
-    u16 tlen = 0;
-    int off = indexed
-        ? store_tlv_find_nth(body, rem, 155, 71, index, &tlen)
-        : sceNpCommerce2_E3455E27(body, rem, 155, 71, &tlen);
-    if (off < 0)
-        return off;
-    store_tlv_reset_hdr(out, 48, parent[0], (const u8 *)(size_t)parent[1],
-                        body + off, tlen, body + off + 71);
-    out[10] = (u32)(size_t)(body + off);
-    out[11] = (u32)(size_t)(body + off + 6);
-    return 0;
-}
-
-int store_tlv_parse_discount_info(const u32 *cursor, u32 *has_disc, u32 *disc_type,
-                                  u32 *disc_val, u32 *disc_price)
-{
-    const u8 *body = (const u8 *)(size_t)cursor[5];
-    u32 rem = cursor[4] - (u32)(body - (const u8 *)(size_t)cursor[3]);
-    u16 tlen = 0;
-    int off = sceNpCommerce2_E3455E27(body, rem, 74, 12, &tlen);
-    if (off == STORE_ERR_TAG_NOT_FOUND) {
-        *has_disc = 0;
-        return 0;
-    }
-    if (off < 0)
-        return off;
-    *disc_type  = store_read_be32(body + off);
-    *disc_val   = store_read_be32(body + off + 4);
-    *disc_price = store_read_be32(body + off + 8);
-    *has_disc   = 1;
-    return 0;
-}
-
-int store_tlv_parse_reward_info(u32 ver, const u8 *base, const u8 *data, u32 data_size,
-                                const u8 *body, u32 *out, int is_alt)
-{
-    u32 rem = data_size - (u32)(body - data);
-    u16 tlen = 0;
-    int off = sceNpCommerce2_E3455E27(body, rem, is_alt ? 145 : 75, 8, &tlen);
-    const u8 *item, *sub;
-    int ret;
-    if (off < 0)
-        return off;
-    item = body + off;
-    sub = item + 8;
-    store_tlv_reset_hdr(out, is_alt ? 68 : 76, ver, base, item, tlen, sub);
-    out[10] = store_read_be32(item);
-    out[11] = store_read_be32(item + 4);
-
-    if (is_alt) {
-        ret = store_tlv_read_str(sub, tlen - 8, 146, base, &out[12]);
-        if (ret < 0 && ret != STORE_ERR_TAG_NOT_FOUND)
-            return ret;
-        return store_min_s32(store_tlv_parse_discount_info(out, &out[13], &out[14], &out[15], &out[16]), 0);
-    }
-
-    ret = store_tlv_read_str(sub, tlen - 8, 90, base, &out[12]);
-    if (ret < 0 && ret != STORE_ERR_TAG_NOT_FOUND)
-        return ret;
-    ret = store_tlv_read_str(sub, tlen - 8, 70, base, &out[13]);
-    if (ret < 0 && ret != STORE_ERR_TAG_NOT_FOUND)
-        return ret;
-    ret = store_tlv_read_str(sub, tlen - 8, 71, base, &out[14]);
-    if (ret < 0 && ret != STORE_ERR_TAG_NOT_FOUND)
-        return ret;
-    return store_min_s32(store_tlv_parse_discount_info(out, &out[15], &out[16], &out[17], &out[18]), 0);
-}
-
-int store_tlv_parse_content_hdr(const u8 *item, u32 *id_out, u32 *type_out, u32 *date_out,
-                                u32 *count1_out, u32 *count2_out, u32 *has_flag_out,
-                                u32 *raw_flags_out, u32 *sp_flags_out)
-{
-    u32 raw_flags, sp_bits;
-
-    *id_out = (u32)(size_t)item;
-    *type_out = store_read_be32(item + 49);
-    store_tlv_store_rtc(item + 53, date_out);
-    *count1_out = store_read_be32(item + 61);
-    *count2_out = store_read_be32(item + 65);
-    raw_flags = store_read_be32(item + 69);
-    *raw_flags_out = raw_flags;
-    *has_flag_out = (raw_flags & 0xAU) != 0;
-    sp_bits = store_read_be32(item + 73);
-    if (sp_bits & 0x80000000U) *sp_flags_out |= 1U;
-    if (sp_bits & 0x40000000U) *sp_flags_out |= 2U;
-    if (sp_bits & 0x20000000U) *sp_flags_out |= 4U;
-    return 77;
-}
-
-int store_tlv_parse_content_item(const u8 *item, u32 item_len, const u8 *base, u32 ver,
-                                 u32 kind, u32 *out)
-{
-    int is_new_sdk = ((u32)sceKernelGetCompiledSdkVersion() > 0x0602FFFFU);
-    const u8 *sub = item + 77;
-    u32 sub_len = (u16)(item_len - 77);
-    u32 sp_bits;
-    int ret;
-
-    store_tlv_reset_hdr(out, is_new_sdk ? 128 : 88, ver, base, item, item_len, sub);
-    out[10] = kind;
-    out[11] = (u32)(size_t)item;
-    out[12] = store_read_be32(item + 49);
-    store_tlv_store_rtc(item + 53, &out[14]);
-    sp_bits = store_read_be32(item + 73);
-    if (is_new_sdk) {
-        if (sp_bits & 0x80000000U) out[22] |= 1U;
-        if (sp_bits & 0x40000000U) out[22] |= 2U;
-        if (sp_bits & 0x20000000U) out[22] |= 4U;
-    }
-
-    ret = store_tlv_read_str(sub, sub_len, 7, base, &out[16]);
-    if (ret >= 0) ret = store_tlv_read_str(sub, sub_len, 12, base, &out[17]);
-    if (ret >= 0) ret = store_tlv_read_str(sub, sub_len, 16, base, &out[18]);
-    if (ret >= 0) ret = store_tlv_read_str(sub, sub_len, 4, base, &out[19]);
-    if (ret >= 0 && kind == 1) {
-        ret = store_tlv_read_str(sub, sub_len, 13, base, &out[20]);
-        if (ret >= 0) {
-            ret = store_tlv_read_str(sub, sub_len, 119, base, &out[21]);
-            if (ret == STORE_ERR_TAG_NOT_FOUND)
-                ret = 0;
-        }
-    }
-    return ret;
-}
-
-int store_tlv_parse_rating_system(const u8 *item, u32 item_len, const u8 *base, u32 ver, u32 *out)
-{
-    const u8 *sub = item + 17;
-    int ret;
-
-    store_tlv_reset_hdr(out, 52, ver, base, item, item_len, sub);
-    out[10] = (u32)(size_t)item;
-    ret = store_tlv_read_str(sub, item_len - 17, 16, base, &out[11]);
-    if (ret < 0)
-        return ret;
-    return sceNpCommerce2_3F6D413C(sub, item_len - 17, 23, 0, &out[12]);
-}
-
-int store_tlv_parse_sku_fields(const u8 *item, u32 **desc, int skip_extra)
-{
-    const u8 *cur = item + 61;
-    u32 val, extra_flag = 0;
-
-    *(desc[3]) = (u32)(size_t)item;
-    val = store_read_be32(item + 57);
-    *(desc[4]) = (val == 2) ? 2 : 1;
-    *(desc[5]) = store_read_be32(cur); cur += 4;
-    *(desc[6]) = store_read_be32(cur); cur += 4;
-    if (desc[7]) *(desc[7]) = store_read_be32(cur);
-    cur += 4;
-    if (desc[8]) *(desc[8]) = store_read_be32(cur);
-    cur += 4;
-    *(desc[9]) = (store_read_be32(cur) != 0); cur += 4;
-    if (((u32)(size_t)desc[1]) & 4U)
-        extra_flag = store_read_be32(cur);
-    cur += 4;
-    if (desc[10]) *(desc[10]) = store_read_be32(cur);
-    cur += 4;
-    if (desc[11]) *(desc[11]) = store_read_be32(cur);
-    cur += 4;
-    if (desc[12]) *(desc[12]) = store_read_be32(cur);
-    cur += 4;
-    if (!skip_extra && desc[13]) *(desc[13]) = store_read_be32(cur);
-    cur += 4;
-    if (!skip_extra && desc[14]) *(desc[14]) = store_read_be32(cur);
-    cur += 4;
-
-    if (!skip_extra) {
-        if (desc[7] && *(desc[7]) != 0) *(desc[2]) |= 1U;
-        if (desc[9] && *(desc[9]) != 0) *(desc[2]) |= 2U;
-        if (extra_flag != 0)            *(desc[2]) |= 4U;
-    }
-    return (int)(cur - item);
-}
-
-int store_tlv_parse_sku_full(const u8 *item, u32 **desc)
-{
-    int off = store_tlv_parse_sku_fields(item, desc, 0);
-    const u8 *cur;
-    u64 size_val;
-
-    if (off < 0)
-        return off;
-    cur = item + off;
-    store_tlv_store_rtc(cur, desc[15]); cur += 8;
-    store_tlv_store_rtc(cur, desc[16]); cur += 8;
-    store_tlv_store_rtc(cur, desc[17]); cur += 8;
-    *(desc[18]) = store_read_be32(cur); cur += 4;
-    size_val = store_read_be64(cur); cur += 8;
-    desc[19][0] = (u32)size_val;
-    desc[19][1] = (u32)(size_val >> 32);
-    return (int)(cur - item);
 }
