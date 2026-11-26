@@ -33,6 +33,7 @@ int SwMwSinkStreamMutexDelete(SceKernelLwMutexWork *mutex);
 
 /* the move session's record list and the device label (SwMwMoveSink.cpp's calls) */
 int SwMwMoveRecordBegin(int manager, int id, int mode);
+int SwMwMoveRecordAppend(int manager, struct SwMwMoveRecord *record);
 int SwMwMoveListRelease(int manager, int id);
 int SwMwCoreNotifyLabel(int device, int label, int value);
 
@@ -196,6 +197,51 @@ extern "C" int SwMwMoveSinkStreamDestroy(struct SwMwSinkStream *stream)
 		::operator delete(SwMwMoveSinkStreamDestruct(stream));
 	}
 	return 0;
+}
+
+/* send the move's MV_FINALIZE for the labelled session (0x8100bd10) */
+extern "C" int SwMwMoveSinkStreamFinalize(struct SwMwSinkStream *stream, int value)
+{
+	struct SwMwMoveSink *sink = (struct SwMwMoveSink *)stream->sink;
+	struct SwMwMoveMessage message;
+	struct SwMwMoveRecord record;
+	int status;
+
+	SwMwMoveMessageInit(&message);
+	memset(&record, 0, sizeof(record));
+	status = sink->content->request(&sink->uri, (unsigned char)sink->moveState, &message, 0);
+	if (status != 0) {
+		swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MOVESTREAM_SOURCE, 1334);
+		SwMwMoveMessageDone(&message);
+		return SwMwStatus(status);
+	}
+	record.label = message.label;
+	memcpy(record.key, message.key, 8);
+	memcpy(record.first, message.first, 10);
+	memcpy(record.second, message.second, 10);
+	record.kind = 1;
+	record.requested = sink->sessionState[6];
+	record.size = sink->sessionState[7];
+	if (record.size != 0)
+		memcpy(record.payload, sink->session, record.size);
+	status = SwMwMoveRecordAppend(sink->manager, &record);
+	if (status != 0) {
+		SwMwMoveMessageDone(&message);
+		return status;
+	}
+	sink->sessionState[5] = record.id;
+	swMwTrace("sw mw:Send MV_FINALIZE: kxm_label=0x%x contentID=%d\n",
+		  record.label, record.requested);
+	status = sink->content->finalize(&sink->uri, &message);
+	if (status != 0) {
+		swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MOVESTREAM_SOURCE, 1365);
+		SwMwMoveMessageDone(&message);
+		return SwMwStatus(status);
+	}
+	sink->finalized = 1;
+	status = SwMwMoveSinkStreamCompleteLabel(stream);
+	SwMwMoveMessageDone(&message);
+	return status;
 }
 
 /* send the move's MV_COMPLETE for the labelled session and finish it (0x8100bee0) */

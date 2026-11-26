@@ -103,7 +103,8 @@ struct SwMwContent {
 	virtual int list(void *out);				/* 0x14 */
 	virtual int setUri(int *uriSet, struct SwMwUri *uri, int mode);	/* 0x18 */
 	virtual int operation(struct SwMwUri *uri, int *result);	/* 0x1c */
-	virtual int request(int value, struct SwMwUri *uri, char mode);	/* 0x20 */
+	virtual int request(struct SwMwUri *uri, unsigned char label,
+			    struct SwMwMoveMessage *message, int value);	/* 0x20 */
 	virtual int finalize(struct SwMwUri *uri, struct SwMwMoveMessage *message);	/* 0x24 */
 	virtual int complete(struct SwMwUri *uri, unsigned char state);		/* 0x28 */
 	virtual int abort(struct SwMwUri *uri, unsigned char state);		/* 0x2c */

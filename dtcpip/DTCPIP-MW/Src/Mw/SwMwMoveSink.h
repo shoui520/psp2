@@ -29,6 +29,20 @@ struct SwMwMoveSink {
 	unsigned char session[0x200];	/* 0x80: the move session's own area */
 };
 
+/* one move record (0x230 bytes): the session id, its kind, the kxm label and key blocks,
+ * the requested label, the session-data size and the payload */
+struct SwMwMoveRecord {
+	int id;				/* 0x000 */
+	int kind;			/* 0x004 */
+	unsigned char label;		/* 0x008 */
+	unsigned char key[8];		/* 0x00C */
+	unsigned char first[10];	/* 0x014 */
+	unsigned char second[10];	/* 0x01E */
+	int requested;			/* 0x028 */
+	int size;			/* 0x02C */
+	unsigned char payload[0x200];	/* 0x030 */
+};
+
 extern "C" {
 int SwMwMoveSinkCreate(int *sink, int device);
 int SwMwMoveSinkDestroy(int sink);
