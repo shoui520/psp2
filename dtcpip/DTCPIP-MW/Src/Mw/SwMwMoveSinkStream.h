@@ -21,12 +21,14 @@ int SwMwMoveSinkStreamInit(struct SwMwSinkStream *stream, void *sink,
 int SwMwMoveSinkStreamCreate(struct SwMwSinkStream **stream, void *sink,
 			     const struct SwMwStreamWindow *window);
 int SwMwMoveSinkStreamDestroy(struct SwMwSinkStream *stream);
+int SwMwMoveSinkStreamCompleteLabel(struct SwMwSinkStream *stream);
 int SwMwMoveSinkStreamEventSet(struct SwMwSinkStream *stream, void *handler, void *argument);
 int SwMwMoveSinkStreamOnEvent(struct SwMwSinkStream *stream, int *message);
 int SwMwMoveSinkStreamKxExpiring(void);
 int SwMwMoveSinkStreamConnect(struct SwMwSinkStream *stream);
 int SwMwMoveSinkStreamAbort(struct SwMwSinkStream *stream);
 int SwMwMoveSinkStreamDestroy(struct SwMwSinkStream *stream);
+int SwMwMoveSinkStreamCompleteLabel(struct SwMwSinkStream *stream);
 struct SwMwSinkStream *SwMwMoveSinkStreamConstruct(struct SwMwSinkStream *stream);
 int SwMwMoveSinkStreamGetWindow(struct SwMwSinkStream *stream, int *window);
 int SwMwMoveSinkStreamMutexLock(SceKernelLwMutexWork *mutex);

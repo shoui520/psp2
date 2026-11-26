@@ -35,7 +35,7 @@ int SwMwMoveSinkStreamIsOpen(int stream);
 int SwMwMoveSinkStreamWaitClosed(int stream);
 int SwMwMoveSinkStreamComplete(int stream);
 int SwMwMoveSinkStreamFinalize(int stream, int label);
-int SwMwMoveSinkStreamCompleteLabel(int stream, int label);
+int SwMwMoveSinkStreamCompleteLabel(int stream);
 void SwMwMoveSinkStreamGetWindow(int stream, int *window);
 }
 
@@ -1120,7 +1120,7 @@ extern "C" int SwMwMoveSinkStreamCompleteCommand(struct SwMwCommChannel *channel
 			SwMwMoveSinkReplyStatus(channel, request, 12003);
 			swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MOVESINK_SOURCE, 1013);
 		} else {
-			status = SwMwMoveSinkStreamCompleteLabel(stream, request->value1);
+			status = SwMwMoveSinkStreamCompleteLabel(stream);
 				if (status != 0) {
 					swMwTrace("[SWMW] Error %d in %s:%d\n", status,
 						  SWMW_MOVESINK_SOURCE, 1018);

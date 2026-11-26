@@ -30,6 +30,14 @@ int SwMwCoreContentManager(int device);
 
 /* the stream's bookkeeping mutex (SwMwSync.cpp's shared primitive, 0x8100c200/c4b6) */
 int SwMwSinkStreamMutexDelete(SceKernelLwMutexWork *mutex);
+
+/* the move session's record list and the device label (SwMwMoveSink.cpp's calls) */
+int SwMwMoveRecordBegin(int manager, int id, int mode);
+int SwMwMoveListRelease(int manager, int id);
+int SwMwCoreNotifyLabel(int device, int label, int value);
+
+/* the shared status mapper (SwMwContent.h) */
+int SwMwStatus(int status);
 }
 
 /* build the move stream object (0x8100c36e) */
@@ -186,6 +194,56 @@ extern "C" int SwMwMoveSinkStreamDestroy(struct SwMwSinkStream *stream)
 				swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MOVESTREAM_SOURCE, 239);
 		}
 		::operator delete(SwMwMoveSinkStreamDestruct(stream));
+	}
+	return 0;
+}
+
+/* send the move's MV_COMPLETE for the labelled session and finish it (0x8100bee0) */
+extern "C" int SwMwMoveSinkStreamCompleteLabel(struct SwMwSinkStream *stream)
+{
+	struct SwMwMoveSink *sink = (struct SwMwMoveSink *)stream->sink;
+	int value;
+	int status;
+
+	if (sink == NULL || sink->content == NULL)
+		return 12004;
+	if (sink->finalized == 0)
+		return 12004;
+	SwMwMoveSinkStreamMutexLock(&sink->mutex);
+	if (sink->sessionState[0] == 0) {
+		SwMwMoveSinkStreamMutexUnlock(&sink->mutex);
+		return 12007;
+	}
+	value = sink->sessionState[1];
+	if (value != 0) {
+		if (value == 1033) {
+			sink->finalized = 0;
+			sink->sessionState[0] = 0;
+			sink->sessionState[1] = 0;
+		} else if (value == 1019) {
+			sink->content->abort(&sink->uri, (unsigned char)sink->moveState);
+			sink->moveState = -1;
+			sink->content->operation(&sink->uri, &sink->result);
+			sink->result = 0;
+			SwMwCoreNotifyLabel(sink->device, sink->sessionState[6], 41);
+			SwMwMoveListRelease(sink->manager, sink->sessionState[5]);
+		}
+		SwMwMoveSinkStreamMutexUnlock(&sink->mutex);
+		return value;
+	}
+	SwMwMoveSinkStreamMutexUnlock(&sink->mutex);
+	if (sink->sessionState[2] == 0) {
+		status = SwMwMoveRecordBegin(sink->manager, sink->sessionState[5], 2);
+		if (status != 0)
+			return status;
+		swMwTrace("sw mw:Send MV_COMPLETE: kxm_label=0x%x contentID=%d\n",
+			  sink->moveState, sink->sessionState[6]);
+		status = sink->content->complete(&sink->uri, (unsigned char)sink->moveState);
+		if (status != 0) {
+			swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MOVESTREAM_SOURCE, 1443);
+			return SwMwStatus(status);
+		}
+		sink->sessionState[2] = 1;
 	}
 	return 0;
 }
