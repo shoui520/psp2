@@ -173,16 +173,25 @@ struct NpImpsCoreTitleNode {
 	char contentId[48];			/* +0x1FC */
 };
 
+struct NpRtCapsNode;
+struct NpRtStoredExt;
+
 struct NpImpsCoreDataNode {
 	NpImpsCoreDataNode *next;		/* +0x000 */
-	SceUInt32 reserved;			/* +0x004 */
-	int valid;				/* +0x008 */
+	char *mimeType;				/* +0x004: <data type="..."> */
+	int valid;				/* +0x008: inline format (1=base64, 2=uri, 3=fileid) */
 	void *dataPtr;				/* +0x00C */
 	SceSize dataSize;			/* +0x010 */
-	SceUInt8 reservedHeader[8];		/* +0x014 */
-	SceNpCommunicationId commId;		/* +0x01C */
-	SceNpCommunicationId targetCommId;	/* +0x028 */
-	SceUInt8 reservedTail[268];		/* +0x034 */
+	SceUInt32 declaredSize;			/* +0x014: <data size="..."> */
+	char *dataName;				/* +0x018: <data name="..."> */
+	SceNpCommunicationId commId;		/* +0x01C: <x context="..."> */
+	SceNpCommunicationId targetCommId;	/* +0x028: <origin> */
+	char defaultName[128];			/* +0x034: <defaultName> */
+	char localName[128];			/* +0x0B4: <localName> */
+	SceUInt8 localLang;			/* +0x134: <localLang> */
+	SceUInt8 padAfterLocalLang[3];		/* +0x135 */
+	SceUInt32 padBeforeActive;		/* +0x138 */
+	int activeState;			/* +0x13C: <x active="0"|"1"> */
 };
 
 struct NpImpsCorePresenceUpdate {
@@ -192,7 +201,8 @@ struct NpImpsCorePresenceUpdate {
 	NpImpsCoreTitleNode *titleList;		/* +0x00C */
 	NpImpsCoreDataNode *dataList;		/* +0x010 */
 	paf::rtc::Tick *lastOnlineTick;		/* +0x014 */
-	SceUInt32 reserved[2];			/* +0x018 */
+	NpRtCapsNode *capsList;			/* +0x018 */
+	NpRtStoredExt *storedExt;		/* +0x01C */
 };
 
 /* Init configuration for SceNpImpsSvc (16 bytes) */

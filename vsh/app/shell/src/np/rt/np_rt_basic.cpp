@@ -492,3 +492,8 @@ void npBasicReleasePrivacyList(NpBasicPrivacyList *privacyList)
 	if (sceAtomicDecrement32AcqRel(&privacyList->refCount) == 0)
 		freePrivacyListImmediate(privacyList);
 }
+
+int npBasicGetHandlerId(void)
+{
+	return s_basicHandlerId;
+}

@@ -276,6 +276,7 @@ int npRtXmppClientRecvStanza(NpRtXmppClient *client, NpRtAnyStanza *outStanza);
 /* SceNpBasic roster & privacy service (np_rt_basic.cpp, 0x81316C1C..0x813176AB) */
 int npBasicInit(void);
 int npBasicTerm(void);
+int npBasicGetHandlerId(void);
 void npBasicSetCallbacks(const NpBasicCallbacks *callbacks);
 int npBasicRequestRoster(int sessionHandle, int transactionId, NpBasicRosterGetCallback callback);
 void npBasicReleaseRosterList(NpBasicRosterList *rosterList);
