@@ -81,6 +81,7 @@ struct SwMwManager {
 	int padding[2];				/* 0x148 */
 	int parameter0;				/* 0x150 */
 	int parameter1;				/* 0x154 */
+	int tail[4];				/* 0x158: the base's own fields */
 };
 
 

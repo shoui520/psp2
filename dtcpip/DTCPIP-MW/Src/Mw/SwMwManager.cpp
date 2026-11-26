@@ -438,14 +438,13 @@ static struct SwMwManagerThread g_swMwParamTblThread;
 /* start the parameter table's download in the background (0x8100536e) */
 extern "C" int SwMwManagerDownloadParamTbl(void)
 {
-	struct SwMwManagerParamTbl *table = &g_swMwParamTbl;
-	struct SwMwManagerThread *thread = &g_swMwParamTblThread;
 	int status;
 	int failed;
 
 	swMwTrace("sw mw:SwMwManagerDownloadParamTbl\n");
-	table->state = 0;
-	status = SwMwManagerThreadCreate(thread, SwMwManagerParamTblThread, table, 0);
+	g_swMwParamTbl.state = 0;
+	status = SwMwManagerThreadCreate(&g_swMwParamTblThread, SwMwManagerParamTblThread,
+					 &g_swMwParamTbl, 0);
 	failed = 0;
 	if (status != 0) {
 		swMwTrace("[SWMW] Error %d in %s:%d\n", status, SWMW_MANAGER_SOURCE, 1654);
@@ -750,11 +749,11 @@ extern "C" int SwMwManagerCreate(struct SwMwManager **out, const int *config,
 						  SWMW_MANAGER_SOURCE, 1130);
 					failed = 1;
 				}
-				for (i = 0; failed == 0 && i < 3; ++i) {
+				for (i = 0; i < 3; ++i) {
 					if (certificate->device[i] != 0)
 						break;
 				}
-				if (failed == 0 && i == 3) {
+				if (i == 3) {
 					status = 13001;
 					failed = 1;
 				}
@@ -780,11 +779,11 @@ extern "C" int SwMwManagerCreate(struct SwMwManager **out, const int *config,
 			swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MANAGER_SOURCE, 1115);
 			failed = 1;
 		}
-		for (j = 0; failed == 0 && j < 3; ++j) {
+		for (j = 0; j < 3; ++j) {
 			if (certificate->device[j] != 0)
 				break;
 		}
-		if (failed == 0 && j == 3) {
+		if (j == 3) {
 			status = 13001;
 			failed = 1;
 		}
