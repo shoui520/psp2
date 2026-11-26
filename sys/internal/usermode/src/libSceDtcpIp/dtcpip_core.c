@@ -223,6 +223,14 @@ int dtcpIpCheckActivation(struct SceDtcpIpMwConnection *connection)
 	dtcpIpUnlock(SCE_DTCP_IP_LOCK_HTTP);
 	dtcpIpIpcDisconnect(ipc);
 
+#if FW_VERSION == 0x03630011
+	g_session.closed = 0;
+	if (status == 0)
+		return dtcpIpMapError(0);
+	if (status == 1 && subStatus != 1)
+		return subStatus;
+	return dtcpIpMapError(status);
+#else
 	if (status == 0) {
 		return dtcpIpMapError(0);
 	} else {
@@ -245,6 +253,7 @@ int dtcpIpCheckActivation(struct SceDtcpIpMwConnection *connection)
 	}
 	g_session.closed = 0;
 	return error;
+#endif
 }
 
 /*
