@@ -171,6 +171,237 @@ IpcProcessContext *Dispatcher::FindIpcProcessContext(IPMI::Session *session)
 	return NULL;
 }
 
+static void ExtractPacketMetadata(const RefPtr<Packet> &packet, void *outToOnlineId,
+				  void *outFromOnlineId, void *outCommId, char *outDataType)
+{
+	if (outToOnlineId != NULL) {
+		sceClibMemset(outToOnlineId, 0, NP_PUSH_IPC_ONLINE_ID_WIRE_SIZE);
+		NpPushOnlineIdData toId;
+		sceClibMemset(&toId, 0, sizeof(toId));
+		if (packet->GetToOnlineId(&toId) >= 0)
+			sceClibMemcpy_safe(outToOnlineId, &toId, sizeof(toId));
+	}
+	if (outFromOnlineId != NULL) {
+		sceClibMemset(outFromOnlineId, 0, NP_PUSH_IPC_ONLINE_ID_WIRE_SIZE);
+		NpPushOnlineIdData fromId;
+		sceClibMemset(&fromId, 0, sizeof(fromId));
+		if (packet->GetFromOnlineId(&fromId) >= 0)
+			sceClibMemcpy_safe(outFromOnlineId, &fromId, sizeof(fromId));
+	}
+	if (outCommId != NULL) {
+		sceClibMemset(outCommId, 0, NP_PUSH_IPC_COMM_ID_WIRE_SIZE);
+		NpPushCommunicationIdData commId;
+		sceClibMemset(&commId, 0, sizeof(commId));
+		if (packet->GetToCommId(&commId) >= 0)
+			sceClibMemcpy_safe(outCommId, &commId, sizeof(commId));
+	}
+	if (outDataType != NULL) {
+		sceClibMemset(outDataType, 0, NP_PUSH_IPC_DATA_TYPE_WIRE_SIZE);
+		packet->GetDataType(outDataType, NP_PUSH_IPC_DATA_TYPE_WIRE_SIZE);
+	}
+}
+
+static void ExtractPacketJsonEntries(const RefPtr<Packet> &packet, IpcJsonEntry *outBody,
+				     IpcJsonEntry *outExtEntries, SceInt32 maxExtCount)
+{
+	if (outBody != NULL) {
+		NpPushJsonValue *bodyVal = packet->GetBodyData();
+		if (bodyVal != NULL) {
+			outBody->ownerPacket = packet;
+			outBody->keyName = NULL;
+			outBody->jsonValue = bodyVal;
+		}
+	}
+
+	if (outExtEntries != NULL && maxExtCount > 0) {
+		NpPushJsonValue *extObj = packet->GetExtendedData();
+		if (extObj != NULL) {
+			int memberCount = SceNpCommonPs4_9C3F1645(extObj);
+			SceInt32 outIdx = 0;
+			for (int memberIdx = 0; memberIdx < memberCount && outIdx < maxExtCount;
+			     ++memberIdx) {
+				char *memberKey = NULL;
+				NpPushJsonValue *memberVal =
+					SceNpCommonPs4_24D09586(extObj, memberIdx, &memberKey);
+				if (memberVal != NULL && memberKey != NULL) {
+					outExtEntries[outIdx].ownerPacket = packet;
+					outExtEntries[outIdx].keyName = memberKey;
+					outExtEntries[outIdx].jsonValue = memberVal;
+					++outIdx;
+				}
+			}
+		}
+	}
+}
+
+/* 0x813B2832: RegisterNotificationOnlineId */
+int Dispatcher::RegisterNotificationOnlineId(IPMI::Session *session,
+					     const NpPushOnlineId *onlineId)
+{
+	if (session == NULL || onlineId == NULL)
+		return SCE_NP_PUSH_ERROR_INVALID_ARGUMENT;
+
+	ScopedLock lock(&m_mutex);
+	IpcProcessContext *procCtx = FindIpcProcessContext(session);
+	if (procCtx == NULL)
+		return SCE_NP_PUSH_ERROR_NOT_FOUND;
+
+	SceUInt32 assignedId = 0;
+	return procCtx->CreateIpcUserContext(onlineId, &assignedId);
+}
+
+/* 0x813B28D0: UnregisterNotificationOnlineId */
+int Dispatcher::UnregisterNotificationOnlineId(IPMI::Session *session,
+					       const NpPushOnlineId *onlineId)
+{
+	if (session == NULL || onlineId == NULL)
+		return SCE_NP_PUSH_ERROR_INVALID_ARGUMENT;
+
+	ScopedLock lock(&m_mutex);
+	IpcProcessContext *procCtx = FindIpcProcessContext(session);
+	if (procCtx == NULL)
+		return SCE_NP_PUSH_ERROR_NOT_FOUND;
+
+	return procCtx->DeleteIpcUserContextByOnlineId(onlineId);
+}
+
+/* 0x813B2AE8: PeekNotificationOnlineId */
+int Dispatcher::PeekNotificationOnlineId(IPMI::Session *session, SceUInt32 *outHasMore,
+					 void *outToOnlineId, void *outFromOnlineId,
+					 void *outCommId, char *outDataType)
+{
+	if (session == NULL)
+		return SCE_NP_PUSH_ERROR_INVALID_ARGUMENT;
+
+	ScopedLock lock(&m_mutex);
+	IpcProcessContext *procCtx = FindIpcProcessContext(session);
+	if (procCtx == NULL)
+		return SCE_NP_PUSH_ERROR_NOT_FOUND;
+
+	RefPtr<Packet> packet;
+	int ret = procCtx->PeekUserPacket(&packet);
+	if (ret < 0)
+		return ret;
+
+	if (outHasMore != NULL)
+		*outHasMore = 1;
+	ExtractPacketMetadata(packet, outToOnlineId, outFromOnlineId, outCommId, outDataType);
+	return 0;
+}
+
+/* 0x813B2C10: GetNotificationOnlineId */
+int Dispatcher::GetNotificationOnlineId(IPMI::Session *session, SceUInt32 flags,
+					const char *extKeys, SceInt32 extKeyCount,
+					void *outToOnlineId, void *outFromOnlineId,
+					void *outCommId, char *outDataType,
+					IpcJsonEntry *outBody, IpcJsonEntry *outExtEntries,
+					SceInt32 maxExtCount)
+{
+	(void)flags;
+	(void)extKeys;
+	(void)extKeyCount;
+
+	if (session == NULL)
+		return SCE_NP_PUSH_ERROR_INVALID_ARGUMENT;
+
+	ScopedLock lock(&m_mutex);
+	IpcProcessContext *procCtx = FindIpcProcessContext(session);
+	if (procCtx == NULL)
+		return SCE_NP_PUSH_ERROR_NOT_FOUND;
+
+	RefPtr<Packet> packet;
+	int ret = procCtx->DequeueUserPacket(&packet);
+	if (ret < 0)
+		return ret;
+
+	ExtractPacketMetadata(packet, outToOnlineId, outFromOnlineId, outCommId, outDataType);
+	ExtractPacketJsonEntries(packet, outBody, outExtEntries, maxExtCount);
+	return 0;
+}
+
+/* 0x813B2D40: RegisterNotificationDataType */
+int Dispatcher::RegisterNotificationDataType(IPMI::Session *session, const DataType *dataType,
+					     SceInt32 matchType)
+{
+	if (session == NULL || dataType == NULL || dataType->CStr() == NULL)
+		return SCE_NP_PUSH_ERROR_INVALID_ARGUMENT;
+
+	ScopedLock lock(&m_mutex);
+	IpcProcessContext *procCtx = FindIpcProcessContext(session);
+	if (procCtx == NULL)
+		return SCE_NP_PUSH_ERROR_NOT_FOUND;
+
+	FilterMatchType mode = (matchType == FILTER_MATCH_PREFIX)
+				       ? FILTER_MATCH_PREFIX
+				       : FILTER_MATCH_EXACT;
+	return procCtx->AddDataTypeFilter(mode, dataType->CStr());
+}
+
+/* 0x813B2DE2: UnregisterNotificationDataType */
+int Dispatcher::UnregisterNotificationDataType(IPMI::Session *session, const DataType *dataType)
+{
+	if (session == NULL || dataType == NULL || dataType->CStr() == NULL)
+		return SCE_NP_PUSH_ERROR_INVALID_ARGUMENT;
+
+	ScopedLock lock(&m_mutex);
+	IpcProcessContext *procCtx = FindIpcProcessContext(session);
+	if (procCtx == NULL)
+		return SCE_NP_PUSH_ERROR_NOT_FOUND;
+
+	return procCtx->RemoveDataTypeFilterByName(dataType->CStr());
+}
+
+/* 0x813B2E80: PeekNotificationDataType */
+int Dispatcher::PeekNotificationDataType(IPMI::Session *session, SceUInt32 *outHasMore,
+					 void *outToOnlineId, void *outFromOnlineId,
+					 void *outCommId, char *outDataType)
+{
+	if (session == NULL)
+		return SCE_NP_PUSH_ERROR_INVALID_ARGUMENT;
+
+	ScopedLock lock(&m_mutex);
+	IpcProcessContext *procCtx = FindIpcProcessContext(session);
+	if (procCtx == NULL)
+		return SCE_NP_PUSH_ERROR_NOT_FOUND;
+
+	RefPtr<Packet> packet;
+	int ret = procCtx->PeekDataTypePacket(&packet);
+	if (ret < 0)
+		return ret;
+
+	if (outHasMore != NULL)
+		*outHasMore = 1;
+	ExtractPacketMetadata(packet, outToOnlineId, outFromOnlineId, outCommId, outDataType);
+	return 0;
+}
+
+/* 0x813B2FA8: GetNotificationDataType */
+int Dispatcher::GetNotificationDataType(IPMI::Session *session, SceUInt32 flags,
+					void *outToOnlineId, void *outFromOnlineId,
+					void *outCommId, char *outDataType,
+					IpcJsonEntry *outBody, IpcJsonEntry *outExtEntries,
+					SceInt32 maxExtCount)
+{
+	(void)flags;
+
+	if (session == NULL)
+		return SCE_NP_PUSH_ERROR_INVALID_ARGUMENT;
+
+	ScopedLock lock(&m_mutex);
+	IpcProcessContext *procCtx = FindIpcProcessContext(session);
+	if (procCtx == NULL)
+		return SCE_NP_PUSH_ERROR_NOT_FOUND;
+
+	RefPtr<Packet> packet;
+	int ret = procCtx->DequeueDataTypePacket(&packet);
+	if (ret < 0)
+		return ret;
+
+	ExtractPacketMetadata(packet, outToOnlineId, outFromOnlineId, outCommId, outDataType);
+	ExtractPacketJsonEntries(packet, outBody, outExtEntries, maxExtCount);
+	return 0;
+}
+
 /* 0x813B30DE: RegisterNotificationCallback */
 int Dispatcher::RegisterNotificationCallback(const char *dataType, FilterMatchType matchType,
 					     PushNotificationCallback callback, void *userContext,

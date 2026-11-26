@@ -52,7 +52,17 @@
 #define SCE_NP_PUSH_ERROR_SERVER_RETRY			(-2141871575)	/* 0x8055A229 */
 #define SCE_NP_PUSH_ERROR_SERVER_BUSY			(-2141871574)	/* 0x8055A22A */
 #define SCE_NP_PUSH_ERROR_SERVER_SHUTDOWN		(-2141871572)	/* 0x8055A22C */
+#define SCE_NP_PUSH_ERROR_TLV_PARSE			(-2141871570)	/* 0x8055A22E */
+#define SCE_NP_PUSH_ERROR_TLV_BUFFER_TOO_SMALL		(-2141871569)	/* 0x8055A22F */
+#define SCE_NP_PUSH_ERROR_TLV_EXDATA_FULL		(-2141871568)	/* 0x8055A230 */
+#define SCE_NP_PUSH_ERROR_TLV_ALREADY_SET		(-2141871567)	/* 0x8055A231 */
 #define SCE_NP_PUSH_ERROR_UNSUPPORTED			(-2141871559)	/* 0x8055A239 */
+
+#define NP_PUSH_IPC_MAX_EXDATA_COUNT			10
+#define NP_PUSH_IPC_EXDATA_KEY_STRIDE			33
+#define NP_PUSH_IPC_ONLINE_ID_WIRE_SIZE			32
+#define NP_PUSH_IPC_COMM_ID_WIRE_SIZE			12
+#define NP_PUSH_IPC_DATA_TYPE_WIRE_SIZE			65
 
 #define SCE_NP_COMMON_PS4_ERROR_JSON_MISSING_KEY	(-2141872594)	/* 0x80559E2E */
 #define SCE_HTTP_ERROR_PARSE_HTTP_NOT_FOUND		(-2143084507)	/* 0x80432025 */
@@ -1557,8 +1567,10 @@ public:
 	IPMI::Session *GetSession(void) const { return m_session; }
 	int CreateIpcUserContext(const NpPushOnlineId *onlineId, SceUInt32 *outUserContextId);
 	int DeleteIpcUserContext(SceUInt32 userContextId);
+	int DeleteIpcUserContextByOnlineId(const NpPushOnlineId *onlineId);
 	int AddDataTypeFilter(FilterMatchType matchType, const char *dataType);
 	int RemoveDataTypeFilter(FilterMatchType matchType, const char *dataType);
+	int RemoveDataTypeFilterByName(const char *dataType);
 
 	int ReceiveNotificationDataTypePacket(const RefPtr<Packet> &packet);
 	int ReceiveUserNotificationPacket(const RefPtr<Packet> &packet);
@@ -1578,6 +1590,88 @@ private:
 	AllocList<IpcUserContext *> m_userContexts;
 	AllocList<DataTypeFilterEntry> m_filters;
 	AllocList<RefPtr<Packet> > m_dataTypeQueue;
+};
+
+struct IpcJsonEntry {
+	RefPtr<Packet> ownerPacket;
+	const char *keyName;
+	NpPushJsonValue *jsonValue;
+
+	IpcJsonEntry() : keyName(NULL), jsonValue(NULL) {}
+	~IpcJsonEntry() { Reset(); }
+
+	void Reset(void)
+	{
+		ownerPacket.Reset();
+		keyName = NULL;
+		jsonValue = NULL;
+	}
+};
+
+struct IpcExDataPair {
+	const char *keyName;
+	NpPushJsonValue *jsonValue;
+};
+
+struct IpcNotificationPayload {
+	NpPushJsonValue *bodyValue;
+	IpcExDataPair exDataPairs[NP_PUSH_IPC_MAX_EXDATA_COUNT];
+
+	void Init(void);
+	int SetBody(NpPushJsonValue *value);
+	int AddExData(const char *keyName, NpPushJsonValue *value);
+	SceSize GetPayloadSize(void) const;
+	int Build(char *outBuffer, SceSize bufferSize, SceSize *outWritten) const;
+};
+
+/* TLV wire-format helpers (service/np_push_ipc_tlv.cpp) */
+int WriteTlvHeader(SceUInt16 tlvType, SceUInt16 payloadLength, char *outBuffer,
+		   SceSize bufferSize, SceSize *outWritten);
+int ReadTlvHeader(SceUInt16 expectedType, SceUInt16 *outLength, const char *srcBuffer,
+		  SceSize bufferSize, SceSize *outConsumed);
+
+class TlvBase : public NpPushRefCounted {
+public:
+	explicit TlvBase(SceUInt16 tlvType);
+	virtual ~TlvBase();
+	virtual SceSize GetValueSize(void) const = 0;
+	virtual int Serialize(char *outBuffer, SceSize bufferSize, SceSize *outWritten) const = 0;
+	virtual int Unserialize(char *srcBuffer, SceSize bufferSize, SceSize *outConsumed) = 0;
+
+protected:
+	SceUInt16 m_tlvType;
+};
+
+class TlvString : public TlvBase {
+public:
+	explicit TlvString(SceUInt16 tlvType);
+	virtual ~TlvString();
+	virtual SceSize GetValueSize(void) const;
+	virtual int Serialize(char *outBuffer, SceSize bufferSize, SceSize *outWritten) const;
+	virtual int Unserialize(char *srcBuffer, SceSize bufferSize, SceSize *outConsumed);
+
+	void SetValue(const char *text) { m_text = text; }
+	const char *GetValue(void) const { return m_text; }
+	SceSize GetLength(void) const { return m_length; }
+
+private:
+	const char *m_text;
+	SceSize m_length;
+};
+
+class TlvJsonValue : public TlvBase {
+public:
+	explicit TlvJsonValue(SceUInt16 tlvType);
+	virtual ~TlvJsonValue();
+	virtual SceSize GetValueSize(void) const;
+	virtual int Serialize(char *outBuffer, SceSize bufferSize, SceSize *outWritten) const;
+	virtual int Unserialize(char *srcBuffer, SceSize bufferSize, SceSize *outConsumed);
+
+	void SetValue(NpPushJsonValue *value) { m_jsonValue = value; }
+	NpPushJsonValue *GetValue(void) const { return m_jsonValue; }
+
+private:
+	NpPushJsonValue *m_jsonValue;
 };
 
 struct InternalCallbackEntry {
@@ -1605,6 +1699,29 @@ public:
 	int NewIpcProcessContext(IPMI::Session *session, IpcProcessContext **outContext);
 	int DeleteIpcProcessContext(IPMI::Session *session);
 	IpcProcessContext *FindIpcProcessContext(IPMI::Session *session);
+
+	int RegisterNotificationOnlineId(IPMI::Session *session, const NpPushOnlineId *onlineId);
+	int UnregisterNotificationOnlineId(IPMI::Session *session, const NpPushOnlineId *onlineId);
+	int PeekNotificationOnlineId(IPMI::Session *session, SceUInt32 *outHasMore,
+				     void *outToOnlineId, void *outFromOnlineId,
+				     void *outCommId, char *outDataType);
+	int GetNotificationOnlineId(IPMI::Session *session, SceUInt32 flags,
+				    const char *extKeys, SceInt32 extKeyCount,
+				    void *outToOnlineId, void *outFromOnlineId,
+				    void *outCommId, char *outDataType,
+				    IpcJsonEntry *outBody, IpcJsonEntry *outExtEntries,
+				    SceInt32 maxExtCount);
+	int RegisterNotificationDataType(IPMI::Session *session, const DataType *dataType,
+					 SceInt32 matchType);
+	int UnregisterNotificationDataType(IPMI::Session *session, const DataType *dataType);
+	int PeekNotificationDataType(IPMI::Session *session, SceUInt32 *outHasMore,
+				     void *outToOnlineId, void *outFromOnlineId,
+				     void *outCommId, char *outDataType);
+	int GetNotificationDataType(IPMI::Session *session, SceUInt32 flags,
+				    void *outToOnlineId, void *outFromOnlineId,
+				    void *outCommId, char *outDataType,
+				    IpcJsonEntry *outBody, IpcJsonEntry *outExtEntries,
+				    SceInt32 maxExtCount);
 
 	int RegisterNotificationCallback(const char *dataType, FilterMatchType matchType,
 					 PushNotificationCallback callback, void *userContext,

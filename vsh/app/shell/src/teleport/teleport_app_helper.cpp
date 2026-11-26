@@ -658,7 +658,7 @@ SceInt32 TeleportAppInfoHelper::CheckLaunchAllowlist(const paf::string &uri)
 	SceInt32 result = 0;
 	SceSize verifiedSize = TELEPORT_ALLOWLIST_MAX_BYTES;
 	char *listBuffer = new char[TELEPORT_ALLOWLIST_MAX_BYTES];
-	TeleportSignedListHeader header;
+	GameWhiteListTeleportHeader header;
 
 	sce_paf_memset(&header, 0, sizeof(header));
 	sce_paf_memset(listBuffer, 0, TELEPORT_ALLOWLIST_MAX_BYTES);
@@ -686,37 +686,36 @@ SceInt32 TeleportAppInfoHelper::CheckLaunchAllowlist(const paf::string &uri)
 		return -4;
 	}
 
-	paf::common::SharedPtr<paf::File> baseFile(localFile);
-	SceInt32 verifyRet = teleportListVerifySignedFile(&baseFile, listBuffer, &verifiedSize);
+	SceInt32 verifyRet = gameWhiteListReadTeleportFile(localFile, listBuffer, &verifiedSize);
 	if (verifyRet < 0 || verifiedSize >= TELEPORT_ALLOWLIST_MAX_BYTES) {
-		teleportListMarkForceRefresh();
+		gameWhiteListRequestTeleportUpdate();
 		delete[] listBuffer;
 		return -4;
 	}
 
 	listBuffer[verifiedSize] = '\0';
-	if (teleportListParseHeader(listBuffer, verifiedSize, &header) < 0) {
-		teleportListMarkForceRefresh();
+	if (gameWhiteListParseTeleportHeader(listBuffer, verifiedSize, &header) < 0) {
+		gameWhiteListRequestTeleportUpdate();
 		delete[] listBuffer;
 		return -4;
 	}
 
-	if (header.formatVersion > 1) {
+	if (header.format > 1) {
 		delete[] listBuffer;
 		return -5;
 	}
 
-	if (header.listMode != 2) {
+	if (header.type != GAME_WHITE_LIST_TYPE_BLACK) {
 		delete[] listBuffer;
 		return -4;
 	}
 
-	if (header.bodyOffset == verifiedSize) {
+	if (header.headerSize == verifiedSize) {
 		delete[] listBuffer;
 		return 0;
 	}
 
-	paf::string bodyText(listBuffer + header.bodyOffset);
+	paf::string bodyText(listBuffer + header.headerSize);
 	paf::vector<paf::string> lines;
 	teleportSplitString(&lines, bodyText, paf::string("\n"), TELEPORT_ALLOWLIST_MAX_ENTRIES);
 

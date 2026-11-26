@@ -137,6 +137,24 @@ int IpcProcessContext::DeleteIpcUserContext(SceUInt32 userContextId)
 	return SCE_NP_PUSH_ERROR_NOT_FOUND;
 }
 
+int IpcProcessContext::DeleteIpcUserContextByOnlineId(const NpPushOnlineId *onlineId)
+{
+	if (onlineId == NULL)
+		return SCE_NP_PUSH_ERROR_INVALID_ARGUMENT;
+
+	for (ListNode<IpcUserContext *> *iter = m_userContexts.Begin();
+	     iter != m_userContexts.End(); iter = iter->next) {
+		if (SceNpCommonPs4_21B2C0B7(&iter->value->GetOnlineId(), onlineId) != 0) {
+			IpcUserContext *userCtx = iter->value;
+			m_userContexts.Erase(iter);
+			userCtx->~IpcUserContext();
+			SceNpCommonPs4_6B428829(GetAllocator(), userCtx);
+			return 0;
+		}
+	}
+	return SCE_NP_PUSH_ERROR_NOT_FOUND;
+}
+
 int IpcProcessContext::AddDataTypeFilter(FilterMatchType matchType, const char *dataType)
 {
 	if (dataType == NULL || dataType[0] == '\0')
@@ -169,6 +187,22 @@ int IpcProcessContext::RemoveDataTypeFilter(FilterMatchType matchType, const cha
 	     iter != m_filters.End(); iter = iter->next) {
 		if (iter->value.matchType == matchType &&
 		    sceClibStrncmp(iter->value.dataType, dataType,
+				   sizeof(iter->value.dataType)) == 0) {
+			m_filters.Erase(iter);
+			return 0;
+		}
+	}
+	return SCE_NP_PUSH_ERROR_NOT_FOUND;
+}
+
+int IpcProcessContext::RemoveDataTypeFilterByName(const char *dataType)
+{
+	if (dataType == NULL)
+		return SCE_NP_PUSH_ERROR_INVALID_ARGUMENT;
+
+	for (ListNode<DataTypeFilterEntry> *iter = m_filters.Begin();
+	     iter != m_filters.End(); iter = iter->next) {
+		if (sceClibStrncmp(iter->value.dataType, dataType,
 				   sizeof(iter->value.dataType)) == 0) {
 			m_filters.Erase(iter);
 			return 0;

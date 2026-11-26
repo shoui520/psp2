@@ -21,6 +21,7 @@
 #include <net/sockinfo.h>
 #include <appmgr/appmgr.h>
 #include "../livespace_db/livespace_db_internal.h"
+#include "../../../game/game_plugin/white_list.h"
 
 /* SceShellTeleport error codes (0x801084xx) */
 #define TELEPORT_ERR_INVALID_PARAM		(-2146401278)	/* 0x80108402 */
@@ -53,14 +54,6 @@ enum TeleportHttpMethod {
 	TELEPORT_HTTP_DELETE = 2,
 	TELEPORT_HTTP_OPTIONS = 3,
 	TELEPORT_HTTP_UNKNOWN = 4
-};
-
-/* Signed launch allowlist header parsed by teleportListParseHeader (0x810A4C0A) */
-struct TeleportSignedListHeader {
-	SceInt32 formatVersion;
-	SceInt32 listRevision;
-	SceInt32 listMode;
-	SceUInt32 bodyOffset;
 };
 
 /* IPMI 0x001A0000 launch notification payload from launched app */
@@ -141,13 +134,6 @@ struct TeleportMulticastCallbacks {
 	SceSize recvBufferSize;
 	void *userData;
 };
-
-/* External signed allowlist helpers (0x810A4B6C, 0x810A4C0A, 0x810A4C12) */
-extern SceInt32 teleportListVerifySignedFile(paf::common::SharedPtr<paf::File> *file,
-					     void *outBuffer, SceSize *inOutSize);
-extern SceInt32 teleportListParseHeader(const char *buffer, SceSize size,
-					TeleportSignedListHeader *outHeader);
-extern SceInt32 teleportListMarkForceRefresh(void);
 
 /* Utility functions (teleport_multicast.cpp, 0x813A6F26..0x813A71DB) */
 void teleportSplitString(paf::vector<paf::string> *outParts, const paf::string &input,

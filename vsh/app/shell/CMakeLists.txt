@@ -708,6 +708,9 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/np/np_push_vsh/core/np_push_get_server_addr_trans.cpp
 	src/np/np_push_vsh/service/np_push_dispatcher.cpp
 	src/np/np_push_vsh/service/np_push_ipc_context.cpp
+	src/np/np_push_vsh/service/np_push_ipc_server.cpp
+	src/np/np_push_vsh/service/np_push_ipc_data.cpp
+	src/np/np_push_vsh/service/np_push_ipc_tlv.cpp
 	src/np/np_ipc2/np_ipc2_server.cpp
 	src/np/np_ipc2/np_ipc2_service_server.cpp
 	src/np/np_ipc2/np_ipc2_ipmi_server.cpp
@@ -719,6 +722,7 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/np/csla/np_csla.cpp
 	np_friend_importer.cpp
 	np_friend_profile_importer.cpp
+	np_friend_cache.cpp
 	src/patch_chk_plugin/bgdl_patch_client.cpp
 	ex_sound_out_mgr.cpp
 	${PSP2_SRC}/sys/sdk/target/src/mt19937/libmt19937.c
