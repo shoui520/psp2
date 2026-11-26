@@ -54,9 +54,27 @@ typedef int64_t  s64;
 #define SCE_NP_COMMERCE2_ERROR_SERVER_CODE_41         ((s32)0x80551041)
 #define SCE_NP_ERROR_OUT_OF_STACK                     ((s32)0x80550004)
 
-#define SDK_VER_STACK_CHECK 0x0505000F
-#define SDK_VER_600         0x05FFFFFFu
-#define SDK_VER_603         0x0602FFFFu
+#define SCE_NP_COMMERCE2_SDK_VER_STACK_CHECK          0x0505000F
+#define SCE_NP_COMMERCE2_SDK_VER_600                  0x05FFFFFFu
+#define SCE_NP_COMMERCE2_SDK_VER_603                  0x0602FFFFu
+
+#define SCE_NP_COMMERCE2_RECV_BUF_SIZE                (256 * 1024)
+#define SCE_NP_COMMERCE2_GETCAT_MAX_COUNT             60u
+
+#define SCE_NP_COMMERCE2_SYM_POS_PRE                  0u
+#define SCE_NP_COMMERCE2_SYM_POS_POST                 1u
+
+#define SCE_NP_COMMERCE2_CONTENT_RATING_DESC_TYPE_ICON 1u
+#define SCE_NP_COMMERCE2_CONTENT_RATING_DESC_TYPE_TEXT 2u
+
+#define SCE_NP_COMMERCE2_CAT_DATA_TYPE_THIN           0
+#define SCE_NP_COMMERCE2_CAT_DATA_TYPE_NORMAL         1
+#define SCE_NP_COMMERCE2_GAME_PRODUCT_DATA_TYPE_THIN  0
+#define SCE_NP_COMMERCE2_GAME_PRODUCT_DATA_TYPE_NORMAL 1
+#define SCE_NP_COMMERCE2_GAME_SKU_DATA_TYPE_THIN      0
+#define SCE_NP_COMMERCE2_GAME_SKU_DATA_TYPE_NORMAL    1
+
+#define SCE_NP_COMMERCE2_EPOCH_TICK_OFFSET            62135596800000000ULL
 
 /* Imported functions */
 extern int KprintfForUser(const char *fmt, ...);
@@ -110,6 +128,249 @@ extern void *sceKernelMemcpy(void *dst, const void *src, u32 size);
 extern int   _sceKernelCheckThreadStack(void);
 extern u64   sceKernelGetSystemTimeWide(void);
 
+/* =========================================================================
+ * Data Structures (Sony Commerce2 SDK & Internal Types)
+ * ========================================================================= */
+
+typedef struct SceNpCommerce2ResponseHeader {
+    u32 version;                /* +0x00 */
+    char emptyStr[4];           /* +0x04 */
+    u32 bodySize;               /* +0x08 */
+    u32 isTruncated;            /* +0x0C */
+    u32 buildVersion;           /* +0x10 */
+    char country[4];            /* +0x14 */
+    char lang[4];               /* +0x18 */
+    char decimalLetter[4];      /* +0x1C */
+    char thousandSeparator[4];  /* +0x20 */
+    u32 reserved[5];            /* +0x24..+0x37 */
+} SceNpCommerce2ResponseHeader; /* 56 bytes */
+
+typedef struct SceNpCommerce2CommonData {
+    u32 version;                /* +0x00 */
+    const u8 *bufHead;          /* +0x04 */
+    u32 bufSize;                /* +0x08 */
+    const u8 *data;             /* +0x0C */
+    u32 dataSize;               /* +0x10 */
+    const u8 *subData;          /* +0x14 */
+    u32 overflow;               /* +0x18 */
+    u32 reserved[3];            /* +0x1C..+0x27 */
+} SceNpCommerce2CommonData;     /* 40 bytes */
+
+typedef struct SceNpCommerce2Range {
+    u32 startPosition;          /* +0x00 */
+    u32 count;                  /* +0x04 */
+    u32 totalCountOfResults;    /* +0x08 */
+} SceNpCommerce2Range;          /* 12 bytes */
+
+typedef struct SceNpCommerce2CreateSessionResult {
+    SceNpCommerce2CommonData commonData; /* +0x00 */
+    u32 countOfCurrencyInfo;             /* +0x28 */
+} SceNpCommerce2CreateSessionResult;     /* 44 bytes */
+
+typedef struct SceNpCommerce2SessionResultEx {
+    SceNpCommerce2CommonData commonData; /* +0x00 */
+    u32 countOfCurrencyInfo;             /* +0x28 */
+    u32 countOfServiceInfo;              /* +0x2C */
+    u32 countOfPaymentMethod;            /* +0x30 */
+    const char *noticeText;              /* +0x34 */
+} SceNpCommerce2SessionResultEx;         /* 56 bytes */
+
+typedef struct SceNpCommerce2AccountInfo {
+    SceNpCommerce2CommonData commonData; /* +0x00 */
+    char accountIdHex[20];               /* +0x28 */
+    const char *onlineId;                /* +0x3C */
+    const char *countryCode;             /* +0x40 */
+    const char *langCode;                /* +0x44 */
+    u32 walletBalance;                   /* +0x48 */
+    const char *accountName;             /* +0x4C */
+    u32 isSubAccount;                    /* +0x50 */
+    u32 spendingLimit;                   /* +0x54 */
+} SceNpCommerce2AccountInfo;             /* 88 bytes */
+
+typedef struct SceNpCommerce2CurrencyInfo {
+    SceNpCommerce2CommonData commonData; /* +0x00 */
+    const char *currencyCode;            /* +0x28 */
+    const char *currencySymbol;          /* +0x2C */
+    u16 decimals;                        /* +0x30 */
+    u16 pad;                             /* +0x32 */
+    u32 minTopupAmount;                  /* +0x34 */
+    u32 maxWalletBalance;                /* +0x38 */
+    u32 countOfTopupAmount;              /* +0x3C */
+    u32 symbolPosition;                  /* +0x40 */
+    u32 symbolWithSpace;                 /* +0x44 */
+    u32 currencyAttr;                    /* +0x48 */
+    const char *thousandSeparator;       /* +0x4C */
+    const char *decimalLetter;           /* +0x50 */
+} SceNpCommerce2CurrencyInfo;            /* 84 bytes */
+
+typedef struct SceNpCommerce2WalletInfo {
+    SceNpCommerce2CommonData commonData; /* +0x00 */
+    u32 isCreditCardRegistered;          /* +0x28 */
+} SceNpCommerce2WalletInfo;              /* 44 bytes */
+
+typedef struct SceNpCommerce2TopupAmountInfo {
+    SceNpCommerce2CommonData commonData; /* +0x00 */
+    u32 amount;                          /* +0x28 */
+} SceNpCommerce2TopupAmountInfo;         /* 44 bytes */
+
+typedef struct SceNpCommerce2ContentRatingDescriptor {
+    SceNpCommerce2CommonData commonData; /* +0x00 */
+    u32 descriptorType;                  /* +0x28 */
+    const char *imageUrl;                /* +0x2C */
+    const char *contentRatingDescription;/* +0x30 */
+} SceNpCommerce2ContentRatingDescriptor; /* 52 bytes */
+
+typedef struct SceNpCommerce2ContentRatingInfo {
+    SceNpCommerce2CommonData commonData; /* +0x00 */
+    const char *ratingSystemId;          /* +0x28 */
+    const char *imageUrl;                /* +0x2C */
+    u32 countOfContentRatingDescriptor;  /* +0x30 */
+} SceNpCommerce2ContentRatingInfo;       /* 52 bytes */
+
+typedef struct SceNpCommerce2CategoryInfo {
+    SceNpCommerce2CommonData commonData; /* +0x00 */
+    int dataType;                        /* +0x28 */
+    const char *categoryId;              /* +0x2C */
+    u64 releaseDate;                     /* +0x30 */
+    const char *categoryName;            /* +0x38 */
+    const char *categoryDescription;     /* +0x3C */
+    const char *imageUrl;                /* +0x40 */
+    const char *spName;                  /* +0x44 */
+    u32 countOfSubCategory;              /* +0x48 */
+    u32 countOfProduct;                  /* +0x4C */
+} SceNpCommerce2CategoryInfo;            /* 80 bytes */
+
+typedef struct SceNpCommerce2GameProductInfo {
+    SceNpCommerce2CommonData commonData; /* +0x00 */
+    int dataType;                        /* +0x28 */
+    const char *productId;               /* +0x2C */
+    u32 countOfSku;                      /* +0x30 */
+    u32 pad;                             /* +0x34 */
+    u64 releaseDate;                     /* +0x38 */
+    const char *productName;             /* +0x40 */
+    const char *productShortDescription; /* +0x44 */
+    const char *imageUrl;                /* +0x48 */
+    const char *spName;                  /* +0x4C */
+    const char *productLongDescription;  /* +0x50 */
+    const char *legalDescription;        /* +0x54 */
+    u32 productAttr;                     /* +0x58 */
+    u32 reserved[9];                     /* +0x5C..+0x7F */
+} SceNpCommerce2GameProductInfo;         /* 128 bytes (88 bytes pre-6.03) */
+
+typedef struct SceNpCommerce2GameSkuInfo {
+    SceNpCommerce2CommonData commonData; /* +0x00 */
+    int dataType;                        /* +0x28 */
+    const char *skuId;                   /* +0x2C */
+    u32 skuType;                         /* +0x30 */
+    u32 countUntilExpiration;            /* +0x34 */
+    u32 timeUntilExpiration;             /* +0x38 */
+    u32 purchasabilityFlag;              /* +0x3C */
+    u32 annotation;                      /* +0x40 */
+    u32 downloadable;                    /* +0x44 */
+    u32 price;                           /* +0x48 */
+    const char *skuName;                 /* +0x4C */
+    const char *productId;               /* +0x50 */
+    const char *contentLinkUrl;          /* +0x54 */
+    u32 countOfRewardInfo;               /* +0x58 */
+    u32 skuAttr;                         /* +0x5C */
+    u32 salesType;                       /* +0x60 */
+    u32 firstPlayExpiration;             /* +0x64 */
+    u32 countOfApplicableRewardInfo;     /* +0x68 */
+    u32 countOfGameSkuEntitlementInfo;   /* +0x6C */
+    u32 reserved[3];                     /* +0x70..+0x7B */
+} SceNpCommerce2GameSkuInfo;             /* 124 bytes (88 bytes pre-6.00) */
+
+typedef struct SceNpCommerce2GetCategoryContentsResult {
+    SceNpCommerce2CommonData commonData; /* +0x00 */
+    SceNpCommerce2Range rangeOfContents; /* +0x28 */
+} SceNpCommerce2GetCategoryContentsResult; /* 52 bytes */
+
+typedef struct SceNpCommerce2GetProductInfoResult {
+    SceNpCommerce2CommonData commonData; /* +0x00 */
+} SceNpCommerce2GetProductInfoResult;    /* 40 bytes */
+
+typedef struct SceNpCommerce2ContentInfo {
+    SceNpCommerce2CommonData commonData; /* +0x00 */
+    u32 contentType;                     /* +0x28 */
+} SceNpCommerce2ContentInfo;             /* 44 bytes */
+
+typedef struct SceNpCommerce2ProductInfo {
+    SceNpCommerce2CommonData commonData; /* +0x00 */
+    u32 productType;                     /* +0x28 */
+} SceNpCommerce2ProductInfo;             /* 44 bytes */
+
+typedef struct SceNpCommerce2SessionInfo {
+    char currencyCode[4];                /* +0x00 */
+    u32 decimals;                        /* +0x04 */
+    char currencySymbol[4];              /* +0x08 */
+    u32 symbolPosition;                  /* +0x0C */
+    u32 symbolWithSpace;                 /* +0x10 */
+    char thousandSeparator[5];           /* +0x14 */
+    char decimalLetter[5];               /* +0x19 */
+    u8 padding[2];                       /* +0x1E */
+    u32 reserved[4];                     /* +0x20..+0x2F */
+} SceNpCommerce2SessionInfo;             /* 48 bytes (8 bytes pre-6.00) */
+
+typedef struct Commerce2Req {
+    struct Commerce2Req *next;           /* +0x00 */
+    u32 refCount;                        /* +0x04 */
+    u32 reqId;                           /* +0x08 */
+    u32 flags;                           /* +0x0C: bit0=deleted, bit1=aborted */
+    int httpReqId;                       /* +0x10 */
+    u16 action;                          /* +0x14 */
+    u16 pad;                             /* +0x16 */
+} Commerce2Req; /* 24 bytes */
+
+typedef struct Commerce2Ctx {
+    struct Commerce2Ctx *next;           /* +0x00 */
+    u32 refCount;                        /* +0x04 */
+    u32 version;                         /* +0x08 */
+    u32 ctxId;                           /* +0x0C */
+    u32 flags;                           /* +0x10: bit0=deleted */
+    u32 reserved;                        /* +0x14 */
+    int httpTmplId;                      /* +0x18 */
+    int httpConnId;                      /* +0x1C */
+    Commerce2Req *reqList;               /* +0x20 */
+    u8 sessionBuf[1024];                 /* +0x24 */
+    u32 sessionLen;                      /* +0x424 */
+    u32 storeType;                       /* +0x428 */
+    u32 pad;                             /* +0x42C */
+    u64 lastActivityTime;                /* +0x430 */
+    u32 isInternal;                      /* +0x438 */
+    u32 buildVersion;                    /* +0x43C */
+    char country[4];                     /* +0x440 */
+    char lang[4];                        /* +0x444 */
+} Commerce2Ctx; /* 1096 bytes */
+
+typedef struct Commerce2FormField {
+    u32 len;
+    const char *str;
+} Commerce2FormField;
+
+typedef struct SkuParseSpec {
+    const void *hdrCopy;                 /* +0x00 */
+    u32 flagMask;                        /* +0x04 */
+    u32 *outFlags;                       /* +0x08 */
+    const char **outSkuId;               /* +0x0C */
+    u32 *outSkuType;                     /* +0x10 */
+    u32 *outCountUntilExpiration;        /* +0x14 */
+    u32 *outTimeUntilExpiration;         /* +0x18 */
+    u32 *outPurchasability;              /* +0x1C */
+    u32 *outAnnotation;                  /* +0x20 */
+    u32 *outDownloadable;                /* +0x24 */
+    u32 *outPrice;                       /* +0x28 */
+    u32 *outRegularPrice;                /* +0x2C */
+    u32 *outDiscountPrice;               /* +0x30 */
+    u32 *outSalesType;                   /* +0x34 */
+    u32 *outFirstPlayExpiration;         /* +0x38 */
+} SkuParseSpec; /* 60 bytes */
+
+typedef struct DesContext {
+    u32 roundKeys[32];                   /* +0x00..+0x7F */
+    u8 iv[8];                            /* +0x80..+0x87 */
+    u32 pad[2];                          /* +0x88..+0x8F */
+} DesContext; /* 144 bytes */
+
 /* Forward declarations of exported internal helpers */
 int sceNpCommerce2_06618C81(void *mgr, void *req, u32 ctxId, u32 *reqIdOut);
 int sceNpCommerce2_02C307C0(void *mgr, u32 reqId);
@@ -140,83 +401,101 @@ int sceNpCommerce2_ADAA054C(u8 *buf, u32 bufSize, u32 bodyLen, int isTruncated);
 int sceNpCommerce2_F8D175FA(u8 *buf, u32 bufSize, const char *country, const char *lang);
 int sceNpCommerce2_FC687AC7(const u8 *buf, u32 bufLen, u16 tag, u16 minLen, u16 *valLenOut, int allowTrunc);
 int sceNpCommerce2_3546C737(const u8 *buf, u32 bufLen, u16 tag, u16 *valLenOut, u32 *countOut, int allowTrunc);
-int sceNpCommerce2_69FEA1C8(const u8 *buf, u32 bufLen, u16 tag, u16 *valLenOut, u32 *rangeOut, int allowTrunc);
+int sceNpCommerce2_69FEA1C8(const u8 *buf, u32 bufLen, u16 tag, u16 *valLenOut, SceNpCommerce2Range *rangeOut, int allowTrunc);
 int sceNpCommerce2_E3455E27(const u8 *buf, u32 bufLen, u16 tag, u16 minLen, u16 *valLenOut);
 int sceNpCommerce2_3F6D413C(const u8 *buf, u32 bufLen, u16 tag, u16 *valLenOut, u32 *countOut);
-int sceNpCommerce2_22CEC5E2(char *out, int outSize, u32 lo, u32 hi, int isDecimal);
+int sceNpCommerce2_22CEC5E2(char *out, int outSize, u64 val, int isDecimal);
 int sceNpCommerce2_460A1D92(char *out, u32 outSize);
 int sceNpCommerce2_F0900551(void *ctx, int *versionOut);
 int sceNpCommerce2_02CADA41(void *ctx, char *username, char *password);
 int sceNpCommerce2_157FA8AA(char *consoleId, u32 size);
 int sceNpCommerce2_B7911D82(void);
 int sceNpCommerce2_FC47B63C(u64 *timeOut);
-int sceNpCommerce2_48D77A66(void *res, const void *buf, u32 bufSize);
-int sceNpCommerce2_287B6FB3(void *res, u32 idx, void *info);
-int sceNpCommerce2_3D88DCCA(void *contentInfo, void *productInfo);
-int sceNpCommerce2_1D9C32C0(void *productInfo, void *gameProductInfo);
-int sceNpCommerce2_5C691546(void *res, void *productInfo);
-int sceNpCommerce2_993C29DB(void *productInfo, void *gameProductInfo);
-int sceNpCommerce2_3755FC84(void *ratingInfo, u32 idx, void *desc);
+int sceNpCommerce2_48D77A66(SceNpCommerce2CreateSessionResult *res, const void *buf, u32 bufSize);
+int sceNpCommerce2_287B6FB3(const SceNpCommerce2CreateSessionResult *res, u32 idx, SceNpCommerce2CurrencyInfo *info);
+int sceNpCommerce2_3D88DCCA(const SceNpCommerce2ContentInfo *contentInfo, SceNpCommerce2ProductInfo *productInfo);
+int sceNpCommerce2_1D9C32C0(const SceNpCommerce2ProductInfo *productInfo, SceNpCommerce2GameProductInfo *gameProductInfo);
+int sceNpCommerce2_5C691546(const SceNpCommerce2GetProductInfoResult *res, SceNpCommerce2ProductInfo *productInfo);
+int sceNpCommerce2_993C29DB(const SceNpCommerce2ProductInfo *productInfo, SceNpCommerce2GameProductInfo *gameProductInfo);
+int sceNpCommerce2_3755FC84(const SceNpCommerce2ContentRatingInfo *ratingInfo, u32 idx, SceNpCommerce2ContentRatingDescriptor *desc);
 
-/* Byte-swap helpers */
-static inline u16 bswap16(u16 v) {
-    return (u16)((v >> 8) | (v << 8));
+/* Inline helpers */
+static __inline__ __attribute__((always_inline)) u16 bswap16(u16 val) {
+    return (u16)((val >> 8) | (val << 8));
 }
 
-static inline u32 bswap32(u32 v) {
-    return ((v & 0x000000FFu) << 24) |
-           ((v & 0x0000FF00u) <<  8) |
-           ((v & 0x00FF0000u) >>  8) |
-           ((v & 0xFF000000u) >> 24);
+static __inline__ __attribute__((always_inline)) u32 bswap32(u32 val) {
+    return ((val & 0x000000FFu) << 24) |
+           ((val & 0x0000FF00u) <<  8) |
+           ((val & 0x00FF0000u) >>  8) |
+           ((val & 0xFF000000u) >> 24);
 }
 
-static inline u32 rotr32(u32 v, u32 n) {
-    return (v >> n) | (v << (32 - n));
+static __inline__ __attribute__((always_inline)) u32 rotr32(u32 val, u32 shift) {
+    return (val >> shift) | (val << (32 - shift));
 }
 
-/* Data structures */
-typedef struct Commerce2Req {
-    struct Commerce2Req *next;      /* +0x00 */
-    u32 refCount;                   /* +0x04 */
-    u32 reqId;                      /* +0x08 */
-    u32 flags;                      /* +0x0C: bit0=deleted, bit1=aborted */
-    int httpReqId;                  /* +0x10 */
-    u16 action;                     /* +0x14 */
-    u16 pad;                        /* +0x16 */
-} Commerce2Req; /* 24 bytes */
+static __inline__ __attribute__((always_inline)) const char *emptyResponseStr(const u8 *bufHead) {
+    return (const char *)(bufHead + 4);
+}
 
-typedef struct Commerce2Ctx {
-    struct Commerce2Ctx *next;      /* +0x00 (word 0) */
-    u32 refCount;                   /* +0x04 (word 1) */
-    u32 version;                    /* +0x08 (word 2) */
-    u32 ctxId;                      /* +0x0C (word 3) */
-    u32 flags;                      /* +0x10 (word 4): bit0=deleted */
-    u32 reserved5;                  /* +0x14 (word 5) */
-    int httpTmplId;                 /* +0x18 (word 6) */
-    int httpConnId;                 /* +0x1C (word 7) */
-    Commerce2Req *reqList;          /* +0x20 (word 8) */
-    u8 sessionBuf[1024];            /* +0x24 (words 9..264) */
-    u32 sessionLen;                 /* +0x424 (word 265) */
-    u32 storeType;                  /* +0x428 (word 266) */
-    u32 pad267;                     /* +0x42C (word 267) */
-    u64 lastActivityTime;           /* +0x430 (words 268..269) */
-    u32 isInternal;                 /* +0x438 (word 270) */
-    u32 buildVersion;               /* +0x43C (word 271) */
-    char country[4];                /* +0x440 (word 272) */
-    char lang[4];                   /* +0x444 (word 273) */
-} Commerce2Ctx; /* 1096 bytes */
+static __inline__ __attribute__((always_inline)) void initCommonData(
+    SceNpCommerce2CommonData *common, u32 version, const u8 *bufHead,
+    u32 bufSize, const u8 *data, u32 dataSize) {
+    sceKernelMemset(common, 0, sizeof(SceNpCommerce2CommonData));
+    common->version = version;
+    common->bufHead = bufHead;
+    common->bufSize = bufSize;
+    common->data = data;
+    common->dataSize = dataSize;
+}
 
-typedef struct Commerce2FormField {
-    u32 len;
-    const char *str;
-} Commerce2FormField;
+static __inline__ __attribute__((always_inline)) void initChildCommonData(
+    SceNpCommerce2CommonData *common, u32 version, const u8 *bufHead,
+    const u8 *data, u32 dataSize) {
+    sceKernelMemset(common, 0, sizeof(SceNpCommerce2CommonData));
+    common->version = version;
+    common->bufHead = bufHead;
+    common->data = data;
+    common->dataSize = dataSize;
+}
+
+static __inline__ __attribute__((always_inline)) const char *formatContentIdPrefixInline(
+    const char *src, char *dst, u32 dstSize) {
+    const char *cur = src;
+    char ch;
+    u32 len, maxLen;
+
+    if (*cur != '\0' && *cur != '-') {
+        cur++;
+        while (*cur != '\0' && *cur != '-')
+            cur++;
+    }
+    ch = *cur;
+    if (ch != '\0') {
+        cur++;
+        ch = *cur;
+    }
+    if (ch != '\0' && ch != '-') {
+        cur++;
+        while (*cur != '\0' && *cur != '-')
+            cur++;
+    }
+    len = (u32)(cur - src);
+    maxLen = dstSize - 1;
+    if (len > maxLen)
+        len = maxLen;
+    sceKernelMemcpy(dst, src, len);
+    dst[len] = '\0';
+    return dst;
+}
 
 /* Global state (BSS) */
 static u32 g_coreInitialized = 0;
 static u32 g_apiInitialized = 0;
 static Commerce2Ctx *g_ctxList = NULL;
 static u32 g_ctxIdCounter = 0;
-static u32 g_ctxMgrDummy = 0;
+static u32 g_ctxMgr = 0;
 static u32 g_reqIdCounter = 0;
 static int g_envFlag = 0;
 static char g_envStr[16];
@@ -291,170 +570,176 @@ static const u16 g_desPc2[24] = {
 };
 
 /* 3DES keys + zero IV (from firmware .data 0xAD00..0xAD20) */
-static const u32 g_3desKey1Lo = 0x91fda7e0u;
-static const u32 g_3desKey1Hi = 0xcdf8451au;
-static const u32 g_3desKey2Lo = 0x9e34012cu;
-static const u32 g_3desKey2Hi = 0xf4d56d92u;
-static const u32 g_3desKey3Lo = 0x4994516du;
-static const u32 g_3desKey3Hi = 0xfd9b80f1u;
-static const u8  g_3desIv[8]  = { 0, 0, 0, 0, 0, 0, 0, 0 };
+static u64 g_tripleDesKeys[3] = {
+    0xcdf8451a91fda7e0ULL,
+    0xf4d56d929e34012cULL,
+    0xfd9b80f14994516dULL,
+};
+static u8 g_tripleDesIv[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
 /* =========================================================================
  * DES / 3DES implementation (used by sceNpCommerce2_EE7255FE)
  * ========================================================================= */
 
-static u64 desInitialPerm(u32 a1, u32 a2) {
-    u32 t, l, r;
-    t = ((a2 >> 4) ^ a1) & 0x0F0F0F0Fu;
-    a1 ^= t;
-    a2 ^= (t << 4);
+static __attribute__((noinline)) u64 desInitialPerm(u32 loWord, u32 hiWord) {
+    u32 mix, left, right;
+    mix = ((hiWord >> 4) ^ loWord) & 0x0F0F0F0Fu;
+    loWord ^= mix;
+    hiWord ^= (mix << 4);
 
-    l = (a2 & 0xFFFFu) | ((a1 & 0xFFFFu) << 16);
-    r = (a1 & 0xFFFF0000u) | (a2 >> 16);
+    left = (hiWord & 0xFFFFu) | ((loWord & 0xFFFFu) << 16);
+    right = (loWord & 0xFFFF0000u) | (hiWord >> 16);
 
-    t = ((r >> 2) ^ l) & 0x33333333u;
-    l ^= t;
-    r ^= (t << 2);
+    mix = ((right >> 2) ^ left) & 0x33333333u;
+    left ^= mix;
+    right ^= (mix << 2);
 
-    t = ((r >> 8) ^ l) & 0x00FF00FFu;
-    l ^= t;
-    r ^= (t << 8);
+    mix = ((right >> 8) ^ left) & 0x00FF00FFu;
+    left ^= mix;
+    right ^= (mix << 8);
 
-    t = ((l >> 1) ^ r) & 0x55555555u;
-    r ^= t;
-    l ^= (t << 1);
+    mix = ((left >> 1) ^ right) & 0x55555555u;
+    right ^= mix;
+    left ^= (mix << 1);
 
-    return ((u64)l << 32) | r;
+    return ((u64)left << 32) | right;
 }
 
-static u64 desFinalPerm(u32 a1, u32 a2) {
-    u32 t, l, r;
-    t = ((a2 >> 1) ^ a1) & 0x55555555u;
-    a1 ^= t;
-    a2 ^= (t << 1);
+static __attribute__((noinline)) u64 desFinalPerm(u32 loWord, u32 hiWord) {
+    u32 mix, left, right;
+    mix = ((hiWord >> 1) ^ loWord) & 0x55555555u;
+    loWord ^= mix;
+    hiWord ^= (mix << 1);
 
-    t = ((a1 >> 8) ^ a2) & 0x00FF00FFu;
-    a1 ^= (t << 8);
-    a2 ^= t;
+    mix = ((loWord >> 8) ^ hiWord) & 0x00FF00FFu;
+    loWord ^= (mix << 8);
+    hiWord ^= mix;
 
-    t = ((a1 >> 2) ^ a2) & 0x33333333u;
-    a1 ^= (t << 2);
-    a2 ^= t;
+    mix = ((loWord >> 2) ^ hiWord) & 0x33333333u;
+    loWord ^= (mix << 2);
+    hiWord ^= mix;
 
-    l = (a1 & 0xFFFF0000u) | (a2 >> 16);
-    r = (a2 & 0xFFFFu) | ((a1 & 0xFFFFu) << 16);
+    left = (loWord & 0xFFFF0000u) | (hiWord >> 16);
+    right = (hiWord & 0xFFFFu) | ((loWord & 0xFFFFu) << 16);
 
-    t = ((r >> 4) ^ l) & 0x0F0F0F0Fu;
-    l ^= t;
-    r ^= (t << 4);
+    mix = ((right >> 4) ^ left) & 0x0F0F0F0Fu;
+    left ^= mix;
+    right ^= (mix << 4);
 
-    return ((u64)r << 32) | l;
+    return ((u64)right << 32) | left;
 }
 
-static u32 desFeistel(u32 r, const u32 *rk) {
-    u32 e0 = (rotr32(r, 31) & 0xFF00003Fu) |
-             ((((r >> 3) & 0x3FFFu) << 10) & 0x00FC003Fu) |
-             ((((r >> 3) & 0x03FFu) <<  8) & 0x0003F03Fu) |
-             (((r >> 3) & 0x003Fu) << 6);
-    u32 e1 = (rotr32(r, 9) & 0xFFFC0000u) |
-             ((((r >> 15) & 0x3FFFu) << 4) & 0x0003F000u) |
-             ((((r >> 15) & 0x03FFu) << 2) & 0x00000FC0u) |
-             ((r >> 15) & 0x003Fu);
-    u32 x0 = e0 ^ rk[0];
-    u32 x1 = e1 ^ rk[1];
+static __attribute__((noinline)) u32 desFeistel(u32 halfBlock, const u32 *roundKey) {
+    u32 expLo = (rotr32(halfBlock, 31) & 0xFF00003Fu) |
+                ((((halfBlock >> 3) & 0x3FFFu) << 10) & 0x00FC003Fu) |
+                ((((halfBlock >> 3) & 0x03FFu) <<  8) & 0x0003F03Fu) |
+                (((halfBlock >> 3) & 0x003Fu) << 6);
+    u32 expHi = (rotr32(halfBlock, 9) & 0xFFFC0000u) |
+                ((((halfBlock >> 15) & 0x3FFFu) << 4) & 0x0003F000u) |
+                ((((halfBlock >> 15) & 0x03FFu) << 2) & 0x00000FC0u) |
+                ((halfBlock >> 15) & 0x003Fu);
+    u32 xorLo = expLo ^ roundKey[0];
+    u32 xorHi = expHi ^ roundKey[1];
 
-    u32 b0 = g_desSbox[4 * ((x0 >>  6) & 0x3F) + 3];
-    u32 b1 = g_desSbox[4 * ((x1 >>  6) & 0x3F) + 0];
-    u32 b2 = g_desSbox[4 * ((x1 >>  6) & 0x3F) + 1];
-    u32 b3 = g_desSbox[4 * ((x1 >> 18) & 0x3F) + 0];
-    u32 v6 = (b0 & 0xFFu) | ((b1 & 0xFFu) << 8) | ((b2 & 0xFFu) << 16) | ((b3 & 0xFFu) << 24);
+    u32 sboxLoA = g_desSbox[4 * ((xorLo >>  6) & 0x3F) + 3];
+    u32 sboxHiA = g_desSbox[4 * ((xorHi >>  6) & 0x3F) + 0];
+    u32 sboxHiB = g_desSbox[4 * ((xorHi >>  6) & 0x3F) + 1];
+    u32 sboxHiC = g_desSbox[4 * ((xorHi >> 18) & 0x3F) + 0];
+    u32 packed = (sboxLoA & 0xFFu) |
+                 ((sboxHiA & 0xFFu) << 8) |
+                 ((sboxHiB & 0xFFu) << 16) |
+                 ((sboxHiC & 0xFFu) << 24);
 
-    u8 v8  = g_desSbox[4 * ((x0 >> 12) & 0x3F) + 2];
-    u8 v9  = g_desSbox[4 * ((x1 >>  0) & 0x3F) + 1];
-    u8 v10 = g_desSbox[4 * ((x1 >> 12) & 0x3F) + 0];
+    u8 sboxLoB = g_desSbox[4 * ((xorLo >> 12) & 0x3F) + 2];
+    u8 sboxHiD = g_desSbox[4 * ((xorHi >>  0) & 0x3F) + 1];
+    u8 sboxHiE = g_desSbox[4 * ((xorHi >> 12) & 0x3F) + 0];
 
-    u32 s = (v6 & 0xF0F000F0u) |
-            (((u32)g_desSbox[4 * ((x0 >> 18) & 0x3F) + 2] << 8) & 0x0000F0FFu) |
-            (g_desSbox[4 * (x0 & 0x3F) + 3] & 0x0Fu) |
-            (((u32)(v8 & 0x0Fu)) << 8) |
-            (((u32)(v9 & 0x0Fu)) << 16) |
-            (((u32)(v10 & 0x0Fu)) << 24);
+    u32 subst = (packed & 0xF0F000F0u) |
+                (((u32)g_desSbox[4 * ((xorLo >> 18) & 0x3F) + 2] << 8) & 0x0000F0FFu) |
+                (g_desSbox[4 * (xorLo & 0x3F) + 3] & 0x0Fu) |
+                (((u32)(sboxLoB & 0x0Fu)) << 8) |
+                (((u32)(sboxHiD & 0x0Fu)) << 16) |
+                (((u32)(sboxHiE & 0x0Fu)) << 24);
 
-    return (rotr32(s, 27) & 0x40402402u) |
-           ((u32)v9 << 31) |
-           ((((s >> 10) & 7u) << 27) & 0x30402402u) |
-           (((s & 0xFu) << 24) & 0x08402402u) |
-           ((((s >> 18) & 7u) << 24) & 0x04402402u) |
-           ((((s >>  3) & 3u) << 24) & 0x02402402u) |
-           ((((u32)(u16)s >> 14) << 23) & 0x01402402u) |
-           ((s >> 31) << 23) |
-           (((u32)(v8 & 3u) << 20) & 0x00202402u) |
-           ((((s >>  3) & 0xFu) << 17) & 0x00102402u) |
-           (((u32)(v10 & 0xFu) << 16) & 0x00082402u) |
-           (((s & 0x4000u) != 0) << 18) |
-           (((s & 3u) << 16) & 0x00022402u) |
-           ((((s >> 20) & 7u) << 14) & 0x00012402u) |
-           ((((s >> 29) & 3u) << 14) & 0x0000A402u) |
-           (((u32)(v10 & 1u)) << 14) |
-           (((s & 0x40000u) != 0) << 12) |
-           ((s & 1u) << 11) |
-           (((s & 0x20000000u) != 0) << 9) |
-           ((32u * ((s >> 20) & 0xFu)) & 0x102u) |
-           ((16u * ((s >> 10) & 0xFu)) & 0x082u) |
-           ((32u * ((s >> 18) & 3u)) & 0x042u) |
-           ((8u * (s & 7u)) & 0x022u) |
-           ((4u * (v10 & 7u)) & 0x012u) |
-           (8u * ((s & 0x400u) != 0)) |
-           (4u * ((s & 0x200000u) != 0)) |
-           ((s & 0x80u) != 0);
+    return (rotr32(subst, 27) & 0x40402402u) |
+           ((u32)sboxHiD << 31) |
+           ((((subst >> 10) & 7u) << 27) & 0x30402402u) |
+           (((subst & 0xFu) << 24) & 0x08402402u) |
+           ((((subst >> 18) & 7u) << 24) & 0x04402402u) |
+           ((((subst >>  3) & 3u) << 24) & 0x02402402u) |
+           ((((u32)(u16)subst >> 14) << 23) & 0x01402402u) |
+           ((subst >> 31) << 23) |
+           (((u32)(sboxLoB & 3u) << 20) & 0x00202402u) |
+           ((((subst >>  3) & 0xFu) << 17) & 0x00102402u) |
+           (((u32)(sboxHiE & 0xFu) << 16) & 0x00082402u) |
+           (((subst >> 14) & 1u) << 18) |
+           (((subst & 3u) << 16) & 0x00022402u) |
+           ((((subst >> 20) & 7u) << 14) & 0x00012402u) |
+           ((((subst >> 29) & 3u) << 14) & 0x0000A402u) |
+           (((u32)(sboxHiE & 1u)) << 14) |
+           (((subst >> 18) & 1u) << 12) |
+           ((subst & 1u) << 11) |
+           (((subst >> 29) & 1u) << 9) |
+           ((32u * ((subst >> 20) & 0xFu)) & 0x102u) |
+           ((16u * ((subst >> 10) & 0xFu)) & 0x082u) |
+           ((32u * ((subst >> 18) & 3u)) & 0x042u) |
+           ((8u * (subst & 7u)) & 0x022u) |
+           ((4u * (sboxHiE & 7u)) & 0x012u) |
+           (((subst >> 10) & 1u) << 3) |
+           (((subst >> 21) & 1u) << 2) |
+           ((subst >> 7) & 1u);
 }
 
-static int desKeySchedule(u32 *rk, u32 keyLo, u32 keyHi) {
-    u32 c = 0, d = 0;
-    u32 bit = 57;
+static __attribute__((noinline)) int desKeySchedule(u32 *roundKeys, u64 key) {
+    u32 keyLo = (u32)key;
+    u32 keyHi = (u32)(key >> 32);
+    u32 leftPerm = 0, rightPerm = 0;
+    u32 bitPos = 57;
+
     do {
-        u32 t = rotr32(d, 31);
-        c = ((c << 1) & 0xFFFFFFEFu) | ((t & 1u) << 4);
-        u32 kb = (bit & 0x20u) ? (keyHi >> (bit & 0x1Fu)) : (keyLo >> (bit & 0x1Fu));
-        bit = (bit - 8 + (((bit - 8) & 0x40u) ? 1 : 0)) & 0x3Fu;
-        d = (t & 0xFFFFFFEFu) | ((kb & 1u) << 4);
-    } while (bit != 0);
+        u32 rotRight = rotr32(rightPerm, 31);
+        leftPerm = ((leftPerm << 1) & 0xFFFFFFEFu) | ((rotRight & 1u) << 4);
+        u32 keyBit = (bitPos & 0x20u) ? (keyHi >> (bitPos & 0x1Fu)) : (keyLo >> (bitPos & 0x1Fu));
+        bitPos = (bitPos - 8 + (((bitPos - 8) & 0x40u) ? 1 : 0)) & 0x3Fu;
+        rightPerm = (rotRight & 0xFFFFFFEFu) | ((keyBit & 1u) << 4);
+    } while (bitPos != 0);
 
-    u32 bs = bswap32(c);
-    u32 c28 = ((bs & 0xF000000Fu) | ((bs & 0xFu) << 4)) >> 4;
-    u32 d28 = d >> 4;
+    u32 swappedLeft = bswap32(leftPerm);
+    u32 leftHalf = ((swappedLeft & 0xF000000Fu) | ((swappedLeft & 0xFu) << 4)) >> 4;
+    u32 rightHalf = rightPerm >> 4;
 
-    u32 shifts = 0x6AAA9AA5u; /* 1789504165 */
+    u32 shifts = 0x6AAA9AA5u;
     while (shifts != 0) {
-        u32 sh = shifts & 3u;
-        c28 = rotr32((c28 & 0x0FFFFFFFu) | ((c28 & 0xFFu) << 28), sh);
-        d28 = rotr32((d28 & 0x0FFFFFFFu) | ((d28 & 0xFFu) << 28), sh);
-        u32 k0 = 0, k1 = 0;
-        int idx = 24;
-        while (idx > 0) {
-            idx--;
-            u16 p = g_desPc2[idx];
-            k0 = (k0 << 1) | ((c28 >> (p >> 8)) & 1u);
-            k1 = (k1 << 1) | ((d28 >> (p & 0xFFu)) & 1u);
+        u32 rotAmt = shifts & 3u;
+        leftHalf = rotr32((leftHalf & 0x0FFFFFFFu) | ((leftHalf & 0xFFu) << 28), rotAmt);
+        rightHalf = rotr32((rightHalf & 0x0FFFFFFFu) | ((rightHalf & 0xFFu) << 28), rotAmt);
+        u32 subkeyLo = 0, subkeyHi = 0;
+        int pcIdx = 24;
+        while (pcIdx > 0) {
+            pcIdx--;
+            u16 pair = g_desPc2[pcIdx];
+            subkeyLo = (subkeyLo << 1) | ((leftHalf >> (pair >> 8)) & 1u);
+            subkeyHi = (subkeyHi << 1) | ((rightHalf >> (pair & 0xFFu)) & 1u);
         }
-        rk[0] = k0;
-        rk[1] = k1;
-        rk += 2;
+        roundKeys[0] = subkeyLo;
+        roundKeys[1] = subkeyHi;
+        roundKeys += 2;
         shifts >>= 2;
     }
     return 0;
 }
 
-static u64 desEncryptBlock(const u32 *rk, u64 blk) {
-    u64 ip = desInitialPerm((u32)blk, (u32)(blk >> 32));
-    u32 r = (u32)ip;
-    u32 l = (u32)(ip >> 32);
-    int i;
-    for (i = 0; i < 16; i += 2) {
-        l ^= desFeistel(r, rk + 2 * i);
-        r ^= desFeistel(l, rk + 2 * (i + 1));
-    }
-    return desFinalPerm(l, r);
+static __attribute__((noinline)) u64 desEncryptBlock(const u32 *roundKeys, u64 block) {
+    const u32 *end = roundKeys + 32;
+    u64 ip = desInitialPerm((u32)block, (u32)(block >> 32));
+    u32 right = (u32)ip;
+    u32 left = (u32)(ip >> 32);
+    do {
+        left ^= desFeistel(right, roundKeys);
+        right ^= desFeistel(left, roundKeys + 2);
+        roundKeys += 4;
+    } while (roundKeys != end);
+    return desFinalPerm(left, right);
 }
 
 /* =========================================================================
@@ -462,26 +747,26 @@ static u64 desEncryptBlock(const u32 *rk, u64 blk) {
  * ========================================================================= */
 
 int sceNpCommerce2_4484DB5A(const char *src, char *dst, u32 dstSize) {
-    const char *p = src;
+    const char *cur = src;
     char ch;
     u32 len, maxLen;
 
-    if (*p != '\0' && *p != '-') {
-        p++;
-        while (*p != '\0' && *p != '-')
-            p++;
+    if (*cur != '\0' && *cur != '-') {
+        cur++;
+        while (*cur != '\0' && *cur != '-')
+            cur++;
     }
-    ch = *p;
+    ch = *cur;
     if (ch != '\0') {
-        p++;
-        ch = *p;
+        cur++;
+        ch = *cur;
     }
     if (ch != '\0' && ch != '-') {
-        p++;
-        while (*p != '\0' && *p != '-')
-            p++;
+        cur++;
+        while (*cur != '\0' && *cur != '-')
+            cur++;
     }
-    len = (u32)(p - src);
+    len = (u32)(cur - src);
     maxLen = dstSize - 1;
     if (len > maxLen)
         len = maxLen;
@@ -491,22 +776,22 @@ int sceNpCommerce2_4484DB5A(const char *src, char *dst, u32 dstSize) {
 }
 
 int sceNpCommerce2_E3EC9E14(const char *tag, const char *const *ids, u32 count) {
-    char buf[32];
-    u32 i;
+    char formatted[32];
+    u32 idx;
 
     if (!sceNp_2E4769C3())
         return 0;
-    if (!tag || !ids || count == 0)
+    if (tag == NULL || ids == NULL || count == 0)
         return 0;
 
-    sceNpCommerce2_4484DB5A(ids[0], buf, sizeof(buf));
+    formatContentIdPrefixInline(ids[0], formatted, sizeof(formatted));
     if (count < 2)
-        return KprintfForUser("%s: %s\n", tag, buf);
+        return KprintfForUser("%s: %s\n", tag, formatted);
 
-    KprintfForUser("%s: %s", tag, buf);
-    for (i = 1; i < count; i++) {
-        sceNpCommerce2_4484DB5A(ids[i], buf, sizeof(buf));
-        KprintfForUser(", %s", buf);
+    KprintfForUser("%s: %s", tag, formatted);
+    for (idx = 1; idx < count; idx++) {
+        formatContentIdPrefixInline(ids[idx], formatted, sizeof(formatted));
+        KprintfForUser(", %s", formatted);
     }
     return KprintfForUser("\n");
 }
@@ -515,8 +800,8 @@ int sceNpCommerce2_E3EC9E14(const char *tag, const char *const *ids, u32 count) 
  * Environment / misc helpers
  * ========================================================================= */
 
-static int setEnvString(const char *env) {
-    if (!env)
+static __attribute__((noinline)) int setEnvString(const char *env) {
+    if (env == NULL)
         return SCE_NP_COMMERCE2_ERROR_ENV_NULL;
     if (sceNet_lib_D8722983(env) >= 9)
         return SCE_NP_COMMERCE2_ERROR_ENV_TOO_LONG;
@@ -555,9 +840,9 @@ int sceNpCommerce2_D5932A6C(void *ctx, char *countryOut, u32 countrySize, u32 *l
     (void)ctx;
     ret = sceNpGetAccountRegion(country, &lang);
     if (ret >= 0) {
-        if (countryOut)
+        if (countryOut != NULL)
             sceNet_lib_B5CE388A(countryOut, country, countrySize);
-        if (langOut)
+        if (langOut != NULL)
             *langOut = lang;
     }
     return ret;
@@ -574,7 +859,7 @@ int sceNpCommerce2_B7911D82(void) {
     return g_envFlag;
 }
 
-static int setEnvFlag(int flag) {
+static __attribute__((noinline)) int setEnvFlag(int flag) {
     g_envFlag = flag;
     return 0;
 }
@@ -712,7 +997,7 @@ void sceNpCommerce2_77BE411B(void *mgr, void *ctxPtr) {
 int sceNpCommerce2_8E80E661(void *mgr) {
     u32 ids[5];
     u32 count = 0;
-    u32 i;
+    u32 idx;
     Commerce2Ctx *cur;
     int intr;
 
@@ -721,9 +1006,9 @@ int sceNpCommerce2_8E80E661(void *mgr) {
         ids[count++] = cur->ctxId;
     sceKernelCpuResumeIntr(intr);
 
-    for (i = 0; i < count; i++) {
-        sceNpCommerce2_73F9CD9E(mgr, ids[i]);
-        sceNpCommerce2_8139E653(mgr, ids[i]);
+    for (idx = 0; idx < count; idx++) {
+        sceNpCommerce2_73F9CD9E(mgr, ids[idx]);
+        sceNpCommerce2_8139E653(mgr, ids[idx]);
     }
     return 0;
 }
@@ -746,17 +1031,17 @@ int sceNpCommerce2_06618C81(void *mgr, void *reqPtr, u32 ctxId, u32 *reqIdOut) {
         if (count < maxReqs) {
             u32 nextId = (g_reqIdCounter == 0xFFFFu) ? 1u : (g_reqIdCounter + 1u);
             while (nextId != g_reqIdCounter) {
-                Commerce2Ctx *tmpCtx = NULL;
-                int findRet = sceNpCommerce2_0A6AB496(mgr, ctxId, (void **)&tmpCtx, 0);
+                Commerce2Ctx *lookupCtx = NULL;
+                int findRet = sceNpCommerce2_0A6AB496(mgr, ctxId, (void **)&lookupCtx, 0);
                 if (findRet >= 0) {
-                    Commerce2Req *r = tmpCtx->reqList;
-                    while (r != NULL && (u16)r->reqId != (u16)nextId)
-                        r = r->next;
-                    if (r == NULL)
+                    Commerce2Req *iter = lookupCtx->reqList;
+                    while (iter != NULL && (u16)iter->reqId != (u16)nextId)
+                        iter = iter->next;
+                    if (iter == NULL)
                         findRet = SCE_NP_COMMERCE2_ERROR_REQ_NOT_FOUND;
                 }
-                if (tmpCtx != NULL)
-                    sceNpCommerce2_77BE411B(mgr, tmpCtx);
+                if (lookupCtx != NULL)
+                    sceNpCommerce2_77BE411B(mgr, lookupCtx);
                 if (findRet < 0)
                     break;
                 nextId = (nextId == 0xFFFFu) ? 1u : (nextId + 1u);
@@ -825,7 +1110,7 @@ int sceNpCommerce2_73F9CD9E(void *mgr, u32 ctxId) {
     Commerce2Ctx *ctx = NULL;
     u32 ids[8];
     u32 count = 0;
-    u32 i;
+    u32 idx;
     int intr;
     int ret;
 
@@ -841,8 +1126,8 @@ int sceNpCommerce2_73F9CD9E(void *mgr, u32 ctxId) {
     sceNpCommerce2_77BE411B(mgr, ctx);
     sceKernelCpuResumeIntr(intr);
 
-    for (i = 0; i < count; i++)
-        sceNpCommerce2_02C307C0(mgr, ids[i]);
+    for (idx = 0; idx < count; idx++)
+        sceNpCommerce2_02C307C0(mgr, ids[idx]);
     return ret;
 }
 
@@ -899,39 +1184,40 @@ int sceNpCommerce2_CCEEA788(int *tmplIdOut, int *connIdOut, int enableCookie) {
     if (tmplId < 0)
         return ret;
 
-    if (enableCookie == 1) {
-        ret = sceHttpEnableCookie(tmplId);
+    do {
+        if (enableCookie == 1) {
+            ret = sceHttpEnableCookie(tmplId);
+            if (ret < 0)
+                break;
+        }
+        ret = sceHttpSetConnectTimeOut(tmplId, 20000000);
         if (ret < 0)
-            goto fail;
-    }
-    ret = sceHttpSetConnectTimeOut(tmplId, 20000000);
-    if (ret < 0)
-        goto fail;
-    ret = sceHttpSetRecvTimeOut(tmplId, 60000000);
-    if (ret < 0)
-        goto fail;
-    ret = sceHttpSetSendTimeOut(tmplId, 20000000);
-    if (ret < 0)
-        goto fail;
+            break;
+        ret = sceHttpSetRecvTimeOut(tmplId, 60000000);
+        if (ret < 0)
+            break;
+        ret = sceHttpSetSendTimeOut(tmplId, 20000000);
+        if (ret < 0)
+            break;
 
-    if (sceNpCommerce2_B7911D82() <= 0) {
-        ret = sceHttp_87F1E666(tmplId, 357);
-        if (ret < 0)
-            goto fail;
-        ret = sceHttp_3C478044(tmplId, 26);
-    } else {
-        ret = sceHttp_87F1E666(tmplId, 64);
-        if (ret < 0)
-            goto fail;
-        ret = sceHttp_3C478044(tmplId, 1);
-    }
-    if (ret >= 0) {
-        *connIdOut = 0;
-        *tmplIdOut = tmplId;
-        return ret;
-    }
+        if (sceNpCommerce2_B7911D82() <= 0) {
+            ret = sceHttp_87F1E666(tmplId, 357);
+            if (ret < 0)
+                break;
+            ret = sceHttp_3C478044(tmplId, 26);
+        } else {
+            ret = sceHttp_87F1E666(tmplId, 64);
+            if (ret < 0)
+                break;
+            ret = sceHttp_3C478044(tmplId, 1);
+        }
+        if (ret >= 0) {
+            *connIdOut = 0;
+            *tmplIdOut = tmplId;
+            return ret;
+        }
+    } while (0);
 
-fail:
     if (tmplId != 0)
         sceHttpDeleteTemplate(tmplId);
     return ret;
@@ -946,7 +1232,7 @@ int sceNpCommerce2_382803C8(int tmplId, int storeType, int action, const char *d
     int connId = *connIdInOut;
     int reqId;
     int ret;
-    u32 i;
+    u32 idx;
     (void)storeType;
     (void)action;
 
@@ -969,20 +1255,23 @@ int sceNpCommerce2_382803C8(int tmplId, int storeType, int action, const char *d
     if (reqId < 0)
         return reqId;
 
-    for (i = 0; i < 4; i++) {
-        ret = sceHttpAddExtraHeader(reqId, g_httpHeaders[2 * i], g_httpHeaders[2 * i + 1], 0);
+    do {
+        for (idx = 0; idx < 4; idx++) {
+            ret = sceHttpAddExtraHeader(reqId, g_httpHeaders[2 * idx], g_httpHeaders[2 * idx + 1], 0);
+            if (ret < 0)
+                break;
+        }
         if (ret < 0)
-            goto fail;
-    }
-    if (cookie != NULL && sceNet_lib_D8722983(cookie) != 0) {
-        ret = sceHttpAddExtraHeader(reqId, "Cookie", cookie, 0);
-        if (ret < 0)
-            goto fail;
-    }
-    *reqIdOut = reqId;
-    return ret;
+            break;
+        if (cookie != NULL && sceNet_lib_D8722983(cookie) != 0) {
+            ret = sceHttpAddExtraHeader(reqId, "Cookie", cookie, 0);
+            if (ret < 0)
+                break;
+        }
+        *reqIdOut = reqId;
+        return ret;
+    } while (0);
 
-fail:
     if (reqId != 0)
         sceHttpDeleteRequest(reqId);
     return ret;
@@ -992,8 +1281,8 @@ int sceNpCommerce2_4D43B84D(int httpReqId, u32 *buildVerInOut) {
     int statusCode;
     const char *allHdr;
     u32 allHdrLen = 0;
-    const char *val;
-    u32 valLen;
+    const char *hdrVal;
+    u32 hdrValLen;
     int ret;
 
     ret = sceHttpGetStatusCode(httpReqId, &statusCode);
@@ -1002,15 +1291,15 @@ int sceNpCommerce2_4D43B84D(int httpReqId, u32 *buildVerInOut) {
 
     if (*buildVerInOut == 0) {
         if (sceHttpGetAllHeader(httpReqId, &allHdr, &allHdrLen) >= 0 &&
-            sceParseHttpResponseHeader(allHdr, allHdrLen, "X-NativeBuildVersion", &val, &valLen) >= 0) {
-            if (valLen >= sceNet_lib_D8722983("XX.XX.XX.XX")) {
+            sceParseHttpResponseHeader(allHdr, allHdrLen, "X-NativeBuildVersion", &hdrVal, &hdrValLen) >= 0) {
+            if (hdrValLen >= sceNet_lib_D8722983("XX.XX.XX.XX")) {
                 u32 ver = 0;
-                const char *p = val;
-                if ((uintptr_t)val < (uintptr_t)0xFFFFFFF7u) {
+                const char *cur = hdrVal;
+                if ((uintptr_t)hdrVal < (uintptr_t)0xFFFFFFF7u) {
                     do {
-                        ver = 100u * ver + 10u * (u32)(u8)p[0] + (u32)(u8)p[1] - 528u;
-                        p += 3;
-                    } while ((uintptr_t)p <= (uintptr_t)val + 9u);
+                        ver = 100u * ver + 10u * (u32)(u8)cur[0] + (u32)(u8)cur[1] - 528u;
+                        cur += 3;
+                    } while ((uintptr_t)cur <= (uintptr_t)hdrVal + 9u);
                     *buildVerInOut = ver;
                 } else {
                     *buildVerInOut = 0;
@@ -1100,18 +1389,18 @@ int sceNpCommerce2_AE614CC6(int httpReqId, const void *data, u32 size) {
 }
 
 int sceNpCommerce2_44B8A9A9(int httpReqId, void *buf, u32 size) {
-    u8 *p = (u8 *)buf;
+    u8 *cur = (u8 *)buf;
     u32 rem = size;
     u32 total = 0;
     int ret;
 
     while (rem != 0) {
-        ret = sceHttpReadData(httpReqId, p, rem);
+        ret = sceHttpReadData(httpReqId, cur, rem);
         if (ret < 0)
             return ret;
         if (ret == 0)
             return (int)total;
-        p += ret;
+        cur += ret;
         rem -= (u32)ret;
         total += (u32)ret;
     }
@@ -1139,7 +1428,8 @@ int sceNpCommerce2_66EC0829(char *out, u32 outSize, const char *in, u32 inLen, u
  * Request URL/Body Builders
  * ========================================================================= */
 
-static int resolveActionPath(int storeType, u16 action, const char **dirOut, const char **nameOut) {
+static __attribute__((noinline)) int resolveActionPath(
+    int storeType, u16 action, const char **dirOut, const char **nameOut) {
     char envBuf[12];
     int ret;
 
@@ -1156,7 +1446,8 @@ static int resolveActionPath(int storeType, u16 action, const char **dirOut, con
     return ret;
 }
 
-static int sendUintFormField(int httpReqId, int fieldIdx, u32 val, int prependAmp) {
+static __attribute__((noinline)) int sendUintFormField(
+    int httpReqId, int fieldIdx, u32 val, int prependAmp) {
     char numBuf[16];
     int ret;
 
@@ -1169,15 +1460,16 @@ static int sendUintFormField(int httpReqId, int fieldIdx, u32 val, int prependAm
     if (ret < 0)
         return ret;
 
-    int n = sceNet_lib_CF705E46(numBuf, "%u", val);
-    if (n >= 16)
+    int printed = sceNet_lib_CF705E46(numBuf, "%u", val);
+    if (printed >= 16)
         return SCE_NP_COMMERCE2_ERROR_FORMAT;
     return sceNpCommerce2_AE614CC6(httpReqId, numBuf, sceNet_lib_D8722983(numBuf));
 }
 
-static int buildOrSendCreateSessionBody(int sendMode, int httpReqId, u64 *lenOut,
-                                        u32 version, const char *username,
-                                        const char *password, const char *consoleId) {
+static __attribute__((noinline)) int buildOrSendCreateSessionBody(
+    int sendMode, int httpReqId, u64 *lenOut,
+    u32 version, const char *username,
+    const char *password, const char *consoleId) {
     char escBuf[784];
     char numBuf[16];
     s64 total = 0;
@@ -1186,8 +1478,8 @@ static int buildOrSendCreateSessionBody(int sendMode, int httpReqId, u64 *lenOut
     if (sendMode == 1) {
         ret = sendUintFormField(httpReqId, 2, version, 0);
     } else {
-        int n = sceNet_lib_CF705E46(numBuf, "%u", version);
-        ret = (n < 16) ? (int)(n + g_formFields[2].len) : SCE_NP_COMMERCE2_ERROR_FORMAT;
+        int printed = sceNet_lib_CF705E46(numBuf, "%u", version);
+        ret = (printed < 16) ? (int)(printed + g_formFields[2].len) : SCE_NP_COMMERCE2_ERROR_FORMAT;
     }
     if (ret < 0)
         return ret;
@@ -1243,9 +1535,10 @@ static int buildOrSendCreateSessionBody(int sendMode, int httpReqId, u64 *lenOut
     return 0;
 }
 
-static int sendCreateSessionHttp(int storeType, int tmplId, int *connIdInOut, u16 action,
-                                 int *httpReqIdInOut, u32 version, const char *username,
-                                 const char *password, const char *consoleId) {
+static __attribute__((noinline)) int sendCreateSessionHttp(
+    int storeType, int tmplId, int *connIdInOut, u16 action,
+    int *httpReqIdInOut, u32 version, const char *username,
+    const char *password, const char *consoleId) {
     u64 contentLen = 0;
     const char *dir = NULL;
     const char *name = NULL;
@@ -1269,7 +1562,8 @@ static int sendCreateSessionHttp(int storeType, int tmplId, int *connIdInOut, u1
     return 0;
 }
 
-static int sendDeleteSessionHttp(int storeType, int tmplId, int *connIdInOut, u16 action, int *httpReqIdInOut) {
+static __attribute__((noinline)) int sendDeleteSessionHttp(
+    int storeType, int tmplId, int *connIdInOut, u16 action, int *httpReqIdInOut) {
     const char *dir = NULL;
     const char *name = NULL;
     int ret = resolveActionPath(storeType, action, &dir, &name);
@@ -1277,16 +1571,17 @@ static int sendDeleteSessionHttp(int storeType, int tmplId, int *connIdInOut, u1
         ret = sceNpCommerce2_382803C8(tmplId, storeType, action, dir, name, NULL,
                                       connIdInOut, httpReqIdInOut, 0);
     if (ret >= 0) {
-        int sret = sceNpCommerce2_AE614CC6(*httpReqIdInOut, NULL, 0);
-        return (sret < 0) ? sret : 0;
+        int sendRet = sceNpCommerce2_AE614CC6(*httpReqIdInOut, NULL, 0);
+        return (sendRet < 0) ? sendRet : 0;
     }
     return ret;
 }
 
-static int buildOrSendGetCategoryBody(int sendMode, int httpReqId, u64 *lenOut,
-                                      int storeType, const char *categoryId,
-                                      const char *const *rewardIds, u32 rewardCount,
-                                      u32 startPos, u32 maxCount) {
+static __attribute__((noinline)) int buildOrSendGetCategoryBody(
+    int sendMode, int httpReqId, u64 *lenOut,
+    int storeType, const char *categoryId,
+    const char *const *rewardIds, u32 rewardCount,
+    u32 startPos, u32 maxCount) {
     char escBuf[784];
     char numBuf[16];
     int hasReward = (rewardIds != NULL && rewardCount != 0);
@@ -1345,8 +1640,8 @@ static int buildOrSendGetCategoryBody(int sendMode, int httpReqId, u64 *lenOut,
     if (sendMode == 1) {
         ret = sendUintFormField(httpReqId, 7, startPos, 1);
     } else {
-        int n = sceNet_lib_CF705E46(numBuf, "%u", startPos);
-        ret = (n < 16) ? (int)(n + g_formFields[7].len + 1) : SCE_NP_COMMERCE2_ERROR_FORMAT;
+        int printed = sceNet_lib_CF705E46(numBuf, "%u", startPos);
+        ret = (printed < 16) ? (int)(printed + g_formFields[7].len + 1) : SCE_NP_COMMERCE2_ERROR_FORMAT;
     }
     if (ret < 0)
         return ret;
@@ -1355,8 +1650,8 @@ static int buildOrSendGetCategoryBody(int sendMode, int httpReqId, u64 *lenOut,
     if (sendMode == 1) {
         ret = sendUintFormField(httpReqId, 8, maxCount, 1);
     } else {
-        int n = sceNet_lib_CF705E46(numBuf, "%u", maxCount);
-        ret = (n < 16) ? (int)(n + g_formFields[8].len + 1) : SCE_NP_COMMERCE2_ERROR_FORMAT;
+        int printed = sceNet_lib_CF705E46(numBuf, "%u", maxCount);
+        ret = (printed < 16) ? (int)(printed + g_formFields[8].len + 1) : SCE_NP_COMMERCE2_ERROR_FORMAT;
     }
     if (ret < 0)
         return ret;
@@ -1367,10 +1662,11 @@ static int buildOrSendGetCategoryBody(int sendMode, int httpReqId, u64 *lenOut,
     return 0;
 }
 
-static int sendGetCategoryHttp(int storeType, int tmplId, int *connIdInOut, u16 action,
-                               int *httpReqIdInOut, const char *categoryId,
-                               const char *const *rewardIds, u32 rewardCount,
-                               u32 startPos, u32 maxCount) {
+static __attribute__((noinline)) int sendGetCategoryHttp(
+    int storeType, int tmplId, int *connIdInOut, u16 action,
+    int *httpReqIdInOut, const char *categoryId,
+    const char *const *rewardIds, u32 rewardCount,
+    u32 startPos, u32 maxCount) {
     u64 contentLen = 0;
     const char *dir = NULL;
     const char *name = NULL;
@@ -1395,10 +1691,11 @@ static int sendGetCategoryHttp(int storeType, int tmplId, int *connIdInOut, u16 
     return 0;
 }
 
-static int buildOrSendGetProductBody(int sendMode, int httpReqId, u64 *lenOut,
-                                     int storeType, const char *categoryId,
-                                     const char *productId, const char *const *rewardIds,
-                                     u32 rewardCount) {
+static __attribute__((noinline)) int buildOrSendGetProductBody(
+    int sendMode, int httpReqId, u64 *lenOut,
+    int storeType, const char *categoryId,
+    const char *productId, const char *const *rewardIds,
+    u32 rewardCount) {
     char escBuf[784];
     int hasReward = (rewardIds != NULL && rewardCount != 0);
     s64 total = 0;
@@ -1476,10 +1773,11 @@ static int buildOrSendGetProductBody(int sendMode, int httpReqId, u64 *lenOut,
     return 0;
 }
 
-static int sendGetProductHttp(int storeType, int tmplId, int *connIdInOut, u16 action,
-                              int *httpReqIdInOut, const char *categoryId,
-                              const char *productId, const char *const *rewardIds,
-                              u32 rewardCount) {
+static __attribute__((noinline)) int sendGetProductHttp(
+    int storeType, int tmplId, int *connIdInOut, u16 action,
+    int *httpReqIdInOut, const char *categoryId,
+    const char *productId, const char *const *rewardIds,
+    u32 rewardCount) {
     u64 contentLen = 0;
     const char *dir = NULL;
     const char *name = NULL;
@@ -1509,27 +1807,27 @@ static int sendGetProductHttp(int storeType, int tmplId, int *connIdInOut, u16 a
 
 int sceNpCommerce2_C27FEAB1(void *ctxPtr, int httpReqId, int action, u8 *statusOut, u8 *buf, u32 bufSize) {
     Commerce2Ctx *ctx = (Commerce2Ctx *)ctxPtr;
-    u8 header[56];
+    SceNpCommerce2ResponseHeader header;
     u8 rawStatus[4];
-    char hexTmp[256];
+    char hexDump[256];
     int ret;
     (void)action;
 
     if (bufSize < 60)
         return SCE_NP_COMMERCE2_ERROR_RESPONSE_BUF_TOO_SMALL;
 
-    sceKernelMemset(header, 0, sizeof(header));
-    *(u32 *)(header + 0)  = ctx->version;
-    *(u32 *)(header + 16) = ctx->buildVersion;
-    sceNet_lib_B5CE388A((char *)(header + 20), ctx->country, 4);
-    header[23] = 0;
-    sceNet_lib_B5CE388A((char *)(header + 24), ctx->lang, 4);
-    header[27] = 0;
-    sceNet_lib_B5CE388A((char *)(header + 28), ".", 4);
-    header[31] = 0;
-    sceNet_lib_B5CE388A((char *)(header + 32), ",", 4);
-    header[35] = 0;
-    sceKernelMemcpy(buf, header, sizeof(header));
+    sceKernelMemset(&header, 0, sizeof(header));
+    header.version = ctx->version;
+    header.buildVersion = ctx->buildVersion;
+    sceNet_lib_B5CE388A(header.country, ctx->country, 4);
+    header.country[3] = '\0';
+    sceNet_lib_B5CE388A(header.lang, ctx->lang, 4);
+    header.lang[3] = '\0';
+    sceNet_lib_B5CE388A(header.decimalLetter, ".", 4);
+    header.decimalLetter[3] = '\0';
+    sceNet_lib_B5CE388A(header.thousandSeparator, ",", 4);
+    header.thousandSeparator[3] = '\0';
+    sceKernelMemcpy(buf, &header, sizeof(header));
 
     ret = sceNpCommerce2_44B8A9A9(httpReqId, rawStatus, 4);
     if (ret < 0)
@@ -1538,15 +1836,24 @@ int sceNpCommerce2_C27FEAB1(void *ctxPtr, int httpReqId, int action, u8 *statusO
         return SCE_NP_COMMERCE2_ERROR_UNEXPECTED_EOF;
 
     {
-        u32 i;
-        for (i = 0; i < 4; i++) {
-            u8 hi = rawStatus[i] >> 4;
-            u8 lo = rawStatus[i] & 0xFu;
-            hexTmp[2 * i]     = (char)(hi < 10 ? hi + '0' : hi + 'a' - 10);
-            hexTmp[2 * i + 1] = (char)(lo < 10 ? lo + '0' : lo + 'a' - 10);
-        }
-        hexTmp[8] = '\0';
-        (void)hexTmp;
+        u32 idx = 0;
+        do {
+            u32 chunk = 4u - idx;
+            u32 limit;
+            char *outPtr = hexDump;
+            if (chunk >= 129u)
+                chunk = 128u;
+            limit = idx + chunk;
+            while (idx < limit) {
+                u32 hiNib = rawStatus[idx] >> 4;
+                u32 loNib = rawStatus[idx] & 0xFu;
+                *outPtr++ = (char)(hiNib < 10u ? hiNib + '0' : hiNib + 'a' - 10u);
+                *outPtr++ = (char)(loNib < 10u ? loNib + '0' : loNib + 'a' - 10u);
+                idx++;
+            }
+            *outPtr = '\0';
+        } while (idx < 4u);
+        (void)hexDump;
     }
 
     *statusOut = rawStatus[1];
@@ -1557,54 +1864,54 @@ int sceNpCommerce2_C27FEAB1(void *ctxPtr, int httpReqId, int action, u8 *statusO
 }
 
 int sceNpCommerce2_ADAA054C(u8 *buf, u32 bufSize, u32 bodyLen, int isTruncated) {
-    u32 hdr[14];
-    if (bufSize < 56)
+    SceNpCommerce2ResponseHeader hdr;
+    if (bufSize < sizeof(hdr))
         return SCE_NP_COMMERCE2_ERROR_RESPONSE_BUF_TOO_SMALL;
-    sceKernelMemcpy(hdr, buf, 56);
-    hdr[2] = bodyLen + 4;
-    hdr[3] = (u32)isTruncated;
-    sceKernelMemcpy(buf, hdr, 56);
+    sceKernelMemcpy(&hdr, buf, sizeof(hdr));
+    hdr.bodySize = bodyLen + 4;
+    hdr.isTruncated = (u32)isTruncated;
+    sceKernelMemcpy(buf, &hdr, sizeof(hdr));
     return 0;
 }
 
 int sceNpCommerce2_F8D175FA(u8 *buf, u32 bufSize, const char *country, const char *lang) {
-    u8 hdr[56];
-    if (bufSize < 56)
+    SceNpCommerce2ResponseHeader hdr;
+    if (bufSize < sizeof(hdr))
         return SCE_NP_COMMERCE2_ERROR_RESPONSE_BUF_TOO_SMALL;
-    sceKernelMemcpy(hdr, buf, 56);
-    sceNet_lib_B5CE388A((char *)(hdr + 20), country, 4);
-    hdr[23] = 0;
-    sceNet_lib_B5CE388A((char *)(hdr + 24), lang, 4);
-    hdr[27] = 0;
-    sceKernelMemcpy(buf, hdr, 56);
+    sceKernelMemcpy(&hdr, buf, sizeof(hdr));
+    sceNet_lib_B5CE388A(hdr.country, country, 4);
+    hdr.country[3] = '\0';
+    sceNet_lib_B5CE388A(hdr.lang, lang, 4);
+    hdr.lang[3] = '\0';
+    sceKernelMemcpy(buf, &hdr, sizeof(hdr));
     return 0;
 }
 
 int sceNpCommerce2_FC687AC7(const u8 *buf, u32 bufLen, u16 tag, u16 minLen, u16 *valLenOut, int allowTrunc) {
     const u8 *cur = buf;
     while (1) {
-        u16 rawTag, rawLen, t, l;
+        u16 rawTag, rawLen, parsedTag, parsedLen;
         if (bufLen < (u32)(cur - buf) + 4u)
             return SCE_NP_COMMERCE2_ERROR_TLV_NOT_FOUND;
 
         sceKernelMemcpy(&rawTag, cur, 2);
-        t = (u16)(bswap16(rawTag) & 0x0FFFu);
+        parsedTag = (u16)(bswap16(rawTag) & 0x0FFFu);
         sceKernelMemcpy(&rawLen, cur + 2, 2);
-        l = bswap16(rawLen);
+        parsedLen = bswap16(rawLen);
         cur += 4;
 
-        if (t == tag) {
+        if (parsedTag == tag) {
             if (bufLen < (u32)(cur - buf) + (u32)minLen)
                 return SCE_NP_COMMERCE2_ERROR_TLV_SHORT_HEADER;
-            if (l < minLen)
+            if (parsedLen < minLen)
                 return SCE_NP_COMMERCE2_ERROR_TLV_SHORT_MIN;
-            if (bufLen < (u32)(cur - buf) + (u32)l && !allowTrunc)
+            if (bufLen < (u32)(cur - buf) + (u32)parsedLen && !allowTrunc)
                 return SCE_NP_COMMERCE2_ERROR_TLV_TRUNCATED;
             if (valLenOut != NULL)
-                *valLenOut = l;
+                *valLenOut = parsedLen;
             return (int)(cur - buf);
         }
-        cur += l;
+        cur += parsedLen;
     }
 }
 
@@ -1612,59 +1919,59 @@ int sceNpCommerce2_3546C737(const u8 *buf, u32 bufLen, u16 tag, u16 *valLenOut, 
     const u8 *cur = buf;
     while (1) {
         u16 blockLen, rawTag, rawCount;
-        int off;
+        int foundOff;
         if (bufLen < (u32)(cur - buf))
             return SCE_NP_COMMERCE2_ERROR_TLV_NOT_FOUND;
-        off = sceNpCommerce2_FC687AC7(cur, bufLen - (u32)(cur - buf), 1, 4, &blockLen, allowTrunc);
-        if (off < 0)
-            return off;
-        const u8 *p = cur + off;
-        sceKernelMemcpy(&rawTag, p, 2);
+        foundOff = sceNpCommerce2_FC687AC7(cur, bufLen - (u32)(cur - buf), 1, 4, &blockLen, allowTrunc);
+        if (foundOff < 0)
+            return foundOff;
+        const u8 *entry = cur + foundOff;
+        sceKernelMemcpy(&rawTag, entry, 2);
         rawTag = (u16)(bswap16(rawTag) & 0x0FFFu);
-        sceKernelMemcpy(&rawCount, p + 2, 2);
+        sceKernelMemcpy(&rawCount, entry + 2, 2);
         rawCount = bswap16(rawCount);
         if (rawTag == tag) {
             if (valLenOut != NULL)
                 *valLenOut = (u16)(blockLen - 4);
             if (countOut != NULL)
                 *countOut = rawCount;
-            return (int)((p - buf) + 4);
+            return (int)((entry - buf) + 4);
         }
-        cur = p + blockLen;
+        cur = entry + blockLen;
     }
 }
 
-int sceNpCommerce2_69FEA1C8(const u8 *buf, u32 bufLen, u16 tag, u16 *valLenOut, u32 *rangeOut, int allowTrunc) {
+int sceNpCommerce2_69FEA1C8(const u8 *buf, u32 bufLen, u16 tag, u16 *valLenOut, SceNpCommerce2Range *rangeOut, int allowTrunc) {
     const u8 *cur = buf;
     while (1) {
         u16 blockLen, rawTag, rawCount, rawStart, rawTotal;
-        int off;
+        int foundOff;
         if (bufLen < (u32)(cur - buf))
             return SCE_NP_COMMERCE2_ERROR_TLV_NOT_FOUND;
-        off = sceNpCommerce2_FC687AC7(cur, bufLen - (u32)(cur - buf), 2, 8, &blockLen, allowTrunc);
-        if (off < 0)
-            return off;
-        const u8 *p = cur + off;
-        sceKernelMemcpy(&rawTag, p, 2);
+        foundOff = sceNpCommerce2_FC687AC7(cur, bufLen - (u32)(cur - buf), 2, 8, &blockLen, allowTrunc);
+        if (foundOff < 0)
+            return foundOff;
+        const u8 *entry = cur + foundOff;
+        sceKernelMemcpy(&rawTag, entry, 2);
         rawTag = (u16)(bswap16(rawTag) & 0x0FFFu);
-        sceKernelMemcpy(&rawCount, p + 2, 2);
+        sceKernelMemcpy(&rawCount, entry + 2, 2);
         rawCount = bswap16(rawCount);
-        sceKernelMemcpy(&rawStart, p + 4, 2);
+        sceKernelMemcpy(&rawStart, entry + 4, 2);
         rawStart = bswap16(rawStart);
-        sceKernelMemcpy(&rawTotal, p + 6, 2);
+        sceKernelMemcpy(&rawTotal, entry + 6, 2);
         rawTotal = bswap16(rawTotal);
         if (rawTag == tag) {
             if (valLenOut != NULL)
                 *valLenOut = (u16)(blockLen - 8);
             if (rangeOut != NULL) {
-                sceKernelMemset(rangeOut, 0, 12);
-                rangeOut[0] = rawStart;
-                rangeOut[1] = rawCount;
-                rangeOut[2] = rawTotal;
+                sceKernelMemset(rangeOut, 0, sizeof(SceNpCommerce2Range));
+                rangeOut->startPosition = rawStart;
+                rangeOut->count = rawCount;
+                rangeOut->totalCountOfResults = rawTotal;
             }
-            return (int)((p - buf) + 8);
+            return (int)((entry - buf) + 8);
         }
-        cur = p + blockLen;
+        cur = entry + blockLen;
     }
 }
 
@@ -1676,41 +1983,43 @@ int sceNpCommerce2_3F6D413C(const u8 *buf, u32 bufLen, u16 tag, u16 *valLenOut, 
     return sceNpCommerce2_3546C737(buf, bufLen, tag, valLenOut, countOut, 0);
 }
 
-static int parseResponseHeader(const u8 *buf, u32 bufSize, u32 *versionOut, u32 *bodyLenOut, u32 *truncOut) {
-    u32 hdr[14];
+static __attribute__((noinline)) int parseResponseHeader(
+    const u8 *buf, u32 bufSize, u32 *versionOut, u32 *bodyLenOut, u32 *truncOut) {
+    SceNpCommerce2ResponseHeader hdr;
     u8 status[4];
 
     if (bufSize < 60)
         return SCE_NP_COMMERCE2_ERROR_INVALID_RESPONSE;
 
-    sceKernelMemcpy(hdr, buf, 56);
+    sceKernelMemcpy(&hdr, buf, sizeof(hdr));
     sceKernelMemcpy(status, buf + 56, 4);
-    if (bufSize < hdr[2] + 56u)
+    if (bufSize < hdr.bodySize + 56u)
         return SCE_NP_COMMERCE2_ERROR_INVALID_RESPONSE;
 
-    *bodyLenOut = hdr[2] - 4u;
+    *bodyLenOut = hdr.bodySize - 4u;
     if (versionOut != NULL)
-        *versionOut = hdr[0];
+        *versionOut = hdr.version;
     if (truncOut != NULL)
-        *truncOut = hdr[3];
+        *truncOut = hdr.isTruncated;
     return 60;
 }
 
-static int findIndexedArrayItem(const u8 *buf, u32 bufLen, u16 tag, u16 minLen, u32 index, u16 *itemLenOut) {
+static __attribute__((noinline)) int findIndexedArrayItem(
+    const u8 *buf, u32 bufLen, u16 tag, u16 minLen, u32 index, u16 *itemLenOut) {
     u16 arrLen;
     u32 count;
-    int off = sceNpCommerce2_3F6D413C(buf, bufLen, tag, &arrLen, &count);
-    if (off < 0)
-        return off;
+    int startOff = sceNpCommerce2_3F6D413C(buf, bufLen, tag, &arrLen, &count);
+    if (startOff < 0)
+        return startOff;
     if (index >= count)
         return SCE_NP_COMMERCE2_ERROR_INVALID_INDEX;
 
-    const u8 *arrStart = buf + off;
+    const u8 *arrStart = buf + startOff;
     const u8 *cur = arrStart;
     u16 itemLen = 0;
-    u32 i;
-    for (i = 0; i <= index; i++) {
-        if (i != 0)
+    u32 idx;
+    for (idx = 0; idx <= index; idx++) {
+        if (idx != 0)
             cur += itemLen;
         int itemOff = sceNpCommerce2_E3455E27(cur, arrLen - (u32)(cur - arrStart), tag, minLen, &itemLen);
         if (itemOff < 0)
@@ -1721,19 +2030,20 @@ static int findIndexedArrayItem(const u8 *buf, u32 bufLen, u16 tag, u16 minLen, 
     return (int)(cur - buf);
 }
 
-static int findIndexedRangeItem(const u8 *buf, u32 bufLen, u16 tag, u16 minLen, u32 index, u16 *itemLenOut, int allowTrunc) {
-    u32 range[3];
-    int off = sceNpCommerce2_69FEA1C8(buf, bufLen, tag, NULL, range, allowTrunc);
-    if (off < 0)
-        return off;
-    if (index >= range[1])
+static __attribute__((noinline)) int findIndexedRangeItem(
+    const u8 *buf, u32 bufLen, u16 tag, u16 minLen, u32 index, u16 *itemLenOut, int allowTrunc) {
+    SceNpCommerce2Range range;
+    int startOff = sceNpCommerce2_69FEA1C8(buf, bufLen, tag, NULL, &range, allowTrunc);
+    if (startOff < 0)
+        return startOff;
+    if (index >= range.count)
         return SCE_NP_COMMERCE2_ERROR_INVALID_INDEX;
 
-    const u8 *cur = buf + off;
+    const u8 *cur = buf + startOff;
     u16 itemLen = 0;
-    u32 i;
-    for (i = 0; i <= index; i++) {
-        if (i != 0)
+    u32 idx;
+    for (idx = 0; idx <= index; idx++) {
+        if (idx != 0)
             cur += itemLen;
         int itemOff = sceNpCommerce2_E3455E27(cur, bufLen - (u32)(cur - buf), tag, minLen, &itemLen);
         if (itemOff < 0)
@@ -1744,15 +2054,16 @@ static int findIndexedRangeItem(const u8 *buf, u32 bufLen, u16 tag, u16 minLen, 
     return (int)(cur - buf);
 }
 
-static int clampRangeCount(const u32 *base, u16 tag, u16 minLen, u32 *range) {
+static __attribute__((noinline)) int clampRangeCount(
+    const SceNpCommerce2CommonData *common, u16 tag, u16 minLen, SceNpCommerce2Range *range) {
     u16 itemLen;
-    u32 i;
+    u32 idx;
     int ret = 0;
-    for (i = 0; i < range[1]; i++) {
-        ret = findIndexedRangeItem((const u8 *)(uintptr_t)base[3], base[4], tag, minLen, i, &itemLen, (int)base[6]);
+    for (idx = 0; idx < range->count; idx++) {
+        ret = findIndexedRangeItem(common->data, common->dataSize, tag, minLen, idx, &itemLen, (int)common->overflow);
         if (ret < 0) {
-            if (i != 0) {
-                range[1] = i;
+            if (idx != 0) {
+                range->count = idx;
                 return 0;
             }
             return ret;
@@ -1765,370 +2076,356 @@ static int clampRangeCount(const u32 *base, u16 tag, u16 minLen, u32 *range) {
  * Structured Info Parsers (Session, Category, Content, Product, SKU, Rating)
  * ========================================================================= */
 
-static int parseAccountInfo(const u32 *base, u32 *out) {
-    const u8 *src = (const u8 *)(uintptr_t)base[3];
+static __attribute__((noinline)) int parseAccountInfo(
+    const SceNpCommerce2CommonData *base, SceNpCommerce2AccountInfo *out) {
+    const u8 *src = base->data;
     u16 len;
     u16 optLen;
-    int off = sceNpCommerce2_E3455E27(src, base[4], 94, 50, &len);
-    if (off < 0)
-        return off;
+    int foundOff = sceNpCommerce2_E3455E27(src, base->dataSize, 94, 50, &len);
+    if (foundOff < 0)
+        return foundOff;
 
-    const u8 *p = src + off;
-    sceKernelMemset(out, 0, 88);
-    out[0] = base[0];
-    out[1] = base[1];
-    out[3] = (u32)(uintptr_t)p;
-    out[4] = len;
+    const u8 *payload = src + foundOff;
+    sceKernelMemset(out, 0, sizeof(SceNpCommerce2AccountInfo));
+    initChildCommonData(&out->commonData, base->version, base->bufHead, payload, len);
 
-    u32 acctId[2];
-    sceKernelMemcpy(acctId, p, 8);
-    sceNpCommerce2_22CEC5E2((char *)(out + 10), 17, bswap32(acctId[1]), bswap32(acctId[0]), 0);
-    out[15] = (u32)(uintptr_t)(p + 8);
-    out[16] = (u32)(uintptr_t)(p + 25);
-    out[17] = (u32)(uintptr_t)(p + 28);
+    u32 rawAcct[2];
+    sceKernelMemcpy(rawAcct, payload, 8);
+    u64 acctId = ((u64)bswap32(rawAcct[0]) << 32) | bswap32(rawAcct[1]);
+    sceNpCommerce2_22CEC5E2(out->accountIdHex, 17, acctId, 0);
+    out->onlineId = (const char *)(payload + 8);
+    out->countryCode = (const char *)(payload + 25);
+    out->langCode = (const char *)(payload + 28);
 
-    u32 tmp;
-    sceKernelMemcpy(&tmp, p + 34, 4);
-    out[18] = bswap32(tmp);
-    sceKernelMemcpy(&tmp, p + 38, 4);
-    out[20] = (bswap32(tmp) != 0);
-    sceKernelMemcpy(&tmp, p + 42, 4);
-    out[21] = bswap32(tmp);
+    u32 rawWord;
+    sceKernelMemcpy(&rawWord, payload + 34, 4);
+    out->walletBalance = bswap32(rawWord);
+    sceKernelMemcpy(&rawWord, payload + 38, 4);
+    out->isSubAccount = (bswap32(rawWord) != 0);
+    sceKernelMemcpy(&rawWord, payload + 42, 4);
+    out->spendingLimit = bswap32(rawWord);
 
-    const u8 *tail = p + 46;
-    out[5] = (u32)(uintptr_t)tail;
-    out[19] = out[1] + 4;
-    off = sceNpCommerce2_E3455E27(tail, len - (u32)(tail - p), 93, 0, &optLen);
-    if (off >= 0 && optLen != 0)
-        out[19] = (u32)(uintptr_t)(tail + off);
-    return off;
+    const u8 *tail = payload + 46;
+    out->commonData.subData = tail;
+    out->accountName = emptyResponseStr(out->commonData.bufHead);
+    foundOff = sceNpCommerce2_E3455E27(tail, len - (u32)(tail - payload), 93, 0, &optLen);
+    if (foundOff >= 0 && optLen != 0)
+        out->accountName = (const char *)(tail + foundOff);
+    return foundOff;
 }
 
-static int parseSessionResultEx(u32 *out, const u8 *buf, u32 bufSize) {
+static __attribute__((noinline)) int parseSessionResultEx(
+    SceNpCommerce2SessionResultEx *out, const u8 *buf, u32 bufSize) {
     u32 ver, bodyLen;
     u16 optLen;
-    int off = parseResponseHeader(buf, bufSize, &ver, &bodyLen, NULL);
-    if (off < 0)
-        return off;
+    int hdrOff = parseResponseHeader(buf, bufSize, &ver, &bodyLen, NULL);
+    if (hdrOff < 0)
+        return hdrOff;
 
-    const u8 *body = buf + off;
-    sceKernelMemset(out, 0, 56);
-    out[0] = ver;
-    out[1] = (u32)(uintptr_t)buf;
-    out[2] = (u32)off + bodyLen;
-    out[3] = (u32)(uintptr_t)body;
-    out[4] = bodyLen;
-    out[13] = (u32)(uintptr_t)(buf + 4);
+    const u8 *body = buf + hdrOff;
+    sceKernelMemset(out, 0, sizeof(SceNpCommerce2SessionResultEx));
+    initCommonData(&out->commonData, ver, buf, (u32)hdrOff + bodyLen, body, bodyLen);
+    out->noticeText = emptyResponseStr(buf);
 
     int ret = sceNpCommerce2_E3455E27(body, bodyLen, 164, 0, &optLen);
     if (ret >= 0 && optLen != 0)
-        out[13] = (u32)(uintptr_t)(body + ret);
+        out->noticeText = (const char *)(body + ret);
     if (ret < 0 && ret != SCE_NP_COMMERCE2_ERROR_TLV_NOT_FOUND)
         return ret;
     if (ret != SCE_NP_COMMERCE2_ERROR_TLV_NOT_FOUND)
         return 0;
 
-    ret = sceNpCommerce2_3F6D413C(body, bodyLen, 22, NULL, out + 10);
+    ret = sceNpCommerce2_3F6D413C(body, bodyLen, 22, NULL, &out->countOfCurrencyInfo);
     if (ret < 0)
         return ret;
-    ret = sceNpCommerce2_3F6D413C(body, bodyLen, 100, NULL, out + 11);
+    ret = sceNpCommerce2_3F6D413C(body, bodyLen, 100, NULL, &out->countOfServiceInfo);
     if (ret < 0)
         return ret;
-    ret = sceNpCommerce2_3F6D413C(body, bodyLen, 88, NULL, out + 12);
+    ret = sceNpCommerce2_3F6D413C(body, bodyLen, 88, NULL, &out->countOfPaymentMethod);
     if (ret < 0)
         return ret;
     return 0;
 }
 
-static int checkSessionExpiredError(const u8 *buf, u32 bufSize, int *expiredOut) {
+static __attribute__((noinline)) int checkSessionExpiredError(
+    const u8 *buf, u32 bufSize, int *expiredOut) {
     u32 ver, bodyLen;
     u32 count = 0;
-    int off = parseResponseHeader(buf, bufSize, &ver, &bodyLen, NULL);
-    if (off < 0)
-        return off;
-    *expiredOut = (sceNpCommerce2_3F6D413C(buf + off, bodyLen, 120, NULL, &count) >= 0) ? 1 : 0;
+    int hdrOff = parseResponseHeader(buf, bufSize, &ver, &bodyLen, NULL);
+    if (hdrOff < 0)
+        return hdrOff;
+    *expiredOut = (sceNpCommerce2_3F6D413C(buf + hdrOff, bodyLen, 120, NULL, &count) >= 0) ? 1 : 0;
     return 0;
 }
 
-static int parseCreateSessionResult(u32 *out, const u8 *buf, u32 bufSize) {
+static __attribute__((noinline)) int parseCreateSessionResult(
+    SceNpCommerce2CreateSessionResult *out, const u8 *buf, u32 bufSize) {
     u32 ver, bodyLen;
-    int off = parseResponseHeader(buf, bufSize, &ver, &bodyLen, NULL);
-    if (off < 0)
-        return off;
+    int hdrOff = parseResponseHeader(buf, bufSize, &ver, &bodyLen, NULL);
+    if (hdrOff < 0)
+        return hdrOff;
 
-    const u8 *body = buf + off;
-    sceKernelMemset(out, 0, 44);
-    out[0] = ver;
-    out[1] = (u32)(uintptr_t)buf;
-    out[2] = (u32)off + bodyLen;
-    out[3] = (u32)(uintptr_t)body;
-    out[4] = bodyLen;
+    const u8 *body = buf + hdrOff;
+    sceKernelMemset(out, 0, sizeof(SceNpCommerce2CreateSessionResult));
+    initCommonData(&out->commonData, ver, buf, (u32)hdrOff + bodyLen, body, bodyLen);
 
-    int ret = sceNpCommerce2_3F6D413C(body, bodyLen, 22, NULL, out + 10);
+    int ret = sceNpCommerce2_3F6D413C(body, bodyLen, 22, NULL, &out->countOfCurrencyInfo);
     return (ret < 0) ? ret : 0;
 }
 
-static int parseCurrencyInfo(const u32 *base, u32 index, u32 *out) {
-    const u8 *src = (const u8 *)(uintptr_t)base[3];
-    u16 itemLen, optLen;
-    int off = findIndexedArrayItem(src, base[4], 22, 42, index, &itemLen);
-    if (off < 0)
-        return off;
+static __attribute__((noinline)) int parseCurrencyInfo(
+    const SceNpCommerce2CreateSessionResult *res, u32 index, SceNpCommerce2CurrencyInfo *out) {
+    const u8 *src = res->commonData.data;
+    u16 itemLen, thousandLen, decimalLen;
+    int foundOff = findIndexedArrayItem(src, res->commonData.dataSize, 22, 42, index, &itemLen);
+    if (foundOff < 0)
+        return foundOff;
 
-    const u8 *p = src + off;
-    sceKernelMemset(out, 0, 84);
-    out[0] = base[0];
-    out[1] = base[1];
-    out[3] = (u32)(uintptr_t)p;
-    out[4] = itemLen;
-    out[10] = (u32)(uintptr_t)p;
-    out[11] = (u32)(uintptr_t)(p + 4);
+    const u8 *payload = src + foundOff;
+    sceKernelMemset(out, 0, sizeof(SceNpCommerce2CurrencyInfo));
+    initChildCommonData(&out->commonData, res->commonData.version, res->commonData.bufHead, payload, itemLen);
+    out->currencyCode = (const char *)payload;
+    out->currencySymbol = (const char *)(payload + 4);
 
-    u16 tmp16;
-    u32 tmp32;
-    sceKernelMemcpy(&tmp16, p + 8, 2);
-    *(u16 *)(out + 12) = bswap16(tmp16);
-    sceKernelMemcpy(&tmp32, p + 10, 4);
-    out[13] = bswap32(tmp32);
-    sceKernelMemcpy(&tmp32, p + 14, 4);
-    out[14] = bswap32(tmp32);
-    sceKernelMemcpy(&tmp32, p + 18, 4);
-    out[16] = bswap32(tmp32);
-    sceKernelMemcpy(&tmp32, p + 22, 4);
-    out[17] = bswap32(tmp32);
-    sceKernelMemcpy(&tmp32, p + 26, 4);
-    out[18] = bswap32(tmp32);
+    u16 rawDecimals;
+    u32 rawMinTopup, rawMaxWallet, rawSymPos, rawSymSpace, rawAttr;
+    sceKernelMemcpy(&rawDecimals, payload + 8, 2);
+    out->decimals = bswap16(rawDecimals);
+    sceKernelMemcpy(&rawMinTopup, payload + 10, 4);
+    out->minTopupAmount = bswap32(rawMinTopup);
+    sceKernelMemcpy(&rawMaxWallet, payload + 14, 4);
+    out->maxWalletBalance = bswap32(rawMaxWallet);
+    sceKernelMemcpy(&rawSymPos, payload + 18, 4);
+    out->symbolPosition = bswap32(rawSymPos);
+    sceKernelMemcpy(&rawSymSpace, payload + 22, 4);
+    out->symbolWithSpace = bswap32(rawSymSpace);
+    sceKernelMemcpy(&rawAttr, payload + 26, 4);
+    out->currencyAttr = bswap32(rawAttr);
 
-    const u8 *tail = p + 30;
-    u32 rem = itemLen - 30u;
-    out[5] = (u32)(uintptr_t)tail;
+    const u8 *tail = payload + 30;
+    out->commonData.subData = tail;
+    u32 rem = itemLen - (u32)(tail - out->commonData.data);
 
-    int ret = sceNpCommerce2_3F6D413C(tail, rem, 21, NULL, out + 15);
+    int ret = sceNpCommerce2_3F6D413C(tail, rem, 21, NULL, &out->countOfTopupAmount);
     if (ret < 0)
         return ret;
 
-    out[19] = out[1] + 4;
-    ret = sceNpCommerce2_E3455E27(tail, rem, 125, 0, &optLen);
-    if (ret >= 0 && optLen != 0)
-        out[19] = (u32)(uintptr_t)(tail + ret);
+    out->thousandSeparator = emptyResponseStr(out->commonData.bufHead);
+    ret = sceNpCommerce2_E3455E27(tail, itemLen - (u32)(tail - out->commonData.data), 125, 0, &thousandLen);
+    if (ret >= 0 && thousandLen != 0)
+        out->thousandSeparator = (const char *)(tail + ret);
     if (ret < 0)
         return ret;
 
-    out[20] = out[1] + 4;
-    ret = sceNpCommerce2_E3455E27(tail, rem, 126, 0, &optLen);
-    if (ret >= 0 && optLen != 0)
-        out[20] = (u32)(uintptr_t)(tail + ret);
+    out->decimalLetter = emptyResponseStr(out->commonData.bufHead);
+    ret = sceNpCommerce2_E3455E27(tail, itemLen - (u32)(tail - out->commonData.data), 126, 0, &decimalLen);
+    if (ret >= 0 && decimalLen != 0)
+        out->decimalLetter = (const char *)(tail + ret);
     return ret;
 }
 
-static int parseWalletInfo(const u32 *base, u32 *out) {
-    const u8 *src = (const u8 *)(uintptr_t)base[3];
-    u16 len;
-    int off = sceNpCommerce2_E3455E27(src, base[4], 87, 4, &len);
-    if (off < 0)
-        return off;
-
-    const u8 *p = src + off;
-    sceKernelMemset(out, 0, 44);
-    out[0] = base[0];
-    out[1] = base[1];
-    out[3] = (u32)(uintptr_t)p;
-    out[4] = len;
-    out[5] = (u32)(uintptr_t)(p + 4);
-    u32 tmp;
-    sceKernelMemcpy(&tmp, p, 4);
-    out[10] = (bswap32(tmp) != 0);
-    return off;
+static __attribute__((noinline)) int getCurrencyInfoWrapper(
+    const SceNpCommerce2CreateSessionResult *res, u32 index, SceNpCommerce2CurrencyInfo *out) {
+    return parseCurrencyInfo(res, index, out);
 }
 
-static int parseTopupAmount(const u32 *base, u32 index, u32 *out) {
-    const u8 *src = (const u8 *)(uintptr_t)base[5];
-    u32 rem = base[4] - (u32)(base[5] - base[3]);
+static __attribute__((noinline)) int parseWalletInfo(
+    const SceNpCommerce2CommonData *base, SceNpCommerce2WalletInfo *out) {
+    const u8 *src = base->data;
     u16 len;
-    int off = findIndexedArrayItem(src, rem, 21, 4, index, &len);
-    if (off < 0)
-        return off;
+    int foundOff = sceNpCommerce2_E3455E27(src, base->dataSize, 87, 4, &len);
+    if (foundOff < 0)
+        return foundOff;
 
-    const u8 *p = src + off;
-    sceKernelMemset(out, 0, 44);
-    out[0] = base[0];
-    out[1] = base[1];
-    out[3] = (u32)(uintptr_t)p;
-    out[4] = len;
-    u32 tmp;
-    sceKernelMemcpy(&tmp, p, 4);
-    out[10] = bswap32(tmp);
-    return off;
+    const u8 *payload = src + foundOff;
+    sceKernelMemset(out, 0, sizeof(SceNpCommerce2WalletInfo));
+    initChildCommonData(&out->commonData, base->version, base->bufHead, payload, len);
+    u32 rawWord;
+    sceKernelMemcpy(&rawWord, payload, 4);
+    out->commonData.subData = payload + 4;
+    out->isCreditCardRegistered = (bswap32(rawWord) != 0);
+    return foundOff;
 }
 
-static int parseContentRatingDescriptor(const u32 *base, u32 index, u32 *out) {
-    const u8 *src = (const u8 *)(uintptr_t)base[5];
-    u32 rem = base[4] - (u32)(base[5] - base[3]);
+static __attribute__((noinline)) int parseTopupAmount(
+    const SceNpCommerce2CommonData *base, u32 index, SceNpCommerce2TopupAmountInfo *out) {
+    const u8 *src = base->subData;
+    u32 rem = base->dataSize - (u32)(base->subData - base->data);
+    u16 len;
+    int foundOff = findIndexedArrayItem(src, rem, 21, 4, index, &len);
+    if (foundOff < 0)
+        return foundOff;
+
+    const u8 *payload = src + foundOff;
+    sceKernelMemset(out, 0, sizeof(SceNpCommerce2TopupAmountInfo));
+    initChildCommonData(&out->commonData, base->version, base->bufHead, payload, len);
+    u32 rawWord;
+    sceKernelMemcpy(&rawWord, payload, 4);
+    out->amount = bswap32(rawWord);
+    return foundOff;
+}
+
+static __attribute__((noinline)) int parseContentRatingDescriptor(
+    const SceNpCommerce2ContentRatingInfo *ratingInfo, u32 index,
+    SceNpCommerce2ContentRatingDescriptor *out) {
+    const u8 *src = ratingInfo->commonData.subData;
+    u32 rem = ratingInfo->commonData.dataSize - (u32)(src - ratingInfo->commonData.data);
     u16 len, optLen;
-    int off = findIndexedArrayItem(src, rem, 23, 8, index, &len);
-    if (off < 0)
-        return off;
+    int foundOff = findIndexedArrayItem(src, rem, 23, 8, index, &len);
+    if (foundOff < 0)
+        return foundOff;
 
-    const u8 *p = src + off;
-    sceKernelMemset(out, 0, 52);
-    out[0] = base[0];
-    out[1] = base[1];
-    out[3] = (u32)(uintptr_t)p;
-    out[4] = len;
-    out[11] = base[1] + 4;
-    out[12] = base[1] + 4;
+    const u8 *payload = src + foundOff;
+    sceKernelMemset(out, 0, sizeof(SceNpCommerce2ContentRatingDescriptor));
+    initChildCommonData(&out->commonData, ratingInfo->commonData.version,
+                        ratingInfo->commonData.bufHead, payload, len);
+    out->imageUrl = emptyResponseStr(ratingInfo->commonData.bufHead);
+    out->contentRatingDescription = emptyResponseStr(ratingInfo->commonData.bufHead);
 
-    u32 type;
-    sceKernelMemcpy(&type, p, 4);
-    type = bswap32(type);
-    out[10] = type;
-    const u8 *tail = p + 4;
-    out[5] = (u32)(uintptr_t)tail;
+    u32 descType;
+    sceKernelMemcpy(&descType, payload, 4);
+    descType = bswap32(descType);
+    out->descriptorType = descType;
+    const u8 *tail = payload + 4;
+    out->commonData.subData = tail;
 
-    if (type == 1) {
+    if (descType == SCE_NP_COMMERCE2_CONTENT_RATING_DESC_TYPE_ICON) {
+        out->imageUrl = emptyResponseStr(out->commonData.bufHead);
         int ret = sceNpCommerce2_E3455E27(tail, len - 4u, 16, 0, &optLen);
         if (ret >= 0 && optLen != 0)
-            out[11] = (u32)(uintptr_t)(tail + ret);
+            out->imageUrl = (const char *)(tail + ret);
         return ret;
     }
-    if (type == 2) {
+    if (descType == SCE_NP_COMMERCE2_CONTENT_RATING_DESC_TYPE_TEXT) {
+        out->contentRatingDescription = emptyResponseStr(out->commonData.bufHead);
         int ret = sceNpCommerce2_E3455E27(tail, len - 4u, 14, 0, &optLen);
         if (ret >= 0 && optLen != 0)
-            out[12] = (u32)(uintptr_t)(tail + ret);
+            out->contentRatingDescription = (const char *)(tail + ret);
         return ret;
     }
-    return off;
+    return foundOff;
 }
 
-static int parseCategoryInfoBody(const u8 *p, u32 len, u32 bufBase, u32 ver, int hasCounts, u32 *out) {
+static __attribute__((noinline)) int parseCategoryInfoBody(
+    const u8 *payload, u32 len, const u8 *bufHead, u32 ver, int dataType,
+    SceNpCommerce2CategoryInfo *out) {
     u16 optLen;
-    sceKernelMemset(out, 0, 80);
-    out[0] = ver;
-    out[1] = bufBase;
-    out[3] = (u32)(uintptr_t)p;
-    out[4] = len;
-    out[10] = (u32)hasCounts;
-    out[11] = (u32)(uintptr_t)p;
+    sceKernelMemset(out, 0, sizeof(SceNpCommerce2CategoryInfo));
+    initChildCommonData(&out->commonData, ver, bufHead, payload, len);
+    out->dataType = dataType;
+    out->categoryId = (const char *)payload;
 
-    u32 rawHi, rawLo;
-    sceKernelMemcpy(&rawHi, p + 57, 4);
-    sceKernelMemcpy(&rawLo, p + 61, 4);
-    u64 epochMs = ((u64)bswap32(rawHi) << 32) | bswap32(rawLo);
+    u32 rawDate[2];
+    sceKernelMemcpy(rawDate, payload + 57, 8);
+    u64 epochMs = ((u64)bswap32(rawDate[0]) << 32) | bswap32(rawDate[1]);
     if (epochMs != 0) {
-        u64 tick = epochMs * 1000ULL + 62135596800000000ULL;
-        out[12] = (u32)tick;
-        out[13] = (u32)(tick >> 32);
+        out->releaseDate = epochMs * 1000ULL + SCE_NP_COMMERCE2_EPOCH_TICK_OFFSET;
     } else {
-        sceKernelMemset(out + 12, 0, 8);
+        sceKernelMemset(&out->releaseDate, 0, sizeof(out->releaseDate));
     }
 
-    const u8 *tail = p + 65;
-    if (hasCounts == 1) {
-        u32 tmp;
-        sceKernelMemcpy(&tmp, p + 65, 4);
-        out[18] = bswap32(tmp);
-        sceKernelMemcpy(&tmp, p + 69, 4);
-        out[19] = bswap32(tmp);
-        tail = p + 73;
+    const u8 *tail = payload + 65;
+    if (dataType == SCE_NP_COMMERCE2_CAT_DATA_TYPE_NORMAL) {
+        u32 rawWord;
+        sceKernelMemcpy(&rawWord, payload + 65, 4);
+        out->countOfSubCategory = bswap32(rawWord);
+        sceKernelMemcpy(&rawWord, payload + 69, 4);
+        out->countOfProduct = bswap32(rawWord);
+        tail = payload + 73;
     }
 
-    out[5] = (u32)(uintptr_t)tail;
-    u32 rem = len - (u32)(tail - p);
-    out[14] = bufBase + 4;
+    out->commonData.subData = tail;
+    u32 rem = len - (u32)(tail - payload);
+    out->categoryName = emptyResponseStr(out->commonData.bufHead);
     int ret = sceNpCommerce2_E3455E27(tail, rem, 6, 0, &optLen);
     if (ret < 0) return 0;
-    if (optLen != 0) out[14] = (u32)(uintptr_t)(tail + ret);
+    if (optLen != 0) out->categoryName = (const char *)(tail + ret);
 
-    out[15] = bufBase + 4;
+    out->categoryDescription = emptyResponseStr(out->commonData.bufHead);
     ret = sceNpCommerce2_E3455E27(tail, rem, 11, 0, &optLen);
     if (ret < 0) return 0;
-    if (optLen != 0) out[15] = (u32)(uintptr_t)(tail + ret);
+    if (optLen != 0) out->categoryDescription = (const char *)(tail + ret);
 
-    out[16] = bufBase + 4;
+    out->imageUrl = emptyResponseStr(out->commonData.bufHead);
     ret = sceNpCommerce2_E3455E27(tail, rem, 16, 0, &optLen);
     if (ret < 0) return 0;
-    if (optLen != 0) out[16] = (u32)(uintptr_t)(tail + ret);
+    if (optLen != 0) out->imageUrl = (const char *)(tail + ret);
 
-    out[17] = bufBase + 4;
+    out->spName = emptyResponseStr(out->commonData.bufHead);
     ret = sceNpCommerce2_E3455E27(tail, rem, 4, 0, &optLen);
     if (ret >= 0 && optLen != 0)
-        out[17] = (u32)(uintptr_t)(tail + ret);
+        out->spName = (const char *)(tail + ret);
     return 0;
 }
 
-static int parseGameProductInfoBody(const u8 *p, u32 len, u32 bufBase, u32 ver, int isDetailed, u32 *out) {
-    u8 hdrCopy[56];
+static __attribute__((noinline)) int parseGameProductInfoBody(
+    const u8 *payload, u32 len, const u8 *bufHead, u32 ver, int dataType,
+    SceNpCommerce2GameProductInfo *out) {
+    SceNpCommerce2ResponseHeader hdrCopy;
     u16 optLen;
-    sceKernelMemcpy(hdrCopy, (const void *)(uintptr_t)bufBase, 56);
-    int isSdk603 = ((u32)sceKernelGetCompiledSdkVersion() > SDK_VER_603);
-    sceKernelMemset(out, 0, isSdk603 ? 128 : 88);
+    sceKernelMemcpy(&hdrCopy, bufHead, sizeof(hdrCopy));
+    int isSdk603 = ((u32)sceKernelGetCompiledSdkVersion() > SCE_NP_COMMERCE2_SDK_VER_603);
+    sceKernelMemset(out, 0, isSdk603 ? sizeof(SceNpCommerce2GameProductInfo) : 88u);
+    initChildCommonData(&out->commonData, ver, bufHead, payload, len);
+    out->dataType = dataType;
+    out->productId = (const char *)payload;
 
-    out[0] = ver;
-    out[1] = bufBase;
-    out[3] = (u32)(uintptr_t)p;
-    out[4] = len;
-    out[10] = (u32)isDetailed;
-    out[11] = (u32)(uintptr_t)p;
+    u32 rawWord;
+    sceKernelMemcpy(&rawWord, payload + 49, 4);
+    out->countOfSku = bswap32(rawWord);
 
-    u32 tmp;
-    sceKernelMemcpy(&tmp, p + 49, 4);
-    out[12] = bswap32(tmp);
-
-    u32 rawHi, rawLo;
-    sceKernelMemcpy(&rawHi, p + 53, 4);
-    sceKernelMemcpy(&rawLo, p + 57, 4);
-    u64 epochMs = ((u64)bswap32(rawHi) << 32) | bswap32(rawLo);
+    u32 rawDate[2];
+    sceKernelMemcpy(rawDate, payload + 53, 8);
+    u64 epochMs = ((u64)bswap32(rawDate[0]) << 32) | bswap32(rawDate[1]);
     if (epochMs != 0) {
-        u64 tick = epochMs * 1000ULL + 62135596800000000ULL;
-        out[14] = (u32)tick;
-        out[15] = (u32)(tick >> 32);
+        out->releaseDate = epochMs * 1000ULL + SCE_NP_COMMERCE2_EPOCH_TICK_OFFSET;
     } else {
-        sceKernelMemset(out + 14, 0, 8);
+        sceKernelMemset(&out->releaseDate, 0, sizeof(out->releaseDate));
     }
 
-    sceKernelMemcpy(&tmp, p + 73, 4);
-    u32 flags = bswap32(tmp);
+    sceKernelMemcpy(&rawWord, payload + 73, 4);
+    u32 rawFlags = bswap32(rawWord);
     if (isSdk603) {
-        if ((s32)flags < 0)
-            out[22] |= 1u;
-        if (flags & 0x40000000u)
-            out[22] |= 2u;
-        if (flags & 0x20000000u)
-            out[22] |= 4u;
+        if ((s32)rawFlags < 0)
+            out->productAttr |= 1u;
+        if (rawFlags & 0x40000000u)
+            out->productAttr |= 2u;
+        if (rawFlags & 0x20000000u)
+            out->productAttr |= 4u;
     }
 
-    const u8 *tail = p + 77;
+    const u8 *tail = payload + 77;
     u32 rem = (u16)(len - 77);
-    out[5] = (u32)(uintptr_t)tail;
+    out->commonData.subData = tail;
 
-    out[16] = bufBase + 4;
+    out->productName = emptyResponseStr(out->commonData.bufHead);
     int ret = sceNpCommerce2_E3455E27(tail, rem, 7, 0, &optLen);
-    if (ret >= 0 && optLen != 0) out[16] = (u32)(uintptr_t)(tail + ret);
+    if (ret >= 0 && optLen != 0) out->productName = (const char *)(tail + ret);
     if (ret >= 0) {
-        out[17] = bufBase + 4;
+        out->productShortDescription = emptyResponseStr(out->commonData.bufHead);
         ret = sceNpCommerce2_E3455E27(tail, rem, 12, 0, &optLen);
-        if (ret >= 0 && optLen != 0) out[17] = (u32)(uintptr_t)(tail + ret);
+        if (ret >= 0 && optLen != 0) out->productShortDescription = (const char *)(tail + ret);
         if (ret >= 0) {
-            out[18] = bufBase + 4;
+            out->imageUrl = emptyResponseStr(out->commonData.bufHead);
             ret = sceNpCommerce2_E3455E27(tail, rem, 16, 0, &optLen);
-            if (ret >= 0 && optLen != 0) out[18] = (u32)(uintptr_t)(tail + ret);
+            if (ret >= 0 && optLen != 0) out->imageUrl = (const char *)(tail + ret);
             if (ret >= 0) {
-                out[19] = bufBase + 4;
+                out->spName = emptyResponseStr(out->commonData.bufHead);
                 ret = sceNpCommerce2_E3455E27(tail, rem, 4, 0, &optLen);
-                if (ret >= 0 && optLen != 0) out[19] = (u32)(uintptr_t)(tail + ret);
+                if (ret >= 0 && optLen != 0) out->spName = (const char *)(tail + ret);
             }
         }
     }
 
-    if (ret >= 0 && isDetailed == 1) {
+    if (ret >= 0 && dataType == SCE_NP_COMMERCE2_GAME_PRODUCT_DATA_TYPE_NORMAL) {
         u32 fullRem = len - 77u;
-        out[20] = bufBase + 4;
+        out->productLongDescription = emptyResponseStr(out->commonData.bufHead);
         ret = sceNpCommerce2_E3455E27(tail, fullRem, 13, 0, &optLen);
-        if (ret >= 0 && optLen != 0) out[20] = (u32)(uintptr_t)(tail + ret);
+        if (ret >= 0 && optLen != 0) out->productLongDescription = (const char *)(tail + ret);
         if (ret >= 0) {
-            out[21] = bufBase + 4;
+            out->legalDescription = emptyResponseStr(out->commonData.bufHead);
             ret = sceNpCommerce2_E3455E27(tail, fullRem, 119, 0, &optLen);
-            if (ret >= 0 && optLen != 0) out[21] = (u32)(uintptr_t)(tail + ret);
+            if (ret >= 0 && optLen != 0) out->legalDescription = (const char *)(tail + ret);
             if (ret >= 0 || ret == SCE_NP_COMMERCE2_ERROR_TLV_NOT_FOUND)
                 return 0;
         }
@@ -2136,111 +2433,93 @@ static int parseGameProductInfoBody(const u8 *p, u32 len, u32 bufBase, u32 ver, 
     return ret;
 }
 
-static int parseContentRatingInfoBody(const u8 *p, u32 len, u32 bufBase, u32 ver, u32 *out) {
+static __attribute__((noinline)) int parseContentRatingInfoBody(
+    const u8 *payload, u32 len, const u8 *bufHead, u32 ver,
+    SceNpCommerce2ContentRatingInfo *out) {
     u16 optLen;
-    sceKernelMemset(out, 0, 52);
-    out[0] = ver;
-    out[1] = bufBase;
-    out[3] = (u32)(uintptr_t)p;
-    out[4] = len;
-    out[10] = (u32)(uintptr_t)p;
-    out[11] = bufBase + 4;
-    const u8 *tail = p + 17;
-    out[5] = (u32)(uintptr_t)tail;
+    sceKernelMemset(out, 0, sizeof(SceNpCommerce2ContentRatingInfo));
+    initChildCommonData(&out->commonData, ver, bufHead, payload, len);
+    out->ratingSystemId = (const char *)payload;
+    out->imageUrl = emptyResponseStr(bufHead);
+    const u8 *tail = payload + 17;
+    out->commonData.subData = tail;
 
     int ret = sceNpCommerce2_E3455E27(tail, len - 17u, 16, 0, &optLen);
     if (ret >= 0 && optLen != 0)
-        out[11] = (u32)(uintptr_t)(tail + ret);
+        out->imageUrl = (const char *)(tail + ret);
     if (ret < 0)
         return ret;
-    return sceNpCommerce2_3F6D413C(tail, len - 17u, 23, NULL, out + 12);
+    return sceNpCommerce2_3F6D413C(tail, len - 17u, 23, NULL, &out->countOfContentRatingDescriptor);
 }
 
-typedef struct SkuParseSpec {
-    const void *hdrCopy;    /* +0x00 */
-    u32 flagMask;           /* +0x04 */
-    u32 *outFlags;          /* +0x08 */
-    u32 *outSkuId;          /* +0x0C */
-    u32 *outSkuType;        /* +0x10 */
-    u32 *outCountUntilAuto; /* +0x14 */
-    u32 *outTimeUntilAuto;  /* +0x18 */
-    u32 *outPurchasability; /* +0x1C */
-    u32 *outAnnot;          /* +0x20 */
-    u32 *outDownloadable;   /* +0x24 */
-    u32 *outPrice;          /* +0x28 */
-    u32 *outUnused11;       /* +0x2C */
-    u32 *outUnused12;       /* +0x30 */
-    u32 *outSalePrice;      /* +0x34 */
-    u32 *outSaleType;       /* +0x38 */
-} SkuParseSpec;
+static __attribute__((noinline)) int parseSkuFixedFields(
+    const u8 *payload, const SkuParseSpec *spec, int isOldSdk) {
+    u32 rawWord;
+    u32 extraAttr = 0;
+    const u8 *cur = payload + 61;
 
-static int parseSkuFixedFields(const u8 *p, const SkuParseSpec *spec, int isOldSdk) {
-    u32 tmp;
-    u32 extraFlag = 0;
-    const u8 *cur = p + 61;
+    *spec->outSkuId = (const char *)payload;
+    sceKernelMemcpy(&rawWord, payload + 57, 4);
+    rawWord = bswap32(rawWord);
+    *spec->outSkuType = (rawWord == 2) ? 2u : 1u;
 
-    *spec->outSkuId = (u32)(uintptr_t)p;
-    sceKernelMemcpy(&tmp, p + 57, 4);
-    tmp = bswap32(tmp);
-    *spec->outSkuType = (tmp == 2) ? 2u : 1u;
-
-    sceKernelMemcpy(&tmp, cur, 4);
-    *spec->outCountUntilAuto = bswap32(tmp);
+    sceKernelMemcpy(&rawWord, cur, 4);
+    *spec->outCountUntilExpiration = bswap32(rawWord);
     cur += 4;
 
-    sceKernelMemcpy(&tmp, cur, 4);
-    *spec->outTimeUntilAuto = bswap32(tmp);
+    sceKernelMemcpy(&rawWord, cur, 4);
+    *spec->outTimeUntilExpiration = bswap32(rawWord);
     cur += 4;
 
     if (spec->outPurchasability != NULL) {
-        sceKernelMemcpy(&tmp, cur, 4);
-        *spec->outPurchasability = bswap32(tmp);
+        sceKernelMemcpy(&rawWord, cur, 4);
+        *spec->outPurchasability = bswap32(rawWord);
     }
     cur += 4;
 
-    if (spec->outAnnot != NULL) {
-        sceKernelMemcpy(&tmp, cur, 4);
-        *spec->outAnnot = bswap32(tmp);
+    if (spec->outAnnotation != NULL) {
+        sceKernelMemcpy(&rawWord, cur, 4);
+        *spec->outAnnotation = bswap32(rawWord);
     }
     cur += 4;
 
-    sceKernelMemcpy(&tmp, cur, 4);
-    *spec->outDownloadable = (bswap32(tmp) != 0);
+    sceKernelMemcpy(&rawWord, cur, 4);
+    *spec->outDownloadable = (bswap32(rawWord) != 0);
     cur += 4;
 
     if (spec->flagMask & 4u) {
-        sceKernelMemcpy(&tmp, cur, 4);
-        extraFlag = bswap32(tmp);
+        sceKernelMemcpy(&rawWord, cur, 4);
+        extraAttr = bswap32(rawWord);
     }
     cur += 4;
 
     if (spec->outPrice != NULL) {
-        sceKernelMemcpy(&tmp, cur, 4);
-        *spec->outPrice = bswap32(tmp);
+        sceKernelMemcpy(&rawWord, cur, 4);
+        *spec->outPrice = bswap32(rawWord);
     }
     cur += 4;
 
-    if (spec->outUnused11 != NULL) {
-        sceKernelMemcpy(&tmp, cur, 4);
-        *spec->outUnused11 = bswap32(tmp);
+    if (spec->outRegularPrice != NULL) {
+        sceKernelMemcpy(&rawWord, cur, 4);
+        *spec->outRegularPrice = bswap32(rawWord);
     }
     cur += 4;
 
-    if (spec->outUnused12 != NULL) {
-        sceKernelMemcpy(&tmp, cur, 4);
-        *spec->outUnused12 = bswap32(tmp);
+    if (spec->outDiscountPrice != NULL) {
+        sceKernelMemcpy(&rawWord, cur, 4);
+        *spec->outDiscountPrice = bswap32(rawWord);
     }
     cur += 4;
 
-    if (!isOldSdk && spec->outSalePrice != NULL) {
-        sceKernelMemcpy(&tmp, cur, 4);
-        *spec->outSalePrice = bswap32(tmp);
+    if (!isOldSdk && spec->outSalesType != NULL) {
+        sceKernelMemcpy(&rawWord, cur, 4);
+        *spec->outSalesType = bswap32(rawWord);
     }
     cur += 4;
 
-    if (!isOldSdk && spec->outSaleType != NULL) {
-        sceKernelMemcpy(&tmp, cur, 4);
-        *spec->outSaleType = bswap32(tmp);
+    if (!isOldSdk && spec->outFirstPlayExpiration != NULL) {
+        sceKernelMemcpy(&rawWord, cur, 4);
+        *spec->outFirstPlayExpiration = bswap32(rawWord);
     }
     cur += 4;
 
@@ -2249,78 +2528,78 @@ static int parseSkuFixedFields(const u8 *p, const SkuParseSpec *spec, int isOldS
             *spec->outFlags |= 1u;
         if (spec->outDownloadable != NULL && *spec->outDownloadable != 0)
             *spec->outFlags |= 2u;
-        if (extraFlag != 0)
+        if (extraAttr != 0)
             *spec->outFlags |= 4u;
     }
-    return (int)(cur - p);
+    return (int)(cur - payload);
 }
 
-static int parseGameSkuInfoBody(const u8 *p, u32 len, u32 bufBase, u32 ver, int isDetailed, u32 *out) {
-    u8 hdrCopy[56];
+static __attribute__((noinline)) int parseGameSkuInfoBody(
+    const u8 *payload, u32 len, const u8 *bufHead, u32 ver, int dataType,
+    SceNpCommerce2GameSkuInfo *out) {
+    SceNpCommerce2ResponseHeader hdrCopy;
     SkuParseSpec spec;
     u16 optLen;
-    int isSdk600 = ((u32)sceKernelGetCompiledSdkVersion() > SDK_VER_600);
+    int isSdk600 = ((u32)sceKernelGetCompiledSdkVersion() > SCE_NP_COMMERCE2_SDK_VER_600);
 
-    sceKernelMemcpy(hdrCopy, (const void *)(uintptr_t)bufBase, 56);
-    sceKernelMemset(out, 0, isSdk600 ? 124 : 88);
-    out[0] = ver;
-    out[1] = bufBase;
-    out[3] = (u32)(uintptr_t)p;
-    out[4] = len;
-    out[10] = (u32)isDetailed;
+    sceKernelMemcpy(&hdrCopy, bufHead, sizeof(hdrCopy));
+    sceKernelMemset(out, 0, isSdk600 ? sizeof(SceNpCommerce2GameSkuInfo) : 88u);
+    initChildCommonData(&out->commonData, ver, bufHead, payload, len);
+    out->dataType = dataType;
 
     sceKernelMemset(&spec, 0, sizeof(spec));
-    spec.hdrCopy           = hdrCopy;
-    spec.flagMask          = 7;
-    spec.outFlags          = out + 23;
-    spec.outSkuId          = out + 11;
-    spec.outSkuType        = out + 12;
-    spec.outCountUntilAuto = out + 13;
-    spec.outTimeUntilAuto  = out + 14;
-    spec.outPurchasability = out + 15;
-    spec.outAnnot          = out + 16;
-    spec.outDownloadable   = out + 17;
-    spec.outPrice          = out + 18;
-    spec.outSalePrice      = out + 24;
-    spec.outSaleType       = out + 25;
+    spec.hdrCopy                 = &hdrCopy;
+    spec.flagMask                = 7;
+    spec.outFlags                = &out->skuAttr;
+    spec.outSkuId                = &out->skuId;
+    spec.outSkuType              = &out->skuType;
+    spec.outCountUntilExpiration = &out->countUntilExpiration;
+    spec.outTimeUntilExpiration  = &out->timeUntilExpiration;
+    spec.outPurchasability       = &out->purchasabilityFlag;
+    spec.outAnnotation           = &out->annotation;
+    spec.outDownloadable         = &out->downloadable;
+    spec.outPrice                = &out->price;
+    spec.outSalesType            = &out->salesType;
+    spec.outFirstPlayExpiration  = &out->firstPlayExpiration;
 
-    int fixedLen = parseSkuFixedFields(p, &spec, !isSdk600);
+    int fixedLen = parseSkuFixedFields(payload, &spec, !isSdk600);
     if (fixedLen < 0)
         return fixedLen;
 
-    const u8 *tail = p + fixedLen + 36;
-    u32 rem = len - (u32)(tail - p);
-    out[5] = (u32)(uintptr_t)tail;
+    const u8 *tail = payload + fixedLen + 36;
+    u32 rem = len - (u32)(tail - payload);
+    out->commonData.subData = tail;
 
-    if (isDetailed == 0) {
-        out[19] = bufBase + 4;
+    if (dataType == SCE_NP_COMMERCE2_GAME_SKU_DATA_TYPE_THIN) {
+        out->skuName = emptyResponseStr(out->commonData.bufHead);
         int ret = sceNpCommerce2_E3455E27(tail, rem, 8, 0, &optLen);
         if (ret >= 0 && optLen != 0)
-            out[19] = (u32)(uintptr_t)(tail + ret);
+            out->skuName = (const char *)(tail + ret);
         if (ret < 0)
             return ret;
-    } else if (isDetailed == 1) {
-        u32 skuType = out[12];
-        u32 rem16 = (u16)rem;
-        out[19] = bufBase + 4;
-        int ret = sceNpCommerce2_E3455E27(tail, rem16, 8, 0, &optLen);
+    } else if (dataType == SCE_NP_COMMERCE2_GAME_SKU_DATA_TYPE_NORMAL) {
+        u32 skuType = out->skuType;
+        u32 shortRem = (u16)rem;
+        out->skuName = emptyResponseStr(out->commonData.bufHead);
+        int ret = sceNpCommerce2_E3455E27(tail, shortRem, 8, 0, &optLen);
         if (ret >= 0 && optLen != 0)
-            out[19] = (u32)(uintptr_t)(tail + ret);
+            out->skuName = (const char *)(tail + ret);
         if (ret < 0)
             return ret;
 
-        out[20] = bufBase + 4;
-        ret = sceNpCommerce2_E3455E27(tail, rem16, 56, 0, &optLen);
+        out->productId = emptyResponseStr(out->commonData.bufHead);
+        ret = sceNpCommerce2_E3455E27(tail, shortRem, 56, 0, &optLen);
         if (ret >= 0 && optLen != 0)
-            out[20] = (u32)(uintptr_t)(tail + ret);
+            out->productId = (const char *)(tail + ret);
         if (ret < 0)
             return ret;
 
-        out[21] = bufBase + 4;
+        out->contentLinkUrl = emptyResponseStr(out->commonData.bufHead);
         if (skuType == 2) {
-            ret = sceNpCommerce2_E3455E27(tail, rem16, 18, 0, &optLen);
+            out->contentLinkUrl = emptyResponseStr(out->commonData.bufHead);
+            ret = sceNpCommerce2_E3455E27(tail, shortRem, 18, 0, &optLen);
             if (ret >= 0 && optLen != 0)
-                out[21] = (u32)(uintptr_t)(tail + ret);
+                out->contentLinkUrl = (const char *)(tail + ret);
             if (ret < 0)
                 return ret;
         }
@@ -2329,183 +2608,186 @@ static int parseGameSkuInfoBody(const u8 *p, u32 len, u32 bufBase, u32 ver, int 
     if (!isSdk600)
         return 0;
 
-    int ret = sceNpCommerce2_3F6D413C(tail, rem, 128, NULL, out + 22);
+    int ret = sceNpCommerce2_3F6D413C(tail, rem, 128, NULL, &out->countOfRewardInfo);
     if (ret < 0 && ret != SCE_NP_COMMERCE2_ERROR_TLV_NOT_FOUND)
         return ret;
-    ret = sceNpCommerce2_3F6D413C(tail, rem, 149, NULL, out + 26);
+    ret = sceNpCommerce2_3F6D413C(tail, rem, 149, NULL, &out->countOfApplicableRewardInfo);
     if (ret < 0 && ret != SCE_NP_COMMERCE2_ERROR_TLV_NOT_FOUND)
         return ret;
-    if (isDetailed == 1) {
-        ret = sceNpCommerce2_3F6D413C(tail, rem, 156, NULL, out + 27);
+    if (dataType == SCE_NP_COMMERCE2_GAME_SKU_DATA_TYPE_NORMAL) {
+        ret = sceNpCommerce2_3F6D413C(tail, rem, 156, NULL, &out->countOfGameSkuEntitlementInfo);
         if (ret < 0 && ret != SCE_NP_COMMERCE2_ERROR_TLV_NOT_FOUND)
             return ret;
     }
     return 0;
 }
 
-static int initCategoryContentsResult(u32 *out, const u8 *buf, u32 bufSize) {
+static __attribute__((noinline)) int initCategoryContentsResult(
+    SceNpCommerce2GetCategoryContentsResult *out, const u8 *buf, u32 bufSize) {
     u32 ver, bodyLen, isTrunc;
-    int off = parseResponseHeader(buf, bufSize, &ver, &bodyLen, &isTrunc);
-    if (off < 0)
-        return off;
+    int hdrOff = parseResponseHeader(buf, bufSize, &ver, &bodyLen, &isTrunc);
+    if (hdrOff < 0)
+        return hdrOff;
 
-    const u8 *body = buf + off;
-    sceKernelMemset(out, 0, 52);
-    out[0] = ver;
-    out[1] = (u32)(uintptr_t)buf;
-    out[2] = (u32)off + bodyLen;
-    out[3] = (u32)(uintptr_t)body;
-    out[4] = bodyLen;
-    out[6] = isTrunc;
+    const u8 *body = buf + hdrOff;
+    sceKernelMemset(out, 0, sizeof(SceNpCommerce2GetCategoryContentsResult));
+    initCommonData(&out->commonData, ver, buf, (u32)hdrOff + bodyLen, body, bodyLen);
+    out->commonData.overflow = isTrunc;
 
-    int ret = sceNpCommerce2_69FEA1C8(body, bodyLen, 42, NULL, out + 10, (int)isTrunc);
+    int ret = sceNpCommerce2_69FEA1C8(body, bodyLen, 42, NULL, &out->rangeOfContents, (int)isTrunc);
     if (ret < 0)
         return ret;
-    ret = clampRangeCount(out, 42, 4, out + 10);
+    ret = clampRangeCount(&out->commonData, 42, 4, &out->rangeOfContents);
     return (ret < 0) ? ret : 0;
 }
 
-static int parseCategoryInfoFromResult(const u32 *res, u32 *out) {
-    const u8 *src = (const u8 *)(uintptr_t)res[3];
+static __attribute__((noinline)) int parseCategoryInfoFromResult(
+    const SceNpCommerce2GetCategoryContentsResult *res, SceNpCommerce2CategoryInfo *out) {
+    const u8 *src = res->commonData.data;
     u16 len;
-    int off = sceNpCommerce2_E3455E27(src, res[4], 27, 89, &len);
-    if (off < 0)
-        return off;
-    return parseCategoryInfoBody(src + off, len, res[1], res[0], 1, out);
+    int foundOff = sceNpCommerce2_E3455E27(src, res->commonData.dataSize, 27, 89, &len);
+    if (foundOff < 0)
+        return foundOff;
+    return parseCategoryInfoBody(src + foundOff, len, res->commonData.bufHead,
+                                 res->commonData.version, SCE_NP_COMMERCE2_CAT_DATA_TYPE_NORMAL, out);
 }
 
-static int parseContentInfo(const u32 *res, u32 index, u32 *out) {
-    const u8 *src = (const u8 *)(uintptr_t)res[3];
+static __attribute__((noinline)) int parseContentInfo(
+    const SceNpCommerce2GetCategoryContentsResult *res, u32 index, SceNpCommerce2ContentInfo *out) {
+    const u8 *src = res->commonData.data;
     u16 len;
-    int off = findIndexedRangeItem(src, res[4], 42, 4, index, &len, (int)res[6]);
-    if (off < 0)
-        return off;
+    int foundOff = findIndexedRangeItem(src, res->commonData.dataSize, 42, 4, index, &len, (int)res->commonData.overflow);
+    if (foundOff < 0)
+        return foundOff;
 
-    const u8 *p = src + off;
-    sceKernelMemset(out, 0, 44);
-    out[0] = res[0];
-    out[1] = res[1];
-    out[3] = (u32)(uintptr_t)p;
-    out[4] = len;
-    out[5] = (u32)(uintptr_t)(p + 4);
-    u32 tmp;
-    sceKernelMemcpy(&tmp, p, 4);
-    out[10] = bswap32(tmp);
-    return off;
+    const u8 *payload = src + foundOff;
+    sceKernelMemset(out, 0, sizeof(SceNpCommerce2ContentInfo));
+    initChildCommonData(&out->commonData, res->commonData.version, res->commonData.bufHead, payload, len);
+    u32 rawWord;
+    sceKernelMemcpy(&rawWord, payload, 4);
+    out->commonData.subData = payload + 4;
+    out->contentType = bswap32(rawWord);
+    return foundOff;
 }
 
-static int parseCategoryInfoFromContent(const u32 *contentInfo, u32 *out) {
-    const u8 *src = (const u8 *)(uintptr_t)contentInfo[5];
-    u32 rem = contentInfo[4] - (u32)(contentInfo[5] - contentInfo[3]);
+static __attribute__((noinline)) int parseCategoryInfoFromContent(
+    const SceNpCommerce2ContentInfo *contentInfo, SceNpCommerce2CategoryInfo *out) {
+    const u8 *src = contentInfo->commonData.subData;
+    u32 rem = contentInfo->commonData.dataSize - (u32)(src - contentInfo->commonData.data);
     u16 len;
-    int off = sceNpCommerce2_E3455E27(src, rem, 26, 89, &len);
-    if (off < 0)
-        return off;
-    return parseCategoryInfoBody(src + off, len, contentInfo[1], contentInfo[0], 0, out);
+    int foundOff = sceNpCommerce2_E3455E27(src, rem, 26, 89, &len);
+    if (foundOff < 0)
+        return foundOff;
+    return parseCategoryInfoBody(src + foundOff, len, contentInfo->commonData.bufHead,
+                                 contentInfo->commonData.version, SCE_NP_COMMERCE2_CAT_DATA_TYPE_THIN, out);
 }
 
-static int parseProductInfoFromContent(const u32 *contentInfo, u32 *out) {
-    const u8 *src = (const u8 *)(uintptr_t)contentInfo[5];
-    u32 rem = contentInfo[4] - (u32)(contentInfo[5] - contentInfo[3]);
+static __attribute__((noinline)) int parseProductInfoFromContent(
+    const SceNpCommerce2ContentInfo *contentInfo, SceNpCommerce2ProductInfo *out) {
+    const u8 *src = contentInfo->commonData.subData;
+    u32 rem = contentInfo->commonData.dataSize - (u32)(src - contentInfo->commonData.data);
     u16 len;
-    int off = sceNpCommerce2_E3455E27(src, rem, 40, 4, &len);
-    if (off < 0)
-        return off;
+    int foundOff = sceNpCommerce2_E3455E27(src, rem, 40, 4, &len);
+    if (foundOff < 0)
+        return foundOff;
 
-    const u8 *p = src + off;
-    sceKernelMemset(out, 0, 44);
-    out[0] = contentInfo[0];
-    out[1] = contentInfo[1];
-    out[3] = (u32)(uintptr_t)p;
-    out[4] = len;
-    out[5] = (u32)(uintptr_t)(p + 4);
-    u32 tmp;
-    sceKernelMemcpy(&tmp, p, 4);
-    out[10] = bswap32(tmp);
-    return off;
+    const u8 *payload = src + foundOff;
+    sceKernelMemset(out, 0, sizeof(SceNpCommerce2ProductInfo));
+    initChildCommonData(&out->commonData, contentInfo->commonData.version,
+                        contentInfo->commonData.bufHead, payload, len);
+    u32 rawWord;
+    sceKernelMemcpy(&rawWord, payload, 4);
+    out->commonData.subData = payload + 4;
+    out->productType = bswap32(rawWord);
+    return foundOff;
 }
 
-static int parseGameProductFromContentProduct(const u32 *prodInfo, u32 *out) {
-    const u8 *src = (const u8 *)(uintptr_t)prodInfo[5];
-    u32 rem = prodInfo[4] - (u32)(prodInfo[5] - prodInfo[3]);
+static __attribute__((noinline)) int parseGameProductFromContentProduct(
+    const SceNpCommerce2ProductInfo *prodInfo, SceNpCommerce2GameProductInfo *out) {
+    const u8 *src = prodInfo->commonData.subData;
+    u32 rem = prodInfo->commonData.dataSize - (u32)(src - prodInfo->commonData.data);
     u16 len;
-    int off = sceNpCommerce2_E3455E27(src, rem, 33, 81, &len);
-    if (off < 0)
-        return off;
-    return parseGameProductInfoBody(src + off, len, prodInfo[1], prodInfo[0], 0, out);
+    int foundOff = sceNpCommerce2_E3455E27(src, rem, 33, 81, &len);
+    if (foundOff < 0)
+        return foundOff;
+    return parseGameProductInfoBody(src + foundOff, len, prodInfo->commonData.bufHead,
+                                    prodInfo->commonData.version, SCE_NP_COMMERCE2_GAME_PRODUCT_DATA_TYPE_THIN, out);
 }
 
-static int parseRatingInfo(const u32 *parentInfo, u32 *out) {
-    const u8 *src = (const u8 *)(uintptr_t)parentInfo[5];
-    u32 rem = parentInfo[4] - (u32)(parentInfo[5] - parentInfo[3]);
+static __attribute__((noinline)) int parseRatingInfo(
+    const SceNpCommerce2CommonData *parentCommon, SceNpCommerce2ContentRatingInfo *out) {
+    const u8 *src = parentCommon->subData;
+    u32 rem = parentCommon->dataSize - (u32)(src - parentCommon->data);
     u16 len;
-    int off = sceNpCommerce2_E3455E27(src, rem, 24, 12, &len);
-    if (off < 0)
-        return off;
-    return parseContentRatingInfoBody(src + off, len, parentInfo[1], parentInfo[0], out);
+    int foundOff = sceNpCommerce2_E3455E27(src, rem, 24, 12, &len);
+    if (foundOff < 0)
+        return foundOff;
+    return parseContentRatingInfoBody(src + foundOff, len, parentCommon->bufHead,
+                                      parentCommon->version, out);
 }
 
-static int initProductInfoResult(u32 *out, const u8 *buf, u32 bufSize) {
+static __attribute__((noinline)) int initProductInfoResult(
+    SceNpCommerce2GetProductInfoResult *out, const u8 *buf, u32 bufSize) {
     u32 ver, bodyLen;
-    int off = parseResponseHeader(buf, bufSize, &ver, &bodyLen, NULL);
-    if (off < 0)
-        return off;
+    int hdrOff = parseResponseHeader(buf, bufSize, &ver, &bodyLen, NULL);
+    if (hdrOff < 0)
+        return hdrOff;
 
-    const u8 *body = buf + off;
-    sceKernelMemset(out, 0, 40);
-    out[0] = ver;
-    out[1] = (u32)(uintptr_t)buf;
-    out[2] = (u32)off + bodyLen;
-    out[3] = (u32)(uintptr_t)body;
-    out[4] = bodyLen;
+    const u8 *body = buf + hdrOff;
+    sceKernelMemset(out, 0, sizeof(SceNpCommerce2GetProductInfoResult));
+    initCommonData(&out->commonData, ver, buf, (u32)hdrOff + bodyLen, body, bodyLen);
     return 0;
 }
 
-static int parseProductInfoFromResult(const u32 *res, u32 *out) {
-    const u8 *src = (const u8 *)(uintptr_t)res[3];
+static __attribute__((noinline)) int parseProductInfoFromResult(
+    const SceNpCommerce2GetProductInfoResult *res, SceNpCommerce2ProductInfo *out) {
+    const u8 *src = res->commonData.data;
     u16 len;
-    int off = sceNpCommerce2_E3455E27(src, res[4], 41, 4, &len);
-    if (off < 0)
-        return off;
+    int foundOff = sceNpCommerce2_E3455E27(src, res->commonData.dataSize, 41, 4, &len);
+    if (foundOff < 0)
+        return foundOff;
 
-    const u8 *p = src + off;
-    sceKernelMemset(out, 0, 44);
-    out[0] = res[0];
-    out[1] = res[1];
-    out[3] = (u32)(uintptr_t)p;
-    out[4] = len;
-    out[5] = (u32)(uintptr_t)(p + 4);
-    u32 tmp;
-    sceKernelMemcpy(&tmp, p, 4);
-    out[10] = bswap32(tmp);
-    return off;
+    const u8 *payload = src + foundOff;
+    sceKernelMemset(out, 0, sizeof(SceNpCommerce2ProductInfo));
+    initChildCommonData(&out->commonData, res->commonData.version, res->commonData.bufHead, payload, len);
+    u32 rawWord;
+    sceKernelMemcpy(&rawWord, payload, 4);
+    out->commonData.subData = payload + 4;
+    out->productType = bswap32(rawWord);
+    return foundOff;
 }
 
-static int parseGameProductFromResultProduct(const u32 *prodInfo, u32 *out) {
-    const u8 *src = (const u8 *)(uintptr_t)prodInfo[5];
-    u32 rem = prodInfo[4] - (u32)(prodInfo[5] - prodInfo[3]);
+static __attribute__((noinline)) int parseGameProductFromResultProduct(
+    const SceNpCommerce2ProductInfo *prodInfo, SceNpCommerce2GameProductInfo *out) {
+    const u8 *src = prodInfo->commonData.subData;
+    u32 rem = prodInfo->commonData.dataSize - (u32)(src - prodInfo->commonData.data);
     u16 len;
-    int off = sceNpCommerce2_E3455E27(src, rem, 34, 93, &len);
-    if (off < 0)
-        return off;
-    return parseGameProductInfoBody(src + off, len, prodInfo[1], prodInfo[0], 1, out);
+    int foundOff = sceNpCommerce2_E3455E27(src, rem, 34, 93, &len);
+    if (foundOff < 0)
+        return foundOff;
+    return parseGameProductInfoBody(src + foundOff, len, prodInfo->commonData.bufHead,
+                                    prodInfo->commonData.version, SCE_NP_COMMERCE2_GAME_PRODUCT_DATA_TYPE_NORMAL, out);
 }
 
-static int parseGameSkuFromProduct(const u32 *gameProd, u32 isDetailed, u32 index, u32 *out) {
-    const u8 *src = (const u8 *)(uintptr_t)gameProd[5];
-    u32 rem = gameProd[4] - (u32)(gameProd[5] - gameProd[3]);
+static __attribute__((noinline)) int parseGameSkuFromProduct(
+    const SceNpCommerce2GameProductInfo *gameProd, u32 dataType, u32 index,
+    SceNpCommerce2GameSkuInfo *out) {
+    const u8 *src = gameProd->commonData.subData;
+    u32 rem = gameProd->commonData.dataSize - (u32)(src - gameProd->commonData.data);
     u16 len;
-    int off;
-    if (isDetailed == 1) {
-        off = findIndexedArrayItem(src, rem, 29, 89, index, &len);
-        if (off < 0)
-            return off;
-        return parseGameSkuInfoBody(src + off, len, gameProd[1], gameProd[0], 1, out);
+    int foundOff;
+    if (dataType == SCE_NP_COMMERCE2_GAME_PRODUCT_DATA_TYPE_NORMAL) {
+        foundOff = findIndexedArrayItem(src, rem, 29, 89, index, &len);
+        if (foundOff < 0)
+            return foundOff;
+        return parseGameSkuInfoBody(src + foundOff, len, gameProd->commonData.bufHead,
+                                    gameProd->commonData.version, SCE_NP_COMMERCE2_GAME_SKU_DATA_TYPE_NORMAL, out);
     } else {
-        off = sceNpCommerce2_E3455E27(src, rem, 28, 85, &len);
-        if (off < 0)
-            return off;
-        return parseGameSkuInfoBody(src + off, len, gameProd[1], gameProd[0], 0, out);
+        foundOff = sceNpCommerce2_E3455E27(src, rem, 28, 85, &len);
+        if (foundOff < 0)
+            return foundOff;
+        return parseGameSkuInfoBody(src + foundOff, len, gameProd->commonData.bufHead,
+                                    gameProd->commonData.version, SCE_NP_COMMERCE2_GAME_SKU_DATA_TYPE_THIN, out);
     }
 }
 
@@ -2513,21 +2795,22 @@ static int parseGameSkuFromProduct(const u32 *gameProd, u32 isDetailed, u32 inde
  * Session Cache & Core Operations
  * ========================================================================= */
 
-static int postProcessResponse(Commerce2Ctx *ctx, Commerce2Req *req, u8 *buf, u32 bufSize, u32 respSize) {
-    u32 acctInfo[24];
-    u32 sessRes[16];
+static __attribute__((noinline)) int postProcessResponse(
+    Commerce2Ctx *ctx, Commerce2Req *req, u8 *buf, u32 bufSize, u32 respSize) {
+    SceNpCommerce2AccountInfo acctInfo;
+    SceNpCommerce2SessionResultEx sessRes;
     u16 action = req->action;
 
     if (action == 49 || action == 1 || action == 66) {
         int ret;
         if (action == 49)
-            ret = parseSessionResultEx(sessRes, buf, respSize);
+            ret = parseSessionResultEx(&sessRes, buf, respSize);
         else
-            ret = parseCreateSessionResult(sessRes, buf, respSize);
-        if (ret >= 0 && parseAccountInfo(sessRes, acctInfo) >= 0) {
-            sceNet_lib_B5CE388A(ctx->country, (const char *)(uintptr_t)acctInfo[16], 4);
+            ret = parseCreateSessionResult((SceNpCommerce2CreateSessionResult *)&sessRes, buf, respSize);
+        if (ret >= 0 && parseAccountInfo(&sessRes.commonData, &acctInfo) >= 0) {
+            sceNet_lib_B5CE388A(ctx->country, acctInfo.countryCode, 4);
             ctx->country[3] = '\0';
-            sceNet_lib_B5CE388A(ctx->lang, (const char *)(uintptr_t)acctInfo[17], 4);
+            sceNet_lib_B5CE388A(ctx->lang, acctInfo.langCode, 4);
             ctx->lang[3] = '\0';
             sceNpCommerce2_F8D175FA(buf, bufSize, ctx->country, ctx->lang);
         }
@@ -2545,28 +2828,28 @@ static int postProcessResponse(Commerce2Ctx *ctx, Commerce2Req *req, u8 *buf, u3
     return 0;
 }
 
-static void refreshIdleConnection(Commerce2Ctx *ctx) {
+static __inline__ __attribute__((always_inline)) void refreshIdleConnection(Commerce2Ctx *ctx) {
     u64 now;
-    if (sceNpCommerce2_FC47B63C(&now) < 0)
-        return;
-    u64 diff = now - ctx->lastActivityTime;
-    if (diff > 9999999ULL)
-        sceNpCommerce2_75DF99A9(ctx->httpTmplId, &ctx->httpConnId);
+    if (sceNpCommerce2_FC47B63C(&now) >= 0) {
+        u64 elapsed = now - ctx->lastActivityTime;
+        if (elapsed > 9999999ULL)
+            sceNpCommerce2_75DF99A9(ctx->httpTmplId, &ctx->httpConnId);
+    }
 }
 
-static int coreInit(const char *envStr, int envFlag) {
+static __attribute__((noinline)) int coreInit(const char *envStr, int envFlag) {
     int ret = setEnvString(envStr);
     if (ret >= 0) {
         ret = setEnvFlag(envFlag);
         if (ret >= 0) {
-            sceKernelMemset(&g_ctxMgrDummy, 0, 4);
+            sceKernelMemset(&g_ctxMgr, 0, sizeof(g_ctxMgr));
             return 0;
         }
     }
     return ret;
 }
 
-static int coreInitWrapper(const char *envStr, int envFlag) {
+static __attribute__((noinline)) int coreInitWrapper(const char *envStr, int envFlag) {
     if (g_coreInitialized != 0)
         return SCE_NP_COMMERCE2_ERROR_ALREADY_INITIALIZED;
     int ret = coreInit(envStr, envFlag);
@@ -2576,55 +2859,62 @@ static int coreInitWrapper(const char *envStr, int envFlag) {
     return 0;
 }
 
-static int coreTermWrapper(void) {
+static __attribute__((noinline)) int termCoreContexts(void) {
+    return sceNpCommerce2_8E80E661(&g_ctxMgr);
+}
+
+static __attribute__((noinline)) int destroyAllContextsInternal(void) {
+    return sceNpCommerce2_8E80E661(&g_ctxMgr);
+}
+
+static __attribute__((noinline)) int coreTermWrapper(void) {
     if (g_coreInitialized != 0) {
-        sceNpCommerce2_8E80E661(&g_ctxMgrDummy);
+        termCoreContexts();
         g_coreInitialized = 0;
     }
     return 0;
 }
 
-static int createCtxInternal(u32 version, u32 *ctxIdOut, int isInternal) {
+static __attribute__((noinline)) int createCtxInternal(u32 version, u32 *ctxIdOut, int isInternal) {
     if (version >= 3u)
         return SCE_NP_COMMERCE2_ERROR_UNSUPPORTED_VERSION;
     if (ctxIdOut == NULL)
         return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 
     Commerce2Ctx *ctx = (Commerce2Ctx *)sceNetIfhandle_lib_15CFE3C0(sizeof(Commerce2Ctx));
-    if (ctx == NULL)
-        return SCE_NP_COMMERCE2_ERROR_OUT_OF_MEMORY;
+    int ret = SCE_NP_COMMERCE2_ERROR_OUT_OF_MEMORY;
+    if (ctx != NULL) {
+        sceKernelMemset(ctx, 0, sizeof(Commerce2Ctx));
+        ctx->version = version;
+        ctx->storeType = (ctx->isInternal == 1) ? 1u : 3u;
 
-    sceKernelMemset(ctx, 0, sizeof(Commerce2Ctx));
-    ctx->version = version;
-    ctx->storeType = (ctx->isInternal == 1) ? 1u : 3u;
-
-    int ret = sceNpCommerce2_CCEEA788(&ctx->httpTmplId, &ctx->httpConnId, isInternal);
-    if (ret >= 0) {
-        ret = sceNpCommerce2_2AFD0CC7(&g_ctxMgrDummy, ctx, ctxIdOut, isInternal);
-        if (ret >= 0)
-            return ret;
+        ret = sceNpCommerce2_CCEEA788(&ctx->httpTmplId, &ctx->httpConnId, isInternal);
+        if (ret >= 0) {
+            ret = sceNpCommerce2_2AFD0CC7(&g_ctxMgr, ctx, ctxIdOut, isInternal);
+            if (ret >= 0)
+                return ret;
+        }
+        if (ctx->httpTmplId != 0)
+            sceNpCommerce2_CBA487E9(ctx->httpTmplId, ctx->httpConnId);
+        sceNetIfhandle_lib_76BAD213(ctx);
     }
-
-    if (ctx->httpTmplId != 0)
-        sceNpCommerce2_CBA487E9(ctx->httpTmplId, ctx->httpConnId);
-    sceNetIfhandle_lib_76BAD213(ctx);
     return ret;
 }
 
-static int destroyCtxInternal(u32 ctxId) {
+static __attribute__((noinline)) int destroyCtxInternal(u32 ctxId) {
     Commerce2Ctx *ctx = NULL;
-    int ret = sceNpCommerce2_0A6AB496(&g_ctxMgrDummy, ctxId, (void **)&ctx, 1);
+    int ret = sceNpCommerce2_0A6AB496(&g_ctxMgr, ctxId, (void **)&ctx, 1);
     if (ret >= 0)
-        ret = sceNpCommerce2_8139E653(&g_ctxMgrDummy, ctxId);
+        ret = sceNpCommerce2_8139E653(&g_ctxMgr, ctxId);
     if (ctx != NULL)
-        sceNpCommerce2_77BE411B(&g_ctxMgrDummy, ctx);
+        sceNpCommerce2_77BE411B(&g_ctxMgr, ctx);
     return ret;
 }
 
-static int createReqInternal(u32 ctxId, u16 action, u32 *reqIdOut) {
+static __attribute__((noinline)) int createReqInternal(u32 ctxId, u16 action, u32 *reqIdOut) {
     Commerce2Ctx *ctx = NULL;
     Commerce2Req *req = NULL;
-    int ret = sceNpCommerce2_0A6AB496(&g_ctxMgrDummy, ctxId, (void **)&ctx, 1);
+    int ret = sceNpCommerce2_0A6AB496(&g_ctxMgr, ctxId, (void **)&ctx, 1);
     if (ret >= 0) {
         req = (Commerce2Req *)sceNetIfhandle_lib_15CFE3C0(sizeof(Commerce2Req));
         if (req == NULL) {
@@ -2632,40 +2922,56 @@ static int createReqInternal(u32 ctxId, u16 action, u32 *reqIdOut) {
         } else {
             sceKernelMemset(req, 0, sizeof(Commerce2Req));
             req->action = action;
-            ret = sceNpCommerce2_06618C81(&g_ctxMgrDummy, req, ctxId, reqIdOut);
+            ret = sceNpCommerce2_06618C81(&g_ctxMgr, req, ctxId, reqIdOut);
             if (ret < 0)
                 sceNetIfhandle_lib_76BAD213(req);
         }
     }
     if (ctx != NULL)
-        sceNpCommerce2_77BE411B(&g_ctxMgrDummy, ctx);
+        sceNpCommerce2_77BE411B(&g_ctxMgr, ctx);
     return ret;
 }
 
-static int destroyReqInternal(u32 reqId) {
+static __attribute__((noinline)) int createSessionCreateReqInternal(u32 ctxId, u32 *reqIdOut) {
+    return createReqInternal(ctxId, 1, reqIdOut);
+}
+
+static __attribute__((noinline)) int deleteSessionCreateReqInternal(u32 ctxId, u32 *reqIdOut) {
+    return createReqInternal(ctxId, 2, reqIdOut);
+}
+
+static __attribute__((noinline)) int getCategoryCreateReqInternal(u32 ctxId, u32 *reqIdOut) {
+    return createReqInternal(ctxId, 3, reqIdOut);
+}
+
+static __attribute__((noinline)) int getProductCreateReqInternal(u32 ctxId, u32 *reqIdOut) {
+    return createReqInternal(ctxId, 4, reqIdOut);
+}
+
+static __attribute__((noinline)) int destroyReqInternal(u32 reqId) {
     Commerce2Ctx *ctx = NULL;
     Commerce2Req *req = NULL;
-    int ret = sceNpCommerce2_0A6AB496(&g_ctxMgrDummy, reqId >> 16, (void **)&ctx, 1);
+    int ret = sceNpCommerce2_0A6AB496(&g_ctxMgr, reqId >> 16, (void **)&ctx, 1);
     if (ret >= 0) {
-        ret = sceNpCommerce2_851E7844(&g_ctxMgrDummy, reqId, (void **)&req);
+        ret = sceNpCommerce2_851E7844(&g_ctxMgr, reqId, (void **)&req);
         if (ret >= 0) {
-            sceNpCommerce2_02C307C0(&g_ctxMgrDummy, reqId);
+            sceNpCommerce2_02C307C0(&g_ctxMgr, reqId);
             ret = 0;
         }
     }
     if (req != NULL)
-        sceNpCommerce2_8642C532(&g_ctxMgrDummy, req);
+        sceNpCommerce2_8642C532(&g_ctxMgr, req);
     if (ctx != NULL)
-        sceNpCommerce2_77BE411B(&g_ctxMgrDummy, ctx);
+        sceNpCommerce2_77BE411B(&g_ctxMgr, ctx);
     return ret;
 }
 
-static int abortReqInternal(u32 reqId) {
+static __attribute__((noinline)) int abortReqInternal(u32 reqId) {
     Commerce2Ctx *ctx = NULL;
     Commerce2Req *req = NULL;
-    int ret = sceNpCommerce2_0A6AB496(&g_ctxMgrDummy, reqId >> 16, (void **)&ctx, 1);
+    int ret = sceNpCommerce2_0A6AB496(&g_ctxMgr, reqId >> 16, (void **)&ctx, 1);
     if (ret >= 0) {
-        ret = sceNpCommerce2_851E7844(&g_ctxMgrDummy, reqId, (void **)&req);
+        ret = sceNpCommerce2_851E7844(&g_ctxMgr, reqId, (void **)&req);
         if (ret >= 0) {
             sceNpCommerce2_63B96D73(req->httpReqId);
             req->flags |= 2u;
@@ -2673,13 +2979,13 @@ static int abortReqInternal(u32 reqId) {
         }
     }
     if (req != NULL)
-        sceNpCommerce2_8642C532(&g_ctxMgrDummy, req);
+        sceNpCommerce2_8642C532(&g_ctxMgr, req);
     if (ctx != NULL)
-        sceNpCommerce2_77BE411B(&g_ctxMgrDummy, ctx);
+        sceNpCommerce2_77BE411B(&g_ctxMgr, ctx);
     return ret;
 }
 
-static int getResultInternal(u32 reqId, u8 *buf, u32 bufSize, u32 *fillSizeOut) {
+static __attribute__((noinline)) int getResultInternal(u32 reqId, u8 *buf, u32 bufSize, u32 *fillSizeOut) {
     Commerce2Ctx *ctx = NULL;
     Commerce2Req *req = NULL;
     u8 serverStatus = 0;
@@ -2687,82 +2993,85 @@ static int getResultInternal(u32 reqId, u8 *buf, u32 bufSize, u32 *fillSizeOut) 
     int expired = 0;
     int ret;
 
-    if (buf == NULL || bufSize == 0 || fillSizeOut == NULL)
-        return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
-
-    ret = sceNpCommerce2_0A6AB496(&g_ctxMgrDummy, reqId >> 16, (void **)&ctx, 1);
-    if (ret < 0)
-        goto cleanup;
-    ret = sceNpCommerce2_851E7844(&g_ctxMgrDummy, reqId, (void **)&req);
-    if (ret < 0)
-        goto cleanup;
-
-    if ((req->action == 3 || req->action == 4) && ctx->isInternal != 1 && bufSize < 0x40000u) {
-        ret = SCE_NP_COMMERCE2_ERROR_INSUFFICIENT_BUFFER;
-        goto cleanup;
-    }
-
-    ret = sceNpCommerce2_4D43B84D(req->httpReqId, &ctx->buildVersion);
-    if (ret < 0)
-        goto cleanup;
-
-    int hdrLen = sceNpCommerce2_C27FEAB1(ctx, req->httpReqId, req->action, &serverStatus, buf, bufSize);
-    if (hdrLen < 0) {
-        ret = hdrLen;
-        goto cleanup;
-    }
-
-    int bodyLen = sceNpCommerce2_D4C319C6(req->httpReqId, buf, buf + hdrLen, bufSize, &isTrunc);
-    if (bodyLen < 0) {
-        ret = bodyLen;
-        goto cleanup;
-    }
-
-    if (isTrunc == 1) {
-        u16 a = req->action;
-        if (a != 3 && a != 5 && a != 7 && a != 53 && a != 54 && a != 55 && a != 76) {
-            ret = SCE_NP_COMMERCE2_ERROR_RESPONSE_BUF_TOO_SMALL;
-            goto cleanup;
+    do {
+        if (buf == NULL || bufSize == 0 || fillSizeOut == NULL) {
+            ret = SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
+            break;
         }
-    }
 
-    ret = sceNpCommerce2_ADAA054C(buf, bufSize, (u32)bodyLen, isTrunc);
-    if (ret < 0)
-        goto cleanup;
+        ret = sceNpCommerce2_0A6AB496(&g_ctxMgr, reqId >> 16, (void **)&ctx, 1);
+        if (ret < 0)
+            break;
+        ret = sceNpCommerce2_851E7844(&g_ctxMgr, reqId, (void **)&req);
+        if (ret < 0)
+            break;
 
-    *fillSizeOut = (u32)(hdrLen + bodyLen);
-    if (serverStatus == 0) {
-        postProcessResponse(ctx, req, buf, bufSize, *fillSizeOut);
-        ret = 0;
-        goto cleanup;
-    }
+        if ((req->action == 3 || req->action == 4) && ctx->isInternal != 1 && bufSize < SCE_NP_COMMERCE2_RECV_BUF_SIZE) {
+            ret = SCE_NP_COMMERCE2_ERROR_INSUFFICIENT_BUFFER;
+            break;
+        }
 
-    ret = SCE_NP_COMMERCE2_ERROR_SERVER_BASE | (u32)serverStatus;
-    if (req->action == 38 && ret == (SCE_NP_COMMERCE2_ERROR_SERVER_BASE | 1)) {
-        ret = SCE_NP_COMMERCE2_ERROR_SERVER_CODE_41;
-        goto cleanup;
-    }
-    if ((req->action == 23 || req->action == 64) && ret == (SCE_NP_COMMERCE2_ERROR_SERVER_BASE | 1)) {
-        ret = SCE_NP_COMMERCE2_ERROR_SERVER_CODE_2B;
-        goto cleanup;
-    }
+        ret = sceNpCommerce2_4D43B84D(req->httpReqId, &ctx->buildVersion);
+        if (ret < 0)
+            break;
 
-    checkSessionExpiredError(buf, *fillSizeOut, &expired);
-    if (expired == 1)
-        ret = SCE_NP_COMMERCE2_ERROR_SESSION_EXPIRED;
+        int hdrLen = sceNpCommerce2_C27FEAB1(ctx, req->httpReqId, req->action, &serverStatus, buf, bufSize);
+        if (hdrLen < 0) {
+            ret = hdrLen;
+            break;
+        }
 
-cleanup:
+        int bodyLen = sceNpCommerce2_D4C319C6(req->httpReqId, buf, buf + hdrLen, bufSize, &isTrunc);
+        if (bodyLen < 0) {
+            ret = bodyLen;
+            break;
+        }
+
+        if (isTrunc == 1) {
+            u16 act = req->action;
+            if (act != 3 && act != 5 && act != 7 && act != 53 && act != 54 && act != 55 && act != 76) {
+                ret = SCE_NP_COMMERCE2_ERROR_RESPONSE_BUF_TOO_SMALL;
+                break;
+            }
+        }
+
+        ret = sceNpCommerce2_ADAA054C(buf, bufSize, (u32)bodyLen, isTrunc);
+        if (ret < 0)
+            break;
+
+        *fillSizeOut = (u32)(hdrLen + bodyLen);
+        if (serverStatus == 0) {
+            postProcessResponse(ctx, req, buf, bufSize, *fillSizeOut);
+            ret = 0;
+            break;
+        }
+
+        ret = SCE_NP_COMMERCE2_ERROR_SERVER_BASE | (u32)serverStatus;
+        if (req->action == 38 && ret == (SCE_NP_COMMERCE2_ERROR_SERVER_BASE | 1)) {
+            ret = SCE_NP_COMMERCE2_ERROR_SERVER_CODE_41;
+            break;
+        }
+        if ((req->action == 23 || req->action == 64) && ret == (SCE_NP_COMMERCE2_ERROR_SERVER_BASE | 1)) {
+            ret = SCE_NP_COMMERCE2_ERROR_SERVER_CODE_2B;
+            break;
+        }
+
+        checkSessionExpiredError(buf, *fillSizeOut, &expired);
+        if (expired == 1)
+            ret = SCE_NP_COMMERCE2_ERROR_SESSION_EXPIRED;
+    } while (0);
+
     if (req != NULL) {
         if (req->flags & 2u)
             ret = SCE_NP_COMMERCE2_ERROR_ABORTED;
-        sceNpCommerce2_8642C532(&g_ctxMgrDummy, req);
+        sceNpCommerce2_8642C532(&g_ctxMgr, req);
     }
     if (ctx != NULL)
-        sceNpCommerce2_77BE411B(&g_ctxMgrDummy, ctx);
+        sceNpCommerce2_77BE411B(&g_ctxMgr, ctx);
     return ret;
 }
 
-static int createSessionStartInternal(u32 reqId) {
+static __attribute__((noinline)) int createSessionStartInternal(u32 reqId) {
     Commerce2Ctx *ctx = NULL;
     Commerce2Req *req = NULL;
     char consoleId[80];
@@ -2771,131 +3080,138 @@ static int createSessionStartInternal(u32 reqId) {
     int version;
     int ret;
 
-    ret = sceNpCommerce2_0A6AB496(&g_ctxMgrDummy, reqId >> 16, (void **)&ctx, 1);
-    if (ret < 0) goto cleanup;
-    ret = sceNpCommerce2_851E7844(&g_ctxMgrDummy, reqId, (void **)&req);
-    if (ret < 0) goto cleanup;
-    ret = sceNpCommerce2_F0900551(ctx, &version);
-    if (ret < 0) goto cleanup;
-    ret = sceNpCommerce2_02CADA41(ctx, username, password);
-    if (ret < 0) goto cleanup;
-    ret = sceNpCommerce2_157FA8AA(consoleId, 65);
-    if (ret < 0) goto cleanup;
+    do {
+        ret = sceNpCommerce2_0A6AB496(&g_ctxMgr, reqId >> 16, (void **)&ctx, 1);
+        if (ret < 0) break;
+        ret = sceNpCommerce2_851E7844(&g_ctxMgr, reqId, (void **)&req);
+        if (ret < 0) break;
+        ret = sceNpCommerce2_F0900551(ctx, &version);
+        if (ret < 0) break;
+        ret = sceNpCommerce2_02CADA41(ctx, username, password);
+        if (ret < 0) break;
+        ret = sceNpCommerce2_157FA8AA(consoleId, 65);
+        if (ret < 0) break;
 
-    refreshIdleConnection(ctx);
-    ret = sendCreateSessionHttp((int)ctx->storeType, ctx->httpTmplId, &ctx->httpConnId,
-                                req->action, &req->httpReqId, (u32)version,
-                                username, password, consoleId);
-    if (ret >= 0)
-        sceNpCommerce2_FC47B63C(&ctx->lastActivityTime);
+        refreshIdleConnection(ctx);
+        ret = sendCreateSessionHttp((int)ctx->storeType, ctx->httpTmplId, &ctx->httpConnId,
+                                    req->action, &req->httpReqId, (u32)version,
+                                    username, password, consoleId);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->lastActivityTime);
+    } while (0);
 
-cleanup:
     if (req != NULL) {
         if (req->flags & 2u)
             ret = SCE_NP_COMMERCE2_ERROR_ABORTED;
-        sceNpCommerce2_8642C532(&g_ctxMgrDummy, req);
+        sceNpCommerce2_8642C532(&g_ctxMgr, req);
     }
     if (ctx != NULL)
-        sceNpCommerce2_77BE411B(&g_ctxMgrDummy, ctx);
+        sceNpCommerce2_77BE411B(&g_ctxMgr, ctx);
     return ret;
 }
 
-static int deleteSessionStartInternal(u32 reqId) {
+static __attribute__((noinline)) int deleteSessionStartInternal(u32 reqId) {
     Commerce2Ctx *ctx = NULL;
     Commerce2Req *req = NULL;
     int ret;
 
-    ret = sceNpCommerce2_0A6AB496(&g_ctxMgrDummy, reqId >> 16, (void **)&ctx, 1);
-    if (ret < 0) goto cleanup;
-    ret = sceNpCommerce2_851E7844(&g_ctxMgrDummy, reqId, (void **)&req);
-    if (ret < 0) goto cleanup;
+    do {
+        ret = sceNpCommerce2_0A6AB496(&g_ctxMgr, reqId >> 16, (void **)&ctx, 1);
+        if (ret < 0) break;
+        ret = sceNpCommerce2_851E7844(&g_ctxMgr, reqId, (void **)&req);
+        if (ret < 0) break;
 
-    refreshIdleConnection(ctx);
-    ret = sendDeleteSessionHttp((int)ctx->storeType, ctx->httpTmplId, &ctx->httpConnId,
-                                req->action, &req->httpReqId);
-    if (ret >= 0) {
-        sceNpCommerce2_FC47B63C(&ctx->lastActivityTime);
-        ctx->sessionLen = 0;
-    }
+        refreshIdleConnection(ctx);
+        ret = sendDeleteSessionHttp((int)ctx->storeType, ctx->httpTmplId, &ctx->httpConnId,
+                                    req->action, &req->httpReqId);
+        if (ret >= 0) {
+            sceNpCommerce2_FC47B63C(&ctx->lastActivityTime);
+            ctx->sessionLen = 0;
+        }
+    } while (0);
 
-cleanup:
     if (req != NULL) {
         if (req->flags & 2u)
             ret = SCE_NP_COMMERCE2_ERROR_ABORTED;
-        sceNpCommerce2_8642C532(&g_ctxMgrDummy, req);
+        sceNpCommerce2_8642C532(&g_ctxMgr, req);
     }
     if (ctx != NULL)
-        sceNpCommerce2_77BE411B(&g_ctxMgrDummy, ctx);
+        sceNpCommerce2_77BE411B(&g_ctxMgr, ctx);
     return ret;
 }
 
-static int getCategoryStartInternal(u32 reqId, const char *categoryId,
-                                    const char *const *rewardIds, u32 rewardCount,
-                                    u32 startPos, u32 maxCount) {
+static __attribute__((noinline)) int getCategoryStartInternal(
+    u32 reqId, const char *categoryId,
+    const char *const *rewardIds, u32 rewardCount,
+    u32 startPos, u32 maxCount) {
     Commerce2Ctx *ctx = NULL;
     Commerce2Req *req = NULL;
     int ret;
 
-    ret = sceNpCommerce2_0A6AB496(&g_ctxMgrDummy, reqId >> 16, (void **)&ctx, 1);
-    if (ret < 0) goto cleanup;
-    ret = sceNpCommerce2_851E7844(&g_ctxMgrDummy, reqId, (void **)&req);
-    if (ret < 0) goto cleanup;
+    do {
+        ret = sceNpCommerce2_0A6AB496(&g_ctxMgr, reqId >> 16, (void **)&ctx, 1);
+        if (ret < 0) break;
+        ret = sceNpCommerce2_851E7844(&g_ctxMgr, reqId, (void **)&req);
+        if (ret < 0) break;
 
-    if (ctx->isInternal == 0 && maxCount >= 61u) {
-        ret = SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
-        goto cleanup;
-    }
+        if (ctx->isInternal == 0 && maxCount > SCE_NP_COMMERCE2_GETCAT_MAX_COUNT) {
+            ret = SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
+            break;
+        }
 
-    refreshIdleConnection(ctx);
-    ret = sendGetCategoryHttp((int)ctx->storeType, ctx->httpTmplId, &ctx->httpConnId,
-                              req->action, &req->httpReqId, categoryId,
-                              rewardIds, rewardCount, startPos, maxCount);
-    if (ret >= 0)
-        sceNpCommerce2_FC47B63C(&ctx->lastActivityTime);
+        refreshIdleConnection(ctx);
+        ret = sendGetCategoryHttp((int)ctx->storeType, ctx->httpTmplId, &ctx->httpConnId,
+                                  req->action, &req->httpReqId, categoryId,
+                                  rewardIds, rewardCount, startPos, maxCount);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->lastActivityTime);
+    } while (0);
 
-cleanup:
     if (req != NULL) {
         if (req->flags & 2u)
             ret = SCE_NP_COMMERCE2_ERROR_ABORTED;
-        sceNpCommerce2_8642C532(&g_ctxMgrDummy, req);
+        sceNpCommerce2_8642C532(&g_ctxMgr, req);
     }
     if (ctx != NULL)
-        sceNpCommerce2_77BE411B(&g_ctxMgrDummy, ctx);
+        sceNpCommerce2_77BE411B(&g_ctxMgr, ctx);
     return ret;
 }
 
-static int getProductStartInternal(u32 reqId, const char *categoryId, const char *productId,
-                                   const char *const *rewardIds, u32 rewardCount) {
+static __attribute__((noinline)) int getProductStartInternal(
+    u32 reqId, const char *categoryId, const char *productId,
+    const char *const *rewardIds, u32 rewardCount) {
     Commerce2Ctx *ctx = NULL;
     Commerce2Req *req = NULL;
     int ret;
 
-    ret = sceNpCommerce2_0A6AB496(&g_ctxMgrDummy, reqId >> 16, (void **)&ctx, 1);
-    if (ret < 0) goto cleanup;
-    ret = sceNpCommerce2_851E7844(&g_ctxMgrDummy, reqId, (void **)&req);
-    if (ret < 0) goto cleanup;
+    do {
+        ret = sceNpCommerce2_0A6AB496(&g_ctxMgr, reqId >> 16, (void **)&ctx, 1);
+        if (ret < 0) break;
+        ret = sceNpCommerce2_851E7844(&g_ctxMgr, reqId, (void **)&req);
+        if (ret < 0) break;
 
-    refreshIdleConnection(ctx);
-    ret = sendGetProductHttp((int)ctx->storeType, ctx->httpTmplId, &ctx->httpConnId,
-                             req->action, &req->httpReqId, categoryId,
-                             productId, rewardIds, rewardCount);
-    if (ret >= 0)
-        sceNpCommerce2_FC47B63C(&ctx->lastActivityTime);
+        refreshIdleConnection(ctx);
+        ret = sendGetProductHttp((int)ctx->storeType, ctx->httpTmplId, &ctx->httpConnId,
+                                 req->action, &req->httpReqId, categoryId,
+                                 productId, rewardIds, rewardCount);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->lastActivityTime);
+    } while (0);
 
-cleanup:
     if (req != NULL) {
         if (req->flags & 2u)
             ret = SCE_NP_COMMERCE2_ERROR_ABORTED;
-        sceNpCommerce2_8642C532(&g_ctxMgrDummy, req);
+        sceNpCommerce2_8642C532(&g_ctxMgr, req);
     }
     if (ctx != NULL)
-        sceNpCommerce2_77BE411B(&g_ctxMgrDummy, ctx);
+        sceNpCommerce2_77BE411B(&g_ctxMgr, ctx);
     return ret;
 }
 
-static int getCachedSessionInternal(u32 ctxId, void *buf, u32 bufSize, u32 *sizeOut) {
+static __attribute__((noinline)) int getCachedSessionInternal(
+    u32 ctxId, void *buf, u32 bufSize, u32 *sizeOut) {
     Commerce2Ctx *ctx = NULL;
-    int ret = sceNpCommerce2_0A6AB496(&g_ctxMgrDummy, ctxId, (void **)&ctx, 1);
+    int ret = sceNpCommerce2_0A6AB496(&g_ctxMgr, ctxId, (void **)&ctx, 1);
     if (ret >= 0) {
         if (ctx->sessionLen == 0) {
             ret = SCE_NP_COMMERCE2_ERROR_NO_CACHED_SESSION;
@@ -2907,7 +3223,7 @@ static int getCachedSessionInternal(u32 ctxId, void *buf, u32 bufSize, u32 *size
         }
     }
     if (ctx != NULL)
-        sceNpCommerce2_77BE411B(&g_ctxMgrDummy, ctx);
+        sceNpCommerce2_77BE411B(&g_ctxMgr, ctx);
     return ret;
 }
 
@@ -2915,41 +3231,49 @@ static int getCachedSessionInternal(u32 ctxId, void *buf, u32 bufSize, u32 *size
  * 3DES Token Generator & 64-bit Formatting
  * ========================================================================= */
 
-static u8 hexNibble(char c) {
-    if (c >= 'a' && c <= 'f') return (u8)(c - 'a' + 10);
-    if (c >= 'A' && c <= 'F') return (u8)(c - 'A' + 10);
-    return (u8)(c - '0');
+static __inline__ __attribute__((always_inline)) u8 hexNibble(char ch) {
+    if ((u8)(ch - 'a') < 6u) return (u8)(ch - 'a' + 10);
+    if ((u8)(ch - 'A') < 6u) return (u8)(ch - 'A' + 10);
+    return (u8)(ch - '0');
 }
 
-static void desCbcEncrypt32(const u32 *rk, const u8 iv[8], const u8 in[32], u8 out[32]) {
-    u8 state[8];
-    u32 blk, i;
-    for (i = 0; i < 8; i++)
-        state[i] = iv[i];
-
-    for (blk = 0; blk < 32; blk += 8) {
-        u8 xbuf[8];
-        for (i = 0; i < 8; i++)
-            xbuf[7 - i] = in[blk + i] ^ state[i];
-        u64 val;
-        sceKernelMemcpy(&val, xbuf, 8);
-        val = desEncryptBlock(rk, val);
-        sceKernelMemcpy(xbuf, &val, 8);
-        for (i = 0; i < 8; i++) {
-            state[i] = xbuf[7 - i];
-            out[blk + i] = state[i];
+static __inline__ __attribute__((always_inline)) void desCbcEncrypt32(
+    DesContext *desCtx, u64 key, const u8 iv[8], const u8 in[32], u8 out[32]) {
+    int ret = desKeySchedule(desCtx->roundKeys, key);
+    if (ret >= 0) {
+        u32 idx;
+        for (idx = 0; idx < 8; idx++)
+            desCtx->iv[idx] = iv[idx];
+        ret = 0;
+    }
+    if (ret >= 0) {
+        u32 blkOff;
+        for (blkOff = 0; blkOff < 32; blkOff += 8) {
+            u8 swapped[8];
+            u32 byteIdx;
+            for (byteIdx = 0; byteIdx < 8; byteIdx++)
+                swapped[7 - byteIdx] = in[blkOff + byteIdx] ^ desCtx->iv[byteIdx];
+            u64 blockVal;
+            sceKernelMemcpy(&blockVal, swapped, 8);
+            blockVal = desEncryptBlock(desCtx->roundKeys, blockVal);
+            sceKernelMemcpy(swapped, &blockVal, 8);
+            for (byteIdx = 0; byteIdx < 8; byteIdx++) {
+                u8 cipherByte = swapped[7 - byteIdx];
+                desCtx->iv[byteIdx] = cipherByte;
+                out[blkOff + byteIdx] = cipherByte;
+            }
         }
     }
 }
 
-int sceNpCommerce2_EE7255FE(int unused, u8 *out32) {
+int sceNpCommerce2_EE7255FE(int unused, u8 *outToken) {
     u8 plain[32];
-    u8 mid[32];
+    u8 intermediate[32];
     char consoleIdStr[80];
-    u32 rk1[36], rk2[36], rk3[36];
+    DesContext desCtxFirst, desCtxSecond, desCtxThird;
     u64 tick, accountId;
     int ret;
-    u32 i;
+    u32 idx;
     (void)unused;
 
     sceKernelMemset(plain, 0, sizeof(plain));
@@ -2957,10 +3281,10 @@ int sceNpCommerce2_EE7255FE(int unused, u8 *out32) {
     if (ret < 0)
         return ret;
 
-    u64 ms = (tick - 62135596800000000ULL) / 1000ULL;
+    u64 epochMs = (tick - SCE_NP_COMMERCE2_EPOCH_TICK_OFFSET) / 1000ULL;
     u32 msBe[2];
-    msBe[0] = bswap32((u32)(ms >> 32));
-    msBe[1] = bswap32((u32)ms);
+    msBe[0] = bswap32((u32)(epochMs >> 32));
+    msBe[1] = bswap32((u32)epochMs);
     sceKernelMemcpy(plain, msBe, 8);
 
     if (sceNp_B819A0C8(NULL, NULL, &accountId) < 0)
@@ -2974,47 +3298,52 @@ int sceNpCommerce2_EE7255FE(int unused, u8 *out32) {
     if (ret < 0)
         return SCE_NP_COMMERCE2_ERROR_CONSOLE_ID;
 
-    for (i = 0; i < 16; i++)
-        plain[16 + i] = (u8)((hexNibble(consoleIdStr[2 * i]) << 4) | hexNibble(consoleIdStr[2 * i + 1]));
+    for (idx = 0; idx < 16; idx++) {
+        u8 hiNib = hexNibble(consoleIdStr[2 * idx]);
+        u8 loNib = hexNibble(consoleIdStr[2 * idx + 1]);
+        plain[16 + idx] = (u8)((hiNib << 4) | loNib);
+    }
 
-    if (desKeySchedule(rk1, g_3desKey1Lo, g_3desKey1Hi) >= 0)
-        desCbcEncrypt32(rk1, g_3desIv, plain, out32);
-    if (desKeySchedule(rk2, g_3desKey2Lo, g_3desKey2Hi) >= 0)
-        desCbcEncrypt32(rk2, g_3desIv, out32, mid);
-    if (desKeySchedule(rk3, g_3desKey3Lo, g_3desKey3Hi) >= 0)
-        desCbcEncrypt32(rk3, g_3desIv, mid, out32);
+    desCbcEncrypt32(&desCtxFirst, g_tripleDesKeys[0], g_tripleDesIv, plain, outToken);
+    desCbcEncrypt32(&desCtxSecond, g_tripleDesKeys[1], g_tripleDesIv, outToken, intermediate);
+    desCbcEncrypt32(&desCtxThird, g_tripleDesKeys[2], g_tripleDesIv, intermediate, outToken);
 
     return ret;
 }
 
-int sceNpCommerce2_22CEC5E2(char *out, int outSize, u32 lo, u32 hi, int isDecimal) {
+int sceNpCommerce2_22CEC5E2(char *out, int outSize, u64 val, int isDecimal) {
     (void)outSize;
     if (isDecimal != 1) {
+        u32 lo = (u32)val;
+        u32 hi = (u32)(val >> 32);
         return sceNet_lib_CF705E46(
             out, "%02x%02x%02x%02x%02x%02x%02x%02x",
             (hi >> 24) & 0xFFu, (hi >> 16) & 0xFFu, (hi >> 8) & 0xFFu, hi & 0xFFu,
             (lo >> 24) & 0xFFu, (lo >> 16) & 0xFFu, (lo >> 8) & 0xFFu, lo & 0xFFu);
     }
 
-    u64 val = ((u64)hi << 32) | lo;
-    u64 div = 10000000000000000000ULL;
+    u64 divisor = 1;
+    int powIdx;
+    for (powIdx = 19; powIdx > 0; powIdx--)
+        divisor *= 10ULL;
+
     int started = 0;
     int digits = 19;
     u32 acc = 0;
-    char *p = out;
+    char *cur = out;
 
     do {
-        u32 q = (u32)(val / div);
-        u32 d = q - acc;
-        if (started || d != 0) {
-            *p++ = (char)(d + '0');
+        u32 quotient = (u32)(val / divisor);
+        u32 digit = quotient - acc;
+        if (started || digit != 0) {
+            *cur++ = (char)(digit + '0');
             started = 1;
         }
-        div /= 10ULL;
-        acc = 10u * (acc + d);
+        divisor /= 10ULL;
+        acc = 10u * (acc + digit);
         digits--;
     } while (digits >= 0);
-    *p = '\0';
+    *cur = '\0';
     return 0;
 }
 
@@ -3024,7 +3353,7 @@ int sceNpCommerce2_22CEC5E2(char *out, int outSize, u32 lo, u32 hi, int isDecima
 
 #define CHECK_STACK(minStack) \
     do { \
-        if (sceKernelGetCompiledSdkVersion() > SDK_VER_STACK_CHECK && \
+        if (sceKernelGetCompiledSdkVersion() > SCE_NP_COMMERCE2_SDK_VER_STACK_CHECK && \
             _sceKernelCheckThreadStack() < (minStack)) \
             return SCE_NP_ERROR_OUT_OF_STACK; \
     } while (0)
@@ -3070,7 +3399,7 @@ int sceNpCommerce2_8026FA46(u32 version, u32 *ctxId) {
 int sceNpCommerce2_5BDD4913(void) {
     if (g_coreInitialized == 0)
         return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
-    return sceNpCommerce2_8E80E661(&g_ctxMgrDummy);
+    return destroyAllContextsInternal();
 }
 
 int sceNpCommerce2DestroyCtx(u32 ctxId) {
@@ -3106,7 +3435,7 @@ int sceNpCommerce2CreateSessionCreateReq(u32 ctxId, u32 *reqId) {
         return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
     if (reqId == NULL)
         return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
-    return createReqInternal(ctxId, 1, reqId);
+    return createSessionCreateReqInternal(ctxId, reqId);
 }
 
 int sceNpCommerce2CreateSessionStart(u32 reqId) {
@@ -3116,49 +3445,51 @@ int sceNpCommerce2CreateSessionStart(u32 reqId) {
     return createSessionStartInternal(reqId);
 }
 
-static int getResultChecked(u32 reqId, void *buf, u32 bufSize, u32 *fillSize, int checkBuf) {
+static __attribute__((noinline)) int createSessionGetResultChecked(
+    u32 reqId, void *buf, u32 bufSize, u32 *fillSize, int checkBuf) {
     CHECK_STACK(14320);
     if (g_coreInitialized == 0)
         return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
-    if (sceKernelGetCompiledSdkVersion() > SDK_VER_STACK_CHECK && checkBuf == 1 && bufSize < 0x40000u)
+    if (sceKernelGetCompiledSdkVersion() > SCE_NP_COMMERCE2_SDK_VER_STACK_CHECK &&
+        ((checkBuf == 1) & (bufSize < SCE_NP_COMMERCE2_RECV_BUF_SIZE)))
         return SCE_NP_COMMERCE2_ERROR_INSUFFICIENT_BUFFER;
     return getResultInternal(reqId, (u8 *)buf, bufSize, fillSize);
 }
 
 int sceNpCommerce2CreateSessionGetResult(u32 reqId, void *buf, u32 bufSize, u32 *fillSize) {
-    return getResultChecked(reqId, buf, bufSize, fillSize, 1);
+    return createSessionGetResultChecked(reqId, buf, bufSize, fillSize, 1);
 }
 
-int sceNpCommerce2_48D77A66(void *res, const void *buf, u32 bufSize) {
+int sceNpCommerce2_48D77A66(SceNpCommerce2CreateSessionResult *res, const void *buf, u32 bufSize) {
     if (g_coreInitialized == 0)
         return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
-    if (buf == NULL || bufSize == 0)
+    if ((buf == NULL) | (bufSize == 0))
         return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
-    return parseCreateSessionResult((u32 *)res, (const u8 *)buf, bufSize);
+    return parseCreateSessionResult(res, (const u8 *)buf, bufSize);
 }
 
-int sceNpCommerce2_287B6FB3(void *res, u32 idx, void *info) {
+int sceNpCommerce2_287B6FB3(const SceNpCommerce2CreateSessionResult *res, u32 idx, SceNpCommerce2CurrencyInfo *info) {
     if (g_coreInitialized == 0)
         return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
-    if (res == NULL || info == NULL)
+    if ((res == NULL) | (info == NULL))
         return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
-    return parseCurrencyInfo((const u32 *)res, idx, (u32 *)info);
+    return getCurrencyInfoWrapper(res, idx, info);
 }
 
-int sceNpCommerce2_4DB0E04F(void *res, void *walletInfo) {
+int sceNpCommerce2_4DB0E04F(const SceNpCommerce2CommonData *res, SceNpCommerce2WalletInfo *walletInfo) {
     if (g_coreInitialized == 0)
         return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
-    if (res == NULL || walletInfo == NULL)
+    if ((res == NULL) | (walletInfo == NULL))
         return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
-    return parseWalletInfo((const u32 *)res, (u32 *)walletInfo);
+    return parseWalletInfo(res, walletInfo);
 }
 
-int sceNpCommerce2_6795EE19(void *currInfo, u32 idx, void *topupInfo) {
+int sceNpCommerce2_6795EE19(const SceNpCommerce2CommonData *currInfo, u32 idx, SceNpCommerce2TopupAmountInfo *topupInfo) {
     if (g_coreInitialized == 0)
         return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
-    if (currInfo == NULL || topupInfo == NULL)
+    if ((currInfo == NULL) | (topupInfo == NULL))
         return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
-    return parseTopupAmount((const u32 *)currInfo, idx, (u32 *)topupInfo);
+    return parseTopupAmount(currInfo, idx, topupInfo);
 }
 
 int sceNpCommerce2_7B00DE40(u32 ctxId, u32 *reqId) {
@@ -3166,7 +3497,7 @@ int sceNpCommerce2_7B00DE40(u32 ctxId, u32 *reqId) {
         return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
     if (reqId == NULL)
         return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
-    return createReqInternal(ctxId, 2, reqId);
+    return deleteSessionCreateReqInternal(ctxId, reqId);
 }
 
 int sceNpCommerce2_DA206690(u32 reqId) {
@@ -3187,21 +3518,27 @@ int sceNpCommerce2GetCategoryContentsCreateReq(u32 ctxId, u32 *reqId) {
         return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
     if (reqId == NULL)
         return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
-    return createReqInternal(ctxId, 3, reqId);
+    return getCategoryCreateReqInternal(ctxId, reqId);
 }
 
-static int getCategoryStartWrapper(u32 reqId, const char *categoryId,
-                                   const char *const *rewardIds, u32 rewardCount,
-                                   u32 startPos, u32 maxCount, int isPublic) {
+static __attribute__((noinline)) int getCategoryStartWrapper(
+    u32 reqId, const char *categoryId,
+    const char *const *rewardIds, u32 rewardCount,
+    u32 startPos, u32 maxCount, int isPublic) {
     CHECK_STACK(14320);
     if (g_coreInitialized == 0)
         return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
     if (categoryId == NULL)
         return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
-    if (isPublic == 1 && sceKernelGetCompiledSdkVersion() > SDK_VER_STACK_CHECK && maxCount >= 61u)
+    if (isPublic == 1 &&
+        sceKernelGetCompiledSdkVersion() > SCE_NP_COMMERCE2_SDK_VER_STACK_CHECK &&
+        maxCount > SCE_NP_COMMERCE2_GETCAT_MAX_COUNT)
         return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
-    if (isPublic == 1)
-        sceNpCommerce2_E3EC9E14("GetCategoryContents", &categoryId, 1);
+    if (isPublic == 1 && sceNp_2E4769C3()) {
+        char formatted[32];
+        formatContentIdPrefixInline(categoryId, formatted, sizeof(formatted));
+        KprintfForUser("%s: %s\n", "GetCategoryContents", formatted);
+    }
     return getCategoryStartInternal(reqId, categoryId, rewardIds, rewardCount, startPos, maxCount);
 }
 
@@ -3209,17 +3546,28 @@ int sceNpCommerce2GetCategoryContentsStart(u32 reqId, const char *categoryId, u3
     return getCategoryStartWrapper(reqId, categoryId, NULL, 0, startPos, maxCount, 1);
 }
 
-int sceNpCommerce2GetCategoryContentsGetResult(u32 reqId, void *buf, u32 bufSize, u32 *fillSize) {
-    return getResultChecked(reqId, buf, bufSize, fillSize, 1);
+static __attribute__((noinline)) int getCategoryContentsGetResultChecked(
+    u32 reqId, void *buf, u32 bufSize, u32 *fillSize, int checkBuf) {
+    CHECK_STACK(14320);
+    if (g_coreInitialized == 0)
+        return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
+    if (sceKernelGetCompiledSdkVersion() > SCE_NP_COMMERCE2_SDK_VER_STACK_CHECK &&
+        ((checkBuf == 1) & (bufSize < SCE_NP_COMMERCE2_RECV_BUF_SIZE)))
+        return SCE_NP_COMMERCE2_ERROR_INSUFFICIENT_BUFFER;
+    return getResultInternal(reqId, (u8 *)buf, bufSize, fillSize);
 }
 
-int sceNpCommerce2InitGetCategoryContentsResult(void *res, const void *buf, u32 bufSize) {
+int sceNpCommerce2GetCategoryContentsGetResult(u32 reqId, void *buf, u32 bufSize, u32 *fillSize) {
+    return getCategoryContentsGetResultChecked(reqId, buf, bufSize, fillSize, 1);
+}
+
+int sceNpCommerce2InitGetCategoryContentsResult(SceNpCommerce2GetCategoryContentsResult *res, const void *buf, u32 bufSize) {
     CHECK_STACK(4080);
     if (g_coreInitialized == 0)
         return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
-    if (buf == NULL || bufSize == 0)
+    if ((buf == NULL) | (bufSize == 0))
         return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
-    return initCategoryContentsResult((u32 *)res, (const u8 *)buf, bufSize);
+    return initCategoryContentsResult(res, (const u8 *)buf, bufSize);
 }
 
 int sceNpCommerce2DestroyGetCategoryContentsResult(void) {
@@ -3227,67 +3575,67 @@ int sceNpCommerce2DestroyGetCategoryContentsResult(void) {
     return 0;
 }
 
-int sceNpCommerce2GetCategoryInfo(void *res, void *info) {
+int sceNpCommerce2GetCategoryInfo(const SceNpCommerce2GetCategoryContentsResult *res, SceNpCommerce2CategoryInfo *info) {
     CHECK_STACK(4080);
     if (g_coreInitialized == 0)
         return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
-    if (res == NULL || info == NULL)
+    if ((res == NULL) | (info == NULL))
         return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
-    return parseCategoryInfoFromResult((const u32 *)res, (u32 *)info);
+    return parseCategoryInfoFromResult(res, info);
 }
 
-int sceNpCommerce2GetContentInfo(void *res, u32 index, void *info) {
+int sceNpCommerce2GetContentInfo(const SceNpCommerce2GetCategoryContentsResult *res, u32 index, SceNpCommerce2ContentInfo *info) {
     CHECK_STACK(4080);
     if (g_coreInitialized == 0)
         return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
-    if (res == NULL || info == NULL)
+    if ((res == NULL) | (info == NULL))
         return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
-    return parseContentInfo((const u32 *)res, index, (u32 *)info);
+    return parseContentInfo(res, index, info);
 }
 
-int sceNpCommerce2GetCategoryInfoFromContentInfo(void *contentInfo, void *info) {
+int sceNpCommerce2GetCategoryInfoFromContentInfo(const SceNpCommerce2ContentInfo *contentInfo, SceNpCommerce2CategoryInfo *info) {
     CHECK_STACK(4080);
     if (g_coreInitialized == 0)
         return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
-    if (contentInfo == NULL || info == NULL)
+    if ((contentInfo == NULL) | (info == NULL))
         return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
-    return parseCategoryInfoFromContent((const u32 *)contentInfo, (u32 *)info);
+    return parseCategoryInfoFromContent(contentInfo, info);
 }
 
-int sceNpCommerce2_3D88DCCA(void *contentInfo, void *productInfo) {
+int sceNpCommerce2_3D88DCCA(const SceNpCommerce2ContentInfo *contentInfo, SceNpCommerce2ProductInfo *productInfo) {
     if (g_coreInitialized == 0)
         return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
-    if (contentInfo == NULL || productInfo == NULL)
+    if ((contentInfo == NULL) | (productInfo == NULL))
         return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
-    return parseProductInfoFromContent((const u32 *)contentInfo, (u32 *)productInfo);
+    return parseProductInfoFromContent(contentInfo, productInfo);
 }
 
-int sceNpCommerce2_1D9C32C0(void *productInfo, void *gameProductInfo) {
+int sceNpCommerce2_1D9C32C0(const SceNpCommerce2ProductInfo *productInfo, SceNpCommerce2GameProductInfo *gameProductInfo) {
     if (g_coreInitialized == 0)
         return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
-    if (productInfo == NULL || gameProductInfo == NULL)
+    if ((productInfo == NULL) | (gameProductInfo == NULL))
         return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
-    return parseGameProductFromContentProduct((const u32 *)productInfo, (u32 *)gameProductInfo);
+    return parseGameProductFromContentProduct(productInfo, gameProductInfo);
 }
 
-int sceNpCommerce2GetContentRatingInfoFromCategoryInfo(void *catInfo, void *ratingInfo) {
+int sceNpCommerce2GetContentRatingInfoFromCategoryInfo(const SceNpCommerce2CategoryInfo *catInfo, SceNpCommerce2ContentRatingInfo *ratingInfo) {
     CHECK_STACK(4080);
     if (g_coreInitialized == 0)
         return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
-    if (catInfo == NULL || ratingInfo == NULL)
+    if ((catInfo == NULL) | (ratingInfo == NULL))
         return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
-    return parseRatingInfo((const u32 *)catInfo, (u32 *)ratingInfo);
+    return parseRatingInfo(&catInfo->commonData, ratingInfo);
 }
 
-int sceNpCommerce2_3755FC84(void *ratingInfo, u32 idx, void *desc) {
+int sceNpCommerce2_3755FC84(const SceNpCommerce2ContentRatingInfo *ratingInfo, u32 idx, SceNpCommerce2ContentRatingDescriptor *desc) {
     if (g_coreInitialized == 0)
         return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
-    if (ratingInfo == NULL || desc == NULL)
+    if ((ratingInfo == NULL) | (desc == NULL))
         return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
-    return parseContentRatingDescriptor((const u32 *)ratingInfo, idx, (u32 *)desc);
+    return parseContentRatingDescriptor(ratingInfo, idx, desc);
 }
 
-int sceNpCommerce2GetContentRatingDescriptor(void *ratingInfo, u32 idx, void *desc) {
+int sceNpCommerce2GetContentRatingDescriptor(const SceNpCommerce2ContentRatingInfo *ratingInfo, u32 idx, SceNpCommerce2ContentRatingDescriptor *desc) {
     CHECK_STACK(4080);
     return sceNpCommerce2_3755FC84(ratingInfo, idx, desc);
 }
@@ -3298,18 +3646,22 @@ int sceNpCommerce2GetProductInfoCreateReq(u32 ctxId, u32 *reqId) {
         return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
     if (reqId == NULL)
         return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
-    return createReqInternal(ctxId, 4, reqId);
+    return getProductCreateReqInternal(ctxId, reqId);
 }
 
-static int getProductStartWrapper(u32 reqId, const char *categoryId, const char *productId,
-                                  const char *const *rewardIds, u32 rewardCount, int isPublic) {
+static __attribute__((noinline)) int getProductStartWrapper(
+    u32 reqId, const char *categoryId, const char *productId,
+    const char *const *rewardIds, u32 rewardCount, int isPublic) {
     CHECK_STACK(14320);
     if (g_coreInitialized == 0)
         return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
     if (productId == NULL)
         return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
-    if (isPublic == 1)
-        sceNpCommerce2_E3EC9E14("GetProductInfo", &productId, 1);
+    if (isPublic == 1 && sceNp_2E4769C3()) {
+        char formatted[32];
+        formatContentIdPrefixInline(productId, formatted, sizeof(formatted));
+        KprintfForUser("%s: %s\n", "GetProductInfo", formatted);
+    }
     return getProductStartInternal(reqId, categoryId, productId, rewardIds, rewardCount);
 }
 
@@ -3317,17 +3669,28 @@ int sceNpCommerce2GetProductInfoStart(u32 reqId, const char *categoryId, const c
     return getProductStartWrapper(reqId, categoryId, productId, NULL, 0, 1);
 }
 
-int sceNpCommerce2GetProductInfoGetResult(u32 reqId, void *buf, u32 bufSize, u32 *fillSize) {
-    return getResultChecked(reqId, buf, bufSize, fillSize, 1);
+static __attribute__((noinline)) int getProductInfoGetResultChecked(
+    u32 reqId, void *buf, u32 bufSize, u32 *fillSize, int checkBuf) {
+    CHECK_STACK(14320);
+    if (g_coreInitialized == 0)
+        return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
+    if (sceKernelGetCompiledSdkVersion() > SCE_NP_COMMERCE2_SDK_VER_STACK_CHECK &&
+        ((checkBuf == 1) & (bufSize < SCE_NP_COMMERCE2_RECV_BUF_SIZE)))
+        return SCE_NP_COMMERCE2_ERROR_INSUFFICIENT_BUFFER;
+    return getResultInternal(reqId, (u8 *)buf, bufSize, fillSize);
 }
 
-int sceNpCommerce2InitGetProductInfoResult(void *res, const void *buf, u32 bufSize) {
+int sceNpCommerce2GetProductInfoGetResult(u32 reqId, void *buf, u32 bufSize, u32 *fillSize) {
+    return getProductInfoGetResultChecked(reqId, buf, bufSize, fillSize, 1);
+}
+
+int sceNpCommerce2InitGetProductInfoResult(SceNpCommerce2GetProductInfoResult *res, const void *buf, u32 bufSize) {
     CHECK_STACK(4080);
     if (g_coreInitialized == 0)
         return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
-    if (buf == NULL || bufSize == 0)
+    if ((buf == NULL) | (bufSize == 0))
         return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
-    return initProductInfoResult((u32 *)res, (const u8 *)buf, bufSize);
+    return initProductInfoResult(res, (const u8 *)buf, bufSize);
 }
 
 int sceNpCommerce2DestroyGetProductInfoResult(void) {
@@ -3335,119 +3698,117 @@ int sceNpCommerce2DestroyGetProductInfoResult(void) {
     return 0;
 }
 
-int sceNpCommerce2_5C691546(void *res, void *productInfo) {
+int sceNpCommerce2_5C691546(const SceNpCommerce2GetProductInfoResult *res, SceNpCommerce2ProductInfo *productInfo) {
     if (g_coreInitialized == 0)
         return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
-    if (res == NULL || productInfo == NULL)
+    if ((res == NULL) | (productInfo == NULL))
         return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
-    return parseProductInfoFromResult((const u32 *)res, (u32 *)productInfo);
+    return parseProductInfoFromResult(res, productInfo);
 }
 
-int sceNpCommerce2_993C29DB(void *productInfo, void *gameProductInfo) {
+int sceNpCommerce2_993C29DB(const SceNpCommerce2ProductInfo *productInfo, SceNpCommerce2GameProductInfo *gameProductInfo) {
     if (g_coreInitialized == 0)
         return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
-    if (productInfo == NULL || gameProductInfo == NULL)
+    if ((productInfo == NULL) | (gameProductInfo == NULL))
         return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
-    return parseGameProductFromResultProduct((const u32 *)productInfo, (u32 *)gameProductInfo);
+    return parseGameProductFromResultProduct(productInfo, gameProductInfo);
 }
 
-int sceNpCommerce2GetContentRatingInfoFromGameProductInfo(void *gameProd, void *ratingInfo) {
+int sceNpCommerce2GetContentRatingInfoFromGameProductInfo(const SceNpCommerce2GameProductInfo *gameProd, SceNpCommerce2ContentRatingInfo *ratingInfo) {
     CHECK_STACK(4080);
     if (g_coreInitialized == 0)
         return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
-    if (gameProd == NULL || ratingInfo == NULL)
+    if ((gameProd == NULL) | (ratingInfo == NULL))
         return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
-    return parseRatingInfo((const u32 *)gameProd, (u32 *)ratingInfo);
+    return parseRatingInfo(&gameProd->commonData, ratingInfo);
 }
 
-int sceNpCommerce2GetGameSkuInfoFromGameProductInfo(void *gameProd, u32 index, void *skuInfo) {
+int sceNpCommerce2GetGameSkuInfoFromGameProductInfo(const SceNpCommerce2GameProductInfo *gameProd, u32 index, SceNpCommerce2GameSkuInfo *skuInfo) {
     CHECK_STACK(4080);
     if (g_coreInitialized == 0)
         return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
-    if (gameProd == NULL || skuInfo == NULL)
+    if ((gameProd == NULL) | (skuInfo == NULL))
         return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
-    u32 *gp = (u32 *)gameProd;
-    return parseGameSkuFromProduct(gp, gp[10], index, (u32 *)skuInfo);
+    return parseGameSkuFromProduct(gameProd, (u32)gameProd->dataType, index, skuInfo);
 }
 
 int sceNpCommerce2_7EB30CAA(u32 ctxId, void *buf, u32 bufSize, u32 *sizeOut) {
     if (g_coreInitialized == 0)
         return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
-    if (buf == NULL || bufSize == 0)
+    if ((buf == NULL) | (bufSize == 0))
         return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
     return getCachedSessionInternal(ctxId, buf, bufSize, sizeOut);
 }
 
-int sceNpCommerce2GetSessionInfo(u8 *sessionInfoOut, const void *buf, u32 bufSize) {
-    u32 sessRes[12];
-    u32 currInfo[24];
+int sceNpCommerce2GetSessionInfo(SceNpCommerce2SessionInfo *sessionInfoOut, const void *buf, u32 bufSize) {
+    SceNpCommerce2CreateSessionResult sessRes;
+    SceNpCommerce2CurrencyInfo currInfo;
     int ret;
     CHECK_STACK(3936);
     if (g_apiInitialized == 0)
         return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
-    if (sessionInfoOut == NULL || buf == NULL || bufSize == 0)
+    if (((buf == NULL) | (bufSize == 0)) || sessionInfoOut == NULL)
         return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 
-    ret = sceNpCommerce2_48D77A66(sessRes, buf, bufSize);
+    ret = sceNpCommerce2_48D77A66(&sessRes, buf, bufSize);
     if (ret < 0) return ret;
-    ret = sceNpCommerce2_287B6FB3(sessRes, 0, currInfo);
+    ret = sceNpCommerce2_287B6FB3(&sessRes, 0, &currInfo);
     if (ret < 0) return ret;
 
     u32 sdkVer = (u32)sceKernelGetCompiledSdkVersion();
-    sceKernelMemset(sessionInfoOut, 0, (sdkVer > SDK_VER_600) ? 48 : 8);
-    sceKernelMemcpy(sessionInfoOut, (const void *)(uintptr_t)currInfo[10], 3);
-    sessionInfoOut[3] = 0;
-    *(u32 *)(sessionInfoOut + 4) = *(u16 *)(currInfo + 12);
+    sceKernelMemset(sessionInfoOut, 0, (sdkVer > SCE_NP_COMMERCE2_SDK_VER_600) ? sizeof(SceNpCommerce2SessionInfo) : 8u);
+    sceKernelMemcpy(sessionInfoOut->currencyCode, currInfo.currencyCode, 3);
+    sessionInfoOut->currencyCode[3] = '\0';
+    sessionInfoOut->decimals = currInfo.decimals;
 
-    if (sdkVer > SDK_VER_600) {
-        sceKernelMemcpy(sessionInfoOut + 8, (const void *)(uintptr_t)currInfo[11], 3);
-        sessionInfoOut[11] = 0;
-        *(u32 *)(sessionInfoOut + 12) = currInfo[16];
-        *(u32 *)(sessionInfoOut + 16) = currInfo[17];
-        sceKernelMemcpy(sessionInfoOut + 20, (const void *)(uintptr_t)currInfo[19], 4);
-        sessionInfoOut[24] = 0;
-        sceKernelMemcpy(sessionInfoOut + 25, (const void *)(uintptr_t)currInfo[20], 4);
-        sessionInfoOut[29] = 0;
+    if (sdkVer > SCE_NP_COMMERCE2_SDK_VER_600) {
+        sceKernelMemcpy(sessionInfoOut->currencySymbol, currInfo.currencySymbol, 3);
+        sessionInfoOut->currencySymbol[3] = '\0';
+        sessionInfoOut->symbolPosition = currInfo.symbolPosition;
+        sessionInfoOut->symbolWithSpace = currInfo.symbolWithSpace;
+        sceKernelMemcpy(sessionInfoOut->thousandSeparator, currInfo.thousandSeparator, 4);
+        sessionInfoOut->thousandSeparator[4] = '\0';
+        sceKernelMemcpy(sessionInfoOut->decimalLetter, currInfo.decimalLetter, 4);
+        sessionInfoOut->decimalLetter[4] = '\0';
     }
     return 0;
 }
 
-int sceNpCommerce2GetGameProductInfoFromContentInfo(void *contentInfo, void *gameProd) {
-    u32 prodInfo[12];
+int sceNpCommerce2GetGameProductInfoFromContentInfo(const SceNpCommerce2ContentInfo *contentInfo, SceNpCommerce2GameProductInfo *gameProd) {
+    SceNpCommerce2ProductInfo prodInfo;
     int ret;
     CHECK_STACK(4032);
     if (g_apiInitialized == 0)
         return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
-    ret = sceNpCommerce2_3D88DCCA(contentInfo, prodInfo);
+    ret = sceNpCommerce2_3D88DCCA(contentInfo, &prodInfo);
     if (ret < 0) return ret;
-    return sceNpCommerce2_1D9C32C0(prodInfo, gameProd);
+    return sceNpCommerce2_1D9C32C0(&prodInfo, gameProd);
 }
 
-int sceNpCommerce2GetGameProductInfo(void *res, void *gameProd) {
-    u32 prodInfo[12];
+int sceNpCommerce2GetGameProductInfo(const SceNpCommerce2GetProductInfoResult *res, SceNpCommerce2GameProductInfo *gameProd) {
+    SceNpCommerce2ProductInfo prodInfo;
     int ret;
     CHECK_STACK(4032);
     if (g_apiInitialized == 0)
         return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
-    ret = sceNpCommerce2_5C691546(res, prodInfo);
+    ret = sceNpCommerce2_5C691546(res, &prodInfo);
     if (ret < 0) return ret;
-    return sceNpCommerce2_993C29DB(prodInfo, gameProd);
+    return sceNpCommerce2_993C29DB(&prodInfo, gameProd);
 }
 
-static int appendStr(char **p, char *end, const char *s) {
-    u32 len = sceNet_lib_D8722983(s);
-    if (*p + len >= end)
+static __inline__ __attribute__((always_inline)) int appendPriceStr(char *dst, char *end, const char *str) {
+    u32 len = sceNet_lib_D8722983(str);
+    if (dst + len >= end)
         return SCE_NP_COMMERCE2_ERROR_INSUFFICIENT_BUFFER;
-    sceNet_lib_80C9F02A(*p, s);
-    *p += len;
-    return (int)len;
+    sceNet_lib_80C9F02A(dst, str);
+    return (int)sceNet_lib_D8722983(str);
 }
 
-int sceNpCommerce2GetPrice(const u8 *sessionInfo, char *outBuf, u32 outBufSize, u32 price) {
-    char tmp[32];
+int sceNpCommerce2GetPrice(const SceNpCommerce2SessionInfo *sessionInfo, char *outBuf, u32 outBufSize, u32 price) {
+    char formatted[32];
     char numStr[32];
-    char *p = tmp;
-    char *end = tmp + sizeof(tmp);
+    char *cur = formatted;
+    char *end = formatted + sizeof(formatted);
     int ret = 0;
 
     if (_sceKernelCheckThreadStack() < 4080)
@@ -3455,68 +3816,78 @@ int sceNpCommerce2GetPrice(const u8 *sessionInfo, char *outBuf, u32 outBufSize, 
     if (g_apiInitialized == 0)
         return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 
-    const char *currencySymbol = (const char *)sessionInfo;
-    u32 decimals = *(const u32 *)(sessionInfo + 4);
-    u32 symbolPos = *(const u32 *)(sessionInfo + 12);
-    const char *thousandSep = (const char *)(sessionInfo + 20);
-    const char *decimalSep = (const char *)(sessionInfo + 25);
-
-    if (symbolPos == 0) {
-        ret = appendStr(&p, end, currencySymbol);
+    if (sessionInfo->symbolPosition == SCE_NP_COMMERCE2_SYM_POS_PRE) {
+        char *start = cur;
+        ret = appendPriceStr(cur, end, sessionInfo->currencyCode);
         if (ret < 0) return ret;
-        ret = appendStr(&p, end, " ");
-        if (ret < 0) return ret;
+        cur += ret;
+        if (sessionInfo->symbolPosition == SCE_NP_COMMERCE2_SYM_POS_PRE) {
+            ret = appendPriceStr(cur, end, " ");
+            if (ret < 0) return ret;
+            cur += ret;
+        }
+        ret = (int)(cur - start);
     }
 
     sceNet_lib_CF705E46(numStr, "%u", price);
     numStr[31] = '\0';
     u32 numLen = sceNet_lib_D8722983(numStr);
-    if (p + numLen + (numLen - 1) / 3u + 1 >= end)
+    if (cur + numLen + (numLen - 1) / 3u + 1 >= end)
         return SCE_NP_COMMERCE2_ERROR_INSUFFICIENT_BUFFER;
 
-    s32 intDigits = (s32)numLen - (s32)decimals;
+    s32 intDigits = (s32)sceNet_lib_D8722983(numStr) - (s32)sessionInfo->decimals;
     if (intDigits <= 0) {
-        ret = appendStr(&p, end, "0");
+        ret = appendPriceStr(cur, end, "0");
         if (ret < 0) return ret;
+        cur += ret;
     } else {
-        u32 i;
-        for (i = 0; i < (u32)intDigits; i++) {
-            *p++ = numStr[i];
-            *p = '\0';
-            u32 rem = (u32)intDigits - i - 1;
+        u32 idx;
+        for (idx = 0; idx < (u32)intDigits; idx++) {
+            *cur++ = numStr[idx];
+            *cur = '\0';
+            u32 rem = (u32)intDigits - idx - 1;
             if (rem != 0 && (rem % 3u) == 0) {
-                ret = appendStr(&p, end, thousandSep);
+                ret = appendPriceStr(cur, end, sessionInfo->thousandSeparator);
                 if (ret < 0) return ret;
+                cur += ret;
             }
         }
     }
 
-    if (decimals != 0 && sceNet_lib_D8722983(decimalSep) != 0) {
-        ret = appendStr(&p, end, decimalSep);
+    if (sessionInfo->decimals != 0 && sceNet_lib_D8722983(sessionInfo->decimalLetter) != 0) {
+        ret = appendPriceStr(cur, end, sessionInfo->decimalLetter);
         if (ret < 0) return ret;
+        cur += ret;
         if (intDigits > 0) {
-            ret = appendStr(&p, end, numStr + intDigits);
+            ret = appendPriceStr(cur, end, numStr + intDigits);
             if (ret < 0) return ret;
+            cur += ret;
         } else {
-            u32 z;
-            for (z = 0; z < (u32)(-intDigits); z++) {
-                ret = appendStr(&p, end, "0");
+            u32 zeroIdx;
+            for (zeroIdx = 0; zeroIdx < (u32)(-intDigits); zeroIdx++) {
+                ret = appendPriceStr(cur, end, "0");
                 if (ret < 0) return ret;
+                cur += ret;
             }
-            ret = appendStr(&p, end, numStr);
+            ret = appendPriceStr(cur, end, numStr);
             if (ret < 0) return ret;
+            cur += ret;
         }
     }
 
-    if (symbolPos == 1) {
-        ret = appendStr(&p, end, " ");
+    if (sessionInfo->symbolPosition == SCE_NP_COMMERCE2_SYM_POS_POST) {
+        char *start = cur;
+        ret = appendPriceStr(cur, end, " ");
         if (ret < 0) return ret;
-        ret = appendStr(&p, end, currencySymbol);
+        cur += ret;
+        ret = appendPriceStr(cur, end, sessionInfo->currencyCode);
         if (ret < 0) return ret;
+        cur += ret;
+        ret = (int)(cur - start);
     }
 
-    if (sceNet_lib_D8722983(tmp) >= outBufSize)
+    if (sceNet_lib_D8722983(formatted) >= outBufSize)
         return SCE_NP_COMMERCE2_ERROR_INSUFFICIENT_BUFFER;
-    sceNet_lib_80C9F02A(outBuf, tmp);
-    return 0;
+    sceNet_lib_80C9F02A(outBuf, formatted);
+    return ret;
 }
