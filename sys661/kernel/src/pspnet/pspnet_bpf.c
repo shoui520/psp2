@@ -1,7 +1,7 @@
 #include "pspnet_internal.h"
 
-#define NBPFILTER 8
-#define BPF_MAXINSNS 512
+#define NBPFILTER      8
+#define BPF_MAXINSNS   512
 #define BPF_MAXBUFSIZE 0x8000
 #define BPF_MINBUFSIZE 32
 
@@ -17,93 +17,108 @@ typedef struct BpfProgram {
     BpfInsn *bf_insns;
 } BpfProgram;
 
+typedef struct BpfHdr {
+    NetTimeval bh_tstamp;        /* 0x00 */
+    u32 bh_caplen;               /* 0x08 */
+    u32 bh_datalen;              /* 0x0C */
+    u16 bh_hdrlen;               /* 0x10 */
+} BpfHdr;
+
+typedef struct BpfStat {
+    u32 bs_recv;
+    u32 bs_drop;
+} BpfStat;
+
+typedef struct BpfVersion {
+    u16 bv_major;
+    u16 bv_minor;
+} BpfVersion;
+
 typedef struct BpfIf {
     struct BpfIf *bif_next;
     struct BpfDesc *bif_dlist;
     void **bif_driverp;
     u32 bif_dlt;
     u32 bif_hdrlen;
-    void *bif_ifp;
+    NetIfnet *bif_ifp;
 } BpfIf;
 
 typedef struct BpfDesc {
-    struct BpfDesc *bd_next;     /* 0x00 (0) */
-    u8 *bd_sbuf;                 /* 0x04 (1) */
-    u8 *bd_hbuf;                 /* 0x08 (2) */
-    u8 *bd_fbuf;                 /* 0x0C (3) */
-    u32 bd_slen;                 /* 0x10 (4) */
-    u32 bd_hlen;                 /* 0x14 (5) */
-    u32 bd_bufsize;              /* 0x18 (6) */
-    BpfIf *bd_bif;               /* 0x1C (7) */
-    s32 bd_rtout;                /* 0x20 (8) */
-    BpfInsn *bd_filter;          /* 0x24 (9) */
-    u32 bd_rcount;               /* 0x28 (10) */
-    u32 bd_dcount;               /* 0x2C (11) */
+    struct BpfDesc *bd_next;     /* 0x00 */
+    u8 *bd_sbuf;                 /* 0x04 */
+    u8 *bd_hbuf;                 /* 0x08 */
+    u8 *bd_fbuf;                 /* 0x0C */
+    u32 bd_slen;                 /* 0x10 */
+    u32 bd_hlen;                 /* 0x14 */
+    u32 bd_bufsize;              /* 0x18 */
+    BpfIf *bd_bif;               /* 0x1C */
+    s32 bd_rtout;                /* 0x20 */
+    BpfInsn *bd_filter;          /* 0x24 */
+    u32 bd_rcount;               /* 0x28 */
+    u32 bd_dcount;               /* 0x2C */
     u8 bd_promisc;               /* 0x30 */
     u8 bd_state;                 /* 0x31 */
     u8 bd_immediate;             /* 0x32 */
     u8 bd_pad;                   /* 0x33 */
-    u32 bd_hdrcmplt;             /* 0x34 (13) */
-    SceUID bd_sel_thid;          /* 0x38 (14) */
-    u32 bd_reserved;             /* 0x3C (15) */
+    u32 bd_hdrcmplt;             /* 0x34 */
+    SceUID bd_sel_thid;          /* 0x38 */
+    u32 bd_reserved;             /* 0x3C */
 } BpfDesc;
 
 static u32 g_bpf_bufsize = 0x2000;
 static BpfIf *g_bpf_iflist = NULL;
 static BpfDesc g_bpf_dtab[NBPFILTER];
 
-static u32 m_xword(void *m0, u32 k, int *err)
+static u32 m_xword(NetMbuf *mbuf, u32 offset, int *err)
 {
-    u32 *m = (u32 *)m0;
-    u32 len = m[3];
-    while (k >= len) {
-        k -= len;
-        m = (u32 *)m[0];
-        if (m == NULL) {
+    u32 len = mbuf->m_len;
+    while (offset >= len) {
+        offset -= len;
+        mbuf = mbuf->m_next;
+        if (mbuf == NULL) {
             *err = 1;
             return 0;
         }
-        len = m[3];
+        len = mbuf->m_len;
     }
-    u8 *cp = (u8 *)m[2] + k;
-    u32 rem = len - k;
+    u8 *cp = mbuf->m_data + offset;
+    u32 rem = len - offset;
     if (rem >= 4) {
         *err = 0;
         return ((u32)cp[0] << 24) | ((u32)cp[1] << 16) | ((u32)cp[2] << 8) | cp[3];
     }
-    u32 *m2 = (u32 *)m[0];
-    if (m2 != NULL && m2[3] + rem >= 4) {
-        u8 *cp2 = (u8 *)m2[2];
+    NetMbuf *next = mbuf->m_next;
+    if (next != NULL && next->m_len + rem >= 4) {
+        u8 *np = next->m_data;
         *err = 0;
         if (rem == 1)
-            return ((u32)cp[0] << 24) | ((u32)cp2[0] << 16) | ((u32)cp2[1] << 8) | cp2[2];
+            return ((u32)cp[0] << 24) | ((u32)np[0] << 16) | ((u32)np[1] << 8) | np[2];
         if (rem == 2)
-            return ((u32)cp[0] << 24) | ((u32)cp[1] << 16) | ((u32)cp2[0] << 8) | cp2[1];
-        return ((u32)cp[0] << 24) | ((u32)cp[1] << 16) | ((u32)cp[2] << 8) | cp2[0];
+            return ((u32)cp[0] << 24) | ((u32)cp[1] << 16) | ((u32)np[0] << 8) | np[1];
+        return ((u32)cp[0] << 24) | ((u32)cp[1] << 16) | ((u32)cp[2] << 8) | np[0];
     }
     *err = 1;
     return 0;
 }
 
-static u32 m_xhalf(void *m0, u32 k, int *err)
+static u32 m_xhalf(NetMbuf *mbuf, u32 offset, int *err)
 {
-    u32 *m = (u32 *)m0;
-    u32 len = m[3];
-    while (k >= len) {
-        k -= len;
-        m = (u32 *)m[0];
-        if (m == NULL) {
+    u32 len = mbuf->m_len;
+    while (offset >= len) {
+        offset -= len;
+        mbuf = mbuf->m_next;
+        if (mbuf == NULL) {
             *err = 1;
             return 0;
         }
-        len = m[3];
+        len = mbuf->m_len;
     }
-    u8 *cp = (u8 *)m[2] + k;
-    if (len - k < 2) {
-        u32 *m2 = (u32 *)m[0];
-        if (m2 != NULL) {
+    u8 *cp = mbuf->m_data + offset;
+    if (len - offset < 2) {
+        NetMbuf *next = mbuf->m_next;
+        if (next != NULL) {
             *err = 0;
-            return ((u32)cp[0] << 8) | ((u8 *)m2[2])[0];
+            return ((u32)cp[0] << 8) | next->m_data[0];
         }
         *err = 1;
         return 0;
@@ -112,34 +127,35 @@ static u32 m_xhalf(void *m0, u32 k, int *err)
     return ((u32)cp[0] << 8) | cp[1];
 }
 
-static int bpf_validate(const BpfInsn *f, int len)
+static int bpf_validate(const BpfInsn *insns, int len)
 {
-    int i;
-    for (i = 0; i < len; i++) {
-        const BpfInsn *p = &f[i];
-        if ((p->code & 7) == 5) {
-            if ((p->code & 0xF0) != 0) {
-                if (i + 1 + p->jt >= len || i + 1 + p->jf >= len)
+    int idx;
+    for (idx = 0; idx < len; idx++) {
+        const BpfInsn *insn = &insns[idx];
+        if ((insn->code & 7) == 5) {
+            if ((insn->code & 0xF0) != 0) {
+                if (idx + 1 + insn->jt >= len || idx + 1 + insn->jf >= len)
                     return 0;
             } else {
-                s32 k = (s32)p->k;
-                if (k < 0 || i + 1 + k >= len || i + 1 + k < 0)
+                s32 rel = (s32)insn->k;
+                if (rel < 0 || idx + 1 + rel >= len || idx + 1 + rel < 0)
                     return 0;
             }
         }
-        if ((p->code & 7) == 2 || (p->code & 0xE7) == 0x60) {
-            if (p->k >= 16)
+        if ((insn->code & 7) == 2 || (insn->code & 0xE7) == 0x60) {
+            if (insn->k >= 16)
                 return 0;
         }
-        if (p->code == 0x34 && p->k == 0)
+        if (insn->code == 0x34 && insn->k == 0)
             return 0;
     }
-    return (f[len - 1].code & 7) == 6;
+    return (insns[len - 1].code & 7) == 6;
 }
 
-static u32 bpf_filter(const BpfInsn *pc, void *p, u32 wirelen, u32 buflen)
+static u32 bpf_filter(const BpfInsn *pc, void *pkt, u32 wirelen, u32 buflen)
 {
-    u32 A = 0, X = 0;
+    u32 acc = 0;
+    u32 reg_x = 0;
     u32 mem[16];
     int merr;
 
@@ -150,157 +166,157 @@ static u32 bpf_filter(const BpfInsn *pc, void *p, u32 wirelen, u32 buflen)
     for (;;) {
         pc++;
         switch (pc->code) {
-        case 0x00: A = pc->k; continue;
-        case 0x01: X = pc->k; continue;
-        case 0x02: mem[pc->k] = A; continue;
-        case 0x03: mem[pc->k] = X; continue;
-        case 0x04: A += pc->k; continue;
+        case 0x00: acc = pc->k; continue;
+        case 0x01: reg_x = pc->k; continue;
+        case 0x02: mem[pc->k] = acc; continue;
+        case 0x03: mem[pc->k] = reg_x; continue;
+        case 0x04: acc += pc->k; continue;
         case 0x05: pc += pc->k; continue;
         case 0x06: return pc->k;
-        case 0x07: X = A; continue;
-        case 0x0C: A += X; continue;
-        case 0x14: A -= pc->k; continue;
-        case 0x15: pc += (A == pc->k) ? pc->jt : pc->jf; continue;
-        case 0x16: return A;
-        case 0x1C: A -= X; continue;
-        case 0x1D: pc += (A == X) ? pc->jt : pc->jf; continue;
+        case 0x07: reg_x = acc; continue;
+        case 0x0C: acc += reg_x; continue;
+        case 0x14: acc -= pc->k; continue;
+        case 0x15: pc += (acc == pc->k) ? pc->jt : pc->jf; continue;
+        case 0x16: return acc;
+        case 0x1C: acc -= reg_x; continue;
+        case 0x1D: pc += (acc == reg_x) ? pc->jt : pc->jf; continue;
         case 0x20: {
-            u32 k = pc->k;
-            if (k + 4 <= buflen) {
-                u8 *cp = (u8 *)p + k;
-                A = ((u32)cp[0] << 24) | ((u32)cp[1] << 16) | ((u32)cp[2] << 8) | cp[3];
+            u32 offset = pc->k;
+            if (offset + 4 <= buflen) {
+                u8 *cp = (u8 *)pkt + offset;
+                acc = ((u32)cp[0] << 24) | ((u32)cp[1] << 16) | ((u32)cp[2] << 8) | cp[3];
             } else {
                 if (buflen != 0)
                     return 0;
                 merr = 0;
-                A = m_xword(p, k, &merr);
+                acc = m_xword((NetMbuf *)pkt, offset, &merr);
                 if (merr != 0)
                     return 0;
             }
             continue;
         }
-        case 0x24: A *= pc->k; continue;
-        case 0x25: pc += (A > pc->k) ? pc->jt : pc->jf; continue;
+        case 0x24: acc *= pc->k; continue;
+        case 0x25: pc += (acc > pc->k) ? pc->jt : pc->jf; continue;
         case 0x28: {
-            u32 k = pc->k;
-            if (k + 2 <= buflen) {
-                u8 *cp = (u8 *)p + k;
-                A = ((u32)cp[0] << 8) | cp[1];
+            u32 offset = pc->k;
+            if (offset + 2 <= buflen) {
+                u8 *cp = (u8 *)pkt + offset;
+                acc = ((u32)cp[0] << 8) | cp[1];
             } else {
                 if (buflen != 0)
                     return 0;
                 merr = 0;
-                A = m_xhalf(p, k, &merr);
+                acc = m_xhalf((NetMbuf *)pkt, offset, &merr);
             }
             continue;
         }
-        case 0x2C: A *= X; continue;
-        case 0x2D: pc += (A > X) ? pc->jt : pc->jf; continue;
+        case 0x2C: acc *= reg_x; continue;
+        case 0x2D: pc += (acc > reg_x) ? pc->jt : pc->jf; continue;
         case 0x30: {
-            s32 k = (s32)pc->k;
-            if ((u32)k < buflen) {
-                A = ((u8 *)p)[k];
+            s32 offset = (s32)pc->k;
+            if ((u32)offset < buflen) {
+                acc = ((u8 *)pkt)[offset];
             } else {
                 if (buflen != 0)
                     return 0;
-                u32 *m = (u32 *)p;
-                while (k >= (s32)m[3]) {
-                    k -= (s32)m[3];
-                    m = (u32 *)m[0];
-                    if (m == NULL)
+                NetMbuf *mbuf = (NetMbuf *)pkt;
+                while (offset >= (s32)mbuf->m_len) {
+                    offset -= (s32)mbuf->m_len;
+                    mbuf = mbuf->m_next;
+                    if (mbuf == NULL)
                         return 0;
                 }
-                A = ((u8 *)m[2])[k];
+                acc = mbuf->m_data[offset];
             }
             continue;
         }
-        case 0x34: A /= pc->k; continue;
-        case 0x35: pc += (A >= pc->k) ? pc->jt : pc->jf; continue;
+        case 0x34: acc /= pc->k; continue;
+        case 0x35: pc += (acc >= pc->k) ? pc->jt : pc->jf; continue;
         case 0x3C:
-            if (X == 0)
+            if (reg_x == 0)
                 return 0;
-            A /= X;
+            acc /= reg_x;
             continue;
-        case 0x3D: pc += (A >= X) ? pc->jt : pc->jf; continue;
+        case 0x3D: pc += (acc >= reg_x) ? pc->jt : pc->jf; continue;
         case 0x40: {
-            u32 k = X + pc->k;
-            if (k + 4 <= buflen) {
-                u8 *cp = (u8 *)p + k;
-                A = ((u32)cp[0] << 24) | ((u32)cp[1] << 16) | ((u32)cp[2] << 8) | cp[3];
+            u32 offset = reg_x + pc->k;
+            if (offset + 4 <= buflen) {
+                u8 *cp = (u8 *)pkt + offset;
+                acc = ((u32)cp[0] << 24) | ((u32)cp[1] << 16) | ((u32)cp[2] << 8) | cp[3];
             } else {
                 if (buflen != 0)
                     return 0;
                 merr = 0;
-                A = m_xword(p, k, &merr);
+                acc = m_xword((NetMbuf *)pkt, offset, &merr);
                 if (merr != 0)
                     return 0;
             }
             continue;
         }
-        case 0x44: A |= pc->k; continue;
-        case 0x45: pc += (A & pc->k) ? pc->jt : pc->jf; continue;
+        case 0x44: acc |= pc->k; continue;
+        case 0x45: pc += (acc & pc->k) ? pc->jt : pc->jf; continue;
         case 0x48: {
-            u32 k = X + pc->k;
-            if (k + 2 <= buflen) {
-                u8 *cp = (u8 *)p + k;
-                A = ((u32)cp[0] << 8) | cp[1];
+            u32 offset = reg_x + pc->k;
+            if (offset + 2 <= buflen) {
+                u8 *cp = (u8 *)pkt + offset;
+                acc = ((u32)cp[0] << 8) | cp[1];
             } else {
                 if (buflen != 0)
                     return 0;
                 merr = 0;
-                A = m_xhalf(p, k, &merr);
+                acc = m_xhalf((NetMbuf *)pkt, offset, &merr);
                 if (merr != 0)
                     return 0;
             }
             continue;
         }
-        case 0x4C: A |= X; continue;
-        case 0x4D: pc += (A & X) ? pc->jt : pc->jf; continue;
+        case 0x4C: acc |= reg_x; continue;
+        case 0x4D: pc += (acc & reg_x) ? pc->jt : pc->jf; continue;
         case 0x50: {
-            s32 k = (s32)(X + pc->k);
-            if ((u32)k < buflen) {
-                A = ((u8 *)p)[k];
+            s32 offset = (s32)(reg_x + pc->k);
+            if ((u32)offset < buflen) {
+                acc = ((u8 *)pkt)[offset];
             } else {
                 if (buflen != 0)
                     return 0;
-                u32 *m = (u32 *)p;
-                while (k >= (s32)m[3]) {
-                    k -= (s32)m[3];
-                    m = (u32 *)m[0];
-                    if (m == NULL)
+                NetMbuf *mbuf = (NetMbuf *)pkt;
+                while (offset >= (s32)mbuf->m_len) {
+                    offset -= (s32)mbuf->m_len;
+                    mbuf = mbuf->m_next;
+                    if (mbuf == NULL)
                         return 0;
                 }
-                A = ((u8 *)m[2])[k];
+                acc = mbuf->m_data[offset];
             }
             continue;
         }
-        case 0x54: A &= pc->k; continue;
-        case 0x5C: A &= X; continue;
-        case 0x60: A = mem[pc->k]; continue;
-        case 0x61: X = mem[pc->k]; continue;
-        case 0x64: A <<= pc->k; continue;
-        case 0x6C: A <<= X; continue;
-        case 0x74: A >>= pc->k; continue;
-        case 0x7C: A >>= X; continue;
-        case 0x80: A = wirelen; continue;
-        case 0x81: X = wirelen; continue;
-        case 0x84: A = (u32)(-(s32)A); continue;
-        case 0x87: A = X; continue;
+        case 0x54: acc &= pc->k; continue;
+        case 0x5C: acc &= reg_x; continue;
+        case 0x60: acc = mem[pc->k]; continue;
+        case 0x61: reg_x = mem[pc->k]; continue;
+        case 0x64: acc <<= pc->k; continue;
+        case 0x6C: acc <<= reg_x; continue;
+        case 0x74: acc >>= pc->k; continue;
+        case 0x7C: acc >>= reg_x; continue;
+        case 0x80: acc = wirelen; continue;
+        case 0x81: reg_x = wirelen; continue;
+        case 0x84: acc = (u32)(-(s32)acc); continue;
+        case 0x87: acc = reg_x; continue;
         case 0xB1: {
-            s32 k = (s32)pc->k;
-            if ((u32)k < buflen) {
-                X = 4 * (((u8 *)p)[k] & 0xF);
+            s32 offset = (s32)pc->k;
+            if ((u32)offset < buflen) {
+                reg_x = 4 * (((u8 *)pkt)[offset] & 0xF);
             } else {
                 if (buflen != 0)
                     return 0;
-                u32 *m = (u32 *)p;
-                while (k >= (s32)m[3]) {
-                    k -= (s32)m[3];
-                    m = (u32 *)m[0];
-                    if (m == NULL)
+                NetMbuf *mbuf = (NetMbuf *)pkt;
+                while (offset >= (s32)mbuf->m_len) {
+                    offset -= (s32)mbuf->m_len;
+                    mbuf = mbuf->m_next;
+                    if (mbuf == NULL)
                         return 0;
                 }
-                X = 4 * (((u8 *)m[2])[k] & 0xF);
+                reg_x = 4 * (mbuf->m_data[offset] & 0xF);
             }
             continue;
         }
@@ -310,213 +326,216 @@ static u32 bpf_filter(const BpfInsn *pc, void *p, u32 wirelen, u32 buflen)
     }
 }
 
-static void *bpf_mcopy(void *dst, void *m0, u32 len)
+static void *bpf_mcopy(void *dst, void *src_mbuf, u32 len)
 {
     u8 *dp = (u8 *)dst;
-    u32 *m = (u32 *)m0;
+    NetMbuf *mbuf = (NetMbuf *)src_mbuf;
     while (len != 0) {
-        u32 count = m[3];
+        u32 count = mbuf->m_len;
         if (count > len)
             count = len;
-        sceKernelMemcpy(dp, (void *)m[2], count);
+        sceKernelMemcpy(dp, mbuf->m_data, count);
         dp += count;
         len -= count;
-        m = (u32 *)m[0];
+        mbuf = mbuf->m_next;
     }
     return dst;
 }
 
-static void bpf_catchpacket(BpfDesc *d, void *pkt, u32 pktlen, u32 snaplen,
+static void bpf_catchpacket(BpfDesc *desc, void *pkt, u32 pktlen, u32 snaplen,
                             void *(*cpfn)(void *, void *, u32))
 {
-    u32 curlen, hdrlen, totlen;
-    u32 tv[2];
+    u32 curlen, hdrlen, totlen, endlen;
+    NetTimeval tv;
 
     if (snaplen > pktlen)
         snaplen = pktlen;
 
-    hdrlen = d->bd_bif->bif_hdrlen;
+    hdrlen = desc->bd_bif->bif_hdrlen;
     totlen = hdrlen + snaplen;
-    if (totlen > d->bd_bufsize)
-        totlen = d->bd_bufsize;
+    if (totlen > desc->bd_bufsize)
+        totlen = desc->bd_bufsize;
 
-    curlen = (d->bd_slen + 3) & ~3u;
-    if (curlen + totlen > d->bd_bufsize) {
-        if (d->bd_fbuf == NULL) {
-            d->bd_dcount++;
+    curlen = (desc->bd_slen + 3) & ~3u;
+    endlen = curlen + totlen;
+    if ((s32)endlen > (s32)desc->bd_bufsize) {
+        if (desc->bd_fbuf == NULL) {
+            desc->bd_dcount++;
             return;
         }
-        d->bd_hbuf = d->bd_sbuf;
-        d->bd_hlen = d->bd_slen;
-        d->bd_sbuf = d->bd_fbuf;
-        d->bd_fbuf = NULL;
-        d->bd_slen = 0;
+        desc->bd_hlen = desc->bd_slen;
+        desc->bd_slen = 0;
+        desc->bd_hbuf = desc->bd_sbuf;
+        desc->bd_sbuf = desc->bd_fbuf;
+        desc->bd_fbuf = NULL;
         curlen = 0;
-        sceNet_lib_7574FDA1((u32)d);
-        sceNet_lib_B9C780C7(&d->bd_sel_thid);
-    } else if (d->bd_immediate) {
-        sceNet_lib_7574FDA1((u32)d);
-        sceNet_lib_B9C780C7(&d->bd_sel_thid);
+        endlen = totlen;
+        sceNet_lib_7574FDA1((u32)desc);
+        sceNet_lib_B9C780C7(&desc->bd_sel_thid);
+    } else if (desc->bd_immediate) {
+        sceNet_lib_7574FDA1((u32)desc);
+        sceNet_lib_B9C780C7(&desc->bd_sel_thid);
     }
 
-    u8 *hp = d->bd_sbuf + curlen;
-    sceNet_lib_4B2B3416(tv);
-    *(u32 *)(hp + 0) = tv[0];
-    *(u32 *)(hp + 4) = tv[1];
-    *(u32 *)(hp + 8) = totlen - hdrlen;
-    *(u32 *)(hp + 12) = pktlen;
-    *(u16 *)(hp + 16) = (u16)hdrlen;
-    cpfn(hp + hdrlen, pkt, totlen - hdrlen);
-    d->bd_slen = curlen + totlen;
+    u8 *base = desc->bd_sbuf + curlen;
+    BpfHdr *hdr = (BpfHdr *)base;
+    sceNet_lib_4B2B3416(&tv);
+    hdr->bh_hdrlen = (u16)hdrlen;
+    hdr->bh_tstamp.tv_sec = tv.tv_sec;
+    hdr->bh_datalen = pktlen;
+    hdr->bh_tstamp.tv_usec = tv.tv_usec;
+    hdr->bh_caplen = totlen - hdrlen;
+    cpfn(base + hdrlen, pkt, totlen - hdrlen);
+    desc->bd_slen = endlen;
 }
 
-void bpf_mtap(void *bp_arg, void *m0)
+void bpf_mtap(void *bp_arg, NetMbuf *mbuf_head)
 {
     BpfIf *bp = (BpfIf *)bp_arg;
-    u32 *m = (u32 *)m0;
+    NetMbuf *mbuf = mbuf_head;
     u32 pktlen = 0;
-    while (m != NULL) {
-        pktlen += m[3];
-        m = (u32 *)m[0];
+    while (mbuf != NULL) {
+        pktlen += mbuf->m_len;
+        mbuf = mbuf->m_next;
     }
-    int s = sceNet_lib_94B44F26();
-    BpfDesc *d = bp->bif_dlist;
-    while (d != NULL) {
-        d->bd_rcount++;
-        u32 slen = bpf_filter(d->bd_filter, m0, pktlen, 0);
+    int spl = sceNet_lib_94B44F26();
+    BpfDesc *desc = bp->bif_dlist;
+    while (desc != NULL) {
+        desc->bd_rcount++;
+        u32 slen = bpf_filter(desc->bd_filter, mbuf_head, pktlen, 0);
         if (slen != 0)
-            bpf_catchpacket(d, m0, pktlen, slen, bpf_mcopy);
-        d = d->bd_next;
+            bpf_catchpacket(desc, mbuf_head, pktlen, slen, bpf_mcopy);
+        desc = desc->bd_next;
     }
-    sceNet_lib_515B2F33(s);
+    sceNet_lib_515B2F33(spl);
 }
 
-void bpf_attach(void **bp_ptr, void *ifp, u32 dlt, u32 hdrlen)
+void bpf_attach(void **bp_ptr, NetIfnet *ifp, u32 dlt, u32 hdrlen)
 {
     BpfIf *bp = (BpfIf *)sceNetIfhandle_lib_15CFE3C0(sizeof(BpfIf));
     bp->bif_next = g_bpf_iflist;
-    g_bpf_iflist = bp;
-    bp->bif_dlist = NULL;
-    bp->bif_driverp = bp_ptr;
-    bp->bif_dlt = dlt;
-    bp->bif_hdrlen = ((hdrlen + 23) & ~3u) - hdrlen;
     bp->bif_ifp = ifp;
+    g_bpf_iflist = bp;
+    bp->bif_dlt = dlt;
     *bp_ptr = NULL;
+    bp->bif_driverp = bp_ptr;
+    bp->bif_hdrlen = ((hdrlen + 23) & ~3u) - hdrlen;
+    bp->bif_dlist = NULL;
 }
 
-static void bpf_detachd(BpfDesc *d)
+static inline void bpf_detachd_inline(BpfDesc *desc)
 {
-    BpfIf *bp = d->bd_bif;
-    BpfDesc **p = &bp->bif_dlist;
-    while (*p != d)
-        p = &(*p)->bd_next;
-    *p = d->bd_next;
+    BpfIf *bp = desc->bd_bif;
+    BpfDesc **pp = &bp->bif_dlist;
+    while (*pp != desc)
+        pp = &(*pp)->bd_next;
+    *pp = desc->bd_next;
     if (bp->bif_dlist == NULL)
         *bp->bif_driverp = NULL;
-    d->bd_bif = NULL;
+    desc->bd_bif = NULL;
 }
 
-void bpf_detach(void *ifp)
+void bpf_detach(NetIfnet *ifp)
 {
-    int i;
-    for (i = 0; i < NBPFILTER; i++) {
-        BpfDesc *d = &g_bpf_dtab[i];
-        if (d->bd_next != d && d->bd_bif != NULL && d->bd_bif->bif_ifp == ifp) {
-            int s = sceNet_lib_94B44F26();
-            bpf_detachd(d);
-            sceNet_lib_515B2F33(s);
+    int idx;
+    for (idx = 0; idx < NBPFILTER; idx++) {
+        BpfDesc *desc = &g_bpf_dtab[idx];
+        if (desc->bd_next != desc && desc->bd_bif != NULL && desc->bd_bif->bif_ifp == ifp) {
+            int spl = sceNet_lib_94B44F26();
+            bpf_detachd_inline(desc);
+            sceNet_lib_515B2F33(spl);
         }
     }
-    BpfIf **p = &g_bpf_iflist;
-    while (*p != NULL) {
-        if ((*p)->bif_ifp == ifp) {
-            BpfIf *bp = *p;
-            *p = bp->bif_next;
+    BpfIf **pp = &g_bpf_iflist;
+    while (*pp != NULL) {
+        if ((*pp)->bif_ifp == ifp) {
+            BpfIf *bp = *pp;
+            *pp = bp->bif_next;
             sceNetIfhandle_lib_76BAD213(bp);
             return;
         }
-        p = &(*p)->bif_next;
+        pp = &(*pp)->bif_next;
     }
 }
 
-void bpf_init(int n)
+void bpf_init(int count)
 {
-    int i;
-    (void)n;
+    int idx;
+    (void)count;
     g_bpf_bufsize = 0x2000;
     g_bpf_iflist = NULL;
-    for (i = 0; i < NBPFILTER; i++)
-        g_bpf_dtab[i].bd_next = &g_bpf_dtab[i];
+    for (idx = 0; idx < NBPFILTER; idx++)
+        g_bpf_dtab[idx].bd_next = &g_bpf_dtab[idx];
 }
 
-static int bpf_allocbufs(BpfDesc *d)
+static int bpf_allocbufs(BpfDesc *desc)
 {
-    d->bd_fbuf = (u8 *)sceNetIfhandle_lib_15CFE3C0(d->bd_bufsize);
-    if (d->bd_fbuf == NULL)
+    desc->bd_fbuf = (u8 *)sceNetIfhandle_lib_15CFE3C0(desc->bd_bufsize);
+    if (desc->bd_fbuf == NULL)
         return 12;
-    d->bd_sbuf = (u8 *)sceNetIfhandle_lib_15CFE3C0(d->bd_bufsize);
-    if (d->bd_sbuf == NULL) {
-        sceNetIfhandle_lib_76BAD213(d->bd_fbuf);
+    desc->bd_sbuf = (u8 *)sceNetIfhandle_lib_15CFE3C0(desc->bd_bufsize);
+    if (desc->bd_sbuf == NULL) {
+        sceNetIfhandle_lib_76BAD213(desc->bd_fbuf);
         return 12;
     }
-    d->bd_slen = 0;
-    d->bd_hlen = 0;
+    desc->bd_slen = 0;
+    desc->bd_hlen = 0;
     return 0;
 }
 
-static void bpf_ifname(void *ifp, void *ifr)
+static void bpf_ifname(NetIfnet *ifp, NetIfreq *ifr)
 {
-    sceKernelMemcpy(ifr, (u8 *)ifp + 20, 16);
+    sceKernelMemcpy(ifr->ifr_name, ifp->if_xname, 16);
 }
 
-static int bpf_setif(BpfDesc *d, const char *ifr_name)
+static int bpf_setif(BpfDesc *desc, const char *ifr_name)
 {
     BpfIf *bp = g_bpf_iflist;
     while (bp != NULL) {
-        if (bp->bif_ifp != NULL && sceNet_lib_A0F16ABD((const char *)bp->bif_ifp + 20, ifr_name) == 0)
+        if (bp->bif_ifp != NULL && sceNet_lib_A0F16ABD(bp->bif_ifp->if_xname, ifr_name) == 0)
             break;
         bp = bp->bif_next;
     }
     if (bp == NULL)
         return 6;
 
-    if (d->bd_sbuf == NULL) {
-        int err = bpf_allocbufs(d);
+    if (desc->bd_sbuf == NULL) {
+        int err = bpf_allocbufs(desc);
         if (err != 0)
             return err;
     }
 
-    int s = sceNet_lib_94B44F26();
-    if (bp != d->bd_bif) {
-        if (d->bd_bif != NULL)
-            bpf_detachd(d);
-        d->bd_bif = bp;
-        d->bd_next = bp->bif_dlist;
-        bp->bif_dlist = d;
+    int spl = sceNet_lib_94B44F26();
+    if (bp != desc->bd_bif) {
+        if (desc->bd_bif != NULL)
+            bpf_detachd_inline(desc);
+        desc->bd_bif = bp;
+        desc->bd_next = bp->bif_dlist;
+        bp->bif_dlist = desc;
         *bp->bif_driverp = bp;
     }
-    if (d->bd_hbuf != NULL) {
-        d->bd_fbuf = d->bd_hbuf;
-        d->bd_hbuf = NULL;
+    if (desc->bd_hbuf != NULL) {
+        desc->bd_fbuf = desc->bd_hbuf;
+        desc->bd_hbuf = NULL;
     }
-    d->bd_slen = 0;
-    d->bd_hlen = 0;
-    d->bd_rcount = 0;
-    d->bd_dcount = 0;
-    sceNet_lib_515B2F33(s);
+    desc->bd_slen = 0;
+    desc->bd_hlen = 0;
+    desc->bd_rcount = 0;
+    desc->bd_dcount = 0;
+    sceNet_lib_515B2F33(spl);
     return 0;
 }
 
-static int bpf_setf(BpfDesc *d, BpfProgram *fp)
+static int bpf_setf(BpfDesc *desc, BpfProgram *fp)
 {
-    BpfInsn *old = d->bd_filter;
-    int s;
+    BpfInsn *old = desc->bd_filter;
+    int spl;
 
     if (fp->bf_insns == NULL) {
         if (fp->bf_len != 0)
             return 22;
-        s = sceNet_lib_94B44F26();
-        d->bd_filter = NULL;
+        spl = sceNet_lib_94B44F26();
+        desc->bd_filter = NULL;
     } else {
         u32 flen = fp->bf_len;
         if (flen > BPF_MAXINSNS)
@@ -529,19 +548,19 @@ static int bpf_setf(BpfDesc *d, BpfProgram *fp)
             sceNetIfhandle_lib_76BAD213(fcode);
             return 22;
         }
-        s = sceNet_lib_94B44F26();
-        d->bd_filter = fcode;
+        spl = sceNet_lib_94B44F26();
+        desc->bd_filter = fcode;
     }
 
-    if (d->bd_hbuf != NULL) {
-        d->bd_fbuf = d->bd_hbuf;
-        d->bd_hbuf = NULL;
+    if (desc->bd_hbuf != NULL) {
+        desc->bd_fbuf = desc->bd_hbuf;
+        desc->bd_hbuf = NULL;
     }
-    d->bd_slen = 0;
-    d->bd_hlen = 0;
-    d->bd_rcount = 0;
-    d->bd_dcount = 0;
-    sceNet_lib_515B2F33(s);
+    desc->bd_slen = 0;
+    desc->bd_hlen = 0;
+    desc->bd_rcount = 0;
+    desc->bd_dcount = 0;
+    sceNet_lib_515B2F33(spl);
 
     if (old != NULL)
         sceNetIfhandle_lib_76BAD213(old);
@@ -552,252 +571,252 @@ static int bpf_open_dev(u32 unit)
 {
     if (unit >= NBPFILTER)
         return 6;
-    BpfDesc *d = &g_bpf_dtab[unit];
-    if (d->bd_next != d)
+    BpfDesc *desc = &g_bpf_dtab[unit];
+    if (desc->bd_next != desc)
         return 16;
-    sceKernelMemset(d, 0, sizeof(BpfDesc));
-    d->bd_bufsize = g_bpf_bufsize;
+    sceKernelMemset(desc, 0, sizeof(BpfDesc));
+    desc->bd_bufsize = g_bpf_bufsize;
     return 0;
 }
 
 static int bpf_close_dev(u32 unit)
 {
-    BpfDesc *d = &g_bpf_dtab[unit];
-    int s = sceNet_lib_94B44F26();
-    if (d->bd_bif != NULL)
-        bpf_detachd(d);
-    sceNet_lib_515B2F33(s);
+    BpfDesc *desc = &g_bpf_dtab[unit];
+    int spl = sceNet_lib_94B44F26();
+    if (desc->bd_bif != NULL)
+        bpf_detachd_inline(desc);
+    sceNet_lib_515B2F33(spl);
 
-    if (d->bd_sbuf != NULL) {
-        sceNetIfhandle_lib_76BAD213(d->bd_sbuf);
-        if (d->bd_hbuf != NULL)
-            sceNetIfhandle_lib_76BAD213(d->bd_hbuf);
-        if (d->bd_fbuf != NULL)
-            sceNetIfhandle_lib_76BAD213(d->bd_fbuf);
+    if (desc->bd_sbuf != NULL) {
+        sceNetIfhandle_lib_76BAD213(desc->bd_sbuf);
+        if (desc->bd_hbuf != NULL)
+            sceNetIfhandle_lib_76BAD213(desc->bd_hbuf);
+        if (desc->bd_fbuf != NULL)
+            sceNetIfhandle_lib_76BAD213(desc->bd_fbuf);
     }
-    if (d->bd_filter != NULL)
-        sceNetIfhandle_lib_76BAD213(d->bd_filter);
-    d->bd_next = d;
+    if (desc->bd_filter != NULL)
+        sceNetIfhandle_lib_76BAD213(desc->bd_filter);
+    desc->bd_next = desc;
     return 0;
 }
 
 static int bpf_read_dev(u32 unit, NetUio *uio)
 {
-    BpfDesc *d = &g_bpf_dtab[unit];
+    BpfDesc *desc = &g_bpf_dtab[unit];
     int err;
 
-    if (uio->uio_resid != d->bd_bufsize)
+    if (uio->uio_resid != desc->bd_bufsize)
         return 22;
 
-    int s = sceNet_lib_94B44F26();
-    while (d->bd_hbuf == NULL) {
-        if (d->bd_immediate && d->bd_slen != 0) {
-            d->bd_hbuf = d->bd_sbuf;
-            d->bd_hlen = d->bd_slen;
-            d->bd_sbuf = d->bd_fbuf;
-            d->bd_fbuf = NULL;
-            d->bd_slen = 0;
+    int spl = sceNet_lib_94B44F26();
+    while (desc->bd_hbuf == NULL) {
+        if (desc->bd_immediate && desc->bd_slen != 0) {
+            desc->bd_hbuf = desc->bd_sbuf;
+            desc->bd_hlen = desc->bd_slen;
+            desc->bd_sbuf = desc->bd_fbuf;
+            desc->bd_fbuf = NULL;
+            desc->bd_slen = 0;
             break;
         }
         err = 11;
-        if (d->bd_rtout != -1)
-            err = sceNet_lib_205E8D17((u32)d, (u32)d->bd_rtout);
+        if (desc->bd_rtout != -1)
+            err = sceNet_lib_205E8D17((u32)desc, (u32)desc->bd_rtout);
         if (err == 11) {
-            if (d->bd_hbuf != NULL)
+            if (desc->bd_hbuf != NULL)
                 break;
-            if (d->bd_slen == 0) {
-                sceNet_lib_515B2F33(s);
+            if (desc->bd_slen == 0) {
+                sceNet_lib_515B2F33(spl);
                 return 0;
             }
-            d->bd_hbuf = d->bd_sbuf;
-            d->bd_hlen = d->bd_slen;
-            d->bd_sbuf = d->bd_fbuf;
-            d->bd_fbuf = NULL;
-            d->bd_slen = 0;
+            desc->bd_hbuf = desc->bd_sbuf;
+            desc->bd_hlen = desc->bd_slen;
+            desc->bd_sbuf = desc->bd_fbuf;
+            desc->bd_fbuf = NULL;
+            desc->bd_slen = 0;
             break;
         }
         if (err != 0) {
-            sceNet_lib_515B2F33(s);
+            sceNet_lib_515B2F33(spl);
             return err;
         }
     }
 
-    sceNet_lib_515B2F33(s);
-    err = sceNet_lib_2B42872F(d->bd_hbuf, (int)d->bd_hlen, uio);
-    s = sceNet_lib_94B44F26();
-    d->bd_fbuf = d->bd_hbuf;
-    d->bd_hbuf = NULL;
-    d->bd_hlen = 0;
-    sceNet_lib_515B2F33(s);
+    sceNet_lib_515B2F33(spl);
+    err = sceNet_lib_2B42872F(desc->bd_hbuf, (int)desc->bd_hlen, uio);
+    spl = sceNet_lib_94B44F26();
+    desc->bd_fbuf = desc->bd_hbuf;
+    desc->bd_hbuf = NULL;
+    desc->bd_hlen = 0;
+    sceNet_lib_515B2F33(spl);
     return err;
 }
 
 static int bpf_write_dev(u32 unit, NetUio *uio)
 {
-    BpfDesc *d = &g_bpf_dtab[unit];
-    if (d->bd_bif == NULL)
+    BpfDesc *desc = &g_bpf_dtab[unit];
+    if (desc->bd_bif == NULL)
         return 6;
 
-    void *ifp = d->bd_bif->bif_ifp;
+    NetIfnet *ifp = desc->bd_bif->bif_ifp;
     u32 len = uio->uio_resid;
     if (len == 0)
         return 0;
 
-    u32 *m = (u32 *)sceNetIfhandle_lib_15CFE3C0(256);
-    if (m == NULL)
+    NetMbuf *mbuf = (NetMbuf *)sceNetIfhandle_lib_15CFE3C0(sizeof(NetMbuf));
+    if (mbuf == NULL)
         return 105;
 
-    *(u16 *)((u8 *)m + 16) = 1;
-    m[2] = (u32)((u8 *)m + 48);
-    *(u16 *)((u8 *)m + 18) = 2;
-    m[0] = 0;
-    m[1] = 0;
-    m[7] = 0;
-    m[5] = 0;
-    m[6] = len;
+    mbuf->m_type = 1;
+    mbuf->m_data = mbuf->m_pktdat;
+    mbuf->m_flags = 2;
+    mbuf->m_next = NULL;
+    mbuf->m_nextpkt = NULL;
+    mbuf->m_pkthdr_csum = 0;
+    mbuf->m_pkthdr_rcvif = NULL;
+    mbuf->m_pkthdr_len = len;
 
     if (len >= 209) {
-        void *cl = sceNetIfhandle_lib_15CFE3C0(2048);
-        if (cl == NULL)
-            cl = sceNetIfhandle_lib_15CFE3C0(2048);
-        m[12] = (u32)cl;
-        if (cl != NULL) {
-            m[2] = (u32)cl;
-            *(u16 *)((u8 *)m + 18) |= 9;
-            m[15] = 2048;
-            m[13] = 0;
-            m[14] = 0;
-            m[18] = (u32)m;
-            m[17] = (u32)m;
+        mbuf->m_ext.ext_buf = (u8 *)sceNetIfhandle_lib_15CFE3C0(2048);
+        if (mbuf->m_ext.ext_buf == NULL)
+            mbuf->m_ext.ext_buf = (u8 *)sceNetIfhandle_lib_15CFE3C0(2048);
+        if (mbuf->m_ext.ext_buf != NULL) {
+            mbuf->m_data = mbuf->m_ext.ext_buf;
+            mbuf->m_flags |= 9;
+            mbuf->m_ext.ext_size = 2048;
+            mbuf->m_ext.ext_free = NULL;
+            mbuf->m_ext.ext_arg = NULL;
+            mbuf->m_ext.ext_prevref = mbuf;
+            mbuf->m_ext.ext_nextref = mbuf;
         }
-        if ((*(u16 *)((u8 *)m + 18) & 1) == 0) {
-            sceNetIfhandle_lib_F56FAC82(m);
+        if ((mbuf->m_flags & 1) == 0) {
+            sceNetIfhandle_lib_F56FAC82(mbuf);
             return 105;
         }
     }
 
-    int err = sceNet_lib_2B42872F((void *)m[2], (int)len, uio);
+    int err = sceNet_lib_2B42872F(mbuf->m_data, (int)len, uio);
     if (err != 0) {
-        sceNetIfhandle_lib_F56FAC82(m);
+        sceNetIfhandle_lib_F56FAC82(mbuf);
         return err;
     }
 
-    m[3] = len;
-    int s = sceNet_lib_94B44F26();
-    u32 *ifq = (u32 *)ifp;
-    if ((s32)ifq[53] >= (s32)ifq[54]) {
-        sceNet_lib_515B2F33(s);
-        sceNetIfhandle_lib_F56FAC82(m);
+    mbuf->m_len = len;
+    int spl = sceNet_lib_94B44F26();
+    if (ifp->if_snd.ifq_len >= ifp->if_snd.ifq_maxlen) {
+        sceNet_lib_515B2F33(spl);
+        sceNetIfhandle_lib_F56FAC82(mbuf);
         return 105;
     }
-    *(u64 *)((u8 *)ifp + 136) += m[6];
-    m[1] = 0;
-    if (ifq[52] != 0)
-        ((u32 *)ifq[52])[1] = (u32)m;
+    mbuf->m_nextpkt = NULL;
+    ifp->if_data.ifi_obytes += mbuf->m_pkthdr_len;
+    if (ifp->if_snd.ifq_tail != NULL)
+        ifp->if_snd.ifq_tail->m_nextpkt = mbuf;
     else
-        ifq[51] = (u32)m;
-    ifq[52] = (u32)m;
-    ifq[53]++;
-    if ((*(u16 *)((u8 *)ifp + 48) & 0x400) == 0) {
-        void (*if_start)(void *) = *(void (**)(void *))((u8 *)ifp + 184);
-        if_start(ifp);
-    }
-    sceNet_lib_515B2F33(s);
+        ifp->if_snd.ifq_head = mbuf;
+    ifp->if_snd.ifq_tail = mbuf;
+    ifp->if_snd.ifq_len++;
+    if ((ifp->if_flags & 0x400) == 0)
+        ifp->if_start(ifp);
+    sceNet_lib_515B2F33(spl);
     return 0;
 }
 
 static int bpf_ioctl_dev(u32 unit, u32 cmd, void *addr)
 {
-    BpfDesc *d = &g_bpf_dtab[unit];
+    BpfDesc *desc = &g_bpf_dtab[unit];
 
     switch (cmd) {
     case 0x40044266u: /* BIOCGBLEN */
-        *(u32 *)addr = d->bd_bufsize;
+        *(u32 *)addr = desc->bd_bufsize;
         return 0;
     case 0xC0044266u: /* BIOCSBLEN */
-        if (d->bd_bif != NULL)
+        if (desc->bd_bif != NULL)
             return 22;
         {
             u32 sz = *(u32 *)addr;
-            if (sz > BPF_MAXBUFSIZE)
+            if (sz > BPF_MAXBUFSIZE) {
                 sz = BPF_MAXBUFSIZE;
-            else if (sz < BPF_MINBUFSIZE)
+                *(u32 *)addr = sz;
+            } else if (sz < BPF_MINBUFSIZE) {
                 sz = BPF_MINBUFSIZE;
-            *(u32 *)addr = sz;
-            d->bd_bufsize = sz;
+                *(u32 *)addr = sz;
+            }
+            desc->bd_bufsize = sz;
         }
         return 0;
     case 0x80084267u: /* BIOCSETF */
-        return bpf_setf(d, (BpfProgram *)addr);
+        return bpf_setf(desc, (BpfProgram *)addr);
     case 0x20004268u: /* BIOCFLUSH */ {
-        int s = sceNet_lib_94B44F26();
-        if (d->bd_hbuf != NULL) {
-            d->bd_fbuf = d->bd_hbuf;
-            d->bd_hbuf = NULL;
+        int spl = sceNet_lib_94B44F26();
+        if (desc->bd_hbuf != NULL) {
+            desc->bd_fbuf = desc->bd_hbuf;
+            desc->bd_hbuf = NULL;
         }
-        d->bd_slen = 0;
-        d->bd_hlen = 0;
-        d->bd_rcount = 0;
-        d->bd_dcount = 0;
-        sceNet_lib_515B2F33(s);
+        desc->bd_dcount = 0;
+        desc->bd_slen = 0;
+        desc->bd_hlen = 0;
+        desc->bd_rcount = 0;
+        sceNet_lib_515B2F33(spl);
         return 0;
     }
     case 0x4004426Au: /* BIOCGDLT */
-        if (d->bd_bif == NULL)
+        if (desc->bd_bif == NULL)
             return 22;
-        *(u32 *)addr = d->bd_bif->bif_dlt;
+        *(u32 *)addr = desc->bd_bif->bif_dlt;
         return 0;
     case 0x4020426Bu: /* BIOCGETIF */
-        if (d->bd_bif == NULL)
+        if (desc->bd_bif == NULL)
             return 22;
-        bpf_ifname(d->bd_bif->bif_ifp, addr);
+        bpf_ifname(desc->bd_bif->bif_ifp, (NetIfreq *)addr);
         return 0;
     case 0x8020426Cu: /* BIOCSETIF */
-        return bpf_setif(d, (const char *)addr);
+        return bpf_setif(desc, (const char *)addr);
     case 0x8008426Du: /* BIOCSRTIMEOUT */ {
-        u32 *tv = (u32 *)addr;
-        u32 ticks = tv[0] * 100 + tv[1] / 10000;
-        if (ticks == 0 && tv[1] != 0)
-            ticks = 1;
-        d->bd_rtout = (s32)ticks;
+        NetTimeval *tv = (NetTimeval *)addr;
+        u32 ticks = tv->tv_sec * 100 + tv->tv_usec / 10000;
+        desc->bd_rtout = (s32)ticks;
+        if (ticks == 0 && tv->tv_usec != 0)
+            desc->bd_rtout = 1;
         return 0;
     }
     case 0x4008426Eu: /* BIOCGRTIMEOUT */ {
-        u32 *tv = (u32 *)addr;
-        u32 ticks = (u32)d->bd_rtout;
-        tv[0] = ticks / 100;
-        tv[1] = (ticks % 100) * 10000;
+        NetTimeval *tv = (NetTimeval *)addr;
+        u32 ticks = (u32)desc->bd_rtout;
+        tv->tv_sec = ticks / 100;
+        tv->tv_usec = (ticks % 100) * 10000;
         return 0;
     }
     case 0x4008426Fu: /* BIOCGSTATS */ {
-        u32 *st = (u32 *)addr;
-        st[0] = d->bd_rcount;
-        st[1] = d->bd_dcount;
+        BpfStat *st = (BpfStat *)addr;
+        st->bs_drop = desc->bd_dcount;
+        st->bs_recv = desc->bd_rcount;
         return 0;
     }
     case 0x80044270u: /* BIOCIMMEDIATE */
-        d->bd_immediate = *(u8 *)addr;
+        desc->bd_immediate = *(u8 *)addr;
         return 0;
-    case 0x40044271u: /* BIOCVERSION */
-        ((u16 *)addr)[0] = 1;
-        ((u16 *)addr)[1] = 1;
+    case 0x40044271u: /* BIOCVERSION */ {
+        BpfVersion *ver = (BpfVersion *)addr;
+        ver->bv_minor = 1;
+        ver->bv_major = 1;
         return 0;
+    }
     case 0x40044274u: /* BIOCGHDRCMPLT */
-        *(u32 *)addr = d->bd_hdrcmplt;
+        *(u32 *)addr = desc->bd_hdrcmplt;
         return 0;
     case 0x80044275u: /* BIOCSHDRCMPLT */
-        d->bd_hdrcmplt = (*(u32 *)addr != 0) ? 1 : 0;
+        desc->bd_hdrcmplt = (*(u32 *)addr != 0) ? 1 : 0;
         return 0;
     case 0x8004667Eu: /* FIONBIO */
-        d->bd_rtout = (*(u32 *)addr != 0) ? -1 : 0;
+        desc->bd_rtout = (*(u32 *)addr != 0) ? -1 : 0;
         return 0;
     case 0x4004667Fu: /* FIONREAD */ {
-        int s = sceNet_lib_94B44F26();
-        u32 n = d->bd_slen;
-        if (d->bd_hbuf != NULL)
-            n += d->bd_hlen;
-        sceNet_lib_515B2F33(s);
-        *(u32 *)addr = n;
+        int spl = sceNet_lib_94B44F26();
+        u32 avail = desc->bd_slen;
+        if (desc->bd_hbuf != NULL)
+            avail += desc->bd_hlen;
+        sceNet_lib_515B2F33(spl);
+        *(u32 *)addr = avail;
         return 0;
     }
     default:
@@ -807,16 +826,16 @@ static int bpf_ioctl_dev(u32 unit, u32 cmd, void *addr)
 
 static int bpf_poll_dev(u32 unit, int events, NetThreadInfo *ti)
 {
-    BpfDesc *d = &g_bpf_dtab[unit];
+    BpfDesc *desc = &g_bpf_dtab[unit];
     int revents = 0;
-    int s = sceNet_lib_94B44F26();
+    int spl = sceNet_lib_94B44F26();
     if (events & 0x41) {
-        if (d->bd_hlen != 0 || (d->bd_immediate && d->bd_slen != 0))
+        if (desc->bd_hlen != 0 || (desc->bd_immediate && desc->bd_slen != 0))
             revents = events & 0x41;
         else
-            sceNet_lib_92633D8D(ti, &d->bd_sel_thid);
+            sceNet_lib_92633D8D(ti, &desc->bd_sel_thid);
     }
-    sceNet_lib_515B2F33(s);
+    sceNet_lib_515B2F33(spl);
     return revents;
 }
 
@@ -831,39 +850,42 @@ int sceNet_BFCFEFF6(u32 unit, int events, int timeout_ms)
         return -1;
 
     u32 timeout_us = 0;
+    int valid = 1;
     if (timeout_ms != -1) {
         if ((u32)timeout_ms > 4294967u) {
             err = 22;
-            goto finish;
+            valid = 0;
+        } else {
+            timeout_us = (u32)timeout_ms * 1000u;
         }
-        timeout_us = (u32)timeout_ms * 1000u;
     }
 
-    u32 rem_us = timeout_us;
-    for (;;) {
-        int s = sceNet_lib_94B44F26();
-        err = bpf_poll_dev(unit, events, ti);
-        if (err != 0) {
-            sceNet_lib_515B2F33(s);
-            break;
-        }
-        if (timeout_ms != -1) {
-            if (start_time == 0)
-                start_time = sceKernelGetSystemTimeWide();
-            s64 now = sceKernelGetSystemTimeWide();
-            if ((u64)(now - start_time) >= (u64)timeout_us) {
-                sceNet_lib_515B2F33(s);
+    if (valid) {
+        u32 rem_us = timeout_us;
+        for (;;) {
+            int spl = sceNet_lib_94B44F26();
+            err = bpf_poll_dev(unit, events, ti);
+            if (err != 0) {
+                sceNet_lib_515B2F33(spl);
                 break;
             }
-            rem_us = timeout_us - (u32)(now - start_time);
+            if (timeout_ms != -1) {
+                if (start_time == 0)
+                    start_time = sceKernelGetSystemTimeWide();
+                s64 now = sceKernelGetSystemTimeWide();
+                if ((u64)(now - start_time) >= (u64)timeout_us) {
+                    sceNet_lib_515B2F33(spl);
+                    break;
+                }
+                rem_us = timeout_us - (u32)(now - start_time);
+            }
+            err = sceNet_lib_F6DB0A0B((u32)&g_selwait, rem_us);
+            sceNet_lib_515B2F33(spl);
+            if (err != 0)
+                break;
         }
-        err = sceNet_lib_F6DB0A0B((u32)&g_selwait, rem_us);
-        sceNet_lib_515B2F33(s);
-        if (err != 0)
-            break;
     }
 
-finish:
     if (err > 0) {
         revents = err;
         err = 0;
