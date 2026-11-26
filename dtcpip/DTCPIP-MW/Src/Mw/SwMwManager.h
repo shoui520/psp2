@@ -87,6 +87,7 @@ int SwMwManagerActivationThread(void *argument);
 int SwMwManagerParamTblThread(void *argument);
 int SwMwManagerDownloadParamTbl(void);
 int SwMwManagerEnsureSession(struct SwMwManager *manager, int mode);
+int SwMwManagerTeardown(struct SwMwManager *manager);
 int SwMwManagerThreadCreate(struct SwMwManagerThread *thread, int (*entry)(void *),
 			    void *argument, int type);
 int SwMwManagerSessionStart(struct SwMwManagerSinkSlots *slots, int mode);

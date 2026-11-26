@@ -51,6 +51,8 @@ int SwMwManagerCloseRecordD(int record);
 int SwMwManagerClearSlots(void *slots);
 int SwMwManagerCloseKeyBin(int keyBin);
 struct SwMwManager *SwMwManagerFree(struct SwMwManager *manager);
+int SwMwManagerFlushRecords(struct SwMwManager *manager);
+int SwMwManagerCancelDownload(void);
 }
 
 /* the manager the ensure path keeps for the process (0x8109e0e0) */
@@ -403,17 +405,21 @@ extern "C" int SwMwManagerParamTblThread(void *argument)
 	return 0;
 }
 
+/* the parameter table and the thread that downloads it (0x8109e9a4 / 0x8109e980) */
+static struct SwMwManagerParamTbl g_swMwParamTbl;
+static struct SwMwManagerThread g_swMwParamTblThread;
+
 /* start the parameter table's download in the background (0x8100536e) */
 extern "C" int SwMwManagerDownloadParamTbl(void)
 {
-	static struct SwMwManagerParamTbl table;
-	static struct SwMwManagerThread thread;
+	struct SwMwManagerParamTbl *table = &g_swMwParamTbl;
+	struct SwMwManagerThread *thread = &g_swMwParamTblThread;
 	int status;
 	int failed;
 
 	swMwTrace("sw mw:SwMwManagerDownloadParamTbl\n");
-	table.state = 0;
-	status = SwMwManagerThreadCreate(&thread, SwMwManagerParamTblThread, &table, 0);
+	table->state = 0;
+	status = SwMwManagerThreadCreate(thread, SwMwManagerParamTblThread, table, 0);
 	failed = 0;
 	if (status != 0) {
 		swMwTrace("[SWMW] Error %d in %s:%d\n", status, SWMW_MANAGER_SOURCE, 1654);
@@ -501,4 +507,47 @@ extern "C" int SwMwManagerEnsureSession(struct SwMwManager *manager, int mode)
 	}
 	operator delete(SwMwManagerFree(manager));
 	return status;
+}
+
+/* tear the manager down: flush the records, close the threads, key bin and slots, cancel
+ * the downloads and free the object (0x8100356a) */
+extern "C" int SwMwManagerTeardown(struct SwMwManager *manager)
+{
+	int status;
+
+	if (manager->object == NULL)
+		swMwTrace("[SWMW] Assertion Failed in %s:%d\n", SWMW_MANAGER_SOURCE, 1355);
+	if (manager->keyBin == 0)
+		swMwTrace("[SWMW] Assertion Failed in %s:%d\n", SWMW_MANAGER_SOURCE, 1356);
+	if (manager->keyBin != 0) {
+		status = SwMwManagerFlushRecords(manager);
+		if (status != 0)
+			swMwTrace("[SWMW] Error %d in %s:%d\n", status, SWMW_MANAGER_SOURCE, 1360);
+	}
+	if (manager->parameter1 != 0) {
+		SwMwManagerCloseRecordD(manager->recordD);
+		SwMwManagerCloseRecordC(manager->recordC);
+	}
+	if (manager->recordB != 0)
+		SwMwManagerCloseRecordB(manager->recordB);
+	if (manager->recordA != 0)
+		SwMwManagerCloseRecordA(manager->recordA);
+	if (manager->started != 0)
+		SwMwManagerStopStarted(manager->started);
+	SwMwManagerClearSlots(&manager->slots);
+	if (manager->object != NULL)
+		manager->object->close();
+	if (manager->keyBin != 0)
+		SwMwManagerCloseKeyBin(manager->keyBin);
+	if (g_swMwParamTbl.state == 0) {
+		status = SwMwManagerCancelDownload();
+		swMwTrace("sw mw:SwMwManagerCancelDownload err = %d\n", status);
+	}
+	if (g_swMwParamTbl.state != -1) {
+		status = SwMwManagerCheckParamTblDownloaded(0);
+		swMwTrace("sw mw:SwMwManagerCheckParamTblDownloaded err = %d\n", status);
+	}
+	::operator delete(SwMwManagerFree(manager));
+	g_swMwManager = NULL;
+	return 0;
 }
