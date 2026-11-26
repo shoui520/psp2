@@ -78,7 +78,7 @@ const TmanUidFunc g_uid_timer_funcs[3] = {
 
 void tmanInitMsgPipeType(void)
 {
-    sceKernelCreateUIDtypeInherit("WaitQ", "MsgPipe", sizeof(TmanMsgPipeCB),
+    sceKernelCreateUIDtypeInherit("WaitQ", "MsgPipe", 48,
                                   (SceSysmemUidLookupFunc *)g_uid_msgpipe_funcs,
                                   NULL, &g_tman.uid_msgpipe);
 }
@@ -115,16 +115,47 @@ static int mppUidDelete(SceSysmemUidCB *cb, SceSysmemUidCB *type, int func_id, v
 
 static int mppUidCheck(SceSysmemUidCB *cb, SceSysmemUidCB *type, int func_id, void *args)
 {
-    (void)cb;
     (void)type;
     (void)func_id;
     (void)args;
-    return 0;
+    TmanWaitQueue *wq = (TmanWaitQueue *)tmanUidData(cb, g_tman.uid_waitq);
+    TmanMsgPipeCB *mpp = (TmanMsgPipeCB *)tmanUidData(cb, g_tman.uid_msgpipe);
+    int woken = 0;
+    if (wq->num_wait_threads > 0 && !tmanListEmpty(&wq->wait_list)) {
+        TmanListNode *head = &wq->wait_list;
+        TmanListNode *cur = head->next;
+        while (cur != head) {
+            TmanThreadCB *th = (TmanThreadCB *)cur;
+            cur = cur->next;
+            u32 remain = th->wait_param[1];
+            u32 mode = th->wait_extra[0];
+            u32 avail = mpp->free_size;
+            u32 chunk = (avail < remain) ? avail : remain;
+            if ((mode != 1U || chunk == 0) && (mode != 0U || chunk != remain))
+                break;
+            tmanMsgPipeWriteRing(mpp, (const u8 *)th->wait_param[0], chunk);
+            th->wait_param[1] = remain - chunk;
+            u32 *out_size = (u32 *)th->wait_param[3];
+            if (out_size != NULL)
+                *out_size = th->wait_param[2] - th->wait_param[1];
+            woken += tmanWakeupWaitingThread(th);
+        }
+    }
+    return woken;
 }
 
 static int mppUidRemove(SceSysmemUidCB *cb, SceSysmemUidCB *type, int func_id, void *args)
 {
-    sceKernelCallUIDObjCommonFunction(cb, type, func_id, args);
+    (void)type;
+    (void)func_id;
+    (void)args;
+    TmanWaitQueue *wq = (TmanWaitQueue *)tmanUidData(cb, g_tman.uid_waitq);
+    wq->skip_first_pri = 0;
+    if (!tmanListEmpty(&wq->wait_list)) {
+        TmanThreadCB *head_th = (TmanThreadCB *)wq->wait_list.next;
+        wq->skip_first_pri = (head_th->wait_param[2] != head_th->wait_param[1]) ? 1U : 0U;
+    }
+    wq->num_wait_threads--;
     return 0;
 }
 
@@ -134,7 +165,7 @@ static int mppUidRemove(SceSysmemUidCB *cb, SceSysmemUidCB *type, int func_id, v
 
 void tmanInitVplType(void)
 {
-    sceKernelCreateUIDtypeInherit("WaitQ", "Vpl", sizeof(TmanVplCB),
+    sceKernelCreateUIDtypeInherit("WaitQ", "Vpl", 48,
                                   (SceSysmemUidLookupFunc *)g_uid_vpl_funcs,
                                   NULL, &g_tman.uid_vpl);
 }
@@ -260,7 +291,7 @@ int sceKernelDeleteVpl(SceUID uid)
     return 0;
 }
 
-static int tmanAllocVplInternal(SceUID uid, unsigned int size, void **data,
+static inline __attribute__((always_inline)) int tmanAllocVplInternal(SceUID uid, unsigned int size, void **data,
                                 unsigned int *timeout, int is_try, int use_cb)
 {
     if (!tmanCheckUserPtr(data, sizeof(void *)) || !tmanCheckUserPtr(timeout, sizeof(u32)))
@@ -442,7 +473,7 @@ int sceKernelReferVplStatus(SceUID uid, SceKernelVplInfo *info)
 
 void tmanInitFplType(void)
 {
-    sceKernelCreateUIDtypeInherit("WaitQ", "Fpl", sizeof(TmanFplCB),
+    sceKernelCreateUIDtypeInherit("WaitQ", "Fpl", 48,
                                   (SceSysmemUidLookupFunc *)g_uid_fpl_funcs,
                                   NULL, &g_tman.uid_fpl);
 }
@@ -469,9 +500,9 @@ static int fplUidCreate(SceSysmemUidCB *cb, SceSysmemUidCB *type, int func_id, v
 static int fplUidDelete(SceSysmemUidCB *cb, SceSysmemUidCB *type, int func_id, void *args)
 {
     TmanFplCB *fpl = (TmanFplCB *)tmanUidData(cb, type);
-    if (fpl->bitmap != NULL) {
-        sceKernelFreeHeapMemory(g_tman.heap_id, fpl->bitmap);
-        fpl->bitmap = NULL;
+    if (fpl->link_table != NULL) {
+        sceKernelFreeHeapMemory(g_tman.heap_id, fpl->link_table);
+        fpl->link_table = NULL;
     }
     if (fpl->mem_id > 0) {
         sceKernelFreePartitionMemory(fpl->mem_id);
@@ -481,21 +512,40 @@ static int fplUidDelete(SceSysmemUidCB *cb, SceSysmemUidCB *type, int func_id, v
     return 0;
 }
 
-static void *tmanFplAllocBlock(TmanFplCB *fpl)
+int tmanFplFreeBlock(TmanFplCB *fpl, s32 idx)
 {
-    if (fpl->free_blocks == 0)
-        return NULL;
-    u32 idx;
-    for (idx = 0; idx < fpl->num_blocks; idx++) {
-        u32 word = idx >> 5;
-        u32 bit = 1U << (idx & 31U);
-        if ((fpl->bitmap[word] & bit) == 0) {
-            fpl->bitmap[word] |= bit;
-            fpl->free_blocks--;
-            return (u8 *)fpl->pool + idx * fpl->block_size;
-        }
+    void **slot = &fpl->link_table[idx];
+    if (*slot != NULL)
+        return -1;
+    void **tail = fpl->free_tail;
+    fpl->free_blocks++;
+    if (tail != NULL) {
+        void *head = *tail;
+        fpl->free_tail = slot;
+        *slot = head;
+        *tail = slot;
+    } else {
+        fpl->free_tail = slot;
+        *slot = slot;
     }
-    return NULL;
+    return 0;
+}
+
+int tmanFplAllocBlock(TmanFplCB *fpl)
+{
+    void **tail = fpl->free_tail;
+    if (tail == NULL)
+        return -1;
+    void **head = (void **)*tail;
+    void **next_tail = tail;
+    fpl->free_blocks--;
+    if (tail == head)
+        next_tail = NULL;
+    else
+        *tail = *head;
+    fpl->free_tail = next_tail;
+    *head = NULL;
+    return (int)(head - fpl->link_table);
 }
 
 int sceKernelCreateFpl(const char *name, int part, int attr, unsigned int block_size,
@@ -517,18 +567,17 @@ int sceKernelCreateFpl(const char *name, int part, int attr, unsigned int block_
 
     int is_user = tmanIsUserCaller();
     int intr = sceKernelCpuSuspendIntr();
-    u32 bitmap_words = (blocks + 31U) >> 5;
-    u32 *bitmap = (u32 *)sceKernelAllocHeapMemory(g_tman.heap_id, bitmap_words * sizeof(u32));
-    if (bitmap == NULL) {
+    void **link_table = (void **)sceKernelAllocHeapMemory(g_tman.heap_id, blocks * sizeof(void *));
+    if (link_table == NULL) {
         sceKernelCpuResumeIntr(intr);
         return (int)SCE_ERROR_KERNEL_NO_MEMORY;
     }
-    memset(bitmap, 0, bitmap_words * sizeof(u32));
+    memset(link_table, 0, blocks * sizeof(void *));
 
     int alloc_type = ((attr & 0x4000) != 0) ? 1 : 0;
     SceUID mem_id = sceKernelAllocPartitionMemory(part, name, alloc_type, total_size, NULL);
     if (mem_id < 0) {
-        sceKernelFreeHeapMemory(g_tman.heap_id, bitmap);
+        sceKernelFreeHeapMemory(g_tman.heap_id, link_table);
         sceKernelCpuResumeIntr(intr);
         return (int)SCE_ERROR_KERNEL_NO_MEMORY;
     }
@@ -538,7 +587,7 @@ int sceKernelCreateFpl(const char *name, int part, int attr, unsigned int block_
                                  (char)((attr & 0xFF) | (is_user ? 0xFF : 0x00)), &cb);
     if (ret != 0) {
         sceKernelFreePartitionMemory(mem_id);
-        sceKernelFreeHeapMemory(g_tman.heap_id, bitmap);
+        sceKernelFreeHeapMemory(g_tman.heap_id, link_table);
         sceKernelCpuResumeIntr(intr);
         return ret;
     }
@@ -552,9 +601,14 @@ int sceKernelCreateFpl(const char *name, int part, int attr, unsigned int block_
     fpl->pool = sceKernelGetBlockHeadAddr(mem_id);
     fpl->block_size = aligned_size;
     fpl->num_blocks = blocks;
-    fpl->free_blocks = blocks;
-    fpl->bitmap = bitmap;
+    fpl->free_blocks = 0;
+    fpl->free_tail = NULL;
+    fpl->link_table = link_table;
     fpl->attr = (u32)attr;
+
+    u32 idx;
+    for (idx = 0; idx < blocks; idx++)
+        tmanFplFreeBlock(fpl, (s32)idx);
 
     sceKernelCpuResumeIntr(intr);
     return uid;
@@ -581,7 +635,7 @@ int sceKernelDeleteFpl(SceUID uid)
     return 0;
 }
 
-static int tmanAllocFplInternal(SceUID uid, void **data, unsigned int *timeout,
+static inline __attribute__((always_inline)) int tmanAllocFplInternal(SceUID uid, void **data, unsigned int *timeout,
                                 int is_try, int use_cb)
 {
     if (!tmanCheckUserPtr(data, sizeof(void *)) || !tmanCheckUserPtr(timeout, sizeof(u32)))
@@ -617,10 +671,10 @@ static int tmanAllocFplInternal(SceUID uid, void **data, unsigned int *timeout,
         if (use_cb != 0 && cur->cb_notify_pending != 0)
             tmanCheckPendingCallbacks(intr);
 
-        void *blk = tmanFplAllocBlock(fpl);
-        if (blk != NULL) {
+        int idx = tmanFplAllocBlock(fpl);
+        if (idx >= 0) {
             if (data != NULL)
-                *data = blk;
+                *data = (u8 *)fpl->pool + (u32)idx * fpl->block_size;
             ret = 0;
             break;
         }
@@ -681,9 +735,7 @@ int sceKernelFreeFpl(SceUID uid, void *data)
         return (int)SCE_ERROR_KERNEL_ILLEGAL_MEMBLOCK;
     }
     u32 idx = offset / fpl->block_size;
-    u32 word = idx >> 5;
-    u32 bit = 1U << (idx & 31U);
-    if (idx >= fpl->num_blocks || (fpl->bitmap[word] & bit) == 0) {
+    if (idx >= fpl->num_blocks || fpl->link_table[idx] != NULL) {
         sceKernelCpuResumeIntr(intr);
         return (int)SCE_ERROR_KERNEL_ILLEGAL_MEMBLOCK;
     }
@@ -695,8 +747,7 @@ int sceKernelFreeFpl(SceUID uid, void *data)
             *out = data;
         tmanWakeupFirstWaiter(cb, 0, in_intr, intr);
     } else {
-        fpl->bitmap[word] &= ~bit;
-        fpl->free_blocks++;
+        tmanFplFreeBlock(fpl, (s32)idx);
     }
 
     sceKernelCpuResumeIntr(intr);
@@ -768,7 +819,7 @@ int sceKernelReferFplStatus(SceUID uid, SceKernelFplInfo *info)
 
 void tmanInitTlsplType(void)
 {
-    sceKernelCreateUIDtypeInherit("WaitQ", "Tlspl", sizeof(TmanTlsplCB),
+    sceKernelCreateUIDtypeInherit("WaitQ", "Tlspl", 48,
                                   (SceSysmemUidLookupFunc *)g_uid_tlspl_funcs,
                                   NULL, &g_tman.uid_tlspl);
 }
@@ -795,13 +846,9 @@ static int tlsplUidCreate(SceSysmemUidCB *cb, SceSysmemUidCB *type, int func_id,
 static int tlsplUidDelete(SceSysmemUidCB *cb, SceSysmemUidCB *type, int func_id, void *args)
 {
     TmanTlsplCB *tls = (TmanTlsplCB *)tmanUidData(cb, type);
-    if (tls->bitmap != NULL) {
-        sceKernelFreeHeapMemory(g_tman.heap_id, tls->bitmap);
-        tls->bitmap = NULL;
-    }
-    if (tls->owners != NULL) {
-        sceKernelFreeHeapMemory(g_tman.heap_id, tls->owners);
-        tls->owners = NULL;
+    if (tls->link_table != NULL) {
+        sceKernelFreeHeapMemory(g_tman.heap_id, tls->link_table);
+        tls->link_table = NULL;
     }
     if (tls->mem_id > 0) {
         sceKernelFreePartitionMemory(tls->mem_id);
@@ -809,6 +856,94 @@ static int tlsplUidDelete(SceSysmemUidCB *cb, SceSysmemUidCB *type, int func_id,
     }
     sceKernelCallUIDObjCommonFunction(cb, type, func_id, args);
     return 0;
+}
+
+int tmanTlsplFreeBlock(TmanTlsplCB *tls, s32 idx)
+{
+    void **slot = &tls->link_table[idx];
+    if (*slot != NULL)
+        return -1;
+    void **tail = tls->free_tail;
+    tls->free_blocks++;
+    if (tail != NULL) {
+        void *head = *tail;
+        tls->free_tail = slot;
+        *slot = head;
+        *tail = slot;
+    } else {
+        tls->free_tail = slot;
+        *slot = slot;
+    }
+    return 0;
+}
+
+int tmanTlsplAllocBlock(TmanTlsplCB *tls)
+{
+    void **tail = tls->free_tail;
+    if (tail == NULL)
+        return -1;
+    void **head = (void **)*tail;
+    void **next_tail = tail;
+    tls->free_blocks--;
+    if (tail == head)
+        next_tail = NULL;
+    else
+        *tail = *head;
+    tls->free_tail = next_tail;
+    *head = NULL;
+    return (int)(head - tls->link_table);
+}
+
+int tmanTlsplValidateBlock(TmanTlsplCB *tls, void *ptr)
+{
+    u32 addr = (u32)ptr;
+    u32 base = (u32)tls->pool;
+    if (addr < base)
+        return (int)SCE_ERROR_KERNEL_ILLEGAL_MEMBLOCK;
+    u32 size = tls->block_size;
+    if (addr >= base + size * tls->num_blocks)
+        return (int)SCE_ERROR_KERNEL_ILLEGAL_MEMBLOCK;
+    u32 idx = (addr - base) / size;
+    if (addr != base + size * idx)
+        return (int)SCE_ERROR_KERNEL_ILLEGAL_MEMBLOCK;
+    if (tls->link_table[idx] != NULL)
+        return (int)SCE_ERROR_KERNEL_ILLEGAL_MEMBLOCK;
+    return (int)idx;
+}
+
+void tmanFreeThreadTlspl(TmanThreadCB *th)
+{
+    if (th->user_tls == NULL)
+        return;
+    int intr = sceKernelCpuSuspendIntr();
+    u32 *slots = (u32 *)th->user_tls;
+    int idx;
+    for (idx = 0; idx < 16; idx++) {
+        SceUID uid = (SceUID)slots[16 + idx];
+        slots[16 + idx] = 0;
+        if (uid == 0)
+            continue;
+        SceSysmemUidCB *cb = NULL;
+        if (sceKernelGetUIDcontrolBlockWithType(uid, g_tman.uid_tlspl, &cb) == 0) {
+            TmanTlsplCB *tls = (TmanTlsplCB *)tmanUidData(cb, g_tman.uid_tlspl);
+            TmanWaitQueue *wq = (TmanWaitQueue *)tmanUidData(cb, g_tman.uid_waitq);
+            void *blk = (void *)slots[idx];
+            int slot_idx = tmanTlsplValidateBlock(tls, blk);
+            if (slot_idx >= 0) {
+                if (!tmanListEmpty(&wq->wait_list)) {
+                    TmanThreadCB *waiter = (TmanThreadCB *)wq->wait_list.next;
+                    void **out = (void **)waiter->wait_param[0];
+                    if (out != NULL)
+                        *out = blk;
+                    tmanWakeupFirstWaiter(cb, 0, (int)tmanReadIntrDepth(), intr);
+                } else {
+                    tmanTlsplFreeBlock(tls, slot_idx);
+                }
+            }
+        }
+        slots[idx] = 0;
+    }
+    sceKernelCpuResumeIntr(intr);
 }
 
 SceUID sceKernelCreateTlspl(const char *name, int part, u32 attr, u32 block_size,
@@ -825,25 +960,30 @@ SceUID sceKernelCreateTlspl(const char *name, int part, u32 attr, u32 block_size
     int is_user = tmanIsUserCaller();
     int intr = sceKernelCpuSuspendIntr();
 
-    u32 bitmap_words = (blocks + 31U) >> 5;
-    u32 *bitmap = (u32 *)sceKernelAllocHeapMemory(g_tman.heap_id, bitmap_words * sizeof(u32));
-    SceUID *owners = (SceUID *)sceKernelAllocHeapMemory(g_tman.heap_id, blocks * sizeof(SceUID));
-    if (bitmap == NULL || owners == NULL) {
-        if (bitmap != NULL)
-            sceKernelFreeHeapMemory(g_tman.heap_id, bitmap);
-        if (owners != NULL)
-            sceKernelFreeHeapMemory(g_tman.heap_id, owners);
+    s32 tls_idx = -1;
+    int slot_i;
+    for (slot_i = 0; slot_i < 16; slot_i++) {
+        if ((g_tman.tls_index_bitmap & (1U << slot_i)) == 0) {
+            tls_idx = slot_i;
+            break;
+        }
+    }
+    if (tls_idx < 0) {
         sceKernelCpuResumeIntr(intr);
         return (SceUID)SCE_ERROR_KERNEL_NO_MEMORY;
     }
-    memset(bitmap, 0, bitmap_words * sizeof(u32));
-    memset(owners, 0, blocks * sizeof(SceUID));
+
+    void **link_table = (void **)sceKernelAllocHeapMemory(g_tman.heap_id, blocks * sizeof(void *));
+    if (link_table == NULL) {
+        sceKernelCpuResumeIntr(intr);
+        return (SceUID)SCE_ERROR_KERNEL_NO_MEMORY;
+    }
+    memset(link_table, 0, blocks * sizeof(void *));
 
     SceUID mem_id = sceKernelAllocPartitionMemory(part, name, ((attr & 0x4000U) != 0) ? 1 : 0,
                                                   aligned_size * blocks, NULL);
     if (mem_id < 0) {
-        sceKernelFreeHeapMemory(g_tman.heap_id, bitmap);
-        sceKernelFreeHeapMemory(g_tman.heap_id, owners);
+        sceKernelFreeHeapMemory(g_tman.heap_id, link_table);
         sceKernelCpuResumeIntr(intr);
         return (SceUID)SCE_ERROR_KERNEL_NO_MEMORY;
     }
@@ -853,8 +993,7 @@ SceUID sceKernelCreateTlspl(const char *name, int part, u32 attr, u32 block_size
                                  (char)((attr & 0xFFU) | (is_user ? 0xFFU : 0x00U)), &cb);
     if (ret != 0) {
         sceKernelFreePartitionMemory(mem_id);
-        sceKernelFreeHeapMemory(g_tman.heap_id, bitmap);
-        sceKernelFreeHeapMemory(g_tman.heap_id, owners);
+        sceKernelFreeHeapMemory(g_tman.heap_id, link_table);
         sceKernelCpuResumeIntr(intr);
         return ret;
     }
@@ -868,10 +1007,16 @@ SceUID sceKernelCreateTlspl(const char *name, int part, u32 attr, u32 block_size
     tls->pool = sceKernelGetBlockHeadAddr(mem_id);
     tls->block_size = aligned_size;
     tls->num_blocks = blocks;
-    tls->free_blocks = blocks;
-    tls->bitmap = bitmap;
-    tls->owners = owners;
+    tls->free_blocks = 0;
+    tls->free_tail = NULL;
+    tls->link_table = link_table;
+    tls->tls_index = tls_idx;
     tls->attr = attr;
+    g_tman.tls_index_bitmap |= (1U << tls_idx);
+
+    u32 idx;
+    for (idx = 0; idx < blocks; idx++)
+        tmanTlsplFreeBlock(tls, (s32)idx);
 
     sceKernelCpuResumeIntr(intr);
     return uid;
@@ -899,6 +1044,7 @@ int sceKernelDeleteTlspl(SceUID uid)
         return (int)SCE_ERROR_KERNEL_UTLS_BUSY;
     }
 
+    g_tman.tls_index_bitmap &= ~(1U << tls->tls_index);
     sceKernelDeleteUID(uid);
     sceKernelCpuResumeIntr(intr);
     return 0;
@@ -919,33 +1065,27 @@ s32 _sceKernelAllocateTlspl(SceUID uid, void **out_ptr, u32 *timeout)
     }
 
     TmanTlsplCB *tls = (TmanTlsplCB *)tmanUidData(cb, g_tman.uid_tlspl);
-    SceUID cur_uid = g_tman.current_thread->uid;
-    u32 idx;
-    for (idx = 0; idx < tls->num_blocks; idx++) {
-        u32 word = idx >> 5;
-        u32 bit = 1U << (idx & 31U);
-        if ((tls->bitmap[word] & bit) != 0 && tls->owners[idx] == cur_uid) {
-            if (out_ptr != NULL)
-                *out_ptr = (u8 *)tls->pool + idx * tls->block_size;
-            sceKernelCpuResumeIntr(intr);
-            return 0;
-        }
+    TmanThreadCB *cur = g_tman.current_thread;
+    u32 *slots = (u32 *)cur->user_tls;
+    if (slots != NULL && slots[tls->tls_index] != 0) {
+        if (out_ptr != NULL)
+            *out_ptr = (void *)slots[tls->tls_index];
+        sceKernelCpuResumeIntr(intr);
+        return 0;
     }
 
-    for (idx = 0; idx < tls->num_blocks; idx++) {
-        u32 word = idx >> 5;
-        u32 bit = 1U << (idx & 31U);
-        if ((tls->bitmap[word] & bit) == 0) {
-            tls->bitmap[word] |= bit;
-            tls->owners[idx] = cur_uid;
-            tls->free_blocks--;
-            void *ptr = (u8 *)tls->pool + idx * tls->block_size;
-            memset(ptr, 0, tls->block_size);
-            if (out_ptr != NULL)
-                *out_ptr = ptr;
-            sceKernelCpuResumeIntr(intr);
-            return 0;
+    int idx = tmanTlsplAllocBlock(tls);
+    if (idx >= 0) {
+        void *ptr = (u8 *)tls->pool + (u32)idx * tls->block_size;
+        memset(ptr, 0, tls->block_size);
+        if (slots != NULL) {
+            slots[tls->tls_index] = (u32)ptr;
+            slots[16 + tls->tls_index] = (u32)uid;
         }
+        if (out_ptr != NULL)
+            *out_ptr = ptr;
+        sceKernelCpuResumeIntr(intr);
+        return 0;
     }
 
     sceKernelCpuResumeIntr(intr);
@@ -962,17 +1102,24 @@ int sceKernelFreeTlspl(SceUID uid)
     }
 
     TmanTlsplCB *tls = (TmanTlsplCB *)tmanUidData(cb, g_tman.uid_tlspl);
-    SceUID cur_uid = g_tman.current_thread->uid;
-    u32 idx;
-    for (idx = 0; idx < tls->num_blocks; idx++) {
-        u32 word = idx >> 5;
-        u32 bit = 1U << (idx & 31U);
-        if ((tls->bitmap[word] & bit) != 0 && tls->owners[idx] == cur_uid) {
-            tls->bitmap[word] &= ~bit;
-            tls->owners[idx] = 0;
-            tls->free_blocks++;
-            sceKernelCpuResumeIntr(intr);
-            return 0;
+    TmanWaitQueue *wq = (TmanWaitQueue *)tmanUidData(cb, g_tman.uid_waitq);
+    TmanThreadCB *cur = g_tman.current_thread;
+    u32 *slots = (u32 *)cur->user_tls;
+    if (slots != NULL && slots[tls->tls_index] != 0) {
+        void *blk = (void *)slots[tls->tls_index];
+        int slot_idx = tmanTlsplValidateBlock(tls, blk);
+        slots[tls->tls_index] = 0;
+        slots[16 + tls->tls_index] = 0;
+        if (slot_idx >= 0) {
+            if (!tmanListEmpty(&wq->wait_list)) {
+                TmanThreadCB *waiter = (TmanThreadCB *)wq->wait_list.next;
+                void **out = (void **)waiter->wait_param[0];
+                if (out != NULL)
+                    *out = blk;
+                tmanWakeupFirstWaiter(cb, 0, (int)tmanReadIntrDepth(), intr);
+            } else {
+                tmanTlsplFreeBlock(tls, slot_idx);
+            }
         }
     }
 
@@ -1020,15 +1167,17 @@ int sceKernelReferTlsplStatus(SceUID uid, TmanTlsplInfo *info)
  * System Timer, Delays, Alarms, VTimers
  * ============================================================================ */
 
+u32 g_saved_sys_timer;
+
 static int tmanSysTimerSuspendHandler(int id, void *arg)
 {
     (void)id;
     (void)arg;
-    g_tman.saved_sys_timer = TMAN_REG_SYS_TIME_LO;
+    g_saved_sys_timer = TMAN_REG_SYS_TIME_LO;
     sceKernelDisableIntr(g_tman.sys_timer_intr);
-    u32 diff = (u32)g_tman.next_timer_alarm - g_tman.saved_sys_timer;
+    u32 diff = (u32)g_tman.next_timer_alarm - g_saved_sys_timer;
     if (diff == 0 || diff > 0xF0000000U)
-        g_tman.saved_sys_timer = (u32)g_tman.next_timer_alarm - 1U;
+        g_saved_sys_timer = (u32)g_tman.next_timer_alarm - 1U;
     return 0;
 }
 
@@ -1040,9 +1189,10 @@ static int tmanSysTimerResumeHandler(int id, void *arg)
     TMAN_REG_SYS_TIME_CTRL = 48;
     TMAN_REG_SYS_TIME_MODE = 0;
     tmanSync();
-    TMAN_REG_SYS_TIME_LO = g_tman.saved_sys_timer;
+    TMAN_REG_SYS_TIME_LO = g_saved_sys_timer;
     tmanSync();
     TMAN_REG_SYS_TIME_CMP = (u32)g_tman.next_timer_alarm;
+    tmanSync();
     tmanSync();
     sceKernelEnableIntr(g_tman.sys_timer_intr);
     return 0;
@@ -1075,7 +1225,7 @@ static int tmanRunVTimerHandler(SceSysmemUidCB *cb, int intr_state)
     SceUID uid = cb->uid ^ (s32)g_tman.uid_xor_key;
     g_tman.active_timer_uid = uid;
 
-    u64 now = tmanGetSystemTime64();
+    u64 now = tmanGetSystemTimeWide();
     u64 elapsed = now - vt->base_time;
     SceKernelSysClock sched_clk;
     SceKernelSysClock cur_clk;
@@ -1117,7 +1267,7 @@ static int tmanSysTimerIntrHandler(int intr_num, void *arg)
     (void)intr_num;
     (void)arg;
     int intr = sceKernelCpuSuspendIntr();
-    u64 now = tmanGetSystemTime64();
+    u64 now = tmanGetSystemTimeWide();
 
     while (!tmanListEmpty(&g_tman.timer_list)) {
         TmanTimerCB *tm = (TmanTimerCB *)g_tman.timer_list.next;
@@ -1138,7 +1288,7 @@ static int tmanSysTimerIntrHandler(int intr_num, void *arg)
         } else if (sceKernelIsKindOf(cb, g_tman.uid_alarm) != 0) {
             int next_delta = tmanRunAlarmHandler(cb, intr);
             if (next_delta > 0) {
-                tm->schedule = tmanGetSystemTime64() + (u32)next_delta;
+                tm->schedule = tmanGetSystemTimeWide() + (u32)next_delta;
                 tmanInsertTimerSorted(tm);
             } else {
                 sceKernelDeleteUID(cb->uid ^ (s32)g_tman.uid_xor_key);
@@ -1152,7 +1302,7 @@ static int tmanSysTimerIntrHandler(int intr_num, void *arg)
                 tmanInsertTimerSorted(tm);
             }
         }
-        now = tmanGetSystemTime64();
+        now = tmanGetSystemTimeWide();
     }
 
     g_tman.timer_iter = NULL;
@@ -1163,16 +1313,16 @@ static int tmanSysTimerIntrHandler(int intr_num, void *arg)
 
 void tmanInitTimerTypes(void)
 {
-    sceKernelCreateUIDtype("Timer", sizeof(TmanTimerCB),
+    sceKernelCreateUIDtype("Timer", 20,
                            (SceSysmemUidLookupFunc *)g_uid_timer_funcs,
                            NULL, &g_tman.uid_timer);
-    sceKernelCreateUIDtypeInherit("Timer", "Delay", sizeof(TmanDelayCB),
+    sceKernelCreateUIDtypeInherit("Timer", "Delay", 48,
                                   (SceSysmemUidLookupFunc *)g_uid_delay_funcs,
                                   NULL, &g_tman.uid_delay);
-    sceKernelCreateUIDtypeInherit("Timer", "Alarm", sizeof(TmanAlarmCB),
+    sceKernelCreateUIDtypeInherit("Timer", "Alarm", 48,
                                   (SceSysmemUidLookupFunc *)g_uid_alarm_funcs,
                                   NULL, &g_tman.uid_alarm);
-    sceKernelCreateUIDtypeInherit("Timer", "VTimer", sizeof(TmanVTimerCB),
+    sceKernelCreateUIDtypeInherit("Timer", "VTimer", 48,
                                   (SceSysmemUidLookupFunc *)g_uid_vtimer_funcs,
                                   NULL, &g_tman.uid_vtimer);
 }
@@ -1184,7 +1334,7 @@ void tmanInitSysTimer(void)
     g_tman.timer_min_delta = 100;
     g_tman.timer_max_delta = 200;
     g_tman.get_time_low_fn = (void *)sceKernelGetSystemTimeLow;
-    g_tman.get_time_wide_fn = (void *)tmanGetSystemTime64;
+    g_tman.get_time_wide_fn = (void *)tmanGetSystemTimeWide;
     g_tman.sys_timer_intr = 15;
 
     tmanListInit(&g_tman.delay_pool);
@@ -1204,12 +1354,13 @@ void tmanInitSysTimer(void)
     sceKernelRegisterIntrHandler(g_tman.sys_timer_intr, 1, (void *)tmanSysTimerIntrHandler,
                                  g_tman.current_thread, NULL);
     sceKernelSetIntrLevel(g_tman.sys_timer_intr, 2);
+    sceKernelSetPrimarySyscallHandler(24, (void *)tman_systime_low_syscall);
+    sceKernelRegisterSuspendHandler(24, (void *)tmanSysTimerSuspendHandler, NULL);
+    sceKernelRegisterResumeHandler(24, (void *)tmanSysTimerResumeHandler, NULL);
     sceKernelEnableIntr(g_tman.sys_timer_intr);
-    sceKernelRegisterSuspendHandler(10, (void *)tmanSysTimerSuspendHandler, NULL);
-    sceKernelRegisterResumeHandler(10, (void *)tmanSysTimerResumeHandler, NULL);
 }
 
-u64 tmanGetSystemTime64(void)
+u64 tmanGetSystemTimeWide(void)
 {
     u32 lo = TMAN_REG_SYS_TIME_LO;
     u64 hi = g_tman.sys_timer_high;
@@ -1234,7 +1385,7 @@ void tmanInsertTimerSorted(TmanTimerCB *timer)
 
 void tmanProgramNextTimer(void)
 {
-    u64 now = tmanGetSystemTime64();
+    u64 now = tmanGetSystemTimeWide();
     u64 target = now + 0x40000000ULL;
     if (!tmanListEmpty(&g_tman.timer_list)) {
         TmanTimerCB *first = (TmanTimerCB *)g_tman.timer_list.next;
@@ -1250,18 +1401,18 @@ void tmanProgramNextTimer(void)
 
 void tmanCalcAbsTimeoutUsec(u64 *abs_out, u32 usec)
 {
-    *abs_out = tmanGetSystemTime64() + (u64)usec;
+    *abs_out = tmanGetSystemTimeWide() + (u64)usec;
 }
 
 void tmanCalcAbsTimeoutClock(u64 *abs_out, const SceKernelSysClock *clk)
 {
-    u64 delta = ((u64)clk->hi << 32) | clk->low;
-    *abs_out = tmanGetSystemTime64() + delta;
+    u64 now = tmanGetSystemTimeWide();
+    *abs_out = now + *(const u64 *)clk;
 }
 
 SceUID tmanCreateDelayTimer(const u64 *abs_time, void (*handler)(void *), void *arg)
 {
-    u64 now = tmanGetSystemTime64();
+    u64 now = tmanGetSystemTimeWide();
     if (*abs_time <= now)
         return (SceUID)SCE_ERROR_KERNEL_WAIT_TIMEOUT;
 
@@ -1294,7 +1445,7 @@ int tmanCancelDelayTimer(SceUID delay_id, u32 *remain_usec)
 
     TmanTimerCB *tm = (TmanTimerCB *)tmanUidData(cb, g_tman.uid_timer);
     if (remain_usec != NULL) {
-        u64 now = tmanGetSystemTime64();
+        u64 now = tmanGetSystemTimeWide();
         u64 rem = (tm->schedule > now) ? (tm->schedule - now) : 0ULL;
         *remain_usec = (u32)rem;
     }
@@ -1309,10 +1460,10 @@ int tmanCancelDelayTimer(SceUID delay_id, u32 *remain_usec)
 
 static int timerUidCreate(SceSysmemUidCB *cb, SceSysmemUidCB *type, int func_id, void *args)
 {
-    TmanTimerCB *tm = (TmanTimerCB *)tmanUidData(cb, type);
     sceKernelCallUIDObjCommonFunction(cb, type, func_id, args);
-    tmanListInit(&tm->link);
+    TmanTimerCB *tm = (TmanTimerCB *)tmanUidData(cb, type);
     tm->flags = 0;
+    tmanListInit(&tm->link);
     return cb->uid ^ (s32)g_tman.uid_xor_key;
 }
 
@@ -1432,7 +1583,7 @@ int sceKernelGetSystemTime(SceKernelSysClock *time)
         return (int)SCE_ERROR_KERNEL_ILLEGAL_ADDR;
 
     int intr = sceKernelCpuSuspendIntr();
-    u64 now = tmanGetSystemTime64();
+    u64 now = tmanGetSystemTimeWide();
     time->low = (u32)now;
     time->hi = (u32)(now >> 32);
     if (g_tman.log_handler != NULL)
@@ -1444,7 +1595,7 @@ int sceKernelGetSystemTime(SceKernelSysClock *time)
 s64 sceKernelGetSystemTimeWide(void)
 {
     int intr = sceKernelCpuSuspendIntr();
-    u64 now = tmanGetSystemTime64();
+    u64 now = tmanGetSystemTimeWide();
     if (g_tman.log_handler != NULL)
         g_tman.log_handler(132, 0, 1, (u32)now);
     sceKernelCpuResumeIntr(intr);
@@ -1474,7 +1625,7 @@ static SceUID tmanSetAlarmInternal(u64 delta, SceKernelAlarmHandler handler, voi
 
     TmanTimerCB *tm = (TmanTimerCB *)tmanUidData(cb, g_tman.uid_timer);
     TmanAlarmCB *alarm = (TmanAlarmCB *)tmanUidData(cb, g_tman.uid_alarm);
-    tm->schedule = tmanGetSystemTime64() + delta;
+    tm->schedule = tmanGetSystemTimeWide() + delta;
     alarm->is_user = (u32)is_user;
     alarm->handler = handler;
     alarm->common = common;
@@ -1637,12 +1788,15 @@ s64 sceKernelGetVTimerBaseWide(SceUID uid)
 {
     int intr = sceKernelCpuSuspendIntr();
     SceSysmemUidCB *cb = NULL;
-    if (sceKernelGetUIDcontrolBlockWithType(uid, g_tman.uid_vtimer, &cb) != 0) {
+    if (sceKernelGetUIDcontrolBlockWithType(uid, g_tman.uid_vtimer, &cb) != 0 ||
+        !tmanCheckUidAttr(cb, 1)) {
         sceKernelCpuResumeIntr(intr);
-        return 0;
+        return -1LL;
     }
     TmanVTimerCB *vt = (TmanVTimerCB *)tmanUidData(cb, g_tman.uid_vtimer);
     u64 val = vt->active ? vt->base_time : 0ULL;
+    if (g_tman.log_handler != NULL)
+        g_tman.log_handler(151, (u32)intr, 2, uid, (u32)val);
     sceKernelCpuResumeIntr(intr);
     return (s64)val;
 }
@@ -1659,7 +1813,7 @@ int sceKernelGetVTimerTime(SceUID uid, SceKernelSysClock *time)
         return (int)SCE_ERROR_KERNEL_NOT_FOUND_VTIMER;
     }
     TmanVTimerCB *vt = (TmanVTimerCB *)tmanUidData(cb, g_tman.uid_vtimer);
-    u64 val = vt->active ? (tmanGetSystemTime64() - vt->base_time) : vt->base_time;
+    u64 val = vt->active ? (tmanGetSystemTimeWide() - vt->base_time) : vt->base_time;
     time->low = (u32)val;
     time->hi = (u32)(val >> 32);
     sceKernelCpuResumeIntr(intr);
@@ -1670,24 +1824,27 @@ s64 sceKernelGetVTimerTimeWide(SceUID uid)
 {
     int intr = sceKernelCpuSuspendIntr();
     SceSysmemUidCB *cb = NULL;
-    if (sceKernelGetUIDcontrolBlockWithType(uid, g_tman.uid_vtimer, &cb) != 0) {
+    if (sceKernelGetUIDcontrolBlockWithType(uid, g_tman.uid_vtimer, &cb) != 0 ||
+        !tmanCheckUidAttr(cb, 1)) {
         sceKernelCpuResumeIntr(intr);
-        return 0;
+        return -1LL;
     }
     TmanVTimerCB *vt = (TmanVTimerCB *)tmanUidData(cb, g_tman.uid_vtimer);
-    u64 val = vt->active ? (tmanGetSystemTime64() - vt->base_time) : vt->base_time;
+    u64 val = vt->active ? (tmanGetSystemTimeWide() - vt->base_time) : vt->base_time;
+    if (g_tman.log_handler != NULL)
+        g_tman.log_handler(153, (u32)intr, 2, uid, (u32)val);
     sceKernelCpuResumeIntr(intr);
     return (s64)val;
 }
 
-static u64 tmanSetVTimerTimeCommon(SceSysmemUidCB *cb, u64 new_time)
+static inline __attribute__((always_inline)) u64 tmanSetVTimerTimeCommon(SceSysmemUidCB *cb, u64 new_time)
 {
     TmanVTimerCB *vt = (TmanVTimerCB *)tmanUidData(cb, g_tman.uid_vtimer);
     TmanTimerCB *tm = (TmanTimerCB *)tmanUidData(cb, g_tman.uid_timer);
     u64 prev;
 
     if (vt->active != 0) {
-        u64 now = tmanGetSystemTime64();
+        u64 now = tmanGetSystemTimeWide();
         prev = now - vt->base_time;
         vt->base_time = now - new_time;
         if (vt->handler != NULL) {
@@ -1753,7 +1910,7 @@ int sceKernelStartVTimer(SceUID uid)
     int prev = (int)vt->active;
     if (vt->active == 0) {
         vt->active = 1;
-        vt->base_time = tmanGetSystemTime64() - vt->base_time;
+        vt->base_time = tmanGetSystemTimeWide() - vt->base_time;
         if (vt->handler != NULL) {
             tm->schedule = vt->base_time + vt->schedule;
             tmanInsertTimerSorted(tm);
@@ -1780,7 +1937,7 @@ int sceKernelStopVTimer(SceUID uid)
     int prev = (int)vt->active;
     if (vt->active != 0) {
         vt->active = 0;
-        vt->base_time = tmanGetSystemTime64() - vt->base_time;
+        vt->base_time = tmanGetSystemTimeWide() - vt->base_time;
         if (vt->handler != NULL) {
             if (tm == g_tman.timer_iter)
                 g_tman.timer_iter = (TmanTimerCB *)tm->link.next;
@@ -1792,7 +1949,7 @@ int sceKernelStopVTimer(SceUID uid)
     return prev;
 }
 
-static int tmanSetVTimerHandlerCommon(SceUID uid, u64 schedule, void *handler, void *common)
+static inline __attribute__((always_inline)) int tmanSetVTimerHandlerCommon(SceUID uid, u64 schedule, void *handler, void *common)
 {
     int is_user = tmanIsUserCaller();
     if (!tmanCheckUserAddr((u32)handler) || (!is_user && handler != NULL && (s32)(u32)handler >= 0))
@@ -1872,7 +2029,7 @@ int sceKernelReferVTimerStatus(SceUID uid, TmanVTimerInfo *info)
         strncpy(local.name, cb->name, SCE_UID_NAME_LEN);
     local.active = (s32)vt->active;
     if (vt->active != 0) {
-        u64 cur = tmanGetSystemTime64() - vt->base_time;
+        u64 cur = tmanGetSystemTimeWide() - vt->base_time;
         local.base.low = (u32)vt->base_time;
         local.base.hi = (u32)(vt->base_time >> 32);
         local.current.low = (u32)cur;

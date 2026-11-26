@@ -7,7 +7,7 @@
 
 /* Standard PSP ThreadMan types & constants */
 typedef s32 (*SceKernelThreadEntry)(SceSize args, void *argp);
-typedef s32 (*SceKernelCallbackFunction)(s32 arg1, s32 arg2, void *arg);
+typedef s32 (*SceKernelCallbackFunction)(s32 notify_count, s32 notify_arg, void *common);
 typedef SceUInt (*SceKernelAlarmHandler)(void *common);
 
 typedef struct SceSysmemUidCB {
@@ -22,7 +22,7 @@ typedef struct SceSysmemUidCB {
     struct SceSysmemUidCB *next;
     struct SceSysmemUidCB *PARENT1;
     struct SceSysmemUidCB *childList;
-} __attribute__((packed)) SceSysmemUidCB;
+} SceSysmemUidCB;
 
 typedef struct SceSysmemUidLookupFunc {
     u32 id;
@@ -263,45 +263,27 @@ static inline u32 tmanReadIntrDepth(void)
     return val;
 }
 
-static inline u32 tmanReadCfc0(u32 reg)
-{
-    u32 val = 0;
-    if (reg == 8)       __asm__ volatile("cfc0 %0, $8"  : "=r"(val));
-    else if (reg == 13) __asm__ volatile("cfc0 %0, $13" : "=r"(val));
-    else if (reg == 14) __asm__ volatile("cfc0 %0, $14" : "=r"(val));
-    else if (reg == 15) __asm__ volatile("cfc0 %0, $15" : "=r"(val));
-    else if (reg == 16) __asm__ volatile("cfc0 %0, $16" : "=r"(val));
-    else                __asm__ volatile("cfc0 %0, $25" : "=r"(val));
-    return val;
-}
+#define tmanReadCfc0(reg) ({ \
+    u32 _tman_v; \
+    __asm__ volatile("cfc0 %0, $" #reg : "=r"(_tman_v)); \
+    _tman_v; \
+})
 
-static inline void tmanWriteCtc0(u32 reg, u32 val)
-{
-    if (reg == 8)       __asm__ volatile("ctc0 %0, $8"  :: "r"(val));
-    else if (reg == 13) __asm__ volatile("ctc0 %0, $13" :: "r"(val));
-    else if (reg == 14) __asm__ volatile("ctc0 %0, $14" :: "r"(val));
-    else if (reg == 15) __asm__ volatile("ctc0 %0, $15" :: "r"(val));
-    else if (reg == 16) __asm__ volatile("ctc0 %0, $16" :: "r"(val));
-    else                __asm__ volatile("ctc0 %0, $25" :: "r"(val));
-}
+#define tmanWriteCtc0(reg, val) do { \
+    u32 _tman_v = (u32)(val); \
+    __asm__ volatile("ctc0 %0, $" #reg :: "r"(_tman_v)); \
+} while (0)
 
-static inline u32 tmanMfc0(u32 reg)
-{
-    u32 val = 0;
-    if (reg == 12)      __asm__ volatile("mfc0 %0, $12" : "=r"(val));
-    else if (reg == 13) __asm__ volatile("mfc0 %0, $13" : "=r"(val));
-    else if (reg == 22) __asm__ volatile("mfc0 %0, $22" : "=r"(val));
-    else                __asm__ volatile("mfc0 %0, $25" : "=r"(val));
-    return val;
-}
+#define tmanMfc0(reg) ({ \
+    u32 _tman_v; \
+    __asm__ volatile("mfc0 %0, $" #reg : "=r"(_tman_v)); \
+    _tman_v; \
+})
 
-static inline void tmanMtc0(u32 reg, u32 val)
-{
-    if (reg == 12)      __asm__ volatile("mtc0 %0, $12" :: "r"(val));
-    else if (reg == 13) __asm__ volatile("mtc0 %0, $13" :: "r"(val));
-    else if (reg == 14) __asm__ volatile("mtc0 %0, $14" :: "r"(val));
-    else                __asm__ volatile("mtc0 %0, $25" :: "r"(val));
-}
+#define tmanMtc0(reg, val) do { \
+    u32 _tman_v = (u32)(val); \
+    __asm__ volatile("mtc0 %0, $" #reg :: "r"(_tman_v)); \
+} while (0)
 
 static inline u32 tmanGetIntrMask(void)
 {
@@ -329,19 +311,15 @@ static inline u32 tmanClz(u32 val)
 
 static inline u32 tmanRor32(u32 val, u32 shift)
 {
-    shift &= 31U;
-    return shift ? ((val >> shift) | (val << (32U - shift))) : val;
+    u32 res;
+    __asm__("rotrv %0, %1, %2" : "=r"(res) : "r"(val), "r"(shift));
+    return res;
 }
 
-static inline void tmanCacheOp(u32 op, const void *addr)
-{
-    u32 ptr = (u32)addr;
-    if (op == 0x08U)      __asm__ volatile("cache 0x08, 0(%0)" :: "r"(ptr));
-    else if (op == 0x18U) __asm__ volatile("cache 0x18, 0(%0)" :: "r"(ptr));
-    else if (op == 0x19U) __asm__ volatile("cache 0x19, 0(%0)" :: "r"(ptr));
-    else if (op == 0x1AU) __asm__ volatile("cache 0x1a, 0(%0)" :: "r"(ptr));
-    else                  __asm__ volatile("cache 0x1b, 0(%0)" :: "r"(ptr));
-}
+#define tmanCacheOp(op, addr) do { \
+    u32 _tman_p = (u32)(addr); \
+    __asm__ volatile("cache %0, 0(%1)" :: "i"(op), "r"(_tman_p)); \
+} while (0)
 
 /* Intrusive circular doubly-linked list */
 typedef struct TmanListNode {
@@ -377,8 +355,6 @@ static inline void tmanListRemove(TmanListNode *node)
 {
     node->next->prev = node->prev;
     node->prev->next = node->next;
-    node->next = node;
-    node->prev = node;
 }
 
 /* SysMem UID object access helpers */
@@ -429,10 +405,12 @@ typedef struct TmanThreadContext {
 
 /* Syscall stack header frame */
 typedef struct TmanSyscallStack {
-    u32 reserved0;
-    u32 reserved1;
+    u32 prev_kstack;
+    u32 saved_sp;
     u32 user_sp;
-    u32 reserved3[3];
+    u32 user_ra;
+    u32 saved_gp;
+    u32 saved_s8;
     u32 return_val;
 } TmanSyscallStack;
 
@@ -442,6 +420,9 @@ typedef struct TmanExtStackNode {
     void *stack_base;
     SceUID block_id;
     u32 stack_size;
+    u32 saved_sp;
+    u32 saved_user_ra;
+    u32 saved_user_sp;
 } TmanExtStackNode;
 
 /* Thread control block (320 bytes, inherits "WaitQ") */
@@ -515,11 +496,14 @@ typedef struct TmanSemaCB {
 } TmanSemaCB;
 
 /* EventFlag CB (inherits "WaitQ") */
-typedef struct TmanEventFlagCB {
+typedef struct TmanEvfBlock {
     void *opt;
     u32 init_pattern;
     u32 cur_pattern;
-} TmanEventFlagCB;
+    TmanThreadCB *wait_owner;
+    s32 wait_owner_refs;
+    TmanListNode owner_link;
+} TmanEvfBlock;
 
 /* Mutex CB (inherits "WaitQ") */
 typedef struct TmanMutexCB {
@@ -529,6 +513,7 @@ typedef struct TmanMutexCB {
     s32 lock_count;
     TmanThreadCB *owner;
     void *opt;
+    s32 prio_ceiling;
 } TmanMutexCB;
 
 /* Lightweight Mutex CB (inherits "WaitQ") */
@@ -579,27 +564,29 @@ typedef struct TmanVplCB {
 
 /* FPL CB (inherits "WaitQ") */
 typedef struct TmanFplCB {
-    void *opt;
     SceUID mem_id;
     void *pool;
-    u32 block_size;
-    u32 num_blocks;
+    void **free_tail;
+    void **link_table;
     u32 free_blocks;
-    u32 *bitmap;
+    u32 num_blocks;
+    u32 block_size;
     u32 attr;
+    void *opt;
 } TmanFplCB;
 
 /* TLSPL CB (inherits "WaitQ") */
 typedef struct TmanTlsplCB {
-    void *opt;
     SceUID mem_id;
     void *pool;
-    u32 block_size;
-    u32 num_blocks;
+    void **free_tail;
+    void **link_table;
     u32 free_blocks;
-    u32 *bitmap;
-    SceUID *owners;
+    s32 tls_index;
+    u32 num_blocks;
+    u32 block_size;
     u32 attr;
+    void *opt;
 } TmanTlsplCB;
 
 /* ThreadEventHandler CB (inherits "WaitQ") */
@@ -780,7 +767,6 @@ typedef int (*TmanLogHandler)(u32 event, u32 obj, u32 argc, ...);
 
 /* Global ThreadMan state */
 typedef struct TmanGlobals {
-    u32 saved_sys_timer;
     TmanThreadCB *current_thread;
     TmanThreadCB *next_thread;
     TmanLogHandler log_handler;
@@ -829,6 +815,8 @@ typedef struct TmanGlobals {
     TmanThreadCB *idle_thread;
     TmanThreadCB *cleaner_thread;
     TmanKtlsEntry ktls[16];
+    SceUID tls_uid_table[16];
+    u32 refer_scratch[61];
     u32 cpu_prid;
     s32 sys_timer_intr;
     SceUID sys_stat_evf;
@@ -850,6 +838,7 @@ typedef struct TmanGlobals {
 } TmanGlobals;
 
 extern TmanGlobals g_tman;
+extern u32 g_saved_sys_timer;
 extern u32 ThreadManForKernel_921B7ACD;
 
 /* Assembly helpers (threadman_asm.S) */
@@ -857,8 +846,9 @@ extern void tman_idle_loop(void);
 extern void tman_vfpu_save(void *ctx);
 extern void tman_vfpu_restore(void *ctx);
 extern void tman_vfpu_flush(void);
-extern void tman_vfpu_exc_handler(void);
-extern void tman_eret(void);
+extern u32 tman_fpu_exc_handler[];
+extern void tmanSaveFpuContext(TmanThreadContext *ctx);
+extern void tman_systime_low_syscall(void);
 extern void tman_idle_halt(void);
 
 /* UID function tables */
@@ -893,8 +883,9 @@ extern int sceKernelEnableIntr(int intr);
 extern int sceKernelRegisterIntrHandler(int intr, int sub, void *handler, void *arg, void *opt);
 extern int sceKernelReleaseIntrHandler(int intr);
 extern int sceKernelSetIntrLevel(int intr, int level);
+extern int sceKernelSetPrimarySyscallHandler(int syscall_num, void *handler);
 extern int sceKernelQuerySystemCall(void *func);
-extern int sceKernelCallUserIntrHandler(u32 arg0, u32 arg1, u32 arg2, u32 arg3, void *handler, u32 sp);
+extern int sceKernelCallUserIntrHandler(u32 reg_a, u32 reg_b, u32 reg_c, u32 reg_d, void *handler, u32 sp);
 extern u32 sceKernelGetUserIntrStack(void);
 extern int sceKernelRegisterExceptionHandler(int code, void *handler);
 extern int sceKernelReleaseExceptionHandler(int code, void *handler);
@@ -935,7 +926,6 @@ extern int sceKernelCallUIDObjFunction(SceSysmemUidCB *cb, s32 func_id, ...);
 extern int sceKernelCallUIDObjCommonFunction(SceSysmemUidCB *cb, SceSysmemUidCB *type, s32 func_id, void *args);
 
 /* Internal scheduler / wait queue functions (tman_sched.c) */
-void tmanSaveFpuContext(TmanThreadContext *ctx);
 int tmanAddThreadToWaitQueue(SceSysmemUidCB *wait_obj, u32 wait_type, u32 attr, u64 *timeout_abs, u32 *timeout_out, u32 *wait_counter);
 int tmanWaitOnObject(SceSysmemUidCB *wait_obj, u32 wait_type, u32 attr, u64 *timeout_abs, u32 *timeout_out);
 void tmanParkCurrentThread(TmanListNode *list, u32 wait_type);
@@ -949,35 +939,44 @@ int tmanNotifyWaitObject(SceSysmemUidCB *wait_obj);
 void tmanInitWaitQueueType(void);
 void tmanWaitTimeoutCallback(void *arg);
 void tmanSchedule(int save_wait_stat, int can_switch);
+int tmanNeedReschedule(void);
 void tmanInitEventAndCallbackTypes(void);
 int tmanDispatchThreadEvents(u32 mask, TmanThreadCB *target, int intr_state);
 int tmanCheckPendingCallbacks(int intr_state);
 void tmanCleanupActiveEventHandler(TmanThreadCB *th);
 void tmanCleanupActiveCallback(TmanThreadCB *th);
 void tmanDeleteThreadCallbacks(TmanThreadCB *th);
-int tmanExecuteHandlerContext(int is_user, void *handler, u32 arg0, u32 arg1, u32 arg2, u32 arg3, u32 gp_reg);
+int tmanExecuteHandlerContext(int is_user, void *handler, u32 reg_a, u32 reg_b, u32 reg_c, u32 reg_d, u32 gp_reg);
 int tmanReturnFromHandlerContext(void);
 void tmanDelayTimeoutCallback(void *arg);
 
 /* Internal sync functions (tman_sync.c) */
 void tmanInitSemaType(void);
 void tmanInitEventFlagType(void);
+void tmanReleaseOwnedEventFlags(TmanThreadCB *th);
 void tmanInitMutexType(void);
+void tmanMutexAcquire(SceSysmemUidCB *cb, TmanThreadCB *owner, s32 count);
+void tmanMutexRelease(SceSysmemUidCB *cb);
+void tmanReleaseOwnedMutexes(TmanThreadCB *th);
 void tmanInitLwMutexType(void);
 void tmanInitMbxType(void);
-void tmanReleaseOwnedMutexes(TmanThreadCB *th);
-void tmanReleaseOwnedLwMutexes(TmanThreadCB *th);
-void tmanRecalcThreadPriority(TmanThreadCB *th);
 int tmanWaitQueueHasWaiters(const TmanWaitQueue *wq);
 
 /* Internal memory pool / timer functions (tman_mem.c) */
 void tmanInitMsgPipeType(void);
+void tmanMsgPipeWriteRing(TmanMsgPipeCB *mpp, const u8 *src, u32 len);
 void tmanInitVplType(void);
 void tmanInitFplType(void);
+int tmanFplFreeBlock(TmanFplCB *fpl, s32 idx);
+int tmanFplAllocBlock(TmanFplCB *fpl);
 void tmanInitTlsplType(void);
+int tmanTlsplFreeBlock(TmanTlsplCB *tls, s32 idx);
+int tmanTlsplAllocBlock(TmanTlsplCB *tls);
+int tmanTlsplValidateBlock(TmanTlsplCB *tls, void *ptr);
+void tmanFreeThreadTlspl(TmanThreadCB *th);
 void tmanInitTimerTypes(void);
 void tmanInitSysTimer(void);
-u64 tmanGetSystemTime64(void);
+u64 tmanGetSystemTimeWide(void);
 void tmanCalcAbsTimeoutUsec(u64 *abs_out, u32 usec);
 void tmanCalcAbsTimeoutClock(u64 *abs_out, const SceKernelSysClock *clk);
 SceUID tmanCreateDelayTimer(const u64 *abs_time, void (*handler)(void *), void *arg);
@@ -1001,13 +1000,19 @@ void tmanSwitchVfpuContext(TmanThreadCB *th);
 void tmanCheckKernelStackGuard(void);
 int tmanQueueThreadForCleaner(SceUID thid);
 void tmanFreeThreadResources(TmanThreadCB *th);
+void tmanRestoreExtStacks(TmanThreadCB *th);
 int tmanFreeThreadKtls(TmanThreadCB *th);
+int tmanChangeThreadPriorityInternal(TmanThreadCB *th, s32 new_prio, int from_user);
 void tmanExitCurrentThread(int delete_self, int intr_state, s32 exit_status);
 int tmanResumeDispatchInternal(int mode, int intr_state);
+void tmanThreadIsDead(SceSysmemUidCB *cb);
 void tmanHandleStackOverflow(TmanThreadCB *th, int is_kernel, u32 sp);
+int tmanExtendThreadStackCommon(SceUID block_id, void *stack_base, u32 stack_size, void *entry, void *arg);
+void tmanFillThreadDebugStatus(SceSysmemUidCB *cb, void *status);
+void tmanFillSystemStatus(TmanSystemStatus *local, int intr_state);
 
 /* Exported functions with custom signatures */
-int sceKernelReturnFromCallback(void);
+int _sceKernelReturnFromCallback(void);
 int _sceKernelReturnFromChangeStack(void);
 int sceKernelExtendThreadStack(u32 stack_size, void *entry, void *arg);
 int sceKernelExitThread(s32 status);

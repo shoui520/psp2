@@ -10,7 +10,7 @@ static int threvUidCreate(SceSysmemUidCB *cb, SceSysmemUidCB *type, int func_id,
 static int threvUidDelete(SceSysmemUidCB *cb, SceSysmemUidCB *type, int func_id, void *args);
 static int cbUidCreate(SceSysmemUidCB *cb, SceSysmemUidCB *type, int func_id, void *args);
 static int cbUidDelete(SceSysmemUidCB *cb, SceSysmemUidCB *type, int func_id, void *args);
-static int tmanKernelHandlerTrampoline(int ret_val);
+static int tmanKernelHandlerTrampoline(void);
 
 const TmanUidFunc g_uid_waitq_funcs[6] = {
     { TMAN_UID_FUNC_REMOVE_WAIT, (void *)waitqUidRemove },
@@ -33,57 +33,14 @@ const TmanUidFunc g_uid_cb_funcs[3] = {
     { 0, NULL },
 };
 
-void tmanSaveFpuContext(TmanThreadContext *ctx)
+int tmanNeedReschedule(void)
 {
-    u32 sr = tmanMfc0(12);
-    tmanMtc0(12, sr | 0x20000000U);
-    tmanCacheOp(0x18U, &ctx->fpr[16]);
-
-    __asm__ volatile(
-        "swc1 $f20, 0(%0)\n"
-        "swc1 $f21, 4(%0)\n"
-        "swc1 $f22, 8(%0)\n"
-        "swc1 $f23, 12(%0)\n"
-        "swc1 $f24, 16(%0)\n"
-        "swc1 $f25, 20(%0)\n"
-        "swc1 $f26, 24(%0)\n"
-        "swc1 $f27, 28(%0)\n"
-        "swc1 $f28, 32(%0)\n"
-        "swc1 $f29, 36(%0)\n"
-        "swc1 $f30, 40(%0)\n"
-        "swc1 $f31, 44(%0)\n"
-        :: "r"(&ctx->fpr[20]) : "memory"
-    );
-
-    if ((ctx->status_flag & 0xFFU) != 1U) {
-        tmanCacheOp(0x18U, &ctx->fpr[0]);
-        __asm__ volatile(
-            "swc1 $f0,  0(%0)\n"
-            "swc1 $f1,  4(%0)\n"
-            "swc1 $f2,  8(%0)\n"
-            "swc1 $f3,  12(%0)\n"
-            "swc1 $f4,  16(%0)\n"
-            "swc1 $f5,  20(%0)\n"
-            "swc1 $f6,  24(%0)\n"
-            "swc1 $f7,  28(%0)\n"
-            "swc1 $f8,  32(%0)\n"
-            "swc1 $f9,  36(%0)\n"
-            "swc1 $f10, 40(%0)\n"
-            "swc1 $f11, 44(%0)\n"
-            "swc1 $f12, 48(%0)\n"
-            "swc1 $f13, 52(%0)\n"
-            "swc1 $f14, 56(%0)\n"
-            "swc1 $f15, 60(%0)\n"
-            "swc1 $f16, 64(%0)\n"
-            "swc1 $f17, 68(%0)\n"
-            "swc1 $f18, 72(%0)\n"
-            "swc1 $f19, 76(%0)\n"
-            :: "r"(&ctx->fpr[0]) : "memory"
-        );
-    }
-
-    tmanMtc0(12, sr);
-    tmanWriteCtc0(8, 0);
+    if (g_tman.dispatch_suspended != 0)
+        return 0;
+    if (g_tman.next_thread == g_tman.current_thread)
+        return 0;
+    g_tman.current_thread->stat_counter_ptr = &g_tman.current_thread->preempt_count;
+    return 1;
 }
 
 void tmanInsertThreadByPriority(TmanThreadCB *th, SceSysmemUidCB *wait_obj)
@@ -159,9 +116,13 @@ int tmanWaitOnObject(SceSysmemUidCB *wait_obj, u32 wait_type, u32 attr,
 void tmanParkCurrentThread(TmanListNode *list, u32 wait_type)
 {
     TmanThreadCB *cur = g_tman.current_thread;
-    tmanListInsertTail(list, &cur->link);
+    TmanListNode *prev = list->prev;
+    cur->link.next = list;
+    cur->link.prev = prev;
+    list->prev = &cur->link;
     cur->status = TMAN_TH_WAIT;
     cur->wait_type = wait_type;
+    prev->next = &cur->link;
     cur->wait_obj = NULL;
     cur->wait_result = 0;
 }
@@ -297,11 +258,11 @@ void tmanWaitTimeoutCallback(void *arg)
 
 static int waitqUidCreate(SceSysmemUidCB *cb, SceSysmemUidCB *type, int func_id, void *args)
 {
-    TmanWaitQueue *wq = (TmanWaitQueue *)tmanUidData(cb, type);
     sceKernelCallUIDObjCommonFunction(cb, type, func_id, args);
-    wq->attr = 0;
+    TmanWaitQueue *wq = (TmanWaitQueue *)tmanUidData(cb, type);
     wq->skip_first_pri = 0;
     wq->num_wait_threads = 0;
+    wq->attr = 0;
     tmanListInit(&wq->wait_list);
     return cb->uid ^ (s32)g_tman.uid_xor_key;
 }
@@ -405,11 +366,11 @@ void tmanSchedule(int save_wait_stat, int can_switch)
 void tmanInitEventAndCallbackTypes(void)
 {
     sceKernelCreateUIDtypeInherit("WaitQ", "ThreadEventHandler",
-                                  sizeof(TmanThreadEventHandlerCB),
+                                  48,
                                   (SceSysmemUidLookupFunc *)g_uid_threv_funcs,
                                   NULL, &g_tman.uid_threv);
     sceKernelCreateUIDtypeInherit("WaitQ", "Callback",
-                                  sizeof(TmanCallbackCB),
+                                  48,
                                   (SceSysmemUidLookupFunc *)g_uid_cb_funcs,
                                   NULL, &g_tman.uid_cb);
 }
@@ -986,7 +947,7 @@ int sceKernelReferCallbackStatus(SceUID cb_id, SceKernelCallbackInfo *info)
     return 0;
 }
 
-int sceKernelReturnFromCallback(void)
+int _sceKernelReturnFromCallback(void)
 {
     sceKernelCpuSuspendIntr();
     TmanThreadCB *cur = g_tman.current_thread;
@@ -1068,26 +1029,28 @@ int tmanReturnFromHandlerContext(void)
     return 0;
 }
 
-static int tmanKernelHandlerTrampoline(int ret_val)
+static int tmanKernelHandlerTrampoline(void)
 {
+    int saved;
+    __asm__ volatile("move %0, $2" : "=r"(saved));
     sceKernelCpuSuspendIntr();
-    g_tman.current_thread->wait_result = ret_val;
+    g_tman.current_thread->wait_result = saved;
     return tmanReturnFromHandlerContext();
 }
 
-int tmanExecuteHandlerContext(int is_user, void *handler, u32 arg0, u32 arg1,
-                              u32 arg2, u32 arg3, u32 gp_reg)
+int tmanExecuteHandlerContext(int is_user, void *handler, u32 reg_a, u32 reg_b,
+                              u32 reg_c, u32 reg_d, u32 gp_reg)
 {
     u8 raw_ctx[sizeof(TmanThreadContext) + 64];
     TmanThreadContext *new_ctx = (TmanThreadContext *)(((u32)raw_ctx + 63U) & ~63U);
-    TmanThreadCB *cur = g_tman.current_thread;
 
     tmanInitThreadContext(new_ctx);
+    TmanThreadCB *cur = g_tman.current_thread;
     new_ctx->epc = (u32)handler;
-    new_ctx->gpr[4] = arg0;
-    new_ctx->gpr[5] = arg1;
-    new_ctx->gpr[6] = arg2;
-    new_ctx->gpr[7] = arg3;
+    new_ctx->gpr[4] = reg_a;
+    new_ctx->gpr[5] = reg_b;
+    new_ctx->gpr[6] = reg_c;
+    new_ctx->gpr[7] = reg_d;
     new_ctx->gpr[28] = gp_reg;
 
     u32 saved_vfpu_dirty = cur->vfpu_dirty;
@@ -1107,8 +1070,8 @@ int tmanExecuteHandlerContext(int is_user, void *handler, u32 arg0, u32 arg1,
         cur->ctx = restored;
         if (tmanReadCfc0(8) == (u32)new_ctx)
             tmanWriteCtc0(8, 0);
-        tmanWriteCtc0(14, 0);
-        tmanWriteCtc0(15, 0);
+        tmanWriteCtc0(14, (u32)restored);
+        tmanWriteCtc0(15, (u32)saved_kstack_top);
         return cur->wait_result;
     }
 
@@ -1142,8 +1105,8 @@ int tmanExecuteHandlerContext(int is_user, void *handler, u32 arg0, u32 arg1,
     cur->vfpu_dirty = 0;
     cur->attr &= ~SCE_KERNEL_TH_USE_VFPU;
 
-    tmanWriteCtc0(15, 0);
-    tmanWriteCtc0(14, 0);
+    tmanWriteCtc0(15, (u32)cur->kstack_top);
+    tmanWriteCtc0(14, (u32)new_ctx);
     InterruptManagerForKernel_551097F2(new_ctx);
     return 0;
 }
@@ -1496,7 +1459,7 @@ int sceKernelSuspendAllUserThreads(void)
     return 0;
 }
 
-static int tmanWaitThreadEndInternal(SceUID thid, SceUInt *timeout, int use_cb)
+static inline __attribute__((always_inline)) int tmanWaitThreadEndInternal(SceUID thid, SceUInt *timeout, int use_cb)
 {
     if (!tmanCheckUserPtr(timeout, sizeof(SceUInt)))
         return (int)SCE_ERROR_KERNEL_ILLEGAL_ADDR;
@@ -1567,7 +1530,7 @@ int sceKernelWaitThreadEndCB(SceUID thid, SceUInt *timeout)
     return tmanWaitThreadEndInternal(thid, timeout, 1);
 }
 
-static int tmanDelayThreadInternal(SceUInt delay_usec, int use_cb)
+static inline __attribute__((always_inline)) int tmanDelayThreadInternal(SceUInt delay_usec, int use_cb)
 {
     if (tmanReadIntrDepth() != 0)
         return (int)SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
@@ -1629,7 +1592,7 @@ int sceKernelDelayThreadCB(SceUInt delay)
     return tmanDelayThreadInternal(delay, 1);
 }
 
-static int tmanDelaySysClockInternal(SceKernelSysClock *delay, int use_cb)
+static inline __attribute__((always_inline)) int tmanDelaySysClockInternal(SceKernelSysClock *delay, int use_cb)
 {
     if (tmanReadIntrDepth() != 0)
         return (int)SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;

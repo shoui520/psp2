@@ -12,6 +12,7 @@ static int tmanBootCallback(void *arg);
 static void tmanThreadStartEntry(void);
 static void tmanThreadExitTrampoline(void);
 static int tmanK0CorruptedHandler(TmanThreadCB *th);
+static int doTerminateDeleteThread(SceUID thid, int delete_after);
 
 const TmanUidFunc g_uid_thread_funcs[3] = {
     { TMAN_UID_FUNC_CREATE, (void *)threadUidCreate },
@@ -176,19 +177,50 @@ void tmanInitThreadType(void)
 
 static int threadUidCreate(SceSysmemUidCB *cb, SceSysmemUidCB *type, int func_id, void *args)
 {
-    TmanThreadCB *th = (TmanThreadCB *)tmanUidData(cb, type);
     sceKernelCallUIDObjCommonFunction(cb, type, func_id, args);
-    memset(th, 0, sizeof(*th));
+    TmanThreadCB *th = (TmanThreadCB *)tmanUidData(cb, type);
+    sceKernelMemset32(th, 0, sizeof(*th));
+    th->status = 0;
+    th->uid = cb->uid ^ (s32)g_tman.uid_xor_key;
     tmanListInit(&th->link);
-    tmanListInit(&th->cb_list);
     tmanListInit(&th->owned_mutex_list);
     tmanListInit(&th->owned_lwmutex_list);
-    th->uid = cb->uid ^ (s32)g_tman.uid_xor_key;
-    return th->uid;
+    tmanListInit(&th->cb_list);
+    return cb->uid ^ (s32)g_tman.uid_xor_key;
 }
 
 static int threadUidDelete(SceSysmemUidCB *cb, SceSysmemUidCB *type, int func_id, void *args)
 {
+    int intr = sceKernelCpuSuspendIntr();
+    TmanThreadCB *th = (TmanThreadCB *)tmanUidData(cb, type);
+    if (th->status != 0) {
+        int ret = doTerminateDeleteThread(th->uid, 1);
+        if (ret != 0) {
+            sceKernelCpuResumeIntr(intr);
+            return ret;
+        }
+    }
+    tmanRestoreExtStacks(th);
+    if (th->stack != NULL)
+        sceKernelFreePartitionMemory(th->stack_block_id);
+    if ((s32)th->attr < 0) {
+        if (th->kstack != NULL)
+            sceKernelFreePartitionMemory(th->kstack_block_id);
+        if (th->profiler_regs != NULL)
+            sceKernelFreeHeapMemory(g_tman.heap_id, th->profiler_regs);
+    }
+    if (th->ctx != NULL) {
+        if (tmanReadCfc0(8) == (u32)th->ctx)
+            tmanWriteCtc0(8, 0);
+        sceKernelFreeHeapMemory(g_tman.heap_id, th->ctx);
+    }
+    if (th->vfpu_ctx != NULL) {
+        if (g_tman.vfpu_owner_ctx == th->vfpu_ctx)
+            g_tman.vfpu_owner_ctx = NULL;
+        tman_vfpu_flush();
+        sceKernelFreeHeapMemory(g_tman.heap_id, th->vfpu_ctx);
+    }
+    sceKernelCpuResumeIntr(intr);
     sceKernelCallUIDObjCommonFunction(cb, type, func_id, args);
     return 0;
 }
@@ -198,24 +230,30 @@ void tmanInitThreadContext(TmanThreadContext *ctx)
     int idx;
     for (idx = 0; idx < 32; idx++)
         ctx->gpr[idx] = 0xDEADBEEFU;
-    ctx->gpr[0] = 0;
     ctx->gpr[26] = 0;
     ctx->gpr[27] = 0;
     for (idx = 0; idx < 32; idx++)
         ((u32 *)ctx->fpr)[idx] = 0x7F800001U;
     ctx->fcr31 = 0x0E00U;
-    ctx->hi = 0xDEADBEEFU;
     ctx->lo = 0xDEADBEEFU;
+    ctx->cause = 0;
+    ctx->hi = 0xDEADBEEFU;
     ctx->sr = 0;
     ctx->epc = 0;
-    ctx->cause = 0;
+    ctx->gpr[0] = 0;
 }
 
 void tmanAddReadyQueue(TmanThreadCB *th)
 {
     u32 prio = (u32)th->current_priority;
-    tmanListInsertTail(&g_tman.ready_queues[prio], &th->link);
-    g_tman.ready_bitmap[prio >> 5] |= tmanRor32(0x80000000U, prio);
+    TmanGlobals *g = &g_tman;
+    TmanListNode *head = &g->ready_queues[prio];
+    TmanListNode *prev = head->prev;
+    th->link.prev = prev;
+    head->prev = &th->link;
+    th->link.next = head;
+    g->ready_bitmap[prio >> 5] |= tmanRor32(0x80000000U, prio);
+    prev->next = &th->link;
 }
 
 void tmanRemoveReadyQueue(TmanThreadCB *th, u32 prio)
@@ -330,18 +368,72 @@ void tmanSwitchVfpuContext(TmanThreadCB *th)
     }
 }
 
-void tmanHandleStackOverflow(TmanThreadCB *th, int is_kernel, u32 sp)
+void tmanThreadIsDead(SceSysmemUidCB *cb)
 {
-    (void)sp;
-    Kprintf("Thread (thid=0x%08x) %sstack overflow\n", th->uid, is_kernel ? "kernel " : "");
+    TmanThreadCB *th = (TmanThreadCB *)tmanUidData(cb, g_tman.uid_thread);
+    if (g_tman.dispatch_suspended != 0) {
+        g_tman.dispatch_suspended = 0;
+        Kprintf("thread_is_dead: Thread dispatch is disabled!\n");
+    }
+    if (th->link.next == th->link.prev && th->link.next != &th->link)
+        g_tman.ready_bitmap[(u32)th->current_priority >> 5] &= ~tmanRor32(0x80000000U, (u32)th->current_priority);
+    tmanListRemove(&th->link);
+
+    tmanWakeupAllWaiters(cb, (s32)SCE_ERROR_KERNEL_THREAD_IS_TERMINATED);
+    tmanCleanupActiveEventHandler(th);
+    tmanCleanupActiveCallback(th);
+    tmanFreeThreadKtls(th);
+    tmanReleaseOwnedEventFlags(th);
+    tmanReleaseOwnedMutexes(th);
+    tmanDeleteThreadCallbacks(th);
+    tmanFreeThreadTlspl(th);
+
+    const char *name = (cb->name != NULL) ? cb->name : "";
+    Kprintf("Thread \"%s\" (thid=0x%08x) is DEAD\n", name, th->uid);
+    TmanThreadContext *ctx = th->ctx;
+    if (ctx != NULL && ctx->status_flag == 3) {
+        Kprintf(" Saved registers:\n");
+        Kprintf(" at=%08x  v0-1=%08x,%08x  a0-3=%08x,%08x,%08x,%08x\n",
+                ctx->gpr[1], ctx->gpr[2], ctx->gpr[3],
+                ctx->gpr[4], ctx->gpr[5], ctx->gpr[6], ctx->gpr[7]);
+        Kprintf(" t0-7=%08x,%08x,%08x,%08x, %08x,%08x,%08x,%08x\n",
+                ctx->gpr[8], ctx->gpr[9], ctx->gpr[10], ctx->gpr[11],
+                ctx->gpr[12], ctx->gpr[13], ctx->gpr[14], ctx->gpr[15]);
+        Kprintf(" s0-7=%08x,%08x,%08x,%08x, %08x,%08x,%08x,%08x\n",
+                ctx->gpr[16], ctx->gpr[17], ctx->gpr[18], ctx->gpr[19],
+                ctx->gpr[20], ctx->gpr[21], ctx->gpr[22], ctx->gpr[23]);
+        Kprintf(" t8=%08x t9=%08x\tk0=%08x k1=%08x\t  gp=%08x sp=%08x\n",
+                ctx->gpr[24], ctx->gpr[25], ctx->gpr[26], ctx->gpr[27],
+                ctx->gpr[28], ctx->gpr[29]);
+        Kprintf(" fp=%08x ra=%08x\tlo=%08x hi=%08x\t  PC=%08x\n",
+                ctx->gpr[30], ctx->gpr[31], ctx->lo, ctx->hi, ctx->epc);
+    }
+    if (th->syscall_stack != NULL) {
+        Kprintf(" Syscall return address = 0x%08x, sp = 0x%08x\n",
+                th->syscall_stack->user_ra, th->syscall_stack->user_sp);
+    }
     th->status = TMAN_TH_KILLED;
     tmanListInsertTail(&g_tman.dormant_list, &th->link);
+    if (g_tman.dead_thread_handler != NULL)
+        g_tman.dead_thread_handler(th->uid);
     g_tman.next_thread = NULL;
+}
+
+void tmanHandleStackOverflow(TmanThreadCB *th, int is_kernel, u32 sp)
+{
+    SceSysmemUidCB *cb = tmanDataToUid(th, g_tman.uid_thread);
+    void *base = is_kernel ? th->kstack : th->stack;
+    u32 sz = is_kernel ? th->kstack_size : th->stack_size;
+    Kprintf("\nThread (thid=0x%08x) %sstack overflow\n Stack = 0x%08x, Stack size = 0x%08x, SP = 0x%08x\n",
+            th->uid, is_kernel ? "kernel " : "", (u32)base, sz, sp);
+    tmanThreadIsDead(cb);
 }
 
 static int tmanK0CorruptedHandler(TmanThreadCB *th)
 {
-    Kprintf("Thread (thid=0x%08x) k0 reg corrupted\n", th->uid);
+    SceSysmemUidCB *cb = tmanDataToUid(th, g_tman.uid_thread);
+    Kprintf("\nThread (thid=0x%08x) k0 reg corrupted\n", th->uid);
+    tmanThreadIsDead(cb);
     return 0;
 }
 
@@ -389,7 +481,7 @@ TmanThreadContext *tmanSwitchContext(TmanThreadContext *cur_ctx, int reason)
     if (cur == next) {
         g_tman.noswitch_count++;
     } else {
-        u64 now = tmanGetSystemTime64();
+        u64 now = tmanGetSystemTimeWide();
         u64 elapsed = now - g_tman.last_switch_time;
         g_tman.last_switch_time = now;
         u64 total = (((u64)cur->run_clocks_hi << 32) | cur->run_clocks_lo) + elapsed;
@@ -450,7 +542,9 @@ static int tmanBootCallback(void *arg)
 
 static void tmanThreadExitTrampoline(void)
 {
-    sceKernelExitThread(0);
+    s32 exit_code;
+    __asm__ volatile("move %0, $2" : "=r"(exit_code));
+    sceKernelExitThread(exit_code);
 }
 
 static void tmanThreadStartEntry(void)
@@ -458,11 +552,49 @@ static void tmanThreadStartEntry(void)
     TmanThreadCB *cur = g_tman.current_thread;
     int intr = sceKernelCpuSuspendIntr();
     tmanDispatchThreadEvents(TMAN_THREV_START, cur, intr);
-    sceKernelCpuResumeIntr(intr);
 
-    SceKernelThreadEntry entry = (SceKernelThreadEntry)cur->entry;
-    s32 ret = entry(cur->arg_len, cur->arg_ptr);
-    sceKernelExitThread(ret);
+    tmanInitThreadContext(cur->ctx);
+    TmanThreadContext *ctx = cur->ctx;
+    ctx->status_flag = 3;
+    ctx->gpr[4] = cur->arg_len;
+    ctx->gpr[5] = (u32)cur->arg_ptr;
+    ctx->gpr[26] = (u32)cur->user_tls;
+    ctx->gpr[28] = cur->gp_reg;
+    ctx->gpr[29] = (u32)cur->init_sp;
+    ctx->gpr[30] = (u32)cur->init_sp;
+    ctx->gpr[31] = ((s32)cur->attr < 0) ? (u32)cur->init_sp : (u32)tmanThreadExitTrampoline;
+    ctx->sr = ((s32)cur->attr < 0) ? 19U : 3U;
+    ctx->epc = (u32)cur->entry;
+    if ((s32)cur->attr < 0 && cur->user_tls != NULL)
+        ((u32 *)cur->user_tls)[49] = 0;
+
+    cur->attr = (cur->attr & ~SCE_KERNEL_TH_USE_VFPU) | (cur->init_attr & SCE_KERNEL_TH_USE_VFPU);
+    if (cur->vfpu_ctx != NULL) {
+        u32 *vctx = (u32 *)cur->vfpu_ctx;
+        int idx;
+        for (idx = 0; idx < 128; idx++)
+            vctx[idx] = 0x7F800001U;
+        vctx[128] = 228;
+        vctx[129] = 228;
+        vctx[130] = 0;
+        vctx[131] = 63;
+        vctx[132] = 0;
+        vctx[136] = 0x3F800001U;
+        vctx[137] = 0x3F800002U;
+        vctx[138] = 0x3F800004U;
+        vctx[139] = 0x3F800008U;
+        vctx[140] = 0x3F800000U;
+        vctx[141] = 0x3F800000U;
+        vctx[142] = 0x3F800000U;
+        vctx[143] = 0x3F800000U;
+        if (g_tman.vfpu_owner_ctx == cur->vfpu_ctx)
+            g_tman.vfpu_owner_ctx = NULL;
+    }
+    if ((cur->attr & SCE_KERNEL_TH_USE_VFPU) != 0) {
+        cur->ctx->sr |= 0x40000000U;
+        tmanSwitchVfpuContext(cur);
+    }
+    InterruptManagerForKernel_551097F2(cur->ctx);
 }
 
 static void tmanCleanerThreadEntry(SceSize args, void *argp)
@@ -696,16 +828,16 @@ int module_bootstart(SceSize args, void *argp)
     tmanWriteCtc0(14, 0);
     tmanWriteCtc0(15, 0);
     tmanWriteCtc0(16, 0);
-    InterruptManagerForKernel_E790EAED((void *)tman_eret, (void *)tmanSwitchContext);
+    InterruptManagerForKernel_E790EAED((void *)tmanNeedReschedule, (void *)tmanSwitchContext);
     tmanInitSysTimer();
     sceKernelRegisterIntrHandler(65, 0, (void *)tmanSwiIntrHandler, NULL, NULL);
     sceKernelEnableIntr(65);
-    sceKernelRegisterExceptionHandler(11, (void *)tman_vfpu_exc_handler);
+    sceKernelRegisterExceptionHandler(11, (void *)tman_fpu_exc_handler);
     tmanWriteCtc0(8, 0);
 
     g_tman.syscall_exit_thread = (u32)sceKernelQuerySystemCall((void *)sceKernelExitThread);
     g_tman.syscall_ret_change_stack = (u32)sceKernelQuerySystemCall((void *)_sceKernelReturnFromChangeStack);
-    g_tman.syscall_ret_callback = (u32)sceKernelQuerySystemCall((void *)sceKernelReturnFromCallback);
+    g_tman.syscall_ret_callback = (u32)sceKernelQuerySystemCall((void *)_sceKernelReturnFromCallback);
     g_tman.sys_stat_evf = sceKernelCreateEventFlag("SceThreadmanSysStat", 0x200, 0, NULL);
     sceKernelSetBootCallbackLevel((void *)tmanBootCallback, 3, 0);
 
@@ -719,7 +851,7 @@ int module_reboot_before(SceSize args, void *argp)
     (void)args;
     (void)argp;
     int intr = sceKernelCpuSuspendIntr();
-    sceKernelReleaseExceptionHandler(11, (void *)tman_vfpu_exc_handler);
+    sceKernelReleaseExceptionHandler(11, (void *)tman_fpu_exc_handler);
     sceKernelReleaseIntrHandler(g_tman.sys_timer_intr);
     sceKernelReleaseIntrHandler(65);
     sceKernelCpuResumeIntr(intr);
@@ -935,14 +1067,50 @@ int sceKernelDeleteThread(SceUID thid)
         g_tman.log_handler(17, (u32)th, 1, thid);
 
     tmanDispatchThreadEvents(TMAN_THREV_DELETE, th, intr);
+    tmanReleaseOwnedEventFlags(th);
     tmanReleaseOwnedMutexes(th);
-    tmanReleaseOwnedLwMutexes(th);
     tmanListRemove(&th->link);
     th->status = 0;
     tmanFreeThreadResources(th);
     sceKernelDeleteUID(th->uid);
     sceKernelCpuResumeIntr(intr);
     return 0;
+}
+
+void tmanRestoreExtStacks(TmanThreadCB *th)
+{
+    TmanExtStackNode *ext = th->ext_kstack_list;
+    while (ext != NULL) {
+        SceUID old_blk;
+        if ((s32)th->attr >= 0) {
+            old_blk = th->stack_block_id;
+            th->stack = ext->stack_base;
+            th->stack_block_id = ext->block_id;
+            th->stack_size = ext->stack_size;
+        } else {
+            old_blk = th->kstack_block_id;
+            th->kstack = ext->stack_base;
+            th->kstack_block_id = ext->block_id;
+            th->kstack_size = ext->stack_size;
+        }
+        th->ext_kstack_list = ext->next;
+        sceKernelFreePartitionMemory(old_blk);
+        ext = th->ext_kstack_list;
+    }
+    if ((s32)th->attr < 0) {
+        TmanExtStackNode *uext = th->ext_stack_list;
+        while (uext != NULL) {
+            SceUID old_blk = th->stack_block_id;
+            th->stack = uext->stack_base;
+            th->stack_block_id = uext->block_id;
+            th->stack_size = uext->stack_size;
+            th->ext_stack_list = uext->next;
+            sceKernelFreeHeapMemory(g_tman.heap_id, uext);
+            if (old_blk != 0)
+                sceKernelFreePartitionMemory(old_blk);
+            uext = th->ext_stack_list;
+        }
+    }
 }
 
 int sceKernelStartThread(SceUID thid, SceSize arglen, void *argp)
@@ -1062,9 +1230,10 @@ void tmanExitCurrentThread(int delete_self, int intr_state, s32 exit_status)
     tmanCleanupActiveCallback(cur);
     tmanCleanupActiveEventHandler(cur);
     tmanDispatchThreadEvents(TMAN_THREV_EXIT, cur, intr_state);
+    tmanReleaseOwnedEventFlags(cur);
     tmanReleaseOwnedMutexes(cur);
-    tmanReleaseOwnedLwMutexes(cur);
     tmanDeleteThreadCallbacks(cur);
+    tmanFreeThreadTlspl(cur);
     tmanFreeThreadKtls(cur);
     tmanWakeupAllWaiters(cb, exit_status);
 
@@ -1125,7 +1294,9 @@ int _sceKernelExitThread(void)
 {
     TmanThreadCB *cur = g_tman.current_thread;
     s32 status = (cur->syscall_stack != NULL) ? (s32)cur->syscall_stack->return_val : 0;
-    return sceKernelExitThread(status);
+    int ret = sceKernelExitThread(status);
+    tmanThreadIsDead(tmanDataToUid(cur, g_tman.uid_thread));
+    return ret;
 }
 
 static int doTerminateDeleteThread(SceUID thid, int delete_after)
@@ -1174,8 +1345,9 @@ static int doTerminateDeleteThread(SceUID thid, int delete_after)
     th->exit_status = (s32)SCE_ERROR_KERNEL_THREAD_IS_TERMINATED;
     tmanCleanupActiveCallback(th);
     tmanCleanupActiveEventHandler(th);
+    tmanReleaseOwnedEventFlags(th);
     tmanReleaseOwnedMutexes(th);
-    tmanReleaseOwnedLwMutexes(th);
+    tmanFreeThreadTlspl(th);
     tmanWakeupAllWaiters(cb, th->exit_status);
 
     if (delete_after) {
@@ -1195,12 +1367,52 @@ static int doTerminateDeleteThread(SceUID thid, int delete_after)
 
 int sceKernelTerminateThread(SceUID thid)
 {
-    return doTerminateDeleteThread(thid, 0);
+    if (thid == 0)
+        return (int)SCE_ERROR_KERNEL_ILLEGAL_THREAD;
+    if (tmanReadIntrDepth() != 0 && sceKernelGetCompiledSdkVersion() > 0x0307FFFF)
+        return (int)SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    if (g_tman.dispatch_suspended != 0 && sceKernelGetCompiledSdkVersion() > 0x0307FFFF)
+        return (int)SCE_ERROR_KERNEL_WAIT_CAN_NOT_WAIT;
+
+    int intr = sceKernelCpuSuspendIntr();
+    SceSysmemUidCB *cb = NULL;
+    if (sceKernelGetUIDcontrolBlockWithType(thid, g_tman.uid_thread, &cb) != 0) {
+        sceKernelCpuResumeIntr(intr);
+        return (int)SCE_ERROR_KERNEL_NOT_FOUND_THREAD;
+    }
+    if (!tmanCheckUidAttr(cb, 2)) {
+        sceKernelCpuResumeIntr(intr);
+        return (int)SCE_ERROR_KERNEL_ILLEGAL_PERMISSION;
+    }
+    if (g_tman.log_handler != NULL)
+        g_tman.log_handler(21, (u32)intr, 1, cb->uid ^ (s32)g_tman.uid_xor_key);
+    int ret = doTerminateDeleteThread(thid, 0);
+    sceKernelCpuResumeIntr(intr);
+    return ret;
 }
 
 int sceKernelTerminateDeleteThread(SceUID thid)
 {
-    return doTerminateDeleteThread(thid, 1);
+    if (thid == 0)
+        return (int)SCE_ERROR_KERNEL_ILLEGAL_THREAD;
+    if (g_tman.dispatch_suspended != 0 && sceKernelGetCompiledSdkVersion() > 0x0307FFFF)
+        return (int)SCE_ERROR_KERNEL_WAIT_CAN_NOT_WAIT;
+
+    int intr = sceKernelCpuSuspendIntr();
+    SceSysmemUidCB *cb = NULL;
+    if (sceKernelGetUIDcontrolBlockWithType(thid, g_tman.uid_thread, &cb) != 0) {
+        sceKernelCpuResumeIntr(intr);
+        return (int)SCE_ERROR_KERNEL_NOT_FOUND_THREAD;
+    }
+    if (!tmanCheckUidAttr(cb, 2)) {
+        sceKernelCpuResumeIntr(intr);
+        return (int)SCE_ERROR_KERNEL_ILLEGAL_PERMISSION;
+    }
+    if (g_tman.log_handler != NULL)
+        g_tman.log_handler(22, (u32)intr, 1, cb->uid ^ (s32)g_tman.uid_xor_key);
+    int ret = doTerminateDeleteThread(thid, 1);
+    sceKernelCpuResumeIntr(intr);
+    return ret;
 }
 
 int sceKernelSuspendDispatchThread(void)
@@ -1209,27 +1421,49 @@ int sceKernelSuspendDispatchThread(void)
         return (int)SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
 
     int intr = sceKernelCpuSuspendIntr();
-    int prev = g_tman.dispatch_suspended;
-    if (prev == 0)
+    if (intr == 0) {
+        sceKernelCpuResumeIntr(0);
+        return (int)0x80020066;
+    }
+    if (g_tman.log_handler != NULL)
+        g_tman.log_handler(23, (u32)&g_tman, 0);
+    int prev = 0;
+    if (g_tman.dispatch_suspended == 0) {
         g_tman.dispatch_suspended = 1;
+        prev = 1;
+    }
+    if ((s32)g_tman.current_thread->attr < 0 && g_tman.current_thread->user_tls != NULL)
+        ((u32 *)g_tman.current_thread->user_tls)[49] = 1;
     sceKernelCpuResumeIntr(intr);
     return prev;
 }
 
 int tmanResumeDispatchInternal(int mode, int intr_state)
 {
+    TmanThreadCB *cur = g_tman.current_thread;
+    if (mode == 0) {
+        if (g_tman.dispatch_suspended == 0)
+            g_tman.dispatch_suspended = 1;
+        if ((s32)cur->attr < 0 && cur->user_tls != NULL)
+            ((u32 *)cur->user_tls)[49] = 1;
+        return 0;
+    }
     int prev = g_tman.dispatch_suspended;
     g_tman.dispatch_suspended = 0;
-    if (mode != 0 && prev == 2) {
-        TmanThreadCB *cur = g_tman.current_thread;
+    if ((s32)cur->attr < 0 && cur->user_tls != NULL)
+        ((u32 *)cur->user_tls)[49] = 0;
+    if (prev == 1) {
+        g_tman.next_thread = NULL;
+        tmanSchedule(0, intr_state);
+    } else if (prev == 2) {
         cur->status = TMAN_TH_SUSPEND;
         tmanListInsertTail(&g_tman.suspended_list, &cur->link);
         g_tman.next_thread = NULL;
-        tmanSchedule(1, intr_state);
-    } else if (g_tman.next_thread == NULL) {
-        tmanSchedule(0, intr_state);
+        tmanSchedule(1, 1);
+    } else if (prev == 3) {
+        tmanExitCurrentThread(0, 0, (s32)SCE_ERROR_KERNEL_THREAD_IS_TERMINATED);
     }
-    return prev;
+    return 0;
 }
 
 int sceKernelResumeDispatchThread(int state)
@@ -1247,23 +1481,98 @@ int sceKernelResumeDispatchThread(int state)
 
 int sceKernelChangeCurrentThreadAttr(u32 clear_attr, u32 set_attr)
 {
-    if (tmanReadIntrDepth() != 0)
+    TmanThreadCB *cur = g_tman.current_thread;
+    if (tmanReadIntrDepth() != 0 || cur->event_mask_active != 0)
         return (int)SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     if (((clear_attr | set_attr) & ~SCE_KERNEL_TH_USE_VFPU) != 0)
         return (int)SCE_ERROR_KERNEL_ILLEGAL_ATTR;
+    if (g_tman.log_handler != NULL)
+        g_tman.log_handler(25, clear_attr, 2, clear_attr, set_attr);
 
     int intr = sceKernelCpuSuspendIntr();
-    TmanThreadCB *cur = g_tman.current_thread;
-    if ((set_attr & SCE_KERNEL_TH_USE_VFPU) != 0 && cur->vfpu_ctx == NULL) {
-        u32 align_opt[2] = { 8, 64 };
-        cur->vfpu_ctx = sceKernelAllocHeapMemoryWithOption(g_tman.heap_id, 576, align_opt);
+    u32 new_attr = (cur->attr & ~clear_attr) | set_attr;
+    cur->attr = new_attr;
+    u32 sr = tmanMfc0(12);
+    if ((new_attr & SCE_KERNEL_TH_USE_VFPU) != 0 && (sr & 0x40000000U) == 0) {
         if (cur->vfpu_ctx == NULL) {
-            sceKernelCpuResumeIntr(intr);
-            return (int)SCE_ERROR_KERNEL_NO_MEMORY;
+            u32 align_opt[2] = { 8, 64 };
+            u32 *vctx = (u32 *)sceKernelAllocHeapMemoryWithOption(g_tman.heap_id, 576, align_opt);
+            if (vctx == NULL) {
+                cur->attr &= ~SCE_KERNEL_TH_USE_VFPU;
+                sceKernelCpuResumeIntr(intr);
+                return (int)SCE_ERROR_KERNEL_NO_MEMORY;
+            }
+            int idx;
+            for (idx = 0; idx < 128; idx++)
+                vctx[idx] = 0x7F800001U;
+            vctx[128] = 228;
+            vctx[129] = 228;
+            vctx[130] = 0;
+            vctx[131] = 63;
+            vctx[132] = 0;
+            vctx[136] = 0x3F800001U;
+            vctx[137] = 0x3F800002U;
+            vctx[138] = 0x3F800004U;
+            vctx[139] = 0x3F800008U;
+            vctx[140] = 0x3F800000U;
+            vctx[141] = 0x3F800000U;
+            vctx[142] = 0x3F800000U;
+            vctx[143] = 0x3F800000U;
+            cur->vfpu_ctx = vctx;
         }
+        cur->ctx->sr |= 0x40000000U;
+        if (cur->syscall_stack != NULL)
+            cur->syscall_stack->prev_kstack |= 0x40000000U;
+        tmanMtc0(12, tmanMfc0(12) | 0x40000000U);
+        tmanSwitchVfpuContext(cur);
+    } else if ((cur->attr & SCE_KERNEL_TH_USE_VFPU) == 0 && (sr & 0x40000000U) != 0) {
+        cur->ctx->sr &= ~0x40000000U;
+        if (cur->syscall_stack != NULL)
+            cur->syscall_stack->prev_kstack &= ~0x40000000U;
+        tmanMtc0(12, tmanMfc0(12) & ~0x40000000U);
     }
-    cur->attr = (cur->attr & ~clear_attr) | set_attr;
     sceKernelCpuResumeIntr(intr);
+    return 0;
+}
+
+int tmanChangeThreadPriorityInternal(TmanThreadCB *th, s32 new_prio, int from_user)
+{
+    int in_intr = (int)tmanReadIntrDepth();
+    if (th == g_tman.current_thread) {
+        th->current_priority = new_prio;
+        if (g_tman.dispatch_suspended != 0 || in_intr != 0)
+            return 0;
+        if (from_user != 0)
+            g_tman.next_thread = NULL;
+        return 0;
+    }
+
+    if (th->status == TMAN_TH_READY) {
+        tmanRemoveReadyQueue(th, (u32)th->current_priority);
+        th->current_priority = new_prio;
+        if (in_intr != 0 || g_tman.dispatch_suspended != 0) {
+            tmanAddReadyQueue(th);
+            g_tman.next_thread = NULL;
+            return 0;
+        }
+        if (new_prio >= g_tman.current_thread->current_priority) {
+            tmanAddReadyQueue(th);
+            return 0;
+        }
+        tmanAddReadyQueue(th);
+        g_tman.next_thread = NULL;
+        return 0;
+    }
+
+    th->current_priority = new_prio;
+    if ((th->status == TMAN_TH_WAIT || th->status == TMAN_TH_WAITSUSPEND) && th->wait_obj != NULL) {
+        TmanWaitQueue *wq = (TmanWaitQueue *)tmanUidData(th->wait_obj, g_tman.uid_waitq);
+        if ((wq->attr & SCE_KERNEL_AT_THPRI) != 0) {
+            tmanListRemove(&th->link);
+            tmanInsertThreadByPriority(th, th->wait_obj);
+        }
+        tmanNotifyWaitObject(th->wait_obj);
+    }
     return 0;
 }
 
@@ -1304,7 +1613,8 @@ int sceKernelChangeThreadPriority(SceUID thid, int priority)
     }
 
     th->base_priority = (s16)priority;
-    tmanRecalcThreadPriority(th);
+    s32 eff = (th->inherited_priority < priority) ? th->inherited_priority : priority;
+    tmanChangeThreadPriorityInternal(th, eff, 1);
     if (in_intr == 0) {
         g_tman.next_thread = NULL;
         tmanSchedule(0, intr);
@@ -1401,36 +1711,144 @@ int sceKernelGetThreadExitStatus(SceUID thid)
 
 int _sceKernelReturnFromChangeStack(void)
 {
-    sceKernelCpuSuspendIntr();
     TmanThreadCB *cur = g_tman.current_thread;
-    cur->wait_result = (s32)cur->syscall_stack->return_val;
-    return tmanReturnFromHandlerContext();
+    if (tmanReadIntrDepth() != 0 || cur->ext_stack_list == NULL)
+        tmanBreak();
+
+    int intr = sceKernelCpuSuspendIntr();
+    TmanExtStackNode *node = cur->ext_stack_list;
+    TmanSyscallStack *ss = cur->syscall_stack;
+    u32 old_size = cur->stack_size;
+    SceUID old_blk = cur->stack_block_id;
+    void *old_stack = cur->stack;
+    int ret_val = (int)ss->return_val;
+
+    ss->saved_sp = node->saved_sp;
+    ss->user_ra = node->saved_user_ra;
+    ss->user_sp = node->saved_user_sp;
+    cur->ext_stack_list = node->next;
+    cur->stack = node->stack_base;
+    cur->stack_block_id = node->block_id;
+    cur->stack_size = node->stack_size;
+    sceKernelCpuResumeIntr(intr);
+
+    if ((cur->attr & SCE_KERNEL_TH_CLEAR_STACK) != 0)
+        sceKernelMemset32(old_stack, 0, old_size);
+    if (old_blk != 0)
+        sceKernelFreePartitionMemory(old_blk);
+    sceKernelFreeHeapMemory(g_tman.heap_id, node);
+    return ret_val;
 }
 
-int ThreadManForUser_28BFD974(u32 stack_size, void *entry, void *arg)
+int tmanExtendThreadStackCommon(SceUID block_id, void *stack_base, u32 stack_size,
+                                void *entry, void *arg)
 {
-    return sceKernelExtendThreadStack(stack_size, entry, arg);
+    if (tmanReadIntrDepth() != 0)
+        return (int)SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
+    if ((s32)(u32)entry < 0)
+        return (int)SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+
+    TmanThreadCB *cur = g_tman.current_thread;
+    TmanExtStackNode *node = (TmanExtStackNode *)sceKernelAllocHeapMemory(
+        g_tman.heap_id, sizeof(TmanExtStackNode));
+    if (node == NULL)
+        return (int)SCE_ERROR_KERNEL_NO_MEMORY;
+
+    if ((cur->attr & SCE_KERNEL_TH_NO_FILLSTACK) == 0)
+        memset(stack_base, 0xFF, stack_size);
+    *(u32 *)stack_base = (u32)cur->uid;
+
+    int intr = sceKernelCpuSuspendIntr();
+    TmanSyscallStack *ss = cur->syscall_stack;
+    node->next = cur->ext_stack_list;
+    node->stack_base = cur->stack;
+    node->block_id = cur->stack_block_id;
+    node->stack_size = cur->stack_size;
+    node->saved_sp = ss->saved_sp;
+    node->saved_user_ra = ss->user_ra;
+    node->saved_user_sp = ss->user_sp;
+
+    cur->stack_block_id = block_id;
+    cur->stack = stack_base;
+    cur->stack_size = stack_size;
+    cur->ext_stack_list = node;
+
+    u32 *tramp = (u32 *)((u8 *)stack_base + stack_size - 64U);
+    u32 arg_val = (u32)arg;
+    tramp[0] = 0x3C040000U | (arg_val >> 16);
+    tramp[1] = 0x0C000000U | (((u32)entry >> 2) & 0x03FFFFFFU);
+    tramp[2] = 0x34840000U | (arg_val & 0xFFFFU);
+    tramp[3] = 0x8FBF0038U;
+    tramp[4] = 0x8FBD003CU;
+    tramp[5] = ((g_tman.syscall_ret_change_stack << 6) & 0x03FFFFC0U) | 0x0CU;
+    tramp[6] = 0x03E00008U;
+    tramp[7] = 0;
+    tramp[8] = 0;
+    tramp[9] = 0;
+    tramp[10] = 0;
+    tramp[11] = 0;
+    tramp[12] = 0;
+    tramp[13] = 0;
+    tramp[14] = node->saved_user_ra;
+    tramp[15] = node->saved_user_sp;
+
+    ss->saved_sp = (u32)tramp;
+    ss->user_sp = (u32)tramp;
+    ss->user_ra = 0;
+
+    tmanCacheOp(0x08U, tramp);
+    tmanCacheOp(0x1BU, tramp);
+    sceKernelCpuResumeIntrWithSync(intr);
+    return 0;
+}
+
+int ThreadManForUser_28BFD974(SceUID block_id, void *entry, void *arg)
+{
+    u32 blk_info[14];
+    blk_info[0] = 56;
+    int ret = sceKernelQueryMemoryBlockInfo(block_id, blk_info);
+    if (ret < 0)
+        return ret;
+    u32 base = blk_info[10];
+    u32 size = blk_info[11];
+    if (!tmanCheckUserPtr((void *)base, size))
+        return (int)SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+    if (size < 0x200U)
+        return (int)SCE_ERROR_KERNEL_ILLEGAL_STACK_SIZE;
+    ret = tmanExtendThreadStackCommon(0, (void *)base, size, entry, arg);
+    if (ret < 0)
+        return ret;
+    if (g_tman.log_handler != NULL)
+        g_tman.log_handler(40, tmanGetK1(), 3, block_id);
+    return (int)0xDEADBEEFU;
 }
 
 int sceKernelExtendThreadStack(u32 stack_size, void *entry, void *arg)
 {
-    if (!tmanCheckUserAddr((u32)entry))
-        return (int)SCE_ERROR_KERNEL_ILLEGAL_ADDR;
-    if (tmanReadIntrDepth() != 0)
-        return (int)SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     if (stack_size < 0x200U)
         return (int)SCE_ERROR_KERNEL_ILLEGAL_STACK_SIZE;
-
-    int intr = sceKernelCpuSuspendIntr();
+    u32 aligned_size = (stack_size + 255U) & ~255U;
     TmanThreadCB *cur = g_tman.current_thread;
-    u32 gp_val = (u32)sceKernelGetModuleGPByAddressForKernel((u32)entry);
-    if (gp_val == 0)
-        gp_val = cur->gp_reg;
-
-    int ret = tmanExecuteHandlerContext(((s32)cur->attr < 0) ? 1 : 0, entry,
-                                        (u32)arg, 0, 0, 0, gp_val);
+    SceSysmemUidCB *cb = tmanDataToUid(cur, g_tman.uid_thread);
+    char stack_name[32];
+    int intr = sceKernelCpuSuspendIntr();
+    snprintf(stack_name, 31, "exstack:%s", cb->name ? cb->name : "");
+    int alloc_type = ((cur->attr & SCE_KERNEL_TH_LOW_STACK) != 0) ? 0 : 1;
+    SceUID blk_id = sceKernelAllocPartitionMemory(cur->stack_partition_id, stack_name,
+                                                  alloc_type, aligned_size, NULL);
     sceKernelCpuResumeIntr(intr);
-    return ret;
+    if (blk_id <= 0)
+        return (int)SCE_ERROR_KERNEL_NO_MEMORY;
+
+    void *base = sceKernelGetBlockHeadAddr(blk_id);
+    int ret = tmanExtendThreadStackCommon(blk_id, base, aligned_size, entry, arg);
+    if (ret < 0) {
+        sceKernelFreePartitionMemory(blk_id);
+        return ret;
+    }
+    if (g_tman.log_handler != NULL)
+        g_tman.log_handler(41, (u32)blk_id, 3, aligned_size, entry, arg);
+    return (int)0xDEADBEEFU;
 }
 
 int sceKernelExtendKernelStack(int size, s32 (*cb)(void *), void *arg)
@@ -1486,11 +1904,33 @@ int _sceKernelCheckThreadStack(void)
 {
     if (tmanReadIntrDepth() != 0)
         return 0;
-    volatile u32 probe = 0;
     TmanThreadCB *cur = g_tman.current_thread;
+    if (g_tman.log_handler != NULL)
+        g_tman.log_handler(32, (u32)&g_tman, 0);
+
+    if ((s32)cur->attr < 0) {
+        u32 user_sp = cur->syscall_stack->user_sp;
+        s32 free_bytes = (s32)(user_sp - (u32)cur->stack);
+        if (free_bytes < 64) {
+            sceKernelCpuSuspendIntr();
+            SaveThreadContext(cur->ctx);
+            tmanHandleStackOverflow(cur, 0, user_sp);
+            tmanSchedule(1, 1);
+        }
+        return (int)free_bytes;
+    }
+
+    volatile u32 probe = 0;
     if (cur->stack == NULL)
         return 0;
-    return (int)((u32)&probe - (u32)cur->stack);
+    s32 free_bytes = (s32)((u32)&probe - (u32)cur->stack);
+    if (free_bytes < 64) {
+        sceKernelCpuSuspendIntr();
+        SaveThreadContext(cur->ctx);
+        tmanHandleStackOverflow(cur, 0, cur->ctx->gpr[29]);
+        tmanSchedule(1, 1);
+    }
+    return (int)free_bytes;
 }
 
 int sceKernelCheckThreadKernelStack(void)
@@ -1512,7 +1952,7 @@ int sceKernelCheckThreadKernelStack(void)
     return (int)free_bytes;
 }
 
-static int tmanCalcStackFreeSize(const void *base, u32 size)
+static inline __attribute__((always_inline)) int tmanCalcStackFreeSize(const void *base, u32 size)
 {
     const u32 *words = (const u32 *)base;
     u32 count = size >> 2;
@@ -1626,9 +2066,68 @@ int sceKernelReferThreadStatus(SceUID thid, TmanThreadInfo *info)
     return 0;
 }
 
+void tmanFillThreadDebugStatus(SceSysmemUidCB *cb, void *status)
+{
+    TmanThreadCB *th = (TmanThreadCB *)tmanUidData(cb, g_tman.uid_thread);
+    TmanThreadInfo *dst = (TmanThreadInfo *)status;
+    memset(dst, 0, sizeof(*dst));
+    dst->size = sizeof(*dst);
+    if (cb->name != NULL)
+        strncpy(dst->name, cb->name, SCE_UID_NAME_LEN);
+    dst->attr = th->attr;
+    dst->status = (s32)th->status;
+    dst->entry = th->entry;
+    dst->stack = th->stack;
+    dst->stack_size = (s32)th->stack_size;
+    dst->gp_reg = th->gp_reg;
+    dst->init_priority = th->init_priority;
+    dst->current_priority = th->current_priority;
+    dst->wait_type = (s32)th->wait_type;
+    dst->wait_id = (th->wait_obj != NULL) ? (th->wait_obj->uid ^ (s32)g_tman.uid_xor_key) : 0;
+    dst->wakeup_count = th->wakeup_count;
+    dst->exit_status = th->exit_status;
+    if (th == g_tman.current_thread) {
+        u64 now = tmanGetSystemTimeWide();
+        u64 clocks = (((u64)th->run_clocks_hi << 32) | th->run_clocks_lo) + (now - g_tman.last_switch_time);
+        dst->run_clocks.low = (u32)clocks;
+        dst->run_clocks.hi = (u32)(clocks >> 32);
+    } else {
+        dst->run_clocks.low = th->run_clocks_lo;
+        dst->run_clocks.hi = th->run_clocks_hi;
+    }
+    dst->intr_preempt_count = th->preempt_count;
+    dst->thread_preempt_count = th->release_count;
+    dst->release_count = th->wait_release_count;
+    if (th->ctx != NULL && (u32)th->ctx == tmanReadCfc0(8))
+        tmanSaveFpuContext(th->ctx);
+}
+
 int sceKernelReferThreadDebugStatus(SceUID thid, TmanThreadInfo *info)
 {
-    return sceKernelReferThreadStatus(thid, info);
+    if (!tmanCheckUserPtr(info, sizeof(*info)))
+        return (int)SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+
+    int intr = sceKernelCpuSuspendIntr();
+    SceSysmemUidCB *cb = NULL;
+    if (thid == 0) {
+        cb = tmanDataToUid(g_tman.current_thread, g_tman.uid_thread);
+    } else {
+        if (sceKernelGetUIDcontrolBlockWithType(thid, g_tman.uid_thread, &cb) != 0) {
+            sceKernelCpuResumeIntr(intr);
+            return (int)SCE_ERROR_KERNEL_NOT_FOUND_THREAD;
+        }
+        if (!tmanCheckUidAttr(cb, 1)) {
+            sceKernelCpuResumeIntr(intr);
+            return (int)SCE_ERROR_KERNEL_ILLEGAL_PERMISSION;
+        }
+    }
+
+    TmanThreadInfo local;
+    tmanFillThreadDebugStatus(cb, &local);
+    SceSize copy_size = info->size < local.size ? info->size : local.size;
+    memcpy(info, &local, copy_size);
+    sceKernelCpuResumeIntr(intr);
+    return 0;
 }
 
 int sceKernelReferThreadRunStatus(SceUID thid, TmanThreadRunStatus *info)
@@ -1831,9 +2330,13 @@ SceUID sceKernelGetThreadmanIdOwner(SceUID block_id, int *type_out)
     return (SceUID)SCE_ERROR_KERNEL_UNKNOWN_UID;
 }
 
-int ThreadManForKernel_D366D35A(int enable)
+int ThreadManForKernel_D366D35A(int disable)
 {
-    (void)enable;
+    if (disable != 0) {
+        volatile u32 *code = (volatile u32 *)(void *)tmanK0CorruptedHandler;
+        code[0] = 0x03E00008U;
+        code[1] = 0x00000000U;
+    }
     return 0;
 }
 
@@ -1841,7 +2344,7 @@ int sceKernelSetThreadmanLogHandler(TmanLogHandler handler, TmanThreadCB **cur_o
 {
     g_tman.log_handler = handler;
     if (cur_out != NULL)
-        *cur_out = g_tman.current_thread;
+        *cur_out = (TmanThreadCB *)&g_tman;
     return 0;
 }
 
@@ -1898,6 +2401,27 @@ int sceKernelRegisterDeadThreadHandler(void (*handler)(SceUID))
     return 0;
 }
 
+void tmanFillSystemStatus(TmanSystemStatus *local, int intr_state)
+{
+    memset(local, 0, sizeof(*local));
+    local->size = sizeof(*local);
+    if (tmanReadIntrDepth() != 0) {
+        local->status = 4;
+    } else if (intr_state == 0) {
+        local->status = 3;
+    } else if (g_tman.dispatch_suspended != 0) {
+        local->status = 1;
+    } else {
+        local->status = 0;
+    }
+    TmanThreadCB *idle = g_tman.idle_thread;
+    local->idle_clocks.low = idle->run_clocks_lo;
+    local->idle_clocks.hi = idle->run_clocks_hi;
+    local->comes_out_of_idle_count = idle->release_count;
+    local->thread_switch_count = g_tman.switch_count;
+    local->vfpu_switch_count = g_tman.vfpu_switch_count;
+}
+
 int sceKernelReferSystemStatus(TmanSystemStatus *info)
 {
     if (!tmanCheckUserPtr(info, sizeof(*info)))
@@ -1908,17 +2432,7 @@ int sceKernelReferSystemStatus(TmanSystemStatus *info)
         g_tman.log_handler(164, (u32)info, 1, info);
 
     TmanSystemStatus local;
-    memset(&local, 0, sizeof(local));
-    local.size = sizeof(local);
-    local.status = (u32)((g_tman.dispatch_suspended != 0) ? 1 : 0);
-    if (g_tman.idle_thread != NULL) {
-        local.idle_clocks.low = g_tman.idle_thread->run_clocks_lo;
-        local.idle_clocks.hi = g_tman.idle_thread->run_clocks_hi;
-    }
-    local.comes_out_of_idle_count = g_tman.comes_out_of_idle_count;
-    local.thread_switch_count = g_tman.switch_count;
-    local.vfpu_switch_count = g_tman.vfpu_switch_count;
-
+    tmanFillSystemStatus(&local, intr);
     SceSize copy_size = info->size < local.size ? info->size : local.size;
     memcpy(info, &local, copy_size);
     sceKernelCpuResumeIntr(intr);
@@ -1939,9 +2453,4 @@ void *sceKernelReferGlobalProfiler(void)
     if (g_tman.profiler_mode != 2)
         return NULL;
     return (void *)0x5C400000U;
-}
-
-int _sceKernelReturnFromCallback(void)
-{
-    return sceKernelReturnFromCallback();
 }

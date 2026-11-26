@@ -68,7 +68,7 @@ int tmanWaitQueueHasWaiters(const TmanWaitQueue *wq)
 
 void tmanInitSemaType(void)
 {
-    sceKernelCreateUIDtypeInherit("WaitQ", "Semaphore", sizeof(TmanSemaCB),
+    sceKernelCreateUIDtypeInherit("WaitQ", "Semaphore", 48,
                                   (SceSysmemUidLookupFunc *)g_uid_sema_funcs,
                                   NULL, &g_tman.uid_sema);
 }
@@ -240,7 +240,7 @@ int sceKernelSignalSema(SceUID semaid, int signal)
     return 0;
 }
 
-static int tmanWaitSemaInternal(SceUID semaid, int signal, SceUInt *timeout, int use_cb)
+static inline __attribute__((always_inline)) int tmanWaitSemaInternal(SceUID semaid, int signal, SceUInt *timeout, int use_cb)
 {
     if (!tmanCheckUserPtr(timeout, sizeof(SceUInt)))
         return (int)SCE_ERROR_KERNEL_ILLEGAL_ADDR;
@@ -427,7 +427,7 @@ int sceKernelReferSemaStatus(SceUID semaid, SceKernelSemaInfo *info)
 
 void tmanInitEventFlagType(void)
 {
-    sceKernelCreateUIDtypeInherit("WaitQ", "EventFlag", sizeof(TmanEventFlagCB),
+    sceKernelCreateUIDtypeInherit("WaitQ", "EventFlag", 48,
                                   (SceSysmemUidLookupFunc *)g_uid_evf_funcs,
                                   NULL, &g_tman.uid_evf);
 }
@@ -440,24 +440,60 @@ static int evfUidCreate(SceSysmemUidCB *cb, SceSysmemUidCB *type, int func_id, v
 
 static int evfUidDelete(SceSysmemUidCB *cb, SceSysmemUidCB *type, int func_id, void *args)
 {
+    TmanEvfBlock *evf = (TmanEvfBlock *)tmanUidData(cb, g_tman.uid_evf);
+    if (evf->wait_owner != NULL)
+        tmanListRemove(&evf->owner_link);
     sceKernelCallUIDObjCommonFunction(cb, type, func_id, args);
     return 0;
 }
 
 static int evfUidRemove(SceSysmemUidCB *cb, SceSysmemUidCB *type, int func_id, void *args)
 {
-    sceKernelCallUIDObjCommonFunction(cb, type, func_id, args);
+    (void)type;
+    (void)func_id;
+    TmanThreadCB *th = (args != NULL) ? *(TmanThreadCB **)args : NULL;
+    TmanWaitQueue *wq = (TmanWaitQueue *)tmanUidData(cb, g_tman.uid_waitq);
+    TmanEvfBlock *evf = (TmanEvfBlock *)tmanUidData(cb, g_tman.uid_evf);
+    wq->num_wait_threads--;
+    if (th != NULL) {
+        if (th->wait_result != (s32)SCE_ERROR_KERNEL_WAIT_TIMEOUT && evf->wait_owner != NULL) {
+            evf->wait_owner_refs--;
+            if (evf->wait_owner_refs == 0) {
+                evf->wait_owner = NULL;
+                tmanListRemove(&evf->owner_link);
+            }
+        }
+        u32 *out_bits = (u32 *)th->wait_param[2];
+        if (out_bits != NULL)
+            *out_bits = evf->cur_pattern;
+    }
     return 0;
 }
 
-static int tmanEvalEventFlag(u32 cur_pattern, u32 req_bits, u32 wait_mode)
+void tmanReleaseOwnedEventFlags(TmanThreadCB *th)
+{
+    TmanListNode *head = &th->owned_lwmutex_list;
+    TmanListNode *node = head->next;
+    while (node != head) {
+        TmanListNode *next = node->next;
+        TmanEvfBlock *evf = (TmanEvfBlock *)((u8 *)node - offsetof(TmanEvfBlock, owner_link));
+        if (evf->wait_owner != NULL) {
+            evf->wait_owner = NULL;
+            evf->wait_owner_refs = 0;
+            tmanListRemove(node);
+        }
+        node = next;
+    }
+}
+
+static inline __attribute__((always_inline)) int tmanEvalEventFlag(u32 cur_pattern, u32 req_bits, u32 wait_mode)
 {
     if ((wait_mode & SCE_KERNEL_EW_OR) != 0)
         return (cur_pattern & req_bits) != 0;
     return (cur_pattern & req_bits) == req_bits;
 }
 
-static void tmanApplyEventFlagClear(TmanEventFlagCB *evf, u32 req_bits, u32 wait_mode)
+static inline __attribute__((always_inline)) void tmanApplyEventFlagClear(TmanEvfBlock *evf, u32 req_bits, u32 wait_mode)
 {
     if ((wait_mode & SCE_KERNEL_EW_CLEAR_ALL) != 0)
         evf->cur_pattern = 0;
@@ -485,7 +521,7 @@ SceUID sceKernelCreateEventFlag(const char *name, int attr, int bits, SceKernelE
     }
 
     TmanWaitQueue *wq = (TmanWaitQueue *)tmanUidData(cb, g_tman.uid_waitq);
-    TmanEventFlagCB *evf = (TmanEventFlagCB *)tmanUidData(cb, g_tman.uid_evf);
+    TmanEvfBlock *evf = (TmanEvfBlock *)tmanUidData(cb, g_tman.uid_evf);
     SceUID uid = cb->uid ^ (s32)g_tman.uid_xor_key;
     wq->attr = (u32)attr;
     evf->opt = opt;
@@ -539,7 +575,7 @@ int sceKernelSetEventFlag(SceUID evid, u32 bits)
     }
 
     TmanWaitQueue *wq = (TmanWaitQueue *)tmanUidData(cb, g_tman.uid_waitq);
-    TmanEventFlagCB *evf = (TmanEventFlagCB *)tmanUidData(cb, g_tman.uid_evf);
+    TmanEvfBlock *evf = (TmanEvfBlock *)tmanUidData(cb, g_tman.uid_evf);
     if (g_tman.log_handler != NULL)
         g_tman.log_handler(67, (u32)evf, 2, evid, bits);
 
@@ -600,7 +636,7 @@ int sceKernelClearEventFlag(SceUID evid, u32 bits)
         return (int)SCE_ERROR_KERNEL_ILLEGAL_PERMISSION;
     }
 
-    TmanEventFlagCB *evf = (TmanEventFlagCB *)tmanUidData(cb, g_tman.uid_evf);
+    TmanEvfBlock *evf = (TmanEvfBlock *)tmanUidData(cb, g_tman.uid_evf);
     if (g_tman.log_handler != NULL)
         g_tman.log_handler(68, (u32)evf, 2, evid, bits);
 
@@ -609,7 +645,7 @@ int sceKernelClearEventFlag(SceUID evid, u32 bits)
     return 0;
 }
 
-static int tmanWaitEventFlagInternal(SceUID evid, u32 bits, u32 wait_mode, u32 *out_bits,
+static inline __attribute__((always_inline)) int tmanWaitEventFlagInternal(SceUID evid, u32 bits, u32 wait_mode, u32 *out_bits,
                                      SceUInt *timeout, int use_cb)
 {
     if (!tmanCheckUserPtr(out_bits, sizeof(u32)) || !tmanCheckUserPtr(timeout, sizeof(SceUInt)))
@@ -639,7 +675,7 @@ static int tmanWaitEventFlagInternal(SceUID evid, u32 bits, u32 wait_mode, u32 *
     }
 
     TmanWaitQueue *wq = (TmanWaitQueue *)tmanUidData(cb, g_tman.uid_waitq);
-    TmanEventFlagCB *evf = (TmanEventFlagCB *)tmanUidData(cb, g_tman.uid_evf);
+    TmanEvfBlock *evf = (TmanEvfBlock *)tmanUidData(cb, g_tman.uid_evf);
     if ((wq->attr & SCE_KERNEL_EA_MULTI) == 0 && wq->num_wait_threads > 0) {
         sceKernelCpuResumeIntr(intr);
         return (int)SCE_ERROR_KERNEL_EVENT_FLAG_NO_MULTI_PERM;
@@ -710,7 +746,7 @@ int sceKernelPollEventFlag(int evid, u32 bits, u32 wait_mode, u32 *out_bits)
     }
 
     TmanWaitQueue *wq = (TmanWaitQueue *)tmanUidData(cb, g_tman.uid_waitq);
-    TmanEventFlagCB *evf = (TmanEventFlagCB *)tmanUidData(cb, g_tman.uid_evf);
+    TmanEvfBlock *evf = (TmanEvfBlock *)tmanUidData(cb, g_tman.uid_evf);
     if ((wq->attr & SCE_KERNEL_EA_MULTI) == 0 && wq->num_wait_threads > 0) {
         sceKernelCpuResumeIntr(intr);
         return (int)SCE_ERROR_KERNEL_EVENT_FLAG_NO_MULTI_PERM;
@@ -748,7 +784,7 @@ int sceKernelCancelEventFlag(SceUID evid, SceUInt set_pattern, s32 *num_wait_thr
         return (int)SCE_ERROR_KERNEL_ILLEGAL_PERMISSION;
     }
 
-    TmanEventFlagCB *evf = (TmanEventFlagCB *)tmanUidData(cb, g_tman.uid_evf);
+    TmanEvfBlock *evf = (TmanEvfBlock *)tmanUidData(cb, g_tman.uid_evf);
     if (g_tman.log_handler != NULL)
         g_tman.log_handler(72, (u32)evf, 2, evid, set_pattern);
 
@@ -781,7 +817,7 @@ int sceKernelReferEventFlagStatus(SceUID evid, SceKernelEventFlagInfo *info)
         g_tman.log_handler(73, (u32)&g_tman.current_thread, 2, evid, info);
 
     TmanWaitQueue *wq = (TmanWaitQueue *)tmanUidData(cb, g_tman.uid_waitq);
-    TmanEventFlagCB *evf = (TmanEventFlagCB *)tmanUidData(cb, g_tman.uid_evf);
+    TmanEvfBlock *evf = (TmanEvfBlock *)tmanUidData(cb, g_tman.uid_evf);
     SceKernelEventFlagInfo local;
     memset(&local, 0, sizeof(local));
     local.size = sizeof(local);
@@ -804,16 +840,14 @@ int sceKernelReferEventFlagStatus(SceUID evid, SceKernelEventFlagInfo *info)
 
 void tmanInitMutexType(void)
 {
-    sceKernelCreateUIDtypeInherit("WaitQ", "Mutex", sizeof(TmanMutexCB),
+    sceKernelCreateUIDtypeInherit("WaitQ", "Mutex", 48,
                                   (SceSysmemUidLookupFunc *)g_uid_mutex_funcs,
                                   NULL, &g_tman.uid_mutex);
 }
 
 static int mutexUidCreate(SceSysmemUidCB *cb, SceSysmemUidCB *type, int func_id, void *args)
 {
-    TmanMutexCB *mtx = (TmanMutexCB *)tmanUidData(cb, type);
     sceKernelCallUIDObjCommonFunction(cb, type, func_id, args);
-    tmanListInit(&mtx->owner_link);
     return cb->uid ^ (s32)g_tman.uid_xor_key;
 }
 
@@ -845,34 +879,81 @@ static int mutexUidCheck(SceSysmemUidCB *cb, SceSysmemUidCB *type, int func_id, 
     return tmanWakeupWaitingThread(next_owner);
 }
 
-void tmanRecalcThreadPriority(TmanThreadCB *th)
+void tmanMutexAcquire(SceSysmemUidCB *cb, TmanThreadCB *owner, s32 count)
 {
-    s32 best = th->base_priority;
-    if (th->inherited_priority < best)
-        best = th->inherited_priority;
-    if (best != th->current_priority) {
-        if (th->status == TMAN_TH_READY) {
-            tmanRemoveReadyQueue(th, (u32)th->current_priority);
-            th->current_priority = best;
-            tmanAddReadyQueue(th);
+    TmanWaitQueue *wq = (TmanWaitQueue *)tmanUidData(cb, g_tman.uid_waitq);
+    TmanMutexCB *mtx = (TmanMutexCB *)tmanUidData(cb, g_tman.uid_mutex);
+    mtx->lock_count = count;
+    mtx->owner = owner;
+    if ((wq->attr & 0x400U) != 0) {
+        TmanListNode *head = &owner->owned_mutex_list;
+        TmanListNode *cur = head->next;
+        while (cur != head) {
+            TmanMutexCB *other = (TmanMutexCB *)cur;
+            if (mtx->prio_ceiling < other->prio_ceiling)
+                break;
+            cur = cur->next;
+        }
+        tmanListInsertBefore(cur, &mtx->owner_link);
+        if (mtx->prio_ceiling < owner->inherited_priority)
+            owner->inherited_priority = mtx->prio_ceiling;
+        if (owner->inherited_priority < owner->current_priority)
+            tmanChangeThreadPriorityInternal(owner, owner->inherited_priority, 0);
+    } else {
+        tmanListInsertTail(&owner->owned_mutex_list, &mtx->owner_link);
+    }
+}
+
+void tmanMutexRelease(SceSysmemUidCB *cb)
+{
+    TmanMutexCB *mtx = (TmanMutexCB *)tmanUidData(cb, g_tman.uid_mutex);
+    TmanThreadCB *owner = mtx->owner;
+    mtx->lock_count = 0;
+    mtx->owner = NULL;
+    if (owner == NULL || owner == (TmanThreadCB *)-1)
+        return;
+    tmanListRemove(&mtx->owner_link);
+    s32 new_prio;
+    if (tmanListEmpty(&owner->owned_mutex_list)) {
+        owner->inherited_priority = 127;
+        new_prio = owner->base_priority;
+    } else {
+        TmanMutexCB *top = (TmanMutexCB *)owner->owned_mutex_list.next;
+        SceSysmemUidCB *top_cb = tmanDataToUid(top, g_tman.uid_mutex);
+        TmanWaitQueue *top_wq = (TmanWaitQueue *)tmanUidData(top_cb, g_tman.uid_waitq);
+        if ((top_wq->attr & 0x400U) != 0) {
+            owner->inherited_priority = top->prio_ceiling;
+            new_prio = (top->prio_ceiling < owner->base_priority)
+                     ? top->prio_ceiling : owner->base_priority;
         } else {
-            th->current_priority = best;
+            owner->inherited_priority = 127;
+            new_prio = owner->base_priority;
         }
     }
+    tmanChangeThreadPriorityInternal(owner, new_prio, 0);
 }
 
 void tmanReleaseOwnedMutexes(TmanThreadCB *th)
 {
     TmanListNode *head = &th->owned_mutex_list;
+    int need_sched = 0;
     while (!tmanListEmpty(head)) {
         TmanMutexCB *mtx = (TmanMutexCB *)head->next;
         SceSysmemUidCB *cb = tmanDataToUid(mtx, g_tman.uid_mutex);
+        TmanWaitQueue *wq = (TmanWaitQueue *)tmanUidData(cb, g_tman.uid_waitq);
         tmanListRemove(&mtx->owner_link);
-        mtx->owner = NULL;
-        mtx->lock_count = 0;
-        if (mutexUidCheck(cb, g_tman.uid_mutex, 0, NULL) > 0)
-            g_tman.next_thread = NULL;
+        if ((wq->attr & 0x800U) != 0) {
+            mtx->owner = (TmanThreadCB *)-1;
+            mtx->lock_count = 0;
+            need_sched |= tmanNotifyWaitObject(cb);
+        } else {
+            mtx->owner = NULL;
+            mtx->lock_count = 0;
+            need_sched |= tmanNotifyWaitObject(cb);
+        }
     }
+    if (need_sched != 0)
+        tmanSchedule(1, 0);
 }
 
 s32 sceKernelCreateMutex(char *name, s32 attr, s32 init_count, const SceKernelMutexOptParam *opt)
@@ -993,7 +1074,7 @@ s32 sceKernelUnlockMutex(SceUID mutex_id, s32 unlock_count)
     return 0;
 }
 
-static s32 tmanLockMutexInternal(SceUID mutex_id, s32 lock_count, u32 *timeout, int use_cb)
+static inline __attribute__((always_inline)) s32 tmanLockMutexInternal(SceUID mutex_id, s32 lock_count, u32 *timeout, int use_cb)
 {
     if (!tmanCheckUserPtr(timeout, sizeof(u32)))
         return (s32)SCE_ERROR_KERNEL_ILLEGAL_ADDR;
@@ -1219,16 +1300,14 @@ s32 sceKernelReferMutexStatus(SceUID mutex_id, SceKernelMutexInfo *info)
 
 void tmanInitLwMutexType(void)
 {
-    sceKernelCreateUIDtypeInherit("WaitQ", "LwMutex", sizeof(TmanLwMutexCB),
+    sceKernelCreateUIDtypeInherit("WaitQ", "LwMutex", 48,
                                   (SceSysmemUidLookupFunc *)g_uid_lwmutex_funcs,
                                   NULL, &g_tman.uid_lwmutex);
 }
 
 static int lwmutexUidCreate(SceSysmemUidCB *cb, SceSysmemUidCB *type, int func_id, void *args)
 {
-    TmanLwMutexCB *lw = (TmanLwMutexCB *)tmanUidData(cb, type);
     sceKernelCallUIDObjCommonFunction(cb, type, func_id, args);
-    tmanListInit(&lw->owner_link);
     return cb->uid ^ (s32)g_tman.uid_xor_key;
 }
 
@@ -1267,11 +1346,6 @@ static int lwmutexUidCheck(SceSysmemUidCB *cb, SceSysmemUidCB *type, int func_id
     lw->work_area->thid = next_owner->uid;
     lw->work_area->lockCount = (s32)next_owner->wait_param[0];
     return tmanWakeupWaitingThread(next_owner);
-}
-
-void tmanReleaseOwnedLwMutexes(TmanThreadCB *th)
-{
-    (void)th;
 }
 
 int sceKernelCreateLwMutex(SceLwMutex *work_area, const char *name, u32 attr,
@@ -1341,7 +1415,7 @@ int sceKernelDeleteLwMutex(SceLwMutex *work_area)
     return 0;
 }
 
-static s32 tmanLockLwMutexInternal(SceLwMutex *work_area, s32 lock_count, u32 *timeout, int use_cb)
+static inline __attribute__((always_inline)) s32 tmanLockLwMutexInternal(SceLwMutex *work_area, s32 lock_count, u32 *timeout, int use_cb)
 {
     if (!tmanCheckUserPtr(work_area, sizeof(*work_area)) || !tmanCheckUserPtr(timeout, sizeof(u32)))
         return (s32)SCE_ERROR_KERNEL_ILLEGAL_ADDR;
@@ -1549,7 +1623,7 @@ int sceKernelReferLwMutexStatusByID(SceUID id, TmanLwMutexInfo *info)
 
 void tmanInitMbxType(void)
 {
-    sceKernelCreateUIDtypeInherit("WaitQ", "Mbx", sizeof(TmanMbxCB),
+    sceKernelCreateUIDtypeInherit("WaitQ", "Mbx", 48,
                                   (SceSysmemUidLookupFunc *)g_uid_mbx_funcs,
                                   NULL, &g_tman.uid_mbx);
 }
@@ -1605,7 +1679,7 @@ static int tmanMbxEnqueueMsg(TmanMbxCB *mbx, TmanMsgPacket *pkt, u32 attr)
     return 0;
 }
 
-static TmanMsgPacket *tmanMbxDequeueMsg(TmanMbxCB *mbx)
+static inline __attribute__((always_inline)) TmanMsgPacket *tmanMbxDequeueMsg(TmanMbxCB *mbx)
 {
     if (mbx->msg_head == NULL)
         return NULL;
@@ -1717,7 +1791,7 @@ int sceKernelSendMbx(SceUID mbxid, void *message)
     return ret;
 }
 
-static int tmanReceiveMbxInternal(SceUID mbxid, void **pmessage, SceUInt *timeout, int use_cb)
+static inline __attribute__((always_inline)) int tmanReceiveMbxInternal(SceUID mbxid, void **pmessage, SceUInt *timeout, int use_cb)
 {
     if (!tmanCheckUserPtr(pmessage, sizeof(void *)) || !tmanCheckUserPtr(timeout, sizeof(SceUInt)))
         return (int)SCE_ERROR_KERNEL_ILLEGAL_ADDR;
@@ -1885,7 +1959,7 @@ int sceKernelReferMbxStatus(SceUID mbxid, TmanMbxInfo *info)
  * Message Pipes
  * ============================================================================ */
 
-static void tmanMsgPipeWriteRing(TmanMsgPipeCB *mpp, const u8 *src, u32 len)
+void tmanMsgPipeWriteRing(TmanMsgPipeCB *mpp, const u8 *src, u32 len)
 {
     if (len == 0 || mpp->buf == NULL)
         return;
@@ -1988,7 +2062,7 @@ int sceKernelDeleteMsgPipe(SceUID uid)
     return 0;
 }
 
-static int tmanSendMsgPipeInternal(SceUID uid, void *message, unsigned int size,
+static inline __attribute__((always_inline)) int tmanSendMsgPipeInternal(SceUID uid, void *message, unsigned int size,
                                    int wait_mode, void *result, unsigned int *timeout,
                                    int is_try, int use_cb)
 {
@@ -2118,7 +2192,7 @@ int sceKernelTrySendMsgPipe(SceUID uid, void *message, unsigned int size,
     return tmanSendMsgPipeInternal(uid, message, size, wait_mode, result, NULL, 1, 0);
 }
 
-static int tmanReceiveMsgPipeInternal(SceUID uid, void *message, unsigned int size,
+static inline __attribute__((always_inline)) int tmanReceiveMsgPipeInternal(SceUID uid, void *message, unsigned int size,
                                       int wait_mode, void *result, unsigned int *timeout,
                                       int is_try, int use_cb)
 {
