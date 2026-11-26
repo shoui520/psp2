@@ -80,13 +80,18 @@ struct SwMwTransfer {
  * offsets of the object's interfaces (the downloader class keeps them zero). A use site
  * writes the adjustment out: transfer + transfer->table[-word]. */
 
-/* the SWS content manager the core keeps behind a device: only its release of a transfer
- * object (dispatch slot +0x0c) is evidenced */
+/* the SWS content manager the core keeps behind a device (the 0x14-byte object at
+ * device+0x12c, dispatch table 0x8109a300): its destructors, the plain transfer factory
+ * 0x81016cb4, the release 0x81016e40 and the factory with the event/work areas
+ * 0x81016e58 that getInfo calls */
 struct SwMwContentManager {
-	virtual void destroy();					/* 0x00 */
-	virtual void dispose();					/* 0x04 */
-	virtual int size();					/* 0x08 */
+	virtual void destroy();						/* 0x00 */
+	virtual void dispose();						/* 0x04 */
+	virtual int createTransfer(struct SwMwTransfer **transfer);	/* 0x08 */
 	virtual int releaseTransfer(struct SwMwTransfer *transfer);	/* 0x0c */
+	virtual int createTransferOn(struct SwMwTransfer **transfer, int *device,
+				      int mode, void *channel, int label,
+				      int value, void *work, int value2);	/* 0x10 */
 };
 
 /* the content object (14 dispatch slots, in table order) */
