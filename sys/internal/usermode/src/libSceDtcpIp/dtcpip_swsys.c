@@ -366,19 +366,43 @@ int dtcpIpSysCloseStream(void *object)
 
 	if (stream == NULL)
 		return 2;
-	if (dtcpIpSwAcquireStream(hold, stream, 2) == 0) {
+	if (dtcpIpSwAcquireStream(hold, stream, 2) != 0) {
+		if (hold[0] != 0) {
+			struct SwSysStream *held = (struct SwSysStream *)hold[0];
+
+			sceKernelLockLwMutex(&held->mutex, 1, NULL);
+			held->state &= ~hold[1];
+			sceKernelUnlockLwMutex(&held->mutex, 1);
+		}
+		return 3;
+	}
+	{
 		message.command = SW_SYS_CLOSE_STREAM;
 		message.channel = 0;
 		message.size = 0;
 		message.value0 = stream->id;
 		ret = dtcpIpIpcRequest(stream->channel, &message);
-		if (ret == 0)
-			ret = message.result;
-		if (ret != 0)
-			result = dtcpIpMapIpcStatus2(ret);
-		else
-			result = 0;
-		if (hold[0] != 0) {
+		if (ret != 0) {
+			struct SwSysStream *held;
+
+			dtcpIpMapIpcStatus2(ret);
+			if (hold[0] != 0) {
+				held = (struct SwSysStream *)hold[0];
+				sceKernelLockLwMutex(&held->mutex, 1, NULL);
+				held->state &= ~hold[1];
+				sceKernelUnlockLwMutex(&held->mutex, 1);
+			}
+		} else if (message.result != 0) {
+			struct SwSysStream *held;
+
+			dtcpIpMapIpcStatus2(message.result);
+			if (hold[0] != 0) {
+				held = (struct SwSysStream *)hold[0];
+				sceKernelLockLwMutex(&held->mutex, 1, NULL);
+				held->state &= ~hold[1];
+				sceKernelUnlockLwMutex(&held->mutex, 1);
+			}
+		} else if (hold[0] != 0) {
 			struct SwSysStream *held = (struct SwSysStream *)hold[0];
 
 			sceKernelLockLwMutex(&held->mutex, 1, NULL);
@@ -390,14 +414,6 @@ int dtcpIpSysCloseStream(void *object)
 		dtcpIpFree(stream);
 		return closeResult;
 	}
-	if (hold[0] != 0) {
-		struct SwSysStream *held = (struct SwSysStream *)hold[0];
-
-		sceKernelLockLwMutex(&held->mutex, 1, NULL);
-		held->state &= ~hold[1];
-		sceKernelUnlockLwMutex(&held->mutex, 1);
-	}
-	return 3;
 }
 
 /* get the stream's info from the middleware (the caller's 56-byte buffer) */
