@@ -1,5 +1,7 @@
 #include <kermit.h>
 
+extern void *memcpy(void *dest, const void *src, SceSize n);
+
 typedef struct SceIoIob {
 	int i_flgs;
 	int i_unit;
@@ -9,7 +11,7 @@ typedef struct SceIoIob {
 	int i_cwd;
 	SceOff i_fpos;
 	SceUID i_thread;
-	int dummy[3];
+	int reserved[3];
 } SceIoIob;
 
 typedef struct SceIoDeviceFunction {
@@ -44,6 +46,32 @@ typedef struct SceIoDeviceEntry {
 	const char *d_desc;
 	const SceIoDeviceFunction *d_f;
 } SceIoDeviceEntry;
+
+typedef struct SceUidControlBlock {
+	struct SceUidControlBlock *parent;
+	struct SceUidControlBlock *nextChild;
+	struct SceUidControlBlock *meta;
+	SceUID uid;
+	const char *name;
+	u8 childSize;
+	u8 size;
+	u16 attr;
+} SceUidControlBlock;
+
+typedef struct MsMediaInfo {
+	u16 status;
+	u8 mediaType;
+	u8 writeProtect;
+	u8 reservedByte;
+} MsMediaInfo;
+
+typedef struct MsStatInfo {
+	u32 suspendCount;
+	u32 resumeCount;
+	u32 ejectCount;
+	u32 removeCount;
+	u32 mask;
+} MsStatInfo;
 
 int sceIoAddDrv(const SceIoDeviceEntry *de);
 int sceIoDelDrv(const char *drv);
@@ -121,11 +149,30 @@ static int g_ejectCount = 1;
 static int g_msemuReserved[2];
 static int g_lockMode;
 static int g_isSuspended;
-static int g_statCount0;
-static int g_statCount1;
-static int g_statCount3;
-static SceUID g_cbList0[32];
-static SceUID g_cbList1[32];
+static int g_suspendCount;
+static int g_resumeCount;
+static int g_removeCount;
+static SceUID g_cbList[32];
+static SceUID g_altCbList[32];
+
+static int __attribute__((noinline)) msstorIoctlGetStatus(u32 *out, SceSize outlen);
+static int __attribute__((noinline)) msstorIoctlGetCapacity(SceIoIob *iob, u32 *out, SceSize outlen);
+static int __attribute__((noinline)) msstorIoctlGetSectorSize(u32 *out, SceSize outlen);
+static int __attribute__((noinline)) msstorIoctlGetMediaType(u32 *out, SceSize outlen);
+static int __attribute__((noinline)) msstorIoctlGetWriteProtect(u32 *out, SceSize outlen);
+static int __attribute__((noinline)) msstorIoctlGetDescriptor(void *out, SceSize outlen);
+static int __attribute__((noinline)) mscmhcIoctlGetMediaInfo(MsMediaInfo *out, SceSize outlen);
+static int __attribute__((noinline)) mscmhcIoctlGetMaxTransfer(u32 *out, SceSize outlen);
+static int __attribute__((noinline)) mscmhcDevctlGetState(u32 *out, SceSize outlen);
+static int __attribute__((noinline)) mscmhcRegisterCb(SceUID *in, SceSize inlen, void *outdata);
+static int __attribute__((noinline)) mscmhcUnregisterCb(SceUID *in, SceSize inlen, void *outdata);
+static int __attribute__((noinline)) mscmhcDevctlGetInsertStatus(u32 *out, SceSize outlen);
+static int __attribute__((noinline)) mscmhcDevctlGetLockMode(void *indata, u32 *out, SceSize outlen);
+static int __attribute__((noinline)) mscmhcDevctlSetLockMode(u32 *in, SceSize inlen, void *outdata);
+static int __attribute__((noinline)) mscmhcDevctlGetStats(u32 *out, SceSize outlen);
+static int __attribute__((noinline)) mscmhcDevctlSetStats(const MsStatInfo *in, SceSize inlen);
+static int __attribute__((noinline)) notifyCbList(int eventCode);
+static int __attribute__((noinline)) notifyAltCbList(int eventCode);
 
 int module_start(SceSize args, void *argp)
 {
@@ -146,27 +193,53 @@ int module_start(SceSize args, void *argp)
 		return res;
 	}
 	for (int i = 0; i < 32; i++) {
-		g_cbList0[i] = 0;
+		g_cbList[i] = 0;
 	}
 	for (int i = 0; i < 32; i++) {
-		g_cbList1[i] = 0;
+		g_altCbList[i] = 0;
 	}
 	sceKernelRegisterSysEventHandler(&g_sysEventHandler);
 	return 0;
 }
 
-static int msstorIoctlSetVal(u32 *out, SceSize outlen, u32 val)
+static int msstorIoctl(SceIoIob *iob, int cmd, void *indata, SceSize inlen, void *outdata, SceSize outlen)
 {
-	if (out == NULL || outlen < 4 || ((s32)(((u32)out | ((u32)out + 4)) & pspGetK1())) < 0) {
+	switch ((u32)cmd) {
+	case 0x02105002:
+	case 0x02105003:
+	case 0x02105004:
+	case 0x02105005:
+		return 0x80220183;
+	case 0x02125001:
+		return msstorIoctlGetStatus(outdata, outlen);
+	case 0x02125006:
+		return msstorIoctlGetCapacity(iob, outdata, outlen);
+	case 0x02125007:
+		return msstorIoctlGetSectorSize(outdata, outlen);
+	case 0x02125008:
+		return msstorIoctlGetMediaType(outdata, outlen);
+	case 0x02125009:
+		return msstorIoctlGetWriteProtect(outdata, outlen);
+	case 0x02125803:
+		return msstorIoctlGetDescriptor(outdata, outlen);
+	default:
+		return 0x80010086;
+	}
+}
+
+static int __attribute__((noinline)) msstorIoctlGetStatus(u32 *out, SceSize outlen)
+{
+	if (outlen < 4 || out == NULL || ((s32)(((u32)out | ((u32)out + 4)) & pspGetK1())) < 0) {
 		return 0x80220183;
 	}
-	*out = val;
+	*out = 1;
 	return 0;
 }
 
-static int msstorIoctlGetCapacity(u32 *out, SceSize outlen)
+static int __attribute__((noinline)) msstorIoctlGetCapacity(SceIoIob *iob, u32 *out, SceSize outlen)
 {
-	if (out == NULL || outlen < 4 || ((s32)(((u32)out | ((u32)out + 4)) & pspGetK1())) < 0) {
+	(void)iob;
+	if (outlen < 4 || out == NULL || ((s32)(((u32)out | ((u32)out + 4)) & pspGetK1())) < 0) {
 		return 0x80220183;
 	}
 	u32 info[8];
@@ -183,63 +256,30 @@ static int msstorIoctlGetCapacity(u32 *out, SceSize outlen)
 	return 0;
 }
 
-static int msstorIoctlGetDescriptor(void *out, SceSize outlen)
+static int __attribute__((noinline)) msstorIoctlGetSectorSize(u32 *out, SceSize outlen)
 {
-	if (out == NULL || outlen < 0x60 || ((s32)(((u32)out | ((u32)out + 0x60)) & pspGetK1())) < 0) {
+	if (outlen < 4 || out == NULL || ((s32)(((u32)out | ((u32)out + 4)) & pspGetK1())) < 0) {
 		return 0x80220183;
 	}
-	const u8 *src = (const u8 *)g_msDescriptor;
-	u8 *dst = (u8 *)out;
-	for (u32 i = 0; i < 0x60; i++) {
-		dst[i] = src[i];
-	}
+	*out = 0x200;
 	return 0;
 }
 
-static int msstorIoctl(SceIoIob *iob, int cmd, void *indata, SceSize inlen, void *outdata, SceSize outlen)
+static int __attribute__((noinline)) msstorIoctlGetMediaType(u32 *out, SceSize outlen)
 {
-	switch ((u32)cmd) {
-	case 0x02105002:
-	case 0x02105003:
-	case 0x02105004:
-	case 0x02105005:
-		return 0x80220183;
-	case 0x02125001:
-		return msstorIoctlSetVal(outdata, outlen, 1);
-	case 0x02125006:
-		return msstorIoctlGetCapacity(outdata, outlen);
-	case 0x02125007:
-		return msstorIoctlSetVal(outdata, outlen, 0x200);
-	case 0x02125008:
-		return msstorIoctlSetVal(outdata, outlen, 1);
-	case 0x02125009:
-		return msstorIoctlSetVal(outdata, outlen, 0);
-	case 0x02125803:
-		return msstorIoctlGetDescriptor(outdata, outlen);
-	default:
-		return 0x80010086;
-	}
-}
-
-static int mscmhcIoctl02125801(u8 *out, SceSize outlen)
-{
-	if (out == NULL || outlen < 5 || ((s32)(((u32)out | ((u32)out + 5)) & pspGetK1())) < 0) {
+	if (outlen < 4 || out == NULL || ((s32)(((u32)out | ((u32)out + 4)) & pspGetK1())) < 0) {
 		return 0x80220183;
 	}
-	out[3] = 1;
-	out[4] = 0;
-	out[0] = 1;
-	out[1] = 0;
-	out[2] = 0;
+	*out = 1;
 	return 0;
 }
 
-static int mscmhcIoctl02125802(u32 *out, SceSize outlen)
+static int __attribute__((noinline)) msstorIoctlGetWriteProtect(u32 *out, SceSize outlen)
 {
-	if (out == NULL || outlen < 4 || ((s32)(((u32)out | ((u32)out + 4)) & pspGetK1())) < 0) {
+	if (outlen < 4 || out == NULL || ((s32)(((u32)out | ((u32)out + 4)) & pspGetK1())) < 0) {
 		return 0x80220183;
 	}
-	*out = 0x40;
+	*out = 0;
 	return 0;
 }
 
@@ -249,27 +289,96 @@ static int mscmhcIoctl(SceIoIob *iob, int cmd, void *indata, SceSize inlen, void
 		return 0x80010013;
 	}
 	if ((u32)cmd == 0x02125801) {
-		return mscmhcIoctl02125801(outdata, outlen);
+		return mscmhcIoctlGetMediaInfo(outdata, outlen);
 	}
 	if ((u32)cmd == 0x02125802) {
-		return mscmhcIoctl02125802(outdata, outlen);
+		return mscmhcIoctlGetMaxTransfer(outdata, outlen);
 	}
 	return 0x80010086;
 }
 
-static int mscmhcRegisterCb(SceUID *in, SceSize inlen, void *outdata)
+static int __attribute__((noinline)) mscmhcIoctlGetMediaInfo(MsMediaInfo *out, SceSize outlen)
+{
+	if (out == NULL || outlen < 5 || ((s32)(((u32)out | ((u32)out + 5)) & pspGetK1())) < 0) {
+		return 0x80220183;
+	}
+	out->writeProtect = 1;
+	out->reservedByte = 0;
+	out->status = 1;
+	out->mediaType = 0;
+	return 0;
+}
+
+static int __attribute__((noinline)) mscmhcIoctlGetMaxTransfer(u32 *out, SceSize outlen)
+{
+	if (out == NULL || outlen < 4 || ((s32)(((u32)out | ((u32)out + 4)) & pspGetK1())) < 0) {
+		return 0x80220183;
+	}
+	*out = 0x40;
+	return 0;
+}
+
+static int __attribute__((noinline)) msstorIoctlGetDescriptor(void *out, SceSize outlen)
+{
+	if (out == NULL || outlen < 0x60 || ((s32)(((u32)out | ((u32)out + 0x60)) & pspGetK1())) < 0) {
+		return 0x80220183;
+	}
+	memcpy(out, g_msDescriptor, 0x60);
+	return 0;
+}
+
+static int mscmhcDevctl(SceIoIob *iob, const char *dev, int cmd, void *indata, SceSize inlen, void *outdata, SceSize outlen)
+{
+	(void)g_msemuReserved;
+	if (iob->i_unit != 0) {
+		return 0x80010013;
+	}
+	switch ((u32)cmd) {
+	case 0x02015804:
+		return mscmhcRegisterCb(indata, inlen, outdata);
+	case 0x02015805:
+		return mscmhcUnregisterCb(indata, inlen, outdata);
+	case 0x02015807:
+		return mscmhcDevctlGetLockMode(indata, outdata, outlen);
+	case 0x0201580B:
+		return mscmhcDevctlSetStats(indata, inlen);
+	case 0x02025801:
+		return mscmhcDevctlGetState(outdata, outlen);
+	case 0x02025806:
+		return mscmhcDevctlGetInsertStatus(outdata, outlen);
+	case 0x02025808:
+		return mscmhcDevctlSetLockMode(indata, inlen, outdata);
+	case 0x0202580A:
+		return mscmhcDevctlGetStats(outdata, outlen);
+	default:
+		return 0x80010016;
+	}
+}
+
+static int __attribute__((noinline)) mscmhcDevctlGetState(u32 *out, SceSize outlen)
+{
+	u32 k1 = pspGetK1();
+	if (out == NULL || outlen < 4 || ((s32)(k1 & (u32)out)) < 0) {
+		return 0x80220081;
+	}
+	*out = g_msState;
+	return 0;
+}
+
+static int __attribute__((noinline)) mscmhcRegisterCb(SceUID *in, SceSize inlen, void *outdata)
 {
 	u32 k1 = pspGetK1();
 	if (in == NULL || inlen < 4 || outdata != NULL || ((s32)(k1 & (u32)in)) < 0) {
 		return 0x80220081;
 	}
-	void *cb = NULL;
-	if (sceKernelGetUIDcontrolBlock(*in, &cb) != 0) {
+	void *cbRaw = NULL;
+	if (sceKernelGetUIDcontrolBlock(*in, &cbRaw) != 0) {
 		return 0x80220081;
 	}
+	SceUidControlBlock *cb = (SceUidControlBlock *)cbRaw;
 	u32 perm = 2;
-	if ((k1 >> 31) != 0) {
-		perm = *(u16 *)((u8 *)cb + 0x16) & 2u;
+	if ((s32)k1 < 0) {
+		perm = cb->attr & 2u;
 	}
 	if (perm == 0) {
 		return 0x80220081;
@@ -278,13 +387,13 @@ static int mscmhcRegisterCb(SceUID *in, SceSize inlen, void *outdata)
 	int intr = sceKernelSuspendDispatchThread();
 	int found = 0;
 	for (int i = 0; i < 32; i++) {
-		if (g_cbList0[i] == 0) {
+		if (g_cbList[i] == 0) {
 			SceUID cbid = *in;
-			g_cbList0[i] = cbid;
+			g_cbList[i] = cbid;
 			found = 1;
 			if (g_msState == 4) {
 				if (sceKernelNotifyCallback(cbid, 1) == (int)0x800201A1) {
-					g_cbList0[i] = 0;
+					g_cbList[i] = 0;
 				}
 			}
 			break;
@@ -294,19 +403,20 @@ static int mscmhcRegisterCb(SceUID *in, SceSize inlen, void *outdata)
 	return found ? 0 : 0x80220082;
 }
 
-static int mscmhcUnregisterCb(SceUID *in, SceSize inlen, void *outdata)
+static int __attribute__((noinline)) mscmhcUnregisterCb(SceUID *in, SceSize inlen, void *outdata)
 {
 	u32 k1 = pspGetK1();
 	if (in == NULL || inlen < 4 || outdata != NULL || ((s32)(k1 & (u32)in)) < 0) {
 		return 0x80220081;
 	}
-	void *cb = NULL;
-	if (sceKernelGetUIDcontrolBlock(*in, &cb) != 0) {
+	void *cbRaw = NULL;
+	if (sceKernelGetUIDcontrolBlock(*in, &cbRaw) != 0) {
 		return 0x80220081;
 	}
+	SceUidControlBlock *cb = (SceUidControlBlock *)cbRaw;
 	u32 perm = 2;
-	if ((k1 >> 31) != 0) {
-		perm = *(u16 *)((u8 *)cb + 0x16) & 2u;
+	if ((s32)k1 < 0) {
+		perm = cb->attr & 2u;
 	}
 	if (perm == 0) {
 		return 0x80220081;
@@ -316,8 +426,8 @@ static int mscmhcUnregisterCb(SceUID *in, SceSize inlen, void *outdata)
 	SceUID target = *in;
 	int found = 0;
 	for (int i = 0; i < 32; i++) {
-		if (g_cbList0[i] == target) {
-			g_cbList0[i] = 0;
+		if (g_cbList[i] == target) {
+			g_cbList[i] = 0;
 			found = 1;
 			break;
 		}
@@ -326,153 +436,149 @@ static int mscmhcUnregisterCb(SceUID *in, SceSize inlen, void *outdata)
 	return found ? 0 : 0x80220081;
 }
 
-static int mscmhcDevctl(SceIoIob *iob, const char *dev, int cmd, void *indata, SceSize inlen, void *outdata, SceSize outlen)
+static int __attribute__((noinline)) mscmhcDevctlGetInsertStatus(u32 *out, SceSize outlen)
 {
-	(void)g_msemuReserved;
-	if (iob->i_unit != 0) {
-		return 0x80010013;
-	}
 	u32 k1 = pspGetK1();
-	switch ((u32)cmd) {
-	case 0x02015804:
-		return mscmhcRegisterCb(indata, inlen, outdata);
-	case 0x02015805:
-		return mscmhcUnregisterCb(indata, inlen, outdata);
-	case 0x02015807:
-		if (outdata == NULL || outlen < 4 || indata != NULL || ((s32)(k1 & (u32)outdata)) < 0) {
-			return 0x80220081;
-		}
-		sceKernelPowerLockForUser(0);
-		*(u32 *)outdata = g_lockMode;
-		sceKernelPowerUnlockForUser(0);
-		return 0;
-	case 0x0201580B: {
-		if (indata == NULL || inlen < 0x14) {
-			return 0x80220081;
-		}
-		u32 *in = (u32 *)indata;
-		u32 mask = in[4];
-		if ((mask & 0x80000001u) != 0) {
-			g_statCount0 = in[0];
-		}
-		if ((mask & 0x80000002u) != 0) {
-			g_statCount1 = in[1];
-		}
-		if ((mask & 0x80000004u) != 0) {
-			g_ejectCount = in[2];
-		}
-		if ((mask & 0x80000008u) != 0) {
-			g_statCount3 = in[3];
-		}
-		return 0;
+	if (out == NULL || outlen < 4 || ((s32)(k1 & (u32)out)) < 0) {
+		return 0x80220081;
 	}
-	case 0x02025801:
-		if (outdata == NULL || outlen < 4 || ((s32)(k1 & (u32)outdata)) < 0) {
-			return 0x80220081;
-		}
-		*(u32 *)outdata = g_msState;
-		return 0;
-	case 0x02025806:
-		if (outdata == NULL || outlen < 4 || ((s32)(k1 & (u32)outdata)) < 0) {
-			return 0x80220081;
-		}
-		*(u32 *)outdata = (g_msState == 4) ? 1 : 2;
-		return 0;
-	case 0x02025808: {
-		if (indata == NULL || inlen < 4 || outdata != NULL || ((s32)(k1 & (u32)indata)) < 0) {
-			return 0x80220081;
-		}
-		u32 mode = *(u32 *)indata;
-		if ((mode - 1u) >= 2u) {
-			return 0x80220081;
-		}
-		int res = 0x80220086;
-		sceKernelPowerLockForUser(0);
-		if (g_isSuspended == 0) {
-			g_lockMode = mode;
-			res = 0;
-		}
-		sceKernelPowerUnlockForUser(0);
-		return res;
-	}
-	case 0x0202580A: {
-		if (outdata == NULL || outlen < 0x10) {
-			return 0x80220081;
-		}
-		u32 *out = (u32 *)outdata;
-		out[0] = g_statCount0;
-		out[1] = g_statCount1;
-		out[2] = g_ejectCount;
-		out[3] = g_statCount3;
-		return 0;
-	}
-	default:
-		return 0x80010016;
-	}
+	*out = (g_msState == 4) ? 1 : 2;
+	return 0;
 }
 
-static void notifyCbLists(int arg)
+static int __attribute__((noinline)) mscmhcDevctlGetLockMode(void *indata, u32 *out, SceSize outlen)
 {
-	int intr = sceKernelSuspendDispatchThread();
-	for (int i = 0; i < 32; i++) {
-		if (g_cbList0[i] != 0) {
-			if (sceKernelNotifyCallback(g_cbList0[i], arg) == (int)0x800201A1) {
-				g_cbList0[i] = 0;
-			}
-		}
+	u32 k1 = pspGetK1();
+	if (out == NULL || outlen < 4 || indata != NULL || ((s32)(k1 & (u32)out)) < 0) {
+		return 0x80220081;
 	}
-	sceKernelResumeDispatchThread(intr);
+	sceKernelPowerLockForUser(0);
+	*out = g_lockMode;
+	sceKernelPowerUnlockForUser(0);
+	return 0;
+}
 
-	intr = sceKernelSuspendDispatchThread();
-	for (int i = 0; i < 32; i++) {
-		if (g_cbList1[i] != 0) {
-			if (sceKernelNotifyCallback(g_cbList1[i], arg) == (int)0x800201A1) {
-				g_cbList1[i] = 0;
-			}
-		}
+static int __attribute__((noinline)) mscmhcDevctlSetLockMode(u32 *in, SceSize inlen, void *outdata)
+{
+	u32 k1 = pspGetK1();
+	if (in == NULL || inlen < 4 || outdata != NULL || ((s32)(k1 & (u32)in)) < 0) {
+		return 0x80220081;
 	}
-	sceKernelResumeDispatchThread(intr);
+	u32 mode = *in;
+	if ((mode - 1u) >= 2u) {
+		return 0x80220081;
+	}
+	int res = 0x80220086;
+	sceKernelPowerLockForUser(0);
+	if (g_isSuspended == 0) {
+		g_lockMode = mode;
+		res = 0;
+	}
+	sceKernelPowerUnlockForUser(0);
+	return res;
+}
+
+static int __attribute__((noinline)) mscmhcDevctlGetStats(u32 *out, SceSize outlen)
+{
+	if (out == NULL || outlen < 0x10) {
+		return 0x80220081;
+	}
+	out[0] = g_suspendCount;
+	out[1] = g_resumeCount;
+	out[2] = g_ejectCount;
+	out[3] = g_removeCount;
+	return 0;
+}
+
+static int __attribute__((noinline)) mscmhcDevctlSetStats(const MsStatInfo *in, SceSize inlen)
+{
+	if (in == NULL || inlen < 0x14) {
+		return 0x80220081;
+	}
+	if ((in->mask & 0x80000001u) != 0) {
+		g_suspendCount = in->suspendCount;
+	}
+	if ((in->mask & 0x80000002u) != 0) {
+		g_resumeCount = in->resumeCount;
+	}
+	if ((in->mask & 0x80000004u) != 0) {
+		g_ejectCount = in->ejectCount;
+	}
+	if ((in->mask & 0x80000008u) != 0) {
+		g_removeCount = in->removeCount;
+	}
+	return 0;
 }
 
 static int msemuSysEventHandler(int ev_id, char *ev_name, void *param, int *result)
 {
 	if (g_lockMode == 1) {
 		if (ev_id == 0x400D) {
-			g_statCount0++;
+			g_suspendCount++;
 		} else if (ev_id == 0x400) {
 			g_msState = 1;
-			g_statCount3++;
+			g_removeCount++;
 			g_isSuspended = 1;
-			notifyCbLists(2);
+			notifyCbList(2);
+			notifyAltCbList(2);
 		} else if (ev_id == 0x1000D) {
-			g_statCount1++;
+			g_resumeCount++;
 			g_msState = 4;
 			g_ejectCount++;
-			notifyCbLists(1);
+			notifyCbList(1);
+			notifyAltCbList(1);
 		} else if (ev_id == 0x400000) {
 			g_isSuspended = 0;
 		}
 	} else {
 		if (ev_id == 0x400D) {
-			g_statCount0++;
+			g_suspendCount++;
 		} else if (ev_id == 0x400) {
 			g_isSuspended = 1;
 		} else if (ev_id == 0x1000D) {
-			g_statCount1++;
+			g_resumeCount++;
 			g_msState = 1;
-			g_statCount3++;
+			g_removeCount++;
 			g_ejectCount++;
-			notifyCbLists(2);
+			notifyCbList(2);
+			notifyAltCbList(2);
 		} else if (ev_id == 0x100002) {
 			if (g_msState != 4) {
 				g_msState = 4;
-				notifyCbLists(1);
+				notifyCbList(1);
+				notifyAltCbList(1);
 			}
 		} else if (ev_id == 0x400000) {
 			g_isSuspended = 0;
 		}
 	}
 	return 0;
+}
+
+static int __attribute__((noinline)) notifyCbList(int eventCode)
+{
+	int intr = sceKernelSuspendDispatchThread();
+	for (int i = 0; i < 32; i++) {
+		if (g_cbList[i] != 0) {
+			if (sceKernelNotifyCallback(g_cbList[i], eventCode) == (int)0x800201A1) {
+				g_cbList[i] = 0;
+			}
+		}
+	}
+	return sceKernelResumeDispatchThread(intr);
+}
+
+static int __attribute__((noinline)) notifyAltCbList(int eventCode)
+{
+	int intr = sceKernelSuspendDispatchThread();
+	for (int i = 0; i < 32; i++) {
+		if (g_altCbList[i] != 0) {
+			if (sceKernelNotifyCallback(g_altCbList[i], eventCode) == (int)0x800201A1) {
+				g_altCbList[i] = 0;
+			}
+		}
+	}
+	return sceKernelResumeDispatchThread(intr);
 }
 
 static int msstorInit(void *de)
