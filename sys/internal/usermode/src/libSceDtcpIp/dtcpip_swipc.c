@@ -224,10 +224,13 @@ int dtcpIpIpcCreate(int *outConnection, const int *sessionInfo, const unsigned i
 		return 5;
 	object->session = NULL;
 	object->stream = NULL;
-	if (dtcpIpIpcInitSession(object, config, size) != 0 ||
-	    dtcpIpIpcInitStream(&object->stream, object->session, 0, 0, 0, 0) != 0 ||
-	    dtcpIpIpcInitShared(object->stream, &object->shared) != 0) {
-		ret = dtcpIpMapIpcStatus(0);
+	ret = dtcpIpIpcInitSession(object, config, size);
+	if (ret == 0)
+		ret = dtcpIpIpcInitStream(&object->stream, object->session, 0, 0, 0, 0);
+	if (ret == 0)
+		ret = dtcpIpIpcInitShared(object->stream, &object->shared);
+	if (ret != 0) {
+		ret = dtcpIpMapIpcStatus(ret);
 	} else {
 		message.command = SCE_DTCP_IP_IPC_CONNECT;
 		message.channel = 0;
