@@ -27,8 +27,12 @@ int SwsGetToolMode(void);
 int SwsGetAffinity(void);
 int SwMwThreadTrampoline(SceSize args, void *argument);
 
-/* the activation's worker entry (the manager's thread, not written yet) */
+/* the activation's worker entry (0x810056a6) and the calls it makes */
 int SwMwManagerActivationThread(void *argument);
+int SwMwCoreGetPort(unsigned short *port);
+int SwMwCoreImportKeyBin(const void *data, int size);
+int _sceDtcpIpDownload(unsigned short port, void *buffer, int *size);
+int _sceDtcpIpActivate(int *result);
 }
 
 extern "C" int SwMwManagerThreadCreate(struct SwMwManagerThread *thread, int (*entry)(void *),
@@ -270,11 +274,8 @@ extern "C" int SwMwManagerCheckActivation(void)
 	return 13001;
 }
 
-/* the activation's worker state, its result and its thread (the flag doubles as the
- * worker's argument) */
-static unsigned char g_swMwActivationState;
-static int g_swMwActivationStatus;
-static int g_swMwActivationResult;
+/* the activation's worker state and the thread that runs it */
+static struct SwMwManagerActivation g_swMwActivation;
 static struct SwMwManagerThread g_swMwActivationThread;
 
 /* wait for a manager thread and delete it (0x810044bc) */
@@ -293,10 +294,10 @@ extern "C" int SwMwManagerStartActivation(void)
 	int status;
 	int failed;
 
-	g_swMwActivationState = 0;
+	g_swMwActivation.state = 0;
 	status = SwMwManagerThreadCreate(&g_swMwActivationThread,
 					 SwMwManagerActivationThread,
-					 &g_swMwActivationState, 0);
+					 &g_swMwActivation, 0);
 	failed = 0;
 	if (status != 0) {
 		swMwTrace("[SWMW] Error %d in %s:%d\n", status, SWMW_MANAGER_SOURCE, 2317);
@@ -312,20 +313,53 @@ extern "C" int SwMwManagerGetActivationResult(int *result)
 {
 	int failed;
 
-	if (g_swMwActivationState == 0)
+	if (g_swMwActivation.state == 0)
 		return 12007;
-	if (g_swMwActivationState != 1)
+	if (g_swMwActivation.state != 1)
 		return 12004;
 	SwMwManagerJoinThread(&g_swMwActivationThread);
 	if (result != NULL)
-		*result = g_swMwActivationResult;
+		*result = g_swMwActivation.result;
 	failed = 0;
-	if (g_swMwActivationStatus != 0) {
-		swMwTrace("[SWMW] Error %d in %s:%d\n", g_swMwActivationStatus,
+	if (g_swMwActivation.status != 0) {
+		swMwTrace("[SWMW] Error %d in %s:%d\n", g_swMwActivation.status,
 			  SWMW_MANAGER_SOURCE, 2340);
 		failed = 1;
 	}
 	if (failed != 0)
-		return SwMwManagerMapStatus(g_swMwActivationStatus);
+		return SwMwManagerMapStatus(g_swMwActivation.status);
+	return 0;
+}
+
+/* the activation's worker: activate, and on the -3 answer download and import the key
+ * bin, then activate again (0x810056a6) */
+extern "C" int SwMwManagerActivationThread(void *argument)
+{
+	struct SwMwManagerActivation *activation = (struct SwMwManagerActivation *)argument;
+	unsigned short port;
+	int size;
+	unsigned char buffer[612];
+	int status;
+
+	activation->state = 0;
+	activation->status = _sceDtcpIpActivate(&activation->result);
+	if (activation->status == -3) {
+		size = 612;
+		SwMwCoreGetPort(&port);
+		status = _sceDtcpIpDownload(port, buffer, &size);
+		if (status >= 0) {
+			status = SwMwCoreImportKeyBin(buffer, size);
+			if (status == 13002)
+				activation->status = -6;
+			else if (status != 0)
+				activation->status = -7;
+			else
+				activation->status = _sceDtcpIpActivate(&activation->result);
+		} else {
+			activation->result = status;
+			activation->status = -3;
+		}
+	}
+	activation->state = 1;
 	return 0;
 }
