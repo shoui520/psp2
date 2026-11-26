@@ -243,6 +243,7 @@ int MlnImpl_81027140(int heap, MlnServiceArg *value, void **out)
 	return 0;
 }
 
+#ifndef MLN_PLAYBACK
 int MlnImpl_8102717C(int heap, MlnServiceArg *value, void **out)
 {
 	if (value == NULL || out == NULL || value->type != MLN_SERVICE_ARG_STRUCT)
@@ -251,7 +252,9 @@ int MlnImpl_8102717C(int heap, MlnServiceArg *value, void **out)
 	value->value = NULL;
 	return 0;
 }
+#endif
 
+#ifndef MLN_PLAYBACK
 int MlnImpl_810271B8(int heap, MlnServiceArg *value, void **out)
 {
 	if (value == NULL || out == NULL || value->type != MLN_SERVICE_ARG_LIST)
@@ -260,6 +263,7 @@ int MlnImpl_810271B8(int heap, MlnServiceArg *value, void **out)
 	value->value = NULL;
 	return 0;
 }
+#endif
 
 int MlnImpl_810271F4(int heap, MlnServiceArg *value, void **out)
 {

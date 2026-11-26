@@ -394,6 +394,7 @@ out:
 }
 
 /* set the attributes of a core handle's bundle from node's AttributeList */
+#ifndef MLN_PLAYBACK
 unsigned int MlnImpl_8104AE1C(int handle, MlnXmlNode *node)
 {
 	MlnCoreHandle *core = NULL;
@@ -433,6 +434,7 @@ out:
 	MlnImpl_8103C57C(attributes, MLN_OCTOPUS_ATTRIBUTE);
 	return ret;
 }
+#endif
 
 /* open a record handle of a core handle: *opened names it */
 unsigned int MlnImpl_8104AF48(int handle, const MlnServiceRecordValue *record, int *opened)
@@ -863,7 +865,11 @@ unsigned int MlnImpl_8104B4C4(int handle, int kind, MlnBuffer *const *transfer, 
 		goto out;
 	}
 	core->kind = kind;
+#ifdef MLN_PLAYBACK
+	MlnMemset(keys, 0, sizeof(keys));
+#else
 	__builtin_memset(keys, 0, sizeof(keys));
+#endif
 	if (MlnImpl_8104A448() != 0) {
 		ret = 7;
 		goto out;
@@ -1099,6 +1105,7 @@ static inline __attribute__((always_inline)) unsigned int MlnCoreKeyError(unsign
  * Run a core handle's keyed operation with an RSA public key given as
  * DER: it gives three arrays of *count buffers.
  */
+#ifndef MLN_PLAYBACK
 unsigned int MlnImpl_8104C130(int handle, const MlnBuffer *publicKey, int *count,
 			      MlnBuffer ***first, MlnBuffer ***second, MlnBuffer ***third)
 {
@@ -1148,6 +1155,7 @@ out:
 		MlnImpl_81055CA8(rsa);
 	return ret;
 }
+#endif
 
 #define MLN_CORE_MOVE_CALLBACK	"OnAgentCompletion.Move.Callback"
 

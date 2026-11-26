@@ -557,6 +557,7 @@ int MlnImpl_81036CA8(int heap, unsigned int size, const unsigned char *encoding,
 }
 
 /* a node whose contents are given encoded, a constructed node's too */
+#ifndef MLN_PLAYBACK
 int MlnImpl_81036D28(int heap, int tagClass, unsigned char constructed, int tag,
 		     unsigned int length, const void *contents, MlnAsn1Node **out)
 {
@@ -600,6 +601,7 @@ fail:
 	MlnImpl_81035ABC(heap, node);
 	return ret;
 }
+#endif
 
 /* an empty constructed node */
 int MlnImpl_81036E34(int heap, int tagClass, int tag, MlnAsn1Node **out)
@@ -620,11 +622,13 @@ int MlnImpl_81036E34(int heap, int tagClass, int tag, MlnAsn1Node **out)
 }
 
 /* a primitive node whose contents are given encoded */
+#ifndef MLN_PLAYBACK
 int MlnImpl_81036EBC(int heap, int tagClass, int tag, unsigned int length,
 		     const void *contents, MlnAsn1Node **out)
 {
 	return MlnImpl_81036D28(heap, tagClass, 0, tag, length, contents, out);
 }
+#endif
 
 /* a tree, as the library's callers free it */
 __attribute__((noinline))

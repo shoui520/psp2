@@ -268,6 +268,7 @@ int MlnImpl_81025C1C(int area, void *handle, unsigned int size, unsigned int *re
 }
 
 /* read up to and including the first delimiter, leaving the file just past it */
+#ifndef MLN_PLAYBACK
 int MlnImpl_81025E74(int area, void *handle, int delimiter, unsigned int size,
 		     unsigned int *read, unsigned char *data)
 {
@@ -292,6 +293,7 @@ int MlnImpl_81025E74(int area, void *handle, int delimiter, unsigned int size,
 	*read = got;
 	return 0;
 }
+#endif
 
 int MlnImpl_81025F5C(int area, void *handle, unsigned int size, const void *data)
 {

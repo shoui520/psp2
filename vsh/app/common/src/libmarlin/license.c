@@ -55,10 +55,12 @@ out:
 	return ret;
 }
 
+#ifndef MLN_PLAYBACK
 unsigned int MlnImpl_8104D16C(int handle, int kind, MlnBuffer **out)
 {
 	return MlnLicenseRead(handle, kind, out);
 }
+#endif
 
 /*
  * Note the first use of the bundle in token when its rights limit how
@@ -246,6 +248,7 @@ static inline __attribute__((always_inline)) MlnHandleTable *MlnServiceHandleTab
  * Open a service handle of a kind (2 to 8) with a copy of the values
  * given: *handle names it. Kinds 6 and 7 are not services of the core.
  */
+#ifndef MLN_PLAYBACK
 unsigned int MlnImpl_8104D5E0(int kind, MlnServiceList *list, int *handle)
 {
 	MlnCoreServiceHandle *service;
@@ -390,8 +393,10 @@ end:
 		MlnImpl_8104A558();
 	return ret;
 }
+#endif
 
 /* close a service handle of MlnImpl_8104D5E0 */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8104DAA4(int handle)
 {
 	MlnCoreServiceHandle *service = NULL;
@@ -427,8 +432,10 @@ end:
 	MlnImpl_8104A558();
 	return ret;
 }
+#endif
 
 /* send a named message through a service handle of kind 2, once */
+#ifndef MLN_PLAYBACK
 unsigned int MlnImpl_8104DC4C(int handle, unsigned int size, const unsigned char *data,
 			      const char *name, MlnBlob *out)
 {
@@ -486,11 +493,13 @@ out:
 		MlnImpl_8104A558();
 	return ret;
 }
+#endif
 
 /*
  * Take the reply to a service handle's message: the uid of its bundle's node and the core's
  * state.
  */
+#ifndef MLN_PLAYBACK
 unsigned int MlnImpl_8104DE10(int handle, const MlnBuffer *data, MlnBlob *first, MlnBlob *second)
 {
 	MlnCoreServiceHandle *service = NULL;
@@ -603,11 +612,13 @@ out:
 		MlnImpl_8104A558();
 	return ret;
 }
+#endif
 
 /*
  * Send a named message with two documents (the first optional) through a service handle of
  * kind 3, once; the documents are kept in the handle for its reply.
  */
+#ifndef MLN_PLAYBACK
 unsigned int MlnImpl_8104E18C(int handle, unsigned int size, const unsigned char *data,
 			      const char *name, const MlnBuffer *third, const MlnBuffer *fourth,
 			      MlnBlob *first, MlnBlob *second)
@@ -699,6 +710,7 @@ out:
 		MlnImpl_8104A558();
 	return ret;
 }
+#endif
 
 /* map the errors of storing a link */
 static inline unsigned int MlnServiceLinkError(unsigned int r)
@@ -724,6 +736,7 @@ static inline unsigned int MlnServiceLinkError(unsigned int r)
  * sent, which is stored; returns its uid, the second reply and the core's state. The
  * documents kept in the handle are dropped.
  */
+#ifndef MLN_PLAYBACK
 unsigned int MlnImpl_8104E45C(int handle, const MlnBuffer *data, MlnBlob *first, MlnBlob *second,
 			      MlnBlob *third)
 {
@@ -878,11 +891,13 @@ out:
 		MlnImpl_8104A558();
 	return ret;
 }
+#endif
 
 /*
  * Send a named message with a document, or an empty one, through a service handle of kind 4,
  * once.
  */
+#ifndef MLN_PLAYBACK
 unsigned int MlnImpl_8104E9B8(int handle, unsigned int size, const unsigned char *data,
 			      const char *name, const MlnBuffer *third, MlnBlob *first,
 			      MlnBlob *second)
@@ -949,6 +964,7 @@ out:
 		MlnImpl_8104A558();
 	return ret;
 }
+#endif
 
 /*
  * Record the first use of a bundle's license when its rights limit how long it may be used:
@@ -1039,6 +1055,7 @@ out:
  * Take the reply to a service handle's message of kind 4: a license token, whose first use is
  * recorded; returns it and the core's state.
  */
+#ifndef MLN_PLAYBACK
 unsigned int MlnImpl_8104EBD8(int handle, const MlnBuffer *data, MlnBlob *first, MlnBlob *second)
 {
 	MlnCoreServiceHandle *service = NULL;
@@ -1120,12 +1137,14 @@ out:
 		MlnImpl_8104A558();
 	return ret;
 }
+#endif
 
 /*
  * Send a named message with two documents (the first optional; an empty one in its place)
  * through a service handle of kind 5, once; the documents are kept in the handle for its
  * reply. The third argument is not used.
  */
+#ifndef MLN_PLAYBACK
 unsigned int MlnImpl_8104F044(int handle, unsigned int size, const unsigned char *data,
 			      const char *name, const MlnBuffer *third, const MlnBuffer *fourth,
 			      const MlnBuffer *fifth, MlnBlob *first, MlnBlob *second)
@@ -1213,12 +1232,14 @@ out:
 		MlnImpl_8104A558();
 	return ret;
 }
+#endif
 
 /*
  * Take the reply to a service handle's message of kind 5: the link between the two documents
  * sent is removed; returns the second reply and the core's state. The first document kept in
  * the handle is dropped.
  */
+#ifndef MLN_PLAYBACK
 unsigned int MlnImpl_8104F2F4(int handle, const MlnBuffer *data, MlnBlob *first, MlnBlob *second)
 {
 	MlnCoreServiceHandle *service = NULL;
@@ -1335,6 +1356,7 @@ out:
 		MlnImpl_8104A558();
 	return ret;
 }
+#endif
 
 /* the errors of a service's SOAP faults: by fault code and, where given, detail name */
 static const struct {
@@ -1363,6 +1385,7 @@ static const struct {
 };
 
 /* the SOAP fault of a service handle's exchange, with its error, in the core's form */
+#ifndef MLN_PLAYBACK
 unsigned int MlnImpl_8104F620(int handle, MlnCoreGroup *core)
 {
 	MlnCoreServiceHandle *service = NULL;
@@ -1543,6 +1566,7 @@ end:
 	MlnImpl_8104A558();
 	return ret;
 }
+#endif
 
 /* free a certificate chain of MlnImpl_81059600 */
 static inline void MlnServiceChainFree(MlnBuffer **certificates, int count)
@@ -1563,6 +1587,7 @@ static inline void MlnServiceChainFree(MlnBuffer **certificates, int count)
  * checked for the peer's role and the leaf certificates' subjects match the NameIdentifier of
  * the SAML assertion given.
  */
+#ifndef MLN_PLAYBACK
 unsigned int MlnImpl_8104FC70(int handle, unsigned int firstSize, const unsigned char *first,
 			      unsigned int secondSize, const unsigned char *second,
 			      unsigned int thirdSize, const unsigned char *third)
@@ -1719,8 +1744,10 @@ out:
 		MlnImpl_8104A558();
 	return ret;
 }
+#endif
 
 /* keep two more messages (each when given and not empty) in a service handle */
+#ifndef MLN_PLAYBACK
 unsigned int MlnImpl_81050110(int handle, const MlnBuffer *first, const MlnBuffer *second)
 {
 	MlnCoreServiceHandle *service = NULL;
@@ -1751,8 +1778,10 @@ unsigned int MlnImpl_81050110(int handle, const MlnBuffer *first, const MlnBuffe
 	}
 	return ret;
 }
+#endif
 
 /* send a request of a kind through a service handle of kind 8 */
+#ifndef MLN_PLAYBACK
 unsigned int MlnImpl_81050210(int handle, int kind, MlnXmlNode **document,
 			      const MlnBuffer *extra, MlnBlob *out)
 {
@@ -1801,8 +1830,10 @@ out:
 		MlnImpl_8104A558();
 	return ret;
 }
+#endif
 
 /* take the reply to a request of a kind through a service handle of kind 8 */
+#ifndef MLN_PLAYBACK
 unsigned int MlnImpl_81050378(int handle, int kind, const char *name,
 			      const MlnBuffer *message, MlnXmlNode **document)
 {
@@ -1848,8 +1879,10 @@ unsigned int MlnImpl_81050378(int handle, int kind, const char *name,
 	MlnImpl_8104A558();
 	return ret;
 }
+#endif
 
 /* map an error of the store or the core, others to fallback */
+#ifndef MLN_PLAYBACK
 unsigned int MlnImpl_810504EC(unsigned int r, unsigned int fallback)
 {
 	switch (r) {
@@ -1879,6 +1912,7 @@ unsigned int MlnImpl_810504EC(unsigned int r, unsigned int fallback)
 		return fallback;
 	}
 }
+#endif
 
 /* the registration session handle table, made on first use */
 static inline __attribute__((always_inline)) MlnHandleTable *MlnRegistrationHandleTable(MlnShared *shared)
@@ -1897,6 +1931,7 @@ static inline __attribute__((always_inline)) MlnHandleTable *MlnRegistrationHand
 }
 
 /* close a session of MlnImpl_81050778 */
+#ifndef MLN_PLAYBACK
 int MlnImpl_810505B8(int handle)
 {
 	MlnRegistrationSession *session = NULL;
@@ -1926,6 +1961,7 @@ int MlnImpl_810505B8(int handle)
 		ret = 7;
 	return ret;
 }
+#endif
 
 /*
  * Open a session with a registration service. Without a token, the device's own certificates
@@ -1933,6 +1969,7 @@ int MlnImpl_810505B8(int handle)
  * groups); with the caller's (which the session takes), the service is given the leaf
  * certificates of the two chains given, checked against the token.
  */
+#ifndef MLN_PLAYBACK
 unsigned int MlnImpl_81050778(int *handle, MlnServiceList *list, unsigned int *firstCount,
 			      MlnBuffer ***firsts, unsigned int *secondCount, MlnBuffer ***seconds,
 			      MlnBuffer **third, MlnBuffer **fourth)
@@ -2146,11 +2183,13 @@ fail:
 	MlnImpl_81042A88(info);
 	return ret;
 }
+#endif
 
 /*
  * Make a registration session's request from the data given and send it; the request is kept
  * in the session.
  */
+#ifndef MLN_PLAYBACK
 unsigned int MlnImpl_81050E58(int handle, const MlnBuffer *data, MlnBlob *out)
 {
 	MlnRegistrationSession *session = NULL;
@@ -2195,6 +2234,7 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, request);
 	return ret;
 }
+#endif
 
 /*
  * Take a registration session's license transfer reply: the license is added to the session's
@@ -2202,6 +2242,7 @@ out:
  * ValidityAfterFirstUse parameter, the service is told of it. Errors 9, 0xf and 0x44 also
  * reset the store (MlnImpl_810485B4).
  */
+#ifndef MLN_PLAYBACK
 unsigned int MlnImpl_81051084(int handle, const MlnBuffer *data, MlnBlob *first, MlnBlob *second)
 {
 	MlnRegistrationSession *session = NULL;
@@ -2345,11 +2386,13 @@ out:
 	MlnXmlNodeFree(MLN_HEAP_GENERAL, transferNode);
 	return ret;
 }
+#endif
 
 /*
  * Take a registration session's license transfer response: the keys it carries are stored and
  * the node it gives kept in the session; the service is told, and the core's state returned.
  */
+#ifndef MLN_PLAYBACK
 unsigned int MlnImpl_8105152C(int handle, const MlnBuffer *data, MlnBlob *first, MlnBlob *second)
 {
 	MlnRegistrationSession *session = NULL;
@@ -2421,6 +2464,7 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, state);
 	return ret;
 }
+#endif
 
 /* free an array of count buffers */
 static inline void MlnServiceBuffersFree(MlnBuffer **buffers, int count)
@@ -2438,6 +2482,7 @@ static inline void MlnServiceBuffersFree(MlnBuffer **buffers, int count)
  * the keyed operation's buffers, made with the public key in the ScubaKeys of the session's
  * token, the reply is sent to the service.
  */
+#ifndef MLN_PLAYBACK
 unsigned int MlnImpl_8105183C(int handle, const MlnBuffer *data, MlnBlob *first, MlnBlob *second)
 {
 	MlnRegistrationSession *session = NULL;
@@ -2623,12 +2668,14 @@ out:
 	MlnServiceBuffersFree(thirds, count);
 	return ret;
 }
+#endif
 
 /*
  * Take a registration session's license transfer teardown: the ContentKeys of the bundle given
  * are replaced by the payload's, and the first use of the new bundle is recorded; returns the
  * new bundle and the core's state.
  */
+#ifndef MLN_PLAYBACK
 unsigned int MlnImpl_81051F2C(int handle, const MlnBuffer *data, const MlnBuffer *extra,
 			      MlnBlob *first, MlnBlob *second)
 {
@@ -2730,3 +2777,4 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, text);
 	return ret;
 }
+#endif

@@ -24,9 +24,12 @@ __attribute__((noinline)) void MlnEngineFree(MlnEngine *engine)
 
 	if (engine == NULL)
 		return;
+#ifndef MLN_PLAYBACK
 	if (engine->kind == 1)
 		MlnImpl_81018220(engine->context);
-	else if (engine->kind == 0 || engine->kind == 2)
+	else
+#endif
+	if (engine->kind == 0 || engine->kind == 2)
 		MlnImpl_81015168(engine->context);
 	MlnBufferDestroy(MLN_HEAP_SECURE, engine->account);
 	MlnBufferDestroy(MLN_HEAP_SECURE, engine->secret);
@@ -377,6 +380,7 @@ __attribute__((noinline)) int MlnEngineStep(MlnEngine *engine, MlnBuffer **messa
 		case 19:
 			ret = MlnImpl_8101BC60(engine, message, result, hasValue);
 			break;
+#ifndef MLN_PLAYBACK
 		case 20:
 			ret = MlnImpl_8101BD9C(engine, message, result, hasValue);
 			break;
@@ -392,6 +396,7 @@ __attribute__((noinline)) int MlnEngineStep(MlnEngine *engine, MlnBuffer **messa
 		case 24:
 			ret = MlnImpl_8101C0F4(engine, message, result, hasValue);
 			break;
+#endif
 		default:
 			ret = 7;
 			break;
@@ -422,6 +427,7 @@ static inline __attribute__((always_inline)) void MlnBufferArrayFree(MlnBuffer *
  * The first step of a remote engine: the request that opens it on the service, its body
  * the message the service's open reply asks for.
  */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_8101A360(MlnEngine *engine, MlnApiResult **out)
 {
 	MlnApiResult *result = NULL;
@@ -477,8 +483,10 @@ free:
 	MlnApiResultFree(result);
 	return ret;
 }
+#endif
 
 /* the action token of a license transfer (LTP) */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_8101A59C(MlnBuffer **out)
 {
 	MlnBuffer *buffer = NULL;
@@ -504,6 +512,7 @@ out:
 	MlnBufferDestroy(MLN_HEAP_SECURE, buffer);
 	return ret;
 }
+#endif
 
 /* the data command 0x405 asks the engine for: none, and the engine moves on to state 4 */
 __attribute__((noinline)) int MlnImpl_8101A620(void *cookie, void *arg, void **data,
@@ -1342,6 +1351,7 @@ __attribute__((noinline)) int MlnImpl_8101BC60(MlnEngine *engine, MlnBuffer **me
 }
 
 /* state 20: the remote engine's open response (command 0x445), sent on to the service */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_8101BD9C(MlnEngine *engine, MlnBuffer **message,
 					       MlnApiResult *result, int hasValue)
 {
@@ -1372,8 +1382,10 @@ out:
 	MlnBufferDestroy(MLN_HEAP_SECURE, body);
 	return ret;
 }
+#endif
 
 /* state 22: the remote engine's request (command 0x446), sent to the license transfer service */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_8101BE94(MlnEngine *engine, MlnBuffer **message,
 					       MlnApiResult *result, int hasValue)
 {
@@ -1420,8 +1432,10 @@ out:
 	MlnBufferDestroy(MLN_HEAP_SECURE, body);
 	return ret;
 }
+#endif
 
 /* state 23: the remote engine's reply (command 0x447), sent back; the engine is closed */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_8101BFEC(MlnEngine *engine, MlnBuffer **message,
 					       MlnApiResult *result, int hasValue)
 {
@@ -1456,11 +1470,13 @@ out:
 	MlnBufferDestroy(MLN_HEAP_SECURE, body);
 	return ret;
 }
+#endif
 
 /*
  * State 24: the license the transfer service sent (command 0x448 with the engine's secret);
  * the engine is closed and goes on to the next action.
  */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_8101C0F4(MlnEngine *engine, MlnBuffer **message,
 					       MlnApiResult *result, int hasValue)
 {
@@ -1498,6 +1514,7 @@ out:
 	MlnBufferDestroy(MLN_HEAP_SECURE, license);
 	return ret;
 }
+#endif
 
 /* the first endpoint of the license service or of the registration service */
 static inline __attribute__((always_inline)) MlnServiceEndpoint *
@@ -1845,6 +1862,7 @@ out:
  * State 21: the license transfer, to the transfer service's endpoint with its keys and the
  * engine's secret.
  */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_8101CC94(MlnEngine *engine, MlnApiResult *result)
 {
 	MlnBuffer *body = NULL, *encryptionKey = NULL, *signingKey = NULL;
@@ -1922,6 +1940,7 @@ out:
 	MlnBufferDestroy(MLN_HEAP_SECURE, body);
 	return ret;
 }
+#endif
 
 /* a file layer's error as the engine gives it */
 static inline __attribute__((always_inline)) int MlnFileError(unsigned int ret)

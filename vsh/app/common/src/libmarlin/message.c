@@ -506,6 +506,7 @@ out:
 }
 
 /* the client's account: a token (noToken 0), or the account and its secret (noToken 1) */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_81021734(int noToken, const MlnBuffer *token,
 					       MlnBuffer *account, MlnBuffer *secret,
 					       MlnBuffer **request)
@@ -534,8 +535,10 @@ __attribute__((noinline)) int MlnImpl_81021734(int noToken, const MlnBuffer *tok
 	MlnBufferDestroy(1, encoded);
 	return error;
 }
+#endif
 
 /* type 0x401: a halfword, 2 only */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_810217E4(int type, MlnBuffer **request)
 {
 	MlnBuffer *encoded = NULL;
@@ -559,6 +562,7 @@ __attribute__((noinline)) int MlnImpl_810217E4(int type, MlnBuffer **request)
 	MlnBufferDestroy(1, encoded);
 	return error;
 }
+#endif
 
 /* the service asks for a URL to be fetched */
 __attribute__((noinline)) int MlnImpl_81021864(const char *url, MlnBuffer **request)
@@ -733,6 +737,7 @@ __attribute__((noinline)) int MlnImpl_81021CD4(int kind, void *data, MlnBuffer *
 }
 
 /* type 0x500: a license */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_81021D70(MlnBuffer *license, MlnBuffer **request)
 {
 	MlnBuffer *encoded = NULL;
@@ -754,6 +759,7 @@ __attribute__((noinline)) int MlnImpl_81021D70(MlnBuffer *license, MlnBuffer **r
 	MlnBufferDestroy(1, encoded);
 	return error;
 }
+#endif
 
 /* a rights summary, with its own copy of the ID table */
 __attribute__((noinline)) int MlnImpl_81021DE8(MlnApiReportData *data, MlnBuffer **message)
@@ -906,6 +912,7 @@ __attribute__((noinline)) int MlnImpl_81022180(MlnBuffer **request)
 	return error;
 }
 
+#ifndef MLN_PLAYBACK
 /* type 0x601: the engine's address */
 __attribute__((noinline)) int MlnImpl_810222A0(const MlnBuffer *address, MlnBuffer **request)
 {
@@ -928,6 +935,7 @@ __attribute__((noinline)) int MlnImpl_810222A0(const MlnBuffer *address, MlnBuff
 	MlnBufferDestroy(1, encoded);
 	return error;
 }
+#endif
 
 /* the session's version: 1.0, its build, its name and ID */
 __attribute__((noinline)) int MlnImpl_810223C8(int major, int minor, int build, MlnBuffer *name,
@@ -1279,6 +1287,7 @@ out:
 	return error;
 }
 
+#ifndef MLN_PLAYBACK
 /* type 0x10ae: a word */
 __attribute__((noinline)) int MlnImpl_81022D54(void *arg, MlnBuffer **request)
 {
@@ -1301,6 +1310,7 @@ __attribute__((noinline)) int MlnImpl_81022D54(void *arg, MlnBuffer **request)
 	MlnBufferDestroy(1, encoded);
 	return error;
 }
+#endif
 
 /* a buffer the client found */
 __attribute__((noinline)) int MlnImpl_81022E7C(MlnApiReportData *arg, MlnBuffer **message)
@@ -1327,6 +1337,7 @@ __attribute__((noinline)) int MlnImpl_81022E7C(MlnApiReportData *arg, MlnBuffer 
 }
 
 /* type 0x10a0: version 1.0 */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_81022EFC(MlnBuffer **request)
 {
 	MlnBuffer *encoded = NULL;
@@ -1348,6 +1359,7 @@ __attribute__((noinline)) int MlnImpl_81022EFC(MlnBuffer **request)
 	MlnBufferDestroy(1, encoded);
 	return error;
 }
+#endif
 
 /* a handle */
 __attribute__((noinline)) int MlnImpl_8102302C(MlnBuffer *arg, MlnBuffer **message)
@@ -1373,6 +1385,7 @@ __attribute__((noinline)) int MlnImpl_8102302C(MlnBuffer *arg, MlnBuffer **messa
 	return error;
 }
 
+#ifndef MLN_PLAYBACK
 /* type 0x10a2: one buffer */
 __attribute__((noinline)) int MlnImpl_810230AC(MlnBuffer *arg, MlnBuffer **request)
 {
@@ -1418,6 +1431,7 @@ __attribute__((noinline)) int MlnImpl_810231D4(MlnBuffer *arg, MlnBuffer **reque
 	MlnBufferDestroy(1, encoded);
 	return error;
 }
+#endif
 
 /* a token */
 __attribute__((noinline)) int MlnImpl_810232FC(MlnApiReportData *arg, MlnBuffer **message)

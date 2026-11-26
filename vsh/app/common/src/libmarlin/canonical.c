@@ -175,10 +175,12 @@ __attribute__((noinline)) int MlnImpl_8105F3AC(const MlnOctopusArray *array,
 }
 
 /* write a byte sequence */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8105F5F4(const MlnBuffer *buffer, MlnTextBuffer *out)
 {
 	return MlnCanonicalWriteBuffer(out, buffer);
 }
+#endif
 
 /* write a key: its usage, its format and its data */
 __attribute__((noinline)) int MlnImpl_8105F658(const MlnOctopusKey *key, MlnTextBuffer *out)
@@ -218,6 +220,7 @@ __attribute__((noinline)) int MlnImpl_8105F658(const MlnOctopusKey *key, MlnText
 	return MlnCanonicalWriteBuffer(out, key->data);
 }
 
+#ifndef MLN_PLAYBACK
 /* write a public key: its uid, the key and its pair's uid */
 int MlnImpl_8105F8D4(const MlnOctopusKeyPair *pair, MlnTextBuffer *out)
 {
@@ -231,6 +234,7 @@ int MlnImpl_8105F8D4(const MlnOctopusKeyPair *pair, MlnTextBuffer *out)
 		return ret;
 	return MlnCanonicalWriteBuffer(out, pair->pair);
 }
+#endif
 
 /* write a secret key: its uid and the key */
 int MlnImpl_8105F9A4(const MlnOctopusKey *key, MlnTextBuffer *out)

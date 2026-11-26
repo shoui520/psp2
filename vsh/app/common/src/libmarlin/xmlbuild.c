@@ -285,12 +285,14 @@ static inline __attribute__((always_inline)) void MlnXmlElementRemoveChildInline
 	MlnXmlContentRelease(heap, &removed);
 }
 
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnXmlElementRemoveChild(int heap, MlnXmlElement *element,
 						       MlnXmlElement *child)
 {
 	MlnXmlElementRemoveChildInline(heap, element, child);
 	return MLN_OK;
 }
+#endif
 
 /* a child element of an element replaced by a content item */
 __attribute__((noinline)) int MlnXmlElementReplaceChild(int heap, MlnXmlElement *element,
@@ -534,6 +536,7 @@ out:
 }
 
 /* an attribute ("xmlns" and "xmlns:p": a namespace declaration) added to an element node */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnXmlNodeAddAttribute(int heap, MlnXmlNode *node, const char *name,
 						     const char *value)
 {
@@ -587,6 +590,7 @@ out:
 		MlnXmlAttributeRelease(heap, &attribute);
 	return ret;
 }
+#endif
 
 /* text added after an element node's content */
 __attribute__((noinline)) int MlnXmlNodeAddText(int heap, MlnXmlNode *node, const char *text)
@@ -712,6 +716,7 @@ __attribute__((noinline)) int MlnXmlNodeAppendChild(int heap, MlnXmlNode *parent
  */
 #define MLN_XML_DECLARATION_PIECE	3
 
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnXmlNodeSerialize(int heap, MlnXmlNode *node, const char *version,
 						  const char *encoding, MlnBuffer **out)
 {
@@ -781,6 +786,7 @@ out:
 	MlnBufferDestroy(heap, text);
 	return ret;
 }
+#endif
 
 /* element nodes as one text, one after another */
 __attribute__((noinline)) int MlnXmlNodesSerialize(int heap, int count, MlnXmlNode **nodes,

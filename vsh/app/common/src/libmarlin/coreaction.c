@@ -88,6 +88,7 @@ out:
 }
 
 /* the buffer groups of a license request, with the store's errors as the API's */
+#ifndef MLN_PLAYBACK
 unsigned int MlnImpl_8108299C(MlnBufferGroups **out)
 {
 	MlnBufferGroups *groups = NULL, *made;
@@ -122,3 +123,4 @@ done:
 	MlnImpl_81042A88(groups);
 	return ret;
 }
+#endif

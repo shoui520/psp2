@@ -5,6 +5,7 @@
 #include "mln_internal.h"
 
 /* the result the client keeps for the last step, fetched with its own request */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_8101D5D4(MlnClient *client, MlnApiValue **out)
 {
 	MlnServiceSession *session = client->kind->remote;
@@ -83,11 +84,13 @@ out:
 		session->release(reply);
 	return ret;
 }
+#endif
 
 /*
  * The request a message asks for, as a step's result: a GET of its url, a POST with its body
  * and header lines, or a body alone.
  */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_8101D7C0(MlnMessage *message, MlnApiResult **out)
 {
 	MlnApiResult *result;
@@ -272,8 +275,10 @@ out:
 	MlnApiResultFree(result);
 	return ret;
 }
+#endif
 
 /* a status message: the result it announces, as a step's value */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8101DC14(MlnClient *client, int failed, int result,
 					       MlnApiResult **out)
 {
@@ -306,8 +311,10 @@ out:
 	MlnApiValueFree(value);
 	return ret;
 }
+#endif
 
 /* a status message where a reply was due: the status's error, else unexpected */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_8101DCB4(MlnClient *client,
 					       const MlnMessageStatus *status)
 {
@@ -318,8 +325,10 @@ __attribute__((noinline)) int MlnImpl_8101DCB4(MlnClient *client,
 		ret = 86;
 	return ret;
 }
+#endif
 
 /* opens a remote client on the kind's transport, with its version */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_8101DD24(MlnApiKind *kind, MlnBuffer *address,
 					       MlnClient **out, MlnApiVersion *version)
 {
@@ -394,7 +403,9 @@ fail:
 	MlnFree(MLN_HEAP_SECURE, client);
 	return ret;
 }
+#endif
 
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) void MlnImpl_8101DF70(MlnClient *client)
 {
 	if (client == NULL)
@@ -403,8 +414,10 @@ __attribute__((noinline)) void MlnImpl_8101DF70(MlnClient *client)
 		MlnImpl_810233C4(&client->pending);
 	MlnFree(MLN_HEAP_SECURE, client);
 }
+#endif
 
 /* a request of the client's that the reply answers with two values */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_8101DFA0(MlnClient *client, void *a1, void *a2, int *first,
 					       int *second)
 {
@@ -455,8 +468,10 @@ free:
 	MlnBufferDestroy(MLN_HEAP_SECURE, request);
 	return ret;
 }
+#endif
 
 /* a request of the client's that the reply answers with pairs of buffers */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_8101E118(MlnClient *client, MlnBuffer *a1, MlnBuffer *a2,
 					       unsigned int *count, MlnBuffer ***items)
 {
@@ -539,11 +554,13 @@ free:
 	MlnBufferDestroy(MLN_HEAP_SECURE, request);
 	return ret;
 }
+#endif
 
 /*
  * Starts an action token on the client (start set; else it goes on with the token it runs):
  * the reply is the first request the client asks for.
  */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_8101E380(MlnClient *client, const MlnBuffer *token,
 					       MlnBuffer *account, MlnBuffer *secret, int start)
 {
@@ -622,8 +639,10 @@ free:
 		client->busy = 0;
 	return ret;
 }
+#endif
 
 /* stops what the client runs */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_8101E628(MlnClient *client)
 {
 	if (client != NULL) {
@@ -634,6 +653,7 @@ __attribute__((noinline)) int MlnImpl_8101E628(MlnClient *client)
 	}
 	return MLN_OK;
 }
+#endif
 
 /* a value message: the value of an action, with the client's account and secret */
 static inline __attribute__((always_inline)) int MlnClientValue(MlnClient *client,
@@ -709,6 +729,7 @@ out:
  * A step of the action token the client runs: the request it asked for before, or the
  * client's answer to the response to the last one.
  */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_8101E658(MlnClient *client, MlnBuffer **message,
 					       MlnApiResult **out)
 {
@@ -788,8 +809,10 @@ free:
 	MlnBufferDestroy(MLN_HEAP_SECURE, request);
 	return ret;
 }
+#endif
 
 /* hands the client a step's request; the reply is the body to send with it */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_8101E9EC(MlnClient *client, MlnApiResult *step,
 					       MlnBuffer **message)
 {
@@ -865,8 +888,10 @@ free:
 	MlnImpl_810233C4(&decoded);
 	return ret;
 }
+#endif
 
 /* the client's list: pairs of buffers, first and second of each in turn */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_8101EC08(MlnClient *client, unsigned int *count,
 					       MlnBuffer ***items)
 {
@@ -945,8 +970,10 @@ out:
 		session->release(reply);
 	return ret;
 }
+#endif
 
 /* a license's rights, summarized by the client; none when it gives nothing */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_8101EE90(MlnClient *client, MlnBuffer *license,
 					       MlnRightsSummary **out)
 {
@@ -1025,8 +1052,10 @@ free:
 	MlnBufferDestroy(MLN_HEAP_SECURE, request);
 	return ret;
 }
+#endif
 
 /* a request the client answers with its status alone */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_8101F0B8(MlnClient *client, void *a1, void *a2)
 {
 	MlnServiceSession *session;
@@ -1068,8 +1097,10 @@ free:
 	MlnBufferDestroy(MLN_HEAP_SECURE, request);
 	return ret;
 }
+#endif
 
 /* a request the client answers with a buffer it found */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_8101F1F0(MlnClient *client, void *a1, MlnBuffer **found)
 {
 	MlnServiceSession *session;
@@ -1112,8 +1143,10 @@ free:
 	MlnBufferDestroy(MLN_HEAP_SECURE, request);
 	return ret;
 }
+#endif
 
 /* the client's state; one that announces a result has it fetched first */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_8101F33C(MlnClient *client, int *out)
 {
 	MlnServiceSession *session;
@@ -1166,8 +1199,10 @@ free:
 	MlnBufferDestroy(MLN_HEAP_SECURE, request);
 	return ret;
 }
+#endif
 
 /* a request the client answers with a handle */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_8101F4B0(MlnClient *client, void **handle)
 {
 	MlnServiceSession *session;
@@ -1210,8 +1245,10 @@ free:
 	MlnBufferDestroy(MLN_HEAP_SECURE, request);
 	return ret;
 }
+#endif
 
 /* a buffer handed to the client, answered with its status alone */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_8101F5F4(MlnClient *client, MlnBuffer *a1)
 {
 	MlnServiceSession *session;
@@ -1253,8 +1290,10 @@ free:
 	MlnBufferDestroy(MLN_HEAP_SECURE, request);
 	return ret;
 }
+#endif
 
 /* an action token handed to the client, answered with a buffer it found in it */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_8101F724(MlnClient *client, MlnBuffer *token,
 					       MlnBuffer **found)
 {
@@ -1298,6 +1337,7 @@ free:
 	MlnBufferDestroy(MLN_HEAP_SECURE, request);
 	return ret;
 }
+#endif
 
 /* opens the session that serves a remote client */
 __attribute__((noinline)) int MlnImpl_8101F870(MlnApiKind *kind, MlnBuffer *address,
@@ -1338,6 +1378,7 @@ __attribute__((noinline)) void MlnImpl_8101F92C(MlnSession *session)
  * A client's message as a request for the engine. The client may send a request or a body
  * only while the session allows it; a message refused gives a status reply to send back.
  */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_8101F954(MlnSession *session, MlnBuffer *message, int status,
 					       void *data, MlnApiRequest *request)
 {
@@ -1616,6 +1657,7 @@ out:
 	MlnBufferDestroy(MLN_HEAP_SECURE, reply);
 	return ret;
 }
+#endif
 
 /* the name a session gives itself */
 #define MLN_SESSION_NAME	"sony.net:1.0;"

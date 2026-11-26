@@ -319,6 +319,7 @@ int MlnImpl_81043D94(void)
  * links table and the link list; without values the link is keyed by the
  * core's digest when it has one
  */
+#ifndef MLN_PLAYBACK
 int MlnImpl_81043DE0(const MlnBuffer *to, const MlnBuffer *from, const MlnBuffer *record,
 		     const MlnBuffer *value1, const MlnBuffer *value2)
 {
@@ -368,6 +369,7 @@ out:
 	MlnImpl_81049918(links);
 	return ret;
 }
+#endif
 
 /*
  * removes the links whose record holds to: 0x230A0003 when none did, 6 when
@@ -904,10 +906,12 @@ out:
 	return ret;
 }
 
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_81044D64(MlnBuffer **out)
 {
 	return MlnStoreReadToken(out);
 }
+#endif
 
 __attribute__((noinline)) int MlnImpl_81044DEC(int kind, MlnOctopusSamlAssertion **out)
 {
@@ -1231,6 +1235,7 @@ out:
  * stores value under the digest of data in table 2, with the device id (its
  * first ten bytes when the id is neither zero at the start nor at the end)
  */
+#ifndef MLN_PLAYBACK
 int MlnImpl_810457D4(const MlnBuffer *data, const MlnBuffer *value)
 {
 	unsigned char zero[10];
@@ -1256,6 +1261,7 @@ int MlnImpl_810457D4(const MlnBuffer *data, const MlnBuffer *value)
 	MlnImpl_810570A8(data->data, data->size, digest);
 	return MlnImpl_810467C0(2, digest, NULL, id, *value);
 }
+#endif
 
 /* removes the link from context to data, and its record (table 7) */
 unsigned int MlnImpl_810458B0(const MlnBuffer *context, const MlnBuffer *data)

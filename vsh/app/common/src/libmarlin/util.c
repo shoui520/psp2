@@ -48,6 +48,10 @@ int MlnImpl_81052944(const MlnDateTime *a, const MlnDateTime *b)
 	return 0;
 }
 
+#ifdef MLN_PLAYBACK
+static inline int MlnImpl_81052CA8(int value, int base);
+#endif
+
 /* writes a value in a base as exactly size digits, zero-padded, without a terminator */
 int MlnImpl_810529E8(int value, int base, int size, char *buf)
 {
@@ -126,6 +130,9 @@ int MlnImpl_81052BD0(const char *s)
 }
 
 /* how many characters a value takes in a base, its sign included; -1 for another base */
+#ifdef MLN_PLAYBACK
+static inline
+#endif
 int MlnImpl_81052CA8(int value, int base)
 {
 	int count;

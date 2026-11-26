@@ -39,15 +39,18 @@ int MlnImpl_81031A40(unsigned int command, MlnServiceReply *reply, MlnBuffer **r
 	case 1025:
 		ret = MlnImpl_8102C77C(reply, &args, &status);
 		break;
+#ifndef MLN_PLAYBACK
 	case 1026:
 		ret = MlnImpl_8102C7FC(reply, &args, &status);
 		break;
 	case 1029:
 		ret = MlnImpl_8102C870(reply, &args, &status);
 		break;
+#endif
 	case 1030:
 		ret = MlnImpl_8102C95C(reply, &args, &status);
 		break;
+#ifndef MLN_PLAYBACK
 	case 1031:
 		ret = MlnImpl_8102CAAC(reply, &args, &status);
 		break;
@@ -75,9 +78,11 @@ int MlnImpl_81031A40(unsigned int command, MlnServiceReply *reply, MlnBuffer **r
 	case 1040:
 		ret = MlnImpl_8102D05C(reply, &args, &status, result);
 		break;
+#endif
 	case 1041:
 		ret = MlnImpl_8102D138(reply, &args, &status);
 		break;
+#ifndef MLN_PLAYBACK
 	case 1042:
 		ret = MlnImpl_8102D1D4(reply, &args, &status, result);
 		break;
@@ -130,6 +135,7 @@ int MlnImpl_81031A40(unsigned int command, MlnServiceReply *reply, MlnBuffer **r
 	case 1062:
 		ret = MlnImpl_8102E8A0(reply, &args, &status);
 		break;
+#endif
 	case 1065:
 		ret = MlnImpl_8102EBD0(reply, &args, &status, result);
 		break;
@@ -161,9 +167,11 @@ int MlnImpl_81031A40(unsigned int command, MlnServiceReply *reply, MlnBuffer **r
 	case 1070:
 		ret = MlnImpl_8102EF48(1070, reply, &args, &status, result);
 		break;
+#ifndef MLN_PLAYBACK
 	case 1071:
 		ret = MlnImpl_8102F1B0(reply, &args, &status, result);
 		break;
+#endif
 	case 1072:
 		ret = MlnImpl_8102F408(reply, &args, &status, result);
 		break;
@@ -173,6 +181,7 @@ int MlnImpl_81031A40(unsigned int command, MlnServiceReply *reply, MlnBuffer **r
 	case 1074:
 		ret = MlnImpl_8102F83C(reply, &args, &status);
 		break;
+#ifndef MLN_PLAYBACK
 	case 1089:
 		ret = MlnImpl_8102F9A0(1089, reply, &args, &status);
 		break;
@@ -230,6 +239,7 @@ int MlnImpl_81031A40(unsigned int command, MlnServiceReply *reply, MlnBuffer **r
 	case 1100:
 		ret = MlnImpl_8102FC18(reply, &args, &status, result);
 		break;
+#endif
 	case 1105:
 		ret = MlnImpl_81030FA8(reply, &args, &status);
 		break;
@@ -242,18 +252,22 @@ int MlnImpl_81031A40(unsigned int command, MlnServiceReply *reply, MlnBuffer **r
 	case 1108:
 		ret = MlnImpl_8103149C(reply, &args, &status, result);
 		break;
+#ifndef MLN_PLAYBACK
 	case 1109:
 		ret = MlnImpl_8102E7A8(reply, &args, &status);
 		break;
+#endif
 	case 1110:
 		ret = MlnImpl_81031288(reply, &args, &status);
 		break;
+#ifndef MLN_PLAYBACK
 	case 1111:
 		ret = MlnImpl_8102FCCC(reply, &args, &status);
 		break;
 	case 1112:
 		ret = MlnImpl_8102FDB4(reply, &args, &status, result);
 		break;
+#endif
 	case 1113:
 		ret = MlnImpl_810317AC(reply, &args, &status);
 		break;

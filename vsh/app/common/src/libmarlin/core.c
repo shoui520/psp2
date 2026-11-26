@@ -2724,6 +2724,7 @@ __attribute__((noinline)) int MlnImpl_8101743C(MlnServiceContext *context, unsig
 }
 
 /* service command 0x43e with two buffers given as their sizes and data */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_8101753C(MlnServiceContext *context,
 					       unsigned int firstSize, void *firstData,
 					       unsigned int secondSize, void *secondData)
@@ -2756,6 +2757,7 @@ __attribute__((noinline)) int MlnImpl_8101753C(MlnServiceContext *context,
 	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
 	return ret;
 }
+#endif
 
 /* service command 0x43f with a buffer given as its size and data (the context is not checked) */
 __attribute__((noinline)) int MlnImpl_810175FC(MlnServiceContext *context, unsigned int size,
@@ -2810,6 +2812,7 @@ __attribute__((noinline)) int MlnImpl_81017690(MlnServiceContext *context, void 
 }
 
 /* service command 0x441 */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnImpl_81017710(MlnServiceContext *context)
 {
 	MlnServiceArgs args = { 0, NULL };
@@ -2823,6 +2826,7 @@ __attribute__((noinline)) int MlnImpl_81017710(MlnServiceContext *context)
 	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
 	return ret;
 }
+#endif
 
 /* the record in the reply to service command 0x40a (zero when there is none) */
 __attribute__((noinline)) MlnServiceRecord MlnImpl_81017764(MlnServiceContext *context)

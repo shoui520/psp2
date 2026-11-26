@@ -996,6 +996,7 @@ out:
  * element of an element node, with the parent's namespaces in scope. Not an element:
  * as MlnXmlNodeAppendXml.
  */
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnXmlNodeReplaceChildXml(int heap, unsigned int size, const void *xml, MlnXmlNode *child,
 			      MlnXmlNode *parent)
 {
@@ -1034,6 +1035,7 @@ out:
 	MlnXmlParserTerm(heap, &parser);
 	return ret;
 }
+#endif
 
 /* A decimal integer with an optional '-'; an empty number is 0. */
 __attribute__((noinline)) int MlnXmlParseInt(int heap, unsigned int size, const char *text, int *value)

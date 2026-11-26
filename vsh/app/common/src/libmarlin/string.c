@@ -137,6 +137,7 @@ char *MlnStrchr(const char *str, int c)
 	return (char *)s;
 }
 
+#ifndef MLN_PLAYBACK
 char *MlnStrrchr(const char *s, int c)
 {
 	const char *last;
@@ -152,6 +153,7 @@ char *MlnStrrchr(const char *s, int c)
 	} while (ch != '\0');
 	return (char *)last;
 }
+#endif
 
 unsigned int MlnStrspn(const char *s, const char *accept)
 {

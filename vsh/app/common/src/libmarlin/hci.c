@@ -102,6 +102,7 @@ static inline unsigned int MlnHciTakeBuffer(unsigned int handle, unsigned int *s
 	return 0;
 }
 
+#ifndef MLN_PLAYBACK
 /* signs data with a key */
 unsigned int MlnImpl_81080C90(void *key, int kind, const MlnBuffer *data, MlnBuffer **out)
 {
@@ -117,6 +118,7 @@ unsigned int MlnImpl_81080C90(void *key, int kind, const MlnBuffer *data, MlnBuf
 		return ret;
 	return MlnHciTakeBuffer(handle, &size, out);
 }
+#endif
 
 /*
  * decrypts data with a key; kind 2 (CBC) goes in chunks of at most 2 KiB, each given with the

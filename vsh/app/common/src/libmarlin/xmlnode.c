@@ -300,10 +300,12 @@ out:
 	return ret;
 }
 
+#ifndef MLN_PLAYBACK
 __attribute__((noinline)) int MlnXmlAttributeInsertSorted(int heap, MlnXmlLink **list, MlnXmlAttribute *attribute)
 {
 	return MlnXmlAttributeInsertSortedInline(heap, list, attribute);
 }
+#endif
 
 __attribute__((noinline)) int MlnXmlLinksPop(int heap, MlnXmlLink **list, int kind)
 {

@@ -914,6 +914,7 @@ unsigned int MlnImpl_8106C54C(int size, MlnCoreHost *host, MlnVm **out)
 }
 
 /* walk the VM's modules (what this did is compiled out) */
+#ifndef MLN_PLAYBACK
 unsigned int MlnImpl_8106C694(MlnVm *vm)
 {
 	MlnVmModule *module;
@@ -926,6 +927,7 @@ unsigned int MlnImpl_8106C694(MlnVm *vm)
 	}
 	return 0;
 }
+#endif
 
 /* release a VM and its group */
 unsigned int MlnImpl_8106C6C4(MlnVm *vm)
@@ -995,6 +997,7 @@ unsigned int MlnImpl_8106C7A4(MlnVm *vm, int address, int size, unsigned char *o
 }
 
 /* the words free between the data segments and the stack's top */
+#ifndef MLN_PLAYBACK
 unsigned int MlnImpl_8106C828(MlnVm *vm, unsigned int *words)
 {
 	MlnVmMemory *memory;
@@ -1007,6 +1010,7 @@ unsigned int MlnImpl_8106C828(MlnVm *vm, unsigned int *words)
 	*words = (memory->size - memory->dataSize) >> 2;
 	return 0;
 }
+#endif
 
 /* push a word onto the VM's stack */
 unsigned int MlnImpl_8106C86C(MlnVm *vm, unsigned int value)

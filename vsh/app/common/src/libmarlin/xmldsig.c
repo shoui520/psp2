@@ -1027,6 +1027,7 @@ int MlnImpl_8105BA14(MlnXmlNode *signature, int usage, int count, MlnBuffer *con
  * MlnImpl_8105A3D8; the digests are SHA-1 or SHA-256 by the first matching Reference's
  * digest method.
  */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8105BA50(MlnXmlNode *signature, MlnXmlNode *document, int usage, int count,
 		     MlnBuffer *const *references, unsigned char **digests, int *digestTypes,
 		     const MlnBuffer *certificate, int *verified)
@@ -1179,6 +1180,7 @@ out:
 		MlnXmlListFree(MLN_HEAP_GENERAL, list);
 	return ret;
 }
+#endif
 
 #define MLN_XMLDSIG_ERROR_DIGEST	0x220A0006
 
@@ -1573,6 +1575,7 @@ out:
  * Sign references with an RSA key: their SignedInfo, its signature and the KeyInfo
  * (MlnImpl_8105C234's) as a Signature element.
  */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8105CF28(int count, int hash, const int *transforms, const char *const *uris,
 		     unsigned char **digests, void *rsa, int keyInfo, MlnBuffer **certificates,
 		     const char *id, MlnXmlNode **out)
@@ -1607,3 +1610,4 @@ out:
 	MlnXmlNodeFree(MLN_HEAP_GENERAL, signedInfo);
 	return ret;
 }
+#endif

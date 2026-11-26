@@ -629,6 +629,7 @@ int SceMarlin_73C12840(MlnBundleInfo *info);
 int SceMarlin_9609E2DF(MlnBuffer *buffer);
 int SceMarlin_45B29121(MlnApiNode *list);
 int SceMarlin_8FEB4F94(MlnApiObject *object);
+#ifndef MLN_PLAYBACK
 int MlnApi_8100326C(MlnApiNode **list, MlnApiValue **value);
 int MlnApi_81003818(MlnApiObject *object, MlnBuffer **response, MlnApiResult **result);
 int MlnApi_810039A8(MlnApiObject *object, void *a1, void *a2, void *a3);
@@ -637,6 +638,7 @@ int MlnApi_8100370C(MlnApiObject *object, int status, MlnApiResult *result, MlnA
 int MlnApi_81003464(MlnBuffer *serviceProvider, MlnBuffer *token, unsigned int *count,
 		    MlnBuffer ***items);
 int MlnApi_81003A9C(MlnBuffer *license, MlnRightsSummary **summary);
+#endif
 int MlnApi_810037B0(const int *minutes, MlnApiDate *date);
 int MlnApi_810026B8(MlnServiceContext *context, MlnBuffer **esb);
 int SceMarlin_A43BC777(MlnServiceContext *context);
@@ -1951,7 +1953,9 @@ int MlnImpl_81052944(const MlnDateTime *a, const MlnDateTime *b);
 int MlnImpl_810529E8(int value, int base, int size, char *buf);
 /* prefix, the buffer's text and suffix joined into a new string */
 int MlnImpl_81082EA4(const char *prefix, const MlnBuffer *value, const char *suffix, char **out);
+#ifndef MLN_PLAYBACK
 int MlnImpl_81052CA8(int value, int base);
+#endif
 int MlnImpl_81061898(int kind, const MlnOctopusKey *key, const MlnBuffer *message,
 		     const MlnBuffer *signature);
 int MlnImpl_81060FE8(const MlnOctopusContentKey *contentKey, MlnBuffer **out);

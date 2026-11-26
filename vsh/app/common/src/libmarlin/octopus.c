@@ -324,6 +324,7 @@ int MlnImpl_8102AE84(const MlnBuffer *state)
 	return ret;
 }
 
+#ifndef MLN_PLAYBACK
 MlnX509CrlNumber MlnImpl_8102AFBC(void)
 {
 	MlnX509CrlNumber info;
@@ -337,6 +338,7 @@ MlnX509CrlNumber MlnImpl_8102AFBC(void)
 	}
 	return info;
 }
+#endif
 
 unsigned int MlnImpl_8102B054(void)
 {

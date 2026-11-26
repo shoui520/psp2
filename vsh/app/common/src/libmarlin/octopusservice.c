@@ -85,6 +85,7 @@ int MlnImpl_8102C77C(const MlnServiceReply *reply, MlnServiceArgs **out, int *st
 }
 
 /* the mode in the reply's one argument, set */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8102C7FC(const MlnServiceReply *reply, MlnServiceArgs **out, int *status)
 {
 	int mode;
@@ -99,8 +100,10 @@ int MlnImpl_8102C7FC(const MlnServiceReply *reply, MlnServiceArgs **out, int *st
 	*out = NULL;
 	return 0;
 }
+#endif
 
 /* a reply of one flag: whether the core is loaded */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8102C870(const MlnServiceReply *reply, MlnServiceArgs **out, int *status)
 {
 	MlnServiceArgs *args = NULL;
@@ -136,6 +139,7 @@ out:
 	MlnFree(MLN_HEAP_GENERAL, loaded);
 	return ret;
 }
+#endif
 
 /* a reply of the flags the core keeps for the identifier in the reply's one argument */
 int MlnImpl_8102C95C(const MlnServiceReply *reply, MlnServiceArgs **out, int *status)
@@ -181,6 +185,7 @@ out:
 }
 
 /* a reply of the core's object for the identifier in the reply's one argument */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8102CAAC(const MlnServiceReply *reply, MlnServiceArgs **out, int *status)
 {
 	MlnServiceArgs *args = NULL;
@@ -224,8 +229,10 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, object);
 	return ret;
 }
+#endif
 
 /* the state in the reply's one argument, given to the core */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8102CBF8(const MlnServiceReply *reply, MlnServiceArgs **out, int *status)
 {
 	MlnBuffer *state = NULL;
@@ -247,8 +254,10 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, state);
 	return ret;
 }
+#endif
 
 /* a reply of the CRL store's CRL number */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8102CCA4(const MlnServiceReply *reply, MlnServiceArgs **out, int *status)
 {
 	MlnServiceArgs *args = NULL;
@@ -281,8 +290,10 @@ out:
 	MlnFree(MLN_HEAP_GENERAL, info);
 	return ret;
 }
+#endif
 
 /* a reply of the core's buffer for the identifier in the reply's one argument */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8102CDB4(const MlnServiceReply *reply, MlnServiceArgs **out, int *status)
 {
 	MlnServiceArgs *args = NULL;
@@ -322,8 +333,10 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, object);
 	return ret;
 }
+#endif
 
 /* the core's buffer for the identifier in the reply's one argument, handed to the caller */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8102CEEC(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
 		     MlnBuffer **result)
 {
@@ -355,8 +368,10 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, id);
 	return ret;
 }
+#endif
 
 /* the identifier in the reply's one argument, given to the core */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8102CFB0(const MlnServiceReply *reply, MlnServiceArgs **out, int *status)
 {
 	MlnBuffer *id = NULL;
@@ -378,8 +393,10 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, id);
 	return ret;
 }
+#endif
 
 /* the core's second buffer for the identifier in the reply's one argument */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8102D05C(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
 		     MlnBuffer **result)
 {
@@ -415,6 +432,7 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, id);
 	return ret;
 }
+#endif
 
 /* the state in the reply's one argument, checked by the core */
 int MlnImpl_8102D138(const MlnServiceReply *reply, MlnServiceArgs **out, int *status)
@@ -441,6 +459,7 @@ out:
 }
 
 /* the core's state, handed to the caller */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8102D1D4(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
 		     MlnBuffer **result)
 {
@@ -458,6 +477,7 @@ int MlnImpl_8102D1D4(const MlnServiceReply *reply, MlnServiceArgs **out, int *st
 	*status = err;
 	return 0;
 }
+#endif
 
 static inline void MlnServiceListFree(MlnServiceList *list)
 {
@@ -483,6 +503,7 @@ static inline void MlnServiceListFree(MlnServiceList *list)
 }
 
 /* a reply of a handle the core opens for the kind and the named values in the reply */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8102D240(const MlnServiceReply *reply, MlnServiceArgs **out, int *status)
 {
 	MlnServiceArgs *args = NULL;
@@ -536,8 +557,10 @@ out:
 	MlnServiceListFree(list);
 	return ret;
 }
+#endif
 
 /* the handle in the reply's one argument, closed */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8102D454(const MlnServiceReply *reply, MlnServiceArgs **out, int *status)
 {
 	int handle;
@@ -554,8 +577,10 @@ int MlnImpl_8102D454(const MlnServiceReply *reply, MlnServiceArgs **out, int *st
 	*out = NULL;
 	return 0;
 }
+#endif
 
 /* a reply of the buffer the core makes from a handle, a buffer and a name */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8102D4D4(const MlnServiceReply *reply, MlnServiceArgs **out, int *status)
 {
 	MlnServiceArgs *args = NULL;
@@ -620,9 +645,11 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, result);
 	return ret;
 }
+#endif
 
 /* a reply of the first of two buffers the core makes from a handle and a buffer; the
  * second goes to the caller */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8102D6F8(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
 		     MlnBuffer **result)
 {
@@ -680,9 +707,11 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, object);
 	return ret;
 }
+#endif
 
 /* a reply of the first of two buffers the core makes from a handle, a buffer, a name and
  * two more buffers; the second goes to the caller */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8102D8B8(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
 		     MlnBuffer **result)
 {
@@ -766,9 +795,11 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, object);
 	return ret;
 }
+#endif
 
 /* a reply of the first two of three buffers the core makes from a handle and a buffer;
  * the third goes to the caller */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8102DB4C(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
 		     MlnBuffer **result)
 {
@@ -834,9 +865,11 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, secondObject);
 	return ret;
 }
+#endif
 
 /* a reply of the first of two buffers the core makes from a handle, a buffer, a name and
  * one more buffer; the second goes to the caller */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8102DD64(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
 		     MlnBuffer **result)
 {
@@ -912,7 +945,9 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, object);
 	return ret;
 }
+#endif
 /* as 0x8102d6f8, with the core's other call */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8102DFC8(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
 		     MlnBuffer **result)
 {
@@ -970,8 +1005,10 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, object);
 	return ret;
 }
+#endif
 /* a reply of the first of two buffers the core makes from a handle, a buffer, a name and
  * three more buffers; the second goes to the caller */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8102E188(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
 		     MlnBuffer **result)
 {
@@ -1062,7 +1099,9 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, object);
 	return ret;
 }
+#endif
 /* as 0x8102d6f8, with a third of the core's calls */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8102E468(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
 		     MlnBuffer **result)
 {
@@ -1120,8 +1159,10 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, object);
 	return ret;
 }
+#endif
 
 /* three buffers in the reply given to the core with a handle */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8102E628(const MlnServiceReply *reply, MlnServiceArgs **out, int *status)
 {
 	MlnBuffer *first = NULL;
@@ -1171,8 +1212,10 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, third);
 	return ret;
 }
+#endif
 
 /* two buffers in the reply given to the core with a handle */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8102E7A8(const MlnServiceReply *reply, MlnServiceArgs **out, int *status)
 {
 	MlnBuffer *first = NULL;
@@ -1211,6 +1254,7 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, second);
 	return ret;
 }
+#endif
 
 /* the core's group as the library's: its buffers move over, its entries' list is freed */
 static inline int MlnCoreGroupConvert(MlnCoreGroup *core, MlnBufferGroup **out)
@@ -1274,6 +1318,7 @@ fail:
 }
 
 /* a reply of the buffer group the core keeps for the handle in the reply's one argument */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8102E8A0(const MlnServiceReply *reply, MlnServiceArgs **out, int *status)
 {
 	MlnServiceArgs *args = NULL;
@@ -1325,6 +1370,7 @@ out:
 	MlnImpl_81027390(MLN_HEAP_GENERAL, args);
 	return ret;
 }
+#endif
 
 /* the buffer the core makes from a handle and the reply's buffer, handed to the caller;
  * the core may give it with error 10 too */
@@ -1820,6 +1866,7 @@ int MlnImpl_8102F9A0(int command, const MlnServiceReply *reply, MlnServiceArgs *
 	return 0;
 }
 
+#ifndef MLN_PLAYBACK
 int MlnImpl_8102FA24(const MlnServiceReply *reply, MlnServiceArgs **out, int *status)
 {
 	int ret;
@@ -1833,7 +1880,9 @@ int MlnImpl_8102FA24(const MlnServiceReply *reply, MlnServiceArgs **out, int *st
 	*out = NULL;
 	return ret;
 }
+#endif
 
+#ifndef MLN_PLAYBACK
 int MlnImpl_8102FA70(const MlnServiceReply *reply, MlnServiceArgs **out, int *status)
 {
 	if (MlnImpl_81026D94(reply, 0) != 0)
@@ -1842,8 +1891,10 @@ int MlnImpl_8102FA70(const MlnServiceReply *reply, MlnServiceArgs **out, int *st
 	*out = NULL;
 	return 0;
 }
+#endif
 
 /* a reply of the buffer the core makes from the reply's two values */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8102FAAC(const MlnServiceReply *reply, MlnServiceArgs **out, int *status)
 {
 	MlnServiceArgs *args = NULL;
@@ -1887,8 +1938,10 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, object);
 	return ret;
 }
+#endif
 
 /* the buffer the core makes from the reply's buffer, handed to the caller */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8102FC18(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
 		     MlnBuffer **result)
 {
@@ -1916,8 +1969,10 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, data);
 	return ret;
 }
+#endif
 
 /* a reply of the buffer the core makes with no values */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8102FCCC(const MlnServiceReply *reply, MlnServiceArgs **out, int *status)
 {
 	MlnServiceArgs *args = NULL;
@@ -1951,8 +2006,10 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, object);
 	return ret;
 }
+#endif
 
 /* the same as 0x8102fc18, for another command */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8102FDB4(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
 		     MlnBuffer **result)
 {
@@ -1980,6 +2037,7 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, data);
 	return ret;
 }
+#endif
 
 /*
  * A reply of the handle the core opens for the reply's named values. With them alone, the
@@ -1987,6 +2045,7 @@ out:
  * otherwise the reply gives them: a count and its buffers, a count and its buffers, then
  * the two buffers.
  */
+#ifndef MLN_PLAYBACK
 int MlnImpl_8102FE68(const MlnServiceReply *reply, MlnServiceArgs **out, int *status)
 {
 	MlnServiceArgs *args = NULL;
@@ -2175,8 +2234,10 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, fourth);
 	return ret;
 }
+#endif
 
 /* the handle in the reply's one argument, closed */
+#ifndef MLN_PLAYBACK
 int MlnImpl_81030648(const MlnServiceReply *reply, MlnServiceArgs **out, int *status)
 {
 	int handle;
@@ -2193,8 +2254,10 @@ int MlnImpl_81030648(const MlnServiceReply *reply, MlnServiceArgs **out, int *st
 	*out = NULL;
 	return 0;
 }
+#endif
 
 /* a reply of the buffer the core makes from a handle and the reply's buffer */
+#ifndef MLN_PLAYBACK
 int MlnImpl_810306C8(const MlnServiceReply *reply, MlnServiceArgs **out, int *status)
 {
 	MlnServiceArgs *args = NULL;
@@ -2244,9 +2307,11 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, data);
 	return ret;
 }
+#endif
 
 /* a reply of the first of two buffers the core makes from a handle and a buffer; the
  * second goes to the caller, and the core may give them with error 29 */
+#ifndef MLN_PLAYBACK
 int MlnImpl_81030858(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
 		     MlnBuffer **result)
 {
@@ -2304,9 +2369,11 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, data);
 	return ret;
 }
+#endif
 
 /* a reply of the first of two buffers the core makes from a handle and a buffer; the
  * second goes to the caller */
+#ifndef MLN_PLAYBACK
 int MlnImpl_81030A24(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
 		     MlnBuffer **result)
 {
@@ -2360,9 +2427,11 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, data);
 	return ret;
 }
+#endif
 
 /* a reply of the first of two buffers the core makes from a handle and a buffer; the
  * second goes to the caller */
+#ifndef MLN_PLAYBACK
 int MlnImpl_81030BD0(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
 		     MlnBuffer **result)
 {
@@ -2420,8 +2489,10 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, data);
 	return ret;
 }
+#endif
 
 /* the same from a handle and two buffers */
+#ifndef MLN_PLAYBACK
 int MlnImpl_81030D90(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
 		     MlnBuffer **result)
 {
@@ -2486,6 +2557,7 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, extra);
 	return ret;
 }
+#endif
 
 /* a reply of the buffer the core makes from a handle and the reply's buffer; the
  * handle is not checked here */

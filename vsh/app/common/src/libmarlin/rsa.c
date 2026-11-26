@@ -672,6 +672,7 @@ out:
 }
 
 /* RSAES-PKCS1-v1_5 encryption under the public key */
+#ifndef MLN_PLAYBACK
 unsigned int MlnImpl_81056744(void *rsa, const MlnBuffer *in, MlnBuffer **out)
 {
 	MlnRsaKey *key = rsa;
@@ -699,6 +700,7 @@ unsigned int MlnImpl_81056744(void *rsa, const MlnBuffer *in, MlnBuffer **out)
 	*out = buffer;
 	return 0;
 }
+#endif
 
 /* RSAES-PKCS1-v1_5 decryption under the private key */
 unsigned int MlnImpl_810567EC(void *rsa, const MlnBuffer *in, MlnBuffer **out)
