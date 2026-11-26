@@ -455,20 +455,13 @@ struct SceDtcpIpIpcClientState {
 int dtcpIpIpcSetState(int *hold, void *connection, unsigned int state)
 {
 	struct SceDtcpIpIpcClientState *client = connection;
-	int busy = 0;
 
 	hold[0] = (int)connection;
 	hold[1] = state;
 	if (client == NULL)
 		return 0;
 	sceKernelLockLwMutex(&client->mutex, 1, NULL);
-	if (state > 2) {
-		if (state == 4)
-			busy = 1;
-	} else if (state != 0) {
-		busy = 1;
-	}
-	if (busy) {
+	if ((state > 2 && state == 4) || (state <= 2 && state != 0)) {
 		if (((struct SceDtcpIpIpcClientState *)hold[0])->state != 0) {
 			sceKernelUnlockLwMutex(&client->mutex, 1);
 			return 12004;
