@@ -678,6 +678,12 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/activity_drawobj/activity_drawobj.cpp
 	src/activity_drawobj/activity_shader.cpp
 	src/activity_drawobj/cg/programs.S
+	src/import_savedata_plugin/import_savedata_plugin.cpp
+	src/import_savedata_plugin/import_savedata_util.cpp
+	src/import_savedata_plugin/import_savedata_controller.cpp
+	src/import_savedata_plugin/import_savedata_job_manager.cpp
+	src/import_savedata_plugin/import_savedata_dialog.cpp
+	src/import_savedata_plugin/import_savedata_jobs.cpp
 	${PSP2_SRC}/sys/sdk/target/src/md5/libmd5.c
 	${PSP2_SRC}/sys/internal/usermode/src/ces/libces/src/ces_context.c
 	${PSP2_SRC}/sys/internal/usermode/src/ces/libces/src/UCS/ces_ucs_context.c
