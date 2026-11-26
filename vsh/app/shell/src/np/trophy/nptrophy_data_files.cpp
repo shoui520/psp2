@@ -184,8 +184,8 @@ struct TitleConfMetaRecord {
 	uint8_t reservedTail[40];
 };
 
-struct TitleOpenPsIdRecord {
-	uint8_t openPsId[16];
+struct TitleIdRecord {
+	char titleId[16];
 	uint8_t reservedTail[32];
 };
 
@@ -2157,7 +2157,7 @@ void TrophyProgressDirtyCache::ApplyTrophy(const TrophyEntryStaticMeta *meta,
 TrophyTitleDataFile::TrophyTitleDataFile()
 	: TrophyJournaledRecordFile(TROPHY_MAGIC_TRPTITLE),
 	  m_confMetaSection(0),
-	  m_openPsIdSection(0),
+	  m_titleIdSection(0),
 	  m_titleMetaSection(0),
 	  m_groupMetaSection(0),
 	  m_trophyMetaSection(0),
@@ -2191,13 +2191,13 @@ int TrophyTitleDataFile::InitConfMetaCallback(void *recordBuf, SceSize recordSiz
 }
 
 /* 0x812DEE68 */
-int TrophyTitleDataFile::InitOpenPsIdCallback(void *recordBuf, SceSize recordSize,
-					      uint32_t recordIndex, void *userCtx)
+int TrophyTitleDataFile::InitTitleIdCallback(void *recordBuf, SceSize recordSize,
+					     uint32_t recordIndex, void *userCtx)
 {
 	(void)recordSize;
 	(void)recordIndex;
 	(void)userCtx;
-	sceClibMemset(recordBuf, 0, sizeof(TitleOpenPsIdRecord));
+	sceClibMemset(recordBuf, 0, sizeof(TitleIdRecord));
 	return 0;
 }
 
@@ -2387,7 +2387,7 @@ int TrophyTitleDataFile::LoadSectionIndices()
 	int ret = m_recordFile.FindSection(0x100u, &m_confMetaSection);
 	if (ret < 0)
 		return ret;
-	ret = m_recordFile.FindSection(0x200u, &m_openPsIdSection);
+	ret = m_recordFile.FindSection(0x200u, &m_titleIdSection);
 	if (ret < 0)
 		return ret;
 	ret = m_recordFile.FindSection(0x300u, &m_titleMetaSection);
@@ -2455,7 +2455,7 @@ int TrophyTitleDataFile::Create(TrophyHandle *handle, const char *path, int flag
 	}
 
 	TitleConfMetaRecord confBuf;
-	TitleOpenPsIdRecord psIdBuf;
+	TitleIdRecord titleIdBuf;
 	TitleStaticMetaRecord titleBuf;
 	TitleGroupMetaRecord groupBuf;
 	TitleTrophyMetaRecord trophyBuf;
@@ -2473,11 +2473,11 @@ int TrophyTitleDataFile::Create(TrophyHandle *handle, const char *path, int flag
 	sections[0].initUserCtx = const_cast<TrophyTitleCreateParams *>(params);
 
 	sections[1].sectionId = 0x200u;
-	sections[1].recordSize = sizeof(TitleOpenPsIdRecord);
+	sections[1].recordSize = sizeof(TitleIdRecord);
 	sections[1].sectionKind = 1;
 	sections[1].recordCount = 16;
-	sections[1].initialRecordBuf = &psIdBuf;
-	sections[1].initCallback = InitOpenPsIdCallback;
+	sections[1].initialRecordBuf = &titleIdBuf;
+	sections[1].initCallback = InitTitleIdCallback;
 	sections[1].initUserCtx = const_cast<TrophyTitleCreateParams *>(params);
 
 	sections[2].sectionId = 0x300u;
@@ -3181,35 +3181,35 @@ int TrophyTitleDataFile::UpdateModifiedTicks(TrophyHandle *handle, const TrophyD
 }
 
 /* 0x812DE386 */
-int TrophyTitleDataFile::RecordOpenPsId(TrophyHandle *handle, const SceKernelOpenPsId *openPsId)
+int TrophyTitleDataFile::RecordTitleId(TrophyHandle *handle, const char *titleId)
 {
-	uint8_t zeroPsId[16];
-	sceClibMemset(zeroPsId, 0, sizeof(zeroPsId));
-	if (sceClibMemcmp(zeroPsId, openPsId->id, sizeof(zeroPsId)) == 0)
+	char zeroTitleId[16];
+	sceClibMemset(zeroTitleId, 0, sizeof(zeroTitleId));
+	if (sceClibMemcmp(zeroTitleId, titleId, sizeof(zeroTitleId)) == 0)
 		return 0;
 
 	int freeSlot = -1;
 	for (uint32_t slot = 0; slot < 16; ++slot) {
-		TitleOpenPsIdRecord disk;
-		int ret = ReadRecord(handle, m_openPsIdSection, slot, 0, &disk, sizeof(disk));
+		TitleIdRecord disk;
+		int ret = ReadRecord(handle, m_titleIdSection, slot, 0, &disk, sizeof(disk));
 		if (ret < 0)
 			return ret;
-		if (sceClibMemcmp(openPsId->id, disk.openPsId, 16) == 0)
-			return MoveRecord(handle, m_openPsIdSection, slot, 0);
-		if (sceClibMemcmp(zeroPsId, disk.openPsId, 16) == 0) {
+		if (sceClibMemcmp(titleId, disk.titleId, 16) == 0)
+			return MoveRecord(handle, m_titleIdSection, slot, 0);
+		if (sceClibMemcmp(zeroTitleId, disk.titleId, 16) == 0) {
 			freeSlot = (int)slot;
 			break;
 		}
 	}
 
 	uint32_t writeSlot = (freeSlot >= 0) ? (uint32_t)freeSlot : 15u;
-	TitleOpenPsIdRecord disk;
+	TitleIdRecord disk;
 	sceClibMemset(&disk, 0, sizeof(disk));
-	sceClibMemcpy(disk.openPsId, openPsId->id, 16);
-	int ret = WriteRecord(handle, m_openPsIdSection, writeSlot, 0, &disk, sizeof(disk));
+	sceClibMemcpy(disk.titleId, titleId, 16);
+	int ret = WriteRecord(handle, m_titleIdSection, writeSlot, 0, &disk, sizeof(disk));
 	if (ret < 0)
 		return ret;
-	return MoveRecord(handle, m_openPsIdSection, writeSlot, 0);
+	return MoveRecord(handle, m_titleIdSection, writeSlot, 0);
 }
 
 /* 0x812DDDC8 */

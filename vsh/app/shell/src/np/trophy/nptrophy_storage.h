@@ -632,7 +632,7 @@ public:
 	int VerifySnapshot(TrophyHandle *handle, const TrophyTitleDataSnapshot *expected);
 
 	int UpdateModifiedTicks(TrophyHandle *handle, const TrophyDualTick *ticks);
-	int RecordOpenPsId(TrophyHandle *handle, const SceKernelOpenPsId *openPsId);
+	int RecordTitleId(TrophyHandle *handle, const char *titleId);
 	int UnlockTrophy(TrophyHandle *handle, const TrophyUnlockRequest *req, uint32_t options,
 			 TrophyUnlockDelta *outTrophyDelta, TrophyUnlockDelta *outPlatinumDelta);
 	int LockTrophy(TrophyHandle *handle, int trophyId, uint32_t options,
@@ -667,8 +667,8 @@ private:
 
 	static int InitConfMetaCallback(void *recordBuf, SceSize recordSize, uint32_t recordIndex,
 					void *userCtx);
-	static int InitOpenPsIdCallback(void *recordBuf, SceSize recordSize, uint32_t recordIndex,
-					void *userCtx);
+	static int InitTitleIdCallback(void *recordBuf, SceSize recordSize, uint32_t recordIndex,
+				       void *userCtx);
 	static int InitTitleMetaCallback(void *recordBuf, SceSize recordSize, uint32_t recordIndex,
 					 void *userCtx);
 	static int InitGroupMetaCallback(void *recordBuf, SceSize recordSize, uint32_t recordIndex,
@@ -683,7 +683,7 @@ private:
 					    uint32_t recordIndex, void *userCtx);
 
 	uint32_t m_confMetaSection;		/* +0x4C */
-	uint32_t m_openPsIdSection;		/* +0x50 */
+	uint32_t m_titleIdSection;		/* +0x50 */
 	uint32_t m_titleMetaSection;		/* +0x54 */
 	uint32_t m_groupMetaSection;		/* +0x58 */
 	uint32_t m_trophyMetaSection;		/* +0x5C */
@@ -1039,7 +1039,7 @@ public:
 			     TrophySyncSessionBase *syncSession, uint32_t *outSyncFlags,
 			     NpTrophyFlagArray *outSyncedTrophies, int *outUnlockedPlatinumId);
 	int ApplyRegisterAndSync(TrophyHandle *handle, const TrophyDualTick *ticks,
-				 const SceKernelOpenPsId *openPsId, bool keepDeferred,
+				 const char *titleId, bool keepDeferred,
 				 TrophySyncSessionBase *syncSession, uint32_t *outSyncFlags,
 				 NpTrophyFlagArray *outSyncedTrophies, int *outUnlockedPlatinumId);
 
@@ -1331,7 +1331,7 @@ int npTrophyContextGetServerTag(const TrophyContext *context, const void **outTa
 int npTrophyContextGetTrialFlag(const TrophyContext *context, uint8_t *outIsTrial);
 int npTrophyContextGetUnlockAllowed(const TrophyContext *context, uint8_t *outAllowed);
 int npTrophyContextGetOfflineFlag(const TrophyContext *context, uint8_t *outOffline);
-const SceKernelOpenPsId *npTrophyContextGetOpenPsId(const TrophyContext *context);
+const char *npTrophyContextGetTitleId(const TrophyContext *context);
 
 /* SceNpSnsFb internal bridge helpers (0x81338C08, 0x81338C26, 0x81339D6A, 0x8133CC14) */
 int npSnsFbIsEnabled(int *outEnabled);

@@ -2021,7 +2021,7 @@ int TrophyUserStorage::ApplySyncSession(TrophyHandle *handle, const TrophyDualTi
 
 /* 0x812D4B98 */
 int TrophyUserStorage::ApplyRegisterAndSync(TrophyHandle *handle, const TrophyDualTick *ticks,
-					    const SceKernelOpenPsId *openPsId, bool keepDeferred,
+					    const char *titleId, bool keepDeferred,
 					    TrophySyncSessionBase *syncSession,
 					    uint32_t *outSyncFlags,
 					    NpTrophyFlagArray *outSyncedTrophies,
@@ -2030,8 +2030,8 @@ int TrophyUserStorage::ApplyRegisterAndSync(TrophyHandle *handle, const TrophyDu
 	int ret = m_titleFile.UpdateModifiedTicks(handle, ticks);
 	if (ret < 0)
 		return ret;
-	if (openPsId != NULL) {
-		ret = m_titleFile.RecordOpenPsId(handle, openPsId);
+	if (titleId != NULL) {
+		ret = m_titleFile.RecordTitleId(handle, titleId);
 		if (ret < 0)
 			return ret;
 	}
@@ -3711,7 +3711,7 @@ int TrophyTitleStorage::InstallFromContext(TrophyHandle *handle, TrophyContext *
 			NpTrophyFlagArray syncedTrophies;
 			sceClibMemset(&syncedTrophies, 0, sizeof(syncedTrophies));
 			ret = m_userStorage->ApplyRegisterAndSync(
-				handle, &nowTicks, npTrophyContextGetOpenPsId(context),
+				handle, &nowTicks, npTrophyContextGetTitleId(context),
 				isTrial != 0, syncSession, &syncFlags, &syncedTrophies,
 				outPlatinumId);
 			if (ret >= 0) {
@@ -3830,7 +3830,7 @@ int TrophyTitleStorage::UpgradeFromContext(TrophyHandle *handle, TrophyContext *
 			NpTrophyFlagArray syncedTrophies;
 			sceClibMemset(&syncedTrophies, 0, sizeof(syncedTrophies));
 			ret = m_userStorage->ApplyRegisterAndSync(
-				handle, &nowTicks, npTrophyContextGetOpenPsId(context),
+				handle, &nowTicks, npTrophyContextGetTitleId(context),
 				isTrial != 0, NULL, &syncFlags, &syncedTrophies, outPlatinumId);
 			if (ret >= 0) {
 				{
@@ -4016,7 +4016,7 @@ int TrophyTitleStorage::RegisterExistingContext(TrophyHandle *handle, TrophyCont
 		if (ret >= 0) {
 			uint32_t syncFlags = 0;
 			ret = m_userStorage->ApplyRegisterAndSync(
-				handle, &nowTicks, npTrophyContextGetOpenPsId(context),
+				handle, &nowTicks, npTrophyContextGetTitleId(context),
 				isTrial != 0, syncSession, &syncFlags, &syncedTrophies,
 				outPlatinumId);
 		}

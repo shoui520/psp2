@@ -274,8 +274,8 @@ extern int npTrophyCoreNetSyncTitles(SceUID pid, IPMI::Session *session, int han
 extern int npTrophyCoreOnClientConnect(SceUID pid, IPMI::Session *session);		/* 0x812C2504 */
 extern int npTrophyCoreOnClientDisconnect(SceUID pid, IPMI::Session *session,
 					  int reason);					/* 0x812C252C */
-extern int npTrophyCoreSuspend(void);							/* 0x812C2558 */
-extern int npTrophyCoreResume(void);							/* 0x812C257C */
+extern int npTrophyCoreSuspend(SceUID pid);						/* 0x812C2558 */
+extern int npTrophyCoreResume(SceUID pid);						/* 0x812C257C */
 extern int npTrophyCoreCheckRecovery(SceUID pid, IPMI::Session *session, int handleId,
 				     int ctxId, int *outRequired);			/* 0x812C25A0 */
 extern int npTrophyCorePerformRecovery(SceUID pid, IPMI::Session *session, int handleId,
@@ -352,16 +352,17 @@ extern int npTrophyCoreGetTitleSyncStatus(SceUID pid, IPMI::Session *session, in
 					  int titleSession, int ctxId,
 					  void *outStatus);				/* 0x812C6F38 */
 extern int npTrophyCoreUnlockTrophy(SceUID pid, IPMI::Session *session, int handleId,
-				    int ctxId, int trophyId, int flags, int *outPlatinumId,
+				    int titleSession, int ctxId, int trophyId, int *outPlatinumId,
 				    NpTrophyGameDetails *outGameDetails,
 				    NpTrophyDetails *outTrophyDetails,
 				    NpTrophyDetails *outPlatinumDetails,
 				    NpTrophyCommId *outCommId, int *ioUnlockedFlag);	/* 0x812C7178 */
 extern int npTrophyCoreDebugUnlockTrophy(SceUID pid, IPMI::Session *session, int handleId,
-					 int ctxId, int trophyId, const SceUInt64 *timestamp,
+					 int titleSession, int ctxId,
+					 const SceUInt64 *debugTarget,
 					 int *outPlatinumId);				/* 0x812C74FC */
 extern int npTrophyCoreDebugLockTrophy(SceUID pid, IPMI::Session *session, int handleId,
-				       int ctxId, int trophyId, const SceUInt64 *timestamp,
+				       int titleSession, int ctxId, const SceUInt64 *debugTarget,
 				       int *outPlatinumId);				/* 0x812C775E */
 extern int npTrophyCoreGetUnlockedFlagArray(SceUID pid, IPMI::Session *session, int handleId,
 					    int ctxId, int mode,

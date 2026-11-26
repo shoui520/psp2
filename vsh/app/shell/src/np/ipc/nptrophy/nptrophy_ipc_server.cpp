@@ -251,16 +251,16 @@ int npTrophyServerInit(SceSize poolSize)
 }
 
 /* 0x81226F54 */
-int npTrophyServerSuspend(void)
+int npTrophyServerSuspend(SceUID pid)
 {
-	int ret = npTrophyCoreSuspend();
+	int ret = npTrophyCoreSuspend(pid);
 	return (ret >= 0) ? 0 : ret;
 }
 
 /* 0x81226F64 */
-int npTrophyServerResume(void)
+int npTrophyServerResume(SceUID pid)
 {
-	int ret = npTrophyCoreResume();
+	int ret = npTrophyCoreResume(pid);
 	return (ret >= 0) ? 0 : ret;
 }
 
