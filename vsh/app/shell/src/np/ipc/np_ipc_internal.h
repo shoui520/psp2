@@ -42,15 +42,70 @@ struct NpImpsRawMsgServerCallbacks {
 	int (*onClientMessage)(IPMI::Session *session, const void *msgBuf);
 };
 
-/* NP common LW mutex wrapper (32 bytes = SceKernelLwMutexWork) */
+/* NP common LW mutex & cond wrappers (32B / 16B) */
 struct NpIpcLwMutex {
 	SceKernelLwMutexWork work;
 };
 
-/* NP Job Queue and Job Base (vsh/app/shell NP manager job system) */
+struct NpIpcLwCond {
+	SceKernelLwCondWork work;
+};
+
+/* NP common thread base (16 bytes, vtable 0x8153CE2C) */
+class NpThreadBase {
+public:
+	NpThreadBase();
+	virtual ~NpThreadBase();
+	virtual int Run() = 0;
+
+	int Create(const char *name, int priority, SceSize stackSize);
+	int Start();
+	int Join(int *outExitCode);
+	void Delete();
+	bool IsStarted() const;
+
+protected:
+	static int ThreadEntry(SceSize args, void *argp);
+
+	SceUID m_threadId;		/* +0x04 */
+	SceUInt8 m_started;		/* +0x08 */
+	int m_exitCode;			/* +0x0C */
+};
+
+class NpJobBase;
+class NpJobWorkerThread;
+
+/* NP Job Queue (84 bytes, vtable 0x8153CE08) */
 class NpJobQueue {
 public:
+	NpJobQueue();
 	virtual ~NpJobQueue();
+
+	static void *operator new(size_t size, void *mem) { (void)size; return mem; }
+	static void operator delete(void *ptr) { ::operator delete(ptr); }
+
+	int Init(const char *name, SceUInt32 priority, SceSize stackSize);
+	int Start();
+	void Shutdown();
+	int Enqueue(int requestId, NpJobBase *job);
+	int Cancel(int requestId, int cancelError);
+	int CancelAll(int cancelError);
+	int Dequeue(NpJobBase **outJob);
+	void CompleteJob(NpJobBase *job, int result);
+
+	NpJobBase *FindJobLocked(int requestId) const;
+	void DrainFinishedByState(int targetState);
+
+	SceUInt8 m_stopRequested;	/* +0x04 */
+	NpIpcLwMutex m_mutex;		/* +0x08 */
+	NpIpcLwCond m_cond;		/* +0x28 */
+	NpJobBase *m_pendingHead;	/* +0x38 */
+	NpJobBase *m_pendingTail;	/* +0x3C */
+	NpJobBase *m_runningHead;	/* +0x40 */
+	NpJobBase *m_runningTail;	/* +0x44 */
+	NpJobBase *m_finishedHead;	/* +0x48 */
+	NpJobBase *m_finishedTail;	/* +0x4C */
+	NpJobWorkerThread *m_worker;	/* +0x50 */
 };
 
 class NpJobBase {
@@ -62,6 +117,8 @@ public:
 	virtual int Run() = 0;
 	virtual void Finish(int result) = 0;
 
+	void Unlink();
+
 	int m_requestId;		/* +0x04 */
 	const char *m_name;		/* +0x08 */
 	int m_state;			/* +0x0C */
@@ -70,6 +127,19 @@ public:
 	NpJobQueue *m_queue;		/* +0x18 */
 	int m_cancelError;		/* +0x1C */
 	SceUInt8 m_canceled;		/* +0x20 */
+};
+
+/* Worker thread owned by NpJobQueue (28 bytes, vtable 0x8153CE18) */
+class NpJobWorkerThread : public NpThreadBase {
+public:
+	explicit NpJobWorkerThread(NpJobQueue *queue);
+	virtual ~NpJobWorkerThread();
+	virtual int Run();
+
+private:
+	NpJobQueue *m_queue;		/* +0x10 */
+	int m_unused;			/* +0x14 */
+	SceUInt8 m_exitRequested;	/* +0x18 */
 };
 
 /* NpAuth internal request parameter (36 bytes) */
