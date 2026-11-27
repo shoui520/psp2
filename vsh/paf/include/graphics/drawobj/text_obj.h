@@ -44,7 +44,9 @@ public:
 	virtual void UpdatePost(const math::matrix &world_mat);
 	virtual void CalcWorldMatrix(math::matrix &world_mat, const math::matrix &parent,
 				     bool unscaled);
+#ifndef PAF_BUILD_2014
 	virtual void SetSurfaceDraw(const SurfaceDrawParam &param);
+#endif
 
 	int32_t SetLayoutAttribute(TextLayoutAttribute attr, int32_t val);
 	int32_t SetLayoutAttribute(TextLayoutAttribute attr, float val);

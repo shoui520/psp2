@@ -22,6 +22,10 @@ public:
 	{
 	}
 
+#ifdef PAF_BUILD_2014
+	virtual int32_t EnableOption(uint32_t option);
+	virtual int32_t DisableOption(uint32_t option);
+#endif
 	virtual int32_t Getstat(FileStat *stat);
 	virtual int32_t SetPriority(int32_t priority);
 

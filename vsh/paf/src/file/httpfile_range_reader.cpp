@@ -749,6 +749,22 @@ int64_t HttpFileRangeReader::GetFileSize()
 	return -1;
 }
 
+#ifdef PAF_BUILD_2014
+void HttpFileRangeReader::EnableRangeFlag(uint32_t flag)
+{
+	m_range_flag |= flag;
+	if (m_range_flag != 0)
+		m_range_enabled = true;
+}
+
+void HttpFileRangeReader::DisableRangeFlag(uint32_t flag)
+{
+	m_range_flag &= ~flag;
+	if (m_range_flag == 0)
+		m_range_enabled = false;
+}
+#endif
+
 bool HttpFileRangeReader::FormatRange(char *dst, size_t max, size_t nbyte)
 {
 	uint32_t flags = 0;

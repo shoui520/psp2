@@ -181,7 +181,7 @@ public:
 };
 
 class WebViewBase
-	: public ScrollViewBase,
+	: public ScrollView,
 	  public WebController,
 	  public DocumentEventObserver {
 public:

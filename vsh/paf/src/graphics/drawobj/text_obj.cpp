@@ -180,26 +180,24 @@ int32_t TextObj::SetStyleAttribute(TextStyleAttribute attr, uint32_t index, uint
 	return LayoutChanged(m_layout->SetStyleAttribute(attr, index, len, val));
 }
 
+#ifndef PAF_BUILD_2014
 /* the font flags into the layout's first style, unless 128, and the surface draw bit */
 void TextObj::SetSurfaceDraw(const SurfaceDrawParam &param)
 {
 	int32_t flags = param.m_font_flags;
 
 	if (flags != 128) {
-#ifndef PAF_BUILD_2014
 		bool enlarge_font_size = (flags & 1) ? true : false;
 		bool force_bold = (flags & 2) != 0;
-#endif
 		bool deepen_color = (flags & 4) != 0;
 
-#ifndef PAF_BUILD_2014
 		SetStyleAttribute(TextStyleAttribute_EnlargeFontSize, 0, 0, enlarge_font_size);
 		SetStyleAttribute(TextStyleAttribute_ForceBold, 0, 0, force_bold);
-#endif
 		m_draw_style.deepen_color = deepen_color;
 	}
 	m_draw_style.surface_draw = param.m_surface_draw;
 }
+#endif
 
 void TextObj::DrawCallback(const DrawCallbackArg &arg)
 {

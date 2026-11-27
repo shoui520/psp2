@@ -127,6 +127,10 @@ public:
 	virtual int32_t FlushAsync();
 	virtual int32_t WaitAsync(int64_t *result);
 	virtual int32_t PollAsync(int64_t *result);
+#ifdef PAF_BUILD_2014
+	virtual int32_t EnableOption(uint32_t option);
+	virtual int32_t DisableOption(uint32_t option);
+#endif
 	virtual int32_t Getstat(FileStat *stat);
 	virtual ~HttpFile();
 
@@ -149,6 +153,9 @@ public:
 	inline __attribute__((always_inline)) int32_t StartIoThread();
 
 	bool m_is_opened;
+#ifdef PAF_BUILD_2014
+	uint32_t m_open_flag;
+#endif
 	thread::RWLock m_lock_rwlock;
 	mutable thread::RMutex m_lock_mutex;
 	thread::Thread *m_io_thread;

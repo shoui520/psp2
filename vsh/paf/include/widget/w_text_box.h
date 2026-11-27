@@ -116,7 +116,11 @@ public:
 		       m_map_e_listener.find(CB_TEXT_BOX_TAPPED) != m_map_e_listener.end();
 	}
 #endif
+#ifdef PAF_BUILD_2014
+	void UpdateTouchMode();
+#else
 	virtual void UpdateTouchMode();
+#endif
 #ifndef PAF_BUILD_2014
 	/* where the focus moves: down only once tapping or editing takes it (name ours) */
 	virtual int32_t GetFocusDirectionMask()
@@ -236,10 +240,12 @@ public:
 	virtual ~TextBoxEditListener();
 
 	virtual TextBox *GetTextBox() = 0;
+#ifndef PAF_BUILD_2014
 	virtual int32_t SetPreeditBackColor(const math::v4 &color) = 0;
 	virtual int32_t GetPreeditBackColor(math::v4 &color) = 0;
 	virtual int32_t SetPreeditUnderlineColor(const math::v4 &color) = 0;
 	virtual int32_t GetPreeditUnderlineColor(math::v4 &color) = 0;
+#endif
 	virtual int32_t BeginEdit(TextBox *text_box) = 0;
 	virtual int32_t EndEdit(TextBox *text_box) = 0;
 	virtual int32_t Update(TextBox *text_box) = 0;

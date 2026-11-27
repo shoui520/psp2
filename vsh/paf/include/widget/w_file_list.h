@@ -289,7 +289,11 @@ public:
 	virtual void OnCellDragStart(int32_t segment, int32_t cell);
 	virtual void OnCellDragStop(int32_t segment, int32_t cell);
 	/* the segments and cells their sources say are dirty updated (no name found) */
+#ifdef PAF_BUILD_2014
+	void ScePafWidget_69860A6F();
+#else
 	virtual void ScePafWidget_69860A6F();
+#endif
 
 	void SetSegmentSource(intrusive_ptr<filelist::SegmentSource> source);
 	int64_t GetSegmentID(int32_t segment);

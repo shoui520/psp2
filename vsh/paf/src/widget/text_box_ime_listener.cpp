@@ -56,6 +56,7 @@ TextBox *TextBoxImeListener::GetTextBox()
 	return m_text_box;
 }
 
+#ifndef PAF_BUILD_2014
 int32_t TextBoxImeListener::SetPreeditBackColor(const math::v4 &color)
 {
 	m_preedit_back_color = color;
@@ -79,6 +80,7 @@ int32_t TextBoxImeListener::GetPreeditUnderlineColor(math::v4 &color)
 	color = m_preedit_underline_color;
 	return 0;
 }
+#endif
 
 int32_t TextBoxImeListener::PostEvent(uint32_t type, const math::v4 &rect)
 {

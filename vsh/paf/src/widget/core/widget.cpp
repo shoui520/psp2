@@ -4792,12 +4792,14 @@ bool Widget::UpdateSurfaceDraw(bool on)
 		return false;
 	m_surface_draw = on;
 
+#ifndef PAF_BUILD_2014
 	graph::SurfaceDrawParam param;
 
 	param.m_font_flags = 128;
 	param.m_surface_draw = on;
 	for (vector<DrawObjEntry>::iterator it = m_drawobjs.begin(); it != m_drawobjs.end(); ++it)
 		it->m_obj->SetSurfaceDraw(param);
+#endif
 	return true;
 }
 
@@ -8831,15 +8833,16 @@ int32_t Widget::CalcHitBoxToPlane(const math::v4 &size, const math::v4 &pos, con
    ours) */
 static inline void SetDrawObjSurfaceDraw(Widget *widget, graph::DrawObj *obj)
 {
+#ifndef PAF_BUILD_2014
 	graph::SurfaceDrawParam param;
 
-#ifdef PAF_BUILD_2014
-	param.m_font_flags = 128;
-#else
 	param.m_font_flags = widget->m_scene != NULL ? widget->m_scene->m_font_flags : 128;
-#endif
 	param.m_surface_draw = widget->m_surface_draw;
 	obj->SetSurfaceDraw(param);
+#else
+	(void)widget;
+	(void)obj;
+#endif
 }
 
 void Widget::AddDrawObj(const DrawObjEntry &entry, bool update)

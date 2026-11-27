@@ -59,6 +59,18 @@ public:
 	virtual int32_t WaitAsync(int64_t *result) = 0;
 	virtual int32_t PollAsync(int64_t *result) = 0;
 
+#ifdef PAF_BUILD_2014
+	virtual int32_t EnableOption(uint32_t option)
+	{
+		return SCE_PAF_ERROR_FILE_NOT_SUPPORTED;
+	}
+
+	virtual int32_t DisableOption(uint32_t option)
+	{
+		return SCE_PAF_ERROR_FILE_NOT_SUPPORTED;
+	}
+#endif
+
 	virtual int32_t Getstat(FileStat *stat)
 	{
 		return SCE_PAF_ERROR_FILE_NOT_SUPPORTED;

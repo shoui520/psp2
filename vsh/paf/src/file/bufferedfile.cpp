@@ -582,6 +582,22 @@ int32_t BufferedReader::GetCapability() const
 	return capability & 0x17;
 }
 
+#ifdef PAF_BUILD_2014
+int32_t FileHolder::EnableOption(uint32_t option)
+{
+	if (m_file.get() == NULL)
+		return SCE_PAF_ERROR_FILE_PROTECTED;
+	return m_file->EnableOption(option);
+}
+
+int32_t FileHolder::DisableOption(uint32_t option)
+{
+	if (m_file.get() == NULL)
+		return SCE_PAF_ERROR_FILE_PROTECTED;
+	return m_file->DisableOption(option);
+}
+#endif
+
 int32_t FileHolder::Getstat(FileStat *stat)
 {
 	if (m_file.get() == NULL)

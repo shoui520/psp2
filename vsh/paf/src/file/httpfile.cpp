@@ -41,7 +41,11 @@ HttpFile::OpenArg::OpenArg()
 }
 
 HttpFile::HttpFile()
-	: m_is_opened(false), m_lock_rwlock("ScePafHttpFileRwLock", 0),
+	: m_is_opened(false),
+#ifdef PAF_BUILD_2014
+	  m_open_flag(0),
+#endif
+	  m_lock_rwlock("ScePafHttpFileRwLock", 0),
 	  m_lock_mutex("ScePafHttpFileCsLock", 0), m_io_thread(NULL), m_http_reader(NULL),
 	  m_reader_param(NULL)
 {
@@ -691,6 +695,32 @@ int32_t HttpFile::GetResponseHeader(const char *name, string &value) const
 	m_lock_mutex.Unlock();
 	return ret;
 }
+
+#ifdef PAF_BUILD_2014
+int32_t HttpFile::EnableOption(uint32_t option)
+{
+	uint32_t masked = option & (OpenArg::ENABLE_RANGE_GET | OpenArg::ENABLE_HALF_RANGE_GET);
+
+	if (masked == 0)
+		return SCE_PAF_ERROR_FILE_NOT_SUPPORTED;
+	m_open_flag |= masked;
+	if (m_http_reader != NULL)
+		m_http_reader->EnableRangeFlag(masked);
+	return 0;
+}
+
+int32_t HttpFile::DisableOption(uint32_t option)
+{
+	uint32_t masked = option & (OpenArg::ENABLE_RANGE_GET | OpenArg::ENABLE_HALF_RANGE_GET);
+
+	if (masked == 0)
+		return SCE_PAF_ERROR_FILE_NOT_SUPPORTED;
+	m_open_flag &= ~masked;
+	if (m_http_reader != NULL)
+		m_http_reader->DisableRangeFlag(masked);
+	return 0;
+}
+#endif
 
 int32_t HttpFile::Getstat(FileStat *stat)
 {

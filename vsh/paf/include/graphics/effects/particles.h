@@ -34,6 +34,29 @@ public:
 	{
 	}
 
+#ifdef PAF_BUILD_2014
+	virtual void SetModelviewProjection(const math::matrix &value) = 0;
+	virtual void SetModelview(const math::matrix &value) = 0;
+	virtual void SetParticleSize(const math::v3 &value) = 0;
+	virtual void SetLightPack(const math::matrix &value) = 0;
+	virtual void SetTransparency(const math::v2 &value) = 0;
+	virtual void SetFocus(const math::v4 &value) = 0;
+	virtual void SetFocusRangesRcp(const math::v2 &value) = 0;
+	virtual void SetFocusCurves(const math::v3 &value) = 0;
+	virtual void SetFrontFacingQuaternion(const math::v4 &value) = 0;
+	virtual void SetFrontFacingMatrix(const math::matrix &value) = 0;
+	virtual void SetNearControl(const math::v4 &value) = 0;
+	virtual void SetLifeBoundsMin(const math::v3 &value) = 0;
+	virtual void SetLifeBoundsMax(const math::v3 &value) = 0;
+	virtual void SetDarkness(const math::v2 &value) = 0;
+	virtual void SetGlobalAlign(const float &value) = 0;
+	virtual void SetGlare(const math::v4 &value) = 0;
+	virtual void SetWorldScaleHack(const float &value) = 0;
+	virtual void SetGlareRampTex(const arl::TextureSource &value) = 0;
+	virtual void SetIridescentTex(const arl::TextureSource &value) = 0;
+	virtual void SetRotationsTex(const arl::TextureSource &value) = 0;
+	virtual void SetColor(const math::v3 &value) = 0;
+#else
 	virtual void SetModelviewProjection(const math::matrix &value)
 	{
 	}
@@ -117,6 +140,7 @@ public:
 	virtual void SetColor(const math::v3 &value)
 	{
 	}
+#endif
 };
 
 /* uniform setter interface shared by all three particle fragment shaders */
@@ -126,6 +150,12 @@ public:
 	{
 	}
 
+#ifdef PAF_BUILD_2014
+	virtual void SetGlare(const math::v4 &value) = 0;
+	virtual void SetRadiusTex(const arl::TextureSource &value) = 0;
+	virtual void SetGlareTex(const arl::TextureSource &value) = 0;
+	virtual void SetColor(const math::v4 &value) = 0;
+#else
 	virtual void SetGlare(const math::v4 &value)
 	{
 	}
@@ -141,6 +171,7 @@ public:
 	virtual void SetColor(const math::v4 &value)
 	{
 	}
+#endif
 };
 
 /* paf/cg/drawobj/particles/particles.vp */
@@ -221,6 +252,9 @@ public:
 	{
 		m_front_facing_quat.Set(value);
 	}
+#ifdef PAF_BUILD_2014
+	virtual void SetFrontFacingMatrix(const math::matrix &value) {}
+#endif
 	virtual void SetNearControl(const math::v4 &value) { m_near_control.Set(value); }
 	virtual void SetLifeBoundsMin(const math::v3 &value) { m_life_bounds_min.Set(value); }
 	virtual void SetLifeBoundsMax(const math::v3 &value) { m_life_bounds_max.Set(value); }
@@ -228,6 +262,9 @@ public:
 	virtual void SetGlobalAlign(const float &value) { m_global_align.Set(value); }
 	virtual void SetGlare(const math::v4 &value) { m_glare.Set(value); }
 	virtual void SetWorldScaleHack(const float &value) { m_world_scale_hack.Set(value); }
+#ifdef PAF_BUILD_2014
+	virtual void SetGlareRampTex(const arl::TextureSource &value) {}
+#endif
 	virtual void SetIridescentTex(const arl::TextureSource &value)
 	{
 		m_iridescent_tex.Set(value);
@@ -279,7 +316,14 @@ public:
 
 	WAVE_SHADER_BINARY("paf/cg/drawobj/particles/particles.fp", 0x27C);
 
+#ifdef PAF_BUILD_2014
+	virtual void SetGlare(const math::v4 &value) {}
+#endif
 	virtual void SetRadiusTex(const arl::TextureSource &value) { m_radius_tex.Set(value); }
+#ifdef PAF_BUILD_2014
+	virtual void SetGlareTex(const arl::TextureSource &value) {}
+	virtual void SetColor(const math::v4 &value) {}
+#endif
 
 	arl::ShaderParameter<arl::TextureSource> m_radius_tex;
 };
@@ -356,6 +400,9 @@ public:
 	virtual void SetFocus(const math::v4 &value) { m_focus.Set(value); }
 	virtual void SetFocusRangesRcp(const math::v2 &value) { m_focus_ranges_rcp.Set(value); }
 	virtual void SetFocusCurves(const math::v3 &value) { m_focus_curves.Set(value); }
+#ifdef PAF_BUILD_2014
+	virtual void SetFrontFacingQuaternion(const math::v4 &value) {}
+#endif
 	virtual void SetFrontFacingMatrix(const math::matrix &value)
 	{
 		m_front_facing_matrix.Set(value);
@@ -364,8 +411,14 @@ public:
 	virtual void SetLifeBoundsMin(const math::v3 &value) { m_life_bounds_min.Set(value); }
 	virtual void SetLifeBoundsMax(const math::v3 &value) { m_life_bounds_max.Set(value); }
 	virtual void SetDarkness(const math::v2 &value) { m_darkness.Set(value); }
+#ifdef PAF_BUILD_2014
+	virtual void SetGlobalAlign(const float &value) {}
+#endif
 	virtual void SetGlare(const math::v4 &value) { m_glare.Set(value); }
 	virtual void SetWorldScaleHack(const float &value) { m_world_scale_hack.Set(value); }
+#ifdef PAF_BUILD_2014
+	virtual void SetGlareRampTex(const arl::TextureSource &value) {}
+#endif
 	virtual void SetIridescentTex(const arl::TextureSource &value)
 	{
 		m_iridescent_tex.Set(value);
@@ -418,8 +471,14 @@ public:
 
 	WAVE_SHADER_BINARY("paf/cg/drawobj/particles/particles_glare.fp", 0x134);
 
+#ifdef PAF_BUILD_2014
+	virtual void SetGlare(const math::v4 &value) {}
+#endif
 	virtual void SetRadiusTex(const arl::TextureSource &value) { m_radius_tex.Set(value); }
 	virtual void SetGlareTex(const arl::TextureSource &value) { m_glare_tex.Set(value); }
+#ifdef PAF_BUILD_2014
+	virtual void SetColor(const math::v4 &value) {}
+#endif
 
 	arl::ShaderParameter<arl::TextureSource> m_radius_tex;
 	arl::ShaderParameter<arl::TextureSource> m_glare_tex;
@@ -498,6 +557,9 @@ public:
 	virtual void SetFocus(const math::v4 &value) { m_focus.Set(value); }
 	virtual void SetFocusRangesRcp(const math::v2 &value) { m_focus_ranges_rcp.Set(value); }
 	virtual void SetFocusCurves(const math::v3 &value) { m_focus_curves.Set(value); }
+#ifdef PAF_BUILD_2014
+	virtual void SetFrontFacingQuaternion(const math::v4 &value) {}
+#endif
 	virtual void SetFrontFacingMatrix(const math::matrix &value)
 	{
 		m_front_facing_matrix.Set(value);
@@ -506,8 +568,14 @@ public:
 	virtual void SetLifeBoundsMin(const math::v3 &value) { m_life_bounds_min.Set(value); }
 	virtual void SetLifeBoundsMax(const math::v3 &value) { m_life_bounds_max.Set(value); }
 	virtual void SetDarkness(const math::v2 &value) { m_darkness.Set(value); }
+#ifdef PAF_BUILD_2014
+	virtual void SetGlobalAlign(const float &value) {}
+#endif
 	virtual void SetGlare(const math::v4 &value) { m_glare.Set(value); }
 	virtual void SetWorldScaleHack(const float &value) { m_world_scale_hack.Set(value); }
+#ifdef PAF_BUILD_2014
+	virtual void SetGlareRampTex(const arl::TextureSource &value) {}
+#endif
 	virtual void SetIridescentTex(const arl::TextureSource &value)
 	{
 		m_iridescent_tex.Set(value);
@@ -594,6 +662,9 @@ public:
 	virtual void SetModelview(const math::matrix &value) { m_mv.Set(value); }
 	virtual void SetParticleSize(const math::v3 &value) { m_particle_size.Set(value); }
 	virtual void SetLightPack(const math::matrix &value) { m_light_pack.Set(value); }
+#ifdef PAF_BUILD_2014
+	virtual void SetTransparency(const math::v2 &value) {}
+#endif
 	virtual void SetFocus(const math::v4 &value) { m_focus.Set(value); }
 	virtual void SetFocusRangesRcp(const math::v2 &value) { m_focus_ranges_rcp.Set(value); }
 	virtual void SetFocusCurves(const math::v3 &value) { m_focus_curves.Set(value); }
@@ -601,10 +672,22 @@ public:
 	{
 		m_front_facing_quat.Set(value);
 	}
+#ifdef PAF_BUILD_2014
+	virtual void SetFrontFacingMatrix(const math::matrix &value) {}
+#endif
 	virtual void SetNearControl(const math::v4 &value) { m_near_control.Set(value); }
+#ifdef PAF_BUILD_2014
+	virtual void SetLifeBoundsMin(const math::v3 &value) {}
+	virtual void SetLifeBoundsMax(const math::v3 &value) {}
+	virtual void SetDarkness(const math::v2 &value) {}
+#endif
 	virtual void SetGlobalAlign(const float &value) { m_global_align.Set(value); }
 	virtual void SetGlare(const math::v4 &value) { m_glare.Set(value); }
 	virtual void SetWorldScaleHack(const float &value) { m_world_scale_hack.Set(value); }
+#ifdef PAF_BUILD_2014
+	virtual void SetGlareRampTex(const arl::TextureSource &value) {}
+	virtual void SetIridescentTex(const arl::TextureSource &value) {}
+#endif
 	virtual void SetRotationsTex(const arl::TextureSource &value) { m_rotations_tex.Set(value); }
 	virtual void SetColor(const math::v3 &value) { m_color.Set(value); }
 
@@ -647,7 +730,14 @@ public:
 
 	WAVE_SHADER_BINARY("paf/cg/drawobj/particles/particles_debug.fp", 0x27C);
 
+#ifdef PAF_BUILD_2014
+	virtual void SetGlare(const math::v4 &value) {}
+#endif
 	virtual void SetRadiusTex(const arl::TextureSource &value) { m_radius_tex.Set(value); }
+#ifdef PAF_BUILD_2014
+	virtual void SetGlareTex(const arl::TextureSource &value) {}
+	virtual void SetColor(const math::v4 &value) {}
+#endif
 
 	arl::ShaderParameter<arl::TextureSource> m_radius_tex;
 };

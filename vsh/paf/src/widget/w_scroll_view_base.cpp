@@ -2169,7 +2169,11 @@ int32_t ScrollViewBase::HandleFocusEvent(Event *e)
 	return Handler::HandleFocusEvent(e);
 }
 
+#ifdef PAF_BUILD_2014
+int32_t ScrollViewBase::HandleSystemEvent(Event *e)
+#else
 int32_t ScrollViewBase::HandleCommandEvent(Event *e)
+#endif
 {
 	if (e != NULL) {
 		switch (e->GetType()) {
@@ -2189,7 +2193,11 @@ int32_t ScrollViewBase::HandleCommandEvent(Event *e)
 			break;
 		}
 	}
+#ifdef PAF_BUILD_2014
+	return Handler::HandleSystemEvent(e);
+#else
 	return Handler::HandleCommandEvent(e);
+#endif
 }
 
 void ScrollViewBase::OnViewLayoutUpdated(bool is_dirty)

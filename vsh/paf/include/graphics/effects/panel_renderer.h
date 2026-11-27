@@ -2028,9 +2028,21 @@ public:
 		m_light_pos.Set(value);
 	}
 
+	virtual void SetAmbientColor(const math::v4 &value)
+	{
+	}
+
 	virtual void SetDiffuseColor(const math::v4 &value)
 	{
 		m_diffuse_color.Set(value);
+	}
+
+	virtual void SetBackColor(const math::v4 &value)
+	{
+	}
+
+	virtual void SetBackgroundSize(const math::v4 &value)
+	{
 	}
 
 	virtual void SetBackgroundRatio(const math::v2 &value)
@@ -2046,6 +2058,10 @@ public:
 	virtual void SetEyePos(const math::v4 &value)
 	{
 		m_eye_pos.Set(value);
+	}
+
+	virtual void SetSpecularFactor(const math::v4 &value)
+	{
 	}
 
 	virtual void SetBackColorZRange(const math::v2 &value)
@@ -2094,10 +2110,22 @@ public:
 
 	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/bubble_glass.fp", 428);
 
+	virtual void SetMaterialPack(const math::matrix &value) {}
+	virtual void SetLightPos(const math::v3 &value) {}
+	virtual void SetAmbientColor(const math::v4 &value) {}
+	virtual void SetDiffuseColor(const math::v4 &value) {}
+	virtual void SetBackColor(const math::v4 &value) {}
+	virtual void SetBackgroundSize(const math::v4 &value) {}
+	virtual void SetBackgroundRatio(const math::v2 &value) {}
+	virtual void SetView(const math::matrix &value) {}
+	virtual void SetEyePos(const math::v4 &value) {}
+
 	virtual void SetSpecularFactor(const math::v4 &value)
 	{
 		m_specular_factor.Set(value);
 	}
+
+	virtual void SetColorMap(const arl::TextureSource &value) {}
 
 	virtual void SetBackground(const arl::TextureSource &value)
 	{
@@ -2108,6 +2136,8 @@ public:
 	{
 		m_env_map_detail.Set(value);
 	}
+
+	virtual void SetAlpha(const float &value) {}
 
 	arl::ShaderParameter<math::v4> m_specular_factor;
 	arl::ShaderParameter<arl::TextureSource> m_background;
@@ -2199,6 +2229,12 @@ public:
 		m_diffuse_color.Set(value);
 	}
 
+#ifdef PAF_BUILD_2014
+	virtual void SetBackColor(const math::v4 &value) {}
+	virtual void SetBackgroundSize(const math::v4 &value) {}
+	virtual void SetBackgroundRatio(const math::v2 &value) {}
+#endif
+
 	virtual void SetView(const math::matrix &value)
 	{
 	}
@@ -2207,6 +2243,10 @@ public:
 	{
 		m_eye_pos.Set(value);
 	}
+
+#ifdef PAF_BUILD_2014
+	virtual void SetSpecularFactor(const math::v4 &value) {}
+#endif
 
 	virtual void SetBackColorZRange(const math::v2 &value)
 	{
@@ -2251,9 +2291,23 @@ public:
 
 	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/bubble_image.fp", PAF_SHADER_SIZE(0x168, 332));
 
+#ifdef PAF_BUILD_2014
+	virtual void SetMaterialPack(const math::matrix &value) {}
+	virtual void SetLightPos(const math::v3 &value) {}
+	virtual void SetAmbientColor(const math::v4 &value) {}
+	virtual void SetDiffuseColor(const math::v4 &value) {}
+#endif
+
 	virtual void SetBackColor(const math::v4 &value)
 	{
 	}
+
+#ifdef PAF_BUILD_2014
+	virtual void SetBackgroundSize(const math::v4 &value) {}
+	virtual void SetBackgroundRatio(const math::v2 &value) {}
+	virtual void SetView(const math::matrix &value) {}
+	virtual void SetEyePos(const math::v4 &value) {}
+#endif
 
 	virtual void SetSpecularFactor(const math::v4 &value)
 	{
@@ -2264,6 +2318,10 @@ public:
 	{
 		m_color_map.Set(value);
 	}
+
+#ifdef PAF_BUILD_2014
+	virtual void SetBackground(const arl::TextureSource &value) {}
+#endif
 
 	virtual void SetEnvMapDetail(const arl::TextureSource &value)
 	{
@@ -2349,10 +2407,20 @@ public:
 		m_light_pos.Set(value);
 	}
 
+#ifdef PAF_BUILD_2014
+	virtual void SetAmbientColor(const math::v4 &value) {}
+#endif
+
 	virtual void SetDiffuseColor(const math::v4 &value)
 	{
 		m_diffuse_color.Set(value);
 	}
+
+#ifdef PAF_BUILD_2014
+	virtual void SetBackColor(const math::v4 &value) {}
+	virtual void SetBackgroundSize(const math::v4 &value) {}
+	virtual void SetBackgroundRatio(const math::v2 &value) {}
+#endif
 
 	virtual void SetView(const math::matrix &value)
 	{
@@ -2363,6 +2431,10 @@ public:
 	{
 		m_eye_pos.Set(value);
 	}
+
+#ifdef PAF_BUILD_2014
+	virtual void SetSpecularFactor(const math::v4 &value) {}
+#endif
 
 	virtual void SetBackColorZRange(const math::v2 &value)
 	{
@@ -2413,10 +2485,24 @@ public:
 
 	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/bubble_opaque.fp", PAF_SHADER_SIZE(0x1fc, 488));
 
+#ifdef PAF_BUILD_2014
+	virtual void SetMaterialPack(const math::matrix &value) {}
+	virtual void SetLightPos(const math::v3 &value) {}
+	virtual void SetAmbientColor(const math::v4 &value) {}
+	virtual void SetDiffuseColor(const math::v4 &value) {}
+#endif
+
 	virtual void SetBackColor(const math::v4 &value)
 	{
 		m_back_color.Set(value);
 	}
+
+#ifdef PAF_BUILD_2014
+	virtual void SetBackgroundSize(const math::v4 &value) {}
+	virtual void SetBackgroundRatio(const math::v2 &value) {}
+	virtual void SetView(const math::matrix &value) {}
+	virtual void SetEyePos(const math::v4 &value) {}
+#endif
 
 	virtual void SetSpecularFactor(const math::v4 &value)
 	{
@@ -2427,6 +2513,10 @@ public:
 	{
 		m_color_map.Set(value);
 	}
+
+#ifdef PAF_BUILD_2014
+	virtual void SetBackground(const arl::TextureSource &value) {}
+#endif
 
 	virtual void SetEnvMapDetail(const arl::TextureSource &value)
 	{
@@ -2582,10 +2672,16 @@ public:
 		m_light_pos.Set(value);
 	}
 
+	virtual void SetAmbientColor(const math::v4 &value) {}
+
 	virtual void SetDiffuseColor(const math::v4 &value)
 	{
 		m_diffuse_color.Set(value);
 	}
+
+	virtual void SetBackColor(const math::v4 &value) {}
+	virtual void SetBackgroundSize(const math::v4 &value) {}
+	virtual void SetBackgroundRatio(const math::v2 &value) {}
 
 	virtual void SetView(const math::matrix &value)
 	{
@@ -2596,6 +2692,8 @@ public:
 	{
 		m_eye_pos.Set(value);
 	}
+
+	virtual void SetSpecularFactor(const math::v4 &value) {}
 
 	virtual void SetBackColorZRange(const math::v2 &value)
 	{
@@ -2644,10 +2742,20 @@ public:
 
 	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/bubble_opaque_simple.fp", 452);
 
+	virtual void SetMaterialPack(const math::matrix &value) {}
+	virtual void SetLightPos(const math::v3 &value) {}
+	virtual void SetAmbientColor(const math::v4 &value) {}
+	virtual void SetDiffuseColor(const math::v4 &value) {}
+
 	virtual void SetBackColor(const math::v4 &value)
 	{
 		m_back_color.Set(value);
 	}
+
+	virtual void SetBackgroundSize(const math::v4 &value) {}
+	virtual void SetBackgroundRatio(const math::v2 &value) {}
+	virtual void SetView(const math::matrix &value) {}
+	virtual void SetEyePos(const math::v4 &value) {}
 
 	virtual void SetSpecularFactor(const math::v4 &value)
 	{
@@ -2658,6 +2766,9 @@ public:
 	{
 		m_color_map.Set(value);
 	}
+
+	virtual void SetBackground(const arl::TextureSource &value) {}
+	virtual void SetEnvMapDetail(const arl::TextureSource &value) {}
 
 	virtual void SetAlpha(const float &value)
 	{

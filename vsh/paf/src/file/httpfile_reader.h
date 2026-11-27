@@ -207,19 +207,50 @@ public:
 		return &m_response;
 	}
 
+#ifdef PAF_BUILD_2014
+	virtual HttpHeader *GetRequestHeaders()
+	{
+		return &m_request_headers;
+	}
+#endif
+
 	virtual HttpHeader *GetResponseHeaders()
 	{
 		return &m_response_headers;
 	}
+
+#ifdef PAF_BUILD_2014
+	virtual void EnableRangeFlag(uint32_t flag)
+	{
+	}
+
+	virtual void DisableRangeFlag(uint32_t flag)
+	{
+	}
+
+	virtual void SetTimeout(int32_t resolve, int32_t connect, int32_t send, int32_t recv)
+	{
+		m_timeout.resolve_timeout = resolve;
+		m_timeout.connect_timeout = connect;
+		m_timeout.send_timeout = send;
+		m_timeout.recv_timeout = recv;
+	}
+#endif
 
 	/* The request headers HttpFile::OpenArg's user_agent and referer become. */
 	static const char *const header_user_agent;
 	static const char *const header_referer;
 
 	common::SharedPtr<HttpFileReaderConfig> m_config;
+#ifdef PAF_BUILD_2014
+	HttpHeader m_request_headers;
+#endif
 	HttpHeader m_response_headers;
 	HttpResponse m_response;
 	int32_t m_result[3];
+#ifdef PAF_BUILD_2014
+	HttpFile::Timeout m_timeout;
+#endif
 };
 
 /* What HttpFileHttpReader::AddHeader adds a request header to. */
@@ -271,6 +302,15 @@ public:
 		return &m_response;
 	}
 
+#ifdef PAF_BUILD_2014
+	virtual HttpHeader *GetRequestHeaders()
+	{
+		if (m_reader != NULL)
+			return m_reader->GetRequestHeaders();
+		return &m_request_headers;
+	}
+#endif
+
 	virtual HttpHeader *GetResponseHeaders()
 	{
 		if (m_reader != NULL)
@@ -278,9 +318,17 @@ public:
 		return &m_response_headers;
 	}
 
+#ifdef PAF_BUILD_2014
+	virtual void EnableRangeFlag(uint32_t flag);
+	virtual void DisableRangeFlag(uint32_t flag);
+#endif
+
 	virtual bool FormatRange(char *dst, size_t max, size_t nbyte);
 
 	bool m_range_enabled;
+#ifdef PAF_BUILD_2014
+	uint32_t m_range_flag;
+#endif
 	HttpFileReader *m_reader;
 	int64_t m_position;
 	int64_t m_range_begin;

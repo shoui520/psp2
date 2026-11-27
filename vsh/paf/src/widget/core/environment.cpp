@@ -31,7 +31,9 @@
 #include <widget/core/show_held.h>
 #include <widget/w_camera.h>
 #include <widget/w_scene.h>
+#ifndef PAF_BUILD_2014
 #include <widget/w_pageturn.h>
+#endif
 #include <widget/w_scroll_view_base.h>
 #include <widget/w_supplier.h>
 #ifdef PAF_BUILD_2014
@@ -1787,9 +1789,11 @@ static int32_t SimulateGesture(Environment *env, int32_t type, Widget *widget,
 		} else if (type == 3) {
 			if (!widget->IsInherit(ScrollViewBase::TypeName()))
 				return 0x80AF4071;
+#ifndef PAF_BUILD_2014
 		} else if (type == 26) {
 			if (!widget->IsInherit(PageTurn::TypeName()))
 				return 0x80AF4071;
+#endif
 		} else {
 			return 0x80AF4072;
 		}
@@ -1879,6 +1883,7 @@ found:
 		widget->DoEvent(0x1000b, &ev);
 		widget->DoEvent(0x1000c, &ev);
 	}
+#ifndef PAF_BUILD_2014
 	if (type == 26) {
 		if (widget == NULL || !widget->IsInherit(PageTurn::TypeName()))
 			return 0x80AF4074;
@@ -1886,6 +1891,7 @@ found:
 		widget->DoEvent(0x10000003, &ev);
 		return 0;
 	}
+#endif
 
 	Event gesture(0x80, widget, Event::ROUTE_TERM, 0);
 	int32_t flick_x = 3000;

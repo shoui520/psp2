@@ -24,12 +24,21 @@ class TextBoxImeListener : public TextBoxEditListener {
 public:
 	/* what it sends the scroll view the text box is in (Event types) */
 	enum {
+#ifdef PAF_BUILD_2014
+		EVENT_TEXT_CHANGED = 0x2003,
+		EVENT_EDIT_BEGIN = 0x2004,
+		EVENT_EDIT_END = 0x2005,
+		EVENT_IME_OPEN = 0x2006,
+		EVENT_IME_CHANGE_SIZE = 0x2007,
+		EVENT_IME_EDIT = 0x2008
+#else
 		EVENT_TEXT_CHANGED = 0x8000,
 		EVENT_EDIT_BEGIN = 0x8001,
 		EVENT_EDIT_END = 0x8002,
 		EVENT_IME_OPEN = 0x8003,
 		EVENT_IME_CHANGE_SIZE = 0x8004,
 		EVENT_IME_EDIT = 0x8005
+#endif
 	};
 
 	/* the timeout that masks the password's last characters (SetTimeoutEvent's ID) */
@@ -44,6 +53,7 @@ public:
 
 	/* 0x811ae6a6 */
 	virtual TextBox *GetTextBox();
+#ifndef PAF_BUILD_2014
 	/* 0x811ae6aa */
 	virtual int32_t SetPreeditBackColor(const math::v4 &color);
 	/* 0x811ae6ba */
@@ -52,6 +62,7 @@ public:
 	virtual int32_t SetPreeditUnderlineColor(const math::v4 &color);
 	/* 0x811ae6da */
 	virtual int32_t GetPreeditUnderlineColor(math::v4 &color);
+#endif
 
 	/* 0x811ae6ea: the event with the rectangle sent to the scroll view the text box is in */
 	int32_t PostEvent(uint32_t type, const math::v4 &rect);

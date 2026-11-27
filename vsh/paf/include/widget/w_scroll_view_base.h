@@ -204,7 +204,11 @@ public:
 	virtual int32_t HandleGestureEvent(Event *e);
 	virtual int32_t HandleFocusEvent(Event *e);
 	virtual int32_t HandleFocusSwitchEvent(Event *e);
+#ifdef PAF_BUILD_2014
+	virtual int32_t HandleSystemEvent(Event *e);
+#else
 	virtual int32_t HandleCommandEvent(Event *e);
+#endif
 	virtual bool IsInherit(const char *type) const;
 	virtual char *GetTypeName() const;
 	virtual void DestroyWidget();
@@ -260,7 +264,11 @@ public:
 	virtual void DoSnap(int32_t snap_id, Timer *timer);
 	virtual void SetPreferredSnapPoint(int32_t snap_id, float time, int32_t func);
 	/* the view moved to the position, over the timer where one is given */
+#ifdef PAF_BUILD_2014
+	void SetViewFocus(const math::v2 &pos, Timer *timer, bool flag_a, bool flag_b);
+#else
 	virtual void SetViewFocus(const math::v2 &pos, Timer *timer, bool flag_a, bool flag_b);
+#endif
 	virtual void OnViewLayoutUpdated(bool is_dirty);
 	virtual void OnPartsLayoutUpdated(bool is_dirty);
 	virtual bool TrackBegin(Event *e);

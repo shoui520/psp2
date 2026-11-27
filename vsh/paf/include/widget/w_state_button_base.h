@@ -92,6 +92,16 @@ public:
 	virtual int32_t DoButtonEvent(int32_t type);
 #endif
 	virtual graph::DrawObj *CreateDrawObj(int32_t obj);
+#ifdef PAF_BUILD_2014
+	virtual void Check()
+	{
+		SetCheck(true, 0.0f, false);
+	}
+	virtual void Uncheck()
+	{
+		SetCheck(false, 0.0f, false);
+	}
+#endif
 	/* checked or not, the image's animation played over the time, and its sound played with
 	   ch_anim */
 	virtual void SetCheck(bool onoff, float time = 0.0f, bool ch_anim = false);

@@ -86,20 +86,24 @@ public:
 	/* told of each draw into the surface: the page drawn has changed */
 	virtual void SetDirty(bool dirty);
 
+#ifndef PAF_BUILD_2014
 	virtual bool IsDirty()
 	{
 		return m_page_dirty[m_page_counter];
 	}
+#endif
 
 	virtual void Clear(const math::v4 &color, uint32_t clear_mask);
 	virtual void Swap();
 	virtual void *Lock(int32_t page);
 	virtual void Unlock();
 
+#ifndef PAF_BUILD_2014
 	virtual int32_t GenTexture()
 	{
 		return SCE_PAF_ERROR_GRAPHICS_INVALID_SURFACE;
 	}
+#endif
 
 	virtual int32_t Begin(uint32_t flags);
 	/* a frame begun and ended: the surface's own steps, under the surface list's lock (names

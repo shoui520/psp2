@@ -51,7 +51,11 @@ public:
 	/* not beyond the size of the memory given; NOT_PERMITTED over a render target someone
 	   else keeps */
 	virtual int32_t Resize(int32_t width, int32_t height);
+#ifdef PAF_BUILD_2014
+	int32_t GenTexture();
+#else
 	virtual int32_t GenTexture();
+#endif
 	/* a scene into the page drawn */
 	virtual int32_t Begin(uint32_t flags);
 	virtual int32_t End(const SceGxmNotification *vertex_notification,

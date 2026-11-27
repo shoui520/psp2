@@ -507,7 +507,11 @@ public:
 				      FocusAlignType align);
 	/* the view's focus set, the focus kept on a cell shown: where the focused one is not,
 	   the first one shown after it, else the last one shown */
+#ifdef PAF_BUILD_2014
+	void SetViewFocus(const math::v2 &pos, Timer *timer, bool flag_a, bool flag_b);
+#else
 	virtual void SetViewFocus(const math::v2 &pos, Timer *timer, bool flag_a, bool flag_b);
+#endif
 	/* the scroll range given, the coordinate effector and the over scroll off; or the range
 	   dropped (no name found) */
 	void ScePafWidget_E1824581(bool on, const math::v2 &range);

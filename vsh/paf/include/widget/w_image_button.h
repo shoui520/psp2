@@ -141,7 +141,11 @@ public:
 	virtual int32_t SetEach(Widget *widget);
 	virtual int32_t GetEach(Widget *widget);
 
+#ifdef PAF_BUILD_2014
+	virtual int32_t Init();
+#else
 	int32_t Init();
+#endif
 	void InitParam();
 
 	graph::PlaneObjParam m_image_obj;

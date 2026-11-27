@@ -54,7 +54,11 @@ int sceSasAsTaskListAdd(SceSasAsTaskList *list, SceSasAsTask *task)
 		list->tasks[list->count++] = task;
 		return 0;
 	}
+#ifdef SCE_SAS_STATIC_RUNTIME
+	return sceSasAsError(SCE_SAS_AS_ERROR_FULL, "Overflow task entry count (%d)\n", list->count);
+#else
 	return sceSasAsError(SCE_SAS_AS_ERROR_FULL, "Overflow task entry count (%u)\n", list->count);
+#endif
 }
 
 int sceSasAsTaskListRun(SceSasAsTaskList *list, const SceSasAsRenderInfo *render, SceUInt32 numSamples)

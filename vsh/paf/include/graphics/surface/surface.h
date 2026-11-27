@@ -279,8 +279,10 @@ public:
 	virtual ~Surface();
 	/* told of each draw into the surface, with the front end's third debug cap: nothing */
 	virtual void SetDirty(bool dirty) {}
+#ifndef PAF_BUILD_2014
 	/* whether the page drawn into has been drawn to: a plain surface never says so */
 	virtual bool IsDirty() { return false; }
+#endif
 	/* clears the page drawn into */
 	virtual void Clear(const math::v4 &color, uint32_t clear_mask);
 	virtual void Swap();
@@ -290,7 +292,9 @@ public:
 	virtual void *Lock(int32_t page);
 	virtual void Unlock();
 	virtual int32_t Resize(int32_t width, int32_t height);
+#ifndef PAF_BUILD_2014
 	virtual int32_t GenTexture();
+#endif
 
 	static void *operator new(size_t size);
 	static void operator delete(void *ptr);

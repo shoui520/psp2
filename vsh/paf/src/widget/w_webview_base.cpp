@@ -39,7 +39,7 @@ bool WebViewBase::IsInherit(const char *type) const
 {
 	if (type == m_widget_type)
 		return true;
-	return ScrollViewBase::IsInherit(type);
+	return ScrollView::IsInherit(type);
 }
 
 char *WebViewBase::GetTypeName() const
@@ -153,7 +153,7 @@ void WebViewLoadingPlane::SetStyle(int32_t style)
 }
 
 WebViewBase::WebViewBase(Widget *parent, CreateParam *param)
-	: ScrollViewBase(parent, param),
+	: ScrollView(parent, param),
 	  WebController(),
 	  m_top_offset(0.0f, 0.0f),
 	  m_saved_margin(0.0f, 0.0f, 0.0f, 0.0f),
@@ -453,7 +453,7 @@ void WebViewBase::DestroyWidget()
 	EndTextEdit(false);
 	DestroyDocumentWidget();
 	WebController::Finalize();
-	ScrollViewBase::DestroyWidget();
+	ScrollView::DestroyWidget();
 }
 
 void WebViewBase::Update()
@@ -510,7 +510,7 @@ void WebViewBase::OnViewLayoutUpdated(bool is_dirty)
 		if (doc != NULL)
 			doc->SyncScrollPosition(m_velocity);
 	}
-	ScrollViewBase::OnViewLayoutUpdated(is_dirty);
+	ScrollView::OnViewLayoutUpdated(is_dirty);
 }
 
 void WebViewBase::UpdatePost()
@@ -700,7 +700,7 @@ int32_t WebViewBase::HandleKeycodeEvent(Event *e)
 		m_edit_state = (m_edit_state & ~0xF00U) | 0x100U;
 	else if (key_action == 1)
 		m_edit_state |= 0xF00U;
-	return ScrollViewBase::HandleKeycodeEvent(e);
+	return ScrollView::HandleKeycodeEvent(e);
 }
 
 int32_t WebViewBase::HandleGestureEvent(Event *e)
@@ -713,7 +713,7 @@ int32_t WebViewBase::HandleGestureEvent(Event *e)
 		if (doc != NULL)
 			doc->HandleGestureEvent(e);
 	}
-	return ScrollViewBase::HandleGestureEvent(e);
+	return ScrollView::HandleGestureEvent(e);
 }
 
 void WebViewBase::HandleDebugMagic(const string &command)

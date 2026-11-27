@@ -210,10 +210,12 @@ public:
 	virtual void CalcWorldMatrix(math::matrix &world_mat, const math::matrix &parent,
 				     bool unscaled);
 
+#ifndef PAF_BUILD_2014
 	virtual void SetSurfaceDraw(const SurfaceDrawParam &param)
 	{
 		m_draw_style.surface_draw = param.m_surface_draw;
 	}
+#endif
 
 	void BindDrawStyle();
 	void SetShader(const common::SharedPtr<Shader> &shader);

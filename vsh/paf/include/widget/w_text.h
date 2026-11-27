@@ -187,7 +187,11 @@ public:
 
 	/* sets the touch modes from its touch modes and its focused link (0x8123aa94, name
 	   ours) */
+#ifdef PAF_BUILD_2014
+	void UpdateTouchMode()
+#else
 	virtual void UpdateTouchMode()
+#endif
 	{
 		int32_t mode = 4;
 

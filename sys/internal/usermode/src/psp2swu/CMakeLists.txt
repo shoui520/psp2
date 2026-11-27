@@ -481,8 +481,6 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc SOURCES
 	${PAF}/src/widget/w_list_view.cpp
 	${PAF}/src/widget/w_mapview.cpp
 	${PAF}/src/widget/w_num_spin.cpp
-	${PAF}/src/widget/w_pageturn.cpp
-	${PAF}/src/widget/w_pageturn_base.cpp
 	${PAF}/src/widget/w_plane.cpp
 	${PAF}/src/widget/w_plane_button.cpp
 	${PAF}/src/widget/w_progress_bar.cpp
@@ -760,7 +758,6 @@ set_source_files_properties(
 	${PAF}/src/widget/w_group.cpp ${PAF}/src/widget/w_image_button.cpp
 	${PAF}/src/widget/w_image_slidebar.cpp ${PAF}/src/widget/w_item_spin.cpp
 	${PAF}/src/widget/w_list_item.cpp ${PAF}/src/widget/w_num_spin.cpp
-	${PAF}/src/widget/w_pageturn.cpp ${PAF}/src/widget/w_pageturn_base.cpp
 	${PAF}/src/widget/w_plane.cpp ${PAF}/src/widget/w_plane_button.cpp
 	${PAF}/src/widget/w_progress_bar.cpp ${PAF}/src/widget/w_progress_bar_touch.cpp
 	${PAF}/src/widget/w_radio_box.cpp ${PAF}/src/widget/w_radio_button.cpp
