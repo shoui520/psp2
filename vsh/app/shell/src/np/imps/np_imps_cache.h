@@ -451,11 +451,10 @@ public:
 	/* NpImpsCacheCore overrides */
 	virtual int RegisterObserver(NpImpsCacheObserver *observer);
 	virtual int UnregisterObserver();
-	virtual NpImpsCacheFriendStore *GetFriendStore();
-	virtual NpImpsCacheBlockStore *GetBlockStore();
-	virtual NpImpsCacheRosterSync *GetRosterSync();
 	virtual const SceNpCommunicationId *GetPartyTitleId();
 	virtual paf::thread::RMutex *GetStateMutex();
+	virtual void Lock();
+	virtual void Unlock();
 
 	/* NpImpsCacheStoreSink overrides */
 	virtual int NotifySignInComplete();
@@ -482,6 +481,10 @@ public:
 						  const NpImpsSvcPresenceDiffFlags *diffFlags,
 						  int platform);
 	virtual int NotifyInGameDataMessage(NpImpsSvcInGameDataMessage **msg);
+
+	virtual NpImpsCacheFriendStore *GetFriendStore();
+	virtual NpImpsCacheBlockStore *GetBlockStore();
+	virtual NpImpsCacheRosterSync *GetRosterSync();
 
 	/* NpImpsCacheRosterSync overrides */
 	virtual int TriggerRosterUpdate(const SceNpId *npId, int syncReason);

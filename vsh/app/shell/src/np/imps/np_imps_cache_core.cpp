@@ -338,6 +338,16 @@ paf::thread::RMutex *NpImpsCacheCoreImpl::GetStateMutex()
 	return &m_dataMutex;
 }
 
+void NpImpsCacheCoreImpl::Lock()
+{
+	m_dataMutex.Lock();
+}
+
+void NpImpsCacheCoreImpl::Unlock()
+{
+	m_dataMutex.Unlock();
+}
+
 /* 0x81300328..0x81300D3D: NpImpsCacheStoreSink forwarding to NpImpsCacheObserver */
 int NpImpsCacheCoreImpl::NotifySignInComplete()
 {
@@ -349,7 +359,7 @@ int NpImpsCacheCoreImpl::NotifySignInComplete()
 int NpImpsCacheCoreImpl::NotifySignOutComplete()
 {
 	if (m_observer != NULL)
-		m_observer->OnAccountSessionEvent(2);
+		m_observer->OnAccountSessionEvent(0);
 	return 0;
 }
 

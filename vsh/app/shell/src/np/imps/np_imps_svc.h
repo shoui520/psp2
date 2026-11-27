@@ -908,6 +908,8 @@ public:
 	virtual NpImpsCacheRosterSync *GetRosterSync() = 0;			/* +24 */
 	virtual const SceNpCommunicationId *GetPartyTitleId() = 0;		/* +28 */
 	virtual paf::thread::RMutex *GetStateMutex() = 0;			/* +32 */
+	virtual void Lock() = 0;						/* +36 */
+	virtual void Unlock() = 0;						/* +40 */
 };
 
 /* External bridges implemented in SceNpImpsCache / SceNpRoster / SceNpImpsCore / SceNpParty */
