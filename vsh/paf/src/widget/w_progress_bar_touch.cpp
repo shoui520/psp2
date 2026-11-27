@@ -124,7 +124,9 @@ ProgressBarTouch::ProgressBarTouch(Widget *parent, CreateParam *param)
 	m_hit_find_mode = 0;
 	m_hit_detect_mode = 0;
 	m_hit_detect_b_mode = 0;
+#ifndef PAF_BUILD_2014
 	m_pre_dispatch = true;
+#endif
 	m_hit_check = 0;
 	/* it plays its two sounds */
 	m_sound_mask = 3;

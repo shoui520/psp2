@@ -17,6 +17,9 @@
 #include <math/ngp/v2.h>
 #include <math/ngp/v4.h>
 #include <std/algorithm>
+#ifdef PAF_BUILD_2014
+#include <std/list>
+#endif
 #include <std/string>
 #include <std/vector>
 #include <versatileparam/idparam.h>
@@ -83,8 +86,12 @@ public:
 		LINK_STYLE_NORMAL = 0,
 		LINK_STYLE_AUTO = 1,
 		LINK_STYLE_PRESSED = 2,
+#ifdef PAF_BUILD_2014
+		LINK_STYLE_NUM = 3
+#else
 		LINK_STYLE_FOCUSED = 3,
 		LINK_STYLE_NUM = 4
+#endif
 	};
 
 	/* what FriendAutoScroll does to each of its auto scroll's friends (names ours) */
@@ -283,6 +290,19 @@ public:
 	   the pressed one's pink, the focused one's blue, its listener on its scene's event
 	   0x80000A added; deleted again where one cannot be made (0x81131df2, name ours) */
 	int32_t CreateLinkStyles();
+#ifdef PAF_BUILD_2014
+	/* its touch position in its text's layout (0x81057534, name ours) */
+	int32_t GetTouchTextPos(math::v2 &pos);
+	int32_t SetAutoScrollAlpha(float alpha);
+	int32_t RestoreAutoScrollClip();
+	int32_t SaveAutoScrollClip();
+	int32_t StopAutoScroll();
+	int32_t RunAutoScroll();
+	static void OnAutoScrollFade(Timer *t, AnimListener *listener, void *widget, void *userdata,
+				     void *context);
+	static void OnAutoScrollTick(Timer *t, AnimListener *listener, void *widget, void *userdata,
+				     void *context);
+#else
 	/* every link's style made the found links' or the normal one (0x8113200c, 0x81132072,
 	   names ours) */
 	int32_t SetLinksStyleAuto();
@@ -313,6 +333,7 @@ public:
 	Link *SearchLinkFocus(int32_t dir, const math::v4 &rect, int32_t reserved);
 	/* the focus link let go where it is not all in the view (name ours) */
 	void CheckLinkFocusInView();
+#endif
 	/* its text object's attributes, string and layout: each sets or gets its text
 	   object's, its state changed where a set changes the layout; 0x80AF0022 without a
 	   text object */
@@ -366,6 +387,7 @@ public:
 	/* only returns SCE_PAF_ERROR_NO_ENTRY */
 	int32_t SetSelectionMode(bool mode);
 	int32_t GetSelectionMode(bool &mode);
+#ifndef PAF_BUILD_2014
 	/* an empty method nothing in libpaf calls (name ours) */
 	void DoNothing();
 	/* its auto scroll's or a friend's running (0x81132452, name ours) */
@@ -374,6 +396,7 @@ public:
 	int32_t StopAutoScroll();
 	/* its touch ended: the edit menu told, the selection ended (0x81132c12, name ours) */
 	int32_t EndTouch();
+#endif
 	/* sends the event with the rectangle, as integers (0x8113262e, name ours) */
 	int32_t SendRectEvent(int32_t type, const math::v4 &rect);
 	/* a long press of the touch in the event: the touch begun at its position, the auto
@@ -419,6 +442,15 @@ public:
 	graph::TextStyle *m_link_styles[LINK_STYLE_NUM];
 	/* the link the focus or touch is on (name ours) */
 	Link *m_focus_link;
+#ifdef PAF_BUILD_2014
+	list<Link> m_links;
+	bool m_auto_scroll_clip_saved;
+	int32_t m_auto_scroll;
+	float m_auto_scroll_speed;
+	math::v2 m_auto_scroll_length;
+	/* what it tells about a selection or an edit (name ours) */
+	TextBoxEditMenuListener *m_edit_menu_listener;
+#else
 	vector<Link> m_links;
 	/* not "disable_auto_scroll", and the link event on (names ours) */
 	bool m_auto_scroll_enable : 1;
@@ -429,6 +461,7 @@ public:
 	TextBoxEditMenuListener *m_edit_menu_listener;
 	/* its listener on its scene's event 0x80000A (name ours) */
 	EventListener *m_scene_listener;
+#endif
 };
 
 /* a text's resource parameters (names after the resource's) */
@@ -451,9 +484,11 @@ public:
 	float m_auto_scroll_speed;
 	IDParam m_placeholder;
 	IDParam m_scroll_view;
+#ifndef PAF_BUILD_2014
 	bool m_long_press_text_auto_scroll_mode;
 	IDParam m_auto_scroll_target_friend;
 	bool m_disable_auto_scroll;
+#endif
 };
 
 /* a text's style: its plane and text objects' parameters and how it adjusts its size */

@@ -20,7 +20,12 @@
 #include <widget/core/focus.h>
 #include <widget/core/widget.h>
 #include <widget/factory.h>
+#ifdef PAF_BUILD_2014
+#include <timer/timer.h>
+#include <widget/core/animlistener.h>
+#else
 #include <widget/text_auto_scroll.h>
+#endif
 #include <widget/w_scroll_view_base.h>
 #include <widget/w_scene.h>
 #include <widget/w_text.h>
@@ -35,6 +40,7 @@ extern "C" {
 paf::ui::TextBoxEditMenuListener *ScePafWidget_1EE9D37E(void);
 }
 
+#ifndef PAF_BUILD_2014
 namespace paf {
 
 /* Sony's link setters call the links' push_back out of line. */
@@ -77,10 +83,16 @@ __attribute__((noinline)) int vector<ui::FocusShape>::push_back(const ui::FocusS
 	return result;
 }
 
+}
+#endif
+
+namespace paf {
 namespace ui {
 
+#ifndef PAF_BUILD_2014
 /* the text whose auto scroll a touch started last (name ours) */
 static Text *s_touch_scroll_text;
+#endif
 
 /* the colours of its found links, of a pressed one, and two of a focused one, the second
    one's alpha 0.3; the last two unused (names ours) */
@@ -91,12 +103,41 @@ static inline __attribute__((always_inline)) math::v4 LinkColor(float r, float g
 
 static const math::v4 s_link_color = LinkColor(0.0f, 0.263f, 0.867f, 1.0f);
 static const math::v4 s_link_pressed_color = LinkColor(0.886f, 0.043f, 0.478f, 1.0f);
+#ifndef PAF_BUILD_2014
 static const math::v4 s_link_focus_color = LinkColor(0.043f, 0.867f, 0.867f, 1.0f);
 static const math::v4 s_link_focus_back_color = LinkColor(0.043f, 0.867f, 0.867f, 0.3f);
 
 static int32_t TextFocusCB(Focuser *focuser, Widget *widget, void *data, void *move);
 static void LinkStyleCB(int32_t type, Handler *self, Event *e, void *data);
+#endif
 
+#ifdef PAF_BUILD_2014
+Text::Text(Widget *parent, CreateParam *param)
+	: Widget(parent, param), m_plane(NULL), m_text(new graph::TextObj(graph::TextObjStyle())),
+	  m_scroll_view(NULL), m_touch_modes(0), m_touch_states(2), m_touch_pos(0.0f, 0.0f),
+	  m_auto_link_detect(0), m_url_scheme(3), m_link_styles(), m_focus_link(NULL),
+	  m_auto_scroll_clip_saved(false), m_auto_scroll(0), m_auto_scroll_speed(60.0f),
+	  m_auto_scroll_length(0.0f, 0.0f), m_edit_menu_listener(ScePafWidget_1EE9D37E())
+{
+	ReserveDrawObj(1);
+	if (m_text != NULL)
+		AddDrawObj(DrawObjEntry(m_text, OBJ_TEXT), false);
+
+	m_event_enable |= 0xFBF0;
+	m_hit_find_mode = 0;
+	m_hit_detect_mode = 2;
+	m_hit_detect_b_mode = 2;
+	m_hit_check = 0;
+	m_sound_mask |= 1;
+}
+
+TextParam::TextParam()
+	: m_selection_mode(false), m_auto_link_detect(0), m_url_scheme(3), m_auto_scroll(0),
+	  m_auto_scroll_speed(60.0f)
+{
+	m_string_list.push_back(IndexedRef("label", Text::OBJ_TEXT));
+}
+#else
 Text::Text(Widget *parent, CreateParam *param)
 	: Widget(parent, param), m_plane(NULL), m_text(new graph::TextObj(graph::TextObjStyle())),
 	  m_scroll_view(NULL), m_touch_modes(0), m_touch_states(2), m_touch_pos(0.0f, 0.0f),
@@ -132,6 +173,7 @@ TextParam::TextParam()
 	m_string_list.push_back(IndexedRef("label", Text::OBJ_TEXT));
 	m_alias_string_list.push_back(IndexedRef("label_alias", Text::OBJ_TEXT));
 }
+#endif
 
 TextStyleParam::TextStyleParam() : m_adjust(NULL)
 {
@@ -196,6 +238,7 @@ int32_t Text::DeleteLinkStyles()
 		delete m_link_styles[LINK_STYLE_PRESSED];
 		m_link_styles[LINK_STYLE_PRESSED] = NULL;
 	}
+#ifndef PAF_BUILD_2014
 	if (m_link_styles[LINK_STYLE_FOCUSED] != NULL) {
 		delete m_link_styles[LINK_STYLE_FOCUSED];
 		m_link_styles[LINK_STYLE_FOCUSED] = NULL;
@@ -204,12 +247,14 @@ int32_t Text::DeleteLinkStyles()
 		m_scene->DeleteEventListener(0x80000A, m_scene_listener);
 		m_scene_listener = NULL;
 	}
+#endif
 	return 0;
 }
 
 Text::~Text()
 {
 	DeleteLinkStyles();
+#ifndef PAF_BUILD_2014
 	if (m_auto_scroll != NULL) {
 		delete m_auto_scroll;
 		m_auto_scroll = NULL;
@@ -219,6 +264,7 @@ Text::~Text()
 	m_plane = (graph::PlaneObj *)-1;
 	m_text = (graph::TextObj *)-1;
 	m_scroll_view = (ScrollViewBase *)-1;
+#endif
 }
 
 void Text::DestroyWidget()
@@ -228,6 +274,233 @@ void Text::DestroyWidget()
 	Widget::DestroyWidget();
 }
 
+#ifdef PAF_BUILD_2014
+int32_t Text::GetTouchTextPos(math::v2 &pos)
+{
+	Environment *env = m_env;
+	int32_t ret = SCE_PAF_ERROR_BUSY;
+	HitInfo *hit = &env->m_touch_hit[0][0];
+
+	if (hit != NULL) {
+		if (hit->m_hit_valid == 0) {
+			TouchInfo *touch = &env->m_touch_state[0][0];
+
+			touch->m_port = 0;
+			touch->m_id = 0;
+			if (touch != NULL)
+				CalcHitBoxToLine(math::v4(10000.0f, 10000.0f, 0.0f, 0.0f),
+						 touch->m_line_start, touch->m_line_end, hit);
+		}
+
+		math::v4 box(0.0f, 0.0f, 0.0f, 0.0f);
+
+		if (m_hit_box != NULL)
+			box = *m_hit_box;
+
+		math::v3 text_pos = m_text->m_pos;
+		math::v3 text_size = m_text->m_size;
+		math::v2 visible;
+
+		m_text->GetLayoutAttribute(graph::TextLayoutAttribute_VisiblePos, visible);
+		ret = 0;
+		pos = (hit->m_touch_pos - math::v2(box.getImpl().getXY()) -
+		       math::v2(text_pos.getImpl().getXY())) * math::v2(1.0f, -1.0f) +
+		      math::v2(text_size.getImpl().getXY()) * 0.5f + visible;
+	}
+	return ret;
+}
+
+int32_t Text::HandleTouchEvent(Event *e)
+{
+	uint32_t port = (e->m_detail >> 20) & 0xf;
+	uint32_t id = (uint8_t)e->m_detail;
+
+	if (m_text != NULL && port == 0 && id == 0) {
+		switch (e->m_type & 0xffff) {
+		case 0x41:
+			HandleTouchPress(e);
+			break;
+		case 0x43:
+			if (m_touch_held) {
+				math::v2 pos;
+
+				if (GetTouchTextPos(pos) == 0 && UpdateTouch(pos) == 0)
+					e->m_type = (e->m_type & 0xf0ffffff) | 0x1000000;
+			}
+			break;
+		}
+	}
+	return Widget::HandleTouchEvent(e);
+}
+
+int32_t Text::SetAutoScrollAlpha(float alpha)
+{
+	math::v4 color = m_text->GetColor();
+
+	color.set_w(alpha);
+	m_text->SetColor(color);
+	return 0;
+}
+
+int32_t Text::RestoreAutoScrollClip()
+{
+	if (m_auto_scroll_clip_saved) {
+		m_auto_scroll_clip_saved = false;
+		SetLayoutAttribute(graph::TextLayoutAttribute_Ellipsis, true);
+		SetVisiblePos(math::v2(0.0f, 0.0f));
+	}
+	return 0;
+}
+
+int32_t Text::StopAutoScroll()
+{
+	if (m_auto_scroll != 0 && m_scroll_view == NULL && !m_touch_held) {
+		if (m_auto_scroll_clip_saved) {
+			m_auto_scroll_clip_saved = false;
+			SetLayoutAttribute(graph::TextLayoutAttribute_Ellipsis, true);
+			SetVisiblePos(math::v2(0.0f, 0.0f));
+		}
+		if (ScePafWidget_56384DA3(this, ANIM_AUTO_SCROLL)) {
+			KillAnim(ANIM_AUTO_SCROLL);
+			SetAutoScrollAlpha(1.0f);
+			SetVisiblePos(math::v2(0.0f, 0.0f));
+		}
+	}
+	return 0;
+}
+
+int32_t Text::HandleLongPress(Event *e)
+{
+	math::v2 pos;
+	int32_t ret = GetTouchTextPos(pos);
+
+	if (ret != 0)
+		return ret;
+	StopAutoScroll();
+	ret = SCE_PAF_ERROR_BUSY;
+	if (m_touch_modes != 0) {
+		m_touch_pos = pos;
+		if (m_edit_menu_listener != NULL)
+			m_edit_menu_listener->BeginEdit((TextBox *)this);
+		if (m_selection_mode) {
+			Event ev(0x8000, Event::MODE_DISPATCH, Event::ROUTE_FORWARD, 0);
+
+			DoEvent(CB_TEXT_SELECTION_BEGIN, &ev);
+		}
+		ret = 0;
+	}
+	if (ret == 0) {
+		m_touch_held = true;
+		ret = UpdateTouch(pos);
+	}
+	return ret;
+}
+
+int32_t Text::HandleGestureEvent(Event *e)
+{
+	if (m_text != NULL) {
+		switch ((e->m_detail >> 8) & 0x7f) {
+		case 4:
+			HandleLongPress(e);
+			break;
+		case 0:
+			ScePafWidget_695200BA(e);
+			break;
+		}
+	}
+	return Widget::HandleGestureEvent(e);
+}
+
+uint32_t Text::CheckState()
+{
+	uint32_t state = m_state;
+
+	if (m_text != NULL && !m_text->m_flags.m_prepare)
+		return 0;
+	return state;
+}
+
+int32_t Text::SaveAutoScrollClip()
+{
+	bool ellipsis = false;
+
+	m_text->GetLayoutAttribute(graph::TextLayoutAttribute_Ellipsis, ellipsis);
+	if (ellipsis) {
+		m_auto_scroll_clip_saved = true;
+		SetLayoutAttribute(graph::TextLayoutAttribute_Ellipsis, false);
+	}
+	return 0;
+}
+
+int32_t Text::RunAutoScroll()
+{
+	if (m_auto_scroll != 0 && m_scroll_view == NULL && !m_touch_held) {
+		if (!ScePafWidget_56384DA3(this, ANIM_AUTO_SCROLL)) {
+			bool ellipsis = false;
+
+			m_text->GetLayoutAttribute(graph::TextLayoutAttribute_Ellipsis, ellipsis);
+			if (ellipsis) {
+				m_auto_scroll_clip_saved = true;
+				SetLayoutAttribute(graph::TextLayoutAttribute_Ellipsis, false);
+			}
+			if (!m_text->m_flags.m_prepare) {
+				math::v2 bounds;
+
+				m_text->GetBounds(bounds);
+
+				math::v2 size(m_text->m_size.getImpl().getXY());
+				float dist = 0.0f;
+
+				if (m_auto_scroll == SCROLL_TYPE_HORIZONTAL) {
+					if (bounds.extract_x() > size.extract_x()) {
+						m_auto_scroll_length = math::v2(bounds.extract_x(), 0.0f);
+						dist = bounds.extract_x();
+					}
+				} else if (m_auto_scroll == SCROLL_TYPE_VERTICAL) {
+					if (bounds.extract_y() > size.extract_y()) {
+						m_auto_scroll_length = math::v2(0.0f, bounds.extract_y());
+						dist = bounds.extract_y();
+					}
+				}
+				if (dist > 0.0f) {
+					SetAutoScrollAlpha(1.0f);
+					SetVisiblePos(math::v2(0.0f, 0.0f));
+					SetAnimListener(ANIM_AUTO_SCROLL | 0x10000000,
+							new AnimListener(new Timer(2000.0f), this,
+									 NULL, NULL, NULL),
+							0);
+					SetAnimListener(ANIM_AUTO_SCROLL | 0x10000000,
+							new AnimListener(
+								new Timer((dist / m_auto_scroll_speed) * 1000.0f),
+								this, OnAutoScrollTick, NULL, NULL),
+							0);
+					SetAnimListener(ANIM_AUTO_SCROLL | 0x10000000,
+							new AnimListener(new Timer(1000.0f), this,
+									 NULL, NULL, NULL),
+							0);
+					SetAnimListener(ANIM_AUTO_SCROLL | 0x10000000,
+							new AnimListener(new Timer(1000.0f), this,
+									 OnAutoScrollFade, NULL, NULL),
+							0);
+				}
+			}
+		}
+	}
+	return 0;
+}
+
+uint32_t Text::ChangeState(uint32_t state, int32_t ev_type)
+{
+	if (m_text != NULL && state != m_state && state == 0)
+		AdjustSize();
+
+	uint32_t ret = Widget::ChangeState(state, ev_type);
+
+	if (m_text != NULL)
+		RunAutoScroll();
+	return ret;
+}
+#else
 inline bool Text::IsAutoScrollRunning()
 {
 	return m_auto_scroll != NULL && m_auto_scroll->IsRunning();
@@ -599,6 +872,7 @@ uint32_t Text::ChangeState(uint32_t state, int32_t ev_type)
 		AdjustSize();
 	return Widget::ChangeState(state, ev_type);
 }
+#endif
 
 int32_t Text::SetLayoutAttribute(graph::TextLayoutAttribute attr, const math::v2 &val)
 {
@@ -615,6 +889,7 @@ int32_t Text::SetLayoutAttribute(graph::TextLayoutAttribute attr, const math::v2
 	return ret;
 }
 
+#ifndef PAF_BUILD_2014
 math::v4 Text::GetLinkRect(const Link *link)
 {
 	math::v4 rect(0.0f, 0.0f, 0.0f, 0.0f);
@@ -662,6 +937,7 @@ math::v4 Text::GetLinkRect(const Link *link)
 	}
 	return rect;
 }
+#endif
 
 void Text::UpdateSize()
 {
@@ -840,6 +1116,7 @@ int32_t Text::SetStyle(uint32_t index, uint32_t len, const graph::TextStyle &sty
 	return ret;
 }
 
+#ifndef PAF_BUILD_2014
 math::v4 Text::GetLinkWorldRect(const Link *link)
 {
 	math::v4 rect(0.0f, 0.0f, 0.0f, 0.0f);
@@ -1031,6 +1308,7 @@ __attribute__((noinline)) static int32_t TextFocusCB(Focuser *focuser, Widget *w
 	}
 	return DefaultFocusCB(focuser, widget, data, move);
 }
+#endif
 
 void Text::UpdatePost()
 {
@@ -1296,6 +1574,27 @@ int32_t ScePafWidget_439FFB75(Text *text)
 int32_t ScePafWidget_D56954F6(Text *text)
 {
 	if (text->m_auto_link_detect != 0) {
+#ifdef PAF_BUILD_2014
+		list<Text::Link>::iterator it = text->m_links.begin();
+
+		while (it != text->m_links.end()) {
+			if (it->m_found != Text::LINK_SET) {
+				if (text->m_text != NULL) {
+					int32_t ret = text->m_text->SetStyle(
+						it->m_index, it->m_len,
+						*text->m_link_styles[Text::LINK_STYLE_NORMAL]);
+
+					if (ret > 0 && (ret & 2))
+						text->ChangeState(3, -1);
+				}
+				if (text->m_focus_link == &(*it))
+					text->m_focus_link = NULL;
+				it = text->m_links.erase(it);
+			} else {
+				++it;
+			}
+		}
+#else
 		vector<Text::Link>::iterator it = text->m_links.begin();
 
 		while (it != text->m_links.end()) {
@@ -1315,8 +1614,11 @@ int32_t ScePafWidget_D56954F6(Text *text)
 				++it;
 			}
 		}
+#endif
 	}
+#ifndef PAF_BUILD_2014
 	text->UpdateTouchMode();
+#endif
 	return 0;
 }
 
@@ -1330,6 +1632,29 @@ int32_t Text::SetString(const wstring &str, int32_t obj)
 	if (m_text == NULL)
 		return ret;
 
+#ifdef PAF_BUILD_2014
+	StopAutoScroll();
+	ScePafWidget_D56954F6(this);
+	if (m_edit_menu_listener != NULL)
+		m_edit_menu_listener->EndEdit(static_cast<TextBox *>(this));
+	ret = m_text->SetString(str);
+	if (ret > 0) {
+		if (ret & 2)
+			ChangeState(3, -1);
+		ret = 0;
+	}
+	if (m_auto_link_detect != 0) {
+		wstring text_str;
+
+		m_text->GetString(text_str);
+		if (m_auto_link_detect & 1)
+			ScePafWidget_374B1ECF(this, text_str);
+		if (m_auto_link_detect & 2)
+			ScePafWidget_F7F1BE9A(this, text_str);
+	}
+	RunAutoScroll();
+	return ret;
+#else
 	/* a running auto scroll back at its start, shown in full */
 	if (m_auto_scroll != NULL) {
 		m_auto_scroll->Restore();
@@ -1354,6 +1679,7 @@ int32_t Text::SetString(const wstring &str, int32_t obj)
 	if (m_auto_scroll != NULL)
 		m_auto_scroll->Update();
 	return ret;
+#endif
 }
 
 int32_t Text::GetString(wstring &str, int32_t obj)
@@ -1963,8 +2289,12 @@ int32_t ScePafWidget_DA5F91F8(TextBox *text_box, ScrollView *view)
 		return SCE_PAF_ERROR_NO_OBJECT;
 	if (view == NULL)
 		return SCE_PAF_ERROR_INVALID_ARGUMENT;
+#ifdef PAF_BUILD_2014
+	text_box->StopAutoScroll();
+#else
 	if (text_box->m_auto_scroll != NULL)
 		text_box->m_auto_scroll->Restore();
+#endif
 	text_box->m_scroll_view = view;
 	return 0;
 }
@@ -1976,8 +2306,12 @@ int32_t ScePafWidget_B80D9362(Text *text)
 	if (text->m_scroll_view == NULL)
 		return SCE_PAF_ERROR_INVALID_ARGUMENT;
 	text->m_scroll_view = NULL;
+#ifdef PAF_BUILD_2014
+	text->RunAutoScroll();
+#else
 	if (text->m_auto_scroll != NULL)
 		text->m_auto_scroll->Update();
+#endif
 	return 0;
 }
 
@@ -2011,6 +2345,7 @@ int32_t ScePafWidget_3E4AABD3(Text *text, TextBoxEditMenuListener *listener)
 	return 0;
 }
 
+#ifndef PAF_BUILD_2014
 namespace paf {
 namespace ui {
 
@@ -2049,6 +2384,7 @@ int32_t ScePafWidget_B93118F3(Text *text, bool on)
 	}
 	return 0;
 }
+#endif
 
 namespace paf {
 namespace ui {
@@ -2074,6 +2410,7 @@ int32_t Text::CreateLinkStyles()
 				graph::TextStyleAttribute_Color, s_link_pressed_color);
 			ret = 0;
 		}
+#ifndef PAF_BUILD_2014
 		if (m_link_styles[LINK_STYLE_FOCUSED] == NULL) {
 			m_link_styles[LINK_STYLE_FOCUSED] =
 				new graph::TextStyle(*m_link_styles[LINK_STYLE_NORMAL]);
@@ -2085,6 +2422,7 @@ int32_t Text::CreateLinkStyles()
 				return 0;
 			}
 		}
+#endif
 		if (ret >= 0)
 			return ret;
 	}
@@ -2118,14 +2456,17 @@ int32_t ScePafWidget_00253246(Text *text, int32_t mode)
 				text->m_hit_detect_mode = 0;
 				text->m_hit_detect_b_mode = 0;
 				text->m_hit_check = 1;
+#ifndef PAF_BUILD_2014
 				if (text->m_link_event)
 					text->EnableFocusEvent(true);
+#endif
 			}
 		}
 	}
 	return ret;
 }
 
+#ifndef PAF_BUILD_2014
 int32_t ScePafWidget_5E14AD2A(Text *text, int32_t *mode)
 {
 	*mode = text->m_auto_link_detect;
@@ -2341,6 +2682,7 @@ int32_t ScePafWidget_3612C18B(Text *text, const IDParam &id)
 
 	return scroll->RemoveFriend(copy);
 }
+#endif
 
 namespace paf {
 namespace ui {
@@ -2360,6 +2702,7 @@ int32_t Text::SendRectEvent(int32_t type, const math::v4 &rect)
 }
 }
 
+#ifndef PAF_BUILD_2014
 int32_t ScePafWidget_4608F7EF(Text *text, math::v2 *origin)
 {
 	if (text->m_auto_scroll == NULL)
@@ -2367,6 +2710,7 @@ int32_t ScePafWidget_4608F7EF(Text *text, math::v2 *origin)
 	*origin = text->m_auto_scroll->m_origin;
 	return 0;
 }
+#endif
 
 void Text::OnTouchCaptureChanged(uint32_t port, uint32_t id, int32_t arg)
 {
@@ -2479,6 +2823,16 @@ int32_t ScePafWidget_55EC0090(Text *text, const math::v2 &pos)
 	int32_t ret = text->m_text->HitTestChar(pos, true, index);
 
 	if (ret == 0) {
+#ifdef PAF_BUILD_2014
+		for (list<Text::Link>::iterator it = text->m_links.begin();
+		     it != text->m_links.end(); ++it) {
+			if (it->m_index <= index && index <= it->m_index + it->m_len) {
+				ret = 0;
+				text->m_focus_link = &(*it);
+				break;
+			}
+		}
+#else
 		for (vector<Text::Link>::iterator it = text->m_links.begin();
 		     it != text->m_links.end(); ++it) {
 			if (it->m_index <= index && index <= it->m_index + it->m_len) {
@@ -2487,8 +2841,11 @@ int32_t ScePafWidget_55EC0090(Text *text, const math::v2 &pos)
 				break;
 			}
 		}
+#endif
 	}
+#ifndef PAF_BUILD_2014
 	text->UpdateTouchMode();
+#endif
 	return ret;
 }
 
@@ -2497,6 +2854,46 @@ namespace ui {
 
 int32_t Text::HandleTouchPress(Event *e)
 {
+#ifdef PAF_BUILD_2014
+	HitInfo *hit = &m_env->m_touch_hit[0][0];
+	int32_t ret = SCE_PAF_ERROR_BUSY;
+
+	if (hit != NULL && hit->m_widget == this) {
+		math::v2 pos;
+
+		ret = GetTouchTextPos(pos);
+		if (ret == 0) {
+			uint32_t index;
+
+			m_focus_link = NULL;
+			if (m_text->HitTestChar(pos, true, index) == 0) {
+				for (list<Link>::iterator it = m_links.begin();
+				     it != m_links.end(); ++it) {
+					if (it->m_index <= index &&
+					    index <= it->m_index + it->m_len) {
+						m_focus_link = &(*it);
+						break;
+					}
+				}
+			}
+			if (m_focus_link != NULL && m_text != NULL) {
+				int32_t set = m_text->SetStyle(
+					m_focus_link->m_index, m_focus_link->m_len,
+					*m_link_styles[LINK_STYLE_PRESSED]);
+
+				if (set > 0 && (set & 2))
+					ChangeState(3, -1);
+			}
+
+			int32_t mode = 4;
+
+			if (m_focus_link != NULL || m_touch_modes == 0)
+				mode = 1;
+			ApplyTouchGesture(hit->m_port, hit->m_touch_id, mode, NULL);
+		}
+	}
+	return ret;
+#else
 	uint32_t port = (e->m_detail >> 20) & 0xf;
 	uint32_t id = (uint8_t)e->m_detail;
 	int32_t ret = SCE_PAF_ERROR_BUSY;
@@ -2535,8 +2932,10 @@ int32_t Text::HandleTouchPress(Event *e)
 		}
 	}
 	return ret;
+#endif
 }
 
+#ifndef PAF_BUILD_2014
 int32_t Text::EndTouch()
 {
 	int32_t ret = SCE_PAF_ERROR_BUSY;
@@ -2555,6 +2954,7 @@ int32_t Text::EndTouch()
 	}
 	return ret;
 }
+#endif
 
 int32_t Text::HandleTouchRelease()
 {
@@ -2566,6 +2966,23 @@ int32_t Text::HandleTouchRelease()
 			ChangeState(3, -1);
 	}
 
+#ifdef PAF_BUILD_2014
+	int32_t ret = SCE_PAF_ERROR_BUSY;
+
+	if (m_touch_modes != 0) {
+		if (m_edit_menu_listener != NULL)
+			m_edit_menu_listener->NotifyCaretMove(static_cast<TextBox *>(this));
+		if (m_selection_mode) {
+			Event ev(0x8000, Event::MODE_DISPATCH, Event::ROUTE_FORWARD, 0, 0, 0, 0, 0);
+
+			DoEvent(CB_TEXT_SELECTION_END, &ev);
+		}
+		ret = 0;
+		m_touch_held = false;
+		RunAutoScroll();
+	}
+	return ret;
+#else
 	int32_t ret = EndTouch();
 
 	if (ret == 0) {
@@ -2574,6 +2991,7 @@ int32_t Text::HandleTouchRelease()
 			m_auto_scroll->Update();
 	}
 	return ret;
+#endif
 }
 
 int32_t Text::ScePafWidget_695200BA(Event *e)
@@ -2590,6 +3008,7 @@ int32_t Text::ScePafWidget_695200BA(Event *e)
 		ev.m_data[2] = m_focus_link->m_found;
 		ev.m_data[3] = (int16_t)m_focus_link->m_scheme;
 		DoEvent(CB_TEXT_LINK, &ev);
+#ifndef PAF_BUILD_2014
 		if (m_link_styles[LINK_STYLE_AUTO] != NULL && m_text != NULL) {
 			int32_t set = m_text->SetStyle(m_focus_link->m_index, m_focus_link->m_len,
 						       *m_link_styles[LINK_STYLE_AUTO]);
@@ -2597,6 +3016,7 @@ int32_t Text::ScePafWidget_695200BA(Event *e)
 			if (set > 0 && (set & 2))
 				ChangeState(3, -1);
 		}
+#endif
 		ret = 0;
 	}
 	return ret;
@@ -2669,6 +3089,27 @@ int32_t ScePafWidget_56384DA3(Widget *widget, int32_t id)
 namespace paf {
 namespace ui {
 
+#ifdef PAF_BUILD_2014
+void Text::OnAutoScrollFade(Timer *t, AnimListener *listener, void *widget, void *userdata,
+			    void *context)
+{
+	static_cast<Text *>(widget)->SetAutoScrollAlpha(t->m_mapped_x);
+}
+
+void Text::OnAutoScrollTick(Timer *t, AnimListener *listener, void *widget, void *userdata,
+			    void *context)
+{
+	Text *text = static_cast<Text *>(widget);
+	float v = t->m_mapped_x;
+
+	if (v < 1.0f) {
+		text->SetVisiblePos(text->m_auto_scroll_length * v);
+	} else {
+		text->SetAutoScrollAlpha(0.0f);
+		text->SetVisiblePos(math::v2(0.0f, 0.0f));
+	}
+}
+#else
 static void LinkStyleCB(int32_t type, Handler *self, Event *e, void *data)
 {
 	Text *text = (Text *)data;
@@ -2676,11 +3117,7 @@ static void LinkStyleCB(int32_t type, Handler *self, Event *e, void *data)
 	if (text->m_touch_captures.size() == 0) {
 		Environment *env = text->m_env;
 
-#ifdef PAF_BUILD_2014
-		if (env != NULL && env->m_focus_cursor[0].m_target == text) {
-#else
 		if (env != NULL && env->m_focus_cursor.m_target == text) {
-#endif
 			Text::Link *link = text->m_focus_link;
 
 			if (link == NULL) {
@@ -2694,7 +3131,6 @@ static void LinkStyleCB(int32_t type, Handler *self, Event *e, void *data)
 			graph::TextStyle *normal = text->m_link_styles[Text::LINK_STYLE_AUTO];
 
 			if (link != NULL) {
-#ifndef PAF_BUILD_2014
 				if (focused != NULL && ScePafWidget_529FB877(env, -1)) {
 					if (text->m_text != NULL) {
 						int32_t set = text->m_text->SetStyle(
@@ -2703,9 +3139,7 @@ static void LinkStyleCB(int32_t type, Handler *self, Event *e, void *data)
 						if (set > 0 && (set & 2))
 							text->ChangeState(3, -1);
 					}
-				} else
-#endif
-				if (normal != NULL) {
+				} else if (normal != NULL) {
 					if (text->m_text != NULL) {
 						int32_t set = text->m_text->SetStyle(
 							link->m_index, link->m_len, *normal);
@@ -2718,6 +3152,7 @@ static void LinkStyleCB(int32_t type, Handler *self, Event *e, void *data)
 		}
 	}
 }
+#endif
 
 }
 }
@@ -2880,6 +3315,7 @@ int32_t TextParam::Create(int32_t mode)
 							if (m_serial != NULL) {
 								m_serial->AddParam("scroll_view", &m_scroll_view,
 										   ResourceParam::SEMANTIC_WIDGETREF);
+#ifndef PAF_BUILD_2014
 								if (m_serial != NULL) {
 									m_serial->AddParam(
 										"long_press_text_auto_scroll_mode",
@@ -2897,6 +3333,7 @@ int32_t TextParam::Create(int32_t mode)
 												ResourceParam::SEMANTIC_BOOL);
 									}
 								}
+#endif
 							}
 						}
 					}
@@ -2915,6 +3352,51 @@ int32_t TextParam::Set()
 		Text *text = (Text *)m_widget;
 
 		ScePafWidget_00253246(text, m_auto_link_detect);
+#ifdef PAF_BUILD_2014
+		if (text->m_text != NULL && m_url_scheme != text->m_url_scheme) {
+			ScePafWidget_D56954F6(text);
+			text->m_url_scheme = m_url_scheme;
+			if (text->m_auto_link_detect != 0) {
+				wstring str;
+
+				text->m_text->GetString(str);
+				if (text->m_auto_link_detect & 1)
+					ScePafWidget_374B1ECF(text, str);
+				if (text->m_auto_link_detect & 2)
+					ScePafWidget_F7F1BE9A(text, str);
+			}
+		}
+		if (m_auto_scroll != 0 && text->m_text != NULL) {
+			text->StopAutoScroll();
+			text->m_auto_scroll = m_auto_scroll;
+			text->RunAutoScroll();
+		}
+		if (text->m_text != NULL) {
+			text->StopAutoScroll();
+			text->m_auto_scroll_speed = m_auto_scroll_speed;
+			text->RunAutoScroll();
+		}
+
+		wstring placeholder(GetString(m_placeholder));
+
+		if (text->m_text != NULL) {
+			int32_t set = text->m_text->SetPlaceholderString(placeholder);
+
+			if (set > 0 && (set & 2))
+				text->ChangeState(3, -1);
+		}
+		if (text->m_scene->FindChild(m_scroll_view, 0) != NULL) {
+			if (text->m_scene->FindChild(m_scroll_view, 0)->IsInherit(
+				    ScrollViewBase::TypeName())) {
+				Widget *view = text->m_scene->FindChild(m_scroll_view, 0);
+
+				if (view != NULL && text->m_text != NULL) {
+					text->StopAutoScroll();
+					text->m_scroll_view = (ScrollViewBase *)view;
+				}
+			}
+		}
+#else
 		ScePafWidget_DDB0437F(text, m_url_scheme);
 		if (m_auto_scroll != 0)
 			text->StartAutoScroll((Text::ScrollType)m_auto_scroll);
@@ -2945,6 +3427,7 @@ int32_t TextParam::Set()
 			ScePafWidget_B9F3F203(text, m_auto_scroll_target_friend);
 		if (m_disable_auto_scroll)
 			text->m_auto_scroll_enable = false;
+#endif
 	}
 	return ret;
 }
@@ -2959,10 +3442,14 @@ int32_t TextParam::Get()
 		m_selection_mode = text->m_selection_mode;
 		m_auto_link_detect = text->m_auto_link_detect;
 		m_url_scheme = text->m_url_scheme;
+#ifdef PAF_BUILD_2014
+		m_auto_scroll_speed = text->m_auto_scroll_speed;
+#else
 		if (text->m_auto_scroll != NULL)
 			text->m_auto_scroll->GetSpeed(m_auto_scroll_speed);
 		m_long_press_text_auto_scroll_mode = text->m_touch_auto_scroll;
 		m_disable_auto_scroll = text->m_auto_scroll_enable;
+#endif
 	}
 	return ret;
 }

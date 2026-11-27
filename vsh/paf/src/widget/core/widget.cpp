@@ -2520,6 +2520,7 @@ int32_t Widget::HandleGestureEvent(Event *e)
 
 	int32_t ret = Handler::HandleGestureEvent(e);
 
+#ifndef PAF_BUILD_2014
 	switch (type) {
 	case 7:
 		if ((e->m_type & Event::STATE_CONSUME) != 0)
@@ -2534,6 +2535,7 @@ int32_t Widget::HandleGestureEvent(Event *e)
 		ScePafWidget_727885B3(e);
 		break;
 	}
+#endif
 	return ret;
 }
 
@@ -2802,7 +2804,16 @@ int32_t Widget::EventExecDispatch(Event *e)
 {
 	if (e == NULL)
 		return -1;
+#ifdef PAF_BUILD_2014
+	int32_t result = HandlerProc(e);
 
+	if ((e->m_type & Event::STATE_CONSUME) == 0) {
+		e->m_type = (e->m_type & 0xfff0ffff) | Event::ROUTE_BACK;
+		if (m_parent != NULL && this != static_cast<Widget *>(m_scene))
+			m_parent->EventExecDispatch(e);
+	}
+	return result;
+#else
 	Widget *group = this;
 
 	if (group != NULL) {
@@ -2848,6 +2859,7 @@ routed:
 		}
 	}
 	return result;
+#endif
 }
 
 int32_t Widget::HandleKeycodeEvent(Event *e)
@@ -3420,8 +3432,12 @@ int32_t Widget::SetFocus(bool find_child, int32_t port)
 	if (m_env == NULL)
 		return -3;
 	if (find_child) {
-		FocusSearchInfo info(21);
-		Widget *found = SearchFocus(&info, this, 1);
+		int32_t move[2];
+
+		move[0] = 21;
+		move[1] = 0;
+
+		Widget *found = SearchFocus(&m_env->m_focus_cursor[0], move, true);
 
 		if (found != NULL)
 			return found->SetFocus(false, port);
@@ -3434,57 +3450,72 @@ int32_t Widget::SetFocus(bool find_child, int32_t port)
 	return 0;
 }
 
-Widget *Widget::SearchFocusChildren(FocusSearchInfo *info, Widget *skip)
+Widget *Widget::SearchFocusChildren(FocusInfo *cursor, void *move, Widget *from)
 {
-	if (info == NULL)
+	list<Widget *>::iterator from_it;
+
+	if (from != NULL) {
+		list<Widget *>::iterator it = m_children.begin();
+
+		for (; it != m_children.end(); ++it) {
+			if (*it == from) {
+				from_it = it;
+				break;
+			}
+		}
+		if (it == m_children.end())
+			return NULL;
+	}
+
+	list<Widget *>::iterator begin = m_children.begin();
+	list<Widget *>::iterator end = m_children.end();
+	FocusInfo *env_cursor = &m_env->m_focus_cursor[0];
+
+	if (begin == end)
 		return NULL;
 
-	Widget *found = NULL;
 	int32_t best = 0;
+	Widget *found = NULL;
 
-	info->m_distance = 0;
-	for (list<Widget *>::iterator it = m_children.begin(); it != m_children.end(); ++it) {
+	for (list<Widget *>::iterator it = begin; it != end; ++it) {
 		Widget *child = *it;
 
-		if (child->m_hold_count > 0 || IsShowHeld(child))
-			continue;
-		if (!child->IsInputTarget() || child->m_meta_a_sum < 0.5f)
-			continue;
+		if (child->m_hold_count <= 0 && child != from &&
+		    ((child->m_event_enable & 0x400) != 0 ||
+		     (child->m_focus_count != 0 && !child->m_focus_leaf))) {
+			int32_t score = 0;
 
-		int32_t score = 0;
+			if (!child->m_focus_skip && !child->m_focus_hidden) {
+				Focuser *focuser = child->m_focuser;
 
-		if ((child->m_event_enable & 0x400) != 0 && !child->m_culled &&
-		    child->m_hit_detect_mode != 3) {
-			Focuser *focuser = child->m_focuser;
-
-			if (focuser != NULL)
-				score = focuser->ScePafWidget_97020684(info);
-		}
-		if (best < score) {
-			best = score;
-			found = child;
-		}
-		if (child != skip && child->m_focus_count != 0 && !child->m_focus_leaf &&
-		    child->m_children.size() != 0) {
-			Widget *sub = child->SearchFocusChildren(info, NULL);
-
-			if (best < info->m_distance) {
-				best = info->m_distance;
-				found = sub;
+				if (focuser != NULL)
+					score = focuser->ScePafWidget_97020684(
+						env_cursor, move, from, begin, end, it, from_it);
+			}
+			if (best < score) {
+				found = child;
+				best = score;
 			}
 		}
 	}
-	info->m_distance = best;
+	if (found == NULL)
+		return NULL;
+	if (!found->m_focus_leaf && found->m_focus_count != 0) {
+		Widget *sub = found->SearchFocusChildren(cursor, move, NULL);
+
+		if (sub != NULL)
+			return sub;
+	}
 	return found;
 }
 
-Widget *Widget::SearchFocus(FocusSearchInfo *info, Widget *from, uint32_t mode)
+Widget *Widget::SearchFocus(FocusInfo *cursor, void *move, bool down)
 {
-	if (info == NULL || m_parent == NULL)
+	if (m_parent == NULL)
 		return NULL;
-	if (mode != 0) {
+	if (down) {
 		if (!m_focus_leaf) {
-			Widget *found = SearchFocusChildren(info, NULL);
+			Widget *found = SearchFocusChildren(cursor, move, NULL);
 
 			if (found != NULL)
 				return found;
@@ -3494,14 +3525,94 @@ Widget *Widget::SearchFocus(FocusSearchInfo *info, Widget *from, uint32_t mode)
 		return NULL;
 	}
 	if (!m_focus_skip_sibling) {
-		Widget *found = m_parent->SearchFocusChildren(info, this);
+		Widget *found = m_parent->SearchFocusChildren(cursor, move, this);
 
 		if (found != NULL)
 			return found;
 	}
 	if (this == static_cast<Widget *>(m_scene) || m_focus_stop_parent)
 		return NULL;
-	return m_parent->SearchFocus(info, this, 0);
+	return m_parent->SearchFocus(cursor, move, false);
+}
+
+int32_t DefaultFocusCB(Focuser *focuser, Widget *widget, void *data, FocusInfo *cursor,
+		       void *move, Widget *from, list<Widget *>::iterator begin,
+		       list<Widget *>::iterator end, list<Widget *>::iterator cur,
+		       list<Widget *>::iterator from_it)
+{
+	if (cursor != NULL && cursor->m_target != NULL)
+		from = cursor->m_target;
+	if (from == NULL) {
+		if (widget->m_parent->m_focus_child == widget)
+			return 510;
+		return 1;
+	}
+	if (widget->m_color_alpha < 0.02f && widget->m_state != 3)
+		return 0;
+
+	int32_t dir = 0;
+
+	if (move != NULL)
+		dir = *(int32_t *)move;
+
+	math::v4 to_pos = widget->GetWorldMatrix().w();
+
+	widget->GetSize(0);
+
+	math::v4 from_pos = from->GetWorldMatrix().w();
+
+	from->GetSize(0);
+	if (widget->GetTypeName() == Scene::TypeName()) {
+		for (list<Widget *>::iterator it = widget->m_children.begin();
+		     it != widget->m_children.end(); ++it) {
+			if ((*it)->GetTypeName() != Camera::TypeName())
+				(*it)->GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+		}
+	}
+
+	to_pos.set_z(1.0f);
+	to_pos.set_w(1.0f);
+	from_pos.set_z(1.0f);
+	from_pos.set_w(1.0f);
+
+	math::v4 diff = to_pos - from_pos;
+	float dx = __builtin_fabsf(diff.extract_x());
+	float dy = __builtin_fabsf(diff.extract_y());
+
+	if (dx > 1000.0f)
+		dx = 1000.0f;
+	if (dy > 1000.0f)
+		dy = 1000.0f;
+
+	switch (dir) {
+	case 1:
+		if (diff.extract_y() < 0.0f)
+			return -255;
+		if (dx > dy)
+			return 0;
+		break;
+	case 2:
+		if (diff.extract_y() > 0.0f)
+			return -255;
+		if (dx > dy)
+			return 0;
+		break;
+	case 3:
+		if (diff.extract_x() > 0.0f)
+			return -255;
+		if (dx < dy)
+			return 0;
+		break;
+	case 4:
+		if (diff.extract_x() < 0.0f)
+			return -255;
+		if (dx < dy)
+			return 0;
+		break;
+	default:
+		break;
+	}
+	return (int32_t)((((1000.0f - dx) / 1000.0f) + ((1000.0f - dy) / 1000.0f)) * 255.0f);
 }
 
 extern "C" int32_t ScePafWidget_164BFFA5(Widget *widget, uint32_t mask)
@@ -4143,7 +4254,56 @@ extern "C" float ScePafWidget_F1176ACC(Widget *widget, common::transition::Type 
 int32_t Widget::HandleFocusSwitchEvent(Event *e)
 {
 #ifdef PAF_BUILD_2014
-	return Handler::HandleFocusSwitchEvent(e);
+	if ((uint16_t)e->m_type != 17)
+		return -1;
+
+	uint32_t dir = (uint8_t)e->m_detail;
+	int32_t listener_type;
+
+	if (dir == 1)
+		listener_type = 0x40003;
+	else if (dir == 2)
+		listener_type = 0x40004;
+	else if (dir == 3)
+		listener_type = 0x40005;
+	else if (dir == 4)
+		listener_type = 0x40006;
+	else
+		return -1;
+
+	Widget *cur = NULL;
+	FocusInfo *cursor = NULL;
+
+	if (m_env != NULL) {
+		cur = m_env->GetFocusWidget(0);
+		cursor = &m_env->m_focus_cursor[0];
+	}
+	if (m_map_e_listener.find(listener_type) == m_map_e_listener.end()) {
+		if (cur == m_env->GetFocusWidget(0) && m_focus_target) {
+			int32_t move[2];
+
+			move[0] = (int32_t)dir;
+			move[1] = 0;
+
+			Widget *found = SearchFocus(cursor, move, false);
+
+			if (found != NULL) {
+				found->SetFocus(false, 0);
+				e->m_type = (e->m_type & 0xF0FFFFFF) | Event::STATE_CONSUME;
+				if (m_env != NULL)
+					m_env->m_focus_cursor[0].AddFocusHistory(this, found, dir);
+			}
+		}
+	} else {
+		Handler::HandleFocusSwitchEvent(e);
+		if (m_env != NULL) {
+			Widget *next = m_env->GetFocusWidget(0);
+
+			if (next != NULL)
+				m_env->m_focus_cursor[0].AddFocusHistory(this, next, dir);
+		}
+	}
+	return 0;
 #else
 	Environment *env = m_env;
 
@@ -4494,6 +4654,7 @@ void Widget::SetCursorOn(bool on, Widget *from, Widget *to)
 #endif
 }
 
+#ifndef PAF_BUILD_2014
 void Widget::NotifyCursorGroup(bool on, Widget *from, Widget *to)
 {
 	if (!m_pre_dispatch)
@@ -4514,6 +4675,7 @@ void Widget::NotifyCursorGroup(bool on, Widget *from, Widget *to)
 		DoEvent(537133060, &e);
 	}
 }
+#endif
 
 void Widget::InitCreateParam(const CreateParam *param)
 {
@@ -9412,8 +9574,8 @@ Widget::Widget(Widget *parent, CreateParam *param) : Handler(0x5080)
 #ifndef PAF_BUILD_2014
 	m_focus_in_group = true;
 	m_focus_direction_off = true;
-	m_focus_target = true;
 #endif
+	m_focus_target = true;
 	m_draw_before_children = true;
 	m_debug_events = true;
 	m_input_target = true;

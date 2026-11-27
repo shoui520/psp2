@@ -148,7 +148,11 @@ static inline SceUInt32 sceSasAsCompareAndSwap(volatile SceUInt32 *address, SceU
 }
 
 /* bit 0 of *lock, waiting longer the longer it is held */
+#ifdef SCE_SAS_AS_OUTLINE_LOCKS
+static __attribute__((noinline)) void sceSasAsSpinLock(volatile SceUInt32 *lock)
+#else
 static inline void sceSasAsSpinLock(volatile SceUInt32 *lock)
+#endif
 {
 	volatile SceUInt32 value;
 	volatile SceUInt32 locked;
@@ -171,7 +175,11 @@ static inline void sceSasAsSpinLock(volatile SceUInt32 *lock)
 	} while (sceSasAsCompareAndSwap(lock, value, locked) != value);
 }
 
+#ifdef SCE_SAS_AS_OUTLINE_LOCKS
+static __attribute__((noinline)) void sceSasAsSpinUnlock(volatile SceUInt32 *lock)
+#else
 static inline void sceSasAsSpinUnlock(volatile SceUInt32 *lock)
+#endif
 {
 	volatile SceUInt32 value;
 	volatile SceUInt32 unlocked;
@@ -312,6 +320,46 @@ static inline void sceSasAsMutexUnlock(SceSasAsMutex *mutex)
 }
 
 /* a reference on a handle not destroyed yet: 1, else 0 */
+#ifdef SCE_SAS_AS_OUTLINE_LOCKS
+static __attribute__((noinline)) int sceSasAsRefTryInc(volatile SceInt32 *referenceCount)
+{
+	volatile SceInt32 count;
+	volatile SceInt32 added;
+
+	for (;;) {
+		if ((count = *referenceCount) < 0)
+			return 0;
+		added = count + 1;
+		if ((SceInt32)sceSasAsCompareAndSwap((volatile SceUInt32 *)referenceCount,
+						     count, added) == count)
+			return 1;
+	}
+}
+
+static __attribute__((noinline)) void sceSasAsRefDec(volatile SceInt32 *referenceCount)
+{
+	volatile SceInt32 count;
+	volatile SceInt32 dropped;
+
+	for (;;) {
+		count = *referenceCount;
+		dropped = count - 1;
+		if ((SceInt32)sceSasAsCompareAndSwap((volatile SceUInt32 *)referenceCount,
+						     count, dropped) == count)
+			break;
+	}
+}
+
+static inline int sceSasAsHandleTryAddRef(SceSasAsHandle *handle)
+{
+	return sceSasAsRefTryInc(&handle->referenceCount);
+}
+
+static inline void sceSasAsHandleDropRef(SceSasAsHandle *handle)
+{
+	sceSasAsRefDec(&handle->referenceCount);
+}
+#else
 static inline int sceSasAsHandleTryAddRef(SceSasAsHandle *handle)
 {
 	volatile SceInt32 count;
@@ -340,6 +388,7 @@ static inline void sceSasAsHandleDropRef(SceSasAsHandle *handle)
 			break;
 	}
 }
+#endif
 
 int sceSasAsLog(int level, int code, const char *format, va_list arguments);
 int sceSasAsInitialize(void);

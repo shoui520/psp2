@@ -947,7 +947,11 @@ int32_t TextBox::HandleTouchPress(Event *e)
 		if (hit != NULL && hit->m_widget == this) {
 			math::v2 pos;
 
+#ifdef PAF_BUILD_2014
+			ret = GetTouchTextPos(pos);
+#else
 			ret = GetTouchTextPos(port, id, pos);
+#endif
 			if (ret == 0) {
 				ScePafWidget_55EC0090(this, pos);
 				if (m_touch_state2) {

@@ -41,7 +41,9 @@ static inline __attribute__((always_inline)) math::v4 Vector(float x, float y, f
 /* the cell size a list view starts with (name ours) */
 static math::v4 s_cell_size_default = Vector(80.0f, 80.0f, 0.0f, 0.0f);
 
+#ifndef PAF_BUILD_2014
 static int32_t ListViewFocusCB(Focuser *focuser, Widget *widget, void *data, void *move);
+#endif
 static void AxisPaddingSet(AnimListener *anim, math::v4 data);
 static math::v4 AxisPaddingGet(AnimListener *anim);
 
@@ -1726,12 +1728,14 @@ ListView::ListView(Widget *parent, CreateParam *param)
 	m_item_factory = new listview::ItemFactory;
 	m_cell_map = new listview::CellMap(this);
 
+#ifndef PAF_BUILD_2014
 	Focuser *focuser = new Focuser(ListViewFocusCB);
 
 	delete m_focuser;
 	m_focuser = focuser;
 	if (focuser != NULL)
 		focuser->BindWidget(this);
+#endif
 }
 
 
@@ -3968,6 +3972,7 @@ void ListView::UpdateSize()
 	ScrollViewBase::UpdateSize();
 }
 
+#ifndef PAF_BUILD_2014
 /* the long press text auto scroll the touch of the event holds handed from the button or text it
    captures to the item's text auto scroll target, from the origin it scrolled at (name ours) */
 static void PassTextAutoScroll(ListView *view, Event *e, ListItem *item)
@@ -4075,7 +4080,6 @@ static void PassTextAutoScroll(ListView *view, Event *e, ListItem *item)
 	ScePafWidget_8A5AE1CD(target_text, origin);
 }
 
-#ifndef PAF_BUILD_2014
 /* a move of a front touch whose button or text auto scrolls by a long press: the scroll handed
    to the item the touch is on, and on to the cell next to it where the touch has left it */
 int32_t ListView::HandleTouchEvent(Event *e)
@@ -6419,6 +6423,7 @@ void SegmentHeaderFactory::Dispose(DisposeParam &param)
 
 }
 
+#ifndef PAF_BUILD_2014
 /* the focus moves on from the view only where it is not in the view and the view can take it
    (name ours) */
 static int32_t ListViewFocusCB(Focuser *focuser, Widget *widget, void *data, void *move)
@@ -6430,6 +6435,7 @@ static int32_t ListViewFocusCB(Focuser *focuser, Widget *widget, void *data, voi
 		return 0;
 	return DefaultFocusCB(focuser, widget, data, move);
 }
+#endif
 
 static void AxisPaddingSet(AnimListener *anim, math::v4 data)
 {

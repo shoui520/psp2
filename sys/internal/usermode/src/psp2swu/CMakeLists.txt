@@ -518,7 +518,6 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc SOURCES
 	${PAF}/src/graphics/effects/texture_ops.cpp
 	${PAF}/src/graphics/effects/skydome.cpp
 	${PAF}/src/widget/text_box_edit_menu.cpp
-	${PAF}/src/widget/text_auto_scroll.cpp
 	${PAF}/src/widget/text_box_ime_listener.cpp
 	${PAF}/src/widget/web_ime_listener.cpp
 	${PAF}/src/widget/gesture_drag_ratio.cpp
@@ -763,7 +762,7 @@ set_source_files_properties(
 	${PAF}/src/widget/w_radio_box.cpp ${PAF}/src/widget/w_radio_button.cpp
 	${PAF}/src/widget/w_rich_text.cpp ${PAF}/src/widget/w_scene.cpp
 	${PAF}/src/widget/w_text.cpp ${PAF}/src/widget/w_text_box.cpp
-	${PAF}/src/widget/wutil.cpp ${PAF}/src/widget/text_auto_scroll.cpp
+	${PAF}/src/widget/wutil.cpp
 	${PAF}/src/widget/w_scroll_view.cpp ${PAF}/src/widget/w_scroll_view_base.cpp
 	${PAF}/src/widget/w_scrollbar.cpp ${PAF}/src/widget/w_scrollbar2d.cpp
 	${PAF}/src/widget/w_scrollbar_touch.cpp ${PAF}/src/widget/w_slidebar.cpp

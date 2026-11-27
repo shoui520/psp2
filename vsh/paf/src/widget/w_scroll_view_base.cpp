@@ -43,6 +43,7 @@
 namespace paf {
 namespace ui {
 
+#ifndef PAF_BUILD_2014
 /* the analog sticks' listener of the scroll views: it finds the view under the focus and moves
    it (names ours, after its string "AnalogScrollListener::") */
 class AnalogScrollListener : public UIInputGestureListener {
@@ -123,6 +124,7 @@ public:
 	vector<ScrollViewBase *> m_views;
 	common::SharedPtr<inputdevice::InputListener> m_listener;
 };
+#endif
 
 /* the front touch port's listener of the scroll views: each update their view parents are put
    back in place (name ours) */
@@ -620,7 +622,9 @@ public:
 /* a zero made at start-up that nothing reads (Sony's __sti stores it; name ours) */
 static const sce::Vectormath::Simd::floatInVec s_zero(0.0f);
 
+#ifndef PAF_BUILD_2014
 static AnalogScrollSupplier s_analog_scroll_supplier;
+#endif
 static TouchScrollSupplier s_touch_scroll_supplier;
 
 /* the widget as a ScrollBarTouch, NULL where it is none */
@@ -657,6 +661,7 @@ static inline bool IsAnalogScrollable(ScrollViewBase *view)
 	       ToScrollBarTouch(view->m_vertical_bar) == NULL;
 }
 
+#ifndef PAF_BUILD_2014
 /* the view moved by the stick: stopped for no move, else its velocity takes the move while it
    can still scroll that way; false while a touch or a snap holds the view (name ours) */
 static inline bool MoveViewByAnalog(ScrollViewBase *view, const math::v2 &move)
@@ -774,6 +779,7 @@ void AnalogScrollListener::OnUpdate(const inputdevice::Data *data)
 		break;
 	}
 }
+#endif
 
 /* the view parent's layouter: the view laid out again with it (names ours) */
 class ScrollViewParentLayouter : public Layouter {
@@ -815,8 +821,10 @@ public:
 	ScrollViewBase *m_view;
 };
 
+#ifndef PAF_BUILD_2014
 /* the view's focus moves only to a widget outside its view parent, and only while it moves */
 static int32_t ScrollViewBaseFocusCB(Focuser *focuser, Widget *widget, void *data, void *move);
+#endif
 
 ScrollViewScrollParam::ScrollViewScrollParam()
 {
@@ -998,10 +1006,13 @@ ScrollViewBase::ScrollViewBase(Widget *parent, CreateParam *param)
 	SetDefaultScrollBar();
 	SetScrollBarController(new ScrollViewScrollBarController);
 	ScePafWidget_82A61BBC(this);
+#ifndef PAF_BUILD_2014
 	s_analog_scroll_supplier.Register(this);
+#endif
 	s_touch_scroll_supplier.Register(this);
 	EnableOverScroll(true);
 	ScePafWidget_00AA6519(this);
+#ifndef PAF_BUILD_2014
 	m_pre_dispatch = true;
 
 	Focuser *focuser = new Focuser(ScrollViewBaseFocusCB);
@@ -1010,6 +1021,7 @@ ScrollViewBase::ScrollViewBase(Widget *parent, CreateParam *param)
 	m_focuser = focuser;
 	if (focuser != NULL)
 		focuser->BindWidget(this);
+#endif
 }
 
 ScrollViewBaseParam::ScrollViewBaseParam()
@@ -1814,7 +1826,9 @@ void TouchScrollSupplier::Release(ScrollViewBase *view)
 void ScrollViewBase::DestroyWidget()
 {
 	s_touch_scroll_supplier.Unregister(this);
+#ifndef PAF_BUILD_2014
 	s_analog_scroll_supplier.Unregister(this);
+#endif
 	ScePafWidget_A89BE22F(this);
 	s_touch_scroll_supplier.Release(this);
 	if (m_debug != NULL) {
@@ -2071,9 +2085,12 @@ int32_t ScrollViewBase::HandleKeycodeEvent(Event *e)
 				e->Consume();
 			break;
 		default:
+#ifndef PAF_BUILD_2014
 			if (m_pre_dispatch && (e->m_type & 0x40000000) != 0 &&
 			    (e->m_type & Event::ROUTE_TERM) != 0)
 				return 0;
+#endif
+			break;
 		}
 
 		uint32_t type = e->GetType();
@@ -5667,6 +5684,7 @@ void TouchScrollListener::OnUpdate(const inputdevice::Data *data)
 	s_touch_scroll_supplier.Update();
 }
 
+#ifndef PAF_BUILD_2014
 /* the focus moves on from the view only where it is not in the view and the view moves
    (name ours) */
 static int32_t ScrollViewBaseFocusCB(Focuser *focuser, Widget *widget, void *data, void *move)
@@ -5678,6 +5696,7 @@ static int32_t ScrollViewBaseFocusCB(Focuser *focuser, Widget *widget, void *dat
 		return 0;
 	return DefaultFocusCB(focuser, widget, data, move);
 }
+#endif
 
 }
 }

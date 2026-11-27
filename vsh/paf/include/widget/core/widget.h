@@ -428,13 +428,29 @@ public:
 	Widget *m_widget[4];
 };
 
+class FocusInfo;
+
 /* what a Focuser calls to move the focus: the focuser, its widget, and what Focus was given
    (name ours) */
+#ifdef PAF_BUILD_2014
+typedef int32_t (*FocusCB)(Focuser *focuser, Widget *widget, void *data, FocusInfo *cursor,
+			   void *move, Widget *from, list<Widget *>::iterator begin,
+			   list<Widget *>::iterator end, list<Widget *>::iterator cur,
+			   list<Widget *>::iterator from_it);
+
+/* the callback moving the focus to the nearest widget the way it moves (0x8107dd34 in 2014;
+   name ours) */
+int32_t DefaultFocusCB(Focuser *focuser, Widget *widget, void *data, FocusInfo *cursor,
+		       void *move, Widget *from, list<Widget *>::iterator begin,
+		       list<Widget *>::iterator end, list<Widget *>::iterator cur,
+		       list<Widget *>::iterator from_it);
+#else
 typedef int32_t (*FocusCB)(Focuser *focuser, Widget *widget, void *data, void *move);
 
 /* the callback moving the focus to the nearest widget the way it moves (0x81146794 TOOL; name
    ours) */
 int32_t DefaultFocusCB(Focuser *focuser, Widget *widget, void *data, void *move);
+#endif
 
 /* a widget's focus: the function that moves it, and the hint where it goes (names ours) */
 class Focuser {
@@ -448,7 +464,11 @@ public:
 	{
 	}
 
-	virtual int32_t ScePafWidget_97020684(void *move);
+	virtual int32_t ScePafWidget_97020684(FocusInfo *cursor, void *move, Widget *from,
+					      list<Widget *>::iterator begin,
+					      list<Widget *>::iterator end,
+					      list<Widget *>::iterator cur,
+					      list<Widget *>::iterator from_it);
 
 	void BindWidget(Widget *w)
 	{
@@ -1297,7 +1317,9 @@ public:
 	void SetCursorOn(bool on, Widget *from, Widget *to);
 	/* the same for the focus events 0x403 and 0x404 of a widget that takes its children's events
 	   first (0x81160a0c; name ours) */
+#ifndef PAF_BUILD_2014
 	void NotifyCursorGroup(bool on, Widget *from, Widget *to);
+#endif
 
 	math::v4 *GetSize(int32_t opt);
 	math::v4 *GetScale(int32_t opt);
@@ -1659,6 +1681,10 @@ public:
 	   widget are not held (as DB0FFD33 says) and its own focus root has no move pending (0x81155196;
 	   name ours) */
 	bool IsFocusFree();
+#ifdef PAF_BUILD_2014
+	Widget *SearchFocusChildren(FocusInfo *cursor, void *move, Widget *from);
+	Widget *SearchFocus(FocusInfo *cursor, void *move, bool down);
+#else
 	/* the best widget among its children and theirs for the focus search; the search's
 	   m_distance gets its score (0x81160ba4; name ours) */
 	Widget *SearchFocusChildren(FocusSearchInfo *info, Widget *skip);
@@ -1667,6 +1693,7 @@ public:
 	   scenes of its entry (mode 0 and above 1); the search's m_distance gets its score
 	   (0x81160d82; name ours) */
 	Widget *SearchFocus(FocusSearchInfo *info, Widget *from, uint32_t mode);
+#endif
 	/* a touch or key may reach it: an input target, shown and in no transition, and not
 	   destroy protected (inline in Sony's code: ButtonBase's press, TouchScrollSupplier's rear
 	   mochi gesture; name ours) */
@@ -1737,7 +1764,7 @@ public:
 	bool m_touch_front_event : 1;
 	bool m_touch_rear_event : 1;
 	bool m_focused : 1;
-	bool m_pre_dispatch : 1;
+	bool m_focus_target : 1;
 	bool m_focus_skip : 1;
 	bool m_focus_leaf : 1;
 	bool m_focus_stop_parent : 1;

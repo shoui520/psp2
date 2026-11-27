@@ -63,7 +63,9 @@ SpinBase::SpinBase(Widget *parent, CreateParam *param)
 	m_hit_check = 1;
 	m_hit_detect_mode = 0;
 	m_hit_detect_b_mode = 0;
+#ifndef PAF_BUILD_2014
 	m_pre_dispatch = 1;
+#endif
 
 	graph::DrawStyle base_style;
 

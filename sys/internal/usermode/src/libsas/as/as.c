@@ -9,6 +9,9 @@
 #include <kernel/threadmgr.h>
 
 #include "as_ssp.h"
+#if defined(SCE_SAS_STATIC_RUNTIME) && defined(PAF_BUILD_2014)
+#define SCE_SAS_AS_OUTLINE_LOCKS
+#endif
 #include "as.h"
 #include "as_buss.h"
 #include "as_core.h"
@@ -307,11 +310,48 @@ int sceSasAsHandleCreate(SceSasAsHandle *parent, const char *className, const ch
 	return 0;
 }
 
-int sceSasAsHandleDestroy(SceSasAsHandle *handle, void **buffer, SceSize *size)
+#if defined(SCE_SAS_STATIC_RUNTIME) && defined(PAF_BUILD_2014)
+static __attribute__((noinline)) int sceSasAsUnlinkHandle(SceSasAsHandle *handle)
 {
 	SceSasAsHandle *parent;
-	SceSasAsHandle *child;
 	SceSasAsHandle **link;
+
+	parent = handle->parent;
+	if (parent != NULL) {
+		if (parent->magic == SCE_SAS_AS_HANDLE_MAGIC && sceSasAsHandleTryAddRef(parent)) {
+			sceSasAsSpinLock(&parent->lock);
+			for (link = &parent->children; *link != NULL; link = &(*link)->next) {
+				if (*link == handle) {
+					*link = handle->next;
+					parent->class->removeChild(parent, handle);
+					break;
+				}
+			}
+			sceSasAsSpinUnlock(&parent->lock);
+			sceSasAsHandleDropRef(parent);
+			return 0;
+		}
+		return SCE_SAS_AS_ERROR_INVALID_ARGUMENT;
+	}
+	sceSasAsSpinLock(&sceSasAsRootLock);
+	for (link = &sceSasAsRootHandles; *link != NULL; link = &(*link)->next) {
+		if (*link == handle) {
+			*link = handle->next;
+			break;
+		}
+	}
+	sceSasAsSpinUnlock(&sceSasAsRootLock);
+	return 0;
+}
+#endif
+
+int sceSasAsHandleDestroy(SceSasAsHandle *handle, void **buffer, SceSize *size)
+{
+#if !defined(SCE_SAS_STATIC_RUNTIME) || !defined(PAF_BUILD_2014)
+	SceSasAsHandle *parent;
+	SceSasAsHandle **link;
+#endif
+	SceSasAsHandle *child;
 	int ret;
 
 	if (handle == NULL || handle->magic != SCE_SAS_AS_HANDLE_MAGIC)
@@ -336,6 +376,9 @@ int sceSasAsHandleDestroy(SceSasAsHandle *handle, void **buffer, SceSize *size)
 	if (handle->class->destroy(handle) < 0)
 		sceSasAsError(SCE_SAS_AS_ERROR_BUSY, "Failed to destroy AS handle. (%p,%s)\n",
 			      handle, handle->class->name);
+#if defined(SCE_SAS_STATIC_RUNTIME) && defined(PAF_BUILD_2014)
+	sceSasAsUnlinkHandle(handle);
+#else
 	parent = handle->parent;
 	if (parent != NULL) {
 		if (parent->magic == SCE_SAS_AS_HANDLE_MAGIC && sceSasAsHandleTryAddRef(parent)) {
@@ -360,6 +403,7 @@ int sceSasAsHandleDestroy(SceSasAsHandle *handle, void **buffer, SceSize *size)
 		}
 		sceSasAsSpinUnlock(&sceSasAsRootLock);
 	}
+#endif
 	if (buffer != NULL)
 		*buffer = handle->buffer;
 	if (size != NULL)

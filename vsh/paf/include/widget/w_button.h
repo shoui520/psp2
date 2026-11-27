@@ -15,7 +15,9 @@
 #include <math/ngp/v2.h>
 #include <math/ngp/v4.h>
 #include <widget/core/layouter.h>
+#ifndef PAF_BUILD_2014
 #include <widget/text_auto_scroll.h>
+#endif
 #include <widget/w_button_base.h>
 
 namespace paf {
@@ -85,8 +87,10 @@ public:
 
 	/* the texture animation of the background, forward as it is pressed (export 81FC2E6A) */
 	void DoTexAnim(bool forward);
+#ifndef PAF_BUILD_2014
 	/* whether its label or a text among its children scrolls (export AC592A89) */
 	int32_t IsTextAutoScroll();
+#endif
 	void GetChildrenFitGeometry(math::v4 *size, math::v4 *offs);
 	void GetFitGeometry(math::v4 *size, math::v4 *offs) const;
 	math::v4 GetLayoutSize(const math::v4 &fit_size, const math::v4 &offs) const;
@@ -105,8 +109,10 @@ public:
 	   "frame_num", "frame_time") */
 	int32_t m_frame_num;
 	float m_frame_time;
+#ifndef PAF_BUILD_2014
 	/* the label's auto scroll, made when it first starts */
 	TextAutoScroll *m_text_auto_scroll;
+#endif
 };
 
 /* a Button's resource parameters: the long press that scrolls its label */

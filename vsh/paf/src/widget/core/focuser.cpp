@@ -13,6 +13,7 @@
 namespace paf {
 namespace ui {
 
+#ifndef PAF_BUILD_2014
 /*
  * An object Sony's file builds at startup and destroys at exit, and nothing in the module
  * reads: two vectors of plain values and a factor of 1 (0x813142e0 CEX). Nothing names it or
@@ -34,6 +35,7 @@ public:
 };
 
 static FocusWork s_focus_work;
+#endif
 
 #ifndef PAF_BUILD_2014
 /* the widget of the direction, the first for any other value (ScePafWidget_71349B04 inlined) */
@@ -111,6 +113,23 @@ void Focuser::GetHintID(int32_t dir, IDParam *id)
 }
 #endif
 
+#ifdef PAF_BUILD_2014
+int32_t Focuser::ScePafWidget_97020684(FocusInfo *cursor, void *move, Widget *from,
+				       list<Widget *>::iterator begin,
+				       list<Widget *>::iterator end,
+				       list<Widget *>::iterator cur,
+				       list<Widget *>::iterator from_it)
+{
+	if (m_widget == NULL)
+		return 0;
+
+	int32_t ret = 0;
+
+	if (m_cb != NULL)
+		ret = m_cb(this, m_widget, NULL, cursor, move, from, begin, end, cur, from_it);
+	return ret;
+}
+#else
 int32_t Focuser::ScePafWidget_97020684(void *move)
 {
 	if (m_widget == NULL)
@@ -366,6 +385,7 @@ int32_t DefaultFocusCB(Focuser *focuser, Widget *widget, void *data, void *move)
 	candidate.m_half_view = math::v2(view.extract_x() * 0.5f, view.extract_y() * 0.5f);
 	return ScePafWidget_5D4941E8(&candidate, info);
 }
+#endif
 
 #ifndef PAF_BUILD_2014
 /* whether the widget's hint says its own place and size are searched, not a rectangle */
@@ -428,6 +448,7 @@ extern "C" void ScePafWidget_EA117CF8(Widget::FocusSearchInfo *info, Widget *wid
 }
 }
 
+#ifndef PAF_BUILD_2014
 /* two exports with nothing to do, called by Widget::HandleGestureEvent after a gesture of type 7 or
    10 it consumed and of type 9 or 12 (no name found) */
 extern "C" void ScePafWidget_8A132DF7(paf::ui::Event *e, paf::ui::Widget *widget, bool on)
@@ -437,3 +458,4 @@ extern "C" void ScePafWidget_8A132DF7(paf::ui::Event *e, paf::ui::Widget *widget
 extern "C" void ScePafWidget_727885B3(paf::ui::Event *e)
 {
 }
+#endif

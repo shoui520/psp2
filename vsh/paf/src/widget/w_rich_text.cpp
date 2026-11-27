@@ -250,7 +250,10 @@ void RichText::CreateItemWidget(Item *item)
 {
 	switch (item->m_type) {
 	case ITEM_TYPE_TEXT:
-	case ITEM_TYPE_LINK_TEXT: {
+#ifndef PAF_BUILD_2014
+	case ITEM_TYPE_LINK_TEXT:
+#endif
+	{
 		TextItem *text_item = (TextItem *)item;
 		Text *text = new Text(m_view_parent, NULL);
 
@@ -265,12 +268,14 @@ void RichText::CreateItemWidget(Item *item)
 		text->SetStyleAttribute(graph::TextStyleAttribute_Bold, 0, 0, text_item->m_bold);
 		text->SetLayoutAttribute(graph::TextLayoutAttribute_AlignY, 2);
 		text->SetString(wstring(text_item->m_text));
+#ifndef PAF_BUILD_2014
 		if (item->m_type == ITEM_TYPE_LINK_TEXT) {
 			ScePafWidget_4D5F35D5(text, 0, sce_paf_wcslen(text_item->m_text));
 			text->AddEventListener(0x10000003,
 					       new LinkListener(this,
 								((LinkTextItem *)item)->m_link));
 		}
+#endif
 		break;
 	}
 	case ITEM_TYPE_IMAGE: {
