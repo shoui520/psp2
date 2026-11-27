@@ -369,6 +369,18 @@ ParserFilterBase::~ParserFilterBase()
 {
 }
 
+/* ===== AudioParserBase (vtable 0x8153467C) ===== */
+
+AudioParserBase::AudioParserBase(int workerKind, const char *threadName)
+    : ParserFilterBase(workerKind, threadName)
+{
+}
+
+/* 0x81207894 / 0x812078B6 */
+AudioParserBase::~AudioParserBase()
+{
+}
+
 /* 0x8120751C */
 void ParserFilterBase::setOutputPipe(PipeInterface *pipe)
 {

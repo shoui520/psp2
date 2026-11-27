@@ -174,32 +174,34 @@ int mapAt9ParserError(uint32_t errCode)
 
 /* ===== At9Parser (0x811FB0FC - 0x811FBF43, size 168 bytes) ===== */
 
-class At9Parser : public ParserFilterBase {
+class At9Parser : public AudioParserBase {
 public:
     At9Parser(const char *threadName, int playMode, int loopCount);
     virtual ~At9Parser();
 
     virtual int onFrameConsumed(int frameFlags) { (void)frameFlags; return 0; }
-    virtual int openStream() { return onStart(); }
-    virtual int closeStream() { return onStop(); }
-    virtual int produceFrame(MediaFrameBuffer *outBuf)
-    {
-        return readFrame(reinterpret_cast<At9PacketOut *>(outBuf));
-    }
+    virtual int openStream();
+    virtual int closeStream();
+    virtual int produceFrame(MediaFrameBuffer *outBuf);
 
-    int findCachedMediaInfo(const char *path, At9MediaInfo **outInfo);
-    int setMediaInfo(At9MediaInfo *mediaInfo);
-    int prefetchMediaInfo(At9MediaInfo *mediaInfo);
-    int setStartPosition(int startMs);
+    virtual int findCachedMediaInfo(const char *path, MediaInfoHandle **outInfo);
+    virtual int setMediaInfo(MediaInfoHandle *mediaInfo);
+    virtual int prefetchMediaInfo(MediaInfoHandle *mediaInfo);
+    virtual bool hasNextMedia() const { return m_nextMedia != NULL; }
+    virtual void *getCodecConfig(uint32_t *outSize);
+    virtual void setPlaySpeed(int speed) { m_requestedSpeed = (speed == 1) ? 1 : (speed & ~1); }
+    virtual int setStartPosition(int startMs);
+    virtual int setEndPosition(int endMs);
+    virtual int getDurationMs();
+    virtual int seekPosition(int positionMs) { (void)positionMs; return 0; }
+    virtual int resetPosition();
+    virtual int getPlaySpeed() const { return m_requestedSpeed; }
+    virtual int getStartPosition() const { return m_rawStartMs; }
+    virtual int getEndPosition() const { return m_rawEndMs; }
+    virtual bool isInitialized() const { return ActiveFilterBase::isInitialized(); }
+
     int parseAt9Header(uint8_t scanMask);
-    int setEndPosition(int endMs);
-    int resetPosition();
-    int getDurationMs();
-    int onStart();
-    int onStop();
     void initFramePosition(At9PacketOut *outPkt, int frameIdx, uint32_t sampleOffset, int startMs);
-    int readFrame(At9PacketOut *outPkt);
-    At9CodecConfigPayload *getCodecConfig(uint32_t *outSize);
 
     int m_playMode;                    /* +48 */
     int m_requestedSpeed;              /* +52 */
@@ -236,7 +238,7 @@ public:
 
 /* 0x811FB0FC */
 At9Parser::At9Parser(const char *threadName, int playMode, int loopCount)
-    : ParserFilterBase(1, threadName)
+    : AudioParserBase(1, threadName)
     , m_playMode(playMode)
     , m_requestedSpeed(0)
     , m_activeSpeed(0)
@@ -292,7 +294,7 @@ At9Parser::~At9Parser()
 }
 
 /* 0x811FB226 */
-int At9Parser::findCachedMediaInfo(const char *path, At9MediaInfo **outInfo)
+int At9Parser::findCachedMediaInfo(const char *path, MediaInfoHandle **outInfo)
 {
     if (path == NULL) {
         *outInfo = NULL;
@@ -316,11 +318,12 @@ int At9Parser::findCachedMediaInfo(const char *path, At9MediaInfo **outInfo)
 }
 
 /* 0x811FB29E */
-int At9Parser::setMediaInfo(At9MediaInfo *mediaInfo)
+int At9Parser::setMediaInfo(MediaInfoHandle *handle)
 {
-    if (mediaInfo == NULL || mediaInfo->mediaFourcc != FOURCC_AT9) {
+    if (handle == NULL || handle->mediaFourcc != FOURCC_AT9) {
         return PARSER_ERR_BAD_PARAM;
     }
+    At9MediaInfo *mediaInfo = static_cast<At9MediaInfo *>(handle);
     if (mediaInfo->cacheIo == NULL) {
         MediaInfoHandle *badHandle = mediaInfo;
         decoderManagerReleaseMediaInfo(&badHandle, 1);
@@ -385,11 +388,12 @@ int At9Parser::setMediaInfo(At9MediaInfo *mediaInfo)
 }
 
 /* 0x811FB3FE */
-int At9Parser::prefetchMediaInfo(At9MediaInfo *mediaInfo)
+int At9Parser::prefetchMediaInfo(MediaInfoHandle *handle)
 {
-    if (mediaInfo == NULL || mediaInfo->mediaFourcc != FOURCC_AT9) {
+    if (handle == NULL || handle->mediaFourcc != FOURCC_AT9) {
         return PARSER_ERR_BAD_PARAM;
     }
+    At9MediaInfo *mediaInfo = static_cast<At9MediaInfo *>(handle);
     if (mediaInfo->cacheIo == NULL) {
         return -1;
     }
@@ -567,7 +571,7 @@ int At9Parser::getDurationMs()
 }
 
 /* 0x811FB896 */
-int At9Parser::onStart()
+int At9Parser::openStream()
 {
     if (m_activeCacheIo == NULL) {
         return PARSER_ERR_NO_SOURCE;
@@ -581,7 +585,7 @@ int At9Parser::onStart()
 }
 
 /* 0x811FB8D2 */
-int At9Parser::onStop()
+int At9Parser::closeStream()
 {
     if (m_activeCacheIo == NULL) {
         return PARSER_ERR_NO_SOURCE;
@@ -612,8 +616,9 @@ void At9Parser::initFramePosition(At9PacketOut *outPkt, int frameIdx,
 }
 
 /* 0x811FB95C */
-int At9Parser::readFrame(At9PacketOut *outPkt)
+int At9Parser::produceFrame(MediaFrameBuffer *outBuf)
 {
+    At9PacketOut *outPkt = reinterpret_cast<At9PacketOut *>(outBuf);
     if (m_activeCacheIo == NULL) {
         return PARSER_ERR_NO_SOURCE;
     }
@@ -746,7 +751,7 @@ int At9Parser::readFrame(At9PacketOut *outPkt)
 }
 
 /* 0x811FBD26 */
-At9CodecConfigPayload *At9Parser::getCodecConfig(uint32_t *outSize)
+void *At9Parser::getCodecConfig(uint32_t *outSize)
 {
     m_codecCfg.status = 0;
     sce_paf_memset(m_codecCfg.configData, 0, sizeof(m_codecCfg.configData));

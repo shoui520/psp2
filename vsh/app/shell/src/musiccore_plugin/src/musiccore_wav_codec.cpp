@@ -146,30 +146,35 @@ static int mapWavParserError(int errCode)
 
 /* ===== WavParser (0x811FA3F4 - 0x811FAE27, size 112 bytes) ===== */
 
-class WavParser : public ParserFilterBase {
+class WavParser : public AudioParserBase {
 public:
     explicit WavParser(const char *threadName);
     virtual ~WavParser();
 
+    virtual int onPipeConsumed(int frameFlags);
+    virtual int onPipeUnderflow();
     virtual int onFrameConsumed(int frameFlags) { (void)frameFlags; return 0; }
-    virtual int openStream() { return onStart(); }
-    virtual int closeStream() { return onStop(); }
-    virtual int produceFrame(MediaFrameBuffer *outBuf)
-    {
-        return readFrame(reinterpret_cast<WavPcmPacketOut *>(outBuf));
-    }
+    virtual int openStream();
+    virtual int closeStream();
+    virtual int produceFrame(MediaFrameBuffer *outBuf);
 
-    int findCachedMediaInfo(const char *path, WavMediaInfo **outInfo);
-    int setMediaInfo(WavMediaInfo *mediaInfo);
-    int prefetchMediaInfo(WavMediaInfo *mediaInfo);
-    int setStartPosition(int startMs);
-    int setEndPosition(int endMs);
-    int resetPosition();
+    virtual int findCachedMediaInfo(const char *path, MediaInfoHandle **outInfo);
+    virtual int setMediaInfo(MediaInfoHandle *mediaInfo);
+    virtual int prefetchMediaInfo(MediaInfoHandle *mediaInfo);
+    virtual bool hasNextMedia() const { return m_nextMedia != NULL; }
+    virtual void *getCodecConfig(uint32_t *outSize) { *outSize = 0; return NULL; }
+    virtual void setPlaySpeed(int speed) { m_requestedSpeed = (speed == 1) ? 1 : (speed & ~1); }
+    virtual int setStartPosition(int startMs);
+    virtual int setEndPosition(int endMs);
+    virtual int getDurationMs();
+    virtual int seekPosition(int positionMs) { (void)positionMs; return 0; }
+    virtual int resetPosition();
+    virtual int getPlaySpeed() const { return m_requestedSpeed; }
+    virtual int getStartPosition() const { return m_startPosMs; }
+    virtual int getEndPosition() const { return m_endPosMs; }
+    virtual bool isInitialized() const { return ActiveFilterBase::isInitialized(); }
+
     int parseWaveHeader();
-    int getDurationMs();
-    int onStart();
-    int onStop();
-    int readFrame(WavPcmPacketOut *outPkt);
 
     int m_requestedSpeed;              /* +48 */
     int m_activeSpeed;                 /* +52 */
@@ -193,7 +198,7 @@ public:
 
 /* 0x811FA3F4 */
 WavParser::WavParser(const char *threadName)
-    : ParserFilterBase(1, threadName)
+    : AudioParserBase(1, threadName)
     , m_requestedSpeed(0)
     , m_activeSpeed(0)
     , m_startPosMs(-1)
@@ -232,8 +237,23 @@ WavParser::~WavParser()
     }
 }
 
+/* 0x811FADE0 */
+int WavParser::onPipeConsumed(int frameFlags)
+{
+    int ret = onFrameConsumed(frameFlags);
+    syncEventSignal(&m_wakeEvent, 4u);
+    return ret;
+}
+
+/* 0x811FADFA */
+int WavParser::onPipeUnderflow()
+{
+    syncEventSignal(&m_wakeEvent, 4u);
+    return 0;
+}
+
 /* 0x811FA51C */
-int WavParser::findCachedMediaInfo(const char *path, WavMediaInfo **outInfo)
+int WavParser::findCachedMediaInfo(const char *path, MediaInfoHandle **outInfo)
 {
     if (path == NULL) {
         *outInfo = NULL;
@@ -257,11 +277,12 @@ int WavParser::findCachedMediaInfo(const char *path, WavMediaInfo **outInfo)
 }
 
 /* 0x811FA58C */
-int WavParser::setMediaInfo(WavMediaInfo *mediaInfo)
+int WavParser::setMediaInfo(MediaInfoHandle *handle)
 {
-    if (mediaInfo == NULL || mediaInfo->mediaFourcc != FOURCC_WAV) {
+    if (handle == NULL || handle->mediaFourcc != FOURCC_WAV) {
         return PARSER_ERR_BAD_PARAM;
     }
+    WavMediaInfo *mediaInfo = static_cast<WavMediaInfo *>(handle);
     if (mediaInfo->cacheIo == NULL) {
         MediaInfoHandle *badHandle = mediaInfo;
         decoderManagerReleaseMediaInfo(&badHandle, 1);
@@ -325,11 +346,12 @@ int WavParser::setMediaInfo(WavMediaInfo *mediaInfo)
 }
 
 /* 0x811FA6C4 */
-int WavParser::prefetchMediaInfo(WavMediaInfo *mediaInfo)
+int WavParser::prefetchMediaInfo(MediaInfoHandle *handle)
 {
-    if (mediaInfo == NULL || mediaInfo->mediaFourcc != FOURCC_WAV) {
+    if (handle == NULL || handle->mediaFourcc != FOURCC_WAV) {
         return PARSER_ERR_BAD_PARAM;
     }
+    WavMediaInfo *mediaInfo = static_cast<WavMediaInfo *>(handle);
     if (mediaInfo->cacheIo == NULL) {
         return -1;
     }
@@ -474,7 +496,7 @@ int WavParser::getDurationMs()
 }
 
 /* 0x811FAA76 */
-int WavParser::onStart()
+int WavParser::openStream()
 {
     if (m_activeCacheIo == NULL) {
         return PARSER_ERR_NO_SOURCE;
@@ -488,7 +510,7 @@ int WavParser::onStart()
 }
 
 /* 0x811FAAAC */
-int WavParser::onStop()
+int WavParser::closeStream()
 {
     if (m_activeCacheIo == NULL) {
         return PARSER_ERR_NO_SOURCE;
@@ -498,8 +520,9 @@ int WavParser::onStop()
 }
 
 /* 0x811FAAC2 */
-int WavParser::readFrame(WavPcmPacketOut *outPkt)
+int WavParser::produceFrame(MediaFrameBuffer *outBuf)
 {
+    WavPcmPacketOut *outPkt = reinterpret_cast<WavPcmPacketOut *>(outBuf);
     if (m_activeCacheIo == NULL) {
         return PARSER_ERR_NO_SOURCE;
     }

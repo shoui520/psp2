@@ -235,34 +235,31 @@ static int mapMp4ReadIoError(uint32_t errCode)
 
 /* ===== Mp4Parser (0x811F8F24 - 0x811FA247, size 136 bytes) ===== */
 
-class Mp4Parser : public ParserFilterBase {
+class Mp4Parser : public AudioParserBase {
 public:
     Mp4Parser(const char *threadName, int playMode);
     virtual ~Mp4Parser();
 
-    virtual int onFrameConsumed(int frameFlags) { (void)frameFlags; return 0; }
-    virtual bool isInitialized() const;
-    virtual int openStream() { return onStart(); }
-    virtual int closeStream() { return onStop(); }
-    virtual int produceFrame(MediaFrameBuffer *outBuf)
-    {
-        return readFrame(reinterpret_cast<ParserPacketOut *>(outBuf));
-    }
+    virtual int onFrameConsumed(int frameFlags);
+    virtual int openStream();
+    virtual int closeStream();
+    virtual int produceFrame(MediaFrameBuffer *outBuf);
 
-    int findCachedMediaInfo(const char *path, Mp4MediaInfo **outInfo);
-    int setMediaInfo(Mp4MediaInfo *mediaInfo);
-    int prefetchMediaInfo(Mp4MediaInfo *mediaInfo);
-    Mp4CodecConfigPayload *getCodecConfig(uint32_t *outSize);
-    void setPlaySpeed(int speed);
-    int setStartPosition(int startMs);
-    int setEndPosition(int endMs);
-    int getDurationMs();
-    int seekPosition(int positionMs);
-    int resetPosition();
-    int queryMetadata(void *metaOut);
-    int onStart();
-    int onStop();
-    int readFrame(ParserPacketOut *outPkt);
+    virtual int findCachedMediaInfo(const char *path, MediaInfoHandle **outInfo);
+    virtual int setMediaInfo(MediaInfoHandle *mediaInfo);
+    virtual int prefetchMediaInfo(MediaInfoHandle *mediaInfo);
+    virtual bool hasNextMedia() const { return m_nextMedia != NULL; }
+    virtual void *getCodecConfig(uint32_t *outSize);
+    virtual void setPlaySpeed(int speed);
+    virtual int setStartPosition(int startMs);
+    virtual int setEndPosition(int endMs);
+    virtual int getDurationMs();
+    virtual int seekPosition(int positionMs);
+    virtual int resetPosition();
+    virtual int getPlaySpeed() const { return m_requestedSpeed; }
+    virtual int getStartPosition() const { return m_startPosMs; }
+    virtual int getEndPosition() const { return m_endPosMs; }
+    virtual bool isInitialized() const;
 
     int m_playMode;                      /* +48 */
     int m_requestedSpeed;                /* +52 */
@@ -289,7 +286,7 @@ public:
 
 /* 0x811F8F24 */
 Mp4Parser::Mp4Parser(const char *threadName, int playMode)
-    : ParserFilterBase(1, threadName)
+    : AudioParserBase(1, threadName)
     , m_playMode(playMode)
     , m_requestedSpeed(0)
     , m_startPosMs(-1)
@@ -355,7 +352,7 @@ bool Mp4Parser::isInitialized() const
 }
 
 /* 0x811F903A */
-int Mp4Parser::findCachedMediaInfo(const char *path, Mp4MediaInfo **outInfo)
+int Mp4Parser::findCachedMediaInfo(const char *path, MediaInfoHandle **outInfo)
 {
     if (path == NULL) {
         *outInfo = NULL;
@@ -380,11 +377,12 @@ int Mp4Parser::findCachedMediaInfo(const char *path, Mp4MediaInfo **outInfo)
 }
 
 /* 0x811F90A6 */
-int Mp4Parser::setMediaInfo(Mp4MediaInfo *mediaInfo)
+int Mp4Parser::setMediaInfo(MediaInfoHandle *handle)
 {
-    if (mediaInfo == NULL || mediaInfo->mediaFourcc != FOURCC_MP4) {
+    if (handle == NULL || handle->mediaFourcc != FOURCC_MP4) {
         return PARSER_ERR_BAD_PARAM;
     }
+    Mp4MediaInfo *mediaInfo = static_cast<Mp4MediaInfo *>(handle);
     if (mediaInfo->streamParser == NULL || mediaInfo->cacheIo == NULL) {
         return -1;
     }
@@ -463,11 +461,12 @@ int Mp4Parser::setMediaInfo(Mp4MediaInfo *mediaInfo)
 }
 
 /* 0x811F92F6 */
-int Mp4Parser::prefetchMediaInfo(Mp4MediaInfo *mediaInfo)
+int Mp4Parser::prefetchMediaInfo(MediaInfoHandle *handle)
 {
-    if (mediaInfo == NULL || mediaInfo->mediaFourcc != FOURCC_MP4) {
+    if (handle == NULL || handle->mediaFourcc != FOURCC_MP4) {
         return PARSER_ERR_BAD_PARAM;
     }
+    Mp4MediaInfo *mediaInfo = static_cast<Mp4MediaInfo *>(handle);
     if (mediaInfo->streamParser == NULL || mediaInfo->cacheIo == NULL) {
         return -1;
     }
@@ -534,7 +533,7 @@ int Mp4Parser::prefetchMediaInfo(Mp4MediaInfo *mediaInfo)
 }
 
 /* 0x811F94EA */
-Mp4CodecConfigPayload *Mp4Parser::getCodecConfig(uint32_t *outSize)
+void *Mp4Parser::getCodecConfig(uint32_t *outSize)
 {
     uint32_t openErr = 0xFFFFFFFFu;
     m_codecConfig.sbrFlag = 0;
@@ -696,8 +695,9 @@ int Mp4Parser::resetPosition()
 }
 
 /* 0x811F97C2 */
-int Mp4Parser::queryMetadata(void *metaOut)
+int Mp4Parser::onFrameConsumed(int frameFlags)
 {
+    void *metaOut = reinterpret_cast<void *>(frameFlags);
     if (metaOut == NULL) {
         return PARSER_ERR_OK;
     }
@@ -707,7 +707,7 @@ int Mp4Parser::queryMetadata(void *metaOut)
 }
 
 /* 0x811F9816 */
-int Mp4Parser::onStart()
+int Mp4Parser::openStream()
 {
     if (m_activeStream == NULL) {
         return PARSER_ERR_NO_SOURCE;
@@ -723,7 +723,7 @@ int Mp4Parser::onStart()
 }
 
 /* 0x811F98B2 */
-int Mp4Parser::onStop()
+int Mp4Parser::closeStream()
 {
     if (m_activeStream == NULL) {
         return PARSER_ERR_NO_SOURCE;
@@ -733,8 +733,9 @@ int Mp4Parser::onStop()
 }
 
 /* 0x811F98CA */
-int Mp4Parser::readFrame(ParserPacketOut *outPkt)
+int Mp4Parser::produceFrame(MediaFrameBuffer *outBuf)
 {
+    ParserPacketOut *outPkt = reinterpret_cast<ParserPacketOut *>(outBuf);
     if (m_activeStream == NULL) {
         return PARSER_ERR_NO_SOURCE;
     }

@@ -136,7 +136,6 @@ struct ParserAdapterBase {
     virtual int openStream() { return 0; }
     virtual int closeStream() { return 0; }
     virtual int produceFrame(void *outPkt) { (void)outPkt; return 0; }
-    virtual int queryTagMetadata(void *tagOut) { (void)tagOut; return 0; }
     virtual int findCachedMediaInfo(const char *path, MediaInfoBase **outInfo) = 0;
 };
 

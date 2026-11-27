@@ -139,33 +139,31 @@ int mapMp3ParserError(uint32_t errCode)
 
 /* ===== Mp3Parser (0x811F792C - 0x811F8C7B, size 124 bytes) ===== */
 
-class Mp3Parser : public ParserFilterBase {
+class Mp3Parser : public AudioParserBase {
 public:
     Mp3Parser(const char *threadName, int playMode);
     virtual ~Mp3Parser();
 
-    virtual int onFrameConsumed(int frameFlags) { (void)frameFlags; return 0; }
-    virtual bool isInitialized() const;
-    virtual int openStream() { return onStart(); }
-    virtual int closeStream() { return onStop(); }
-    virtual int produceFrame(MediaFrameBuffer *outBuf)
-    {
-        return readFrame(reinterpret_cast<ParserPacketOut *>(outBuf));
-    }
+    virtual int onFrameConsumed(int frameFlags);
+    virtual int openStream();
+    virtual int closeStream();
+    virtual int produceFrame(MediaFrameBuffer *outBuf);
 
-    int queryMetadata(void *metaOut);
-    int findCachedMediaInfo(const char *path, Mp3MediaInfo **outInfo);
-    int setMediaInfo(Mp3MediaInfo *mediaInfo);
-    int prefetchMediaInfo(Mp3MediaInfo *mediaInfo);
-    void setPlaySpeed(int speed);
-    int setStartPosition(int startMs);
-    int setEndPosition(int endMs);
-    int getDurationMs();
-    int seekPosition(int positionMs);
-    int resetPosition();
-    int onStart();
-    int onStop();
-    int readFrame(ParserPacketOut *outPkt);
+    virtual int findCachedMediaInfo(const char *path, MediaInfoHandle **outInfo);
+    virtual int setMediaInfo(MediaInfoHandle *mediaInfo);
+    virtual int prefetchMediaInfo(MediaInfoHandle *mediaInfo);
+    virtual bool hasNextMedia() const { return m_nextMedia != NULL; }
+    virtual void *getCodecConfig(uint32_t *outSize) { *outSize = 0; return NULL; }
+    virtual void setPlaySpeed(int speed);
+    virtual int setStartPosition(int startMs);
+    virtual int setEndPosition(int endMs);
+    virtual int getDurationMs();
+    virtual int seekPosition(int positionMs);
+    virtual int resetPosition();
+    virtual int getPlaySpeed() const { return m_requestedSpeed; }
+    virtual int getStartPosition() const { return m_startPosMs; }
+    virtual int getEndPosition() const { return m_endPosMs; }
+    virtual bool isInitialized() const;
 
     int m_playMode;                    /* +48 */
     int m_requestedSpeed;              /* +52 */
@@ -194,7 +192,7 @@ public:
 
 /* 0x811F792C */
 Mp3Parser::Mp3Parser(const char *threadName, int playMode)
-    : ParserFilterBase(1, threadName)
+    : AudioParserBase(1, threadName)
     , m_playMode(playMode)
     , m_requestedSpeed(0)
     , m_startPosMs(-1)
@@ -252,8 +250,9 @@ bool Mp3Parser::isInitialized() const
 }
 
 /* 0x811F7A34 */
-int Mp3Parser::queryMetadata(void *metaOut)
+int Mp3Parser::onFrameConsumed(int frameFlags)
 {
+    void *metaOut = reinterpret_cast<void *>(frameFlags);
     if (metaOut == NULL) {
         return 0;
     }
@@ -262,7 +261,7 @@ int Mp3Parser::queryMetadata(void *metaOut)
 }
 
 /* 0x811F7A88 */
-int Mp3Parser::findCachedMediaInfo(const char *path, Mp3MediaInfo **outInfo)
+int Mp3Parser::findCachedMediaInfo(const char *path, MediaInfoHandle **outInfo)
 {
     if (path == NULL) {
         *outInfo = NULL;
@@ -286,11 +285,12 @@ int Mp3Parser::findCachedMediaInfo(const char *path, Mp3MediaInfo **outInfo)
 }
 
 /* 0x811F7AF4 */
-int Mp3Parser::setMediaInfo(Mp3MediaInfo *mediaInfo)
+int Mp3Parser::setMediaInfo(MediaInfoHandle *handle)
 {
-    if (mediaInfo == NULL || mediaInfo->mediaFourcc != FOURCC_MP3) {
+    if (handle == NULL || handle->mediaFourcc != FOURCC_MP3) {
         return PARSER_ERR_BAD_PARAM;
     }
+    Mp3MediaInfo *mediaInfo = static_cast<Mp3MediaInfo *>(handle);
     if (mediaInfo->streamParser == NULL || mediaInfo->cacheIo == NULL) {
         return -1;
     }
@@ -367,11 +367,12 @@ int Mp3Parser::setMediaInfo(Mp3MediaInfo *mediaInfo)
 }
 
 /* 0x811F7D18 */
-int Mp3Parser::prefetchMediaInfo(Mp3MediaInfo *mediaInfo)
+int Mp3Parser::prefetchMediaInfo(MediaInfoHandle *handle)
 {
-    if (mediaInfo == NULL || mediaInfo->mediaFourcc != FOURCC_MP3) {
+    if (handle == NULL || handle->mediaFourcc != FOURCC_MP3) {
         return PARSER_ERR_BAD_PARAM;
     }
+    Mp3MediaInfo *mediaInfo = static_cast<Mp3MediaInfo *>(handle);
     if (mediaInfo->streamParser == NULL || mediaInfo->cacheIo == NULL) {
         return -1;
     }
@@ -537,7 +538,7 @@ int Mp3Parser::resetPosition()
 }
 
 /* 0x811F8082 */
-int Mp3Parser::onStart()
+int Mp3Parser::openStream()
 {
     if (m_activeStream == NULL) {
         return PARSER_ERR_NO_SOURCE;
@@ -554,7 +555,7 @@ int Mp3Parser::onStart()
 }
 
 /* 0x811F80B2 */
-int Mp3Parser::onStop()
+int Mp3Parser::closeStream()
 {
     if (m_activeStream == NULL) {
         return PARSER_ERR_NO_SOURCE;
@@ -566,8 +567,9 @@ int Mp3Parser::onStop()
 }
 
 /* 0x811F80CC */
-int Mp3Parser::readFrame(ParserPacketOut *outPkt)
+int Mp3Parser::produceFrame(MediaFrameBuffer *outBuf)
 {
+    ParserPacketOut *outPkt = reinterpret_cast<ParserPacketOut *>(outBuf);
     if (m_activeStream == NULL) {
         return PARSER_ERR_NO_SOURCE;
     }

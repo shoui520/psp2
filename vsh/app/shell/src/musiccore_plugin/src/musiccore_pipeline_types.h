@@ -173,6 +173,13 @@ public:
     virtual int releaseReadSlot(MediaFrameBuffer *buf) = 0;
 };
 
+/* Base media info handle (musiccore_mp3_readers.cpp) */
+struct MediaInfoHandle {
+    void *vtablePtr;
+    uint32_t mediaFourcc;
+    uint8_t sharedFlag;
+};
+
 /* Parser filter base (48 bytes, multiple inheritance: PipeProducerControl + ActiveFilterBase) */
 class ParserFilterBase : public PipeProducerControl, public ActiveFilterBase {
 public:
@@ -191,6 +198,28 @@ public:
 
 protected:
     PipeInterface *m_outputPipe; /* +44 */
+};
+
+/* Common audio media parser base (vtable 0x8153467C, 23 primary slots) */
+class AudioParserBase : public ParserFilterBase {
+public:
+    AudioParserBase(int workerKind, const char *threadName);
+    virtual ~AudioParserBase();
+
+    virtual int findCachedMediaInfo(const char *path, MediaInfoHandle **outInfo) = 0;
+    virtual int setMediaInfo(MediaInfoHandle *mediaInfo) = 0;
+    virtual int prefetchMediaInfo(MediaInfoHandle *mediaInfo) = 0;
+    virtual bool hasNextMedia() const = 0;
+    virtual void *getCodecConfig(uint32_t *outSize) = 0;
+    virtual void setPlaySpeed(int speed) = 0;
+    virtual int setStartPosition(int startMs) = 0;
+    virtual int setEndPosition(int endMs) = 0;
+    virtual int getDurationMs() = 0;
+    virtual int seekPosition(int positionMs) = 0;
+    virtual int resetPosition() = 0;
+    virtual int getPlaySpeed() const = 0;
+    virtual int getStartPosition() const = 0;
+    virtual int getEndPosition() const = 0;
 };
 
 /* Decoder filter base (56 bytes: PipeProducerControl + PipeConsumerControl + ActiveFilterBase) */
@@ -339,13 +368,6 @@ public:
     virtual int checkRangeReadable(int sizeBytes, int *outErr) = 0;
     virtual void *mapStreamRange(int streamIdx, uint32_t offset, uint32_t size,
                                  int *outErr) = 0;
-};
-
-/* Base media info handle (musiccore_mp3_readers.cpp) */
-struct MediaInfoHandle {
-    void *vtablePtr;
-    uint32_t mediaFourcc;
-    uint8_t sharedFlag;
 };
 
 } /* namespace MusicCore */
