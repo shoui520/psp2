@@ -149,7 +149,7 @@ extern "C" int SwMwSinkClose(int handle, int mode)
 			} else if (value <= 206) {
 				status = 12203;
 			} else if (value > 1004) {
-				status = value;
+				status = sink->status;
 			} else {
 				status = 12204;
 			}
@@ -159,7 +159,7 @@ extern "C" int SwMwSinkClose(int handle, int mode)
 			else
 				status = 12204;
 		} else if (value >= 0) {
-			status = value;
+			status = sink->status;
 		} else {
 			status = 12204;
 		}
