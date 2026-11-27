@@ -63,7 +63,7 @@ struct LiveAreaTopmenuInterface {
 	paf::ui::Widget *(*getPageRootWidget)(int pageKey);			/* +0x14 */
 	paf::cache::CacheManager *(*getPageCacheManager)(int pageKey);		/* +0x18 */
 	paf::graph::SurfacePool *(*getPageSurfacePool)(int pageKey);		/* +0x1C */
-	void *pageListEntry;							/* +0x20 */
+	paf::intrusive_ptr<paf::graph::Surface> *(*getDefaultBgTexture)(void);	/* +0x20 */
 	int (*getCurrentPageKey)(void);						/* +0x24 */
 	int (*getPageIndex)(int pageKey);					/* +0x28 */
 	int (*getPageKeyAt)(int index);						/* +0x2C */
@@ -75,7 +75,10 @@ struct LiveAreaTopmenuInterface {
 	void (*onOnlineStorageIconClick)(int pageKey);				/* +0x44 */
 	void (*addPageEventListener)(int pageKey, void *callback, void *userdata);	/* +0x48 */
 	void (*removePageEventListener)(int pageKey, void *callback, void *userdata);	/* +0x4C */
-	void *listenerGapEntries[4];
+	void (*scrollToPage)(int pageKey);					/* +0x50 */
+	void (*showPageContent)(int pageKey, float duration);			/* +0x54 */
+	void (*cancelPendingPageTransition)(void);				/* +0x58 */
+	void (*completePageTransition)(int pageKey);				/* +0x5C */
 	void (*onContentReset)(int pageKey);					/* +0x60 */
 	void (*addPageShowListener)(int pageKey, void *callback, void *userdata);	/* +0x64 */
 	void (*addPageHideListener)(int pageKey, void *callback, void *userdata);	/* +0x68 */
@@ -89,7 +92,8 @@ struct LiveAreaTopmenuInterface {
 	void *gateGapEntries[2];
 	void (*onGateClick)(int pageKey);					/* +0x9C */
 	int (*isPageInteractive)(int pageKey);					/* +0xA0 */
-	void *scrollGapEntries[2];
+	int (*isPageSelected)(int pageKey);					/* +0xA4 */
+	paf::ui::Widget *(*getPageTurnWidget)(int pageKey);			/* +0xA8 */
 	void (*setPageScrolledDown)(int pageKey, int scrolledDown);		/* +0xAC */
 	void (*notifyIntroComplete)(int pageKey);				/* +0xB0 */
 	void (*notifyContentUpdated)(const char **args);			/* +0xB4 */
@@ -178,13 +182,13 @@ struct LiveAreaFrameState {
 	bool isSwitching;					/* +0x0C */
 	unsigned char switchPadding[3];
 	paf::ui::Widget *frameWidget;				/* +0x10 */
-	int imageObjIndex;					/* +0x14 */
-	int bgImageObjIndex;					/* +0x18 */
+	int bgImageObjIndex;					/* +0x14 */
+	int imageObjIndex;					/* +0x18 */
 	int textObjIndex;					/* +0x1C */
-	float textMarginLeft;					/* +0x20 */
-	float textMarginTop;					/* +0x24 */
-	float textMarginRight;					/* +0x28 */
-	float textMarginBottom;					/* +0x2C */
+	float textMarginTop;					/* +0x20 */
+	float textMarginBottom;					/* +0x24 */
+	float textMarginLeft;					/* +0x28 */
+	float textMarginRight;					/* +0x2C */
 	int scrollMode;						/* +0x30 */
 	int scrollPadding;
 	float scrollDeltaX;					/* +0x38 */
@@ -354,9 +358,30 @@ public:
 
 	void Init();						/* 0x811A417E */
 	int TryReloadXml();					/* 0x811A44CA */
-	void AnimatePopIn(paf::ui::Widget *widget, void *callback); /* 0x811A4684 */
+	void AnimatePopIn(paf::ui::Widget *widget, float delay,
+			  paf::ui::AnimCB callback);		/* 0x811A4684 */
 	void OnInitialImagesLoaded();				/* 0x811A58D4 */
-	void BuildLayout(int flags);				/* 0x811A985E */
+	int SetupDefaultBackground(paf::Plugin *plugin);	/* 0x811A5E40 */
+	int SetupTopBarWidgets(paf::vector<LiFunction> *functions); /* 0x811A5FBE */
+	int SetupTopBar(paf::Plugin *plugin, LiFunctionZone *funcZone); /* 0x811A7352 */
+	int SetupTitle(paf::Plugin *plugin, LiTitle *titleDesc); /* 0x811A7596 */
+	int SetupItemText(LiText *textDesc, paf::ui::Widget *itemWidget,
+			  LiveAreaFrameState *frameState);	/* 0x811A777C */
+	int CreateContentImageCache(const paf::string *relPath,
+				    paf::intrusive_ptr<paf::cache::CacheImageInterface> *outRef); /* 0x811A7DC6 */
+	int SetupPlaneSize(LiPlacedElement *elem, paf::graph::PlaneObj *plane); /* 0x811A7EA8 */
+	int SetupItemImage(LiImage *imageDesc, paf::ui::Widget *itemWidget,
+			   LiveAreaFrameState *frameState);	/* 0x811A7F1A */
+	int SetupItemBgImage(LiItemBackground *bgDesc, paf::ui::Widget *itemWidget,
+			     LiveAreaFrameState *frameState);	/* 0x811A81BC */
+	int PopulateFrame(LiFrame *frameDesc, LiveAreaFrameState *frameState); /* 0x811A845E */
+	void AnimatePopOut(paf::ui::Widget *widget, paf::ui::AnimCB callback,
+			   void *userdata);			/* 0x811A8B70 */
+	int SetupFrame(paf::Plugin *plugin, LiFrame *frameDesc,
+		       LiveAreaFrameState *frameState);		/* 0x811A8CE4 */
+	int SetupGate(paf::Plugin *plugin, LiGate *gateDesc);	/* 0x811A8E84 */
+	int SetupBackground(paf::Plugin *plugin, LiBackground *bgDesc); /* 0x811A9742 */
+	int BuildLayout(int flags);				/* 0x811A985E */
 	void OnRcoLoaded();					/* 0x811A9CCC */
 	void OnParseFail();					/* 0x811A9CE4 */
 	void OnParseComplete(paf::common::SharedPtr<LiTemplate> *parsed, int reloadMask,
@@ -591,7 +616,7 @@ extern void *shellPluginGetInterface(const char *name, int id);		/* 0x810C9D14 *
 extern int shellAppEventServerAddListener(void);			/* 0x810E17DE */
 extern int shellAppEventServerRemoveListener(int type, int (*callback)(int, const char *),
 					     void *userdata);		/* 0x810E17E6 */
-extern void shellRecordMetric(int metricId, int value);			/* 0x81376D36 */
+extern int consoleInfoFileAddInt(int index, SceUInt32 value, int mode);	/* 0x81376D36 */
 
 /* NetCtlInt network hold / connection request */
 extern void netCtlIntAcquire(void);					/* 0x8120EE1E */
@@ -719,6 +744,12 @@ extern paf::common::SharedPtr<paf::job::JobItem> liveareaEnqueueContentResetJob(
 										int resetMask); /* 0x811A3426 */
 extern int liveareaLoadRco(const paf::string *rcoName, const paf::string *pluginName, int drawPriority); /* 0x811ACF10 */
 extern void liveareaUnloadRco(const paf::string *pluginName);		/* 0x811AD0C2 */
+extern void liveareaCmaSetup(paf::Plugin *plugin, paf::ui::Widget *root); /* 0x811AD966 */
+extern void liveareaCmaCleanup(paf::ui::Widget *root);			/* 0x811AE0A4 */
+extern void liveareaParentalSetup(paf::ui::Widget *root, void *userdata); /* 0x811AEC32 */
+extern void liveareaParentalCleanup(paf::ui::Widget *root);		/* 0x811AF7AC */
+extern void liveareaMusicSetup(paf::ui::Widget *root, void *userdata);	/* 0x811AFC90 */
+extern void liveareaMusicCleanup(paf::ui::Widget *root);		/* 0x811B09B8 */
 extern int liveareaEnqueueContentParserJob(paf::common::SharedPtr<paf::job::JobItem> *outJob,
 					   LiveAreaPageInner *inner, const char *xmlPath,
 					   const char *contentDir, SceUInt8 useLsdb,
