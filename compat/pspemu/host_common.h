@@ -442,10 +442,17 @@ int pspemuIsVitaModel(void);
 int pspemuHasRearTouchCapability(void);
 
 /* Cross-module callees from main.c */
-/* Lightweight PNG decoder (0x8100186c..0x81002747) */
-int pspemuPngDecodeImage(void *outBuf, uint32_t outSize, const void *pngData, uint32_t pngSize,
-                         uint32_t *outWidth, uint32_t *outHeight, uint32_t *outFormat);
-int pspemuPngConvertToAbgr(void *dstBuf, const void *srcBuf);
+/* Lightweight PNG decoder (libScePng: 0x8100186c..0x81002747, 0x810396b2) */
+int32_t scePngGetOutputInfo(const void *src, uint32_t insize,
+                            int32_t *width, int32_t *height,
+                            int32_t *outputFormat, int32_t *streamFormat);
+int32_t scePngDec(void *dst, uint32_t outsize, const void *src, uint32_t insize,
+                  int32_t *width, int32_t *height, int32_t *format);
+int32_t scePngConvertToRGBA(void *dst, const void *src,
+                            int32_t width, int32_t height, int32_t format);
+
+/* LZRC decompressor (0x81002a2c) */
+int sceLzrcDecompress(void *dst, size_t dstSize, const void *src, const void **outEnd);
 
 /* Kermit IPC request header in PSP shared RAM */
 typedef struct PspemuKermitRequest {

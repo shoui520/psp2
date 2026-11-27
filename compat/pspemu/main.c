@@ -1298,22 +1298,22 @@ int sceCompatMain(SceSize argLen, void *argp)
 
 	for (splashIndex = 0; ; splashIndex++) {
 		SceSize pngSize = 0;
-		uint32_t pngWidth = 0;
-		uint32_t pngHeight = 0;
-		uint32_t pngFormat = 0;
+		int32_t pngWidth = 0;
+		int32_t pngHeight = 0;
+		int32_t pngFormat = 0;
 		uint8_t *pngScratch = g_cachedCdram;
 		uint8_t *decodeScratch = g_cachedCdram + 0x100000U;
 
 		splashCount = pspemuReadStartDatImage(splashIndex, pngScratch, &pngSize, rifContentId);
 		if (splashCount == 1 || splashCount == 2) {
-			int decRes = pspemuPngDecodeImage(
+			int decRes = scePngDec(
 				decodeScratch, 0x100000U, pngScratch, 0x100000U,
 				&pngWidth, &pngHeight, &pngFormat);
 			if (decRes < 0) {
 				splashCount = decRes;
-			} else if (pngWidth != PSPEMU_SCREEN_WIDTH || pngHeight != PSPEMU_SCREEN_HEIGHT) {
+			} else if (pngWidth != (int32_t)PSPEMU_SCREEN_WIDTH || pngHeight != (int32_t)PSPEMU_SCREEN_HEIGHT) {
 				splashCount = PSPEMU_ERROR_CORRUPTED;
-			} else if (pngFormat == 0x420U) {
+			} else if (pngFormat == 0x420) {
 				uint32_t row;
 
 				for (row = 0; row < PSPEMU_SCREEN_HEIGHT; row++) {
@@ -1324,7 +1324,7 @@ int sceCompatMain(SceSize argLen, void *argp)
 				}
 				g_splashShownTime = sceKernelGetProcessTimeLow();
 			} else {
-				decRes = pspemuPngConvertToAbgr(g_frameTempBuf, decodeScratch);
+				decRes = scePngConvertToRGBA(g_frameTempBuf, decodeScratch, pngWidth, pngHeight, pngFormat);
 				if (decRes < 0) {
 					splashCount = decRes;
 				} else {
