@@ -1355,7 +1355,22 @@ diff -ruN a/libtiff/tif_luv.c b/libtiff/tif_luv.c
  LogL10toY(int p10)		/* compute luminance from 10-bit LogL */
  {
  	if (p10 == 0)
-@@ -1200,10 +1200,7 @@
+@@ -736,10 +736,14 @@
+ 	return (exp(M_LN2/64.*(p10+.5) - M_LN2*12.));
+ }
+ 
++#ifdef PAF_BUILD_2014
++static inline __attribute__((always_inline)) int
++#else
+ #if !LOGLUV_PUBLIC
+ static
+ #endif
+ int
++#endif
+ LogL10fromY(double Y, int em)	/* get 10-bit LogL from Y */
+ {
+ 	if (Y >= 15.742)
+@@ -1200,10 +1204,7 @@
  		    "No support for converting user data format to LogL");
  		return (0);
  	}
@@ -1367,7 +1382,7 @@ diff -ruN a/libtiff/tif_luv.c b/libtiff/tif_luv.c
  	if (multiply(sp->tbuflen, sizeof (int16)) == 0 ||
  	    (sp->tbuf = (tidata_t*) _TIFFmalloc(sp->tbuflen * sizeof (int16))) == NULL) {
  		TIFFErrorExt(tif->tif_clientdata, module, "%s: No space for SGILog translation buffer",
-@@ -1301,10 +1298,7 @@
+@@ -1301,10 +1302,7 @@
  		    "No support for converting user data format to LogLuv");
  		return (0);
  	}
@@ -1810,7 +1825,19 @@ diff -ruN a/libtiff/tif_predict.c b/libtiff/tif_predict.c
 diff -ruN a/libtiff/tif_read.c b/libtiff/tif_read.c
 --- a/libtiff/tif_read.c
 +++ b/libtiff/tif_read.c
-@@ -167,6 +167,8 @@
+@@ -33,7 +33,11 @@
+ 
+ 	int TIFFFillStrip(TIFF*, tstrip_t);
+ 	int TIFFFillTile(TIFF*, ttile_t);
++#ifdef PAF_BUILD_2014
++static inline __attribute__((always_inline)) int TIFFStartStrip(TIFF*, tstrip_t);
++#else
+ static	int TIFFStartStrip(TIFF*, tstrip_t);
++#endif
+ static	int TIFFStartTile(TIFF*, ttile_t);
+ static	int TIFFCheckRead(TIFF*, int);
+ 
+@@ -167,6 +171,8 @@
  		return ((tsize_t) -1);
  }
  
@@ -1819,7 +1846,7 @@ diff -ruN a/libtiff/tif_read.c b/libtiff/tif_read.c
  static tsize_t
  TIFFReadRawStrip1(TIFF* tif,
      tstrip_t strip, tdata_t buf, tsize_t size, const char* module)
-@@ -214,6 +216,7 @@
+@@ -214,6 +220,7 @@
  /*
   * Read a strip of data from the file.
   */
@@ -1827,7 +1854,7 @@ diff -ruN a/libtiff/tif_read.c b/libtiff/tif_read.c
  tsize_t
  TIFFReadRawStrip(TIFF* tif, tstrip_t strip, tdata_t buf, tsize_t size)
  {
-@@ -253,6 +256,7 @@
+@@ -253,6 +260,7 @@
  		bytecount = size;
  	return (TIFFReadRawStrip1(tif, strip, buf, bytecount, module));
  }
@@ -1835,7 +1862,7 @@ diff -ruN a/libtiff/tif_read.c b/libtiff/tif_read.c
  
  /*
   * Read the specified strip and setup for decoding. The data buffer is
-@@ -406,6 +410,8 @@
+@@ -406,6 +414,8 @@
  		return (-1);
  }
  
@@ -1844,7 +1871,7 @@ diff -ruN a/libtiff/tif_read.c b/libtiff/tif_read.c
  static tsize_t
  TIFFReadRawTile1(TIFF* tif,
      ttile_t tile, tdata_t buf, tsize_t size, const char* module)
-@@ -456,6 +462,7 @@
+@@ -456,6 +466,7 @@
  /*
   * Read a tile of data from the file.
   */
@@ -1852,7 +1879,7 @@ diff -ruN a/libtiff/tif_read.c b/libtiff/tif_read.c
  tsize_t
  TIFFReadRawTile(TIFF* tif, ttile_t tile, tdata_t buf, tsize_t size)
  {
-@@ -488,6 +495,7 @@
+@@ -488,6 +499,7 @@
  		bytecount = size;
  	return (TIFFReadRawTile1(tif, tile, buf, bytecount, module));
  }
@@ -1860,6 +1887,18 @@ diff -ruN a/libtiff/tif_read.c b/libtiff/tif_read.c
  
  /*
   * Read the specified tile and setup for decoding. The data buffer is
+@@ -625,7 +637,11 @@
+  * Set state to appear as if a
+  * strip has just been read in.
+  */
++#ifdef PAF_BUILD_2014
++static inline __attribute__((always_inline)) int
++#else
+ static int
++#endif
+ TIFFStartStrip(TIFF* tif, tstrip_t strip)
+ {
+ 	TIFFDirectory *td = &tif->tif_dir;
 diff -ruN a/libtiff/tif_strip.c b/libtiff/tif_strip.c
 --- a/libtiff/tif_strip.c
 +++ b/libtiff/tif_strip.c

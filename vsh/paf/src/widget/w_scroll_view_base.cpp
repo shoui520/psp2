@@ -1011,8 +1011,8 @@ ScrollViewBase::ScrollViewBase(Widget *parent, CreateParam *param)
 #endif
 	s_touch_scroll_supplier.Register(this);
 	EnableOverScroll(true);
-	ScePafWidget_00AA6519(this);
 #ifndef PAF_BUILD_2014
+	ScePafWidget_00AA6519(this);
 	m_pre_dispatch = true;
 
 	Focuser *focuser = new Focuser(ScrollViewBaseFocusCB);

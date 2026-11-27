@@ -5,7 +5,9 @@
  */
 #include <stddef.h>
 #include <stdint.h>
+#ifndef PAF_BUILD_2014
 #include <graphics/color.h>
+#endif
 #include <inputdevice/inputdevice.h>
 #include <inputdevice/inputlistener.h>
 #include <inputdevice/btrm/btrm.h>
@@ -34,7 +36,11 @@ static inline __attribute__((always_inline)) uint32_t ElapsedMs(uint64_t now, ui
 
 /* the keycode of the key mask, 0 for none (Sony's PostGestureEvent has it inline, and 6B810963's
    code a copy; name ours) */
+#ifdef PAF_BUILD_2014
+static inline __attribute__((always_inline)) int32_t PadKeycode(uint32_t mask)
+#else
 static int32_t PadKeycode(uint32_t mask)
+#endif
 {
 	if (mask > 0x200) {
 		switch (mask) {
@@ -387,6 +393,25 @@ static int32_t PadKeycodeForEvent(uint32_t mask)
 	}
 }
 
+#ifdef PAF_BUILD_2014
+static inline __attribute__((always_inline)) int32_t PostPadEvent2014(Environment *env,
+								      uint32_t type, uint32_t key)
+{
+	if (env == NULL)
+		return -1;
+
+	int32_t keycode = PadKeycodeForEvent(key);
+
+	if (keycode == 0)
+		return -1;
+
+	Event e(type, 0x100000, 0x10000, 0, 0, 0, 0, 0);
+
+	e.SetDetail((uint8_t)keycode);
+	env->m_ev_queue.PushBack(e);
+	return 0;
+}
+#else
 int32_t UIPadListener::PostPadEvent(uint32_t type, uint32_t port, uint32_t key, bool flag,
 				    int32_t mode)
 {
@@ -493,6 +518,7 @@ void UIPadListener::UpdatePad(uint32_t *prev, uint32_t *curr, int32_t *port, int
 	}
 	m_prev_mask = now;
 }
+#endif
 
 
 /* one of the pad's repeat steps, as Sony's two OnUpdates have it inline (name ours) */
@@ -503,18 +529,98 @@ static inline float PadTick()
 
 void UIPadListener::OnUpdate(const inputdevice::Data *data)
 {
+#ifdef PAF_BUILD_2014
+	sce_paf_memcpy(s_pad_prev, s_pad_curr, sizeof(s_pad_prev));
+	for (int32_t port = 0; port < 1; port++) {
+		uint32_t curr_buttons = data->m_pad_data->buttons;
+		uint32_t prev_buttons = data->m_pad_data_pre->buttons;
+
+		if (m_env != NULL && (curr_buttons & 0x2000) == 0 && (prev_buttons & 0x2000) != 0)
+			m_env->HideFocus(-1);
+
+		uint32_t curr_mask = data->m_pad_data->buttons & 0xFFFFDFFF;
+		uint32_t prev_mask = data->m_pad_data_pre->buttons & 0xFFFFDFFF;
+		uint32_t pressed = curr_mask & ~prev_mask;
+		uint32_t held = m_hold_key;
+		uint32_t released = prev_mask & ~curr_mask;
+
+		if (pressed != 0) {
+			uint32_t first = 1;
+
+			if ((pressed & 1) == 0) {
+				uint32_t next;
+
+				do {
+					next = pressed & (2 * first);
+					first *= 2;
+				} while (next == 0);
+			}
+			if (held != 0) {
+				if (held == 1 || held == 2 || held == 4 || held == 8) {
+					PostPadEvent2014(m_env, 18, held);
+				} else {
+					inputdevice::ScePafMisc_CB4DB658(this, port, NULL);
+					PostPadEvent2014(m_env, 20, held);
+				}
+			}
+			m_hold_key = first;
+			PostPadEvent2014(m_env, 17, first);
+			m_repeat_delay = 300.0f;
+			m_repeat_interval = 80.0f;
+			held = m_hold_key;
+		}
+		if (released != 0) {
+			if ((released & held) != 0) {
+				if ((inputdevice::pad::GetMask() & m_hold_key) != 0) {
+					inputdevice::ScePafMisc_CB4DB658(this, port, NULL);
+					PostPadEvent2014(m_env, 20, m_hold_key);
+				} else {
+					PostPadEvent2014(m_env, 18, m_hold_key);
+				}
+			}
+			held = 0;
+			m_hold_key = 0;
+		} else if (held != 0) {
+			float delay = m_repeat_delay;
+			float tick = PadTick();
+
+			if (delay > 0.0f) {
+				float remain = delay - tick * 1000.0f;
+
+				m_repeat_delay = remain;
+				if (remain <= 0.0f) {
+					PostPadEvent2014(m_env, 19, held);
+					held = m_hold_key;
+				}
+			} else {
+				float interval = m_repeat_interval - tick * 1000.0f;
+
+				m_repeat_interval = interval;
+				if (interval <= 0.0f) {
+					PostPadEvent2014(m_env, 19, held);
+					held = m_hold_key;
+					m_repeat_interval = 80.0f;
+				}
+			}
+		}
+		s_pad_curr[port].buttons = held;
+		if ((inputdevice::pad::GetMask() & m_hold_key) != 0) {
+			inputdevice::ScePafMisc_CB4DB658(this, port, NULL);
+			PostPadEvent2014(m_env, 20, m_hold_key & inputdevice::pad::GetMask());
+			m_hold_key = 0;
+		}
+	}
+#else
 	sce_paf_memcpy(s_pad_prev, s_pad_curr, sizeof(s_pad_prev));
 	s_pad_port = inputdevice::pad::GetCurrPort();
 	if (s_pad_port < 8) {
 		int32_t mode = m_mode;
-#ifndef PAF_BUILD_2014
 		int32_t type = inputdevice::pad::GetPortType(s_pad_port);
 
 		if (type == 1)
 			mode = 2;
 		else if (type == 2)
 			mode = 3;
-#endif
 
 		uint32_t curr_mask = data->m_pad_data->buttons & 0xFFFFDFFF;
 		uint32_t prev_mask = data->m_pad_data_pre->buttons & 0xFFFFDFFF;
@@ -600,22 +706,22 @@ void UIPadListener::OnUpdate(const inputdevice::Data *data)
 			m_hold_key = 0;
 		}
 	}
+#endif
 }
 
+#ifndef PAF_BUILD_2014
 void UIPadHoldListener::OnUpdate(const inputdevice::Data *data)
 {
 	sce_paf_memcpy(s_pad_prev, s_pad_curr, sizeof(s_pad_prev));
 	s_pad_port = inputdevice::pad::GetCurrPort();
 	if (s_pad_port < 8) {
 		int32_t mode = m_mode;
-#ifndef PAF_BUILD_2014
 		int32_t type = inputdevice::pad::GetPortType(s_pad_port);
 
 		if (type == 1)
 			mode = 2;
 		else if (type == 2)
 			mode = 3;
-#endif
 
 		uint32_t curr_mask = data->m_pad_data->buttons & 0xFFFFDFFF;
 		uint32_t prev_mask = data->m_pad_data_pre->buttons & 0xFFFFDFFF;
@@ -679,6 +785,12 @@ void UIPadHoldListener::OnUpdate(const inputdevice::Data *data)
 			m_mode = 0;
 	}
 }
+#else
+void UIPadHoldListener::OnUpdate(const inputdevice::Data *data)
+{
+	UIPadListener::OnUpdate(data);
+}
+#endif
 
 /* a key event of the type queued for the key code (inline in Sony's UIPadHoldListener::
    PostPadEvent; name ours) */

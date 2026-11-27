@@ -140,7 +140,11 @@ int32_t paf::inputdevice::End()
 }
 
 /* The ownerships of the mask released by as many releases as gets end. */
+#ifdef PAF_BUILD_2014
+static inline __attribute__((always_inline)) void ReleaseOwnershipCompleted(uint32_t device)
+#else
 static void ReleaseOwnershipCompleted(uint32_t device)
+#endif
 {
 	uint32_t released = 0;
 	uint32_t free = 0;
@@ -181,7 +185,12 @@ static void ReleaseOwnershipCompleted(uint32_t device)
 	}
 }
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) bool paf::inputdevice::IsOwnershipReleasable(
+	uint32_t device, int32_t all)
+#else
 bool paf::inputdevice::IsOwnershipReleasable(uint32_t device, int32_t all)
+#endif
 {
 	bool ret = false;
 	uint32_t releasable = 0;

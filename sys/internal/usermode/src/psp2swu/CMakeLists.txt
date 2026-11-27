@@ -31,9 +31,10 @@ if(EXISTS "${FT2_SCE}/.patched")
 endif()
 if(NOT ft2_stamp STREQUAL ft2_patch_md5)
 	file(REMOVE_RECURSE "${FT2_SCE}")
-	foreach(f src/base/ftsystem.c src/base/ftinit.c src/base/ftbase.c src/base/fttrigon.c
-		  include/freetype/internal/ftobjs.h src/cff src/psaux src/pshinter src/raster
-		  src/sfnt src/truetype)
+	foreach(f src/base/ftsystem.c src/base/ftinit.c src/base/ftbase.c src/base/ftobjs.c
+		  src/base/ftoutln.c src/base/fttrigon.c include/freetype/internal/ftobjs.h
+		  src/autofit src/cff src/psaux src/pshinter src/raster src/sfnt src/smooth
+		  src/truetype)
 		get_filename_component(d ${f} DIRECTORY)
 		file(COPY "${FT2}/${f}" DESTINATION "${FT2_SCE}/${d}")
 	endforeach()
@@ -175,7 +176,7 @@ set(swu_ft2_SOURCES
 	${FT2}/src/base/ftbitmap.c
 	${FT2}/src/base/ftglyph.c
 	${FT2_SCE}/src/base/ftinit.c
-	${FT2}/src/autofit/autofit.c
+	${FT2_SCE}/src/autofit/autofit.c
 	${FT2_SCE}/src/truetype/truetype.c
 	${FT2}/src/type1/type1.c
 	${FT2_SCE}/src/cff/cff.c
@@ -185,7 +186,7 @@ set(swu_ft2_SOURCES
 	${FT2_SCE}/src/pshinter/pshinter.c
 	${FT2_SCE}/src/raster/raster.c
 	${FT2_SCE}/src/sfnt/sfnt.c
-	${FT2}/src/smooth/smooth.c
+	${FT2_SCE}/src/smooth/smooth.c
 )
 set_source_files_properties(${swu_ft2_SOURCES} PROPERTIES
 	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;FT2_BUILD_LIBRARY;FT_CONFIG_NO_OTVALID;PAF_STATIC_BUILD"

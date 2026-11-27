@@ -75,7 +75,11 @@ public:
 
 int32_t Init(InitParam &init_param);
 int32_t End();
+#ifdef PAF_BUILD_2014
+inline bool IsOwnershipReleasable(uint32_t device, int32_t all);
+#else
 bool IsOwnershipReleasable(uint32_t device, int32_t all);
+#endif
 int32_t Update(float diff_time);
 int32_t UpdateListener();
 int32_t UpdateGesture(bool event);

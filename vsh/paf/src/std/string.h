@@ -170,7 +170,9 @@ void PafStringAppendBytes(PafString *self, const char *src, size_t len)
 		self->ptr = dest;
 		self->count = total;
 	} else {
+#ifndef PAF_BUILD_2014
 		ScePafStdc_D608246A();
+#endif
 	}
 }
 

@@ -21,6 +21,7 @@
 
 namespace paf {
 
+#ifndef PAF_BUILD_2014
 /* Sony's SetString and its label layout take the separator's length and call the search out of
    line. */
 template<>
@@ -48,6 +49,7 @@ wstring::find(const wchar_t *str, size_type pos, size_type len) const
 	}
 	return npos;
 }
+#endif
 
 template<>
 inline wstring::size_type wstring::find(const wchar_t *str, size_type pos) const

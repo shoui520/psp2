@@ -1113,7 +1113,11 @@ PngCodec::~PngCodec()
 
 static png_voidp PngMalloc(png_structp png, png_alloc_size_t size)
 {
+#ifdef PAF_BUILD_2014
+	HeapAllocator *allocator = (HeapAllocator *)png->mem_ptr;
+#else
 	HeapAllocator *allocator = (HeapAllocator *)png_get_mem_ptr(png);
+#endif
 	if (allocator != NULL)
 		return allocator->sce_paf_malloc(size);
 	return sce_paf_malloc(size);
@@ -1121,7 +1125,11 @@ static png_voidp PngMalloc(png_structp png, png_alloc_size_t size)
 
 static void PngFree(png_structp png, png_voidp ptr)
 {
+#ifdef PAF_BUILD_2014
+	HeapAllocator *allocator = (HeapAllocator *)png->mem_ptr;
+#else
 	HeapAllocator *allocator = (HeapAllocator *)png_get_mem_ptr(png);
+#endif
 	if (allocator != NULL)
 		allocator->sce_paf_free(ptr);
 	else
@@ -1130,7 +1138,11 @@ static void PngFree(png_structp png, png_voidp ptr)
 
 static void ReadFile(png_structp png, png_bytep data, png_size_t length)
 {
+#ifdef PAF_BUILD_2014
+	File *file = (File *)png->io_ptr;
+#else
 	File *file = (File *)png_get_io_ptr(png);
+#endif
 	if (file->Read(data, length) != length)
 		png_error(png, "Read Error");
 }
@@ -1144,7 +1156,11 @@ static int64_t SeekFile(PngReader *reader, int64_t offset, int32_t whence)
 
 static void ReadBuffer(png_structp png, png_bytep data, png_size_t length)
 {
+#ifdef PAF_BUILD_2014
+	PngReader *reader = (PngReader *)png->io_ptr;
+#else
 	PngReader *reader = (PngReader *)png_get_io_ptr(png);
+#endif
 	if (reader->m_size - reader->m_pos < (int64_t)length)
 		png_error(png, "Read Error");
 	sce_paf_memcpy(data, reader->m_data, length);
@@ -1154,21 +1170,33 @@ static void ReadBuffer(png_structp png, png_bytep data, png_size_t length)
 
 static void WriteFile(png_structp png, png_bytep data, png_size_t length)
 {
+#ifdef PAF_BUILD_2014
+	File *file = (File *)png->io_ptr;
+#else
 	File *file = (File *)png_get_io_ptr(png);
+#endif
 	if (file->Write(data, length) != length)
 		png_error(png, "Write Error");
 }
 
 static void FlushFile(png_structp png)
 {
+#ifdef PAF_BUILD_2014
+	File *file = (File *)png->io_ptr;
+#else
 	File *file = (File *)png_get_io_ptr(png);
+#endif
 	if (file->Flush() != 0)
 		png_error(png, "Flush Error");
 }
 
 static void WriteBuffer(png_structp png, png_bytep data, png_size_t length)
 {
+#ifdef PAF_BUILD_2014
+	PngWriteBuffer *buffer = (PngWriteBuffer *)png->io_ptr;
+#else
 	PngWriteBuffer *buffer = (PngWriteBuffer *)png_get_io_ptr(png);
+#endif
 	if (buffer->written + length > buffer->size)
 		png_error(png, "Write Error");
 	sce_paf_memcpy(buffer->data, data, length);

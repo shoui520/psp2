@@ -130,7 +130,11 @@ void CallListListenerOnFinish(TimerListener *base, void *data1, void *data2)
 	_ZN3paf6thread5Mutex4LockEv(&s_giant_lock);
 	if (s_instance) {
 		self->m_is_calling = 1;
+#ifdef PAF_BUILD_2014
+		CallListUpdateInline(&self->m_list, &s_giant_lock);
+#else
 		CallListUpdate(&self->m_list, &s_giant_lock);
+#endif
 		unsigned int count = self->m_list.m_list.count;
 		self->m_is_calling = 0;
 		if (!count) {

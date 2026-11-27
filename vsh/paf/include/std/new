@@ -14,7 +14,11 @@ void operator delete(void *ptr, size_t size, size_t align);
 void operator delete[](void *ptr, size_t size, size_t align);
 
 /* Sony's build calls this one rather than inlining it (_ZnwjPv in the template code). */
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) void *operator new(size_t, void *where)
+#else
 inline __attribute__((noinline)) void *operator new(size_t, void *where)
+#endif
 {
 	return where;
 }

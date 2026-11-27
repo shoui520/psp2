@@ -162,6 +162,7 @@ float sce_paf_cosf(float x)
 	return number.value;
 }
 
+#ifndef PAF_BUILD_2014
 float sce_paf_tanf(float x)
 {
 	float sine = sce_paf_sinf(x);
@@ -169,6 +170,7 @@ float sce_paf_tanf(float x)
 
 	return sine / cosine;
 }
+#endif
 
 float AtanApprox(float x)
 {

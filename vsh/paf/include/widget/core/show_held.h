@@ -13,6 +13,19 @@
 namespace paf {
 namespace ui {
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) int32_t IsShowHeld(Widget *widget)
+{
+	while (widget != NULL) {
+		if (widget->m_show_hold > 0)
+			return 1;
+		if (static_cast<Widget *>(widget->m_scene) == widget)
+			break;
+		widget = widget->m_parent;
+	}
+	return 0;
+}
+#else
 inline int32_t IsShowHeld(Widget *widget)
 {
 	if (widget->m_show_hold > 0)
@@ -25,6 +38,7 @@ inline int32_t IsShowHeld(Widget *widget)
 	}
 	return 0;
 }
+#endif
 
 }
 }

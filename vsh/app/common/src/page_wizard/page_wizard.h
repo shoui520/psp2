@@ -36,6 +36,11 @@ struct PageObserverPendingChange {
 	int32_t priority;
 };
 
+#ifdef PAF_BUILD_2014
+PAF_LIST_INLINE_DTOR(PageObserver *)
+PAF_LIST_INLINE_DTOR(PageObserverPendingChange)
+#endif
+
 class PageObservable {
 public:
 	PageObservable();

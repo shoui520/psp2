@@ -636,7 +636,11 @@ public:
 };
 
 /* the style of the text: a link text's, the tag that set it and its list's numbering */
+#ifdef PAF_BUILD_2014
+class Style : public RichText::TextElement {
+#else
 class Style : public RichText::LinkTextElement {
+#endif
 public:
 	Style()
 	{
@@ -650,6 +654,35 @@ public:
 	char m_list_type;
 	int32_t m_list_index;
 };
+
+#ifdef PAF_BUILD_2014
+}
+template<>
+inline __attribute__((noinline)) void list<ui::Style>::push_front(const ui::Style &val)
+{
+	if (head == NULL)
+		return;
+
+	_Node *node = (_Node *)operator new(sizeof(_Node));
+
+	if (node != NULL)
+		new (&node->value) ui::Style(val);
+	else
+		node = head;
+	if (node != head) {
+		node->prev = head;
+		node->next = head->next;
+
+		_Node *first = head;
+		size_type size = count + 1;
+
+		first->next->prev = node;
+		first->next = node;
+		count = size;
+	}
+}
+namespace ui {
+#endif
 
 /* an image of the text: its url and its size in the text */
 class ImageEntry {
@@ -693,8 +726,10 @@ public:
 	/* the text and link text element of the style, without its text */
 	RichText::TextElement *MakeTextElement()
 	{
+#ifndef PAF_BUILD_2014
 		if (m_style.m_link >= 0)
 			return new RichText::LinkTextElement(m_style);
+#endif
 
 		RichText::TextElement *e = new RichText::TextElement(m_style);
 
@@ -702,7 +737,11 @@ public:
 		return e;
 	}
 
+#ifdef PAF_BUILD_2014
+	__attribute__((noinline)) void PushStyle(const string &tag)
+#else
 	void PushStyle(const string &tag)
+#endif
 	{
 		if (m_stack.size() < 16) {
 			m_stack.push_front(m_style);
@@ -723,8 +762,10 @@ public:
 	}
 
 	/* the tags' handlers */
+#ifndef PAF_BUILD_2014
 	void OnA(const string &tag, map<string, string> &attrs);
 	void OnAEnd(const string &tag);
+#endif
 	void OnB(const string &tag, map<string, string> &attrs);
 	void OnBEnd(const string &tag);
 	void OnBr(const string &tag, map<string, string> &attrs);
@@ -1115,7 +1156,9 @@ void HtmlParser::Parse()
 	m_style.m_list_type = 0;
 	m_style.m_center = false;
 	m_style.m_color = ColorRGBA8(m_color);
+#ifndef PAF_BUILD_2014
 	m_style.m_link = -1;
+#endif
 	m_text.m_len = 0;
 	m_newline = false;
 	m_space = false;
@@ -1169,7 +1212,9 @@ void HtmlParser::Parse()
 }
 
 static const TagEntry s_tags[] = {
+#ifndef PAF_BUILD_2014
 	{ "a", &HtmlParser::OnA, &HtmlParser::OnAEnd },
+#endif
 	{ "b", &HtmlParser::OnB, &HtmlParser::OnBEnd },
 	{ "br", &HtmlParser::OnBr, NULL },
 	{ "center", &HtmlParser::OnCenter, &HtmlParser::OnCenterEnd },
@@ -1615,8 +1660,13 @@ void RichText::LineBuilder::AlignLine(list<Item *>::iterator first, list<Item *>
 	}
 }
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) void RichText::LineBuilder::Center(
+	list<Item *>::iterator first, list<Item *>::iterator last, float width, float x)
+#else
 void RichText::LineBuilder::Center(list<Item *>::iterator first, list<Item *>::iterator last,
 				   float width, float x)
+#endif
 {
 	float offset = (width - x) * 0.5f;
 
@@ -2214,6 +2264,7 @@ static inline const char *ReadNumber(const string &str, uint32_t &value)
 	return p;
 }
 
+#ifndef PAF_BUILD_2014
 void HtmlParser::OnA(const string &tag, map<string, string> &attrs)
 {
 	if (m_no_link)
@@ -2236,6 +2287,7 @@ void HtmlParser::OnAEnd(const string &tag)
 	FlushText();
 	PopStyle(tag);
 }
+#endif
 
 void HtmlParser::OnB(const string &tag, map<string, string> &attrs)
 {
@@ -2433,7 +2485,11 @@ void HtmlParser::OnImg(const string &tag, map<string, string> &attrs)
 	img->m_image = m_images.size() - 1;
 	img->m_indent = m_font_size[0] * (float)m_list_depth * m_scale;
 	img->m_nobr = m_style.m_nobr;
+#ifdef PAF_BUILD_2014
+	img->m_link = -1;
+#else
 	img->m_link = m_style.m_link;
+#endif
 	img->m_center = m_style.m_center;
 	if (!m_no_image_size)
 		img->m_size = size;

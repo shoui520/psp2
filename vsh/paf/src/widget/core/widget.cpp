@@ -55,6 +55,7 @@ _Tree<_Tmap_traits<uint32_t, ui::TouchCapture *, less<uint32_t> > >::erase(itera
 	}
 }
 
+#ifndef PAF_BUILD_2014
 /* Sony's build calls the draw objects' push_back rather than inlining it. */
 template<>
 inline __attribute__((noinline)) int vector<ui::Widget::DrawObjEntry>::push_back(
@@ -68,6 +69,7 @@ inline __attribute__((noinline)) int vector<ui::Widget::DrawObjEntry>::push_back
 	}
 	return result;
 }
+#endif
 
 /* Sony's frame end calls the swapped draw objects' clear rather than inlining it. */
 template<>
@@ -151,7 +153,12 @@ static __attribute__((noinline)) math::v4 CrossKeepW(const math::v4 &a, const ma
 }
 
 /* the product of two rotations (Sony's copy is out of line; name ours) */
+#ifdef PAF_BUILD_2014
+static inline __attribute__((always_inline)) math::quaternion QuatMul(const math::quaternion &a,
+								      const math::quaternion &b)
+#else
 static __attribute__((noinline)) math::quaternion QuatMul(const math::quaternion &a, const math::quaternion &b)
+#endif
 {
 	return math::quaternion(a.getImpl() * b.getImpl());
 }
@@ -190,7 +197,11 @@ static inline void AnimatorDirty(Widget *w, uint32_t kind)
 
 /* the inverse world matrix where it keeps one, of the world matrix moved back to its origin
    where it has one (0x8114be48; name ours) */
+#ifdef PAF_BUILD_2014
+static inline __attribute__((always_inline)) void UpdateInverseMatrix(Widget *w)
+#else
 static __attribute__((noinline)) void UpdateInverseMatrix(Widget *w)
+#endif
 {
 	math::matrix *inverse = w->m_inverse_matrix;
 
@@ -305,7 +316,23 @@ static __attribute__((noinline)) void UpdateLocalMatrix(Widget *w)
 					 math::v4(0.0f, 0.0f, 0.0f, 1.0f));
 }
 
+#ifdef PAF_BUILD_2014
+static inline __attribute__((always_inline)) const math::matrix &WorldMatrix(Widget *w)
+{
+	if ((w->m_update_flag & 7) != 0)
+		w->UpdateMatrix();
+	return w->m_world_matrix;
+}
+
+static inline __attribute__((always_inline)) const math::matrix &LocalMatrix(Widget *w)
+{
+	if ((w->m_update_flag & 7) != 0)
+		w->UpdateMatrix();
+	return w->m_local_matrix;
+}
+#else
 static const math::matrix &WorldMatrix(Widget *w);
+#endif
 
 const math::matrix &Widget::UpdateMatrix()
 {
@@ -5340,6 +5367,7 @@ static __attribute__((noinline)) math::v4 HitBoxOffset(Widget *w)
 	return w->m_hit_box[0];
 }
 
+#ifndef PAF_BUILD_2014
 /* the world and the local matrix (Sony's copies out of line, 0x812427bc and 0x812427d8; names
    ours) */
 static __attribute__((noinline)) const math::matrix &WorldMatrix(Widget *w)
@@ -5355,6 +5383,7 @@ static __attribute__((noinline)) const math::matrix &LocalMatrix(Widget *w)
 		w->UpdateMatrix();
 	return w->m_local_matrix;
 }
+#endif
 
 /* the hit at the point of the widget's space filled in, with the normal of the face it is on, as
    CalcHitBoxToLine has it inline at each of its hits (name ours) */
@@ -6157,6 +6186,7 @@ int32_t Widget::RouteTouchEvent(Event *e)
 	return 0;
 }
 
+#ifndef PAF_BUILD_2014
 float Widget::CalcDistLineToLine(const math::v4 &point_a, const math::v4 &dir_a,
 				 const math::v4 &point_b, const math::v4 &dir_b,
 				 math::v4 *closest_a, math::v4 *closest_b)
@@ -6186,6 +6216,7 @@ float Widget::CalcDistLineToLine(const math::v4 &point_a, const math::v4 &dir_a,
 		*closest_b = on_b;
 	return __builtin_sqrtf((on_a - on_b).dot(on_a - on_b));
 }
+#endif
 
 math::rect Widget::CalcHitRect()
 {
@@ -9342,7 +9373,12 @@ WidgetSoundParam::Sound *Widget::FindSound(int32_t id)
 	return NULL;
 }
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) void Widget::MakeLookAtQuat(math::v4 *facing, math::v4 *up,
+								  math::quaternion *quat)
+#else
 void Widget::MakeLookAtQuat(math::v4 *facing, math::v4 *up, math::quaternion *quat)
+#endif
 {
 	facing->set_w(0.0f);
 	up->set_w(0.0f);
@@ -9692,7 +9728,11 @@ int32_t Widget::GetBaseDestroyCount()
 }
 
 /* the depth of the widget's position in its camera's view (name ours) */
+#ifdef PAF_BUILD_2014
+static inline __attribute__((always_inline)) float CameraDepth(Widget *widget)
+#else
 static float CameraDepth(Widget *widget)
+#endif
 {
 	const math::matrix &view = widget->m_scene->m_camera->GetWorldMatrix();
 	math::v4 pos = widget->GetWorldMatrix().w();

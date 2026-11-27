@@ -187,7 +187,9 @@ int32_t TextSurfaceCache::Allocate(int32_t width, int32_t height, ImageMode form
 		/* no room: the next older entry let go, unless someone else holds its surface */
 release:
 		if (it == m_list.begin()) {
+#ifndef PAF_BUILD_2014
 			sce_paf_wprintf_dummy();
+#endif
 			break;
 		}
 		--it;

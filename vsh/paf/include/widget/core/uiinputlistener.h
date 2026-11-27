@@ -286,8 +286,13 @@ extern inputdevice::pad::Data s_pad_prev[8];
 class UIPadListener : public UIInputGestureListener {
 public:
 	UIPadListener(Environment *env)
+#ifdef PAF_BUILD_2014
+		: UIInputGestureListener(env), m_repeat_delay(300.0f), m_repeat_interval(80.0f),
+		  m_hold_key(0)
+#else
 		: UIInputGestureListener(env), m_repeat_delay(300.0f), m_repeat_interval(80.0f),
 		  m_repeat_count(0), m_hold_key(0), m_analog_to_dpad(false), m_prev_mask(0), m_mode(0)
+#endif
 	{
 		sce_paf_memset(s_pad_curr, 0, sizeof(s_pad_curr));
 		sce_paf_memset(s_pad_prev, 0, sizeof(s_pad_prev));
@@ -317,13 +322,9 @@ public:
 		return 0;
 	}
 
+#ifndef PAF_BUILD_2014
 	/* the key event of the type (17 down, 18 up, 19 repeat, 20 held) for the key, queued
 	   (0x8114aa2a); -1 without an environment or a key code */
-#ifdef PAF_BUILD_2014
-	int32_t PostPadEvent(uint32_t type, uint32_t port, uint32_t key, bool flag, int32_t mode);
-	void UpdatePad(uint32_t *prev, uint32_t *curr, int32_t *port, int32_t *mode,
-		       const inputdevice::Data *data);
-#else
 	virtual int32_t PostPadEvent(uint32_t type, uint32_t port, uint32_t key, bool flag,
 				     int32_t mode);
 	/* the keys of the update made into the masks the events come from: opposite directions
@@ -336,12 +337,16 @@ public:
 	   far */
 	float m_repeat_delay;
 	float m_repeat_interval;
+#ifndef PAF_BUILD_2014
 	uint32_t m_repeat_count;
+#endif
 	/* the key held, and the keys of the last update */
 	uint32_t m_hold_key;
+#ifndef PAF_BUILD_2014
 	bool m_analog_to_dpad;
 	uint32_t m_prev_mask;
 	int32_t m_mode;
+#endif
 };
 
 /* the pad listener that holds all the keys pressed (vtable at 812F9318; name ours) */

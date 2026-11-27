@@ -335,10 +335,12 @@ static inline int sceSasAsAtoiInline(const char *string)
 	return value * sign;
 }
 
+#if !defined(SCE_SAS_STATIC_RUNTIME) || !defined(PAF_BUILD_2014)
 int sceSasAsAtoi(const char *string)
 {
 	return sceSasAsAtoiInline(string);
 }
+#endif
 
 static inline float sceSasAsAtofInline(const char *string)
 {

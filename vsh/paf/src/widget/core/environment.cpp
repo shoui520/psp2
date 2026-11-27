@@ -48,6 +48,7 @@ extern "C" int vshMotionNoiseFilterIsAvailable(void);
 namespace paf {
 namespace common {
 
+#ifndef PAF_BUILD_2014
 /* Sony's Environment constructor calls the input listeners' assignment out of line. */
 template<>
 inline __attribute__((noinline)) SharedPtr<inputdevice::InputListener> &
@@ -65,6 +66,7 @@ SharedPtr<inputdevice::InputListener>::operator=(const SharedPtr &src)
 	}
 	return *this;
 }
+#endif
 
 }
 
@@ -103,6 +105,7 @@ list<ui::TextureRequest>::erase(iterator where)
 	return iterator(next);
 }
 
+#ifndef PAF_BUILD_2014
 /* Sony's AddSceneEntry calls the pending list's push_back rather than inlining it. */
 template<>
 inline __attribute__((noinline)) void list<ui::EntryRequest>::push_back(const ui::EntryRequest &val)
@@ -126,6 +129,7 @@ inline __attribute__((noinline)) void list<ui::EntryRequest>::push_back(const ui
 		++count;
 	}
 }
+#endif
 
 /* Sony's EventLoop and FlushDelayedEvents have the unlinking of the first event inline. */
 template<>
@@ -165,6 +169,7 @@ _Tree<_Tmap_traits<uint32_t, ui::ModalWidgetList, less<uint32_t> > >::erase(cons
 }
 #endif
 
+#ifndef PAF_BUILD_2014
 /* Sony's Environment constructor calls its lists' and maps' constructors out of line. */
 #define PAF_ENV_LIST_CTOR(T) \
 	template<> \
@@ -197,12 +202,10 @@ inline __attribute__((noinline)) map<int32_t, ui::Widget *>::map(const allocator
 {
 }
 
-#ifndef PAF_BUILD_2014
 template<>
 inline __attribute__((noinline)) map<uint32_t, ui::ModalWidgetList>::map(const allocator_type &al)
 {
 }
-#endif
 
 /* Sony's UpdateRestructScene calls the scene list's push_back rather than inlining it. */
 template<>
@@ -227,6 +230,7 @@ inline __attribute__((noinline)) void list<ui::Scene *>::push_back(ui::Scene *co
 		++count;
 	}
 }
+#endif
 
 #ifdef PAF_HAS_WEBVIEW
 namespace graph {

@@ -1092,23 +1092,31 @@ void TextBox::OnCaretBlinkFadeIn(Timer *t, AnimListener *listener, void *data1, 
 				 void *data3)
 {
 	TextBox *text_box = (TextBox *)data1;
+#ifdef PAF_BUILD_2014
+	text_box->SetCaretAlpha(t->m_mapped_x);
+#else
 	math::v4 color;
 
 	text_box->m_text->GetCaretColor(color);
 	color.set_w(t->m_mapped_x);
 	text_box->m_text->SetCaretColor(color);
+#endif
 }
 
 void TextBox::OnCaretBlinkFadeOut(Timer *t, AnimListener *listener, void *data1, void *data2,
 				  void *data3)
 {
 	TextBox *text_box = (TextBox *)data1;
+#ifdef PAF_BUILD_2014
+	text_box->SetCaretAlpha(1.0f - t->m_mapped_x);
+#else
 	math::v4 color;
 	float alpha = t->m_mapped_x;
 
 	text_box->m_text->GetCaretColor(color);
 	color.set_w(1.0f - alpha);
 	text_box->m_text->SetCaretColor(color);
+#endif
 }
 
 int32_t TextBox::AdjustSize()

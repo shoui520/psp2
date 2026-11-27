@@ -53,7 +53,56 @@ void CallListUpdate(CallList *self, Mutex *extMtx);
 CallList *CallListConstruct(CallList *self);
 CallList *CallListConstructBase(CallList *self);
 
+#ifdef PAF_BUILD_2014
+static inline __attribute__((always_inline)) void CallListPushBack(CallItemList *list, const CallItem *item)
+{
+	if (!list->root_node)
+		return;
+
+	CallItemNode *node = (CallItemNode *)PafNew(sizeof(*node));
+
+	if (node) {
+		node->val.m_func = item->m_func;
+		node->val.m_data = item->m_data;
+	} else {
+		node = list->root_node;
+	}
+	if (node != list->root_node) {
+		node->prev = list->root_node->prev;
+		node->next = list->root_node;
+		list->root_node->prev->next = node;
+		list->root_node->prev = node;
+		++list->count;
+	}
+}
+
+static inline __attribute__((always_inline)) void CallListUpdateInline(CallList *self, Mutex *extMtx)
+{
+	CallItemNode *item = self->m_list.root_node;
+
+	if (item)
+		item = item->next;
+	self->m_iterator = item;
+	while (item != self->m_list.root_node) {
+		_ZN3paf6thread6RMutex4LockEv(&self->m_item_mtx);
+		if (extMtx)
+			_ZN3paf6thread5Mutex6UnlockEv(extMtx);
+		item->val.m_func(item->val.m_data);
+		_ZN3paf6thread6RMutex6UnlockEv(&self->m_item_mtx);
+		if (extMtx)
+			_ZN3paf6thread5Mutex4LockEv(extMtx);
+		item = self->m_iterator;
+		if (self->m_iterator_updated) {
+			self->m_iterator_updated = 0;
+		} else if (item) {
+			item = item->next;
+			self->m_iterator = item;
+		}
+	}
+}
+#else
 void CallListPushBack(CallItemList *list, const CallItem *item);
+#endif
 
 /* the allocation-failure handler in ScePafStdc */
 extern int ScePafStdc_D608246A(void);
@@ -64,8 +113,10 @@ static inline __attribute__((always_inline)) CallList *CallListInitialize(CallLi
 {
 	self->m_list.count = 0;
 	CallItemNode *root = (CallItemNode *)PafNew(sizeof(*root));
+#ifndef PAF_BUILD_2014
 	if (!root)
 		ScePafStdc_D608246A();
+#endif
 	self->m_list.root_node = root;
 	if (root) {
 		root->prev = root;

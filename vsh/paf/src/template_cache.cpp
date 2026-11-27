@@ -32,8 +32,10 @@ list<WidgetResourceInfo::LayoutData>::push_back(const WidgetResourceInfo::Layout
 
 	_Node *node = (_Node *)operator new(sizeof(_Node));
 
+#ifndef PAF_BUILD_2014
 	if (node == NULL)
 		ScePafStdc_D608246A();
+#endif
 	if (node != NULL)
 		new (&node->value) WidgetResourceInfo::LayoutData(val);
 	else
@@ -49,6 +51,7 @@ list<WidgetResourceInfo::LayoutData>::push_back(const WidgetResourceInfo::Layout
 	}
 }
 
+#ifndef PAF_BUILD_2014
 template<>
 inline __attribute__((noinline)) void
 list<TemplateCache::Item *>::push_back(TemplateCache::Item *const &val)
@@ -72,6 +75,7 @@ list<TemplateCache::Item *>::push_back(TemplateCache::Item *const &val)
 		++count;
 	}
 }
+#endif
 
 /* and inlines this list's erase */
 template<>

@@ -90,6 +90,7 @@ CallList *CallListConstructBase(CallList *self)
 	return CallListInitialize(self);
 }
 
+#ifndef PAF_BUILD_2014
 void CallListPushBack(CallItemList *list, const CallItem *item)
 {
 	if (!list->root_node)
@@ -115,3 +116,4 @@ void CallListPushBack(CallItemList *list, const CallItem *item)
 		++list->count;
 	}
 }
+#endif

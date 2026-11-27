@@ -5,7 +5,13 @@
 namespace paf {
 namespace common_internal {
 
+#ifdef PAF_BUILD_2014
+inline void on_error()
+{
+}
+#else
 void on_error();
+#endif
 
 }
 }

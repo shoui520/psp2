@@ -1351,9 +1351,42 @@ public:
 					 const math::v4 &normal, int32_t is_unit);
 	/* the closest points of two lines, each a point and a direction, and the distance
 	   between them (0x8114d0ea; names ours) */
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) float CalcDistLineToLine(
+		const math::v4 &point_a, const math::v4 &dir_a,
+		const math::v4 &point_b, const math::v4 &dir_b,
+		math::v4 *closest_a, math::v4 *closest_b)
+	{
+		float aa = dir_a.dot(dir_a).getAsFloat();
+		float bb = dir_b.dot(dir_b).getAsFloat();
+		math::v4 diff = point_a - point_b;
+		float ab = dir_b.dot(dir_a).getAsFloat();
+		float a_diff = dir_a.dot(diff).getAsFloat();
+		float b_diff = dir_b.dot(diff).getAsFloat();
+		float denom = ab * ab - aa * bb;
+		float inverse = 0.0f;
+		float t;
+		float s;
+
+		if (!(__builtin_fabsf(denom) < 0.0001f))
+			inverse = 1.0f / denom;
+		t = (a_diff * bb - b_diff * ab) * inverse;
+		s = (-(b_diff * aa) - -(a_diff * ab)) * inverse;
+
+		math::v4 on_a = point_a + dir_a * t;
+		math::v4 on_b = point_b + dir_b * s;
+
+		if (closest_a != NULL)
+			*closest_a = on_a;
+		if (closest_b != NULL)
+			*closest_b = on_b;
+		return __builtin_sqrtf((on_a - on_b).dot(on_a - on_b));
+	}
+#else
 	float CalcDistLineToLine(const math::v4 &point_a, const math::v4 &dir_a,
 				const math::v4 &point_b, const math::v4 &dir_b,
 				math::v4 *closest_a, math::v4 *closest_b);
+#endif
 	/* where its hit box's center is, and its hit box's size (with opt 1 the target of a
 	   running size animation) */
 	math::v4 GetHitBoxCenter();
@@ -1468,7 +1501,11 @@ public:
 	int32_t SetPosture(const math::v4 &facing, const math::v4 &up, Widget *ref);
 	/* the rotation that faces the first vector with the second up, made into the quaternion
 	   (0x81154cee; name ours) */
+#ifdef PAF_BUILD_2014
+	inline static void MakeLookAtQuat(math::v4 *facing, math::v4 *up, math::quaternion *quat);
+#else
 	static void MakeLookAtQuat(math::v4 *facing, math::v4 *up, math::quaternion *quat);
+#endif
 	/* the rectangle it clips its children to */
 	math::rect CalcClipRect();
 	math::v4 GetAlignOffsetToCenter(int32_t opt);

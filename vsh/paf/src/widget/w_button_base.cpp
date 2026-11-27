@@ -355,10 +355,12 @@ int32_t ButtonBase::HandleKeycodeEvent(Event *e)
 
 		if (type > 0x12) {
 			if (type == 0x14) {
+#ifndef PAF_BUILD_2014
 				uint32_t key = detail & 0xFF;
 
 				ReleasePadCaptureDir(key, true);
 				ReleasePadCaptureButton(key, true);
+#endif
 				ChangeButtonState(ST_BTN_NORMAL);
 				e->Consume();
 			}
@@ -376,10 +378,12 @@ int32_t ButtonBase::HandleKeycodeEvent(Event *e)
 				}
 				e->Consume();
 			} else {
+#ifndef PAF_BUILD_2014
 				uint32_t key = detail & 0xFF;
 
 				ReleasePadCaptureDir(key, false);
 				ReleasePadCaptureButton(key, false);
+#endif
 				ChangeButtonState(ST_BTN_NORMAL);
 				e->Consume();
 			}
@@ -928,11 +932,11 @@ uint32_t ButtonBase::ChangeButtonState(ButtonState state)
 		m_btn_state = state;
 		SetGlowAnim(GLOW_OFF, false);
 		ScePafWidget_931AD41E(this, false);
-		ReleasePadCaptureDir(255, false);
-		ReleasePadCaptureButton(255, false);
 #ifdef PAF_BUILD_2014
 		DoButtonEvent(CB_BTN_DISABLE);
 #else
+		ReleasePadCaptureDir(255, false);
+		ReleasePadCaptureButton(255, false);
 		DoButtonEvent(CB_BTN_DISABLE, NULL);
 #endif
 		m_disable_fade = 0;

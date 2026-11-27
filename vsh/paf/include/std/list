@@ -263,6 +263,9 @@ public:
 };
 
 template<class _Ty, class _Ax>
+#ifdef PAF_BUILD_2014
+inline
+#endif
 list<_Ty, _Ax>::list(const list &other)
 {
 	count = 0;
@@ -364,7 +367,7 @@ list<_Ty, _Ax>::pop_front()
 
 #ifdef PAF_BUILD_2014
 template<class _Ty, class _Ax>
-void
+inline void
 list<_Ty, _Ax>::push_front(const _Ty &val)
 {
 	if (head == NULL)
@@ -390,7 +393,7 @@ list<_Ty, _Ax>::push_front(const _Ty &val)
 }
 
 template<class _Ty, class _Ax>
-void
+inline void
 list<_Ty, _Ax>::push_back(const _Ty &val)
 {
 	if (head == NULL)
@@ -496,7 +499,7 @@ list<_Ty, _Ax>::_Splice(const iterator &where, _Myt &right, const iterator &firs
 
 #ifdef PAF_BUILD_2014
 template<class _Ty, class _Ax>
-typename list<_Ty, _Ax>::iterator
+inline typename list<_Ty, _Ax>::iterator
 list<_Ty, _Ax>::insert(iterator where, const _Ty &val)
 {
 	_Node *next = where.node;
@@ -518,7 +521,7 @@ list<_Ty, _Ax>::insert(iterator where, const _Ty &val)
 }
 
 template<class _Ty, class _Ax>
-typename list<_Ty, _Ax>::iterator
+inline typename list<_Ty, _Ax>::iterator
 list<_Ty, _Ax>::erase(iterator where)
 {
 	_Node *node = where.node;
@@ -533,7 +536,7 @@ list<_Ty, _Ax>::erase(iterator where)
 }
 
 template<class _Ty, class _Ax>
-void
+inline void
 list<_Ty, _Ax>::remove(const _Ty &val)
 {
 	_Node *node = begin().node;

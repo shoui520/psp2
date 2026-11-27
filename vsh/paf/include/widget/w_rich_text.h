@@ -426,8 +426,13 @@ public:
 		void AlignLine(list<Item *>::iterator first, list<Item *>::iterator last, float y,
 			       float &height, float &text_height);
 		/* the items from first to last moved right by half of what the line leaves */
+#ifdef PAF_BUILD_2014
+		inline void Center(list<Item *>::iterator first, list<Item *>::iterator last,
+				   float width, float x);
+#else
 		void Center(list<Item *>::iterator first, list<Item *>::iterator last, float width,
 			    float x);
+#endif
 		/* the line ended: its items moved up to the baseline and down the line */
 		void EndLine();
 		/* back to where the nobr block began */

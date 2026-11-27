@@ -96,6 +96,9 @@ PageObservable::PageObservable() : m_notifying(false)
 {
 }
 
+#ifdef PAF_BUILD_2014
+__attribute__((noinline))
+#endif
 PageObservable::~PageObservable()
 {
 }
@@ -113,6 +116,9 @@ PageBase::PageBase(Plugin *plugin, const IDParam &pageId, const Plugin::PageOpen
 {
 }
 
+#ifdef PAF_BUILD_2014
+__attribute__((noinline))
+#endif
 PageBase::~PageBase()
 {
 }

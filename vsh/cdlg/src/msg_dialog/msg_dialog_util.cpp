@@ -22,6 +22,7 @@ using namespace paf;
 #define MSG_DIALOG_SIZE_KB_MAX		9999
 #define MSG_DIALOG_SIZE_MB_MAX		(9999 * 1024)
 
+#ifndef MSG_DIALOG_UTIL_2014
 /* a country's number format: the system language it is for, its decimal point and the separator
    of its thousands */
 struct MsgDialogNumberFormat {
@@ -30,11 +31,13 @@ struct MsgDialogNumberFormat {
 	string decimalPoint;
 	string groupSeparator;
 };
+#endif
 
 static SceUInt32 s_sdkVersion;
 static SceUInt32 s_allowedSdkVersion;
 static int s_sdkLevel;
 
+#ifndef MSG_DIALOG_UTIL_2014
 static MsgDialogNumberFormat s_numberFormats[] = {
 	{ "JP", 0, ".", "," },
 	{ "US", 1, ".", "," },
@@ -116,6 +119,7 @@ static MsgDialogNumberFormat s_numberFormats[] = {
 	{ "TH", 18, ".", "," },
 	{ "KR", 9, ".", "," },
 };
+#endif
 
 const wchar_t *(*g_msgDialogFormatLetter)(wchar_t letter);
 

@@ -1,5 +1,314 @@
+--- a/src/autofit/afcjk.c
++++ b/src/autofit/afcjk.c
+@@ -1166,7 +1166,7 @@
+   }
+ 
+ 
+-  FT_LOCAL_DEF( void )
++  static inline __attribute__(( always_inline )) void
+   af_cjk_hints_compute_blue_edges( AF_GlyphHints  hints,
+                                    AF_CJKMetrics  metrics,
+                                    AF_Dimension   dim )
+@@ -1494,7 +1494,7 @@
+ 
+   /* align one stem edge relative to the previous stem edge */
+ 
+-  static void
++  static inline __attribute__(( always_inline )) void
+   af_cjk_align_linked_edge( AF_GlyphHints  hints,
+                             AF_Dimension   dim,
+                             AF_Edge        base_edge,
+@@ -1665,7 +1665,7 @@
+   }
+ 
+ 
+-  static void
++  static inline __attribute__(( always_inline )) void
+   af_cjk_hint_edges( AF_GlyphHints  hints,
+                      AF_Dimension   dim )
+   {
+--- a/src/autofit/afhints.c
++++ b/src/autofit/afhints.c
+@@ -282,7 +282,7 @@
+ #ifdef __cplusplus
+   extern "C" {
+ #endif
+-  FT_Error
++  static FT_Error
+   af_glyph_hints_get_num_segments( AF_GlyphHints  hints,
+                                    FT_Int         dimension,
+                                    FT_Int*        num_segments )
+@@ -308,7 +308,7 @@
+ #ifdef __cplusplus
+   extern "C" {
+ #endif
+-  FT_Error
++  static FT_Error
+   af_glyph_hints_get_segment_offset( AF_GlyphHints  hints,
+                                      FT_Int         dimension,
+                                      FT_Int         idx,
+@@ -412,7 +412,7 @@
+   }
+ 
+ 
+-  FT_Error
++  static FT_Error
+   af_glyph_hints_get_num_segments( AF_GlyphHints  hints,
+                                    FT_Int         dimension,
+                                    FT_Int*        num_segments )
+@@ -425,7 +425,7 @@
+   }
+ 
+ 
+-  FT_Error
++  static FT_Error
+   af_glyph_hints_get_segment_offset( AF_GlyphHints  hints,
+                                      FT_Int         dimension,
+                                      FT_Int         idx,
+@@ -810,7 +810,7 @@
+   /* Align all points of an edge to the same coordinate value, */
+   /* either horizontally or vertically.                        */
+ 
+-  FT_LOCAL_DEF( void )
++  static inline __attribute__(( always_inline )) void
+   af_glyph_hints_align_edge_points( AF_GlyphHints  hints,
+                                     AF_Dimension   dim )
+   {
+--- a/src/autofit/afhints.h
++++ b/src/autofit/afhints.h
+@@ -427,7 +427,7 @@
+   af_glyph_hints_save( AF_GlyphHints  hints,
+                        FT_Outline*    outline );
+ 
+-  FT_LOCAL( void )
++  static inline __attribute__(( always_inline )) void
+   af_glyph_hints_align_edge_points( AF_GlyphHints  hints,
+                                     AF_Dimension   dim );
+ 
+--- a/src/autofit/aflatin.c
++++ b/src/autofit/aflatin.c
+@@ -1746,7 +1746,7 @@
+ 
+   /* Align one stem edge relative to the previous stem edge. */
+ 
+-  static void
++  static inline __attribute__(( always_inline )) void
+   af_latin_align_linked_edge( AF_GlyphHints  hints,
+                               AF_Dimension   dim,
+                               AF_Edge        base_edge,
+--- a/src/autofit/aflatin2.c
++++ b/src/autofit/aflatin2.c
+@@ -1758,7 +1758,7 @@
+ 
+   /* align one stem edge relative to the previous stem edge */
+ 
+-  static void
++  static inline __attribute__(( always_inline )) void
+   af_latin2_align_linked_edge( AF_GlyphHints  hints,
+                                AF_Dimension   dim,
+                                AF_Edge        base_edge,
+--- a/src/base/ftobjs.c
++++ b/src/base/ftobjs.c
+@@ -1990,7 +1990,7 @@
+ 
+   /* documentation is in freetype.h */
+ 
+-  FT_EXPORT_DEF( FT_Error )
++  FT_EXPORT_DEF( FT_Error ) __attribute__(( noinline ))
+   FT_Open_Face( FT_Library           library,
+                 const FT_Open_Args*  args,
+                 FT_Long              face_index,
+@@ -4094,7 +4094,7 @@
+   /* <Note>                                                                */
+   /*    The driver _must_ be LOCKED!                                       */
+   /*                                                                       */
+-  static void
++  static __attribute__(( noinline )) void
+   Destroy_Module( FT_Module  module )
+   {
+     FT_Memory         memory  = module->memory;
+--- a/src/base/ftoutln.c
++++ b/src/base/ftoutln.c
+@@ -290,7 +290,7 @@
+   }
+ 
+ 
+-  FT_EXPORT_DEF( FT_Error )
++  FT_EXPORT_DEF( FT_Error ) __attribute__(( noinline ))
+   FT_Outline_New_Internal( FT_Memory    memory,
+                            FT_UInt      numPoints,
+                            FT_Int       numContours,
+--- a/src/base/fttrigon.c
++++ b/src/base/fttrigon.c
+@@ -182,7 +182,7 @@
+   }
+ 
+ 
+-  static void
++  static inline __attribute__(( always_inline )) void
+   ft_trig_pseudo_rotate( FT_Vector*  vec,
+                          FT_Angle    theta )
+   {
+@@ -252,7 +252,7 @@
+   }
+ 
+ 
+-  static void
++  static inline __attribute__(( always_inline )) void
+   ft_trig_pseudo_polarize( FT_Vector*  vec )
+   {
+     FT_Fixed         theta;
+--- a/src/cff/cffobjs.c
++++ b/src/cff/cffobjs.c
+@@ -102,7 +102,7 @@
+   /* CFF and Type 1 private dictionaries have slightly different      */
+   /* structures; we need to synthesize a Type 1 dictionary on the fly */
+ 
+-  static void
++  static __attribute__(( noinline )) void
+   cff_make_private_dict( CFF_SubFont  subfont,
+                          PS_Private   priv )
+   {
+--- a/src/psaux/afmparse.c
++++ b/src/psaux/afmparse.c
+@@ -87,7 +87,7 @@
+           ( (stream)->status >= AFM_STREAM_STATUS_EOF )
+ 
+ 
+-  static int
++  static inline __attribute__(( always_inline )) int
+   afm_stream_skip_spaces( AFM_Stream  stream )
+   {
+     int  ch = 0;  /* make stupid compiler happy */
+@@ -155,7 +155,7 @@
+ 
+ 
+   /* read a string (i.e., read to EOL) */
+-  static char*
++  static inline __attribute__(( always_inline )) char*
+   afm_stream_read_string( AFM_Stream  stream )
+   {
+     char*  str;
+--- a/src/pshinter/pshalgo.c
++++ b/src/pshinter/pshalgo.c
+@@ -243,7 +243,7 @@
+   }
+ 
+ 
+-  static void
++  static inline __attribute__(( always_inline )) void
+   psh_hint_table_activate_mask( PSH_Hint_Table  table,
+                                 PS_Mask         hint_mask )
+   {
+@@ -845,7 +845,7 @@
+ #endif /* 0 */
+ 
+ 
+-  static void
++  static __attribute__(( noinline )) void
+   psh_hint_table_align_hints( PSH_Hint_Table  table,
+                               PSH_Globals     globals,
+                               FT_Int          dimension,
+@@ -1875,7 +1875,7 @@
+ 
+ #define  PSH_MAX_STRONG_INTERNAL  16
+ 
+-  static void
++  static __attribute__(( noinline )) void
+   psh_glyph_interpolate_normal_points( PSH_Glyph  glyph,
+                                        FT_Int     dimension )
+   {
+--- a/src/raster/ftraster.c
++++ b/src/raster/ftraster.c
+@@ -794,7 +794,7 @@
+   /* <Return>                                                              */
+   /*    SUCCESS on success.  FAILURE in case of overflow or incoherency.   */
+   /*                                                                       */
+-  static Bool
++  static inline __attribute__(( always_inline )) Bool
+   End_Profile( RAS_ARGS Bool  overshoot )
+   {
+     Long      h;
+@@ -864,7 +864,7 @@
+   /* <Return>                                                              */
+   /*    SUCCESS on success.  FAILURE in case of overflow.                  */
+   /*                                                                       */
+-  static Bool
++  static inline __attribute__(( always_inline )) Bool
+   Insert_Y_Turn( RAS_ARGS Int  y )
+   {
+     PLong  y_turns;
+@@ -1388,7 +1388,7 @@
+   /* <Return>                                                              */
+   /*    SUCCESS on success, FAILURE on render pool overflow.               */
+   /*                                                                       */
+-  static Bool
++  static inline __attribute__(( always_inline )) Bool
+   Bezier_Down( RAS_ARGS Int        degree,
+                         TSplitter  splitter,
+                         Long       miny,
+@@ -2180,7 +2180,7 @@
+   /*    an algorithm which is fast in this case.  Bubble sort is enough    */
+   /*    and simple.                                                        */
+   /*                                                                       */
+-  static void
++  static inline __attribute__(( always_inline )) void
+   Sort( PProfileList  list )
+   {
+     PProfile  *old, current, next;
+--- a/src/sfnt/ttpost.c
++++ b/src/sfnt/ttpost.c
+@@ -152,7 +152,7 @@
+ #endif /* FT_CONFIG_OPTION_POSTSCRIPT_NAMES */
+ 
+ 
+-  static FT_Error
++  static __attribute__(( noinline )) FT_Error
+   load_format_20( TT_Face    face,
+                   FT_Stream  stream,
+                   FT_Long    post_limit )
+--- a/src/smooth/ftsmooth.c
++++ b/src/smooth/ftsmooth.c
+@@ -95,7 +95,7 @@
+ 
+ 
+   /* convert a slot's glyph image into a bitmap */
+-  static FT_Error
++  static __attribute__(( noinline )) FT_Error
+   ft_smooth_render_generic( FT_Renderer       render,
+                             FT_GlyphSlot      slot,
+                             FT_Render_Mode    mode,
+--- a/src/truetype/ttgxvar.c
++++ b/src/truetype/ttgxvar.c
+@@ -276,7 +276,7 @@
+   /* <InOut>                                                               */
+   /*    face :: The font face.                                             */
+   /*                                                                       */
+-  static void
++  static __attribute__(( noinline )) void
+   ft_var_load_avar( TT_Face  face )
+   {
+     FT_Stream       stream = FT_FACE_STREAM(face);
 --- a/src/truetype/ttinterp.c
 +++ b/src/truetype/ttinterp.c
+@@ -1430,7 +1430,7 @@
+ 
+ #if 1
+ 
+-  static FT_Int32
++  static inline __attribute__(( always_inline )) FT_Int32
+   TT_MulFix14( FT_Int32  a,
+                FT_Int    b )
+   {
+@@ -1464,7 +1464,7 @@
+ #else
+ 
+   /* compute (a*b)/2^14 with maximal accuracy and rounding */
+-  static FT_Int32
++  static inline __attribute__(( always_inline )) FT_Int32
+   TT_MulFix14( FT_Int32  a,
+                FT_Int    b )
+   {
 @@ -1777,7 +1777,7 @@
    /* <Return>                                                              */
    /*    SUCCESS or FAILURE.                                                */
@@ -171,143 +480,14 @@
    Ins_ALIGNPTS( INS_ARG )
    {
      FT_UShort   p1, p2;
---- a/src/base/fttrigon.c
-+++ b/src/base/fttrigon.c
-@@ -182,7 +182,7 @@
+--- a/src/truetype/ttobjs.c
++++ b/src/truetype/ttobjs.c
+@@ -999,7 +999,7 @@
    }
  
  
--  static void
-+  static inline __attribute__(( always_inline )) void
-   ft_trig_pseudo_rotate( FT_Vector*  vec,
-                          FT_Angle    theta )
+-  FT_LOCAL_DEF( FT_Error )
++  FT_LOCAL_DEF( FT_Error ) __attribute__(( noinline ))
+   tt_size_ready_bytecode( TT_Size  size,
+                           FT_Bool  pedantic )
    {
-@@ -252,7 +252,7 @@
-   }
- 
- 
--  static void
-+  static inline __attribute__(( always_inline )) void
-   ft_trig_pseudo_polarize( FT_Vector*  vec )
-   {
-     FT_Fixed         theta;
---- a/src/raster/ftraster.c
-+++ b/src/raster/ftraster.c
-@@ -794,7 +794,7 @@
-   /* <Return>                                                              */
-   /*    SUCCESS on success.  FAILURE in case of overflow or incoherency.   */
-   /*                                                                       */
--  static Bool
-+  static inline __attribute__(( always_inline )) Bool
-   End_Profile( RAS_ARGS Bool  overshoot )
-   {
-     Long      h;
-@@ -864,7 +864,7 @@
-   /* <Return>                                                              */
-   /*    SUCCESS on success.  FAILURE in case of overflow.                  */
-   /*                                                                       */
--  static Bool
-+  static inline __attribute__(( always_inline )) Bool
-   Insert_Y_Turn( RAS_ARGS Int  y )
-   {
-     PLong  y_turns;
-@@ -1388,7 +1388,7 @@
-   /* <Return>                                                              */
-   /*    SUCCESS on success, FAILURE on render pool overflow.               */
-   /*                                                                       */
--  static Bool
-+  static inline __attribute__(( always_inline )) Bool
-   Bezier_Down( RAS_ARGS Int        degree,
-                         TSplitter  splitter,
-                         Long       miny,
-@@ -2180,7 +2180,7 @@
-   /*    an algorithm which is fast in this case.  Bubble sort is enough    */
-   /*    and simple.                                                        */
-   /*                                                                       */
--  static void
-+  static inline __attribute__(( always_inline )) void
-   Sort( PProfileList  list )
-   {
-     PProfile  *old, current, next;
---- a/src/psaux/afmparse.c
-+++ b/src/psaux/afmparse.c
-@@ -115,7 +115,7 @@
- 
- 
-   /* read a key or value in current column */
--  static char*
-+  static inline __attribute__(( always_inline )) char*
-   afm_stream_read_one( AFM_Stream  stream )
-   {
-     char*  str;
-@@ -155,7 +155,7 @@
- 
- 
-   /* read a string (i.e., read to EOL) */
--  static char*
-+  static inline __attribute__(( always_inline )) char*
-   afm_stream_read_string( AFM_Stream  stream )
-   {
-     char*  str;
---- a/src/pshinter/pshalgo.c
-+++ b/src/pshinter/pshalgo.c
-@@ -243,7 +243,7 @@
-   }
- 
- 
--  static void
-+  static inline __attribute__(( always_inline )) void
-   psh_hint_table_activate_mask( PSH_Hint_Table  table,
-                                 PS_Mask         hint_mask )
-   {
-@@ -845,7 +845,7 @@
- #endif /* 0 */
- 
- 
--  static void
-+  static __attribute__(( noinline )) void
-   psh_hint_table_align_hints( PSH_Hint_Table  table,
-                               PSH_Globals     globals,
-                               FT_Int          dimension,
-@@ -1875,7 +1875,7 @@
- 
- #define  PSH_MAX_STRONG_INTERNAL  16
- 
--  static void
-+  static __attribute__(( noinline )) void
-   psh_glyph_interpolate_normal_points( PSH_Glyph  glyph,
-                                        FT_Int     dimension )
-   {
---- a/src/cff/cffobjs.c
-+++ b/src/cff/cffobjs.c
-@@ -102,7 +102,7 @@
-   /* CFF and Type 1 private dictionaries have slightly different      */
-   /* structures; we need to synthesize a Type 1 dictionary on the fly */
- 
--  static void
-+  static __attribute__(( noinline )) void
-   cff_make_private_dict( CFF_SubFont  subfont,
-                          PS_Private   priv )
-   {
---- a/src/truetype/ttgxvar.c
-+++ b/src/truetype/ttgxvar.c
-@@ -276,7 +276,7 @@
-   /* <InOut>                                                               */
-   /*    face :: The font face.                                             */
-   /*                                                                       */
--  static void
-+  static __attribute__(( noinline )) void
-   ft_var_load_avar( TT_Face  face )
-   {
-     FT_Stream       stream = FT_FACE_STREAM(face);
---- a/src/sfnt/ttpost.c
-+++ b/src/sfnt/ttpost.c
-@@ -152,7 +152,7 @@
- #endif /* FT_CONFIG_OPTION_POSTSCRIPT_NAMES */
- 
- 
--  static FT_Error
-+  static __attribute__(( noinline )) FT_Error
-   load_format_20( TT_Face    face,
-                   FT_Stream  stream,
-                   FT_Long    post_limit )

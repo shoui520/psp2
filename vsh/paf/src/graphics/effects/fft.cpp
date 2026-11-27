@@ -39,6 +39,58 @@ static inline math::v2 ComplexMul(math::v2 a, math::v2 b)
 }
 
 /* a twiddle factor (cos, sin) as the matrix that rotates by it: its columns (c, s) and (-s, c) (name ours) */
+#ifdef PAF_BUILD_2014
+struct Twiddle {
+	float m_cos;
+	float m_sin;
+	float m_neg_sin;
+	float m_cos_y;
+
+	math::v2 Rotate(math::v2 x) const
+	{
+		return math::v2(m_cos, m_sin) * x.extract_x() +
+		       math::v2(m_neg_sin, m_cos_y) * x.extract_y();
+	}
+};
+
+#define TWIDDLE_INIT(c, s) { (c), (s), -(s), (c) }
+
+static const Twiddle s_twiddle4[4] = {
+	TWIDDLE_INIT(1.0f, 0.0f),
+	TWIDDLE_INIT(0.707107f, 0.707107f),
+	TWIDDLE_INIT(-0.0f, 1.0f),
+	TWIDDLE_INIT(-0.707107f, 0.707107f),
+};
+static const Twiddle s_twiddle8[8] = {
+	TWIDDLE_INIT(1.0f, 0.0f),
+	TWIDDLE_INIT(0.92388f, 0.382683f),
+	TWIDDLE_INIT(0.707107f, 0.707107f),
+	TWIDDLE_INIT(0.382683f, 0.92388f),
+	TWIDDLE_INIT(-0.0f, 1.0f),
+	TWIDDLE_INIT(-0.382684f, 0.92388f),
+	TWIDDLE_INIT(-0.707107f, 0.707107f),
+	TWIDDLE_INIT(-0.92388f, 0.382683f),
+};
+static const Twiddle s_twiddle16[16] = {
+	TWIDDLE_INIT(1.0f, 0.0f),
+	TWIDDLE_INIT(0.980785f, 0.19509f),
+	TWIDDLE_INIT(0.92388f, 0.382683f),
+	TWIDDLE_INIT(0.83147f, 0.55557f),
+	TWIDDLE_INIT(0.707107f, 0.707107f),
+	TWIDDLE_INIT(0.55557f, 0.83147f),
+	TWIDDLE_INIT(0.382683f, 0.92388f),
+	TWIDDLE_INIT(0.19509f, 0.980785f),
+	TWIDDLE_INIT(-0.0f, 1.0f),
+	TWIDDLE_INIT(-0.19509f, 0.980785f),
+	TWIDDLE_INIT(-0.382684f, 0.92388f),
+	TWIDDLE_INIT(-0.55557f, 0.83147f),
+	TWIDDLE_INIT(-0.707107f, 0.707107f),
+	TWIDDLE_INIT(-0.83147f, 0.55557f),
+	TWIDDLE_INIT(-0.92388f, 0.382683f),
+	TWIDDLE_INIT(-0.980785f, 0.19509f),
+};
+#undef TWIDDLE_INIT
+#else
 class Twiddle {
 public:
 	__attribute__((always_inline)) Twiddle(float c, float s)
@@ -90,6 +142,7 @@ static Twiddle s_twiddle16[16] = {
 	Twiddle(-0.92388f, 0.382683f),
 	Twiddle(-0.980785f, 0.19509f),
 };
+#endif
 
 /* the five butterfly stages of an inverse FFT of 32 values stride apart, already in bit-reversed order (name ours) */
 template <int32_t stride>

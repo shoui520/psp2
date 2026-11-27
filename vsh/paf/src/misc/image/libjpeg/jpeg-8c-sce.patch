@@ -1,3 +1,68 @@
+--- a/jchuff.c
++++ b/jchuff.c
+@@ -302,8 +302,12 @@
+  * between calls, so 24 bits are sufficient.
+  */
+ 
++#ifdef PAF_BUILD_2014
++static inline __attribute__((always_inline)) boolean
++#else
+ INLINE
+ LOCAL(boolean)
++#endif
+ emit_bits_s (working_state * state, unsigned int code, int size)
+ /* Emit some bits; return TRUE if successful, FALSE if must suspend */
+ {
+@@ -382,7 +386,11 @@
+ }
+ 
+ 
++#ifdef PAF_BUILD_2014
++LOCAL(boolean) __attribute__((noinline))
++#else
+ LOCAL(boolean)
++#endif
+ flush_bits_s (working_state * state)
+ {
+   if (! emit_bits_s(state, 0x7F, 7)) /* fill any partial byte with ones */
+@@ -393,7 +401,11 @@
+ }
+ 
+ 
++#ifdef PAF_BUILD_2014
++LOCAL(void) __attribute__((noinline))
++#else
+ LOCAL(void)
++#endif
+ flush_bits_e (huff_entropy_ptr entropy)
+ {
+   emit_bits_e(entropy, 0x7F, 7); /* fill any partial byte with ones */
+@@ -912,7 +924,11 @@
+ 
+ /* Encode a single block's worth of coefficients */
+ 
++#ifdef PAF_BUILD_2014
++LOCAL(boolean) __attribute__((noinline))
++#else
+ LOCAL(boolean)
++#endif
+ encode_one_block (working_state * state, JCOEFPTR block, int last_dc_val,
+ 		  c_derived_tbl *dctbl, c_derived_tbl *actbl)
+ {
+--- a/jdhuff.c
++++ b/jdhuff.c
+@@ -461,7 +461,11 @@
+ #endif
+ 
+ 
++#ifdef PAF_BUILD_2014
++static inline __attribute__((always_inline)) boolean
++#else
+ LOCAL(boolean)
++#endif
+ jpeg_fill_bit_buffer (bitread_working_state * state,
+ 		      register bit_buf_type get_buffer, register int bits_left,
+ 		      int nbits)
 --- a/jdmarker.c
 +++ b/jdmarker.c
 @@ -305,7 +305,7 @@
@@ -148,55 +213,4 @@
 +#endif
  }
  
-
---- a/jchuff.c
-+++ b/jchuff.c
-@@ -302,8 +302,12 @@
-  * between calls, so 24 bits are sufficient.
-  */
  
-+#ifdef PAF_BUILD_2014
-+static inline __attribute__((always_inline)) boolean
-+#else
- INLINE
- LOCAL(boolean)
-+#endif
- emit_bits_s (working_state * state, unsigned int code, int size)
- /* Emit some bits; return TRUE if successful, FALSE if must suspend */
- {
-@@ -382,7 +386,11 @@
- }
- 
- 
-+#ifdef PAF_BUILD_2014
-+LOCAL(boolean) __attribute__((noinline))
-+#else
- LOCAL(boolean)
-+#endif
- flush_bits_s (working_state * state)
- {
-   if (! emit_bits_s(state, 0x7F, 7)) /* fill any partial byte with ones */
-@@ -393,7 +401,11 @@
- }
- 
- 
-+#ifdef PAF_BUILD_2014
-+LOCAL(void) __attribute__((noinline))
-+#else
- LOCAL(void)
-+#endif
- flush_bits_e (huff_entropy_ptr entropy)
- {
-   emit_bits_e(entropy, 0x7F, 7); /* fill any partial byte with ones */
-@@ -912,7 +924,11 @@
- 
- /* Encode a single block's worth of coefficients */
- 
-+#ifdef PAF_BUILD_2014
-+LOCAL(boolean) __attribute__((noinline))
-+#else
- LOCAL(boolean)
-+#endif
- encode_one_block (working_state * state, JCOEFPTR block, int last_dc_val,
- 		  c_derived_tbl *dctbl, c_derived_tbl *actbl)
- {
