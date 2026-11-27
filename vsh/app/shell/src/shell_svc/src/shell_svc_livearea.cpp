@@ -18,6 +18,7 @@
 #include "../../../plugins.h"
 #include "../../livespace_db/lsdb_keys.h"
 #include "../../livespace_db/livearea.h"
+#include "shell_svc_livearea_job.h"
 
 struct LiTemplateLayout {
 	paf::string m_style;					/* +0 */
@@ -64,23 +65,15 @@ extern int shellSvcLiveAreaUpdateFromPath(SceUID pid, const char *path, paf::str
 extern int shellSvcLiveAreaSetFromPath(SceUID pid, const char *path, paf::common::SharedPtr<int> *parsed,
 	int flags, paf::string *titleId, SceUInt8 allowAny, paf::string *outDir, int *outFlag); /* 0x811B9836 */
 
-class LiveAreaUtilJobBase : public paf::job::JobItem {
-public:
-	LiveAreaUtilJobBase(IPMI::Session *session, SceUInt32 reqId,
-		const char *path, const char *titleId, SceUInt8 flag);
-	virtual ~LiveAreaUtilJobBase() {}
-	virtual int Run() { return 0; }
-	virtual void Finish(int) {}
-
-	IPMI::Session *m_session;				/* +28 */
-	SceUInt32 m_reqId;					/* +32 */
-	paf::string m_path;					/* +36 */
-	paf::string m_titleId;					/* +48 */
-	SceUInt8 m_flag;					/* +60 */
-};
-
 static paf::list<LiveAreaUtilJobBase *> s_liveareaUtilJobs;	/* 0x8156B650 */
 static paf::thread::RMutex s_liveareaUtilMutex("SceLiveAreaUtilJobMutex", 0); /* 0x8156B660 */
+
+LiveAreaUtilJobBase::~LiveAreaUtilJobBase()
+{
+	s_liveareaUtilMutex.Lock();
+	s_liveareaUtilJobs.remove(this);
+	s_liveareaUtilMutex.Unlock();
+}
 
 /* 0x811B84F2 */
 int shellSvcLiveAreaSendUpdateResp(IPMI::Session *session, SceUInt32 reqId, int err)

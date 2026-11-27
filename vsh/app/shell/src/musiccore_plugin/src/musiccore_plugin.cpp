@@ -139,7 +139,75 @@ static void musicCoreOnPowerEvent2(int eventId);		/* 0x811CE45A */
 static void musicCoreOnPowerEvent3(int eventId);		/* 0x811CE4D2 */
 static void musicCoreOnRemoteKey(int eventId, int handler, const void *ev); /* 0x811CE54A */
 
-static void *s_musicCoreInterface[32] = { NULL };		/* 0x81544E38 */
+int musicCoreRegisterCallback(int unused, MusicCoreEventCb cb);
+int musicCoreUnregisterCallback(int unused, MusicCoreEventCb cb);
+int musicCoreCmdSetContent(const MusicCoreClientCtx *ctx, const void *content);
+int musicCoreGetTrackInfo(const MusicCoreClientCtx *ctx, char *outInfo);
+int musicCoreSendControlCmd(const MusicCoreClientCtx *ctx, SceUInt32 ctrlCode, int param);
+int musicCoreQueryConvertedStatus(const MusicCoreClientCtx *ctx, MusicCoreRawStatus *outStatus);
+int musicCoreSetParam(const MusicCoreClientCtx *ctx, int paramId, const int *values);
+int musicCoreGetParam(const MusicCoreClientCtx *ctx, int paramId, int *outVal);
+int musicCoreDbSync(const MusicCoreClientCtx *ctx);
+static int musicCoreInterfaceNoop(void) { return 0; }		/* 0x81409E2C */
+int musicCoreCmdOpen(const MusicCoreClientCtx *ctx);
+int musicCoreCmdClose(const MusicCoreClientCtx *ctx);
+int musicCoreSendOpenUri(const MusicCoreClientCtx *ctx, const void *uriBuf, const void *optBuf);
+int musicCoreGetCurrentUri(const MusicCoreClientCtx *ctx, char *outUri);
+int musicCoreGetChannelError(const MusicCoreClientCtx *ctx, int *outErr);
+int musicCoreDbOpen(const MusicCoreClientCtx *ctx);
+int musicCoreDbSuspend(const MusicCoreClientCtx *ctx, SceUInt8 flag);
+int musicCoreDbClose(const MusicCoreClientCtx *ctx);
+int musicCoreDbDetach(const MusicCoreClientCtx *ctx);
+int musicCoreDbQuery(const MusicCoreClientCtx *ctx, const void *data);
+int musicCoreGetCapability(const MusicCoreClientCtx *ctx, void *outCap);
+int musicCoreGetMetadata(const MusicCoreClientCtx *ctx, void *outMeta);
+int musicCoreGetBgmMute(int mode, void *outState);
+int musicCoreSetBgmMute(int mode, int enable);
+int musicCoreCmdResetChannel(const MusicCoreClientCtx *ctx);
+int musicCoreGetPlayTime(const MusicCoreClientCtx *ctx, int *outTime);
+int musicCoreCmdExOpen(const MusicCoreClientCtx *ctx, const void *openParam);
+int musicCoreCmdExClose(const MusicCoreClientCtx *ctx);
+int musicCoreCmdSetAvrcp(const MusicCoreClientCtx *ctx, SceUInt8 enable);
+int musicCoreCmdSetNoticeSuppress(const MusicCoreClientCtx *ctx, SceUInt8 mute);
+int musicCoreCmdClearNoticeSuppress(const MusicCoreClientCtx *ctx, SceUInt8 mute);
+int musicCoreCmdSetAudioFocus(const MusicCoreClientCtx *ctx, SceUInt8 mode);
+int musicCoreCmdSetSystemPause(const MusicCoreClientCtx *ctx, SceUInt8 pause);
+
+static void *s_musicCoreInterface[33] = {			/* 0x81544E38 */
+	reinterpret_cast<void *>(&musicCoreRegisterCallback),		/* [ 0] 0x811CD952 */
+	reinterpret_cast<void *>(&musicCoreUnregisterCallback),		/* [ 1] 0x811CD98A */
+	reinterpret_cast<void *>(&musicCoreCmdSetContent),		/* [ 2] 0x811CD9D8 */
+	reinterpret_cast<void *>(&musicCoreGetTrackInfo),		/* [ 3] 0x811CDAAE */
+	reinterpret_cast<void *>(&musicCoreSendControlCmd),		/* [ 4] 0x811CAF32 */
+	reinterpret_cast<void *>(&musicCoreQueryConvertedStatus),	/* [ 5] 0x811CB1F6 */
+	reinterpret_cast<void *>(&musicCoreSetParam),			/* [ 6] 0x811CB736 */
+	reinterpret_cast<void *>(&musicCoreGetParam),			/* [ 7] 0x811CDB26 */
+	reinterpret_cast<void *>(&musicCoreDbSync),			/* [ 8] 0x811CDC54 */
+	reinterpret_cast<void *>(&musicCoreInterfaceNoop),		/* [ 9] 0x81409E2C */
+	reinterpret_cast<void *>(&musicCoreCmdOpen),			/* [10] 0x811CD0E0 */
+	reinterpret_cast<void *>(&musicCoreCmdClose),			/* [11] 0x811CD18E */
+	reinterpret_cast<void *>(&musicCoreSendOpenUri),		/* [12] 0x811CAD60 */
+	reinterpret_cast<void *>(&musicCoreGetCurrentUri),		/* [13] 0x811CD23C */
+	reinterpret_cast<void *>(&musicCoreGetChannelError),		/* [14] 0x811CD2A6 */
+	reinterpret_cast<void *>(&musicCoreDbOpen),			/* [15] 0x811CDD02 */
+	reinterpret_cast<void *>(&musicCoreDbSuspend),			/* [16] 0x811CDDB0 */
+	reinterpret_cast<void *>(&musicCoreDbClose),			/* [17] 0x811CDE6C */
+	reinterpret_cast<void *>(&musicCoreDbDetach),			/* [18] 0x811CDF1A */
+	reinterpret_cast<void *>(&musicCoreDbQuery),			/* [19] 0x811CDFC8 */
+	reinterpret_cast<void *>(&musicCoreGetCapability),		/* [20] 0x811CE090 */
+	reinterpret_cast<void *>(&musicCoreGetMetadata),		/* [21] 0x811CD384 */
+	reinterpret_cast<void *>(&musicCoreGetBgmMute),			/* [22] 0x811CE1A2 */
+	reinterpret_cast<void *>(&musicCoreSetBgmMute),			/* [23] 0x811CE1BA */
+	reinterpret_cast<void *>(&musicCoreCmdResetChannel),		/* [24] 0x811CE1D2 */
+	reinterpret_cast<void *>(&musicCoreGetPlayTime),		/* [25] 0x811CD310 */
+	reinterpret_cast<void *>(&musicCoreCmdExOpen),			/* [26] 0x811CD3B8 */
+	reinterpret_cast<void *>(&musicCoreCmdExClose),			/* [27] 0x811CD480 */
+	reinterpret_cast<void *>(&musicCoreCmdSetAvrcp),		/* [28] 0x811CD52E */
+	reinterpret_cast<void *>(&musicCoreCmdSetNoticeSuppress),	/* [29] 0x811CD556 */
+	reinterpret_cast<void *>(&musicCoreCmdClearNoticeSuppress),	/* [30] 0x811CD610 */
+	reinterpret_cast<void *>(&musicCoreCmdSetAudioFocus),		/* [31] 0x811CD6CA */
+	reinterpret_cast<void *>(&musicCoreCmdSetSystemPause),		/* [32] 0x811CD84E */
+};
 
 /* 0x811CA5A2 */
 void musiccorePluginInit(paf::Plugin *plugin)

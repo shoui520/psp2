@@ -17,6 +17,7 @@
 #include <kernel/threadmgr.h>
 
 #include "../../livespace_db/lsdb_keys.h"
+#include "shell_svc_livearea_job.h"
 
 extern void *g_pafFramework;					/* 0x81488474 */
 
@@ -468,25 +469,29 @@ int ShellSvcServer::ThreadEntry(SceSize args, void *argp)
 /* LiveAreaUtil async job enqueuers (0x811B7B54 - 0x811B8480)         */
 /* ------------------------------------------------------------------ */
 
-struct LiveAreaUtilJobShell : public paf::job::JobItem {
-	IPMI::Session *m_session;				/* +28 */
-	SceUInt32 m_reqId;					/* +32 */
-	paf::string m_path;					/* +36 */
-	paf::string m_titleId;					/* +48 */
-	SceUInt8 m_flag;					/* +60 */
+struct LiveAreaUtilUpdateJob : public LiveAreaUtilJobBase {
+	LiveAreaUtilUpdateJob(IPMI::Session *session, SceUInt32 reqId,
+		const char *path, const char *titleId, const SceUInt64 *ts,
+		SceUInt8 allowAny, SceUInt8 flag)
+		: LiveAreaUtilJobBase(session, reqId, path, titleId, flag),
+		  m_ts(ts ? *ts : 0),
+		  m_allowAny(allowAny) {}
 
-	virtual ~LiveAreaUtilJobShell() {}
-	virtual int Run() { return 0; }
-	virtual void Finish(int) {}
-};
-
-struct LiveAreaUtilUpdateJob : public LiveAreaUtilJobShell {
 	SceUInt64 m_ts;						/* +64 */
 	SceUInt8 m_allowAny;					/* +72 */
 	virtual int Run() { return shellSvcLiveAreaUpdateJobRun(this); }
 };
 
-struct LiveAreaUtilSetContentJob : public LiveAreaUtilJobShell {
+struct LiveAreaUtilSetContentJob : public LiveAreaUtilJobBase {
+	LiveAreaUtilSetContentJob(IPMI::Session *session, SceUInt32 reqId,
+		const char *path, const char *titleId, int flags,
+		SceUInt8 allowAny, SceUInt8 isMulti, SceUInt8 flag)
+		: LiveAreaUtilJobBase(session, reqId, path, titleId, flag),
+		  m_flags(flags),
+		  m_allowAny(allowAny),
+		  m_isMulti(isMulti),
+		  m_xmls() {}
+
 	int m_flags;						/* +64 */
 	SceUInt8 m_allowAny;					/* +68 */
 	SceUInt8 m_isMulti;					/* +69 */
@@ -494,12 +499,23 @@ struct LiveAreaUtilSetContentJob : public LiveAreaUtilJobShell {
 	virtual int Run() { return shellSvcLiveAreaSetContentJobRun(this); }
 };
 
-struct LiveAreaUtilGetTsJob : public LiveAreaUtilJobShell {
+struct LiveAreaUtilGetTsJob : public LiveAreaUtilJobBase {
+	LiveAreaUtilGetTsJob(IPMI::Session *session, SceUInt32 reqId,
+		const char *frameId, SceUInt8 flag)
+		: LiveAreaUtilJobBase(session, reqId, NULL, "", flag),
+		  m_frameId(frameId ? frameId : "") {}
+
 	paf::string m_frameId;					/* +64 */
 	virtual int Run() { return shellSvcLiveAreaGetTsJobRun(this); }
 };
 
-struct LiveAreaUtilGetContentJob : public LiveAreaUtilJobShell {
+struct LiveAreaUtilGetContentJob : public LiveAreaUtilJobBase {
+	LiveAreaUtilGetContentJob(IPMI::Session *session, SceUInt32 reqId,
+		const char *frameId, SceUInt32 maxSize, SceUInt8 flag)
+		: LiveAreaUtilJobBase(session, reqId, NULL, "", flag),
+		  m_frameId(frameId ? frameId : ""),
+		  m_maxSize(maxSize) {}
+
 	paf::string m_frameId;					/* +64 */
 	SceUInt32 m_maxSize;					/* +76 */
 	virtual int Run() { return shellSvcLiveAreaGetContentJobRun(this); }
@@ -510,12 +526,8 @@ int shellSvcLiveAreaEnqueueUpdate(IPMI::Session *session, SceUInt32 reqId,
 	const char *path, const char *titleId, const SceUInt64 *ts,
 	SceUInt8 allowAny, SceUInt8 flag)
 {
-	LiveAreaUtilUpdateJob *job = (LiveAreaUtilUpdateJob *)operator new(sizeof(LiveAreaUtilUpdateJob));
-	if (job) {
-		shellSvcLiveAreaJobBaseCtor(job, session, reqId, path, titleId, flag);
-		job->m_ts = ts ? *ts : 0;
-		job->m_allowAny = allowAny;
-	}
+	LiveAreaUtilUpdateJob *job = new LiveAreaUtilUpdateJob(
+		session, reqId, path, titleId, ts, allowAny, flag);
 	paf::common::SharedPtr<paf::job::JobItem> sp(job);
 	if (paf::job::JobQueue::default_queue->Enqueue(sp) != 0)
 		shellSvcLiveAreaSendUpdateResp(session, reqId, (int)0x801040FF);
@@ -528,12 +540,9 @@ int shellSvcLiveAreaEnqueueSetContent(IPMI::Session *session, SceUInt32 reqId,
 	const char *path, int flags, const char *titleId,
 	SceUInt8 allowAny, SceUInt8 isMulti, SceUInt8 flag)
 {
-	LiveAreaUtilSetContentJob *job = (LiveAreaUtilSetContentJob *)operator new(sizeof(LiveAreaUtilSetContentJob));
+	LiveAreaUtilSetContentJob *job = new LiveAreaUtilSetContentJob(
+		session, reqId, path, titleId, flags, allowAny, isMulti, flag);
 	if (job) {
-		shellSvcLiveAreaJobBaseCtor(job, session, reqId, path, titleId, flag);
-		job->m_flags = flags;
-		job->m_allowAny = allowAny;
-		job->m_isMulti = isMulti;
 		job->m_xmls.resize(bufCount);
 		for (SceUInt32 i = 0; i < bufCount; ++i)
 			job->m_xmls[i].assign((const char *)bufs[i]->GetAddr(), bufs[i]->GetSize());
@@ -592,11 +601,7 @@ int shellSvcLiveAreaSetContentMulti(IPMI::Session *session, SceUInt32 reqId,
 int shellSvcLiveAreaEnqueueGetTs(IPMI::Session *session, SceUInt32 reqId,
 	const char *frameId, SceUInt8 flag)
 {
-	LiveAreaUtilGetTsJob *job = (LiveAreaUtilGetTsJob *)operator new(sizeof(LiveAreaUtilGetTsJob));
-	if (job) {
-		shellSvcLiveAreaJobBaseCtor(job, session, reqId, NULL, "", flag);
-		job->m_frameId = frameId ? frameId : "";
-	}
+	LiveAreaUtilGetTsJob *job = new LiveAreaUtilGetTsJob(session, reqId, frameId, flag);
 	paf::common::SharedPtr<paf::job::JobItem> sp(job);
 	if (paf::job::JobQueue::default_queue->Enqueue(sp) != 0) {
 		SceUInt64 zeroTs = 0;
@@ -609,12 +614,8 @@ int shellSvcLiveAreaEnqueueGetTs(IPMI::Session *session, SceUInt32 reqId,
 int shellSvcLiveAreaEnqueueGetContent(IPMI::Session *session, SceUInt32 reqId,
 	const char *frameId, SceUInt32 maxSize, SceUInt8 flag)
 {
-	LiveAreaUtilGetContentJob *job = (LiveAreaUtilGetContentJob *)operator new(sizeof(LiveAreaUtilGetContentJob));
-	if (job) {
-		shellSvcLiveAreaJobBaseCtor(job, session, reqId, NULL, "", flag);
-		job->m_frameId = frameId ? frameId : "";
-		job->m_maxSize = maxSize;
-	}
+	LiveAreaUtilGetContentJob *job = new LiveAreaUtilGetContentJob(
+		session, reqId, frameId, maxSize, flag);
 	paf::common::SharedPtr<paf::job::JobItem> sp(job);
 	if (paf::job::JobQueue::default_queue->Enqueue(sp) != 0) {
 		SceUInt32 zeroSz = 0;
