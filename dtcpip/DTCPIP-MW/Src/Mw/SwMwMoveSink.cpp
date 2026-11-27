@@ -22,26 +22,27 @@ extern "C" {
 int swMwTrace(const char *format, ...);
 
 /* the SWS core's move-sink hooks (the linked core) */
-int SwMwCoreCheckMoveSink(int device);		/* 0x81002d94 */
-int SwMwCoreDataLabel(int device);		/* 0x81002d12 */
-int SwMwCoreMoveManager(int device);		/* 0x81002d00 */
-void *SwMwCoreContent(int device);		/* 0x81002cd0 */
-int SwMwCoreRegisterMoveSink(int device, void *sink);	/* 0x81002d5c */
-void SwMwCoreUnregisterMoveSink(int device, void *sink);	/* 0x81002d78 */
-int SwMwCoreNotifyLabel(int device, int label, int value);	/* 0x81003da0 */
+int SwMwCoreCheckMoveSink(int device);		/* */
+int SwMwCoreDataLabel(int device);		/* */
+int SwMwCoreMoveManager(int device);		/* */
+void *SwMwCoreContent(int device);		/* */
+int SwMwCoreRegisterMoveSink(int device, void *sink);	/* */
+void SwMwCoreUnregisterMoveSink(int device, void *sink);	/* */
+int SwMwCoreNotifyLabel(int device, int label, int value);	/* */
+int SwMwCoreNotifyDevice(int device, int event);		/* */
 
 /* the device's move record list (the core's move manager) */
-int SwMwMoveListGet(int manager, void **list, int *count);	/* 0x8106b8fe */
-int SwMwMoveListFree(int manager, void *list);			/* 0x8106b916 */
-int SwMwMoveRecordBegin(int manager, int id, int mode);		/* 0x8106b8ca */
-int SwMwMoveListRelease(int manager, int id);			/* 0x8106b8da */
+int SwMwMoveListGet(int manager, void **list, int *count);	/* */
+int SwMwMoveListFree(int manager, void *list);			/* */
+int SwMwMoveRecordBegin(int manager, int id, int mode);		/* */
+int SwMwMoveListRelease(int manager, int id);			/* */
 
-/* the support library's base object around the URI (0x8107b464/0x8107b44c) */
+/* the support library's base object around the URI */
 void *SwMwMoveSinkBaseConstruct(void *sink);
 void *SwMwMoveSinkBaseDestruct(void *sink);
 }
 
-/* the move sink's lwmutex, "sce_sws_mutex" (0x810071cc/0x81007208) */
+/* the move sink's lwmutex, "sce_sws_mutex" */
 extern "C" int SwMwMoveSinkMutexCreate(SceKernelLwMutexWork *mutex)
 {
 	int result;
@@ -57,7 +58,7 @@ extern "C" int SwMwMoveSinkMutexDelete(SceKernelLwMutexWork *mutex)
 	return sceKernelDeleteLwMutex(mutex);
 }
 
-/* lock and unlock the move sink's mutex (0x810073ac/0x810073ce) */
+/* lock and unlock the move sink's mutex */
 extern "C" int SwMwMoveSinkMutexLock(SceKernelLwMutexWork *mutex)
 {
 	return sceKernelLockLwMutex(mutex, 1, NULL);
@@ -68,7 +69,7 @@ extern "C" int SwMwMoveSinkMutexUnlock(SceKernelLwMutexWork *mutex)
 	return sceKernelUnlockLwMutex(mutex, 1);
 }
 
-/* create the channel's move sink on its device (0x81007222) */
+/* create the channel's move sink on its device */
 extern "C" int SwMwMoveSinkCreate(int *out, int device)
 {
 	struct SwMwMoveSink *sink = NULL;
@@ -125,7 +126,7 @@ extern "C" int SwMwMoveSinkCreate(int *out, int device)
 	return status;
 }
 
-/* destroy the move sink (0x8100771c) */
+/* destroy the move sink */
 extern "C" int SwMwMoveSinkDestroy(int handle)
 {
 	struct SwMwMoveSink *sink = (struct SwMwMoveSink *)handle;
@@ -142,7 +143,7 @@ extern "C" int SwMwMoveSinkDestroy(int handle)
 	return 0;
 }
 
-/* give the move sink its URI and start the move (0x810073ec) */
+/* give the move sink its URI and start the move */
 extern "C" int SwMwMoveSinkSetUri(int handle, void *uriText, int size)
 {
 	struct SwMwMoveSink *sink = (struct SwMwMoveSink *)handle;
@@ -208,13 +209,13 @@ extern "C" int SwMwMoveSinkSetUri(int handle, void *uriText, int size)
 	return SwMwStatus(status);
 }
 
-/* the 0x2804 command: the move result (0x81007700) */
+/* the 0x2804 command: the move result */
 extern "C" int SwMwMoveSinkGetUriResult(int handle, unsigned char *out, int value)
 {
 	return SwMwMoveSinkClose(handle, out, value);
 }
 
-/* the close/result handshake shared with the 0x2804 command (0x810075ec) */
+/* the close/result handshake shared with the 0x2804 command */
 extern "C" int SwMwMoveSinkClose(int handle, unsigned char *out, int mode)
 {
 	struct SwMwMoveSink *sink = (struct SwMwMoveSink *)handle;
@@ -261,7 +262,7 @@ extern "C" int SwMwMoveSinkClose(int handle, unsigned char *out, int mode)
 	return status;
 }
 
-/* send the move's MV_FINALIZE and let the completion run (0x81007920) */
+/* send the move's MV_FINALIZE and let the completion run */
 extern "C" int SwMwMoveSinkFinalize(int handle, void *uriText, int size, int label)
 {
 	struct SwMwMoveSink *sink = (struct SwMwMoveSink *)handle;
@@ -271,8 +272,7 @@ extern "C" int SwMwMoveSinkFinalize(int handle, void *uriText, int size, int lab
 	unsigned char address[16];
 	unsigned char parsed[4];
 	unsigned short length;
-	unsigned char *records;
-	unsigned char *info;
+	struct SwMwMoveRecord *records;
 	int count;
 	int status;
 	int failed;
@@ -321,39 +321,43 @@ extern "C" int SwMwMoveSinkFinalize(int handle, void *uriText, int size, int lab
 				SwMwMoveMessageDone(&unused);
 				return status;
 			}
-			records = NULL;
-			count = 0;
-			status = SwMwMoveListGet(sink->manager, (void **)&records, &count);
+			{
+				void *recordsRaw = NULL;
+				count = 0;
+				status = SwMwMoveListGet(sink->manager, &recordsRaw, &count);
+				records = (struct SwMwMoveRecord *)recordsRaw;
+			}
 			if (status != 0) {
 				SwMwMoveMessageDone(&unused);
 				return status;
 			}
 			if (count != 0) {
 				for (index = 0; index < count; ++index) {
-					if (*(int *)(records + 0x230 * index + 40) == label)
+					if (records[index].requested == label)
 						break;
 				}
 				if (index != count) {
-					sink->sessionState[5] = *(int *)(records + 0x230 * index);
+					struct SwMwMoveRecord *entry = &records[index];
+
+					sink->sessionState[5] = entry->id;
 					sink->sessionState[6] = label;
 					sink->sessionState[7] = 0;
-					info = records + 0x230 * index + 8;
-					sink->moveState = *info;
+					sink->moveState = entry->label;
 					sink->finalized = 0;
 					sink->sessionState[0] = 0;
 					sink->sessionState[1] = 0;
 					sink->sessionState[2] = 0;
 					sink->sessionState[3] = 0;
 					sink->sessionState[4] = 0;
-					if (*(int *)(records + 0x230 * index + 4) == 1) {
+					if (entry->kind == 1) {
 						SwMwMoveMessageInit(&message);
 						memset(&message, 0, sizeof(message));
-						message.label = *info;
-						memcpy(message.key, info + 4, 8);
-						memcpy(message.first, info + 12, 10);
-						memcpy(message.second, info + 22, 10);
+						message.label = entry->label;
+						memcpy(message.key, entry->key, sizeof(message.key));
+						memcpy(message.first, entry->first, sizeof(message.first));
+						memcpy(message.second, entry->second, sizeof(message.second));
 						swMwTrace("sw mw:Send MV_FINALIZE: kxm_label=%d contentID=%d\n",
-							  *info, label);
+							  entry->label, label);
 						status = sink->content->finalize(&sink->uri, &message);
 						failed = 0;
 						if (status != 0) {
@@ -370,7 +374,7 @@ extern "C" int SwMwMoveSinkFinalize(int handle, void *uriText, int size, int lab
 						}
 						sink->finalized = 1;
 						SwMwMoveMessageDone(&message);
-					} else if (*(int *)(records + 0x230 * index + 4) == 2) {
+					} else if (entry->kind == 2) {
 						sink->finalized = 1;
 						sink->sessionState[0] = 1;
 						sink->sessionState[1] = 0;
@@ -397,7 +401,7 @@ extern "C" int SwMwMoveSinkFinalize(int handle, void *uriText, int size, int lab
 	return 12202;
 }
 
-/* send the move's MV_COMPLETE and finish the session (0x81007cee) */
+/* send the move's MV_COMPLETE and finish the session */
 extern "C" int SwMwMoveSinkComplete(int handle)
 {
 	struct SwMwMoveSink *sink = (struct SwMwMoveSink *)handle;
@@ -464,4 +468,75 @@ extern "C" int SwMwMoveSinkComplete(int handle)
 		return status;
 	sink->sessionState[5] = -1;
 	return 0;
+}
+
+/* store authentication result and kxm label under lock */
+extern "C" int SwMwMoveSinkOnAuthResult(struct SwMwMoveSink *sink, int status,
+					unsigned char kxmLabel)
+{
+	if (sink == NULL)
+		swMwTrace("[SWMW] Assertion Failed in %s:%d\n", SWMW_MOVESINK_SOURCE, 253);
+	SwMwMoveSinkMutexLock(&sink->mutex);
+	sink->moveState = kxmLabel;
+	sink->closed = 1;
+	sink->status = status;
+	return SwMwMoveSinkMutexUnlock(&sink->mutex);
+}
+
+/* forward a device notification to the core manager */
+extern "C" int SwMwMoveSinkNotifyDevice(struct SwMwMoveSink *sink, int event)
+{
+	return SwMwCoreNotifyDevice(sink->device, event);
+}
+
+/* record a move cancellation received from the source */
+extern "C" int SwMwMoveSinkOnCancel(struct SwMwMoveSink *sink)
+{
+	if (sink == NULL)
+		swMwTrace("[SWMW] Assertion Failed in %s:%d\n", SWMW_MOVESINK_SOURCE, 278);
+	SwMwMoveSinkMutexLock(&sink->mutex);
+	sink->moveResult = 1;
+	sink->sessionState[0] = 1;
+	sink->sessionState[1] = 1522;
+	return SwMwMoveSinkMutexUnlock(&sink->mutex);
+}
+
+/* record the MV_FINALIZE result and notify label 42 on success */
+extern "C" int SwMwMoveSinkOnFinalizeResult(struct SwMwMoveSink *sink, int status)
+{
+	if (sink == NULL)
+		swMwTrace("[SWMW] Assertion Failed in %s:%d\n", SWMW_MOVESINK_SOURCE, 299);
+	if (status == 0)
+		SwMwCoreNotifyLabel(sink->device, sink->sessionState[6], 42);
+	SwMwMoveSinkMutexLock(&sink->mutex);
+	sink->sessionState[0] = 1;
+	sink->sessionState[1] = status;
+	return SwMwMoveSinkMutexUnlock(&sink->mutex);
+}
+
+/* record the MV_COMPLETE result under lock */
+extern "C" int SwMwMoveSinkOnCompleteResult(struct SwMwMoveSink *sink, int status)
+{
+	if (sink == NULL)
+		swMwTrace("[SWMW] Assertion Failed in %s:%d\n", SWMW_MOVESINK_SOURCE, 320);
+	SwMwMoveSinkMutexLock(&sink->mutex);
+	sink->sessionState[3] = 1;
+	sink->sessionState[4] = status;
+	return SwMwMoveSinkMutexUnlock(&sink->mutex);
+}
+
+/* return the active authentication id */
+extern "C" int SwMwMoveSinkGetAuthId(struct SwMwMoveSink *sink)
+{
+	if (sink == NULL)
+		swMwTrace("[SWMW] Assertion Failed in %s:%d\n", SWMW_MOVESINK_SOURCE, 573);
+	return sink->moveStatus;
+}
+
+/* return the active kxm label */
+extern "C" int SwMwMoveSinkGetKxmLabel(struct SwMwMoveSink *sink)
+{
+	if (sink == NULL)
+		swMwTrace("[SWMW] Assertion Failed in %s:%d\n", SWMW_MOVESINK_SOURCE, 584);
+	return sink->moveState;
 }

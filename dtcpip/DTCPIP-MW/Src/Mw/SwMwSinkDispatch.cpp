@@ -36,7 +36,7 @@ struct SwMwSinkStreamInfo {
 	int value1;			/* 0x34 */
 };
 
-/* answer a sink request with a status and no payload (0x8100cf4c) */
+/* answer a sink request with a status and no payload */
 extern "C" int SwMwSinkReplyStatus(struct SwMwCommChannel *channel,
 				   struct SwMwIpcMessage *request, int status)
 {
@@ -46,21 +46,21 @@ extern "C" int SwMwSinkReplyStatus(struct SwMwCommChannel *channel,
 	return SwMwCommServerReplyError(channel, request);
 }
 
-/* turn a sink handle back into its object (0x8100d30c) */
+/* turn a sink handle back into its object */
 extern "C" int SwMwSinkDecodeHandle(int handle, int *sink)
 {
 	*sink = (int)((unsigned int)handle ^ 0x10AAAA55);
 	return 0;
 }
 
-/* turn a stream handle back into its object (0x8100da00) */
+/* turn a stream handle back into its object */
 extern "C" int SwMwSinkStreamDecodeHandle(int handle, int *stream)
 {
 	*stream = (int)((unsigned int)handle ^ 0x10AAAA55);
 	return 0;
 }
 
-/* the stream gate's shared side, taken for a stream command (0x8107b964/0x8107b984) */
+/* the stream gate's shared side, taken for a stream command */
 extern "C" struct SwMwGate **SwMwSinkStreamLock(struct SwMwGate **held, void *stream)
 {
 	held[0] = SwMwSinkStreamGate((struct SwMwSinkStream *)stream);
@@ -74,7 +74,7 @@ extern "C" struct SwMwGate **SwMwSinkStreamUnlock(struct SwMwGate **held)
 	return held;
 }
 
-/* the stream gate's exclusive side, taken for the periodic connect (0x8107b998/0x8107b9b8) */
+/* the stream gate's exclusive side, taken for the periodic connect */
 extern "C" struct SwMwGate **SwMwSinkConnectLock(struct SwMwGate **held, void *stream)
 {
 	held[0] = SwMwSinkStreamGate((struct SwMwSinkStream *)stream);
@@ -867,7 +867,7 @@ extern "C" int SwMwSinkStreamConnectCommand(struct SwMwCommChannel *channel,
 	return status;
 }
 
-/* the sink's command dispatcher (0x8100cf7a) */
+/* the sink's command dispatcher */
 extern "C" int SwMwSinkDispatch(struct SwMwCommChannel *channel,
 				struct SwMwIpcMessage *request, void *argument)
 {

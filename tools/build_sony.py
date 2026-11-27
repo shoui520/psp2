@@ -27,7 +27,7 @@ ROOT = sonycc.ROOT
 def rel_path(devpath):
     """Source folder below src/ of a device path (os0:kd/sysmem.skprx -> os0/kd/sysmem)."""
     part, path = devpath.split(':', 1)
-    return part + '/' + re.sub(r'\.(skprx|suprx|self|elf)$', '', path)
+    return part + '/' + re.sub(r'\.(skprx|suprx|self|elf|bin)$', '', path)
 
 
 def main():

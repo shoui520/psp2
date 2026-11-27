@@ -49,7 +49,7 @@ struct SwMwMoveSinkStreamWindow {
 	int blockSize;			/* 0x14 */
 };
 
-/* answer a move-sink request with a status and no payload (0x81007f68) */
+/* answer a move-sink request with a status and no payload */
 extern "C" int SwMwMoveSinkReplyStatus(struct SwMwCommChannel *channel,
 				       struct SwMwIpcMessage *request, int status)
 {
@@ -59,21 +59,21 @@ extern "C" int SwMwMoveSinkReplyStatus(struct SwMwCommChannel *channel,
 	return SwMwCommServerReplyError(channel, request);
 }
 
-/* turn a move-sink handle back into its object (0x8100837c) */
+/* turn a move-sink handle back into its object */
 extern "C" int SwMwMoveSinkDecodeHandle(int handle, int *sink)
 {
 	*sink = (int)((unsigned int)handle ^ 0x10AAAA55);
 	return 0;
 }
 
-/* turn a move-sink stream handle back into its object (0x81008a82) */
+/* turn a move-sink stream handle back into its object */
 extern "C" int SwMwMoveSinkStreamDecodeHandle(int handle, int *stream)
 {
 	*stream = (int)((unsigned int)handle ^ 0x10AAAA55);
 	return 0;
 }
 
-/* the stream gate's shared side (0x8107b604/0x8107b624) */
+/* the stream gate's shared side */
 extern "C" struct SwMwGate **SwMwMoveSinkStreamLock(struct SwMwGate **held, void *stream)
 {
 	held[0] = SwMwMoveSinkStreamGate(stream);
@@ -87,7 +87,7 @@ extern "C" struct SwMwGate **SwMwMoveSinkStreamUnlock(struct SwMwGate **held)
 	return held;
 }
 
-/* the stream gate's exclusive side (0x8107b638/0x8107b658) */
+/* the stream gate's exclusive side */
 extern "C" struct SwMwGate **SwMwMoveSinkConnectLock(struct SwMwGate **held, void *stream)
 {
 	held[0] = SwMwMoveSinkStreamGate(stream);
@@ -1121,7 +1121,7 @@ extern "C" int SwMwMoveSinkStreamCompleteCommand(struct SwMwCommChannel *channel
 	return 0;
 }
 
-/* the move sink's command dispatcher (0x81007f96) */
+/* the move sink's command dispatcher */
 extern "C" int SwMwMoveSinkDispatch(struct SwMwCommChannel *channel,
 				    struct SwMwIpcMessage *request, void *argument)
 {

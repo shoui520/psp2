@@ -1,6 +1,6 @@
 /*
  * The SWS content object the sink and the move sink drive (the 0xD0-byte class whose
- * dispatch table is 0x8109a1dc): the content session's start, close, URI and state
+ * dispatch table is ): the content session's start, close, URI and state
  * calls. The declaration order is the object's dispatch table; the method names are ours
  * where no Sony record names them (recorded in agent/namecheck).
  */
@@ -26,19 +26,19 @@ struct SwMwUri : SwMwUriText {
 };
 
 extern "C" {
-int SwMwUriInit(struct SwMwUri *uri, const char *text);		/* 0x81052c04 */
-int SwMwUriDone(struct SwMwUriText *uri);				/* 0x81052d6a */
-int SwMwUriFormatText(struct SwMwUriText *text, const struct SwMwUri *uri); /* 0x81050822 */
-const char *SwMwUriTextGet(const struct SwMwUriText *text);		/* 0x8107b158 */
+int SwMwUriInit(struct SwMwUri *uri, const char *text);		/* */
+int SwMwUriDone(struct SwMwUriText *uri);				/* */
+int SwMwUriFormatText(struct SwMwUriText *text, const struct SwMwUri *uri); /* */
+const char *SwMwUriTextGet(const struct SwMwUriText *text);		/* */
 int SwMwUriSet(struct SwMwUri *uri, const struct SwMwUri *text,
-	       unsigned short size);					/* 0x810507ba */
-int SwMwUriIsSet(const struct SwMwUri *uri);				/* 0x8105091c */
-int SwMwNetParseAddress(int kind, const char *text, void *address);	/* 0x81055eb8 */
+	       unsigned short size);					/* */
+int SwMwUriIsSet(const struct SwMwUri *uri);				/* */
+int SwMwNetParseAddress(int kind, const char *text, void *address);	/* */
 int SwMwNetResolveName(const char *text, unsigned short size, int kind,
-		       void *address);					/* 0x81055de8 */
+		       void *address);					/* */
 int SwMwNetFormatAddress(int kind, const void *address, char *text,
-			 int size);					/* 0x81055ee2 */
-int SwMwStatus(int status);						/* 0x81012408 */
+			 int size);					/* */
+int SwMwStatus(int status);						/* */
 }
 
 /* the DTCP move message (0x24 bytes): its type word, the kxm label byte and the three
@@ -53,8 +53,8 @@ struct SwMwMoveMessage {
 };
 
 extern "C" {
-int SwMwMoveMessageInit(struct SwMwMoveMessage *message);	/* 0x8105236c */
-int SwMwMoveMessageDone(struct SwMwMoveMessage *message);	/* 0x810523d6 */
+int SwMwMoveMessageInit(struct SwMwMoveMessage *message);	/* */
+int SwMwMoveMessageDone(struct SwMwMoveMessage *message);	/* */
 }
 
 struct SwMwStreamEvent;
@@ -88,10 +88,10 @@ struct SwMwTransfer {
  * writes the adjustment out: transfer + transfer->table[-word]. */
 
 /* the SWS content manager the core keeps behind a device (the 0x14-byte object at
- * device+0x12c, dispatch table 0x8109a300): its destructors, the plain transfer factory
- * 0x81016cb4, the release 0x81016e40 and the factory with the event/work areas
- * 0x81016e58 that getInfo calls */
-/* the content library's buffer reader (its debug name, "SdiBuffer(" at 0x8104fd04): the
+ * device+0x12c, dispatch table ): its destructors, the plain transfer factory
+ * , the release and the factory with the event/work areas
+ * that getInfo calls */
+/* the content library's buffer reader (its debug name, "SdiBuffer(" at ): the
  * ring the stream commands drain. The called slots are consume (+0x10), available
  * (+0x14), isEndOfStream (+0x1c) and getReadChunkList (+0x38); the others are named from
  * their bodies (reset, size, read, write and the write-side chunk list). Ours. */

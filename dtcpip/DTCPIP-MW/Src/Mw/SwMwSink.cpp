@@ -23,18 +23,18 @@ extern "C" {
 int swMwTrace(const char *format, ...);
 
 /* the SWS core's sink hooks (the linked core) */
-int SwMwCoreIsSinkConnected(int device);	/* 0x81002da6 */
-void *SwMwCoreContent(int device);		/* 0x81002cd0 */
-int SwMwCoreNotifyDevice(int device, int value);	/* 0x81003d46 */
-int SwMwCoreRegisterSink(int device, void *sink);	/* 0x81002d24 */
-void SwMwCoreUnregisterSink(int device, void *sink);	/* 0x81002d40 */
+int SwMwCoreIsSinkConnected(int device);	/* */
+void *SwMwCoreContent(int device);		/* */
+int SwMwCoreNotifyDevice(int device, int value);	/* */
+int SwMwCoreRegisterSink(int device, void *sink);	/* */
+void SwMwCoreUnregisterSink(int device, void *sink);	/* */
 
-/* the support library's base object around the URI (0x8107b94c/0x8107b934) */
+/* the support library's base object around the URI */
 void *SwMwSinkBaseConstruct(void *sink);
 void *SwMwSinkBaseDestruct(void *sink);
 }
 
-/* the sink's lwmutex, "sce_sws_mutex" (0x8100c894/0x8100c8d0) */
+/* the sink's lwmutex, "sce_sws_mutex" */
 extern "C" int SwMwSinkMutexCreate(SceKernelLwMutexWork *mutex)
 {
 	int result;
@@ -50,7 +50,7 @@ extern "C" int SwMwSinkMutexDelete(SceKernelLwMutexWork *mutex)
 	return sceKernelDeleteLwMutex(mutex);
 }
 
-/* lock and unlock the sink's mutex (0x8100ca12/0x8100ca34) */
+/* lock and unlock the sink's mutex */
 extern "C" int SwMwSinkMutexLock(SceKernelLwMutexWork *mutex)
 {
 	return sceKernelLockLwMutex(mutex, 1, NULL);
@@ -61,7 +61,7 @@ extern "C" int SwMwSinkMutexUnlock(SceKernelLwMutexWork *mutex)
 	return sceKernelUnlockLwMutex(mutex, 1);
 }
 
-/* create the channel's sink on its device (0x8100c8ea) */
+/* create the channel's sink on its device */
 extern "C" int SwMwSinkCreate(int *out, int device)
 {
 	struct SwMwSink *sink = NULL;
@@ -103,7 +103,7 @@ extern "C" int SwMwSinkCreate(int *out, int device)
 	return status;
 }
 
-/* destroy the sink (0x8100ce56) */
+/* destroy the sink */
 extern "C" int SwMwSinkDestroy(int handle)
 {
 	struct SwMwSink *sink = (struct SwMwSink *)handle;
@@ -119,7 +119,7 @@ extern "C" int SwMwSinkDestroy(int handle)
 	return 0;
 }
 
-/* the close/status handshake: other modes close, mode 0 answers the status (0x8100cd3c) */
+/* the close/status handshake: other modes close, mode 0 answers the status */
 extern "C" int SwMwSinkClose(int handle, int mode)
 {
 	struct SwMwSink *sink = (struct SwMwSink *)handle;
@@ -168,13 +168,13 @@ extern "C" int SwMwSinkClose(int handle, int mode)
 	return status;
 }
 
-/* the 0x2204 command: the close status (0x8100ce3e) */
+/* the 0x2204 command: the close status */
 extern "C" int SwMwSinkGetUriResult(int handle, int value)
 {
 	return SwMwSinkClose(handle, value);
 }
 
-/* mark the sink closed with a status (0x8100ceba) */
+/* mark the sink closed with a status */
 extern "C" int SwMwSinkSetStatus(int handle, int status)
 {
 	struct SwMwSink *sink = (struct SwMwSink *)handle;
@@ -187,7 +187,7 @@ extern "C" int SwMwSinkSetStatus(int handle, int status)
 	return SwMwSinkMutexUnlock(&sink->mutex);
 }
 
-/* the sink's URI state (0x8100cf1e) */
+/* the sink's URI state */
 extern "C" int SwMwSinkGetUriState(int handle)
 {
 	struct SwMwSink *sink = (struct SwMwSink *)handle;
@@ -197,7 +197,7 @@ extern "C" int SwMwSinkGetUriState(int handle)
 	return sink->uriSet;
 }
 
-/* notify the sink's device of a value (0x8100cf08) */
+/* notify the sink's device of a value */
 extern "C" int SwMwSinkDeviceNotify(int handle, int value)
 {
 	struct SwMwSink *sink = (struct SwMwSink *)handle;
@@ -205,7 +205,7 @@ extern "C" int SwMwSinkDeviceNotify(int handle, int value)
 	return SwMwCoreNotifyDevice(sink->device, value);
 }
 
-/* the content information the descriptor carries (0x8100c82e) */
+/* the content information the descriptor carries */
 extern "C" void SwMwContentGetInfo(void *descriptor, void *info)
 {
 	int *source = (int *)descriptor;
@@ -216,13 +216,13 @@ extern "C" void SwMwContentGetInfo(void *descriptor, void *info)
 	memcpy((int *)info + 9, source + 10, 0x20);
 }
 
-/* the content descriptor's status (0x8100c882) */
+/* the content descriptor's status */
 extern "C" int SwMwContentGetStatus(void *descriptor)
 {
 	return *(int *)descriptor;
 }
 
-/* give the sink its URI: address-literal or resolver path, then the content's start (0x8100ca52) */
+/* give the sink its URI: address-literal or resolver path, then the content's start */
 extern "C" int SwMwSinkSetUri(int handle, void *uriText, int size)
 {
 	struct SwMwSink *sink = (struct SwMwSink *)handle;

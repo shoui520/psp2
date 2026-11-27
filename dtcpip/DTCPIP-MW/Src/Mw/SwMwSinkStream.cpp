@@ -23,14 +23,14 @@ using ::size_t;
 extern "C" {
 int swMwTrace(const char *format, ...);
 
-/* the SWS core's content manager behind a device (the linked core's 0x81002ce8) */
+/* the SWS core's content manager behind a device (the linked core's ) */
 int SwMwCoreContentManager(int device);
 
-/* the reader's event base object (the SWS support library, 0x8107ba54/0x8107ba88) */
+/* the reader's event base object (the SWS support library, /) */
 void SwMwStreamEventConstruct(struct SwMwStreamEvent *event);
 void SwMwStreamEventDestruct(struct SwMwStreamEvent *event);
 
-/* the sink's re-authentication (SwMwSink.cpp, 0x8100ccaa) */
+/* the sink's re-authentication (SwMwSink.cpp) */
 int SwMwSinkReauthenticate(int sink);
 
 /* the transfer bodies the dispatcher's forwarders call */
@@ -43,13 +43,13 @@ int SwMwSinkStreamSendMessageBody(struct SwMwSinkStream *stream, int message);
 int SwMwSinkStreamAbortBody(struct SwMwSinkStream *stream);
 }
 
-/* the stream's gate (0x8100fe54) */
+/* the stream's gate */
 extern "C" struct SwMwGate *SwMwSinkStreamGate(struct SwMwSinkStream *stream)
 {
 	return &stream->gate;
 }
 
-/* the lwmutex that guards the transfer bookkeeping (0x8100ffbe) */
+/* the lwmutex that guards the transfer bookkeeping */
 extern "C" int SwMwSinkStreamMutexCreate(SceKernelLwMutexWork *mutex)
 {
 	int result;
@@ -60,13 +60,13 @@ extern "C" int SwMwSinkStreamMutexCreate(SceKernelLwMutexWork *mutex)
 	return result;
 }
 
-/* delete the transfer bookkeeping's lwmutex (0x8101026a) */
+/* delete the transfer bookkeeping's lwmutex */
 extern "C" int SwMwSinkStreamMutexDelete(SceKernelLwMutexWork *mutex)
 {
 	return sceKernelDeleteLwMutex(mutex);
 }
 
-/* the reader's event: its flag, condition variable and mutex (0x810100ae) */
+/* the reader's event: its flag, condition variable and mutex */
 extern "C" int SwMwSinkStreamEventCreate(struct SwMwSignal *signal)
 {
 	signal->signalled = 0;
@@ -79,7 +79,7 @@ extern "C" int SwMwSinkStreamEventCreate(struct SwMwSignal *signal)
 	return 11;
 }
 
-/* delete the reader's event (0x81010284) */
+/* delete the reader's event */
 extern "C" int SwMwSinkStreamEventDelete(struct SwMwSignal *signal)
 {
 	sceKernelDeleteLwCond(&signal->cond);
@@ -87,7 +87,7 @@ extern "C" int SwMwSinkStreamEventDelete(struct SwMwSignal *signal)
 	return 0;
 }
 
-/* lock and unlock a lwmutex (0x8100e7de/0x8100e800) */
+/* lock and unlock a lwmutex */
 extern "C" int SwMwSinkStreamMutexLock(SceKernelLwMutexWork *mutex)
 {
 	return sceKernelLockLwMutex(mutex, 1, NULL);
@@ -98,7 +98,7 @@ extern "C" int SwMwSinkStreamMutexUnlock(SceKernelLwMutexWork *mutex)
 	return sceKernelUnlockLwMutex(mutex, 1);
 }
 
-/* wait for a signal's flag and clear it (0x8100e81e) */
+/* wait for a signal's flag and clear it */
 extern "C" int SwMwSinkStreamWait(struct SwMwSignal *signal)
 {
 	if (sceKernelLockLwMutex(&signal->mutex, 1, NULL) < 0)
@@ -115,7 +115,7 @@ extern "C" int SwMwSinkStreamWait(struct SwMwSignal *signal)
 	return 0;
 }
 
-/* set a signal's flag and wake its waiter (0x8100e8a8) */
+/* set a signal's flag and wake its waiter */
 extern "C" int SwMwSinkStreamSignal(struct SwMwSignal *signal)
 {
 	sceKernelLockLwMutex(&signal->mutex, 1, NULL);
@@ -125,7 +125,7 @@ extern "C" int SwMwSinkStreamSignal(struct SwMwSignal *signal)
 	return 0;
 }
 
-/* lock and unlock the transfer bookkeeping's mutex (0x8100ea46/0x8100ea68) */
+/* lock and unlock the transfer bookkeeping's mutex */
 extern "C" int SwMwSinkStreamStateLock(SceKernelLwMutexWork *mutex)
 {
 	return sceKernelLockLwMutex(mutex, 1, NULL);
@@ -136,7 +136,7 @@ extern "C" int SwMwSinkStreamStateUnlock(SceKernelLwMutexWork *mutex)
 	return sceKernelUnlockLwMutex(mutex, 1);
 }
 
-/* the stream's window, as the transfer commands report it (0x8100e8e4) */
+/* the stream's window, as the transfer commands report it */
 extern "C" void SwMwSinkStreamGetWindow(struct SwMwSinkStream *stream, int *window)
 {
 	window[0] = (int)stream->window.receiveBase;
@@ -147,7 +147,7 @@ extern "C" void SwMwSinkStreamGetWindow(struct SwMwSinkStream *stream, int *wind
 	window[5] = stream->window.blockSize;
 }
 
-/* register the reader's callback with its context (0x8100fe66) */
+/* register the reader's callback with its context */
 extern "C" int SwMwStreamEventSet(struct SwMwStreamEvent *event, void *handler, void *context,
 				  void *argument)
 {
@@ -157,14 +157,14 @@ extern "C" int SwMwStreamEventSet(struct SwMwStreamEvent *event, void *handler, 
 	return (int)argument;
 }
 
-/* register a handler with the stream's reader (0x8100ea24) */
+/* register a handler with the stream's reader */
 extern "C" int SwMwSinkStreamSetHandler(struct SwMwSinkStream *stream, void *handler,
 					void *argument)
 {
 	return SwMwStreamEventSet(&stream->event, handler, stream, argument);
 }
 
-/* mark the stream finished with a status, once (0x8100ea86) */
+/* mark the stream finished with a status, once */
 extern "C" int SwMwSinkStreamSetFinished(struct SwMwSinkStream *stream, int status)
 {
 	SwMwSinkStreamStateLock(&stream->mutex);
@@ -176,27 +176,27 @@ extern "C" int SwMwSinkStreamSetFinished(struct SwMwSinkStream *stream, int stat
 	return 0;
 }
 
-/* the stream's open state (0x8100eac4) */
+/* the stream's open state */
 extern "C" int SwMwSinkStreamIsOpen(struct SwMwSinkStream *stream)
 {
 	SwMwSinkStreamSetFinished(stream, 12015);
 	return 0;
 }
 
-/* the stream's name (0x8100eae0) */
+/* the stream's name */
 extern "C" int SwMwSinkStreamSetName(struct SwMwSinkStream *stream, const char *name)
 {
 	strncpy(stream->name, name, 0xFF);
 	return 0;
 }
 
-/* a reader hook that has nothing to do (0x8100eb04) */
+/* a reader hook that has nothing to do */
 extern "C" int SwMwSinkStreamNoop(void)
 {
 	return 0;
 }
 
-/* the stream's status while a transfer is outstanding (0x8100f316) */
+/* the stream's status while a transfer is outstanding */
 extern "C" int SwMwSinkStreamPoll(struct SwMwSinkStream *stream)
 {
 	int status;
@@ -209,7 +209,7 @@ extern "C" int SwMwSinkStreamPoll(struct SwMwSinkStream *stream)
 	return status;
 }
 
-/* build the stream object (0x8101012c) */
+/* build the stream object */
 extern "C" struct SwMwSinkStream *SwMwSinkStreamConstruct(struct SwMwSinkStream *stream)
 {
 	stream->state = 0;
@@ -245,13 +245,13 @@ extern "C" struct SwMwSinkStream *SwMwSinkStreamConstruct(struct SwMwSinkStream 
 	return stream;
 }
 
-/* the constructor's copy form (0x8101025a) */
+/* the constructor's copy form */
 extern "C" struct SwMwSinkStream *SwMwSinkStreamConstructCopy(struct SwMwSinkStream *stream)
 {
 	return SwMwSinkStreamConstruct(stream);
 }
 
-/* tear the stream object down (0x810102a2) */
+/* tear the stream object down */
 extern "C" struct SwMwSinkStream *SwMwSinkStreamDestruct(struct SwMwSinkStream *stream)
 {
 	if (stream->state != 0) {
@@ -264,13 +264,13 @@ extern "C" struct SwMwSinkStream *SwMwSinkStreamDestruct(struct SwMwSinkStream *
 	return stream;
 }
 
-/* the destructor's copy form (0x810102fc) */
+/* the destructor's copy form */
 extern "C" struct SwMwSinkStream *SwMwSinkStreamDestructCopy(struct SwMwSinkStream *stream)
 {
 	return SwMwSinkStreamDestruct(stream);
 }
 
-/* initialise a constructed stream on its sink and window (0x8100fffa) */
+/* initialise a constructed stream on its sink and window */
 extern "C" int SwMwSinkStreamInit(struct SwMwSinkStream *stream, void *sink,
 				  const struct SwMwStreamWindow *window)
 {
@@ -294,7 +294,7 @@ extern "C" int SwMwSinkStreamInit(struct SwMwSinkStream *stream, void *sink,
 	return 0;
 }
 
-/* create the channel's stream (0x8100e912) */
+/* create the channel's stream */
 extern "C" int SwMwSinkStreamCreate(struct SwMwSinkStream **stream, void *sink,
 				    const struct SwMwStreamWindow *window)
 {
@@ -323,7 +323,7 @@ extern "C" int SwMwSinkStreamCreate(struct SwMwSinkStream **stream, void *sink,
 	return 0;
 }
 
-/* the reader's event: 0 asks for re-authentication, 1 reports a finished move (0x8101030c) */
+/* the reader's event: 0 asks for re-authentication, 1 reports a finished move */
 extern "C" int SwMwSinkStreamOnEvent(struct SwMwSinkStream *stream, int *message)
 {
 	int result;
@@ -348,7 +348,7 @@ extern "C" int SwMwSinkStreamOnEvent(struct SwMwSinkStream *stream, int *message
 	return result;
 }
 
-/* the reader reported that its key is about to expire (0x8100fe86) */
+/* the reader reported that its key is about to expire */
 extern "C" void SwMwSinkStreamOnKeyExpired(struct SwMwStreamEvent *event)
 {
 	int message = 0;
@@ -359,7 +359,7 @@ extern "C" void SwMwSinkStreamOnKeyExpired(struct SwMwStreamEvent *event)
 								  event->argument);
 }
 
-/* the reader asked for the stream to be discarded (0x8100feda) */
+/* the reader asked for the stream to be discarded */
 extern "C" void SwMwSinkStreamOnDiscard(struct SwMwStreamEvent *event, int reason)
 {
 	unsigned char byte;
@@ -375,7 +375,7 @@ extern "C" void SwMwSinkStreamOnDiscard(struct SwMwStreamEvent *event, int reaso
 								  event->argument);
 }
 
-/* the reader reported the content's EEMI type (0x8100ff3c) */
+/* the reader reported the content's EEMI type */
 extern "C" void SwMwSinkStreamOnEemi(struct SwMwStreamEvent *event, int type, int value)
 {
 	int message[3];
@@ -394,7 +394,7 @@ extern "C" void SwMwSinkStreamOnEemi(struct SwMwStreamEvent *event, int type, in
 	}
 }
 
-/* re-authenticate the stream's sink (0x8100fdc6) */
+/* re-authenticate the stream's sink */
 extern "C" int SwMwSinkStreamReauthenticate(struct SwMwSinkStream *stream)
 {
 	int status;
@@ -405,7 +405,7 @@ extern "C" int SwMwSinkStreamReauthenticate(struct SwMwSinkStream *stream)
 	return status;
 }
 
-/* the periodic connect: re-authenticate when the reader's key is expiring (0x8100fdf0) */
+/* the periodic connect: re-authenticate when the reader's key is expiring */
 extern "C" int SwMwSinkStreamConnect(struct SwMwSinkStream *stream)
 {
 	int status;

@@ -73,4 +73,11 @@ int SwMwMoveSinkMutexCreate(SceKernelLwMutexWork *mutex);
 int SwMwMoveSinkMutexDelete(SceKernelLwMutexWork *mutex);
 int SwMwMoveSinkMutexLock(SceKernelLwMutexWork *mutex);
 int SwMwMoveSinkMutexUnlock(SceKernelLwMutexWork *mutex);
+int SwMwMoveSinkOnAuthResult(struct SwMwMoveSink *sink, int status, unsigned char kxmLabel);
+int SwMwMoveSinkNotifyDevice(struct SwMwMoveSink *sink, int event);
+int SwMwMoveSinkOnCancel(struct SwMwMoveSink *sink);
+int SwMwMoveSinkOnFinalizeResult(struct SwMwMoveSink *sink, int status);
+int SwMwMoveSinkOnCompleteResult(struct SwMwMoveSink *sink, int status);
+int SwMwMoveSinkGetAuthId(struct SwMwMoveSink *sink);
+int SwMwMoveSinkGetKxmLabel(struct SwMwMoveSink *sink);
 }

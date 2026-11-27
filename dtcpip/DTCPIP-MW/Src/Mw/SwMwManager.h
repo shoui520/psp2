@@ -21,6 +21,23 @@ struct SwMwManagerObject {
 	virtual void poll();				/* 0x18 */
 	virtual int write(int value, int size);		/* 0x1c */
 	virtual int exchange(int size, void *buffer, int *value, void *owner);	/* 0x20 */
+	virtual int getDeviceProperty(void *out, int size);			/* 0x24 */
+	virtual int setOptionByte(int value);					/* 0x28 */
+	virtual int setTransferConfig(int first, int second, int third,
+				      int fourth, int fifth);			/* 0x2c */
+	virtual int setOptionWord(int value);					/* 0x30 */
+	virtual int getSrm(void *buffer, size_t *size);				/* 0x34 */
+	virtual int setSrm(const void *buffer, size_t size);			/* 0x38 */
+};
+
+/* content interface slice used by SwMwManagerSinkSlots::resetNetwork */
+struct SwMwManagerContentInterface {
+	virtual void destroy();				/* 0x00 */
+	virtual void dispose();				/* 0x04 */
+	virtual void init();				/* 0x08 */
+	virtual void term();				/* 0x0c */
+	virtual void start();				/* 0x10 */
+	virtual void onNetworkDisconnected();		/* 0x14 */
 };
 
 /* the activation worker's state: its flag, the worker's status and the activation result */
@@ -49,19 +66,19 @@ struct SwMwManagerThread {
 struct SwMwManager;
 
 /* the device object the manager keeps at +4: the SWS callback table the library calls
- * (vtable 0x81099fbc), the two 35-entry session tables, the manager that owns it and the
+ * (vtable ), the two 35-entry session tables, the manager that owns it and the
  * SWS objects the session start builds */
 struct SwMwManagerSinkSlots {
-	void *table;			/* 0x000: the callback table (0x81099fbc) */
-	int sinks[35];			/* 0x004: the sinks (0x81005060) */
-	int moveSinks[35];		/* 0x090: the move sinks (0x810050FC/0x8100514A) */
+	void *table;			/* 0x000: the callback table */
+	int sinks[35];			/* 0x004: the sinks */
+	int moveSinks[35];		/* 0x090: the move sinks */
 	struct SwMwManager *owner;	/* 0x11C: the manager, set at session start */
-	void *support;			/* 0x120: the content support (0x81013790) */
+	void *support;			/* 0x120: the content support */
 	void *content;			/* 0x124: the content object (the streams' manager) */
 	void *manager;			/* 0x128: the manager object */
 };
 
-/* the certification descriptor the manager create takes (0x81002de2): the template
+/* the certification descriptor the manager create takes: the template
  * pointer, the device certificate's three bytes at +4, the template type at +0x88 and its
  * length at +0x8c */
 struct SwMwManagerCertificate {
@@ -72,25 +89,31 @@ struct SwMwManagerCertificate {
 	int size;			/* 0x08c */
 };
 
+struct SwMwMoveRecord;
+
 /* the manager object: its first word, the device slots the session start uses, then the
  * key bin, the started flag, the four record handles and the two parameters */
 struct SwMwManager {
 	struct SwMwManagerObject *object;	/* 0x000 */
 	struct SwMwManagerSinkSlots slots;	/* 0x004 */
 	void *keyBin;				/* 0x130: the SWS key bin object */
-	int started;				/* 0x134 */
+	int started;				/* 0x134: network-state checker handle */
 	int recordA;				/* 0x138 */
-	int recordB;				/* 0x13C */
-	int recordC;				/* 0x140 */
-	int recordD;				/* 0x144 */
-	int padding[2];				/* 0x148 */
+	int recordB;				/* 0x13C: label notification store */
+	int recordC;				/* 0x140: source resume record store */
+	int recordD;				/* 0x144: sink resume record store */
+	unsigned int lastNetCheckMs;		/* 0x148: last network poll timestamp (ms) */
+	int unusedWord;				/* 0x14C */
 	int parameter0;				/* 0x150 */
 	int parameter1;				/* 0x154 */
-	int tail[4];				/* 0x158: the base's own fields */
+	struct SwMwMoveRecord *sinkResumeList;	/* 0x158 */
+	unsigned int sinkResumeCount;		/* 0x15C */
+	struct SwMwMoveRecord *sourceResumeList;/* 0x160 */
+	unsigned int sourceResumeCount;		/* 0x164 */
 };
 
 
-/* the SWS content support singleton's interface the start builds (0x81013790's class) */
+/* the SWS content support singleton's interface the start builds ('s class) */
 struct SwMwContentSupport {
 	virtual void destroy();				/* 0x00 */
 	virtual void dispose();				/* 0x04 */

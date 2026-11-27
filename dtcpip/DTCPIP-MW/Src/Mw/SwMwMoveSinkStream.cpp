@@ -21,20 +21,20 @@ using ::size_t;
 extern "C" {
 int swMwTrace(const char *format, ...);
 
-/* the move stream's event base (the SWS support library, 0x8107b768/0x8107b840) */
+/* the move stream's event base (the SWS support library, /) */
 void SwMwMoveStreamEventConstruct(struct SwMwStreamEvent *event);
 void SwMwMoveStreamEventDestruct(struct SwMwStreamEvent *event);
 
-/* the SWS core's content manager behind a device (0x81002ce8) */
+/* the SWS core's content manager behind a device */
 int SwMwCoreContentManager(int device);
 
-/* the stream's bookkeeping mutex (SwMwSync.cpp's shared primitive, 0x8100c200/c4b6) */
+/* the stream's bookkeeping mutex (SwMwSync.cpp's shared primitive, /c4b6) */
 int SwMwSinkStreamMutexDelete(SceKernelLwMutexWork *mutex);
 
-/* the device's move-sink check (the SWS core, 0x81002d94) */
+/* the device's move-sink check (the SWS core) */
 int SwMwCoreCheckMoveSink(int device);
 
-/* the certificate block helpers (the SWS content library, 0x8100c82e/0x8100c882) */
+/* the certificate block helpers (the SWS content library, /) */
 struct SwMwCertificateBlock {
 	unsigned char sender[16];	/* 0x00 */
 	unsigned char receiver[16];	/* 0x10 */
@@ -54,7 +54,7 @@ int SwMwCoreNotifyLabel(int device, int label, int value);
 int SwMwStatus(int status);
 }
 
-/* build the move stream object (0x8100c36e) */
+/* build the move stream object */
 extern "C" struct SwMwSinkStream *SwMwMoveSinkStreamConstruct(struct SwMwSinkStream *stream)
 {
 	stream->state = 0;
@@ -91,7 +91,7 @@ extern "C" struct SwMwSinkStream *SwMwMoveSinkStreamConstruct(struct SwMwSinkStr
 	return stream;
 }
 
-/* the stream's window, as the transfer commands report it (0x8100a190) */
+/* the stream's window, as the transfer commands report it */
 extern "C" int SwMwMoveSinkStreamGetWindow(struct SwMwSinkStream *stream, int *window)
 {
 	window[0] = stream->window.value[0];
@@ -103,7 +103,7 @@ extern "C" int SwMwMoveSinkStreamGetWindow(struct SwMwSinkStream *stream, int *w
 	return stream->window.value[5];
 }
 
-/* lock and unlock the transfer bookkeeping (0x8100a348/0x8100a36a) */
+/* lock and unlock the transfer bookkeeping */
 extern "C" int SwMwMoveSinkStreamMutexLock(SceKernelLwMutexWork *mutex)
 {
 	return sceKernelLockLwMutex(mutex, 1, NULL);
@@ -114,7 +114,7 @@ extern "C" int SwMwMoveSinkStreamMutexUnlock(SceKernelLwMutexWork *mutex)
 	return sceKernelUnlockLwMutex(mutex, 1);
 }
 
-/* mark the stream finished with a status, once (0x8100a388) */
+/* mark the stream finished with a status, once */
 extern "C" int SwMwMoveSinkStreamSetFinished(struct SwMwSinkStream *stream, int status)
 {
 	SwMwMoveSinkStreamMutexLock(&stream->mutex);
@@ -126,27 +126,27 @@ extern "C" int SwMwMoveSinkStreamSetFinished(struct SwMwSinkStream *stream, int 
 	return 0;
 }
 
-/* the stream's open state: it finishes the transfer (0x8100a3c6) */
+/* the stream's open state: it finishes the transfer */
 extern "C" int SwMwMoveSinkStreamIsOpen(struct SwMwSinkStream *stream)
 {
 	SwMwMoveSinkStreamSetFinished(stream, 12015);
 	return 0;
 }
 
-/* the stream's name (0x8100a3e2) */
+/* the stream's name */
 extern "C" int SwMwMoveSinkStreamSetName(struct SwMwSinkStream *stream, const char *name)
 {
 	strncpy(stream->name, name, 0xFF);
 	return 0;
 }
 
-/* a hook that has nothing to do (0x8100a406) */
+/* a hook that has nothing to do */
 extern "C" int SwMwMoveSinkStreamNoop(void)
 {
 	return 0;
 }
 
-/* the transfer's state while a command is outstanding (0x8100acb6) */
+/* the transfer's state while a command is outstanding */
 extern "C" int SwMwMoveSinkStreamPoll(struct SwMwSinkStream *stream)
 {
 	int status;
@@ -159,7 +159,7 @@ extern "C" int SwMwMoveSinkStreamPoll(struct SwMwSinkStream *stream)
 	return status;
 }
 
-/* end the transfer: release its pending bytes and reset it (0x8100a936) */
+/* end the transfer: release its pending bytes and reset it */
 extern "C" int SwMwMoveSinkStreamAbort(struct SwMwSinkStream *stream)
 {
 	int status;
@@ -187,7 +187,7 @@ extern "C" int SwMwMoveSinkStreamAbort(struct SwMwSinkStream *stream)
 	return status;
 }
 
-/* destroy the move stream: release its transfer, flush the sink's move and free it (0x8100a252) */
+/* destroy the move stream: release its transfer, flush the sink's move and free it */
 extern "C" int SwMwMoveSinkStreamDestroy(struct SwMwSinkStream *stream)
 {
 	struct SwMwMoveSink *sink;
@@ -212,7 +212,7 @@ extern "C" int SwMwMoveSinkStreamDestroy(struct SwMwSinkStream *stream)
 	return 0;
 }
 
-/* the move stream's two-phase MV_COMPLETE over the sink (0x8100ba4e) */
+/* the move stream's two-phase MV_COMPLETE over the sink */
 extern "C" int SwMwMoveSinkStreamComplete(struct SwMwSinkStream *stream)
 {
 	struct SwMwMoveSink *sink = (struct SwMwMoveSink *)stream->sink;
@@ -295,7 +295,7 @@ extern "C" int SwMwMoveSinkStreamComplete(struct SwMwSinkStream *stream)
 	return 0;
 }
 
-/* wait for the move to close: finalize once, then complete (0x8100b7fc) */
+/* wait for the move to close: finalize once, then complete */
 extern "C" int SwMwMoveSinkStreamWaitClosed(struct SwMwSinkStream *stream)
 {
 	struct SwMwMoveSink *sink = (struct SwMwMoveSink *)stream->sink;
@@ -358,7 +358,7 @@ extern "C" int SwMwMoveSinkStreamWaitClosed(struct SwMwSinkStream *stream)
 	return status;
 }
 
-/* send the move's MV_FINALIZE for the labelled session (0x8100bd10) */
+/* send the move's MV_FINALIZE for the labelled session */
 extern "C" int SwMwMoveSinkStreamFinalize(struct SwMwSinkStream *stream, int value)
 {
 	struct SwMwMoveSink *sink = (struct SwMwMoveSink *)stream->sink;
@@ -403,7 +403,7 @@ extern "C" int SwMwMoveSinkStreamFinalize(struct SwMwSinkStream *stream, int val
 	return status;
 }
 
-/* send the move's MV_COMPLETE for the labelled session and finish it (0x8100bee0) */
+/* send the move's MV_COMPLETE for the labelled session and finish it */
 extern "C" int SwMwMoveSinkStreamCompleteLabel(struct SwMwSinkStream *stream)
 {
 	struct SwMwMoveSink *sink = (struct SwMwMoveSink *)stream->sink;
@@ -453,7 +453,7 @@ extern "C" int SwMwMoveSinkStreamCompleteLabel(struct SwMwSinkStream *stream)
 	return 0;
 }
 
-/* start the move stream's transfer on its work area (0x8100a412) */
+/* start the move stream's transfer on its work area */
 extern "C" int SwMwMoveSinkStreamGetInfo(struct SwMwSinkStream *stream,
 					 struct SwMwMoveSinkStreamInfo *info)
 {
@@ -582,7 +582,7 @@ extern "C" int SwMwMoveSinkStreamGetInfo(struct SwMwSinkStream *stream,
 	return SwMwStatus(started);
 }
 
-/* hand the sink one of the reader's chunks (0x8100acf6) */
+/* hand the sink one of the reader's chunks */
 extern "C" int SwMwMoveSinkStreamReceive(struct SwMwSinkStream *stream, int *offset,
 					 int *size, unsigned char *type)
 {
@@ -682,7 +682,7 @@ extern "C" int SwMwMoveSinkStreamReceive(struct SwMwSinkStream *stream, int *off
 	return status;
 }
 
-/* release the bytes the sink consumed from its chunk (0x8100aff8) */
+/* release the bytes the sink consumed from its chunk */
 extern "C" int SwMwMoveSinkStreamRelease(struct SwMwSinkStream *stream, int size)
 {
 	struct SwMwMoveSink *sink = (struct SwMwMoveSink *)stream->sink;
@@ -753,7 +753,7 @@ extern "C" int SwMwMoveSinkStreamRelease(struct SwMwSinkStream *stream, int size
 	return status;
 }
 
-/* hand the sink the next send chunk (0x8100b22e) */
+/* hand the sink the next send chunk */
 extern "C" int SwMwMoveSinkStreamSend(struct SwMwSinkStream *stream, int *offset, int *size)
 {
 	struct SwMwMoveSink *sink = (struct SwMwMoveSink *)stream->sink;
@@ -862,7 +862,7 @@ extern "C" int SwMwMoveSinkStreamSend(struct SwMwSinkStream *stream, int *offset
 	return status;
 }
 
-/* release the pending send bytes when the message is sent (0x8100b59e) */
+/* release the pending send bytes when the message is sent */
 extern "C" int SwMwMoveSinkStreamSendMessage(struct SwMwSinkStream *stream, int size)
 {
 	struct SwMwMoveSink *sink = (struct SwMwMoveSink *)stream->sink;
@@ -920,7 +920,7 @@ extern "C" int SwMwMoveSinkStreamSendMessage(struct SwMwSinkStream *stream, int 
 }
 
 /* stop the move stream: drain the reader when asked, then release the transfer and the
- * reader and notify the sink (0x8100aa1e) */
+ * reader and notify the sink */
 extern "C" int SwMwMoveSinkStreamStop(struct SwMwSinkStream *stream, int mode)
 {
 	struct SwMwStreamChunk *chunks;
@@ -996,26 +996,26 @@ extern "C" int SwMwMoveSinkStreamStop(struct SwMwSinkStream *stream, int mode)
 	return status;
 }
 
-/* the set-parameter command is the stop body with its mode (0x8100ac9a) */
+/* the set-parameter command is the stop body with its mode */
 extern "C" int SwMwMoveSinkStreamSetParameter(struct SwMwSinkStream *stream, int parameter)
 {
 	return SwMwMoveSinkStreamStop(stream, parameter);
 }
 
-/* the stream's gate (0x8100b7ea) */
+/* the stream's gate */
 extern "C" struct SwMwGate *SwMwMoveSinkStreamGate(struct SwMwSinkStream *stream)
 {
 	return &stream->gate;
 }
 
-/* register the stream's event handler (0x8100a326) */
+/* register the stream's event handler */
 extern "C" int SwMwMoveSinkStreamEventSet(struct SwMwSinkStream *stream, void *handler,
 					  void *argument)
 {
 	return SwMwStreamEventSet(&stream->event, handler, stream, argument);
 }
 
-/* initialise a constructed move stream on its sink and window (0x8100c23c) */
+/* initialise a constructed move stream on its sink and window */
 extern "C" int SwMwMoveSinkStreamInit(struct SwMwSinkStream *stream, void *sink,
 				      const struct SwMwStreamWindow *window)
 {
@@ -1039,7 +1039,7 @@ extern "C" int SwMwMoveSinkStreamInit(struct SwMwSinkStream *stream, void *sink,
 	return 0;
 }
 
-/* tear the move stream down (0x8100c4ee) */
+/* tear the move stream down */
 extern "C" struct SwMwSinkStream *SwMwMoveSinkStreamDestruct(struct SwMwSinkStream *stream)
 {
 	if (stream->state != 0) {
@@ -1052,7 +1052,7 @@ extern "C" struct SwMwSinkStream *SwMwMoveSinkStreamDestruct(struct SwMwSinkStre
 	return stream;
 }
 
-/* create the channel's move stream on its sink and window (0x8100a1be) */
+/* create the channel's move stream on its sink and window */
 extern "C" int SwMwMoveSinkStreamCreate(struct SwMwSinkStream **stream, void *sink,
 					const struct SwMwStreamWindow *window)
 {
@@ -1081,7 +1081,7 @@ extern "C" int SwMwMoveSinkStreamCreate(struct SwMwSinkStream **stream, void *si
 	return 0;
 }
 
-/* the move stream's event: 0 asks for a re-authentication check, 1 finishes (0x8100c558) */
+/* the move stream's event: 0 asks for a re-authentication check, 1 finishes */
 extern "C" int SwMwMoveSinkStreamOnEvent(struct SwMwSinkStream *stream, int *message)
 {
 	int result;
@@ -1107,7 +1107,7 @@ extern "C" int SwMwMoveSinkStreamOnEvent(struct SwMwSinkStream *stream, int *mes
 	return result;
 }
 
-/* the periodic connect: check the transfer's key when it is expiring (0x8100b786) */
+/* the periodic connect: check the transfer's key when it is expiring */
 extern "C" int SwMwMoveSinkStreamConnect(struct SwMwSinkStream *stream)
 {
 	int status;
@@ -1122,9 +1122,82 @@ extern "C" int SwMwMoveSinkStreamConnect(struct SwMwSinkStream *stream)
 	return 0;
 }
 
-/* the move's key is about to expire (0x8100b76c) */
+/* the move's key is about to expire */
 extern "C" int SwMwMoveSinkStreamKxExpiring(void)
 {
 	swMwTrace("sw mw:KX will be expired within 60 sec\n");
 	return 0;
+}
+
+/* populate the move stream's event callback descriptor */
+extern "C" void *SwMwMoveStreamEventSet(struct SwMwStreamEvent *event, void *handler,
+					void *context, void *argument)
+{
+	event->context = context;
+	event->handler = handler;
+	event->argument = argument;
+	return argument;
+}
+
+/* reader callback: key is about to expire */
+extern "C" void SwMwMoveSinkStreamOnKeyExpired(struct SwMwStreamEvent *event)
+{
+	int message;
+
+	swMwTrace("sw mw:KeyBeingExpired\n");
+	if (event->handler != NULL) {
+		message = 0;
+		((void (*)(void *, int *, void *))event->handler)(event->context, &message,
+								  event->argument);
+	}
+}
+
+/* reader callback: transition to discard stream */
+extern "C" void SwMwMoveSinkStreamOnDiscard(struct SwMwStreamEvent *event, int reason)
+{
+	unsigned char reasonByte;
+	int message[3];
+
+	message[2] = reason;
+	reasonByte = (unsigned char)reason;
+	swMwTrace("sw mw:TransitToDiscardStream\n");
+	if (event->handler != NULL) {
+		message[0] = 1;
+		message[1] = reasonByte;
+		((void (*)(void *, int *, void *))event->handler)(event->context, message,
+								  event->argument);
+	}
+}
+
+/* reader callback: EEMI/CCI notification */
+extern "C" void SwMwMoveSinkStreamOnEemi(struct SwMwStreamEvent *event, int eemi, int cci,
+					 int flag)
+{
+	int message[3];
+
+	message[2] = flag;
+	event->eemi = (unsigned char)eemi;
+	if ((unsigned char)flag != 0)
+		((struct SwMwSinkStream *)event->context)->eventArgument = 1;
+	if (eemi != 6 || cci == 4) {
+		swMwTrace("sw mw:detected EEMI %x, CCI %x\n", eemi, cci);
+		swMwTrace("sw mw:=> discard stream\n");
+		if (event->handler != NULL) {
+			message[0] = 1;
+			message[1] = 1;
+			((void (*)(void *, int *, void *))event->handler)(event->context, message,
+									  event->argument);
+		}
+	}
+}
+
+/* copy-entry forwarding wrappers */
+extern "C" struct SwMwSinkStream *SwMwMoveSinkStreamConstructCopy(struct SwMwSinkStream *stream)
+{
+	return SwMwMoveSinkStreamConstruct(stream);
+}
+
+extern "C" struct SwMwSinkStream *SwMwMoveSinkStreamDestructCopy(struct SwMwSinkStream *stream)
+{
+	return SwMwMoveSinkStreamDestruct(stream);
 }

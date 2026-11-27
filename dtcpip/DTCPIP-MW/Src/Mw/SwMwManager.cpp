@@ -6,6 +6,7 @@
  */
 
 #include <stddef.h>
+#include <stdint.h>
 #include <string.h>
 
 /* the SDK's <new> asks std::size_t of the freestanding headers */
@@ -16,7 +17,9 @@ using ::size_t;
 #include <stdlib.h>
 #include <scetypes.h>
 #include <kernel/threadmgr.h>
+#include <rtc.h>
 #include "SwMwManager.h"
+#include "SwMwMoveSink.h"
 
 #define SWMW_MANAGER_SOURCE	"C:\\work\\svn\\psp2\\dtcpip\\trunk.365\\DTCPIP-MW\\Src\\Mw\\SwMwManager.cpp"
 
@@ -33,7 +36,7 @@ int SwsGetToolMode(void);
 int SwsGetAffinity(void);
 int SwMwThreadTrampoline(SceSize args, void *argument);
 
-/* the activation's worker entry (0x810056a6) and the calls it makes */
+/* the activation's worker entry and the calls it makes */
 int SwMwManagerActivationThread(void *argument);
 int SwMwCoreGetPort(unsigned short *port);
 int SwMwCoreImportKeyBin(const void *data, int size);
@@ -81,12 +84,12 @@ int sceRegMgrGetKeyBin(const char *category, const char *name, void *buffer, int
 int sceRegMgrSetKeyBin(const char *category, const char *name, const void *buffer, int size);
 }
 
-/* the manager's configuration word (0x8109e0e4) and the certificate template (0x8108ce64) */
+/* the manager's configuration word and the certificate template */
 static int g_swMwManagerConfig;
 extern unsigned char g_swMwCertificateTemplate[];
 
 
-/* the manager the ensure path keeps for the process (0x8109e0e0) */
+/* the manager the ensure path keeps for the process */
 static struct SwMwManager *g_swMwManager;
 
 
@@ -197,7 +200,7 @@ extern "C" int SwMwManagerThreadCreate(struct SwMwManagerThread *thread, int (*e
 
 
 /* the manager's error translation: -7..0 map to the manager statuses, anything else to
- * 12001 (0x81005776, the jump table at 0x8100578e) */
+ * 12001 (, the jump table at ) */
 extern "C" int SwMwManagerMapStatus(int status)
 {
 	switch (status) {
@@ -222,7 +225,7 @@ extern "C" int SwMwManagerMapStatus(int status)
 	}
 }
 
-/* cancel the activation and the download in flight (0x8100458c) */
+/* cancel the activation and the download in flight */
 extern "C" int SwMwManagerCancel(void)
 {
 	int status;
@@ -236,7 +239,7 @@ extern "C" int SwMwManagerCancel(void)
 	return 0;
 }
 
-/* give a move sink a slot in the device's move table (0x810050fc) */
+/* give a move sink a slot in the device's move table */
 extern "C" int SwMwManagerRegisterMoveSink(struct SwMwManagerSinkSlots *slots, int sink)
 {
 	int i;
@@ -250,7 +253,7 @@ extern "C" int SwMwManagerRegisterMoveSink(struct SwMwManagerSinkSlots *slots, i
 	return 12008;
 }
 
-/* free a move sink's slot in the device's move table (0x8100514a) */
+/* free a move sink's slot in the device's move table */
 extern "C" int SwMwManagerUnregisterMoveSink(struct SwMwManagerSinkSlots *slots, int sink)
 {
 	int i;
@@ -264,7 +267,7 @@ extern "C" int SwMwManagerUnregisterMoveSink(struct SwMwManagerSinkSlots *slots,
 	return 12008;
 }
 
-/* start a session: the support singleton, the content and the manager (0x81004e40) */
+/* start a session: the support singleton, the content and the manager */
 extern "C" int SwMwManagerSessionStart(struct SwMwManagerSinkSlots *slots, int mode)
 {
 	int status;
@@ -309,7 +312,7 @@ extern "C" int SwMwManagerSessionStart(struct SwMwManagerSinkSlots *slots, int m
 	return status;
 }
 
-/* whether the device certificate exists: 0 active, 13001 to activate (0x810045dc) */
+/* whether the device certificate exists: 0 active, 13001 to activate */
 extern "C" int SwMwManagerCheckActivation(void)
 {
 	int activated;
@@ -333,7 +336,7 @@ extern "C" int SwMwManagerCheckActivation(void)
 static struct SwMwManagerActivation g_swMwActivation;
 static struct SwMwManagerThread g_swMwActivationThread;
 
-/* wait for a manager thread and delete it (0x810044bc) */
+/* wait for a manager thread and delete it */
 extern "C" int SwMwManagerJoinThread(struct SwMwManagerThread *thread)
 {
 	int result;
@@ -343,7 +346,7 @@ extern "C" int SwMwManagerJoinThread(struct SwMwManagerThread *thread)
 	return result;
 }
 
-/* start the activation's worker thread (0x8100444c) */
+/* start the activation's worker thread */
 extern "C" int SwMwManagerStartActivation(void)
 {
 	int status;
@@ -363,7 +366,7 @@ extern "C" int SwMwManagerStartActivation(void)
 	return 0;
 }
 
-/* the activation's outcome: 12007 while it runs, 12004 if it did not start (0x810044ea) */
+/* the activation's outcome: 12007 while it runs, 12004 if it did not start */
 extern "C" int SwMwManagerGetActivationResult(int *result)
 {
 	int failed;
@@ -387,7 +390,7 @@ extern "C" int SwMwManagerGetActivationResult(int *result)
 }
 
 /* the activation's worker: activate, and on the -3 answer download and import the key
- * bin, then activate again (0x810056a6) */
+ * bin, then activate again */
 extern "C" int SwMwManagerActivationThread(void *argument)
 {
 	struct SwMwManagerActivation *activation = (struct SwMwManagerActivation *)argument;
@@ -419,7 +422,7 @@ extern "C" int SwMwManagerActivationThread(void *argument)
 	return 0;
 }
 
-/* the parameter table's worker: download it and import it (0x810052f6) */
+/* the parameter table's worker: download it and import it */
 extern "C" int SwMwManagerParamTblThread(void *argument)
 {
 	struct SwMwManagerParamTbl *table = (struct SwMwManagerParamTbl *)argument;
@@ -436,11 +439,11 @@ extern "C" int SwMwManagerParamTblThread(void *argument)
 	return 0;
 }
 
-/* the parameter table and the thread that downloads it (0x8109e9a4 / 0x8109e980) */
+/* the parameter table and the thread that downloads it */
 static struct SwMwManagerParamTbl g_swMwParamTbl;
 static struct SwMwManagerThread g_swMwParamTblThread;
 
-/* start the parameter table's download in the background (0x8100536e) */
+/* start the parameter table's download in the background */
 extern "C" int SwMwManagerDownloadParamTbl(void)
 {
 	int status;
@@ -461,7 +464,7 @@ extern "C" int SwMwManagerDownloadParamTbl(void)
 }
 
 /* ensure the manager's session: the parameter table, the manager init, the session start,
- * then the key bin, the started flag and the four records (0x810032d2) */
+ * then the key bin, the started flag and the four records */
 extern "C" int SwMwManagerEnsureSession(struct SwMwManager *manager, int mode)
 {
 	int status;
@@ -540,7 +543,7 @@ extern "C" int SwMwManagerEnsureSession(struct SwMwManager *manager, int mode)
 }
 
 /* tear the manager down: flush the records, close the threads, key bin and slots, cancel
- * the downloads and free the object (0x8100356a) */
+ * the downloads and free the object */
 extern "C" int SwMwManagerTeardown(struct SwMwManager *manager)
 {
 	int status;
@@ -582,7 +585,7 @@ extern "C" int SwMwManagerTeardown(struct SwMwManager *manager)
 	return 0;
 }
 
-/* write one record through the session (0x8100376a) */
+/* write one record through the session */
 extern "C" int SwMwManagerWriteRecord(struct SwMwManager *manager, int value, int size)
 {
 	int status;
@@ -603,7 +606,7 @@ extern "C" int SwMwManagerWriteRecord(struct SwMwManager *manager, int value, in
 	return 0;
 }
 
-/* write one record and mark it done (0x810036e4) */
+/* write one record and mark it done */
 extern "C" int SwMwManagerWriteRecordDone(struct SwMwManager *manager, int value, int size,
 					  int *done)
 {
@@ -620,7 +623,7 @@ extern "C" int SwMwManagerWriteRecordDone(struct SwMwManager *manager, int value
 	return 0;
 }
 
-/* exchange a record buffer with the session (0x81003802) */
+/* exchange a record buffer with the session */
 extern "C" int SwMwManagerExchangeRecord(struct SwMwManager *manager, void *buffer,
 					 unsigned int size, int *value)
 {
@@ -646,7 +649,7 @@ extern "C" int SwMwManagerExchangeRecord(struct SwMwManager *manager, void *buff
 	return 0;
 }
 
-/* flush the session's records into the key bin (0x810039d2) */
+/* flush the session's records into the key bin */
 extern "C" int SwMwManagerFlushRecords(struct SwMwManager *manager)
 {
 	unsigned char *buffer;
@@ -686,7 +689,7 @@ extern "C" int SwMwManagerFlushRecords(struct SwMwManager *manager)
 }
 
 /* create the manager: its base, the key bin, the certificate descriptor's template and
- * device certificate, then the session, the init and the parameter table (0x81002de2) */
+ * device certificate, then the session, the init and the parameter table */
 extern "C" int SwMwManagerCreate(struct SwMwManager **out, const int *config,
 				 struct SwMwManagerCertificate *certificate, int argument)
 {
@@ -845,8 +848,8 @@ extern "C" int SwMwManagerCreate(struct SwMwManager **out, const int *config,
 	return status;
 }
 
-/* the SWS core's SRM update callback (vtable 0x81099fbc's +0x18 slot): trace the
- * address and size, then flush the manager's records (0x81004832) */
+/* the SWS core's SRM update callback (vtable 's +0x18 slot): trace the
+ * address and size, then flush the manager's records */
 extern "C" int SwMwManagerSrmUpdated(struct SwMwManagerSinkSlots *device, struct SwMwUri *uri,
 				     int unused, int size)
 {
@@ -865,7 +868,7 @@ extern "C" int SwMwManagerSrmUpdated(struct SwMwManagerSinkSlots *device, struct
 }
 
 /* compare the session's records with the key bin's and rewrite it when they differ
- * (0x81003adc) */
+ * */
 extern "C" int SwMwManagerSyncKeyBin(struct SwMwManager *manager)
 {
 	unsigned char *record;
@@ -922,4 +925,581 @@ extern "C" int SwMwManagerSyncKeyBin(struct SwMwManager *manager)
 	if (stored != NULL)
 		free(stored);
 	return status;
+}
+
+extern "C" {
+int SwModNsCheckerIsInterfaceConnected(int checker);
+int SwModNsCheckerSetState(int checker, int connected, int valid);
+int SwMwMoveListGet(int store, struct SwMwMoveRecord **records, unsigned int *count);
+int SwMwMoveListFree(int store, struct SwMwMoveRecord *records);
+int SwMwMoveRecordAppend(int store, const struct SwMwMoveRecord *record);
+int SwMwMoveListClear(int store);
+int SwMwSourceResumeListGet(int store, struct SwMwMoveRecord **records, unsigned int *count);
+int SwMwSourceResumeListFree(int store, struct SwMwMoveRecord *records);
+int SwMwSourceResumeAppend(int store, const struct SwMwMoveRecord *record);
+int SwMwSourceResumeClear(int store);
+int SwMwLabelStoreSet(int store, int label, int status);
+int SwMwLabelStoreClear(int store);
+int SwMwSinkGetUriState(int sink);
+void SwMwSinkSetStatus(int sink, int status);
+}
+
+/* return the active process-wide manager instance */
+extern "C" struct SwMwManager *SwMwManagerGetInstance(void)
+{
+	return g_swMwManager;
+}
+
+/* return the manager's recordA handle */
+extern "C" int SwMwManagerGetRecordA(struct SwMwManager *manager)
+{
+	return manager->recordA;
+}
+
+/* return the global manager configuration word */
+extern "C" int SwMwManagerGetConfig(void)
+{
+	return g_swMwManagerConfig;
+}
+
+/* cancel download wrapper */
+extern "C" int SwMwManagerCancelDownloadWrap(void)
+{
+	return SwMwManagerCancelDownload();
+}
+
+/* unsupported operation stub returning 12014 */
+extern "C" int SwMwManagerUnsupported(void)
+{
+	return 12014;
+}
+
+/* update the device SRM and flush key-bin records */
+extern "C" int SwMwManagerSetSrm(struct SwMwManager *manager, const void *srm, int size)
+{
+	int status;
+	int flushStatus;
+	int failed;
+
+	if (manager == NULL)
+		swMwTrace("[SWMW] Assertion Failed in %s:%d\n", SWMW_MANAGER_SOURCE, 1512);
+	if (manager->object == NULL)
+		swMwTrace("[SWMW] Assertion Failed in %s:%d\n", SWMW_MANAGER_SOURCE, 1513);
+	status = manager->object->setSrm(srm, (size_t)size);
+	if (status != 0 && status != 1015) {
+		swMwTrace("[SWMW] Error %d in %s:%d\n", status, SWMW_MANAGER_SOURCE, 1518);
+		return SwMwStatus(status);
+	}
+	flushStatus = SwMwManagerFlushRecords(manager);
+	failed = 0;
+	if (flushStatus != 0) {
+		swMwTrace("[SWMW] Error %d in %s:%d\n", flushStatus, SWMW_MANAGER_SOURCE, 1525);
+		failed = 1;
+	}
+	if (failed == 0)
+		return 0;
+	return flushStatus;
+}
+
+/* trigger key re-initialization */
+extern "C" int SwMwManagerInitKey(int device)
+{
+	(void)device;
+	SwMwCoreInitKey();
+	return 0;
+}
+
+/* no-op manager callback returning 0 */
+extern "C" int SwMwManagerNoop(void)
+{
+	return 0;
+}
+
+/* current RTC tick converted to milliseconds */
+extern "C" unsigned int SwMwManagerGetTimeMs(void)
+{
+	SceRtcTick tick;
+
+	sceRtcGetCurrentTick(&tick);
+	return (unsigned int)(tick.tick / 1000ULL);
+}
+
+/* notify the content object when the network interface is disconnected */
+extern "C" int SwMwManagerSlotsOnNetworkLost(struct SwMwManagerSinkSlots *slots)
+{
+	if (slots->content != NULL)
+		((struct SwMwManagerContentInterface *)slots->content)->onNetworkDisconnected();
+	return 0;
+}
+
+/* check network interface connectivity and notify slots on disconnect */
+extern "C" int SwMwManagerCheckNetwork(struct SwMwManager *manager)
+{
+	if (manager != NULL && manager->started != 0 &&
+	    SwModNsCheckerIsInterfaceConnected(manager->started) == 0)
+		SwMwManagerSlotsOnNetworkLost(&manager->slots);
+	return 0;
+}
+
+/* periodic keepalive: poll network connectivity every 30 seconds */
+extern "C" int SwMwDeviceKeepalive(struct SwMwManager *manager)
+{
+	unsigned int nowMs;
+
+	nowMs = SwMwManagerGetTimeMs();
+	if (nowMs < manager->lastNetCheckMs || nowMs - manager->lastNetCheckMs > 30000U) {
+		manager->lastNetCheckMs = nowMs;
+		SwMwManagerCheckNetwork(manager);
+	}
+	return 0;
+}
+
+/* override network checker state */
+extern "C" int SwMwManagerSetNetworkState(struct SwMwManager *manager, int connected, int valid)
+{
+	if (SwModNsCheckerSetState(manager->started, connected, valid) != 0)
+		return 12014;
+	return 0;
+}
+
+/* record a label status notification on recordB */
+extern "C" int SwMwCoreNotifyLabel(struct SwMwManager *manager, int label, int status)
+{
+	if (manager->recordB != 0 && label != -1 &&
+	    SwMwLabelStoreSet(manager->recordB, label, status) != 0)
+		return 12007;
+	return 0;
+}
+
+/* load the sink or source resume record list */
+extern "C" int SwMwManagerStartResumeList(struct SwMwManager *manager, int isSink)
+{
+	int status;
+
+	if (isSink != 0) {
+		if (manager->sinkResumeList != NULL)
+			return 12004;
+		status = SwMwMoveListGet(manager->recordD, &manager->sinkResumeList,
+					 &manager->sinkResumeCount);
+		if (status != 0)
+			return status;
+	} else {
+		if (manager->sourceResumeList != NULL)
+			return 12004;
+		status = SwMwSourceResumeListGet(manager->recordC, &manager->sourceResumeList,
+						 &manager->sourceResumeCount);
+		if (status != 0)
+			return status;
+	}
+	return 0;
+}
+
+/* return the first or next resume record after contentId */
+extern "C" int SwMwManagerGetResumeData(struct SwMwManager *manager, int isSink, int contentId,
+					struct SwMwMoveRecord *out)
+{
+	unsigned int index;
+
+	if (isSink != 0) {
+		if (out == NULL)
+			return 12003;
+		if (manager->sinkResumeCount == 0)
+			return 12016;
+		if (manager->sinkResumeList == NULL)
+			return 12004;
+		if (contentId != 0) {
+			index = 0;
+			while (index < manager->sinkResumeCount) {
+				if (manager->sinkResumeList[index].requested == contentId) {
+					++index;
+					break;
+				}
+				++index;
+			}
+			if (index == manager->sinkResumeCount)
+				return 12016;
+		} else {
+			index = 0;
+		}
+		memcpy(out, &manager->sinkResumeList[index], sizeof(*out));
+		swMwTrace("sw mw:GetSinkResumeData contentID=%d kxmLabel=0x%x resumeId=%d\n",
+			  out->requested, out->label, out->id);
+	} else {
+		if (out == NULL)
+			return 12003;
+		if (manager->sourceResumeCount == 0)
+			return 12016;
+		if (manager->sourceResumeList == NULL)
+			return 12004;
+		if (contentId != 0) {
+			index = 0;
+			while (index < manager->sourceResumeCount) {
+				if (manager->sourceResumeList[index].requested == contentId) {
+					++index;
+					break;
+				}
+				++index;
+			}
+			if (index == manager->sourceResumeCount)
+				return 12016;
+		} else {
+			index = 0;
+		}
+		memcpy(out, &manager->sourceResumeList[index], sizeof(*out));
+		swMwTrace("sw mw:GetSourceResumeData contentID=%d kxmLabel=0x%x resumeId=%d\n",
+			  out->requested, out->label, out->id);
+	}
+	return 0;
+}
+
+/* release the loaded sink or source resume record list */
+extern "C" int SwMwManagerEndResumeList(struct SwMwManager *manager, int isSink)
+{
+	int status;
+
+	if (isSink != 0) {
+		manager->sinkResumeCount = 0;
+		if (manager->sinkResumeList != NULL) {
+			status = SwMwMoveListFree(manager->recordD, manager->sinkResumeList);
+			if (status != 0)
+				return status;
+			manager->sinkResumeList = NULL;
+		}
+	} else {
+		manager->sourceResumeCount = 0;
+		if (manager->sourceResumeList != NULL) {
+			status = SwMwSourceResumeListFree(manager->recordC,
+							  manager->sourceResumeList);
+			if (status != 0)
+				return status;
+			manager->sourceResumeList = NULL;
+		}
+	}
+	return 0;
+}
+
+/* append/clear resume records and label notifications */
+extern "C" int SwMwManagerAddSinkResumeData(struct SwMwManager *manager,
+					    const struct SwMwMoveRecord *record)
+{
+	int status = SwMwMoveRecordAppend(manager->recordD, record);
+
+	return status != 0 ? status : 0;
+}
+
+extern "C" int SwMwManagerClearSinkResumeData(struct SwMwManager *manager)
+{
+	int status = SwMwMoveListClear(manager->recordD);
+
+	return status != 0 ? status : 0;
+}
+
+extern "C" int SwMwManagerAddSourceResumeData(struct SwMwManager *manager,
+					      const struct SwMwMoveRecord *record)
+{
+	int status = SwMwSourceResumeAppend(manager->recordC, record);
+
+	return status != 0 ? status : 0;
+}
+
+extern "C" int SwMwManagerClearSourceResumeData(struct SwMwManager *manager)
+{
+	int status = SwMwSourceResumeClear(manager->recordC);
+
+	return status != 0 ? status : 0;
+}
+
+extern "C" int SwMwManagerNotifyLabel(struct SwMwManager *manager, int label, int statusVal)
+{
+	int status = SwMwLabelStoreSet(manager->recordB, label, statusVal);
+
+	return status != 0 ? status : 0;
+}
+
+extern "C" int SwMwManagerClearLabels(struct SwMwManager *manager)
+{
+	int status = SwMwLabelStoreClear(manager->recordB);
+
+	return status != 0 ? status : 0;
+}
+
+/* SWS sink authentication and move callbacks (vtable ) */
+extern "C" void SwMwManagerOnSinkAuthSuccess(struct SwMwManagerSinkSlots *device,
+					     struct SwMwUri *uri, struct SwMwUriText *info,
+					     int authId)
+{
+	struct SwMwUriText text;
+	int i;
+
+	SwMwUriFormatText(&text, uri);
+	swMwTrace("sw mw:SINK AUTH SUCCESS: %s, %s, authid=%d\n",
+		  SwMwUriTextGet(&text), SwMwUriTextGet(info), authId);
+	SwMwUriDone(&text);
+	for (i = 0; i < 35; ++i) {
+		if (device->sinks[i] != 0 && SwMwSinkGetUriState(device->sinks[i]) == authId) {
+			SwMwSinkSetStatus(device->sinks[i], SwMwStatus(0));
+			break;
+		}
+	}
+}
+
+extern "C" void SwMwManagerOnSinkAuthFailed(struct SwMwManagerSinkSlots *device,
+					    struct SwMwUri *uri, int authId, int error)
+{
+	struct SwMwUriText text;
+	int i;
+
+	SwMwUriFormatText(&text, uri);
+	swMwTrace("sw mw:SINK AUTH FAILED: %s, error = %d, authid=%d\n",
+		  SwMwUriTextGet(&text), error, authId);
+	SwMwUriDone(&text);
+	for (i = 0; i < 35; ++i) {
+		if (device->sinks[i] != 0 && SwMwSinkGetUriState(device->sinks[i]) == authId) {
+			SwMwSinkSetStatus(device->sinks[i], SwMwStatus(error));
+			break;
+		}
+	}
+}
+
+extern "C" void SwMwManagerOnSinkSrmTxFailed(struct SwMwManagerSinkSlots *device,
+					     struct SwMwUri *uri, int error)
+{
+	struct SwMwUriText text;
+
+	(void)device;
+	SwMwUriFormatText(&text, uri);
+	swMwTrace("sw mw:SINK SRM TXFAILED: %s, error = %d\n", SwMwUriTextGet(&text), error);
+	SwMwUriDone(&text);
+}
+
+extern "C" void SwMwManagerOnMoveAuthSucceeded(struct SwMwManagerSinkSlots *device,
+					       struct SwMwUri *uri, struct SwMwUriText *info,
+					       int kxmLabel, int authId)
+{
+	struct SwMwUriText text;
+	unsigned char labelByte;
+	int i;
+
+	labelByte = (unsigned char)kxmLabel;
+	SwMwUriFormatText(&text, uri);
+	swMwTrace("sw mw:Sink MoveAuthenticationSucceeded: %s, %s, kxm = 0x%x, authid=%d\n",
+		  SwMwUriTextGet(&text), SwMwUriTextGet(info), labelByte, authId);
+	SwMwUriDone(&text);
+	for (i = 0; i < 35; ++i) {
+		struct SwMwMoveSink *sink = (struct SwMwMoveSink *)(uintptr_t)device->moveSinks[i];
+
+		if (sink != NULL && SwMwMoveSinkGetAuthId(sink) == authId) {
+			SwMwMoveSinkOnAuthResult(sink, 0, labelByte);
+			break;
+		}
+	}
+}
+
+extern "C" void SwMwManagerOnMoveAuthFailed(struct SwMwManagerSinkSlots *device,
+					    struct SwMwUri *uri, int authId, int error)
+{
+	struct SwMwUriText text;
+	int i;
+
+	SwMwUriFormatText(&text, uri);
+	swMwTrace("sw mw:Sink MoveAuthenticationFailed: %s, error = %d, authid=%d\n",
+		  SwMwUriTextGet(&text), error, authId);
+	SwMwUriDone(&text);
+	for (i = 0; i < 35; ++i) {
+		struct SwMwMoveSink *sink = (struct SwMwMoveSink *)(uintptr_t)device->moveSinks[i];
+
+		if (sink != NULL && SwMwMoveSinkGetAuthId(sink) == authId) {
+			SwMwMoveSinkOnAuthResult(sink, SwMwStatus(error), 0);
+			break;
+		}
+	}
+}
+
+extern "C" void SwMwManagerOnMoveFinalizeAccepted(struct SwMwManagerSinkSlots *device,
+						  struct SwMwUri *uri, int kxmLabel)
+{
+	struct SwMwUriText text;
+	unsigned char labelByte;
+	int i;
+
+	labelByte = (unsigned char)kxmLabel;
+	SwMwUriFormatText(&text, uri);
+	swMwTrace("sw mw:Sink MoveFinalizeAcceptedReceived: %s, kxm_label = 0x%x\n",
+		  SwMwUriTextGet(&text), labelByte);
+	SwMwUriDone(&text);
+	for (i = 0; i < 35; ++i) {
+		struct SwMwMoveSink *sink = (struct SwMwMoveSink *)(uintptr_t)device->moveSinks[i];
+
+		if (sink != NULL && SwMwMoveSinkGetKxmLabel(sink) == labelByte) {
+			SwMwMoveSinkOnFinalizeResult(sink, 0);
+			break;
+		}
+	}
+}
+
+extern "C" void SwMwManagerOnMoveFinalizeFailed(struct SwMwManagerSinkSlots *device,
+						struct SwMwUri *uri, int kxmLabel, int error)
+{
+	struct SwMwUriText text;
+	unsigned char labelByte;
+	int i;
+
+	labelByte = (unsigned char)kxmLabel;
+	SwMwUriFormatText(&text, uri);
+	swMwTrace("sw mw:Sink MoveFinalizeFailed: %s, kxm_label = 0x%x, error = %d\n",
+		  SwMwUriTextGet(&text), labelByte, error);
+	SwMwUriDone(&text);
+	for (i = 0; i < 35; ++i) {
+		struct SwMwMoveSink *sink = (struct SwMwMoveSink *)(uintptr_t)device->moveSinks[i];
+
+		if (sink != NULL && SwMwMoveSinkGetKxmLabel(sink) == labelByte) {
+			SwMwMoveSinkOnFinalizeResult(sink, SwMwStatus(error));
+			break;
+		}
+	}
+}
+
+extern "C" void SwMwManagerOnMoveCompleteAccepted(struct SwMwManagerSinkSlots *device,
+						  struct SwMwUri *uri, int kxmLabel)
+{
+	struct SwMwUriText text;
+	unsigned char labelByte;
+	int i;
+
+	labelByte = (unsigned char)kxmLabel;
+	SwMwUriFormatText(&text, uri);
+	swMwTrace("sw mw:Sink MoveCompleteAcceptedReceived: %s, kxm_label = 0x%x\n",
+		  SwMwUriTextGet(&text), labelByte);
+	SwMwUriDone(&text);
+	for (i = 0; i < 35; ++i) {
+		struct SwMwMoveSink *sink = (struct SwMwMoveSink *)(uintptr_t)device->moveSinks[i];
+
+		if (sink != NULL && SwMwMoveSinkGetKxmLabel(sink) == labelByte) {
+			SwMwMoveSinkOnCompleteResult(sink, 0);
+			break;
+		}
+	}
+}
+
+extern "C" void SwMwManagerOnMoveCompleteFailed(struct SwMwManagerSinkSlots *device,
+						struct SwMwUri *uri, int kxmLabel, int error)
+{
+	struct SwMwUriText text;
+	unsigned char labelByte;
+	int i;
+
+	labelByte = (unsigned char)kxmLabel;
+	SwMwUriFormatText(&text, uri);
+	swMwTrace("sw mw:Sink MoveCompleteFailed: %s, kxm_label = 0x%x, error = %d\n",
+		  SwMwUriTextGet(&text), labelByte, error);
+	SwMwUriDone(&text);
+	for (i = 0; i < 35; ++i) {
+		struct SwMwMoveSink *sink = (struct SwMwMoveSink *)(uintptr_t)device->moveSinks[i];
+
+		if (sink != NULL && SwMwMoveSinkGetKxmLabel(sink) == labelByte) {
+			SwMwMoveSinkOnCompleteResult(sink, SwMwStatus(error));
+			break;
+		}
+	}
+}
+
+extern "C" void SwMwManagerOnMoveCancelReceived(struct SwMwManagerSinkSlots *device,
+						struct SwMwUri *uri, int kxmLabel)
+{
+	struct SwMwUriText text;
+	unsigned char labelByte;
+	int i;
+
+	labelByte = (unsigned char)kxmLabel;
+	SwMwUriFormatText(&text, uri);
+	swMwTrace("sw mw:Sink MoveCancelReceived: %s, kxm_label = 0x%x\n",
+		  SwMwUriTextGet(&text), labelByte);
+	SwMwUriDone(&text);
+	for (i = 0; i < 35; ++i) {
+		struct SwMwMoveSink *sink = (struct SwMwMoveSink *)(uintptr_t)device->moveSinks[i];
+
+		if (sink != NULL && SwMwMoveSinkGetKxmLabel(sink) == labelByte) {
+			SwMwMoveSinkOnCancel(sink);
+			break;
+		}
+	}
+}
+
+/* register/unregister standard sink slots */
+extern "C" int SwMwManagerRegisterSink(struct SwMwManagerSinkSlots *slots, int sink)
+{
+	int i;
+
+	for (i = 0; i < 35; ++i) {
+		if (slots->sinks[i] == 0) {
+			slots->sinks[i] = sink;
+			return 0;
+		}
+	}
+	return 12008;
+}
+
+extern "C" int SwMwManagerUnregisterSink(struct SwMwManagerSinkSlots *slots, int sink)
+{
+	int i;
+
+	for (i = 0; i < 35; ++i) {
+		if (slots->sinks[i] == sink) {
+			slots->sinks[i] = 0;
+			return 0;
+		}
+	}
+	return 12008;
+}
+
+/* accessors for the slots' SWS content and manager objects */
+extern "C" void *SwMwManagerSlotsContent(struct SwMwManagerSinkSlots *slots)
+{
+	return slots->content;
+}
+
+extern "C" void *SwMwManagerSlotsManager(struct SwMwManagerSinkSlots *slots)
+{
+	return slots->manager;
+}
+
+/* map _sceDtcpIpDownload error codes to middleware status */
+extern "C" int SwMwManagerMapDownloadStatus(int status)
+{
+	switch (status) {
+	case 0:
+		return 0;
+	case -7:
+		return 12002;
+	case -6:
+		return 12003;
+	case -5:
+		return 12015;
+	default:
+		return 13017;
+	}
+}
+
+/* filter key-manager status codes for session init */
+extern "C" int SwMwManagerFilterKeyStatus(int status)
+{
+	switch (status) {
+	case 0:
+		return 0;
+	case 13001:
+	case 13002:
+	case 13003:
+	case 13004:
+	case 13005:
+	case 13008:
+	case 13009:
+	case 13011:
+	case 13012:
+	case 13017:
+	case 13018:
+	case 13019:
+		return status;
+	default:
+		return 12001;
+	}
 }

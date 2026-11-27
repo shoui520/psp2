@@ -49,7 +49,7 @@ void SwMwDeviceKeepalive(void *device);
 #define SWMW_TRACE_ERROR(result, line)						\
 	swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_SOURCE, line)
 
-/* fill the dispatch context from the channel's request view (0x8107b0d8) */
+/* fill the dispatch context from the channel's request view */
 extern "C" __attribute__((noinline)) void SwMwManagerBuildContext(void *context, void *channelArgument)
 {
 	struct SwMwManagerContextBlock *block = (struct SwMwManagerContextBlock *)context;
@@ -58,7 +58,7 @@ extern "C" __attribute__((noinline)) void SwMwManagerBuildContext(void *context,
 	SwMwCommServerGetRequest((const struct SwMwCommRequest *)block->channel, block->head);
 }
 
-/* the context's device words, past its channel word (0x8107b0fc) */
+/* the context's device words, past its channel word */
 extern "C" __attribute__((noinline)) int *SwMwManagerContextValues(void *context)
 {
 	struct SwMwManagerContextBlock *block = (struct SwMwManagerContextBlock *)context;
@@ -67,7 +67,7 @@ extern "C" __attribute__((noinline)) int *SwMwManagerContextValues(void *context
 }
 
 /*
- * The request dispatcher (0x81002b80): the command's subsystem bits pick the manager's
+ * The request dispatcher: the command's subsystem bits pick the manager's
  * own dispatch (0x100), the sink's (0x200, SwMwSinkDispatch.cpp), the move sink's (0x800,
  * SwMwMoveSinkDispatch.cpp) or the 0x400 error reply; a connect (command 1) also
  * re-dispatches the three device words the channel's context holds, and a live sink

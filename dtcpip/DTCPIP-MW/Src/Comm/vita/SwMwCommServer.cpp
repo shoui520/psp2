@@ -92,7 +92,7 @@ extern "C" int SwMwNetTerm(void)
 
 /*
  * hand the SW core a request's header and payload: its three header words, then the
- * 256-byte payload, in the core's own block (0x81000c38; called from the core's dispatch).
+ * 256-byte payload, in the core's own block (; called from the core's dispatch).
  */
 extern "C" int SwMwCommServerGetRequest(const struct SwMwCommRequest *request, int *out)
 {
@@ -109,7 +109,7 @@ struct SwMwCoreReply {
 	unsigned char value[64];	/* 0x0C */
 };
 
-/* store the 64-byte value a SW core reply carries in a request's payload (0x81000c78) */
+/* store the 64-byte value a SW core reply carries in a request's payload */
 extern "C" int SwMwCommServerSetRequestValue(struct SwMwCommRequest *request, const void *value)
 {
 	const struct SwMwCoreReply *reply = (const struct SwMwCoreReply *)value;
@@ -119,7 +119,7 @@ extern "C" int SwMwCommServerSetRequestValue(struct SwMwCommRequest *request, co
 }
 
 /*
- * poll the application manager's events (0x81000ca0): the run loop calls it while a
+ * poll the application manager's events: the run loop calls it while a
  * receive times out. A quit request for this application's own identity ends the loop.
  */
 extern "C" int SwMwCommServerCheckAppEvent(void)
@@ -785,7 +785,7 @@ extern "C" int SwMwThreadCreate(struct SwMwCommThread *thread, int (*entry)(void
 }
 
 /*
- * Set a channel up (0x81001832): open the single stream's CtoS pipe, create the four
+ * Set a channel up: open the single stream's CtoS pipe, create the four
  * streams' request pipes (StoC) and, when the channel carries streams, open their CtoS
  * pipes, then create or open the shared memory block. A failure tears the pipes down and
  * answers 12009.
@@ -863,7 +863,7 @@ extern "C" int SwMwCommChannelSetup(struct SwMwCommChannel *channel, int bufferS
 	return 0;
 }
 
-/* tear a channel down (0x81001b9c): free its shared block, then its stream pipes */
+/* tear a channel down: free its shared block, then its stream pipes */
 extern "C" int SwMwCommChannelTerm(struct SwMwCommChannel *channel)
 {
 	int result;
@@ -901,7 +901,7 @@ extern "C" int SwMwCommChannelTerm(struct SwMwCommChannel *channel)
 	return 0;
 }
 
-/* free a channel (0x81001cfc): its four stream pipe pairs and its single pipe */
+/* free a channel: its four stream pipe pairs and its single pipe */
 extern "C" int SwMwCommChannelFree(struct SwMwCommChannel *channel)
 {
 	int result;
@@ -931,7 +931,7 @@ extern "C" int SwMwCommChannelFree(struct SwMwCommChannel *channel)
 }
 
 /*
- * Open a channel (0x81001e0e): the request names the channel, its stream count and buffer
+ * Open a channel: the request names the channel, its stream count and buffer
  * size; set the channel up, start one thread per stream (or the single one), and tell the
  * library the channel is open with a kind-5 control message. A failure tears it down.
  */
@@ -1020,7 +1020,7 @@ struct SwMwChannelShared {
 };
 
 /*
- * Create the server (0x810006c8): its network, the StoC pipe it answers on, the shared
+ * Create the server: its network, the StoC pipe it answers on, the shared
  * block, the hello message, the CtoS pipe and the connect ack, the control mutex and the
  * two channels. Every step traces its line on failure and the cleanup releases whatever
  * was taken.
@@ -1148,7 +1148,7 @@ extern "C" int SwMwCommServerCreate(struct SwMwCommServer **out)
 	return result;
 }
 
-/* tear the server down (0x81000b48): the network, the open channels, the shared block,
+/* tear the server down: the network, the open channels, the shared block,
  * the pipes, the mutex and the server itself */
 extern "C" int SwMwCommServerTerm(struct SwMwCommServer *server)
 {
@@ -1181,7 +1181,7 @@ extern "C" int SwMwCommServerTerm(struct SwMwCommServer *server)
 	return 0;
 }
 
-/* close one channel of the server (0x8100206a): stop its threads, tear it down, answer
+/* close one channel of the server: stop its threads, tear it down, answer
  * the library with a kind-7 control message */
 extern "C" int SwMwCommStreamClose(struct SwMwCommServer *server,
 				   struct SwMwIpcWireMessage *message)
@@ -1213,7 +1213,7 @@ extern "C" int SwMwCommStreamClose(struct SwMwCommServer *server,
 }
 
 /*
- * The server's run loop (0x81000d86): remember the manager's dispatch triple, receive
+ * The server's run loop: remember the manager's dispatch triple, receive
  * requests from the CtoS pipe, poll the application's events on a timeout, and handle
  * disconnect (end), channel open (kind 4) and channel close (kind 6).
  */
@@ -1262,7 +1262,7 @@ extern "C" int SwMwCommServerRun(struct SwMwCommServer *server,
 	return 0;
 }
 
-/* signal a stream with its index (0x81002564): the index travels in the event's high word */
+/* signal a stream with its index: the index travels in the event's high word */
 extern "C" int SwMwIpcSignalStream(SceUID event, int streamIndex)
 {
 	if (sceKernelSetEvent(event, 0x1000000,
@@ -1272,7 +1272,7 @@ extern "C" int SwMwIpcSignalStream(SceUID event, int streamIndex)
 }
 
 /*
- * Answer a request (0x81001206): its result and out values as the reply block's three
+ * Answer a request: its result and out values as the reply block's three
  * pairs, its out payload into the stream's shared slice, then the block on the stream's
  * StoC pipe (shared streams signal the event with the stream index instead).
  */
@@ -1316,7 +1316,7 @@ extern "C" int SwMwCommServerReply(struct SwMwCommChannel *channel,
 	return result;
 }
 
-/* answer a request whose channel byte 255 means "no reply" (0x8100142a) */
+/* answer a request whose channel byte 255 means "no reply" */
 extern "C" int SwMwCommServerReplyError(struct SwMwCommChannel *channel,
 					struct SwMwIpcMessage *request)
 {
@@ -1330,7 +1330,7 @@ extern "C" int SwMwCommServerReplyError(struct SwMwCommChannel *channel,
 	return result;
 }
 
-/* answer a request with a status and no payload (0x810057e4): the result, an empty out
+/* answer a request with a status and no payload: the result, an empty out
  * size and no out payload, then the error reply */
 extern "C" int SwMwCommServerReplyStatus(struct SwMwCommChannel *channel,
 					 struct SwMwIpcMessage *request, int status)
@@ -1339,4 +1339,43 @@ extern "C" int SwMwCommServerReplyStatus(struct SwMwCommChannel *channel,
 	request->outSize = 0;
 	request->outPayload = NULL;
 	return SwMwCommServerReplyError(channel, request);
+}
+
+/* lock an IPC kernel mutex */
+extern "C" int SwMwIpcLockMutex(SceUID mutex)
+{
+	if (sceKernelLockMutex(mutex, 1, NULL) != 0)
+		return SWMW_IPC_ERROR;
+	return 0;
+}
+
+/* unlock an IPC kernel mutex */
+extern "C" int SwMwIpcUnlockMutex(SceUID mutex)
+{
+	if (sceKernelUnlockMutex(mutex, 1) != 0)
+		return SWMW_IPC_ERROR;
+	return 0;
+}
+
+/* allocate/open shared memory wrappers */
+extern "C" int SwMwSharedMemoryCreate(struct SwMwSharedMemory **outShared, const char *name,
+				      int size, void **outBase)
+{
+	return SwMwCommServerCreateShared(outShared, name, size, outBase, 0);
+}
+
+extern "C" int SwMwSharedMemoryDelete(struct SwMwSharedMemory *shared)
+{
+	return SwMwSharedMemoryFree(shared, 0);
+}
+
+extern "C" int SwMwSharedMemoryOpen(struct SwMwSharedMemory **outShared, const char *name,
+				    int size, void **outBase)
+{
+	return SwMwCommServerCreateShared(outShared, name, size, outBase, 1);
+}
+
+extern "C" int SwMwSharedMemoryClose(struct SwMwSharedMemory *shared)
+{
+	return SwMwSharedMemoryFree(shared, 1);
 }

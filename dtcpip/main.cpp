@@ -23,10 +23,15 @@
 /* the application's identity, from the parameter after "dtcpip:" */
 char g_swagnerIdentity[16];
 
+#if FW_VERSION != 0x03630011
+extern "C" const unsigned int sce_process_preload_disabled = 0x01d00000;
+extern "C" const unsigned int sceLibcHeapSize = 0x80000;
+#endif
+
 extern "C" int vshSblAimgrIsTool(void);
 extern "C" int vshSblQafMgrIsAllowLoadMagicGate(void);
 extern "C" int vshSblQafMgrIsAllowDtcpIpReset(void);
-extern "C" int ksceRegMgrSetKeyBin(const char *category, const char *name, const void *value,
+extern "C" int sceRegMgrSetKeyBin(const char *category, const char *name, const void *value,
 				  int size);
 
 /* the middleware's main (SwMwMain) */
@@ -38,6 +43,11 @@ extern "C" void swKeyManagerReset(int handle);
 
 extern "C" int main(int argc, char *argv[])
 {
+#if FW_VERSION == 0x03630011
+	(void)argc;
+	(void)argv;
+	return 0;
+#else
 	bool allowReset;
 	bool isTool;
 	bool allowMagicGate;
@@ -45,6 +55,8 @@ extern "C" int main(int argc, char *argv[])
 	char devCert[3];
 	char param[1024];
 
+	(void)argc;
+	(void)argv;
 	res = 0;
 	res = sceAppMgrGetAppParam(param);
 	if (memcmp(param, "dtcpip::reset", 13) == 0) {
@@ -52,7 +64,7 @@ extern "C" int main(int argc, char *argv[])
 		if (allowReset) {
 			swKeyManagerReset(swKeyManagerOpen());
 			memset(devCert, 0, 3);
-			res = ksceRegMgrSetKeyBin("/CONFIG/DTCPIP", "devcert", devCert, 3);
+			res = sceRegMgrSetKeyBin("/CONFIG/DTCPIP", "devcert", devCert, 3);
 		}
 		return res;
 	}
@@ -71,4 +83,5 @@ extern "C" int main(int argc, char *argv[])
 	res = swagnerMain();
 	sceKernelExitProcess(res);
 	return res;
+#endif
 }
