@@ -20,6 +20,14 @@ static inline int isInvalidHeader(const unsigned char *p)
 	return us - d31 * 31;
 }
 
+#ifdef SCE_DEFLT_2014
+static __attribute__((noinline)) unsigned int read32BE(const void *src)
+{
+	const unsigned char *p = src;
+
+	return (((((unsigned int)p[0] << 8) + p[1]) << 8) + p[2] << 8) + p[3];
+}
+#else
 static inline unsigned int read32BE(const void *p0)
 {
 	const unsigned int *p = p0;
@@ -30,6 +38,7 @@ static inline unsigned int read32BE(const void *p0)
 	return __builtin_bswap32(*p);
 #endif
 }
+#endif
 
 int sceZlibIsValid(const void *pSrc)
 {

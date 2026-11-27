@@ -845,7 +845,7 @@ static inline PvfFontHandle *pvfAllocHandle(PvfLib *lib)
 
 /* opens a handle on a font (pvfOpenFont's), with the library's sizes */
 #ifdef SCE_PVF_2014
-static PvfFontHandle *pvfOpenHandle(PvfLib *lib, ScePvf_t_s32 index,
+static __attribute__((noinline)) PvfFontHandle *pvfOpenHandle(PvfLib *lib, ScePvf_t_s32 index,
 	const char *fileName, const void *buffer, ScePvf_t_s32 size, ScePvf_t_u32 openMode,
 	ScePvf_t_error *errorCode)
 #else

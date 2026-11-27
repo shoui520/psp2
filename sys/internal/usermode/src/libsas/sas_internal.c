@@ -1031,6 +1031,59 @@ static inline SceInt32 sceSasPeak(const SceInt32 *samples, SceUInt32 count)
 	return peak;
 }
 
+#if defined(SCE_SAS_STATIC_RUNTIME) && defined(PAF_BUILD_2014)
+static __attribute__((noinline)) SceSasResult sasGetBussPeakInternal(
+	SceSasSystem *sas, SceInt32 buss, SceInt32 *outL, SceInt32 *outR)
+{
+	SceSasAsBussBuffers *buffers;
+	SceInt32 peak;
+	SceUInt32 channel;
+
+	if (sas == NULL)
+		return SCE_SAS_ERROR_NOTINIT;
+	if (outL != NULL)
+		*outL = 0;
+	if (outR != NULL)
+		*outR = 0;
+	if (sceSasAsHandleLock(sas->buss, SCE_SAS_AS_BUSS_BLOCK_BUFFERS, (void **)&buffers) != 0)
+		return SCE_SAS_ERROR_FAIL;
+	if (buffers->numBusses <= buss) {
+		if (outL != NULL)
+			*outL = 0;
+		if (outR != NULL)
+			*outR = 0;
+	} else {
+		for (channel = 0; channel < 2; channel++) {
+			peak = sceSasPeak(buffers->buffers[buss * buffers->numChannels + channel],
+					  buffers->numGranularities);
+			if (channel == 0) {
+				if (outL != NULL)
+					*outL = peak;
+			} else {
+				if (outR != NULL)
+					*outR = peak;
+			}
+		}
+	}
+	sceSasAsHandleUnlock(buffers);
+	return 0;
+}
+
+SceSasResult sceSasGetDryPeakInternal(SceSasSystem *sas, SceInt32 *outL, SceInt32 *outR)
+{
+	return sasGetBussPeakInternal(sas, 0, outL, outR);
+}
+
+SceSasResult sceSasGetWetPeakInternal(SceSasSystem *sas, SceInt32 *outL, SceInt32 *outR)
+{
+	return sasGetBussPeakInternal(sas, 1, outL, outR);
+}
+
+SceSasResult sceSasGetPreMasterPeakInternal(SceSasSystem *sas, SceInt32 *outL, SceInt32 *outR)
+{
+	return sasGetBussPeakInternal(sas, 0, outL, outR);
+}
+#else
 /* the dry buss's peaks, left and right */
 SceSasResult sceSasGetDryPeakInternal(SceSasSystem *sas, SceInt32 *outL, SceInt32 *outR)
 {
@@ -1131,3 +1184,4 @@ SceSasResult sceSasGetPreMasterPeakInternal(SceSasSystem *sas, SceInt32 *outL, S
 	sceSasAsHandleUnlock(buffers);
 	return 0;
 }
+#endif

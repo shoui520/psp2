@@ -17,13 +17,12 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
 	"${PSP2_SRC}/contrib/dlmalloc-2.8.4/malloc.c"
 	"${PAF}/src/memory/dlmalloc_sce_0996.patch")
 
-# FreeType 2.4.9 with Sony's patches (same configuration as sys/internal/usermode/src/libSceFt2).
+# FreeType 2.4.9 with Sony's SCE patch (2014 libSceFt2.a did not use 3.65's freetype-inline.patch).
 set(FT2 "${PSP2_SRC}/contrib/freetype-2.4.9")
 set(FT2_DIR "${PSP2_SRC}/sys/internal/usermode/src/libSceFt2")
 set(FT2_SCE "${CMAKE_CURRENT_BINARY_DIR}/freetype-sce")
 file(MD5 "${FT2_DIR}/freetype-sce.patch" ft2_patch_md5)
-file(MD5 "${FT2_DIR}/freetype-inline.patch" ft2_inline_md5)
-string(MD5 ft2_patch_md5 "${ft2_patch_md5} ${ft2_inline_md5} ${FT2}")
+string(MD5 ft2_patch_md5 "${ft2_patch_md5} ${FT2}")
 set(ft2_stamp "")
 if(EXISTS "${FT2_SCE}/.patched")
 	file(READ "${FT2_SCE}/.patched" ft2_stamp)
@@ -34,18 +33,15 @@ if(NOT ft2_stamp STREQUAL ft2_patch_md5)
 		get_filename_component(d ${f} DIRECTORY)
 		file(COPY "${FT2}/${f}" DESTINATION "${FT2_SCE}/${d}")
 	endforeach()
-	foreach(patch freetype-sce.patch freetype-inline.patch)
-		execute_process(COMMAND patch -s -p1 -d "${FT2_SCE}" -i "${FT2_DIR}/${patch}"
-			RESULT_VARIABLE ft2_patch_result ERROR_VARIABLE ft2_patch_error)
-		if(NOT ft2_patch_result EQUAL 0)
-			message(FATAL_ERROR "psp2swu FreeType patch ${patch} failed: ${ft2_patch_error}")
-		endif()
-	endforeach()
+	execute_process(COMMAND patch -s -p1 -d "${FT2_SCE}" -i "${FT2_DIR}/freetype-sce.patch"
+		RESULT_VARIABLE ft2_patch_result ERROR_VARIABLE ft2_patch_error)
+	if(NOT ft2_patch_result EQUAL 0)
+		message(FATAL_ERROR "psp2swu FreeType patch failed: ${ft2_patch_error}")
+	endif()
 	file(WRITE "${FT2_SCE}/.patched" "${ft2_patch_md5}")
 endif()
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
-	"${FT2_DIR}/freetype-sce.patch"
-	"${FT2_DIR}/freetype-inline.patch")
+	"${FT2_DIR}/freetype-sce.patch")
 
 set(MODULE_COMPILE_OPTIONS $<$<COMPILE_LANGUAGE:C,CXX>:-Xautoinlinesize=8>)
 
@@ -294,7 +290,8 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc SOURCES
 	${PAF}/src/ime/ime.cpp
 	${swu_zlib_SOURCES}
 	${swu_ces_SOURCES}
-	${swu_zlib_CHECKSUM}
+	${PSP2_PAF_ZLIB_UPSTREAM}/adler32.c
+	${PSP2_PAF_ZLIB_UPSTREAM}/crc32.c
 	${swu_zlib_INFFAST}
 	${swu_squish_SOURCES}
 	${swu_tiff_CODECS}
@@ -576,7 +573,7 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc SOURCES
 	${PSP2_SRC}/sys/sdk/target/src/libsnc/unwind_pr2.c
 	${PSP2_SRC}/sys/sdk/target/src/deflt/crc.S
 	${PSP2_SRC}/sys/sdk/target/src/deflt/zlibhdr.c
-	${PSP2_SRC}/sys/sdk/target/src/deflt/deflate.S
+	${PSP2_SRC}/sys/sdk/target/src/deflt/deflate.c
 	${PSP2_SRC}/sys/sdk/target/src/deflt/deflate_common.c
 	${PSP2_SRC}/sys/sdk/target/src/aes/libaes.c
 	${PSP2_SRC}/sys/sdk/target/src/aes/aes.S
@@ -630,6 +627,11 @@ target_link_options(${PSP2_TARGET} PRIVATE
 	-Wl,--gc-sections
 	-Wl,--no-warn-mismatch
 	-Wl,-u,sceSasInit
+	-Wl,-u,_stop
+	-Wl,-u,getargc
+	-Wl,-u,getargv
+	-Wl,-u,sceZlibIsValid
+	-Wl,-u,sceZlibGetCompressedData
 	-Wl,--defsym=sceProcessParam=__sce_process_param
 	-Wl,--defsym=__stack_chk_guard=__sce_process_param
 	-Wl,--defsym=__stack_chk_fail=__cxa_pure_virtual
@@ -649,13 +651,12 @@ set_source_files_properties(
 	${PSP2_SRC}/sys/sdk/target/src/libsnc/unwind_pr2.c
 	PROPERTIES COMPILE_OPTIONS -Xblxcall=1)
 
-set_source_files_properties(${PSP2_SRC}/sys/sdk/target/src/deflt/deflate.S PROPERTIES
-	COMPILE_DEFINITIONS DEFLATE_MEMCPY=sceClibMemcpy)
 set_source_files_properties(
 	${PSP2_SRC}/sys/sdk/target/src/deflt/zlibhdr.c
+	${PSP2_SRC}/sys/sdk/target/src/deflt/deflate.c
 	${PSP2_SRC}/sys/sdk/target/src/deflt/deflate_common.c PROPERTIES
-	COMPILE_DEFINITIONS PSP2_COMPILER_GCC48
-	COMPILE_OPTIONS "-Os;-funwind-tables;-ffunction-sections;-fdata-sections")
+	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;SCE_DEFLT_2014;DEFLATE_MEMCPY=sceClibMemcpy"
+	COMPILE_OPTIONS "-Os;-funwind-tables;-fno-stack-protector")
 
 set_source_files_properties(${PSP2_SRC}/sys/sdk/target/src/aes/libaes.c PROPERTIES
 	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;SCE_AES_2014"
@@ -694,8 +695,9 @@ set_source_files_properties(${swu_tiff_SOURCES} ${swu_tiff_CODECS} PROPERTIES
 	COMPILE_OPTIONS -Xautoinlinesize=32 COMPILE_DEFINITIONS NDEBUG)
 set_source_files_properties(${swu_squish_SOURCES} ${swu_squish_API} PROPERTIES
 	COMPILE_OPTIONS -Xautoinlinesize=32 COMPILE_DEFINITIONS SQUISH_USE_NEON=1)
-set_source_files_properties(${swu_zlib_SOURCES} ${swu_zlib_INFFAST} ${PSP2_PAF_ZLIB_CHECKSUM}/checksum.c
-	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=32)
+set_source_files_properties(${swu_zlib_SOURCES} ${swu_zlib_INFFAST}
+	${PSP2_PAF_ZLIB_UPSTREAM}/adler32.c ${PSP2_PAF_ZLIB_UPSTREAM}/crc32.c
+	PROPERTIES COMPILE_OPTIONS -O0)
 set_source_files_properties(${PSP2_PAF_ZLIB_UPSTREAM}/zutil.c PROPERTIES
 	COMPILE_DEFINITIONS MY_ZCALLOC)
 set_source_files_properties("${swu_dlmalloc_source}" PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=21)

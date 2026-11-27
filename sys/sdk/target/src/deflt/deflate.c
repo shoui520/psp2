@@ -116,8 +116,11 @@ int sceDeflateDecompress(void *pDst, unsigned int uiBufSize,
 			if (nextDst > end)
 				return SCE_DEFLATE_ERROR_INVALID_SIZE;
 			input.next = source + length;
-			sceClibMemcpy_safe((void *)(uintptr_t)dst,
-					  (const void *)(uintptr_t)source, length);
+#ifndef DEFLATE_MEMCPY
+#define DEFLATE_MEMCPY sceClibMemcpy_safe
+#endif
+			DEFLATE_MEMCPY((void *)(uintptr_t)dst,
+				       (const void *)(uintptr_t)source, length);
 			dst = nextDst;
 			input.word = DeflateLoadWord(input.next);
 			input.next += 2;
