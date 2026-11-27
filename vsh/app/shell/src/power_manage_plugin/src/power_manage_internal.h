@@ -19,7 +19,6 @@
 #include <graphics/surface/surface.h>
 #include <widget/core/widget.h>
 #include <widget/w_scene.h>
-#include <widget/w_pageturn.h>
 #include <widget/w_supplier.h>
 #include <widget/w_text.h>
 #include <widget/w_button.h>
@@ -28,6 +27,12 @@
 #include "shell.h"
 #include "plugins.h"
 #include "src/livespace_db/livespace_db_internal.h"
+
+namespace paf {
+namespace ui {
+class PageTurn;
+}
+}
 
 struct CommonGuiDialogLayout;
 class CommonGuiLayoutDialogParam;

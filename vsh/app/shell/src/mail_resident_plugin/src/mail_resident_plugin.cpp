@@ -37,31 +37,28 @@ void mailResidentOnInit(void)
 }
 
 /* 0x811C6F12 */
-void mailResidentSetPlugin(paf::Plugin *plugin)
+void mailResidentPluginInit(paf::Plugin *plugin)
 {
 	s_mailResidentHeap = plugin->m_private_heap;
 }
 
 /* 0x811C6F22 */
-int mailResidentStart(void)
+void mailResidentPluginStart(paf::Plugin *plugin)
 {
-	if (s_mailResidentApp != NULL)
-		return (int)s_mailResidentApp;
-	void *mem = mailResidentMalloc(sizeof(MailResidentApp));
-	MailResidentApp *app = (mem != NULL) ? new (mem) MailResidentApp() : NULL;
-	s_mailResidentApp = app;
-	return app->Start();
+	(void)plugin;
+	if (s_mailResidentApp == NULL) {
+		s_mailResidentApp = new MailResidentApp();
+		s_mailResidentApp->Start();
+	}
 }
 
 /* 0x811C6F5E */
-void mailResidentStop(void)
+void mailResidentPluginStop(paf::Plugin *plugin)
 {
+	(void)plugin;
 	if (s_mailResidentApp != NULL) {
 		s_mailResidentApp->Stop();
-		if (s_mailResidentApp != NULL) {
-			s_mailResidentApp->~MailResidentApp();
-			mailResidentFree(s_mailResidentApp);
-		}
+		delete s_mailResidentApp;
 		s_mailResidentApp = NULL;
 	}
 }
@@ -69,21 +66,4 @@ void mailResidentStop(void)
 /* 0x811C6F90 */
 void mailResidentOnExit(void)
 {
-}
-
-void mailResidentPluginInit(paf::Plugin *plugin)
-{
-	mailResidentSetPlugin(plugin);
-}
-
-void mailResidentPluginStart(paf::Plugin *plugin)
-{
-	(void)plugin;
-	mailResidentStart();
-}
-
-void mailResidentPluginStop(paf::Plugin *plugin)
-{
-	(void)plugin;
-	mailResidentStop();
 }

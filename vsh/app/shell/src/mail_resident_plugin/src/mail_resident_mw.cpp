@@ -132,13 +132,14 @@ void MailResidentMwManager::LaunchAndConnect()
 	sceKernelClearEventFlag(m_evf, 0);
 	if (sceAppMgrLaunchAppByName2("NPXS10063", NULL, opt) >= 0) {
 		SceUInt32 outBits = 0;
-		for (SceUInt32 tries = 0; tries <= 0x1E; ++tries) {
+		SceUInt32 tries = 0;
+		do {
 			SceUInt timeout = 1000000;
 			sceKernelPowerTick(1);
 			if (sceKernelWaitEventFlag(m_evf, 0xFFFFFFFF, 3, &outBits, &timeout) !=
 				(int)0x80028005)
 				break;
-		}
+		} while (tries++ < 0x1E);
 
 		SceUInt32 status[0x20];
 		int st;

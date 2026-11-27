@@ -7,6 +7,7 @@
 
 #include <scetypes.h>
 #include <std/list>
+#include <std/memory>
 #include <common/ref_obj.h>
 #include <ipmi/client.h>
 #include <ipmi/server.h>
@@ -20,6 +21,9 @@ extern void mailResidentFree(void *ptr);			/* 0x811C6EFA */
 
 class MailResidentSession : public paf::common::RefObj {
 public:
+	static void *operator new(size_t size) { return mailResidentMalloc(size); }
+	static void operator delete(void *ptr) { mailResidentFree(ptr); }
+
 	MailResidentSession();					/* 0x811C867C */
 	virtual ~MailResidentSession();				/* 0x811C86EE / 0x811C8746 */
 
@@ -60,6 +64,9 @@ public:
 };
 
 struct MailResidentEvent : public paf::common::RefObj {
+	static void *operator new(size_t size) { return mailResidentMalloc(size); }
+	static void operator delete(void *ptr) { mailResidentFree(ptr); }
+
 	int m_type;						/* +8 */
 	MailResidentEvent(int type) : m_type(type) {}
 	virtual ~MailResidentEvent() {}
@@ -87,6 +94,9 @@ struct MailResidentMwPairEvent : public MailResidentEvent {
 };
 
 struct MailResidentSyncReq : public paf::common::RefObj {
+	static void *operator new(size_t size) { return mailResidentMalloc(size); }
+	static void operator delete(void *ptr) { mailResidentFree(ptr); }
+
 	SceInt64 m_key;						/* +8 */
 	int m_method;						/* +16 */
 	int m_bit;						/* +20 */
@@ -97,22 +107,17 @@ struct MailResidentSyncReq : public paf::common::RefObj {
 };
 
 struct MailResidentDoneEvent : public MailResidentEvent {
-	MailResidentSyncReq *m_req;				/* +12 */
-	MailResidentDoneEvent(MailResidentSyncReq *req)
-		: MailResidentEvent(3), m_req(req)
-	{
-		if (m_req)
-			m_req->AddRef();
-	}
-	virtual ~MailResidentDoneEvent()
-	{
-		if (m_req)
-			m_req->Release();
-	}
+	paf::intrusive_ptr<MailResidentSyncReq> m_req;		/* +12 */
+	MailResidentDoneEvent(paf::intrusive_ptr<MailResidentSyncReq> req)
+		: MailResidentEvent(3), m_req(req) {}
+	virtual ~MailResidentDoneEvent() {}
 };
 
 class MailResidentApp : public IPMI::Server::EventHandler {
 public:
+	static void *operator new(size_t size) { return mailResidentMalloc(size); }
+	static void operator delete(void *ptr) { mailResidentFree(ptr); }
+
 	MailResidentApp();					/* 0x811C6F94 */
 	virtual ~MailResidentApp();				/* 0x811C7090 / 0x811C7178 */
 
@@ -121,30 +126,18 @@ public:
 	void EnqueueEvent(int kind, SceUInt32 eventParam, int appState); /* 0x811C7188 */
 	void CancelPendingSyncs();				/* 0x811C77F8 */
 	int EnsureMwRunning(SceInt64 key);			/* 0x811C7878 */
-	int OnNewSession(IPMI::Server *srv, const IPMI::Session::Config *cfg); /* 0x811C7918 */
 	void ReleaseSessionKey(SceInt64 key);			/* 0x811C7A0A */
-	void OnSessionClosed(IPMI::Session *session);		/* 0x811C7AC8 */
 	void SendMwRequest(SceInt64 key, int evType, int method, const void *inBuf, SceSize inSize); /* 0x811C7C6E */
 	void UpdateFetchTimer();				/* 0x811C7D88 */
 	void ProcessQueue();					/* 0x811C7E82 */
 	void ThreadLoop();					/* 0x811C8388 */
 
+	virtual void onAsyncMethodDispatch(IPMI::Session *pSession, SceUInt32 reqId,
+		SceUInt32 methodId, void *pIn, SceSize inSize, void *pOut, SceSize outSize);
 	virtual int onNewClient(IPMI::Server *pServer, const IPMI::Session::Config *pConfig,
-		const void *pUserData, SceSize userDataSize)
-	{
-		(void)pUserData; (void)userDataSize;
-		return OnNewSession(pServer, pConfig);
-	}
-	virtual void onSyncMethodDispatch(IPMI::Session *pSession, SceUInt32 methodId,
-		const IPMI::DataInfo *pInList, SceUInt32 inCount,
-		IPMI::BufferInfo *pOutList, SceUInt32 outCount)
-	{
-		(void)pSession; (void)methodId; (void)pInList; (void)inCount; (void)pOutList; (void)outCount;
-	}
-	virtual void onAsyncMethodDispatch(IPMI::Session *pSession, SceUInt32 reqId, SceUInt32 methodId,
-		const IPMI::DataInfo *pInList, SceUInt32 inCount);
-	virtual void onSessionClosedByClient(IPMI::Session *pSession) { OnSessionClosed(pSession); }
-	virtual void onSessionKilled(IPMI::Session *pSession) { OnSessionClosed(pSession); }
+		const void *pUserData, SceSize userDataSize);	/* 0x811C7918 */
+	virtual void onSessionClosedByClient(IPMI::Session *pSession); /* 0x811C7A00 */
+	virtual void onSessionKilled(IPMI::Session *pSession);	/* 0x811C7AC8 */
 
 	static int ThreadEntry(SceSize args, void *argp);	/* 0x811C8666 */
 
@@ -156,7 +149,7 @@ public:
 	void *m_serverBuf;					/* +24 */
 	SceSize m_workBufSize;					/* +28 */
 	paf::thread::Mutex m_sessionMutex;			/* +32 */
-	paf::list<MailResidentSession *> m_sessions;		/* +64 */
+	paf::list<paf::intrusive_ptr<MailResidentSession> > m_sessions; /* +64 */
 	SceUID m_threadId;					/* +76 */
 	SceUID m_evfProxy;					/* +80 */
 	SceUID m_evfPsnMail;					/* +84 */
@@ -165,14 +158,17 @@ public:
 	SceUID m_cronHandle;					/* +96 */
 	ShellCronOption m_cronOption;				/* +100 */
 	paf::thread::Mutex m_queueMutex;			/* +104 */
-	paf::list<MailResidentEvent *> m_queue;			/* +136 */
+	paf::list<paf::intrusive_ptr<MailResidentEvent> > m_queue; /* +136 */
 	SceUID m_queueCb;					/* +148 */
 	MailResidentMwManager m_mw;				/* +152 */
+	SceUInt32 m_padding[2];					/* +172 */
 	paf::thread::Mutex m_syncMutex;				/* +184 */
-	paf::list<MailResidentSyncReq *> m_syncReqs;		/* +216 */
+	paf::list<paf::intrusive_ptr<MailResidentSyncReq> > m_syncReqs; /* +216 */
 	SceUInt8 m_pendingPush;					/* +228 */
 	SceUInt8 m_pendingTimer;				/* +229 */
 	SceUInt32 m_seqNo;					/* +232 */
 };
+
+typedef char MailResidentAppSizeCheck[sizeof(MailResidentApp) == 0xF0 ? 1 : -1];
 
 #endif /* MAIL_RESIDENT_H */

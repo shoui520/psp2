@@ -5,6 +5,8 @@
  * and application-close screenshot fade transitions.
  */
 #include "topmenu_internal.h"
+#include <graphics/surface/surface_pool.h>
+#include <graphics/graphmem/graphmem.h>
 
 struct TopmenuBootScreen {
 	TopmenuBootScreen();

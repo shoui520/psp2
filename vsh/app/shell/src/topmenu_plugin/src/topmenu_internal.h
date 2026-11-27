@@ -29,11 +29,6 @@
 #include <job/job.h>
 #include <memory/heap_allocator.h>
 #include <graphics/surface/surface.h>
-#include <graphics/surface/surface_pool.h>
-#include <graphics/surface/surface_screen.h>
-#include <graphics/effects/screen_copy.h>
-#include <graphics/drawobj/plane_obj.h>
-#include <graphics/graphmem/graphmem.h>
 #include <cache/cache_manager.h>
 #include <cache/cache_image.h>
 #include <versatileparam/idparam.h>
@@ -48,7 +43,6 @@
 #include <widget/w_busyindicator.h>
 #include <widget/w_progress_bar.h>
 #include <widget/w_scroll_view_base.h>
-#include <widget/w_pageturn.h>
 #include <widget/w_text.h>
 #include <widget/w_rich_text.h>
 #include <inputdevice/inputlistener.h>
@@ -69,7 +63,7 @@
 #include "../../indicator_plugin/src/indicator_interface.h"
 #include "../../power_manage_plugin/src/power_manage_internal.h"
 #include "../../applauncher_plugin/src/applauncher.h"
-#include "../../livearea_plugin/src/livearea_internal.h"
+#include "../../livearea_plugin/src/livearea_interface.h"
 #include "../../../../game/game_plugin/game_plugin.h"
 #include "topmenu_plugin.h"
 
@@ -221,6 +215,15 @@ int consoleInfoFileAddTime(int index, SceUInt64 elapsedUs);		/* 0x81376D44 */
 void shellSizeTextKb(paf::wstring *text, SceUInt32 sizeKB);		/* 0x8134367C */
 
 /* Forward declarations */
+namespace paf {
+namespace graph {
+class SurfacePool;
+class ScreenCopyObj;
+}
+namespace ui {
+class PageTurn;
+}
+}
 class TopTabBase;
 class TopTab;
 class TopTabAppData;

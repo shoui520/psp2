@@ -4,7 +4,11 @@
  * (0x8129666C-0x81298D23).
  */
 #include "topmenu_internal.h"
+#include <graphics/surface/surface_pool.h>
 #include <graphics/surface/surface_display.h>
+#include <graphics/effects/screen_copy.h>
+#include <graphics/drawobj/plane_obj.h>
+#include <widget/w_pageturn.h>
 #include <inputdevice/inputdevice.h>
 #include <inputdevice/pad/pad.h>
 #include <common/string_util.h>

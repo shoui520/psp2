@@ -5,6 +5,7 @@
 
 #include <stddef.h>
 #include <scetypes.h>
+#include <sce_atomic.h>
 #include <std/string.h>
 #include <kernel/threadmgr.h>
 #include <ipmi/server.h>
@@ -87,44 +88,33 @@ static MailResidentApp *s_mailAppInstance = NULL;		/* 0x81544E10 */
 
 /* 0x811C6F94 */
 MailResidentApp::MailResidentApp()
-	: m_stopFlag(0), m_netState(1), m_initStage(0), m_reserved(0),
+	: m_stopFlag(0), m_netState(1), m_initStage(0),
 	  m_server(NULL), m_serverBuf(NULL), m_workBufSize(0),
 	  m_sessionMutex("SceMailResidentAppSession", 0),
-	  m_threadId(-1), m_evfProxy(-1), m_evfPsnMail(-1), m_evfReady(-1),
-	  m_netCbId(-1), m_cronHandle(0),
+	  m_evfProxy(-1), m_evfPsnMail(-1), m_evfReady(-1),
+	  m_netCbId(-1), m_cronHandle(0), m_cronOption(),
 	  m_queueMutex("SceMailResidentAppQueue", 0),
 	  m_queueCb(-1),
 	  m_syncMutex("SceMailResidentAppSync", 0),
 	  m_pendingPush(0), m_pendingTimer(0), m_seqNo(0)
 {
-	m_cronOption.wakeUp = true;
-	m_cronOption.persist = false;
+	m_padding[0] = 0;
+	m_padding[1] = 0;
 	s_mailAppInstance = this;
+	m_cronOption.wakeUp = true;
 }
 
 /* 0x811C7090 / 0x811C7178 */
 MailResidentApp::~MailResidentApp()
 {
 	s_mailAppInstance = NULL;
-	for (paf::list<MailResidentSyncReq *>::iterator it = m_syncReqs.begin();
-	     it != m_syncReqs.end(); ++it) {
-		if (*it) (*it)->Release();
-	}
-	for (paf::list<MailResidentEvent *>::iterator it = m_queue.begin();
-	     it != m_queue.end(); ++it) {
-		if (*it) (*it)->Release();
-	}
-	for (paf::list<MailResidentSession *>::iterator it = m_sessions.begin();
-	     it != m_sessions.end(); ++it) {
-		if (*it) (*it)->Release();
-	}
 }
 
-static void pushQueueEvent(MailResidentApp *app, MailResidentEvent *ev)
+static inline void pushQueueEvent(MailResidentApp *app, MailResidentEvent *ev)
 {
 	app->m_queueMutex.Lock();
-	ev->AddRef();
-	app->m_queue.push_back(ev);
+	paf::intrusive_ptr<MailResidentEvent> ref(ev);
+	app->m_queue.push_back(ref);
 	sceKernelNotifyCallback(app->m_queueCb, 0);
 	app->m_queueMutex.Unlock();
 }
@@ -134,17 +124,20 @@ void MailResidentApp::EnqueueEvent(int kind, SceUInt32 eventParam, int appState)
 {
 	switch (kind) {
 	case 0:
-		m_netState = eventParam;
+		sceAtomicStore32((volatile SceInt32 *)&m_netState, (SceInt32)eventParam);
 		/* fallthrough */
 	case 1:
-	case 7: {
-		void *mem = mailResidentMalloc(sizeof(MailResidentEvent));
-		if (mem != NULL) {
-			MailResidentEvent *ev = new (mem) MailResidentEvent(eventParam ? 7 : 6);
-			pushQueueEvent(this, ev);
+	case 7:
+		if (eventParam != 0) {
+			MailResidentEvent *ev = new MailResidentEvent(7);
+			if (ev != NULL)
+				pushQueueEvent(this, ev);
+		} else {
+			MailResidentEvent *ev = new MailResidentEvent(6);
+			if (ev != NULL)
+				pushQueueEvent(this, ev);
 		}
 		return;
-	}
 	case 2:
 	case 3:
 	case 6: {
@@ -153,9 +146,9 @@ void MailResidentApp::EnqueueEvent(int kind, SceUInt32 eventParam, int appState)
 		if (*pendingFlag != 0)
 			return;
 		m_queueMutex.Lock();
-		for (paf::list<MailResidentEvent *>::iterator it = m_queue.begin();
+		for (paf::list<paf::intrusive_ptr<MailResidentEvent> >::iterator it = m_queue.begin();
 		     it != m_queue.end(); ++it) {
-			MailResidentEvent *e = *it;
+			MailResidentEvent *e = it->get();
 			if (e->m_type == 4) {
 				if (((MailResidentSyncEvent *)e)->m_arg == eventParam) {
 					m_queueMutex.Unlock();
@@ -169,7 +162,7 @@ void MailResidentApp::EnqueueEvent(int kind, SceUInt32 eventParam, int appState)
 		m_queueMutex.Unlock();
 
 		m_syncMutex.Lock();
-		for (paf::list<MailResidentSyncReq *>::iterator it = m_syncReqs.begin();
+		for (paf::list<paf::intrusive_ptr<MailResidentSyncReq> >::iterator it = m_syncReqs.begin();
 		     it != m_syncReqs.end(); ++it) {
 			if ((*it)->m_evType == evType) {
 				*pendingFlag = 1;
@@ -179,28 +172,22 @@ void MailResidentApp::EnqueueEvent(int kind, SceUInt32 eventParam, int appState)
 		}
 		m_syncMutex.Unlock();
 
-		void *mem = mailResidentMalloc(sizeof(MailResidentSyncEvent));
-		if (mem != NULL) {
-			MailResidentSyncEvent *ev = new (mem) MailResidentSyncEvent(evType, eventParam);
+		MailResidentSyncEvent *ev = new MailResidentSyncEvent(evType, eventParam);
+		if (ev != NULL)
 			pushQueueEvent(this, ev);
-		}
 		return;
 	}
 	case 4: {
-		void *mem = mailResidentMalloc(sizeof(MailResidentAppEvent));
-		if (mem != NULL) {
-			MailResidentAppEvent *ev = new (mem) MailResidentAppEvent(eventParam, appState);
+		MailResidentAppEvent *ev = new MailResidentAppEvent(eventParam, appState);
+		if (ev != NULL)
 			pushQueueEvent(this, ev);
-		}
 		return;
 	}
 	case 5: {
 		m_mw.SignalReady();
-		void *mem = mailResidentMalloc(sizeof(MailResidentEvent));
-		if (mem != NULL) {
-			MailResidentEvent *ev = new (mem) MailResidentEvent(1);
+		MailResidentEvent *ev = new MailResidentEvent(1);
+		if (ev != NULL)
 			pushQueueEvent(this, ev);
-		}
 		return;
 	}
 	default:
@@ -224,7 +211,7 @@ static void mailCronReadyCb(int eventType, void *arg)
 /* 0x811C7BFA */
 static void mailPowerCb(void *arg)
 {
-	if (arg == NULL && s_mailAppInstance != NULL)
+	if (arg == NULL)
 		s_mailAppInstance->EnqueueEvent(3, 0, 0);
 }
 
@@ -267,12 +254,11 @@ int MailResidentApp::Start()
 	if (m_evfReady < 0) { m_evfReady = -1; return -1; }
 
 	IPMI::Server::Config cfg;
-	sce_paf_memset(&cfg, 0, sizeof(cfg));
-	cfg.openLimit = 4;
-	cfg.maxRequestSize = 200;
-	cfg.pEventHandler = this;
 	sce_paf_strncpy(cfg.serviceName, "ScePsnMailRs", 16);
 	cfg.budget = 2;
+	cfg.maxRequestSize = 4;
+	cfg.maxMessageSize = 200;
+	cfg.pEventHandler = this;
 	m_workBufSize = IPMI::Server::getWorkBufferSize(&cfg);
 	m_serverBuf = mailResidentMalloc(0x100);
 	if (IPMI::Server::create(&m_server, &cfg, this, m_serverBuf) != 0)
@@ -326,8 +312,8 @@ void MailResidentApp::Stop()
 	}
 	m_initStage = 0;
 
+	int stat = 0;
 	if (m_threadId != -1) {
-		int stat = 0;
 		sceKernelSetEventFlag(m_evfProxy, 0x80000000);
 		sceKernelWaitThreadEnd(m_threadId, &stat, NULL);
 		sceKernelDeleteThread(m_threadId);
@@ -336,10 +322,6 @@ void MailResidentApp::Stop()
 	if (m_evfPsnMail != -1) {
 		sceKernelDeleteEventFlag(m_evfPsnMail);
 		m_evfPsnMail = -1;
-	}
-	for (paf::list<MailResidentSession *>::iterator it = m_sessions.begin();
-	     it != m_sessions.end(); ++it) {
-		if (*it) (*it)->Release();
 	}
 	m_sessions.clear();
 	if (m_server != NULL) {
@@ -355,9 +337,8 @@ void MailResidentApp::Stop()
 		m_evfProxy = -1;
 	}
 	if (m_cronHandle != 0) {
-		ShellCron *cron = shellCronGetInstance();
-		cron->MarkRemove(m_cronHandle);
-		cron->Remove(m_cronHandle);
+		shellCronGetInstance()->MarkRemove(m_cronHandle);
+		shellCronGetInstance()->Remove(m_cronHandle);
 		m_cronHandle = 0;
 	}
 }
@@ -366,16 +347,12 @@ void MailResidentApp::Stop()
 void MailResidentApp::CancelPendingSyncs()
 {
 	m_syncMutex.Lock();
-	for (paf::list<MailResidentSyncReq *>::iterator it = m_syncReqs.begin();
+	for (paf::list<paf::intrusive_ptr<MailResidentSyncReq> >::iterator it = m_syncReqs.begin();
 	     it != m_syncReqs.end(); ++it) {
 		m_mw.RemoveRefKey((*it)->m_key);
 	}
 	m_pendingTimer = 0;
 	m_pendingPush = 0;
-	for (paf::list<MailResidentSyncReq *>::iterator it = m_syncReqs.begin();
-	     it != m_syncReqs.end(); ++it) {
-		if (*it) (*it)->Release();
-	}
 	m_syncReqs.clear();
 	m_syncMutex.Unlock();
 }
@@ -384,14 +361,14 @@ void MailResidentApp::CancelPendingSyncs()
 int MailResidentApp::EnsureMwRunning(SceInt64 key)
 {
 	m_mw.AddRefKey(key);
-	int st = 0;
+	int st;
 	if (m_mw.IsRunning(&st) != 0)
 		return 0;
 	CancelPendingSyncs();
 	if ((((SceUInt32)(key >> 32)) & 0x11u) != 0x11u) {
 		m_sessionMutex.Lock();
 		m_mw.LaunchAndConnect();
-		for (paf::list<MailResidentSession *>::iterator it = m_sessions.begin();
+		for (paf::list<paf::intrusive_ptr<MailResidentSession> >::iterator it = m_sessions.begin();
 		     it != m_sessions.end(); ++it) {
 			(*it)->NotifyZero();
 		}
@@ -401,35 +378,35 @@ int MailResidentApp::EnsureMwRunning(SceInt64 key)
 }
 
 /* 0x811C7918 */
-int MailResidentApp::OnNewSession(IPMI::Server *srv, const IPMI::Session::Config *cfg)
+int MailResidentApp::onNewClient(IPMI::Server *srv, const IPMI::Session::Config *cfg,
+	const void *userData, SceSize userDataSize)
 {
-	void *mem = mailResidentMalloc(sizeof(MailResidentSession));
-	MailResidentSession *sess = (mem != NULL) ? new (mem) MailResidentSession() : NULL;
-	if (sess != NULL)
-		sess->AddRef();
+	(void)userData; (void)userDataSize;
+	paf::intrusive_ptr<MailResidentSession> sess(new MailResidentSession());
 	IPMI::Session *ipmiSess = NULL;
-	if (sess->Open(srv, cfg, &ipmiSess) != 0) {
-		if (sess != NULL) sess->Release();
+	if (sess->Open(srv, cfg, &ipmiSess) != 0)
 		return -1;
-	}
 	m_sessionMutex.Lock();
-	for (paf::list<MailResidentSession *>::iterator it = m_sessions.begin();
+	for (paf::list<paf::intrusive_ptr<MailResidentSession> >::iterator it = m_sessions.begin();
 	     it != m_sessions.end(); ++it) {
 		if ((*it)->m_session == ipmiSess) {
 			m_sessionMutex.Unlock();
-			if (sess != NULL) sess->Release();
 			return -1;
 		}
 	}
 	sess->m_state = 5;
-	sess->AddRef();
 	m_sessions.push_back(sess);
 	m_sessionMutex.Unlock();
 
 	if (EnsureMwRunning((SceInt64)(SceUIntPtr)ipmiSess) == 0)
 		sess->NotifyZero();
-	if (sess != NULL) sess->Release();
 	return 0;
+}
+
+/* 0x811C7A00 */
+void MailResidentApp::onSessionClosedByClient(IPMI::Session *session)
+{
+	onSessionKilled(session);
 }
 
 /* 0x811C7A0A */
@@ -437,31 +414,27 @@ void MailResidentApp::ReleaseSessionKey(SceInt64 key)
 {
 	SceInt64 closeSessionKey = key | 0x0000040100000000LL;
 	SceInt64 flushKey = key | 0x0000080100000000LL;
-	EnsureMwRunning(key | 0x0000000100000000LL);
+	EnsureMwRunning(closeSessionKey);
 	EnsureMwRunning(flushKey);
-	void *mem = mailResidentMalloc(sizeof(MailResidentMwPairEvent));
-	if (mem != NULL) {
-		MailResidentMwPairEvent *ev = new (mem) MailResidentMwPairEvent(
-			closeSessionKey, flushKey);
+	MailResidentMwPairEvent *ev = new MailResidentMwPairEvent(closeSessionKey, flushKey);
+	if (ev != NULL)
 		pushQueueEvent(this, ev);
-	}
 }
 
 /* 0x811C7AC8 */
-void MailResidentApp::OnSessionClosed(IPMI::Session *session)
+void MailResidentApp::onSessionKilled(IPMI::Session *session)
 {
 	m_sessionMutex.Lock();
-	for (paf::list<MailResidentSession *>::iterator it = m_sessions.begin();
+	for (paf::list<paf::intrusive_ptr<MailResidentSession> >::iterator it = m_sessions.begin();
 	     it != m_sessions.end(); ++it) {
 		if ((*it)->m_session == session) {
 			(*it)->Close();
-			(*it)->Release();
 			m_sessions.erase(it);
 			break;
 		}
 	}
 	m_sessionMutex.Unlock();
-	int st = 0;
+	int st;
 	if (m_mw.IsRunning(&st) != 0)
 		ReleaseSessionKey((SceInt64)(SceUIntPtr)session);
 	m_mw.RemoveRefKey((SceInt64)(SceUIntPtr)session);
@@ -469,14 +442,12 @@ void MailResidentApp::OnSessionClosed(IPMI::Session *session)
 
 /* 0x811C7B90 */
 void MailResidentApp::onAsyncMethodDispatch(IPMI::Session *pSession, SceUInt32 reqId,
-	SceUInt32 methodId, const IPMI::DataInfo *pInList, SceUInt32 inCount)
+	SceUInt32 methodId, void *pIn, SceSize inSize, void *pOut, SceSize outSize)
 {
-	(void)inCount;
+	(void)inSize; (void)pOut; (void)outSize;
 	int res = 0;
-	if (methodId == 0x2010) {
-		const void *inData = (pInList != NULL) ? pInList[0].pData : NULL;
-		res = (inData != NULL) ? shellMailHandleCustomCmd(inData, 1) : (int)0x8068000F;
-	}
+	if (methodId == 0x2010)
+		res = (pIn != NULL) ? shellMailHandleCustomCmd(pIn, 1) : (int)0x8068620F;
 	pSession->respondToAsyncMethodRequest(reqId, 0, &res, 4);
 }
 
@@ -488,19 +459,16 @@ void MailResidentApp::SendMwRequest(SceInt64 key, int evType, int method, const 
 		EnsureMwRunning(key);
 	int res = 0;
 	SceSize outSize = 0;
-	int outBuf[2] = { 0, 0 };
+	int outBuf[2];
 	int r = m_mw.SyncCall(method, inBuf, inSize, &res, outBuf, &outSize, 8);
 	if ((r | res) != 0) {
 		if (!isSpecial)
 			m_mw.RemoveRefKey(key);
 	} else {
 		m_syncMutex.Lock();
-		void *mem = mailResidentMalloc(sizeof(MailResidentSyncReq));
-		if (mem != NULL) {
-			MailResidentSyncReq *req = new (mem) MailResidentSyncReq(key, method, outBuf[1], evType);
-			req->AddRef();
-			m_syncReqs.push_back(req);
-		}
+		paf::intrusive_ptr<MailResidentSyncReq> req(
+			new MailResidentSyncReq(key, method, outBuf[1], evType));
+		m_syncReqs.push_back(req);
 		m_syncMutex.Unlock();
 	}
 }
@@ -509,9 +477,8 @@ void MailResidentApp::SendMwRequest(SceInt64 key, int evType, int method, const 
 void MailResidentApp::UpdateFetchTimer()
 {
 	if (m_cronHandle != 0) {
-		ShellCron *cron = shellCronGetInstance();
-		cron->MarkRemove(m_cronHandle);
-		cron->Remove(m_cronHandle);
+		shellCronGetInstance()->MarkRemove(m_cronHandle);
+		shellCronGetInstance()->Remove(m_cronHandle);
 		m_cronHandle = 0;
 	}
 	if (m_netState == 0) {
@@ -524,12 +491,11 @@ void MailResidentApp::UpdateFetchTimer()
 			if (sceRegMgrGetKeyInt("/CONFIG/NP2/PSNMSG", "fetch_interval", &interval) == 0 &&
 			    interval > 0) {
 				interval *= 60;
-				ShellCron *cron = shellCronGetInstance();
-				int r = cron->AddInterval(&m_cronHandle, mailTimerCb, this,
+				int r = shellCronGetInstance()->AddInterval(&m_cronHandle, mailTimerCb, this,
 					(unsigned int)interval, (unsigned int)interval, &m_cronOption);
 				if (r < 0 && m_cronHandle != 0) {
-					cron->MarkRemove(m_cronHandle);
-					cron->Remove(m_cronHandle);
+					shellCronGetInstance()->MarkRemove(m_cronHandle);
+					shellCronGetInstance()->Remove(m_cronHandle);
 					m_cronHandle = 0;
 				}
 			}
@@ -540,29 +506,26 @@ void MailResidentApp::UpdateFetchTimer()
 /* 0x811C7E82 */
 void MailResidentApp::ProcessQueue()
 {
+	paf::intrusive_ptr<MailResidentEvent> ev;
 	m_queueMutex.Lock();
 	if (m_queue.size() == 0) {
 		m_queueMutex.Unlock();
 		return;
 	}
-	MailResidentEvent *ev = m_queue.front();
-	if (ev != NULL)
-		ev->AddRef();
+	ev = m_queue.front();
 	m_queue.pop_front();
 	m_queueMutex.Unlock();
 
 	switch (ev->m_type) {
 	case 0: {
-		MailResidentAppEvent *ae = (MailResidentAppEvent *)ev;
-		for (paf::list<MailResidentSession *>::iterator it = m_sessions.begin();
+		MailResidentAppEvent *ae = (MailResidentAppEvent *)ev.get();
+		for (paf::list<paf::intrusive_ptr<MailResidentSession> >::iterator it = m_sessions.begin();
 		     it != m_sessions.end(); ++it) {
 			if ((SceUInt32)(*it)->m_pid == ae->m_pid) {
 				(*it)->m_state = ae->m_appState;
-				void *mem = mailResidentMalloc(sizeof(MailResidentEvent));
-				if (mem != NULL) {
-					MailResidentEvent *refreshEv = new (mem) MailResidentEvent(1);
+				MailResidentEvent *refreshEv = new MailResidentEvent(1);
+				if (refreshEv != NULL)
 					pushQueueEvent(this, refreshEv);
-				}
 				break;
 			}
 		}
@@ -575,7 +538,7 @@ void MailResidentApp::ProcessQueue()
 			CancelPendingSyncs();
 			m_sessionMutex.Lock();
 			bool hasActive = false;
-			for (paf::list<MailResidentSession *>::iterator it = m_sessions.begin();
+			for (paf::list<paf::intrusive_ptr<MailResidentSession> >::iterator it = m_sessions.begin();
 			     it != m_sessions.end(); ++it) {
 				if ((*it)->m_state == 5) {
 					hasActive = true;
@@ -584,7 +547,7 @@ void MailResidentApp::ProcessQueue()
 			}
 			if (hasActive) {
 				m_mw.LaunchAndConnect();
-				for (paf::list<MailResidentSession *>::iterator it = m_sessions.begin();
+				for (paf::list<paf::intrusive_ptr<MailResidentSession> >::iterator it = m_sessions.begin();
 				     it != m_sessions.end(); ++it) {
 					(*it)->NotifyZero();
 				}
@@ -594,83 +557,95 @@ void MailResidentApp::ProcessQueue()
 		break;
 	}
 	case 2: {
-		MailResidentMwPairEvent *pe = (MailResidentMwPairEvent *)ev;
-		int closeReq = 0;
-		int flushReq = 0;
+		MailResidentMwPairEvent *pe = (MailResidentMwPairEvent *)ev.get();
+		int closeReq;
+		sce_paf_memset(&closeReq, 0, sizeof(closeReq));
 		SendMwRequest(pe->m_closeSessionKey, ev->m_type, 17, &closeReq, 4);
+		int flushReq;
+		sce_paf_memset(&flushReq, 0, sizeof(flushReq));
 		SendMwRequest(pe->m_flushKey, ev->m_type, 13, &flushReq, 4);
 		break;
 	}
 	case 3: {
-		MailResidentDoneEvent *de = (MailResidentDoneEvent *)ev;
-		int inPair[2] = { de->m_req->m_method, de->m_req->m_bit };
+		MailResidentDoneEvent *de = (MailResidentDoneEvent *)ev.get();
+		int inPair[2];
+		sce_paf_memset(inPair, 0, sizeof(inPair));
+		inPair[0] = de->m_req->m_method;
+		inPair[1] = de->m_req->m_bit;
 		int res = 0;
 		SceSize outSz = 0;
 		m_mw.SyncCall(25, inPair, 8, &res, NULL, &outSz, 0);
 
-		MailResidentSyncReq *found = NULL;
+		paf::intrusive_ptr<MailResidentSyncReq> found;
 		m_syncMutex.Lock();
-		for (paf::list<MailResidentSyncReq *>::iterator it = m_syncReqs.begin();
+		for (paf::list<paf::intrusive_ptr<MailResidentSyncReq> >::iterator it = m_syncReqs.begin();
 		     it != m_syncReqs.end(); ++it) {
 			if ((*it)->m_bit == inPair[1] && (*it)->m_method == inPair[0]) {
 				found = *it;
-				found->AddRef();
-				found->Release();
 				m_syncReqs.erase(it);
 				break;
 			}
 		}
 		m_syncMutex.Unlock();
-		if (found != NULL) {
+		if (found.get() != NULL) {
 			if (found->m_evType == 5 && m_pendingTimer != 0) {
 				m_pendingTimer = 0;
-				int z[2] = { 0, 0 };
-				SendMwRequest(found->m_key + 1, found->m_evType, 24, z, 8);
+				int reqBuf[2];
+				sce_paf_memset(reqBuf, 0, sizeof(reqBuf));
+				SendMwRequest(found->m_key + 1, found->m_evType, 24, reqBuf, 8);
 				ReleaseSessionKey(found->m_key + 1);
 			} else if (found->m_evType == 4 && m_pendingPush != 0) {
 				m_pendingPush = 0;
-				int z[2] = { 1, 0 };
-				SendMwRequest(found->m_key + 1, found->m_evType, 24, z, 8);
+				int reqBuf[2];
+				sce_paf_memset(reqBuf, 0, sizeof(reqBuf));
+				reqBuf[0] = 1;
+				SendMwRequest(found->m_key + 1, found->m_evType, 24, reqBuf, 8);
 				ReleaseSessionKey(found->m_key + 1);
 			}
 			m_mw.RemoveRefKey(found->m_key);
-			found->Release();
 		}
 		break;
 	}
 	case 4: {
-		MailResidentSyncEvent *se = (MailResidentSyncEvent *)ev;
+		MailResidentSyncEvent *se = (MailResidentSyncEvent *)ev.get();
+		int reqBuf[2];
+		sce_paf_memset(reqBuf, 0, sizeof(reqBuf));
+		reqBuf[0] = 1;
+		reqBuf[1] = (int)se->m_arg;
 		SceUInt32 seq = ++m_seqNo;
-		int reqBuf[2] = { 1, (int)se->m_arg };
 		SceInt64 key = ((SceInt64)0x101 << 32) | seq;
 		SendMwRequest(key, ev->m_type, 24, reqBuf, 8);
 		ReleaseSessionKey(key);
 		break;
 	}
 	case 5: {
+		int reqBuf[2];
+		sce_paf_memset(reqBuf, 0, sizeof(reqBuf));
 		SceUInt32 seq = ++m_seqNo;
-		int reqBuf[2] = { 0, 0 };
 		SceInt64 key = ((SceInt64)0x201 << 32) | seq;
 		SendMwRequest(key, ev->m_type, 24, reqBuf, 8);
 		ReleaseSessionKey(key);
 		break;
 	}
 	case 6:
-	case 7:
 		UpdateFetchTimer();
 		break;
+	case 7: {
+		int cancelReq;
+		sce_paf_memset(&cancelReq, 0, sizeof(cancelReq));
+		SendMwRequest(0x1100000000LL, ev->m_type, 23, &cancelReq, 4);
+		break;
+	}
 	default:
 		break;
 	}
-	if (ev != NULL)
-		ev->Release();
 }
 
 /* 0x811C82E0 */
 static int mailQueueCallback(int notifyId, int notifyCount, int notifyArg, void *userData)
 {
-	(void)notifyId; (void)notifyCount; (void)notifyArg;
-	if (userData != NULL)
+	(void)notifyId; (void)notifyArg;
+	for (int i = notifyCount; i != 0; --i)
 		((MailResidentApp *)userData)->ProcessQueue();
 	return 0;
 }
@@ -739,12 +714,16 @@ void MailResidentApp::ThreadLoop()
 			break;
 		if (wr == (int)0x80028005) {
 			m_server->tryDispatch(workBuf, m_workBufSize);
-			int msg[28];
-			sce_paf_memset(msg, 0, sizeof(msg));
-			SceSize recvSz = 0;
-			while (sceKernelTryReceiveMsgPipe(pipeId, msg, sizeof(msg), 0, &recvSz) == 0 &&
+			struct {
+				int type;
+				char payload[108];
+			} msg;
+			msg.type = 0;
+			sce_paf_memset(msg.payload, 0, sizeof(msg.payload));
+			SceSize recvSz;
+			while (sceKernelTryReceiveMsgPipe(pipeId, &msg, sizeof(msg), 0, &recvSz) == 0 &&
 			       recvSz == sizeof(msg)) {
-				if (msg[0] == 2)
+				if (msg.type == 2)
 					EnqueueEvent(6, 0, 0);
 			}
 		} else {
@@ -752,14 +731,12 @@ void MailResidentApp::ThreadLoop()
 			for (SceUInt32 bit = 0; bit < 32; ++bit) {
 				if ((outBits & (1u << bit)) != 0) {
 					m_syncMutex.Lock();
-					for (paf::list<MailResidentSyncReq *>::iterator it = m_syncReqs.begin();
+					for (paf::list<paf::intrusive_ptr<MailResidentSyncReq> >::iterator it = m_syncReqs.begin();
 					     it != m_syncReqs.end(); ++it) {
 						if ((*it)->m_bit == (int)bit) {
-							void *mem = mailResidentMalloc(sizeof(MailResidentDoneEvent));
-							if (mem != NULL) {
-								MailResidentDoneEvent *de = new (mem) MailResidentDoneEvent(*it);
+							MailResidentDoneEvent *de = new MailResidentDoneEvent(*it);
+							if (de != NULL)
 								pushQueueEvent(this, de);
-							}
 							break;
 						}
 					}

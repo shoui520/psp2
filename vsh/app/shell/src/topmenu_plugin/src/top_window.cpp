@@ -4,6 +4,9 @@
  * TopmenuPluginInterface table (0x8126F818-0x81281F17).
  */
 #include "topmenu_internal.h"
+#include <graphics/surface/surface_pool.h>
+#include <graphics/graphmem/graphmem.h>
+#include <widget/w_pageturn.h>
 #include <av_config/av_config.h>
 #include <display/display.h>
 #include <gxm.h>

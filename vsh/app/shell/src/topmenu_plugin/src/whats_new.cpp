@@ -3,6 +3,8 @@
  * NSX material refresh job (0x81282C3C-0x8128430B).
  */
 #include "topmenu_internal.h"
+#include <graphics/surface/surface_pool.h>
+#include <graphics/graphmem/graphmem.h>
 
 namespace {
 
