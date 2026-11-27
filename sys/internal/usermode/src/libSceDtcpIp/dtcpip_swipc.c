@@ -262,12 +262,9 @@ int dtcpIpIpcCreate(int *outConnection, const int *sessionInfo, const unsigned i
 		return 5;
 	object->session = NULL;
 	object->stream = NULL;
-	ret = dtcpIpIpcInitSession(object, config, size);
-	if (ret == 0)
-		ret = dtcpIpIpcInitStream(&object->stream, object->session, 0, 0, 0, 0);
-	if (ret == 0)
-		ret = dtcpIpIpcInitShared(object->stream, &object->shared);
-	if (ret != 0) {
+	if ((ret = dtcpIpIpcInitSession(object, config, size)) != 0 ||
+	    (ret = dtcpIpIpcInitStream(&object->stream, object->session, 0, 0, 0, 0)) != 0 ||
+	    (ret = dtcpIpIpcInitShared(object->stream, &object->shared)) != 0) {
 		ret = dtcpIpMapIpcStatus(ret);
 	} else {
 		message.command = SCE_DTCP_IP_IPC_CONNECT;
@@ -277,12 +274,18 @@ int dtcpIpIpcCreate(int *outConnection, const int *sessionInfo, const unsigned i
 		message.value0 = sessionInfo[0];
 		message.value1 = sessionInfo[1];
 		message.value2 = g_dtcpIpIpcFlag;
+#if FW_VERSION != 0x03630011
 		message.value3 = 0;
-		if (dtcpIpIpcRequest(object->stream, &message) == 0 && message.result == 0) {
+#endif
+		ret = dtcpIpIpcRequest(object->stream, &message);
+		if (ret != 0) {
+			ret = dtcpIpMapIpcStatus(ret);
+		} else if (message.result != 0) {
+			ret = dtcpIpMapIpcStatus(message.result);
+		} else {
 			*outConnection = (int)object;
 			return 0;
 		}
-		ret = dtcpIpMapIpcStatus(message.result);
 	}
 	if (object->stream != NULL)
 		dtcpIpIpcFiniStream(object->stream, 0);
