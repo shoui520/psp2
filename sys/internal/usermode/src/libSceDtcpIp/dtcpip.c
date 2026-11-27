@@ -810,6 +810,7 @@ int SceDtcpIp_6C6AC8E8(int *outEvent, int *outResult)
 	SceUInt timeout;
 	int event;
 	int ret;
+	int result;
 
 	if (outEvent != NULL && outResult != NULL) {
 		timeout = 130000000;
@@ -834,7 +835,8 @@ int SceDtcpIp_6C6AC8E8(int *outEvent, int *outResult)
 					}
 					if (take != 0) {
 						event = 12;
-						if (dtcpIpCommandEventId(&event, g_command.common.id) == 0) {
+						ret = dtcpIpCommandEventId(&event, g_command.common.id);
+						if (ret == 0) {
 							*outEvent = event;
 							*outResult = g_command.common.result;
 						}
@@ -845,7 +847,9 @@ int SceDtcpIp_6C6AC8E8(int *outEvent, int *outResult)
 				} else {
 					ret = SCE_DTCP_IP_ERROR_SEQUENCE;
 				}
-				dtcpIpUnlock(SCE_DTCP_IP_LOCK_COMMAND);
+				result = dtcpIpUnlock(SCE_DTCP_IP_LOCK_COMMAND);
+				if (result < 0)
+					ret = result;
 				return ret;
 			}
 			return ret;
