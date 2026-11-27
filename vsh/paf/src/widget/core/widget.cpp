@@ -3200,8 +3200,10 @@ void Widget::detach_environment()
 		m_env->RemoveModalWidget(this);
 		m_modal_mode = 2;
 	}
-	if (m_ordered)
-		ScePafWidget_0253DC9C(this, false);
+	if (m_ordered && m_env != NULL) {
+		m_ordered = false;
+		m_env->RemoveOrderedWidget(this);
+	}
 	ScePafWidget_931AD41E(this, false);
 	m_env->ClearHitInfo(this);
 	if (m_focused)

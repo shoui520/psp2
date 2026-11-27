@@ -1998,6 +1998,21 @@ static inline void ResetTouchHits(Environment *env, uint32_t id)
 }
 
 #ifdef PAF_BUILD_2014
+static inline __attribute__((always_inline)) bool IsInHitStack2014(Environment *env, Widget *widget)
+{
+	list<Widget *>::iterator it = env->m_hit_stack.begin();
+
+	while (it != env->m_hit_stack.end()) {
+		if (*it == widget)
+			return true;
+		++it;
+	}
+
+	HitInfo info;
+
+	return env->GetHitStack(&info, widget) == 0;
+}
+
 extern "C" void ScePafWidget_28D590B6(Environment *env, Event *e)
 {
 	vector<OrderEntry> &entries = env->m_modal_lists[env->m_modal_buf_index];
@@ -2041,7 +2056,7 @@ extern "C" void ScePafWidget_28D590B6(Environment *env, Event *e)
 	if (top != NULL && env->m_cancel_widget == NULL) {
 		if (((type & 0x40) == 0 || port != 1) &&
 		    order >= (uint32_t)top->m_scene->m_scene_priority &&
-		    !env->IsHitStackParent(top)) {
+		    !IsInHitStack2014(env, top)) {
 			uint32_t id = (uint8_t)e->m_detail;
 
 			e->SetTarget(env->m_top_modal_widget);
@@ -2064,7 +2079,7 @@ extern "C" void ScePafWidget_28D590B6(Environment *env, Event *e)
 			continue;
 		if (order < (uint32_t)widget->m_scene->m_scene_priority)
 			break;
-		if (env->IsHitStackParent(widget))
+		if (IsInHitStack2014(env, widget))
 			break;
 
 		uint32_t id = (uint8_t)e->m_detail;

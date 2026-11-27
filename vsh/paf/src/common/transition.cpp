@@ -31,6 +31,9 @@ static const float s_slide_3d_state[5][4] = {
 };
 
 /* GetDefaultDelayReverse: a popup takes longer the larger it is in its scene */
+#ifdef PAF_BUILD_2014
+static inline __attribute__((always_inline))
+#endif
 float ScePafCommon_C85E4F3A(Type type, ui::Widget *widget)
 {
 	float delay = 0.0f;
@@ -115,8 +118,13 @@ float ScePafCommon_C85E4F3A(Type type, ui::Widget *widget)
  * from above, 1 and 5 from the left, 2 and 6 from below, 3 and 7 from the
  * right.
  */
-static void CalcSlidePos(ui::Widget *widget, int32_t direction, math::v4 &from, math::v4 &to,
-			 math::v4 &size, math::v4 &scene_size)
+#ifdef PAF_BUILD_2014
+static inline __attribute__((always_inline))
+#else
+static
+#endif
+void CalcSlidePos(ui::Widget *widget, int32_t direction, math::v4 &from, math::v4 &to,
+		  math::v4 &size, math::v4 &scene_size)
 {
 	uint32_t anchor_x, anchor_y, anchor_z;
 
@@ -664,6 +672,9 @@ float ScePafCommon_6CF3A3C8(float parameter, ui::Widget *widget, Type effect, bo
 }
 
 /* GetDefaultDelay */
+#ifdef PAF_BUILD_2014
+static inline __attribute__((always_inline))
+#endif
 float ScePafCommon_DE5322EB(Type type)
 {
 	float delay = 0.0f;

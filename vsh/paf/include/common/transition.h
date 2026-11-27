@@ -53,14 +53,18 @@ enum Type {
 }
 
 extern "C" {
+#ifndef PAF_BUILD_2014
 /* GetDefaultDelayReverse(Type, ui::Widget *) */
 float ScePafCommon_C85E4F3A(paf::common::transition::Type type, paf::ui::Widget *widget);
+#endif
 /* Do(float parameter, ui::Widget *, Type, bool auto_delete, bool ignore_default_delay): shows */
 float ScePafCommon_6CF3A3C8(float parameter, paf::ui::Widget *widget,
 			    paf::common::transition::Type effect, bool auto_delete,
 			    bool ignore_default_delay);
+#ifndef PAF_BUILD_2014
 /* GetDefaultDelay(Type) */
 float ScePafCommon_DE5322EB(paf::common::transition::Type type);
+#endif
 /* DoReverse(float parameter, ui::Widget *, Type, bool auto_delete, bool ignore_default_delay): hides */
 float ScePafCommon_B48C9BDC(float parameter, paf::ui::Widget *widget,
 			    paf::common::transition::Type effect, bool auto_delete,

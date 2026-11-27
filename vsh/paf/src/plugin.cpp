@@ -194,8 +194,11 @@ void ScePafToplevel_3B003F16(Plugin *plugin, string *id, uint32_t idhash, bool w
 	}
 }
 
-/* called whole by C1BE28B4 */
-__attribute__((noinline)) VersatileParam *ScePafToplevel_417B0721(const char *name)
+/* called whole by C1BE28B4 in 3.65; inlined in 2014 */
+#ifndef PAF_BUILD_2014
+__attribute__((noinline))
+#endif
+VersatileParam *ScePafToplevel_417B0721(const char *name)
 {
 	map<string, ui::FactoryFuncTable>::iterator it = s_factory_table.find(string(name));
 
@@ -242,8 +245,11 @@ void ScePafToplevel_C1BE28B4(Plugin *plugin)
 
 namespace paf {
 
-/* called whole by LoadResourceTable_Style */
-__attribute__((noinline)) VersatileParam *Plugin::CallFactoryStyle(const char *name)
+/* called whole by LoadResourceTable_Style in 3.65 */
+#ifndef PAF_BUILD_2014
+__attribute__((noinline))
+#endif
+VersatileParam *Plugin::CallFactoryStyle(const char *name)
 {
 	map<string, ui::FactoryFuncTable>::iterator it = s_factory_table.find(string(name));
 
@@ -1602,8 +1608,11 @@ void Plugin::InstantiateWidget_Layout(const cxml::Element &elm, ui::Widget *widg
 	delete param;
 }
 
-/* called whole by CreateWidgetWithStyleType */
-__attribute__((noinline)) ui::WidgetParam *Plugin::CallFactoryWidgetParam(const char *name)
+/* called whole by CreateWidgetWithStyleType in 3.65 */
+#ifndef PAF_BUILD_2014
+__attribute__((noinline))
+#endif
+ui::WidgetParam *Plugin::CallFactoryWidgetParam(const char *name)
 {
 	map<string, ui::FactoryFuncTable>::iterator it = s_factory_table.find(string(name));
 

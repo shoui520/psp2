@@ -15,3 +15,10 @@ SceUInt32 vshSblSsSetNvsData(int area, const void *buf, SceSize size)
 	args.size = size;
 	return (SceUInt32)_vshSblSsSetNvsData(area, buf, size, &args);
 }
+
+#ifdef UPDATER_CORE_2014
+int vshSblSsDecryptWithPortability(SceUInt32 mode, const void *iv, const void *in, void *out)
+{
+	return _vshSblSsDecryptWithPortability(mode, iv, in, out);
+}
+#endif

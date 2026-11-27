@@ -22,6 +22,55 @@ typedef union {
 	int i;
 } count_t;
 
+#ifdef SCE_DEFLT_2014
+typedef struct {
+	/* Histograms and sorted-symbol cursors become the fast literal table. */
+	union {
+		uint16_t ft[256];
+		struct {
+			uint32_t flags[16];
+			count_t count[15];
+			uint8_t len[286];
+			uint8_t pad[6];
+		} s;
+	} u;
+	union {
+		int16_t distsym_fix[32];
+		struct {
+			int16_t distsym[30];
+			uint32_t distmaxinfo[15];
+		} d;
+	} dist;
+	uint32_t litmaxinfo[7];
+	union {
+		uint16_t lit_fix[288];
+		struct {
+			union {
+				uint16_t lit[286];
+				signed char len[128];
+			} sym;
+			uint16_t litmaxcode[8];
+		} s;
+	} tail;
+} deflateInternalData_t;
+
+typedef char DeflateInternalDataSizeCheck[
+	sizeof(deflateInternalData_t) == 1248 ? 1 : -1];
+typedef char DeflateSymbolsOffsetCheck[
+	offsetof(deflateInternalData_t, tail.s.sym) == 660 ? 1 : -1];
+typedef char DeflateLengthsOffsetCheck[
+	offsetof(deflateInternalData_t, u.s.len) == 124 ? 1 : -1];
+
+enum {
+	DEFLATE_LITERAL_SYMBOL_BASE = offsetof(deflateInternalData_t, tail.s.sym) / 2
+};
+
+extern const uint8_t _sceDeflateLengthOrder[19];
+
+int _sceDeflateMakeHuffmanTableLength(deflateInternalData_t *pW);
+int _sceDeflateMakeHuffmanTable(deflateInternalData_t *pW);
+int _sceDeflateMakeHuffmanFixcode(deflateInternalData_t *pW);
+#else
 typedef struct {
 	/* Histograms and sorted-symbol cursors become the fast literal table. */
 	union {
@@ -39,7 +88,7 @@ typedef struct {
 	int endflag;
 	uint32_t litmaxinfo[7];
 	uint8_t distsym[30];
-	char pad2[2];
+	char padDist[2];
 	union {
 		uint16_t ftdist[32];
 		/* These construction limits are consumed before ftdist overwrites them. */
@@ -71,5 +120,6 @@ extern const uint8_t _sceDeflateLengthOrder[19];
 unsigned int _sceDeflateMakeHuffmanTableLength(deflateInternalData_t *pW);
 int _sceDeflateMakeHuffmanTable(deflateInternalData_t *pW);
 void _sceDeflateMakeHuffmanFixcode(deflateInternalData_t *pW, int prevflag);
+#endif
 
 #endif

@@ -1,5 +1,18 @@
 #include "deflate_i.h"
 
+#ifdef SCE_DEFLT_2014
+/* 32 length descriptors followed by 32 16-bit distance bases (0xfffb marks invalid). */
+static const uint16_t s_fixhuffcodes[64] = {
+	0x0809, 0x0800, 0x0808, 0x0810, 0x0818, 0x0820, 0x0828, 0x0830,
+	0x0838, 0x0841, 0x0851, 0x0861, 0x0871, 0x0882, 0x08a2, 0x08c2,
+	0x08e2, 0x0903, 0x0943, 0x0983, 0x09c3, 0x0a04, 0x0a84, 0x0b04,
+	0x0b84, 0x0c05, 0x0d05, 0x0e05, 0x0f05, 0x0ff8, 0x0807, 0x0807,
+	0x0000, 0x0001, 0x0002, 0x0003, 0x0004, 0x0006, 0x0008, 0x000c,
+	0x0010, 0x0018, 0x0020, 0x0030, 0x0040, 0x0060, 0x0080, 0x00c0,
+	0x0100, 0x0180, 0x0200, 0x0300, 0x0400, 0x0600, 0x0800, 0x0c00,
+	0x1000, 0x1800, 0x2000, 0x3000, 0x4000, 0x6000, 0xfffb, 0xfffb
+};
+#else
 /* Length descriptors followed by 32 packed distance descriptors. */
 static const uint16_t s_fixhuffcodes[48] = {
 	0x0c00, 0x0803, 0x0804, 0x0805, 0x0806, 0x0807, 0x0808, 0x0809,
@@ -9,11 +22,152 @@ static const uint16_t s_fixhuffcodes[48] = {
 	0x7978, 0x7b7a, 0x7776, 0x7372, 0x6f6e, 0x6b6a, 0x6766, 0x6362,
 	0x5f5e, 0x5b5a, 0x5756, 0x5352, 0x4f4e, 0x4b4a, 0x4746, 0x0000
 };
+#endif
 
 /* Repeat symbols use the decoder's packed descriptors, 19 and 23. */
 const uint8_t _sceDeflateLengthOrder[19] = {
 	16, 19, 23, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15
 };
+
+#ifdef SCE_DEFLT_2014
+int _sceDeflateMakeHuffmanTableLength(deflateInternalData_t *pW)
+{
+	int code = 0;
+	unsigned int bitLen;
+
+	for (bitLen = 1; bitLen < 8; bitLen++) {
+		unsigned int flags = pW->u.s.flags[bitLen];
+
+		if (flags != 0) {
+			pW->u.s.flags[bitLen] = 0;
+			do {
+				unsigned int sym = __clz(flags);
+				int end;
+				signed char entry;
+
+				flags -= 0x80000000u >> sym;
+				entry = (signed char)(bitLen + sym * 8);
+				end = code + (128 >> bitLen);
+				do {
+					pW->tail.s.sym.len[__rbit((unsigned int)code << 25)] = entry;
+					code++;
+				} while (code < end);
+			} while (flags != 0);
+		}
+	}
+	return code - 128;
+}
+
+int _sceDeflateMakeHuffmanTable(deflateInternalData_t *pW)
+{
+	count_t *count = pW->u.s.count;
+	unsigned char *pLen = pW->u.s.len;
+	int pos = 0;
+	int code = 0;
+	int minlen = 0;
+	unsigned int bitLen;
+	unsigned int idx;
+
+	for (bitLen = 1; bitLen < 16; bitLen++) {
+		int c = count[bitLen - 1].i;
+
+		count[bitLen - 1].p = &pW->tail.s.sym.lit[pos];
+		if (c != 0) {
+			pos += c;
+			if (minlen == 0)
+				minlen = (int)bitLen;
+			code += c << (15 - bitLen);
+		}
+		if (bitLen <= 8) {
+			pW->tail.s.litmaxcode[bitLen - 1] = (uint16_t)code;
+		} else {
+			pW->litmaxinfo[bitLen - 9] =
+				(uint16_t)((code >> (15 - bitLen)) - pos -
+					   DEFLATE_LITERAL_SYMBOL_BASE) |
+				(((unsigned int)code << 17) - 0x10000u);
+		}
+	}
+	if (code != 0x8000)
+		return -1;
+
+	for (idx = 0; idx < 256; idx++) {
+		unsigned int len = pLen[idx];
+
+		if (len != 0)
+			*count[len - 1].p++ = (uint16_t)idx;
+	}
+	for (idx = 0; idx < 30; idx++) {
+		unsigned int len = pLen[256 + idx];
+
+		if (len != 0)
+			*count[len - 1].p++ = s_fixhuffcodes[idx];
+	}
+
+	pW->dist.d.distsym[0] = -1;
+	pW->dist.d.distsym[1] = -1;
+
+	unsigned int distMinLen = 0;
+	unsigned int distCode = 0;
+	unsigned int distPos = 0;
+
+	for (bitLen = 1; bitLen < 16; bitLen++) {
+		unsigned int flags = pW->u.s.flags[bitLen];
+		unsigned int diff = distCode - (distPos << (15 - bitLen));
+
+		if (flags != 0) {
+			if (diff == 0)
+				distMinLen = bitLen;
+			do {
+				unsigned int sym = __clz(flags);
+
+				flags -= 0x80000000u >> sym;
+				pW->dist.d.distsym[distPos++] = (int16_t)s_fixhuffcodes[32 + sym];
+				distCode += 1u << (15 - bitLen);
+			} while (flags != 0);
+		}
+		if (distMinLen != 0) {
+			pW->dist.d.distmaxinfo[14 + distMinLen - bitLen] =
+				((distCode << 17) - 0x10000u) | diff;
+		}
+	}
+	if (distMinLen > 1)
+		pW->dist.d.distmaxinfo[distMinLen - 2] = 0xffffffffu;
+
+	uint32_t topInfo;
+
+	if (distPos <= 1) {
+		topInfo = 0xffff0001u;
+	} else {
+		topInfo = distMinLen | pW->dist.d.distmaxinfo[14];
+		distPos = 2;
+	}
+	if (distCode != (distPos << 14))
+		return -1;
+	pW->dist.d.distmaxinfo[14] = topInfo;
+	return minlen;
+}
+
+int _sceDeflateMakeHuffmanFixcode(deflateInternalData_t *pW)
+{
+	unsigned int idx;
+
+	for (idx = 0; idx < 24; idx++)
+		pW->tail.lit_fix[idx] = s_fixhuffcodes[idx];
+	for (idx = 0; idx < 144; idx++) {
+		pW->tail.lit_fix[144 + idx] = (uint16_t)(112 + idx);
+		pW->tail.lit_fix[24 + idx] = (uint16_t)idx;
+	}
+	for (idx = 0; idx < 8; idx++)
+		pW->tail.lit_fix[168 + idx] = s_fixhuffcodes[24 + idx];
+	for (idx = 0; idx < 32; idx++)
+		pW->dist.distsym_fix[idx] = (int16_t)s_fixhuffcodes[32 + idx];
+	pW->tail.s.litmaxcode[6] = 6144;
+	pW->tail.s.litmaxcode[7] = 25600;
+	pW->litmaxinfo[0] = (uint32_t)-106;
+	pW->dist.d.distmaxinfo[14] = (uint32_t)-65531;
+	return 7;
+}
+#else
 
 /*
  * The code-length code's fast table: flags[1..7] hold one bit per symbol of each length 7..1
@@ -269,3 +423,4 @@ void _sceDeflateMakeHuffmanFixcode(deflateInternalData_t *pW, int prevflag)
 		pW->sym.lit[8 + i - 144] = i;
 	pW->litmaxinfo[6] = DEFLATE_LITERAL_SYMBOL_BASE + 8 - 0x190;
 }
+#endif

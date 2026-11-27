@@ -97,7 +97,7 @@ static inline SceInt32 DecryptIndexDatBuffer(SceUInt8 *buffer, SceSize bufferSiz
 	outputKey.size = INDEX_DAT_KEY_SIZE;
 	sce_paf_memset(outputKey.bytes, 0, INDEX_DAT_KEY_SIZE);
 
-	SceInt32 ret = _vshSblSsDecryptWithPortability(1, iv, &inputKey, &outputKey);
+	SceInt32 ret = vshSblSsDecryptWithPortability(1, iv, &inputKey, &outputKey);
 
 	if (ret != 0) {
 		ClearSensitiveBuffer(plainKey, INDEX_DAT_KEY_SIZE);

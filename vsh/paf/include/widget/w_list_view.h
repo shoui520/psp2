@@ -510,13 +510,11 @@ public:
 	void SetItemFactory(listview::ItemFactory *factory);
 	/* where the view goes to show the cell aligned so, kept in the scroll box; -1 for no
 	   such segment (no name found) */
+#ifndef PAF_BUILD_2014
 	int32_t ScePafWidget_B3B40B75(math::v2 *pos, int32_t segment, int32_t cell,
 				      FocusAlignType align);
 	/* the view's focus set, the focus kept on a cell shown: where the focused one is not,
 	   the first one shown after it, else the last one shown */
-#ifdef PAF_BUILD_2014
-	void SetViewFocus(const math::v2 &pos, Timer *timer, bool flag_a, bool flag_b);
-#else
 	virtual void SetViewFocus(const math::v2 &pos, Timer *timer, bool flag_a, bool flag_b);
 #endif
 	/* the scroll range given, the coordinate effector and the over scroll off; or the range
@@ -557,7 +555,11 @@ public:
 	void ScePafWidget_A838831E();
 	/* the cell shown whose item takes the focus, searched from the end the direction points
 	   to; -1, -1 for none (name ours) */
+#ifdef PAF_BUILD_2014
+	listview::ListPos FindFocusCell(float along);
+#else
 	listview::ListPos FindFocusCell(const math::v2 &dir);
+#endif
 	/* the cell is shown, wholly or with an end in the visible range (name ours) */
 	bool IsCellVisible(listview::Cell *cell, bool whole);
 	/* the focus target dropped, the focus given to a cell shown (no name found) */

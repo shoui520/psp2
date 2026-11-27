@@ -2082,6 +2082,107 @@ static int32_t FindVisibleCells(listview::CellMap *map, const math::v4 &rect, bo
 	return num != 0 ? 0 : -1;
 }
 
+#ifdef PAF_BUILD_2014
+__attribute__((noinline)) listview::ListPos ListView::FindFocusCell(float along)
+{
+	int32_t count = (int32_t)m_cell_map->size();
+
+	if (count == 0)
+		return MakeListPos(-1, -1);
+
+	listview::Cell *found = NULL;
+	math::v2 range = GetVisibleRange(0);
+	math::v4 view = m_size;
+	math::v4 box = m_scroll_box;
+
+	if (m_scroll_type != SCROLL_TYPE_VERTICAL) {
+		float margin = (view.extract_x() * (1.0f - 0.8f)) * 0.5f;
+		float target;
+
+		if (along >= 0.0f) {
+			target = range.extract_x() + margin;
+			if (box.extract_x() >= range.extract_x())
+				target = box.extract_x();
+			for (int32_t idx = 0; idx < count; idx++) {
+				listview::Cell *cell = m_cell_map->at(idx);
+
+				if (cell->GetRect(false).extract_x() >= target) {
+					found = cell;
+					break;
+				}
+			}
+		} else {
+			target = range.extract_y() - margin;
+			if (box.extract_z() <= range.extract_y())
+				target = box.extract_z();
+			for (int32_t idx = count - 1; idx >= 0; idx--) {
+				listview::Cell *cell = m_cell_map->at(idx);
+
+				if (cell->GetRect(false).extract_z() <= target) {
+					found = cell;
+					break;
+				}
+			}
+		}
+		if (found == NULL) {
+			float best = 3.4028235e+38f;
+
+			for (int32_t idx = 0; idx < count; idx++) {
+				listview::Cell *cell = m_cell_map->at(idx);
+				float dist = __builtin_fabsf(cell->m_pos.extract_x() - target);
+
+				if (dist < best) {
+					found = cell;
+					best = dist;
+				}
+			}
+		}
+	} else {
+		float margin = (view.extract_y() * (1.0f - 0.8f)) * 0.5f;
+		float target;
+
+		if (along >= 0.0f) {
+			target = range.extract_x() - margin;
+			if (box.extract_y() <= range.extract_x())
+				target = box.extract_y();
+			for (int32_t idx = 0; idx < count; idx++) {
+				listview::Cell *cell = m_cell_map->at(idx);
+
+				if (cell->GetRect(false).extract_y() <= target) {
+					found = cell;
+					break;
+				}
+			}
+		} else {
+			target = range.extract_y() + margin;
+			if (box.extract_w() >= range.extract_y())
+				target = box.extract_w();
+			for (int32_t idx = count - 1; idx >= 0; idx--) {
+				listview::Cell *cell = m_cell_map->at(idx);
+
+				if (cell->GetRect(false).extract_w() >= target) {
+					found = cell;
+					break;
+				}
+			}
+		}
+		if (found == NULL) {
+			float best = 3.4028235e+38f;
+
+			for (int32_t idx = 0; idx < count; idx++) {
+				listview::Cell *cell = m_cell_map->at(idx);
+				float dist = __builtin_fabsf(cell->m_pos.extract_y() - target);
+
+				if (dist < best) {
+					found = cell;
+					best = dist;
+				}
+			}
+		}
+	}
+	return MakeListPos(found->GetSegment()->m_index, found->m_index);
+}
+#else
 __attribute__((noinline)) listview::ListPos ListView::FindFocusCell(const math::v2 &dir)
 {
 	listview::CellMap *map = m_cell_map;
@@ -2144,11 +2245,14 @@ __attribute__((noinline)) listview::ListPos ListView::FindFocusCell(const math::
 	pos.m_cell = -1;
 	return pos;
 }
+#endif
 
 void ListView::ScePafWidget_7F28F5B7()
 {
+#ifdef PAF_BUILD_2014
+	m_focus_list_pos.m_segment = -1;
+#else
 	FindFocusCell(math::v2(0.0f, 0.0f));
-#ifndef PAF_BUILD_2014
 	if (m_focus_root != NULL)
 		m_focus_root->m_focus_moved = 0;
 	m_focus_start = m_focus_target;
@@ -2188,7 +2292,12 @@ void ListView::Rebuild()
 
 		cell->GetSegment()->DestroyCell(cell->m_index, 0xffffffff);
 	}
+#ifdef PAF_BUILD_2014
+	m_focus_list_pos.m_segment = -1;
+	ScePafWidget_A838831E();
+#else
 	ScePafWidget_7F28F5B7();
+#endif
 	ScrollViewBase::MoveViewParent(math::v2(0.0f, 0.0f), NULL);
 	UpdateScrollLayout();
 	Sync();
@@ -3508,6 +3617,106 @@ void ListView::EndDrag(int32_t index)
 	}
 }
 
+#ifdef PAF_BUILD_2014
+void ListView::SetFocus(int32_t segment, int32_t cell, FocusAlignType align, Timer *timer)
+{
+	listview::Segment *seg = m_segment_list->GetSegment(segment);
+
+	if (seg == NULL) {
+		if (timer != NULL)
+			delete timer;
+		return;
+	}
+
+	float size = 0.0f;
+	math::v2 cell_pos = seg->ScePafWidget_7A37CEDA(cell, align, &size);
+	math::v2 pos;
+
+	if (m_scroll_type != SCROLL_TYPE_VERTICAL) {
+		float width = m_size.extract_x();
+		float half = width * 0.5f;
+		float target = cell_pos.extract_x();
+
+		if (align == FOCUS_ALIGN_TYPE_HEAD) {
+			target += half;
+		} else if (align == FOCUS_ALIGN_TYPE_TAIL) {
+			target -= half;
+		} else if (align == FOCUS_ALIGN_TYPE_NEAR && width * 0.8f > size) {
+			float margin = width * 0.8f * 0.5f;
+			math::v4 parent = m_view_parent->GetPos(0, NULL,
+								math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+			float cur = -parent.extract_x();
+			float head = target - size * 0.5f;
+			float tail = target + size * 0.5f;
+
+			if (head < cur - margin) {
+				target = head + margin;
+			} else {
+				if (tail > cur + margin)
+					cur = tail - margin;
+				target = cur;
+			}
+		}
+
+		float min_pos = m_scroll_box.extract_x() + half;
+		float max_pos = m_scroll_box.extract_z() - half;
+
+		if (min_pos > target)
+			target = min_pos;
+		if (max_pos > target)
+			max_pos = target;
+		pos = math::v2(max_pos, 0.0f);
+	} else {
+		float height = m_size.extract_y();
+		float half = height * 0.5f;
+		float target = cell_pos.extract_y();
+
+		if (align == FOCUS_ALIGN_TYPE_HEAD) {
+			target -= half;
+		} else if (align == FOCUS_ALIGN_TYPE_TAIL) {
+			target += half;
+		} else if (align == FOCUS_ALIGN_TYPE_NEAR && height * 0.8f > size) {
+			float margin = height * 0.8f * 0.5f;
+			math::v4 parent = m_view_parent->GetPos(0, NULL,
+								math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+			float cur = -parent.extract_y();
+			float tail = target + size * 0.5f;
+			float head = target - size * 0.5f;
+
+			if (tail > cur + margin) {
+				target = tail - margin;
+			} else {
+				if (head < cur - margin)
+					cur = head + margin;
+				target = cur;
+			}
+		}
+
+		float min_pos = m_scroll_box.extract_w() + half;
+		float max_pos = m_scroll_box.extract_y() - half;
+
+		if (min_pos > target)
+			target = min_pos;
+		if (max_pos > target)
+			max_pos = target;
+		pos = math::v2(0.0f, max_pos);
+	}
+
+	if (align == FOCUS_ALIGN_TYPE_NEAR) {
+		if (pos == GetViewFocusTarget()) {
+			if (timer != NULL)
+				delete timer;
+		} else {
+			ScrollViewBase::SetViewFocus(pos, timer, true, true);
+		}
+		m_focus_list_pos.m_segment = segment;
+		m_focus_list_pos.m_cell = cell;
+		ScePafWidget_A838831E();
+	} else {
+		ScrollViewBase::SetViewFocus(pos, timer, true, false);
+	}
+}
+#else
 int32_t ListView::ScePafWidget_B3B40B75(math::v2 *pos, int32_t segment, int32_t cell,
 				       FocusAlignType align)
 {
@@ -3675,22 +3884,18 @@ void ListView::SetFocus(int32_t segment, int32_t cell, FocusAlignType align, Tim
 							.getImpl()
 							.getXY());
 
-#ifndef PAF_BUILD_2014
 					Environment *env = m_env;
 
 					env->m_focus_cursor.m_moving_only = false;
 					env->m_focus_cursor_rear.m_moving_only = false;
-#endif
 				}
 			} else {
 				m_focus_pos = math::v2(-1.0f, -1.0f);
 
-#ifndef PAF_BUILD_2014
 				Environment *env = m_env;
 
 				env->m_focus_cursor.m_moving_only = true;
 				env->m_focus_cursor_rear.m_moving_only = true;
-#endif
 			}
 			SetViewFocus(pos, timer, true, true);
 		}
@@ -3699,10 +3904,8 @@ void ListView::SetFocus(int32_t segment, int32_t cell, FocusAlignType align, Tim
 	}
 	m_focus_list_pos.m_segment = segment;
 	m_focus_list_pos.m_cell = cell;
-#ifndef PAF_BUILD_2014
 	if (m_focus_root != NULL)
 		m_focus_root->m_focus_moved = 0;
-#endif
 	ScePafWidget_A838831E();
 }
 
@@ -3748,12 +3951,11 @@ void ListView::SetViewFocus(const math::v2 &pos, Timer *timer, bool flag_a, bool
 		m_focus_list_pos.m_cell = item->GetCellIndex();
 	}
 moved:
-#ifndef PAF_BUILD_2014
 	if (m_focus_root != NULL)
 		m_focus_root->m_focus_moved = 0;
-#endif
 	ScePafWidget_A838831E();
 }
+#endif
 
 void ListView::ScePafWidget_E1824581(bool on, const math::v2 &range)
 {
@@ -5338,8 +5540,10 @@ void ListView::ScePafWidget_D95AFF11(math::v2 &move, bool dragging, bool locked,
 void ListView::ScePafWidget_E9C7617A(uint32_t touch_id)
 {
 	ScrollViewBase::ScePafWidget_E9C7617A(touch_id);
+#ifdef PAF_BUILD_2014
+	m_focus_list_pos.m_segment = -1;
+#else
 	FindFocusCell(math::v2(0.0f, 0.0f));
-#ifndef PAF_BUILD_2014
 	if (m_focus_root != NULL)
 		m_focus_root->m_focus_moved = 0;
 	m_focus_start = m_focus_target;
@@ -5386,7 +5590,7 @@ bool ListView::ScrollByKey(const math::v2 &dir)
 			return true;
 	}
 	if (m_focus_list_pos.m_segment < 0) {
-		listview::ListPos found = FindFocusCell(math::v2(0.0f, 0.0f));
+		listview::ListPos found = FindFocusCell(along);
 
 		m_focus_list_pos.m_segment = found.m_segment;
 		m_focus_list_pos.m_cell = found.m_cell;

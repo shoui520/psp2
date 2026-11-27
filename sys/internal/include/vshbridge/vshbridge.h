@@ -89,6 +89,7 @@ typedef struct VshIoMountArgs {
 /* the system calls behind the stub library's wrappers */
 int _vshSblAimgrGetPscode(void *code);
 int _vshSblSsDecryptWithPortability(SceUInt32 mode, const void *iv, const void *in, void *out);
+int vshSblSsDecryptWithPortability(SceUInt32 mode, const void *iv, const void *in, void *out);
 int _vshIoMount(int id, const char *path, int permission, const VshIoMountArgs *uargs);
 
 #ifdef __cplusplus

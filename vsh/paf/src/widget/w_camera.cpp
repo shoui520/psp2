@@ -586,8 +586,10 @@ void Camera::DrawEnd(Camera *const &camera)
 
 void ScePafWidget_EFED66D2(Camera *camera, const math::rect &rect, graph::DrawInfo &info)
 {
+#ifndef PAF_BUILD_2014
 	if (camera->m_env->IsDrawSkipped())
 		return;
+#endif
 
 	uint32_t key = (info.m_layer << 16) + (info.m_sub_layer << 8) + info.m_order;
 	Screen *scr = camera->m_scene->m_screen;
@@ -612,8 +614,13 @@ void ScePafWidget_EFED66D2(Camera *camera, const math::rect &rect, graph::DrawIn
 
 void ScePafWidget_4D02799A(Camera *camera, const math::rect &rect, graph::DrawInfo &info)
 {
+#ifdef PAF_BUILD_2014
+	if (!camera->m_pixel_snap)
+		return;
+#else
 	if (camera->m_env->IsDrawSkipped() || !camera->m_pixel_snap)
 		return;
+#endif
 
 	uint32_t key = (info.m_layer << 16) + (info.m_sub_layer << 8) + info.m_order;
 	Screen *scr = camera->m_scene->m_screen;

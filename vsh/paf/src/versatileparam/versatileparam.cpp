@@ -377,6 +377,7 @@ int32_t WidgetParam::Set()
 		if (it->id.m_idhash != 0)
 			m_widget->SetString(wstring(GetString(it->id)), it->index);
 	}
+#ifndef PAF_BUILD_2014
 	for (list<IndexedRef>::iterator it = m_alias_string_list.begin();
 	     it != m_alias_string_list.end(); ++it) {
 		if (it->id.m_idhash != 0)
@@ -384,6 +385,7 @@ int32_t WidgetParam::Set()
 						    ScePafToplevel_D8801CA4(m_plugin, it->id) : NULL),
 					    it->index);
 	}
+#endif
 	return 0;
 }
 
