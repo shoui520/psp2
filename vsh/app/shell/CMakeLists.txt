@@ -1,6 +1,14 @@
 enable_language(CXX)
 # SceShell (vs0:vsh/shell/shell.self), built by Sony with SNC 3.57 in C++: the system software's
 # shell, with its resident plugins linked in. Its paf imports take libpaf's link names.
+# Sony linked SceShell with psp2ld Identical Code Folding (--icf), collapsing identical C++
+# destructors, no-op callbacks, mutex/memory helpers and template instantiations to one address.
+# GNU ld 2.27 lacks --icf; use ld.lld when available.
+find_program(PSP2_LLD ld.lld)
+if(PSP2_LLD)
+	set(CMAKE_CXX_LINK_EXECUTABLE
+		"${PSP2_LLD} -q -T ${CMAKE_SOURCE_DIR}/cmake/prx.ld --gc-sections --icf=all --ignore-data-address-equality <OBJECTS> -o <TARGET>")
+endif()
 set(MODULE_IMPORT_NAMES vsh/paf/fw/3.65-CEX.exports.yml
 	vsh/app/common/src/dbutil/exports.yml
 	vsh/app/shell/src/livespace_db/exports.yml
@@ -803,18 +811,37 @@ set_source_files_properties(src/applauncher_plugin/src/applauncher_iconinfo_game
 # Static library and service TUs whose internal helpers Sony keeps out of line (e.g. libSceNpPolling,
 # libSceNpRt, libSceNpImps, musiccore IPC, MTP dispatch, LibWMS)
 set_source_files_properties(
+	calibration.cpp
 	media_detect_mgr.cpp
 	np_friend_importer.cpp
+	parental_control_mgr.cpp
 	popup_list.cpp
 	sfo.cpp
+	src/dbsetup/dbsetup_lib.cpp
 	src/dbsetup/dbrecovery_lib.cpp
+	src/esecron/src/esehttp.cpp
+	src/filelist/live2_cell_source.cpp
+	src/filelist/lv1status_activity2_visualizer.cpp
 	src/host_collabo/account_link_checker/bind_job.cpp
+	src/import_savedata_plugin/import_savedata_controller.cpp
 	src/liblocation/src/location_service/gps_emulator.cpp
 	src/livearea_plugin/src/livearea_feed.cpp
 	src/livearea_plugin/src/livearea_page_inner.cpp
+	src/mtp/src/mtp_server.cpp
 	src/mtp/src/mtp_service_dispatch.cpp
+	src/musiccore_plugin/src/musiccore_controller.cpp
 	src/musiccore_plugin/src/musiccore_decoder_manager.cpp
+	src/musiccore_plugin/src/musiccore_filter_base.cpp
 	src/musiccore_plugin/src/musiccore_ipc_service.cpp
+	src/musiccore_plugin/src/musiccore_main_thread.cpp
+	src/musiccore_plugin/src/musiccore_media_list.cpp
+	src/musiccore_plugin/src/musiccore_mp3_media.cpp
+	src/musiccore_plugin/src/musiccore_mp3_readers.cpp
+	src/musiccore_plugin/src/musiccore_mp4_boxes.cpp
+	src/musiccore_plugin/src/musiccore_plugin.cpp
+	src/musiccore_plugin/src/musiccore_queue.cpp
+	src/musiccore_plugin/src/musiccore_wav_at9_media.cpp
+	src/netctl/net_config.cpp
 	src/netctl/net_stun.cpp
 	src/netctl/net_upnp.cpp
 	src/netctl/net_wispr.cpp
@@ -822,19 +849,27 @@ set_source_files_properties(
 	src/netctl/netctl_icm.cpp
 	src/netctl/netctl_ipc_server.cpp
 	src/np/asm/np_asm_client_vsh.cpp
+	src/np/asm/np_service_base_url_cache.cpp
 	src/np/auth/np_auth_core.cpp
 	src/np/commerce2/np_commerce2_core.cpp
+	src/np/commerce2/np_commerce2_http.cpp
 	src/np/community/np_community_client.cpp
 	src/np/community/np_community_profile.cpp
+	src/np/community/np_community_xml.cpp
 	src/np/community/np_score_backend.cpp
 	src/np/community/np_score_ipc_server.cpp
 	src/np/community/np_tus_backend.cpp
 	src/np/community/np_tus_ipc_server.cpp
 	src/np/csla/np_csla.cpp
 	src/np/game_presence/np_game_presence.cpp
+	src/np/imps/np_imps_cache_core.cpp
+	src/np/imps/np_imps_cache_stores.cpp
 	src/np/imps/np_imps_core_ctl.cpp
 	src/np/imps/np_imps_core_notif.cpp
 	src/np/imps/np_imps_core_session.cpp
+	src/np/imps/np_imps_svc.cpp
+	src/np/imps/np_imps_svc_ctxmgr.cpp
+	src/np/imps/np_imps_svc_presence.cpp
 	src/np/imps/np_imps_util_mpstate.cpp
 	src/np/imps/np_imps_util_server.cpp
 	src/np/ipc/jga_msg_server.cpp
@@ -847,27 +882,57 @@ set_source_files_properties(
 	src/np/ipc/rt_netinfo_udpp2p.cpp
 	src/np/manager/np_manager_core.cpp
 	src/np/np_ipc2/np_ipc2_server.cpp
+	src/np/np_ipc2/np_ipc2_service_server.cpp
+	src/np/np_push_vsh/core/np_push_ctl.cpp
+	src/np/np_push_vsh/core/np_push_user_request.cpp
+	src/np/np_push_vsh/service/np_push_dispatcher.cpp
 	src/np/np_push_vsh/service/np_push_ipc_data.cpp
 	src/np/np_push_vsh/service/np_push_ipc_server.cpp
+	src/np/np_websocket/np_websocket_connection.cpp
 	src/np/np_websocket/np_websocket_net.cpp
+	src/np/np_websocket/util/np_websocket_util_stream.cpp
 	src/np/polling/np_polling.cpp
 	src/np/rt/np_rt_basic.cpp
 	src/np/rt/np_rt_core.cpp
 	src/np/rt/np_rt_ext.cpp
+	src/np/rt/np_rt_stanza.cpp
 	src/np/rt/np_rt_xmpp.cpp
 	src/np/sns_fb/np_sns_fb_lib.cpp
 	src/np/sns_fb/np_sns_fb_server.cpp
 	src/np/sns_fb/np_sns_fb_util.cpp
+	src/np/trophy/nptrophy_arbiter.cpp
+	src/np/trophy/nptrophy_data_files.cpp
+	src/np/trophy/nptrophy_http.cpp
+	src/np/trophy/nptrophy_io.cpp
+	src/np/trophy/nptrophy_net_client.cpp
+	src/np/trophy/nptrophy_runtime.cpp
+	src/np/trophy/nptrophy_service.cpp
+	src/np/trophy/nptrophy_sfm.cpp
+	src/np/trophy/nptrophy_storage.cpp
+	src/np/trophy/nptrophy_trp.cpp
+	src/nsx/nsx_clock_updater.cpp
 	src/nsx/nsx_whats_new.cpp
 	src/picture_file_creator/picture_encoder.cpp
+	src/picture_file_creator/picture_exif_writer.cpp
 	promoter_util_server.cpp
 	src/patch_chk_plugin/bgdl_patch_client.cpp
 	src/patch_chk_plugin/game_update.cpp
+	src/patch_chk_plugin/patch_chk_changeinfo.cpp
+	src/screenshot/server/screenshot_ipc_server.cpp
 	src/shell_svc/src/shell_svc_activity_client.cpp
 	src/shell_svc/src/shell_svc_telephony.cpp
 	src/sysupchk_plugin/sysupchk_np.cpp
+	src/sysupchk_plugin/sysupchk_plugin.cpp
+	src/telephony_plugin/src/common/src/tel_attribute_manager.cpp
+	src/telephony_plugin/src/common/src/tel_message_thread.cpp
+	src/telephony_plugin/src/common/src/tel_operator_profile.cpp
+	src/telephony_plugin/src/general/tel_general_logic_gui.cpp
 	src/telephony_plugin/src/general/tel_general_logic_mediator2.cpp
+	src/telephony_plugin/src/sms/tel_sms_logic_mediator.cpp
 	src/telephony_plugin/src/sms_pdu_transcoder/src/sms_pdu_transcoder/amsslib/LibWMS.cpp
+	src/teleport/teleport_app_helper.cpp
+	src/teleport/teleport_http_protocol.cpp
+	src/topmenu_plugin/src/debugger_check_job.cpp
 	src/topmenu_plugin/src/spawn_process_job.cpp
 	src/topmenu_plugin/src/top_window.cpp
 	src/trigger_mgr/trigger_mgr.cpp

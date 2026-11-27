@@ -10,6 +10,8 @@
 #include <plugin.h>
 #include <job/job.h>
 
+#include "mtp_server_internal.h"
+#include "../../../boot.h"
 #include "../../../plugins.h"
 #include "../../applauncher_plugin/src/applauncher.h"
 #include "../../livespace_db/lsdb_keys.h"
@@ -21,7 +23,6 @@ extern int sceClibPrintf(const char *fmt, ...);
 extern int SceLibMtp_4C1B7DBB(void);
 }
 
-extern bool shellBootIsLaunchRestricted(void);			/* 0x81000000 */
 static inline int shellIsBooting(void)
 {
 	return shellBootIsLaunchRestricted() ? 1 : 0;
@@ -61,18 +62,20 @@ public:
 	int m_result;						/* +240 */
 };
 
-class MtpEventHandler {
+class MtpEventHandler : public MtpEventListener {
 public:
 	MtpEventHandler();					/* 0x811C9A18 */
 	virtual ~MtpEventHandler();				/* 0x811C9A6C / 0x811C9A92 */
 
 	int SetCmaIconLock(SceUInt8 unlock);			/* 0x811C9ABE */
-	void OnDisconnected();					/* 0x811C9B86 */
-	void OnUsbError();					/* 0x811C9C92 */
-	void OnNoop();						/* 0x811C9CAA */
-	void OnSessionStarted();				/* 0x811C9CAC */
-	void OnConnected();					/* 0x811C9E02 */
-	void OnBusyEnd();					/* 0x811C9EE8 */
+	virtual void onMtpAvailable();				/* 0x811C9B86 */
+	virtual void onMtpConnectionTimeout();			/* 0x811C9C92 */
+	virtual void onMtpConnected();				/* 0x814098DC */
+	virtual void onMtpDisconnected();			/* 0x811C9CAC */
+	virtual void onMtpBusy();				/* 0x814098DC */
+	virtual void onUsbDetected();				/* 0x811C9E02 */
+	virtual void onHostReady();				/* 0x811C9EFA */
+	virtual void onCmaDeactivated();			/* 0x811C9EE8 */
 
 	SceUInt8 m_isConnected;					/* +4 */
 	SceUInt8 m_pendingClose;				/* +5 */
@@ -92,18 +95,14 @@ static bool isCurrentActiveApp(const char *titleId)
 }
 
 /* 0x811C99E4 */
-void mtpEventHandlerCreate(void)
+int shellMtpWiFiCreate(void)
 {
 	if (s_mtpEventHandler == NULL) {
 		s_mtpEventHandler = new MtpEventHandler();
 		if (s_mtpEventHandler != NULL)
-			mtpRegisterHandler(s_mtpEventHandler);
+			return mtpRegisterHandler(s_mtpEventHandler);
 	}
-}
-
-void shellMtpWiFiCreate(void)
-{
-	mtpEventHandlerCreate();
+	return 0;
 }
 
 /* 0x811C9A18 */
@@ -144,7 +143,7 @@ int MtpEventHandler::SetCmaIconLock(SceUInt8 unlock)
 }
 
 /* 0x811C9B86 */
-void MtpEventHandler::OnDisconnected()
+void MtpEventHandler::onMtpAvailable()
 {
 	if (m_pendingClose == 0 && m_isConnected == 0)
 		return;
@@ -178,7 +177,7 @@ void MtpEventHandler::OnDisconnected()
 }
 
 /* 0x811C9C92 */
-void MtpEventHandler::OnUsbError()
+void MtpEventHandler::onMtpConnectionTimeout()
 {
 	if (m_isConnected != 0 && shellIsBooting() == 0) {
 		mtpCloseBusyDialog();
@@ -186,17 +185,22 @@ void MtpEventHandler::OnUsbError()
 	}
 }
 
-/* 0x811C9CAA */
-void MtpEventHandler::OnNoop()
+/* 0x814098DC */
+void MtpEventHandler::onMtpConnected()
 {
 }
 
 /* 0x811C9CAC */
-void MtpEventHandler::OnSessionStarted()
+void MtpEventHandler::onMtpDisconnected()
 {
 	mtpCloseBusyDialog();
 	mtpCloseUsbErrorDialogs();
 	SetCmaIconLock(0);
+}
+
+/* 0x814098DC */
+void MtpEventHandler::onMtpBusy()
+{
 }
 
 /* 0x811C9CC2 */
@@ -226,7 +230,7 @@ bool toSkipOpenDialog(void)
 }
 
 /* 0x811C9E02 */
-void MtpEventHandler::OnConnected()
+void MtpEventHandler::onUsbDetected()
 {
 	m_isConnected = 0;
 	if (shellIsBooting() != 0 || toSkipOpenDialog())
@@ -260,7 +264,7 @@ void MtpEventHandler::OnConnected()
 }
 
 /* 0x811C9EE8 */
-void MtpEventHandler::OnBusyEnd()
+void MtpEventHandler::onCmaDeactivated()
 {
 	mtpCloseBusyDialog();
 	SetCmaIconLock(0);
@@ -274,7 +278,7 @@ static void mtpOnAccountLinkResult(const void *info, int result)
 }
 
 /* 0x811C9EFA */
-int mtpRegisterAccountLinkCallback(void)
+void MtpEventHandler::onHostReady()
 {
-	return mtpRegisterAccountLinkCb(mtpOnAccountLinkResult);
+	mtpRegisterAccountLinkCb(mtpOnAccountLinkResult);
 }

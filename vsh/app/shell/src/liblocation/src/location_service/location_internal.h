@@ -874,32 +874,33 @@ public:
 class DriverManager {
 public:
 	DriverManager();
-	virtual ~DriverManager();
 
 	int Init();
 	int SetGpsPower(unsigned char on);
 	int SetWifiPower(unsigned char on);
 	int Set3GPower(unsigned char on);
 	int SetEmuPower(unsigned char on);
-	int GpsOpen(SceUID xpsCbId);
-	int GpsStart(int mode);
-	int GpsStop();
-	int GpsClose();
-	int GpsGetData(GpsLocation *data, GpsSatellites *satellites);
-	int GpsGetSatellites(int *outStatus);
-	int GpsGetStatus();
-	int GpsSetParam(int param);
 	int SetEmuFile(const char *path);
-	int WifiScanStart(int scanType, int param);
-	int WifiGetScanInfo(int outBuf, int maxCount);
-	int WifiGetScanInfoByBssid(void *bssid, void *info);
-	int BbmcSubscribe(int cbId);
-	int BbmcUnsubscribe(int handle);
-	int BbmcClearEvent(int handle, int mask);
-	int BbmcResumeCallback(int handle);
-	int BbmcGetCellStart(int handle);
-	int BbmcGetCellDone(void *outInfo);
 	void SetAssistPower(unsigned char on);
+
+	virtual int GpsOpen(SceUID xpsCbId);
+	virtual int GpsStart(int mode);
+	virtual int GpsStop();
+	virtual int GpsClose();
+	virtual int GpsGetData(GpsLocation *data, GpsSatellites *satellites);
+	virtual int GpsGetSatellites(int *outStatus);
+	virtual int GpsGetStatus();
+	virtual int GpsSetParam(int param);
+	virtual int WifiScanStart(int scanType, int param);
+	virtual int WifiGetScanInfo(int outBuf, int maxCount);
+	virtual int WifiGetScanInfoByBssid(void *bssid, void *info);
+	virtual int BbmcSubscribe(int cbId);
+	virtual int BbmcUnsubscribe(int handle);
+	virtual int BbmcClearEvent(int handle, int mask);
+	virtual int BbmcResumeCallback(int handle);
+	virtual int BbmcGetCellStart(int handle);
+	virtual int BbmcGetCellDone(void *outInfo);
+	virtual ~DriverManager();
 
 	static int GpsCallback(int notifyId, int notifyCount, int notifyArg, void *common);
 
