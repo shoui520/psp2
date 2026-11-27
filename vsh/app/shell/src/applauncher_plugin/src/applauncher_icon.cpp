@@ -14,6 +14,10 @@
 #include <std/vector>
 #include <versatileparam/idparam.h>
 #include <common/shared_ptr.h>
+#if !defined(FW_TYPE_CEX)
+#include <common/main_thread_call_list.h>
+#include <std/math.h>
+#endif
 #include <common/char_encoding.h>
 #include <cache/cache_image.h>
 #include <widget/core/widget.h>
@@ -34,6 +38,9 @@ using namespace paf;
 
 /* the frame texture an icon's widget shows its image in */
 #define APPLAUNCHER_ICON_FRAME_TEXTURE	0xAFDEF9D0
+#if !defined(FW_TYPE_CEX)
+#define APPLAUNCHER_ICON_APPHOME_FALLBACK_TEXTURE	0xAFDF1D10u
+#endif
 /* the power icon's label */
 #define APPLAUNCHER_ICON_MSG_POWER	0xC75A2636
 
@@ -80,6 +87,9 @@ static bool s_edgeArmed = false;
 
 static common::SharedPtr<File> applauncherFolderImageOpen(const char *path, void *userdata,
 							   int32_t *error);
+#if !defined(FW_TYPE_CEX)
+static void applauncherIconAppHomeUpdate(void *arg);
+#endif
 
 /* (0x810CF650) */
 int applauncherIconIsSystem(const LsdbIconPtr *icon)
@@ -260,6 +270,10 @@ ApplauncherIcon::ApplauncherIcon(Plugin *plugin, const LsdbIconPtr &data)
 	m_label = applauncherIconUtf16(m_data->title);
 	shellThemeGetIconPath(m_data->titleId.c_str(), &m_data->iconPath, m_data->type);
 	Update(false);
+#if !defined(FW_TYPE_CEX)
+	if (m_data->titleId == string("NPXS10998"))
+		common::MainThreadCallList::Register(applauncherIconAppHomeUpdate, this);
+#endif
 	if (shellStartupGetIduMode() != 0 && applauncherIconIsSystem(&data) != 0)
 		m_hidden = true;
 }
@@ -1032,6 +1046,10 @@ void applauncherIconCancelDrag(void)
 /* (0x810D1E0A) */
 ApplauncherIcon::~ApplauncherIcon()
 {
+#if !defined(FW_TYPE_CEX)
+	if (m_data->titleId == string("NPXS10998"))
+		common::MainThreadCallList::Unregister(applauncherIconAppHomeUpdate, this);
+#endif
 	if (m_icon != NULL) {
 		applauncherIconPoolFree(m_icon, false);
 		m_icon = NULL;
@@ -1102,3 +1120,44 @@ void ApplauncherIcon::RequestData()
 {
 	applauncherPagesRequestData(m_data->titleId);
 }
+
+#if !defined(FW_TYPE_CEX)
+/* (0x810CCCB4, TOOL) */
+void ApplauncherIcon::SetLabel(const wstring &label)
+{
+	m_label = label;
+	if (m_icon != NULL)
+		applauncherIconWidgetSetLabel(m_icon, m_label);
+}
+
+/* (0x810CF17E, TOOL) */
+static void applauncherIconAppHomeUpdate(void *arg)
+{
+	ApplauncherIcon *icon = static_cast<ApplauncherIcon *>(arg);
+
+	if (icon->m_page == NULL || icon->m_page->GetWidget() == NULL)
+		return;
+
+	math::v4 slotPos = icon->GetSlotPos();
+	ui::Widget *pageWidget = icon->m_page->GetWidget();
+	math::v4 pagePos = pageWidget->GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+	math::v4 screenPos = slotPos + pagePos;
+
+	if (__builtin_fabsf(screenPos.extract_x()) >= 549.0f ||
+	    __builtin_fabsf(screenPos.extract_y()) >= 341.0f) {
+		if (icon->m_appHomeJob.get() != NULL) {
+			icon->m_appHomeJob.reset();
+			icon->m_image.clear();
+		}
+	} else if (icon->m_appHomeJob.get() == NULL) {
+		if (icon->m_icon != NULL) {
+			icon->m_icon->m_widget->SetDrawObjMaskBit(&icon->m_image, 0, 0);
+			icon->m_icon->m_widget->SetTexture(
+				g_applauncherPlugin->GetTexture(
+					IDParam(APPLAUNCHER_ICON_APPHOME_FALLBACK_TEXTURE)),
+				0, 0);
+		}
+		icon->m_appHomeJob = applauncherAppHomeCheckJobStart();
+	}
+}
+#endif

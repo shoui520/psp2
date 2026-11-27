@@ -1007,3 +1007,15 @@ void TopTabAppData::RequestCancelLaunch()
 {
 	topmenuAppProcessCancel(&m_process);
 }
+
+#if !defined(FW_TYPE_CEX)
+/* 0x81289AC2 (TOOL) */
+void TopTabAppData::SetTitleId(const char *titleId)
+{
+	SceInt64 appType = SceLsdb_9D27A87D(&m_process.m_appInfo);
+	if (appType == 2 || appType == 3) {
+		m_titleId.assign(titleId, titleId != NULL ? sce_paf_strlen(titleId) : 0);
+		m_process.SetTitleId(titleId);
+	}
+}
+#endif

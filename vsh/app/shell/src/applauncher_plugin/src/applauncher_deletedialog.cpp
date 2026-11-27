@@ -9,6 +9,9 @@
 #include <stddef.h>
 #include <scetypes.h>
 #include <appmgr.h>
+#if !defined(FW_TYPE_CEX)
+#include <appmgr/appmgr.h>
+#endif
 #include <plugin.h>
 #include <std/string>
 #include <std/string.h>
@@ -36,6 +39,31 @@ using namespace paf;
 
 /* the dialogs' priority over the home */
 #define APPLAUNCHER_DELETE_PRIORITY		40
+
+#if !defined(FW_TYPE_CEX)
+enum {
+	APPLAUNCHER_DELETE_MODE_ALL		= 0,
+	APPLAUNCHER_DELETE_MODE_PATCH		= 1,
+	APPLAUNCHER_DELETE_MODE_ADDCONT		= 2,
+	APPLAUNCHER_DELETE_MODE_SAVEDATA	= 3,
+	APPLAUNCHER_DELETE_MODE_TROPHY		= 4,
+	APPLAUNCHER_DELETE_MODE_COREDUMP	= 5,
+};
+
+#define GAME_PLUGIN_FUNC_PLUS_SD_DELETE_USER	41
+#define GAME_PLUGIN_FUNC_PLUS_APP_STATUS_USER	43
+
+#define APPLAUNCHER_COREDUMP_DIALOG_SOUND_ID	0xE0D9F918u
+#define APPLAUNCHER_COREDUMP_TITLE_ID		0x57F9BFC0u
+#define APPLAUNCHER_COREDUMP_ERR_NOT_RUNNING	((int)0x80802012)
+#define APPLAUNCHER_SAVEDATA_ERR_OWNER_MISMATCH	((int)0x80800004)
+#define APPLAUNCHER_RIF_ERR_NO_LICENSE		((int)0x80800018)
+#define APPLAUNCHER_RIF_ERR_EXPIRED		((int)0x80800011)
+
+extern "C" int vshCoredumpCreateDump(SceUID pid, const char *titleId, SceSize titleIdLen,
+				     const char *title, SceSize titleLen, int appVer,
+				     char *outPath, SceSize outPathSize);
+#endif
 
 /* the confirm dialog's contents part, and its widgets: the icon's image, its name, the message
    and the busy indicator */
@@ -160,8 +188,8 @@ public:
 	int m_unusedState;
 	const LsdbAppInfoPtr *m_appInfo;	/* the context menu's, kept by it */
 	int m_value;			/* the context menu's */
-	int m_unusedIndex;
-	wstring m_unusedText;
+	SceUID m_targetPid;		/* target process ID for core dump (TOOL/DEBUGGER) */
+	wstring m_coreFilePath;		/* generated core file path (TOOL/DEBUGGER) */
 	bool m_umassFiles;		/* ux0:umass holds files of the application */
 };
 
@@ -175,6 +203,16 @@ static int applauncherDeleteDialogCheck(ApplauncherDeleteDialogJob *job, void *a
 static void applauncherDeleteDialogOnChecked(int result, void *arg);
 static int applauncherDeleteDialogDelete(ApplauncherDeleteDialogJob *job, void *arg);
 static void applauncherDeleteDialogOnDeleted(int result, void *arg);
+#if !defined(FW_TYPE_CEX)
+static int applauncherDeleteDialogCheckCore(ApplauncherDeleteDialogJob *job, void *arg);
+static int applauncherDeleteDialogCreateCore(ApplauncherDeleteDialogJob *job, void *arg);
+static void applauncherDeleteDialogOnCoreCreated(int result, void *arg);
+static void applauncherDeleteDialogOnCoreDoneClose(SceInt32 value, SceInt32 button, void *arg);
+static void applauncherDeleteDialogShowPartialConfirm(ApplauncherDeleteDialog *dialog,
+						      SceUInt32 headingId, SceUInt32 textId);
+static void applauncherDeleteDialogShowCoreConfirm(ApplauncherDeleteDialog *dialog);
+static void applauncherDeleteDialogShowCoreDone(ApplauncherDeleteDialog *dialog);
+#endif
 
 /* the widget of the parent with the ID, when it is of the type */
 #define APPLAUNCHER_DELETE_FIND(parent, type, id)					\
@@ -262,9 +300,16 @@ static void applauncherDeleteDialogOnConfirm(SceInt32 value, SceInt32 button, vo
 		if (queue == NULL)
 			break;
 
+		ApplauncherDeleteDialogJob::RunFunc runFn = applauncherDeleteDialogDelete;
+		ApplauncherDeleteDialogJob::FinishFunc finishFn = applauncherDeleteDialogOnDeleted;
+#if !defined(FW_TYPE_CEX)
+		if (dialog->m_value == APPLAUNCHER_DELETE_MODE_COREDUMP) {
+			runFn = applauncherDeleteDialogCreateCore;
+			finishFn = applauncherDeleteDialogOnCoreCreated;
+		}
+#endif
 		dialog->m_job = common::SharedPtr<job::JobItem>(new ApplauncherDeleteDialogJob(
-			"DeleteDialog", dialog, applauncherDeleteDialogDelete,
-			applauncherDeleteDialogOnDeleted));
+			"DeleteDialog", dialog, runFn, finishFn));
 		if (dialog->m_job.get() == NULL)
 			break;
 		if (queue->Enqueue(dialog->m_job) < 0)
@@ -289,6 +334,23 @@ static void applauncherDeleteDialogShowError(ApplauncherDeleteDialog *dialog, in
 
 	param.priority = APPLAUNCHER_DELETE_PRIORITY;
 	param.type = error;
+#if !defined(FW_TYPE_CEX)
+	if (dialog->m_value == APPLAUNCHER_DELETE_MODE_COREDUMP) {
+		param.defaultButton = 1;
+		param.cancelButton = 0;
+		if (error == APPLAUNCHER_COREDUMP_ERR_NOT_RUNNING)
+			param.title.format = L"Could not generate core file.\n"
+					     L"This application is not running.";
+		else
+			param.title.format = L"Could not generate core file.";
+	} else if (dialog->m_value == APPLAUNCHER_DELETE_MODE_SAVEDATA &&
+		   error == APPLAUNCHER_SAVEDATA_ERR_OWNER_MISMATCH) {
+		param.defaultButton = 1;
+		param.cancelButton = 0;
+		param.title.format = L"You cannot perform this operation with your account.\n"
+				     L"The owner of this content is another player.";
+	}
+#endif
 
 	int ret = SceCommonGuiDialog_A6422883(g_applauncherHome->m_plugin, &param,
 		new ApplauncherDialogHandler(applauncherDeleteDialogOnClose, dialog),
@@ -306,7 +368,7 @@ ApplauncherDeleteDialog::ApplauncherDeleteDialog(const common::SharedPtr<Applaun
 						 void *context, int value)
 	: m_installed(false), m_unusedFlag(false), m_hold(NULL), m_busy(NULL), m_job(), m_icon(icon),
 	  m_dialogId(-1), m_unusedState(0), m_appInfo((const LsdbAppInfoPtr *)context), m_value(value),
-	  m_unusedIndex(-1), m_umassFiles(false)
+	  m_targetPid(-1), m_umassFiles(false)
 {
 	g_applauncherDeleteDialog = this;
 
@@ -316,9 +378,14 @@ ApplauncherDeleteDialog::ApplauncherDeleteDialog(const common::SharedPtr<Applaun
 	m_hold = ((ApplauncherTopmenuHold *(*)(int))topmenu->func[TOPMENU_PLUGIN_FUNC_HOLD])(0);
 
 	int ret;
+	ApplauncherDeleteDialogJob::RunFunc checkFn = applauncherDeleteDialogCheck;
+#if !defined(FW_TYPE_CEX)
+	if (m_value == APPLAUNCHER_DELETE_MODE_COREDUMP)
+		checkFn = applauncherDeleteDialogCheckCore;
+#endif
 
 	m_job = common::SharedPtr<job::JobItem>(new ApplauncherDeleteDialogJob("DeleteDialog",
-		this, applauncherDeleteDialogCheck, applauncherDeleteDialogOnChecked));
+		this, checkFn, applauncherDeleteDialogOnChecked));
 	if (m_job.get() != NULL) {
 		ret = job::JobQueue::default_queue->Enqueue(m_job);
 		if (ret >= 0)
@@ -390,6 +457,7 @@ static __attribute__((noinline)) int applauncherDeleteDialogDeleteApp(
 
 	string titleId(applauncherDeleteDialogText(it));
 
+#if defined(FW_TYPE_CEX)
 	if (dialog->m_value == 0) {
 		int ret = ((int (*)(const char *, int, int, int, int))
 			   game->func[GAME_PLUGIN_FUNC_APP_DELETE_PART])(titleId.c_str(), 0, 0, 0, 0);
@@ -404,6 +472,47 @@ static __attribute__((noinline)) int applauncherDeleteDialogDeleteApp(
 		return 0;
 	}
 	return APPLAUNCHER_ERROR_DELETE_VALUE;
+#else
+	int partKind;
+	switch (dialog->m_value) {
+	case APPLAUNCHER_DELETE_MODE_ALL:
+		partKind = 0;
+		break;
+	case APPLAUNCHER_DELETE_MODE_PATCH:
+		partKind = 1;
+		break;
+	case APPLAUNCHER_DELETE_MODE_ADDCONT:
+		partKind = 2;
+		break;
+	case APPLAUNCHER_DELETE_MODE_SAVEDATA:
+		partKind = 3;
+		break;
+	case APPLAUNCHER_DELETE_MODE_TROPHY:
+		partKind = 4;
+		break;
+	default:
+		return APPLAUNCHER_ERROR_DELETE_VALUE;
+	}
+
+	int ret = ((int (*)(const char *, int, int, int, int))
+		   game->func[GAME_PLUGIN_FUNC_APP_DELETE_PART])(
+		titleId.c_str(), partKind, 0, 0, 0);
+	if (ret < 0)
+		return ret;
+
+	if (partKind == 0 || partKind == 2) {
+		((int (*)(const char *))game->func[GAME_PLUGIN_FUNC_PLUS_SD_DELETE])(
+			titleId.c_str());
+		((int (*)(const char *, SceUInt8))game->func[GAME_PLUGIN_FUNC_PLUS_APP_STATUS])(
+			titleId.c_str(), 0);
+	} else if (partKind == 1) {
+		((int (*)(const char *))game->func[GAME_PLUGIN_FUNC_PLUS_SD_DELETE_USER])(
+			titleId.c_str());
+		((int (*)(const char *, SceUInt8))
+			 game->func[GAME_PLUGIN_FUNC_PLUS_APP_STATUS_USER])(titleId.c_str(), 0);
+	}
+	return 0;
+#endif
 }
 
 /* the path holds the text (Sony's find with the text's length) */
@@ -660,6 +769,19 @@ static int applauncherDeleteDialogCheck(ApplauncherDeleteDialogJob *job, void *a
 			return ret;
 	}
 
+#if !defined(FW_TYPE_CEX)
+	if (sce_paf_strncmp(path.c_str(), "gro0:", sce_paf_strlen("gro0:")) != 0 &&
+	    dialog->m_value == APPLAUNCHER_DELETE_MODE_SAVEDATA) {
+		SceUInt8 rifInfo[0x70];
+
+		sce_paf_memset(rifInfo, 0, sizeof(rifInfo));
+		int rifRet = sceAppMgrCheckRifGD(path.c_str(), rifInfo);
+		if (rifRet != 0 && rifRet != APPLAUNCHER_RIF_ERR_NO_LICENSE &&
+		    rifRet != APPLAUNCHER_RIF_ERR_EXPIRED)
+			return rifRet;
+	}
+#endif
+
 	LocalFileStat stat;
 
 	dialog->m_installed = false;
@@ -677,10 +799,36 @@ static void applauncherDeleteDialogOnChecked(int result, void *arg)
 	if (result == APPLAUNCHER_ERROR_CANCELED)
 		return;
 
-	if (result < 0)
+	if (result < 0) {
 		applauncherDeleteDialogShowError(dialog, &dialog->m_dialogId, result);
-	else if (dialog->m_value == 0)
+		return;
+	}
+
+#if defined(FW_TYPE_CEX)
+	if (dialog->m_value == 0)
 		applauncherDeleteDialogShowConfirm(dialog);
+#else
+	switch (dialog->m_value) {
+	case APPLAUNCHER_DELETE_MODE_ALL:
+		applauncherDeleteDialogShowConfirm(dialog);
+		break;
+	case APPLAUNCHER_DELETE_MODE_PATCH:
+		applauncherDeleteDialogShowPartialConfirm(dialog, 0xDA081F12u, 0x6E27AEA7u);
+		break;
+	case APPLAUNCHER_DELETE_MODE_ADDCONT:
+		applauncherDeleteDialogShowPartialConfirm(dialog, 0x7EE4CDFEu, 0xD37AC965u);
+		break;
+	case APPLAUNCHER_DELETE_MODE_SAVEDATA:
+		applauncherDeleteDialogShowPartialConfirm(dialog, 0xB06B97ABu, 0xF6F78373u);
+		break;
+	case APPLAUNCHER_DELETE_MODE_TROPHY:
+		applauncherDeleteDialogShowPartialConfirm(dialog, 0x65053379u, 0xE20B7EBEu);
+		break;
+	case APPLAUNCHER_DELETE_MODE_COREDUMP:
+		applauncherDeleteDialogShowCoreConfirm(dialog);
+		break;
+	}
+#endif
 }
 
 /* an application closed: AppMgr asked every half second for a minute */
@@ -783,3 +931,173 @@ static void applauncherDeleteDialogOnClose(SceInt32 value, SceInt32 button, void
 	}
 	applauncherDeleteDialogEndEdit();
 }
+
+#if !defined(FW_TYPE_CEX)
+/* (0x810D507C, TOOL) */
+static void applauncherDeleteDialogShowPartialConfirm(ApplauncherDeleteDialog *dialog,
+						      SceUInt32 headingId, SceUInt32 textId)
+{
+	const wchar_t *headingStr =
+		g_applauncherHome->m_plugin->GetString(IDParam(s_empty_name, headingId));
+	wstring heading(headingStr != NULL ? headingStr : L"");
+	const wchar_t *textStr =
+		g_applauncherHome->m_plugin->GetString(IDParam(s_empty_name, textId));
+	wstring text(textStr != NULL ? textStr : L"");
+
+	int ret = SceCommonGuiDialog_FA31832E(
+		g_applauncherHome->m_plugin, heading, text, &SceCommonGuiDialog_92752DE2,
+		new ApplauncherDialogHandler(applauncherDeleteDialogOnConfirm, dialog));
+	if (ret >= 0) {
+		dialog->m_dialogId = ret;
+	} else {
+		dialog->m_dialogId = -1;
+		applauncherDeleteDialogShowError(dialog, &dialog->m_dialogId, ret);
+	}
+}
+
+/* (0x810D5816, TOOL) */
+static void applauncherDeleteDialogShowCoreConfirm(ApplauncherDeleteDialog *dialog)
+{
+	CommonGuiLayoutDialogParam param;
+
+	param.resourcePlugin = g_applauncherHome->m_plugin;
+	param.soundId = APPLAUNCHER_COREDUMP_DIALOG_SOUND_ID;
+	param.layout = SceCommonGuiDialog_92752DE2;
+
+	const wchar_t *headingStr = g_applauncherHome->m_plugin->GetString(
+		IDParam(s_empty_name, APPLAUNCHER_COREDUMP_TITLE_ID));
+	if (headingStr != NULL)
+		param.heading = headingStr;
+	param.text = L"Do you want to generate core file for this application?";
+	param.handler = new ApplauncherDialogHandler(applauncherDeleteDialogOnConfirm, dialog);
+
+	int ret = SceCommonGuiDialog_CCFCD9A6(&param);
+	if (ret >= 0) {
+		dialog->m_dialogId = ret;
+	} else {
+		dialog->m_dialogId = -1;
+		applauncherDeleteDialogShowError(dialog, &dialog->m_dialogId, ret);
+	}
+}
+
+/* (0x810D5E16, TOOL) */
+static void applauncherDeleteDialogShowCoreDone(ApplauncherDeleteDialog *dialog)
+{
+	CommonGuiLayoutDialogParam param;
+
+	param.resourcePlugin = g_applauncherHome->m_plugin;
+	param.soundId = APPLAUNCHER_COREDUMP_DIALOG_SOUND_ID;
+
+	const wchar_t *headingStr = g_applauncherHome->m_plugin->GetString(
+		IDParam(s_empty_name, APPLAUNCHER_COREDUMP_TITLE_ID));
+	if (headingStr != NULL)
+		param.heading = headingStr;
+	param.text = wstring(L"Generated Core File:\n") + dialog->m_coreFilePath;
+	param.handler = new ApplauncherDialogHandler(applauncherDeleteDialogOnCoreDoneClose, dialog);
+
+	int ret = SceCommonGuiDialog_CCFCD9A6(&param);
+	if (ret >= 0) {
+		dialog->m_dialogId = ret;
+	} else {
+		dialog->m_dialogId = -1;
+		applauncherDeleteDialogShowError(dialog, &dialog->m_dialogId, ret);
+	}
+}
+
+/* (0x810D6070, TOOL) */
+static int applauncherDeleteDialogCheckCore(ApplauncherDeleteDialogJob *job, void *arg)
+{
+	ApplauncherDeleteDialog *dialog = (ApplauncherDeleteDialog *)arg;
+	(void)job;
+
+	LsdbAppInfo::iterator it = (*dialog->m_appInfo)->find(LSDB_KEY_TITLE_ID);
+	if (it == (*dialog->m_appInfo)->end())
+		return APPLAUNCHER_ERROR_NO_TITLE;
+
+	string titleId(applauncherDeleteDialogText(it));
+	SceAppMgrAppStatus status;
+	int ret = sceAppMgrGetStatusByName(titleId.c_str(), &status);
+	if (ret < 0)
+		return ret;
+
+	dialog->m_targetPid = status.processId;
+	return 0;
+}
+
+/* (0x810D6152, TOOL) */
+static int applauncherDeleteDialogCreateCore(ApplauncherDeleteDialogJob *job, void *arg)
+{
+	ApplauncherDeleteDialog *dialog = (ApplauncherDeleteDialog *)arg;
+	(void)job;
+
+	LsdbAppInfo::iterator end = (*dialog->m_appInfo)->end();
+	LsdbAppInfo::iterator titleIdIt = (*dialog->m_appInfo)->find(LSDB_KEY_TITLE_ID);
+	if (titleIdIt == end)
+		return APPLAUNCHER_ERROR_NO_TITLE;
+	string titleId(applauncherDeleteDialogText(titleIdIt));
+
+	LsdbAppInfo::iterator titleIt = (*dialog->m_appInfo)->find(LSDB_KEY_TITLE);
+	if (titleIt == end)
+		return APPLAUNCHER_ERROR_NO_TITLE;
+	string title(applauncherDeleteDialogText(titleIt));
+
+	LsdbAppInfo::iterator verIt = (*dialog->m_appInfo)->find(LSDB_KEY_APP_VER);
+	if (verIt == end)
+		return APPLAUNCHER_ERROR_NO_TITLE;
+	string appVerStr(applauncherDeleteDialogText(verIt));
+
+	int appVer = 0;
+	int place = 1;
+	for (int pos = (int)appVerStr.length() - 1; pos >= 0; --pos) {
+		char ch = appVerStr.c_str()[pos];
+		if (ch != '.') {
+			appVer += (ch - '0') * place;
+			place *= 10;
+		}
+	}
+
+	char outPath[512];
+	sce_paf_memset(outPath, 0, sizeof(outPath));
+	int ret = vshCoredumpCreateDump(dialog->m_targetPid, titleId.c_str(), titleId.length(),
+					title.c_str(), title.length(), appVer, outPath,
+					sizeof(outPath));
+	if (ret < 0)
+		return ret;
+
+	string utf8Path(outPath);
+	common::Utf8ToUtf16(utf8Path, &dialog->m_coreFilePath, 8);
+	return 0;
+}
+
+/* (0x810D648E, TOOL) */
+static void applauncherDeleteDialogOnCoreCreated(int result, void *arg)
+{
+	ApplauncherDeleteDialog *dialog = (ApplauncherDeleteDialog *)arg;
+
+	if (dialog->m_dialogId != -1) {
+		SceCommonGuiDialog_BC311DC0(dialog->m_dialogId);
+		dialog->m_dialogId = -1;
+	}
+	if (result == APPLAUNCHER_ERROR_CANCELED)
+		return;
+	if (result >= 0)
+		applauncherDeleteDialogShowCoreDone(dialog);
+	else
+		applauncherDeleteDialogShowError(dialog, &dialog->m_dialogId, result);
+}
+
+/* (0x810D64CC, TOOL) */
+static void applauncherDeleteDialogOnCoreDoneClose(SceInt32 value, SceInt32 button, void *arg)
+{
+	ApplauncherDeleteDialog *dialog = (ApplauncherDeleteDialog *)arg;
+
+	if (value != -1) {
+		SceCommonGuiDialog_BC311DC0(value);
+		dialog->m_dialogId = -1;
+	}
+	if (button == APPLAUNCHER_DELETE_BUTTON_OK)
+		applauncherDeleteDialogEndEdit();
+	else
+		applauncherDeleteDialogShowError(dialog, &dialog->m_dialogId, 0);
+}
+#endif

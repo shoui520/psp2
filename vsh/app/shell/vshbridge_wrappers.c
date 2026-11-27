@@ -52,7 +52,20 @@ int _vshNpDrmEbootSigVerify(const char *ebootPath, const void *signature,
 int _vshNpDrmPspEbootVerify(const char *ebootPath, const void *signature,
 			    VshVerifyOutArgs *args);
 #else
+typedef struct VshCoredumpCreateArgs {
+	const char *title;
+	SceSize titleLen;
+	int appVer;
+	char *outPath;
+	SceSize outPathSize;
+	SceSize titleIdLenDup;
+	SceSize titleLenDup;
+	SceSize outPathSizeDup;
+} VshCoredumpCreateArgs;
+
 int _vshAppMgrCloudDataSrcMount(int mountType, const void *titleId, void *mountPoint);
+int _vshCoredumpCreateDump(SceUID pid, const char *titleId, SceSize titleIdLen,
+			   const VshCoredumpCreateArgs *args);
 #endif
 int _vshSblAuthMgrVerifySpsfo(const char *path, void *sfo, SceSize size,
 			      VshVerifyOutArgs *args);
@@ -188,6 +201,23 @@ int vshNpDrmPspEbootVerify(const char *ebootPath, const void *signature)
 int vshAppMgrCloudDataSrcMount(int mountType, const void *titleId, void *mountPoint)
 {
 	return _vshAppMgrCloudDataSrcMount(mountType, titleId, mountPoint);
+}
+
+/* 0x81409680 (TOOL) */
+int vshCoredumpCreateDump(SceUID pid, const char *titleId, SceSize titleIdLen, const char *title,
+			  SceSize titleLen, int appVer, char *outPath, SceSize outPathSize)
+{
+	VshCoredumpCreateArgs args;
+
+	args.title = title;
+	args.titleLen = titleLen;
+	args.appVer = appVer;
+	args.outPath = outPath;
+	args.outPathSize = outPathSize;
+	args.titleIdLenDup = titleIdLen;
+	args.titleLenDup = titleLen;
+	args.outPathSizeDup = outPathSize;
+	return _vshCoredumpCreateDump(pid, titleId, titleIdLen, &args);
 }
 #endif
 

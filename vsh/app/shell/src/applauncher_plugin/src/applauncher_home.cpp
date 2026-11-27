@@ -36,13 +36,22 @@
 #include "../../../shell.h"
 #include "../../../plugins.h"
 #include "../../../theme.h"
+#if !defined(FW_TYPE_CEX)
+#include <common/char_encoding.h>
+#include "../../../../game/game_plugin/game_plugin.h"
+#endif
 #include "applauncher.h"
 #include "applauncher_home.h"
 
 using namespace paf;
 
 #if !defined(FW_TYPE_CEX)
-extern "C" void ScePafAutoTestTty_9E10E873(int32_t type, const char *format, ...);
+extern "C" {
+void ScePafAutoTestTty_9E10E873(int32_t type, const char *format, ...);
+const char *sceLsdbGetStitle(const LsdbAppInfoPtr *app);
+const char *sceLsdbGetDiscId(const LsdbAppInfoPtr *app);
+const char *SceLsdb_E26FC9E8(const LsdbAppInfoPtr *app);
+}
 #endif
 
 /* the wave the home shows behind its pages */
@@ -277,7 +286,11 @@ ApplauncherHome::ApplauncherHome(Plugin *plugin)
 	  m_background(NULL), m_scrollView(NULL), m_foreground(NULL), m_editBar(NULL),
 	  m_editRequest(0), m_editState(0), m_indicator(NULL), m_ready(false), m_mode(0),
 	  m_fadeTime(0.0f), m_overlay(NULL), m_waitDialog(-1), m_imageCached(false),
-	  m_dragPos(-10000.0f, -10000.0f), m_waitingAppCount(0), m_noticePage(NULL), m_appCount(0),
+	  m_dragPos(-10000.0f, -10000.0f), m_waitingAppCount(0),
+#if !defined(FW_TYPE_CEX)
+	  m_appHomeChecked(false),
+#endif
+	  m_noticePage(NULL), m_appCount(0),
 	  m_folderCount(0), m_viewHeld(false), m_waveUpdated(false), m_dropIndex(-1),
 	  m_dropPage(-1), m_appPage(NULL), m_appIconTime(0.0f), m_lsdbListener(NULL)
 {
@@ -2952,6 +2965,12 @@ void ApplauncherHome::Update()
 		shellBootScreenClose();
 		((void (*)(void))m_topmenu->func[TOPMENU_PLUGIN_FUNC_HOME_STARTED])();
 		shellEventServerSend(0, NULL, 0);
+#if !defined(FW_TYPE_CEX)
+		if (!m_appHomeChecked) {
+			applauncherAppHomeCheckJobStart();
+			m_appHomeChecked = true;
+		}
+#endif
 		applauncherPagesSetStarted();
 		if (sceKernelCheckDipsw(185)) {
 			ImposePluginInterface *impose = (ImposePluginInterface *)
@@ -3028,6 +3047,134 @@ void applauncherHomeOnRefreshThemeUI(void *data)
 {
 	applauncherHomeApplyTheme();
 }
+
+#if !defined(FW_TYPE_CEX)
+namespace {
+
+typedef int (*GamePluginSfoLoadFunc)(const char *sfoPath, LsdbAppInfoPtr *outInfo);
+
+class AppHomeCheckJob : public job::JobItem {
+public:
+	/* (0x810C9164, TOOL) */
+	AppHomeCheckJob()
+		: job::JobItem("AppHomeCheckJob", NULL),
+		  m_sfoInfo(new LsdbAppInfo()),
+		  m_sfoResult(-1)
+	{
+	}
+
+	/* (0x810C91F6 / 0x810C9260, TOOL) */
+	virtual ~AppHomeCheckJob()
+	{
+	}
+
+	/* (0x810C9270, TOOL) */
+	virtual int32_t Run()
+	{
+		GamePluginInterface *game =
+			(GamePluginInterface *)applauncherPluginGetInterface("game_plugin", 1);
+		GamePluginSfoLoadFunc sfoLoad =
+			reinterpret_cast<GamePluginSfoLoadFunc>(game->func[15]);
+		char path[2048];
+
+		sce_paf_snprintf(path, sizeof(path), "host0:app");
+		if (Dir::IsExist(path)) {
+			m_sfoResult = sfoLoad("host0:app/sce_sys/param.sfo", &m_sfoInfo);
+			return 1;
+		}
+		sce_paf_snprintf(path, sizeof(path), "sd0:app");
+		if (Dir::IsExist(path)) {
+			m_sfoResult = sfoLoad("sd0:app/sce_sys/param.sfo", &m_sfoInfo);
+			return 2;
+		}
+		sce_paf_snprintf(path, sizeof(path), "ux0:data/app");
+		if (Dir::IsExist(path)) {
+			m_sfoResult = sfoLoad("ux0:data/app/sce_sys/param.sfo", &m_sfoInfo);
+			return 3;
+		}
+		return 0;
+	}
+
+	/* (0x810C934A, TOOL) */
+	virtual void Finish(int32_t result)
+	{
+		if (m_sfoResult != 0) {
+			applauncherHomeUpdateAppHome(result, NULL, NULL, NULL);
+			return;
+		}
+		const char *stitle = sceLsdbGetStitle(&m_sfoInfo);
+		const char *discId = sceLsdbGetDiscId(&m_sfoInfo);
+		const char *npCommId = SceLsdb_E26FC9E8(&m_sfoInfo);
+		applauncherHomeUpdateAppHome(result, stitle, discId, npCommId);
+	}
+
+	LsdbAppInfoPtr m_sfoInfo;	/* +0x1C */
+	int m_sfoResult;		/* +0x24 */
+};
+
+typedef char AppHomeCheckJobSizeCheck[sizeof(AppHomeCheckJob) == 40 ? 1 : -1];
+
+} /* namespace */
+
+/* (0x810C938C, TOOL) */
+common::SharedPtr<job::JobItem> applauncherAppHomeCheckJobStart(void)
+{
+	common::SharedPtr<job::JobItem> job(new AppHomeCheckJob());
+
+	job::JobQueue::default_queue->Enqueue(job);
+	return job;
+}
+
+/* (0x810ABD8A, TOOL) */
+void applauncherHomeUpdateAppHome(int appHomeSource, const char *stitle, const char *discId,
+				  const char *npCommId)
+{
+	if (g_applauncherHome == NULL)
+		return;
+
+	((void (*)(int, const char *, const char *))
+		g_applauncherHome->m_topmenu->func[TOPMENU_PLUGIN_FUNC_SET_APP_HOME_INFO])(
+		appHomeSource, discId, npCommId);
+
+	common::SharedPtr<ApplauncherIcon> icon =
+		g_applauncherHome->FindIcon(string("NPXS10998"), NULL);
+	if (icon.get() == NULL)
+		return;
+
+	switch (appHomeSource) {
+	case 1:
+		icon->SetLabel(wstring(L"\x2605" L"APP_HOME\n(host)"));
+		icon->m_data->title = "\xE2\x98\x85" "APP_HOME\n(host)";
+		icon->m_data->iconPath = "host0:app/sce_sys/icon0.png";
+		break;
+	case 2:
+		icon->SetLabel(wstring(L"\x2605" L"APP_HOME\n(sd)"));
+		icon->m_data->title = "\xE2\x98\x85" "APP_HOME\n(sd)";
+		icon->m_data->iconPath = "sd0:app/sce_sys/icon0.png";
+		break;
+	case 3:
+		icon->SetLabel(wstring(L"\x2605" L"APP_HOME\n(ux)"));
+		icon->m_data->title = "\xE2\x98\x85" "APP_HOME\n(ux)";
+		icon->m_data->iconPath = "ux0:data/app/sce_sys/icon0.png";
+		break;
+	default:
+		icon->SetLabel(wstring(L"\x2605" L"APP_HOME"));
+		icon->m_data->title = "\xE2\x98\x85" "APP_HOME";
+		icon->m_data->iconPath = "host0:app/sce_sys/icon0.png";
+		break;
+	}
+
+	if (stitle != NULL) {
+		wstring wideTitle;
+		common::Utf8ToUtf16(string(stitle), &wideTitle, 0);
+		icon->SetLabel(wideTitle);
+		icon->m_data->title = stitle;
+	}
+
+	icon->m_data->type = 4;
+	icon->Reload();
+}
+#endif
 
 /* PLACEHOLDER name: a job's end, the semaphore given released (0x810B28B8) */
 void applauncherHomeOnJobDone(ApplauncherLsdbJob *job, void *data)

@@ -120,6 +120,9 @@ public:
 	/* PLACEHOLDER name: a step of the icon's drag over the pages (0 begun, 1 moved, 2 ended)
 	   with its widget, the page turned at an edge (0x810D0AB0) */
 	void UpdateDrag(int phase, paf::ui::AppIconBase *widget, int edge);
+#if !defined(FW_TYPE_CEX)
+	void SetLabel(const paf::wstring &label);
+#endif
 
 	paf::wstring m_label;			/* PLACEHOLDER: the label its widget shows */
 	ApplauncherIconView *m_icon;		/* PLACEHOLDER: its view from the icon pool */
@@ -140,6 +143,9 @@ public:
 	/* PLACEHOLDER: the icon itself, kept from its creation to its delete (its view's effect
 	   plays while it is set) */
 	paf::common::SharedPtr<ApplauncherIcon> m_self;
+#if !defined(FW_TYPE_CEX)
+	paf::common::SharedPtr<paf::job::JobItem> m_appHomeJob;
+#endif
 };
 
 /*
@@ -981,6 +987,9 @@ public:
 	bool m_imageCached;			/* PLACEHOLDER: the background image taken from the surface pool */
 	paf::math::v2 m_dragPos;
 	int m_waitingAppCount;			/* PLACEHOLDER: the applications with no room yet */
+#if !defined(FW_TYPE_CEX)
+	bool m_appHomeChecked;
+#endif
 	ApplauncherPage *m_noticePage;		/* PLACEHOLDER: the page saying why no more fit */
 	int m_appCount;				/* PLACEHOLDER: the applications on the home */
 	int m_folderCount;			/* PLACEHOLDER: the folders on the home (the full home's text) */
@@ -1631,8 +1640,19 @@ enum {
 	TOPMENU_PLUGIN_FUNC_IS_WAVE_SHOWN	= 57,
 	TOPMENU_PLUGIN_FUNC_APP_DELETING	= 62,	/* PLACEHOLDER name: a title about to be
 							   deleted, its application closed */
+#if !defined(FW_TYPE_CEX)
+	TOPMENU_PLUGIN_FUNC_SET_APP_HOME_INFO	= 84,
+	TOPMENU_PLUGIN_FUNC_LIVEAREA_OPENED	= 86,
+#else
 	TOPMENU_PLUGIN_FUNC_LIVEAREA_OPENED	= 85,
+#endif
 };
+
+#if !defined(FW_TYPE_CEX)
+paf::common::SharedPtr<paf::job::JobItem> applauncherAppHomeCheckJobStart(void);
+void applauncherHomeUpdateAppHome(int appHomeSource, const char *stitle, const char *discId,
+				  const char *npCommId);
+#endif
 
 /* livearea_plugin's functions the home calls (indexes in its PLACEHOLDER table) */
 enum {

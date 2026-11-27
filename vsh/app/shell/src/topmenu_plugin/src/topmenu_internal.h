@@ -569,6 +569,9 @@ public:
 	bool OnCheckJobComplete();
 	void ApplyAppAttributes();
 	void OnAppCheckSucceeded(const LsdbAppInfoPtr &appInfo);
+#if !defined(FW_TYPE_CEX)
+	void SetTitleId(const char *titleId);
+#endif
 
 	paf::string m_titleId;					/* +0x28 */
 	TopTabAppData *m_tabAppData;				/* +0x34 */
@@ -581,11 +584,18 @@ public:
 	paf::common::SharedPtr<paf::job::JobItem> m_checkJob;	/* +0x5C */
 	bool m_pendingStart;					/* +0x64 */
 	bool m_launchedBgPartner;				/* +0x65 */
-	bool m_pendingResume;					/* +0x66 */
+#if !defined(FW_TYPE_CEX)
+	LsdbAppInfoPtr m_subAppInfo;				/* +0x68 (TOOL/DEBUGGER) */
+#endif
+	bool m_pendingResume;					/* +0x66 (CEX) / +0x70 (TOOL) */
 };
 
 typedef char TopmenuProcessBaseSizeCheck[sizeof(TopmenuProcessBase) == 40 ? 1 : -1];
+#if defined(FW_TYPE_CEX)
 typedef char TopmenuAppProcessSizeCheck[sizeof(TopmenuAppProcess) == 104 ? 1 : -1];
+#else
+typedef char TopmenuAppProcessSizeCheck[sizeof(TopmenuAppProcess) == 116 ? 1 : -1];
+#endif
 
 /* ------------------------------------------------------------------ */
 /* TopTabScreenCopy (16B) & TopTabAppData (184B, 0x8129666C..8D23)    */
@@ -633,6 +643,9 @@ public:
 	void LoadBackgroundImage();
 	void SetupContent();
 	void RequestCancelLaunch();
+#if !defined(FW_TYPE_CEX)
+	void SetTitleId(const char *titleId);
+#endif
 
 	paf::string m_titleId;					/* +0x00 */
 	TopTab *m_ownerTab;					/* +0x0C */
@@ -658,7 +671,11 @@ public:
 };
 
 typedef char TopTabScreenCopySizeCheck[sizeof(TopTabScreenCopy) == 16 ? 1 : -1];
+#if defined(FW_TYPE_CEX)
 typedef char TopTabAppDataSizeCheck[sizeof(TopTabAppData) == 184 ? 1 : -1];
+#else
+typedef char TopTabAppDataSizeCheck[sizeof(TopTabAppData) == 196 ? 1 : -1];
+#endif
 
 /* Promotion error context (68 bytes, 0x81289E86 / 0x8128A1F8 / 0x8128ACC8) */
 struct TopmenuInstallError {
@@ -779,7 +796,12 @@ public:
 	float m_gateEffectOriginY;				/* +0xF0 */
 	TopmenuAppProcess *m_gateEffectApp;			/* +0xF4 */
 	paf::intrusive_ptr<paf::graph::Surface> m_appCloseSnapshot;  /* +0xF8 */
-	TopmenuLaunchSeq m_launchSeq;				/* +0xFC */
+#if !defined(FW_TYPE_CEX)
+	SceInt32 m_appHomeSource;				/* +0xFC (TOOL/DEBUGGER) */
+	paf::string m_appHomeDiscId;				/* +0x100 */
+	paf::string m_appHomeNpCommId;				/* +0x10C */
+#endif
+	TopmenuLaunchSeq m_launchSeq;				/* +0xFC (CEX) / +0x118 */
 	SceInt32 m_pendingKillAppId;				/* +0x114 */
 	bool m_closingAllTabs;					/* +0x118 */
 	SceInt32 m_deactivateDelayFrames;			/* +0x11C */
@@ -804,7 +826,11 @@ public:
 	paf::list<SceInt32> m_appTerminateWaiters;		/* +0x178 */
 };
 
+#if defined(FW_TYPE_CEX)
 typedef char TopWindowSizeCheck[sizeof(TopWindow) == 388 ? 1 : -1];
+#else
+typedef char TopWindowSizeCheck[sizeof(TopWindow) == 416 ? 1 : -1];
+#endif
 
 /* ------------------------------------------------------------------ */
 /* Shared globals across topmenu_plugin TUs                           */

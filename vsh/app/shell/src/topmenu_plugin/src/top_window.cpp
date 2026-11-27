@@ -2693,6 +2693,9 @@ static void ifAddPageRemovedListener(TopmenuWindowEventCallback callback, void *
 static void ifRemovePageRemovedListener(TopmenuWindowEventCallback callback, void *userData);
 static void ifAddPageFocusListener(TopmenuWindowEventCallback callback, void *userData);
 static void ifRemovePageFocusListener(TopmenuWindowEventCallback callback, void *userData);
+#if !defined(FW_TYPE_CEX)
+static void ifSetAppHomeInfo(SceInt32 appHomeSource, const char *discId, const char *npCommId);
+#endif
 static void ifRefreshAppInfoSync(const char *titleId);
 static int ifGetOpenAppPageCount(void);
 static void ifReloadSystemBgm(void);
@@ -2759,6 +2762,11 @@ TopWindow::TopWindow(paf::Plugin *plugin)
 	  m_gateEffectOriginY(0.0f),
 	  m_gateEffectApp(NULL),
 	  m_appCloseSnapshot(),
+#if !defined(FW_TYPE_CEX)
+	  m_appHomeSource(0),
+	  m_appHomeDiscId(),
+	  m_appHomeNpCommId(),
+#endif
 	  m_launchSeq(),
 	  m_pendingKillAppId(-1),
 	  m_closingAllTabs(false),
@@ -2990,6 +2998,9 @@ TopWindow::TopWindow(paf::Plugin *plugin)
 	g_topmenuInterface->removePageRemovedListener = ifRemovePageRemovedListener;
 	g_topmenuInterface->addPageFocusListener = ifAddPageFocusListener;
 	g_topmenuInterface->removePageFocusListener = ifRemovePageFocusListener;
+#if !defined(FW_TYPE_CEX)
+	g_topmenuInterface->setAppHomeInfo = ifSetAppHomeInfo;
+#endif
 
 	paf::common::MainThreadCallList::Register(onTopWindowMainTick, NULL);
 	if (m_powerManageIf != NULL)
@@ -4095,6 +4106,11 @@ TopTab *topmenuFindTabByTitleId(TopWindow *window, const char *titleId)
 			const char *tabTitle = tab->m_appData->m_titleId.c_str();
 			if (sce_paf_strncmp(titleId, tabTitle, sce_paf_strlen(tabTitle)) == 0)
 				return tab;
+#if !defined(FW_TYPE_CEX)
+			if (tab->m_appData->m_process.m_launchMode == 4 &&
+			    sce_paf_strncmp(titleId, "NPXS10998", sce_paf_strlen("NPXS10998")) == 0)
+				return tab;
+#endif
 		}
 	}
 	return NULL;
@@ -7738,6 +7754,22 @@ SceInt32 topmenuGetPsnSignInState(void)
 {
 	return g_topWindow->m_psnSignInState;
 }
+
+#if !defined(FW_TYPE_CEX)
+/* 0x81274CDA (TOOL) */
+static void ifSetAppHomeInfo(SceInt32 appHomeSource, const char *discId, const char *npCommId)
+{
+	g_topWindow->m_appHomeSource = appHomeSource;
+	if (discId != NULL)
+		g_topWindow->m_appHomeDiscId.assign(discId, sce_paf_strlen(discId));
+	else
+		g_topWindow->m_appHomeDiscId.assign(NULL, 0);
+	if (npCommId != NULL)
+		g_topWindow->m_appHomeNpCommId.assign(npCommId, sce_paf_strlen(npCommId));
+	else
+		g_topWindow->m_appHomeNpCommId.assign(NULL, 0);
+}
+#endif
 
 struct TopmenuPsStoreLogoParam {
 	SceInt32 appId;

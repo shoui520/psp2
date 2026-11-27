@@ -151,6 +151,9 @@ struct TopmenuPluginInterface {
 	void (*removePageRemovedListener)(TopmenuWindowEventCallback callback, void *userData);
 	void (*addPageFocusListener)(TopmenuWindowEventCallback callback, void *userData);
 	void (*removePageFocusListener)(TopmenuWindowEventCallback callback, void *userData);
+#if !defined(FW_TYPE_CEX)
+	void (*setAppHomeInfo)(SceInt32 appHomeSource, const char *discId, const char *npCommId);
+#endif
 	int (*getNetworkState)(void);
 	void (*refreshAppInfoSync)(const char *titleId);
 	int (*getOpenAppPageCount)(void);
@@ -158,7 +161,11 @@ struct TopmenuPluginInterface {
 	void (*initLiveboardSurfacePools)(void);
 };
 
+#if defined(FW_TYPE_CEX)
 typedef char TopmenuPluginInterfaceSizeCheck[sizeof(TopmenuPluginInterface) == 0x164 ? 1 : -1];
+#else
+typedef char TopmenuPluginInterfaceSizeCheck[sizeof(TopmenuPluginInterface) == 0x168 ? 1 : -1];
+#endif
 
 void topmenuPluginSetParam(paf::Plugin::InitParam2 *param);
 void topmenuPluginInit(paf::Plugin *plugin);

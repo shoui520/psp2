@@ -115,7 +115,10 @@ struct LiveAreaTopmenuInterface {
 	void (*getOpenPageTitleIds)(paf::vector<paf::string> *outTitles);	/* +0x11C */
 	void (*registerDialogId)(int dialogId);					/* +0x120 */
 	void *netStateGapEntries[11];
-	int (*getNetworkState)(void);						/* +0x150 */
+#if !defined(FW_TYPE_CEX)
+	void (*setAppHomeInfo)(SceInt32 appHomeSource, const char *discId, const char *npCommId);
+#endif
+	int (*getNetworkState)(void);						/* +0x150 (CEX) / +0x154 */
 };
 
 struct LiveAreaGameInterface {
