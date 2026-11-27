@@ -4,6 +4,7 @@
  * Original address range (3.65-CEX): 0x811EDBD4 - 0x811EEC3F
  */
 
+#include "musiccore_local_cache_io.h"
 #include <kernel.h>
 #include <std/new>
 #include <stddef.h>
@@ -92,47 +93,6 @@ struct At9SmplLoopInfo {
     uint32_t loopEnd;
 };
 
-class LocalCacheIoBase {
-public:
-    virtual ~LocalCacheIoBase();
-    virtual int initialize();
-    virtual int open();
-    virtual int close();
-    virtual int isOpen();
-    virtual int getFileSize();
-    virtual int getPosition();
-    virtual int seek(int offset, int whence);
-    virtual int read(void *dst, unsigned int size, int *outErr);
-    virtual int readAt(int offset, void *dst, unsigned int size, int *outErr);
-    virtual int setPath(const char *path);
-    virtual int setIoHint(int hintMode, int hintParam);
-    virtual int flushCache();
-    virtual void *mapRange(unsigned int offset, unsigned int size, int flags,
-                           int *outMapped, int *outErr, int extra);
-    virtual int checkRangeReadable(int sizeBytes, int *outErr);
-
-protected:
-    void *m_cacheHandle;
-    uint8_t m_initialized;
-    uint8_t m_padInit[3];
-    char *m_filePath;
-    void *m_fileObj;
-    void *m_fileRefCount;
-    int m_priorityMode;
-    int m_padPriority;
-    int64_t m_filePos;
-    int m_chunkSize;
-    int m_blockCount;
-};
-
-extern void localCacheIoConstruct(LocalCacheIoBase *io, const char *path,
-                                  int chunkSize, int blockCount, int readAhead,
-                                  int extraChunk, int extraBlocks);
-extern void localCacheIoDestroy(LocalCacheIoBase *io);
-extern int localCacheIoIsOpen(LocalCacheIoBase *io);
-extern int localCacheIoClose(LocalCacheIoBase *io);
-extern int localCacheIoSetPath(LocalCacheIoBase *io, const char *path);
-
 class MediaInfoBase {
 public:
     virtual ~MediaInfoBase() {}
@@ -188,7 +148,7 @@ static void clearMetadataValidityFlags(TrackMetadataResult *meta)
     meta->hasCodecSubType = 0;
 }
 
-class WavCacheIo : public LocalCacheIoBase {
+class WavCacheIo : public LocalCacheIo {
 public:
     WavCacheIo(const char *path, int chunkSize, int blockCount, int readAhead,
                int extraChunk, int extraBlocks);
@@ -218,15 +178,14 @@ private:
 /* 0x811EDE90 */
 WavCacheIo::WavCacheIo(const char *path, int chunkSize, int blockCount, int readAhead,
                        int extraChunk, int extraBlocks)
+    : LocalCacheIo(path, chunkSize, blockCount, (uint8_t)readAhead, extraChunk, extraBlocks)
 {
-    localCacheIoConstruct(this, path, chunkSize, blockCount, readAhead, extraChunk, extraBlocks);
     resetChunkState();
 }
 
 /* 0x811EDED0 / 0x811EDEEC */
 WavCacheIo::~WavCacheIo()
 {
-    localCacheIoDestroy(this);
 }
 
 void WavCacheIo::resetChunkState()
@@ -243,7 +202,7 @@ void WavCacheIo::resetChunkState()
 /* 0x811EDF0C */
 int WavCacheIo::setPath(const char *path)
 {
-    int ret = localCacheIoSetPath(this, path);
+    int ret = LocalCacheIo::setPath(path);
     if (ret >= 0) {
         resetChunkState();
     }
@@ -432,7 +391,7 @@ WavMediaInfo::WavMediaInfo(const char *path)
         m_cacheIo = new (mem) WavCacheIo(filePath, 0x10000, 8, 1, 0, 0);
     }
     if (m_cacheIo != NULL) {
-        m_cacheIo->initialize();
+        m_cacheIo->isInitialized();
     }
 }
 
@@ -527,7 +486,7 @@ int WavMediaInfo::parseMetadata(TrackMetadataResult *outMeta)
     return status;
 }
 
-class At9CacheIo : public LocalCacheIoBase {
+class At9CacheIo : public LocalCacheIo {
 public:
     At9CacheIo(const char *path, int chunkSize, int blockCount, int readAhead,
                int extraChunk, int extraBlocks);
@@ -559,18 +518,17 @@ private:
 /* 0x811EE6DC */
 At9CacheIo::At9CacheIo(const char *path, int chunkSize, int blockCount, int readAhead,
                        int extraChunk, int extraBlocks)
+    : LocalCacheIo(path, chunkSize, blockCount, (uint8_t)readAhead, extraChunk, extraBlocks)
 {
-    localCacheIoConstruct(this, path, chunkSize, blockCount, readAhead, extraChunk, extraBlocks);
     resetChunkState();
 }
 
 /* 0x811EE720 / 0x811EE74C */
 At9CacheIo::~At9CacheIo()
 {
-    if (localCacheIoIsOpen(this) != 0) {
-        localCacheIoClose(this);
+    if (isOpen() != 0) {
+        close();
     }
-    localCacheIoDestroy(this);
 }
 
 void At9CacheIo::resetChunkState()
@@ -589,7 +547,7 @@ void At9CacheIo::resetChunkState()
 /* 0x811EE77C */
 int At9CacheIo::setPath(const char *path)
 {
-    int ret = localCacheIoSetPath(this, path);
+    int ret = LocalCacheIo::setPath(path);
     if (ret >= 0) {
         resetChunkState();
     }
@@ -785,7 +743,7 @@ At9MediaInfo::At9MediaInfo(const char *path, int loopMode)
         m_cacheIo = new (mem) At9CacheIo(filePath, 0x4000, 32, 1, 0, 0);
     }
     if (m_cacheIo != NULL) {
-        m_cacheIo->initialize();
+        m_cacheIo->isInitialized();
     }
 }
 

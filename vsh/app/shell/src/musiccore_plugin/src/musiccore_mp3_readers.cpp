@@ -90,6 +90,7 @@ public:
     virtual int setPath(const char *path) = 0;
     virtual int setPriorityMode(uint32_t mode) = 0;
     virtual int applyOpenFilePriority(int mode) = 0;
+    virtual void flushCache() = 0;
     virtual int setCacheHint(int hintMode) = 0;
     virtual void *mapRangeSimple(int offset, int size, int unusedFlag, int *outErr,
                                  int *outMappedSize) = 0;

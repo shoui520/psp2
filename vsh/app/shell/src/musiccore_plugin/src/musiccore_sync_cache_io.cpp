@@ -5,7 +5,7 @@
  * Original address range (3.65-CEX): 0x811F360C - 0x811F51FB
  */
 
-#include <file/localfile.h>
+#include "musiccore_local_cache_io.h"
 #include <kernel.h>
 #include <std/new>
 #include <stddef.h>
@@ -546,53 +546,6 @@ static int mapCacheEngineError(uint32_t engineErr)
         return -1;
     }
 }
-
-class LocalCacheIo {
-public:
-    LocalCacheIo(const char *path, int chunkSize, int blockCount, uint8_t readAhead);
-    LocalCacheIo(const char *path, int chunkSize, int blockCount, uint8_t readAhead,
-                 int extraChunkSize, int extraBlockCount);
-    virtual ~LocalCacheIo();
-
-    virtual int isInitialized() const;
-    virtual int open();
-    virtual int close();
-    virtual int isOpen() const;
-    virtual int getFileSize() const;
-    virtual int setPath(const char *path);
-    virtual int setPriorityMode(uint32_t priorityMode);
-    virtual int applyOpenFilePriority(int priorityMode);
-    virtual int setCacheHint(int hintMode);
-    virtual void *mapRangeSimple(int offset, int size, int unusedFlag, int *outErr, int extra);
-    virtual void *mapRange(int offset, int size, uint8_t flags, int *outMappedSize,
-                           int *outErr, int extra);
-    virtual int checkRangeReadable(int sizeBytes, int *outErr);
-    virtual int prefetchRange(uint8_t flags, int offset, int size, int *outErr);
-
-    static bool isRegularFile(const char *path);
-
-private:
-    static int openCallback(const char *path, void *userCtx);
-    static int closeCallback(void *userCtx);
-    static int64_t seekCallback(void *userCtx, int64_t offset, int whence);
-    static int readCallback(void *userCtx, void *dst, size_t size);
-    static int getFileSizeCallback(const char *path, uint32_t *outSize);
-    static int setThreadPriorityCallback(int priorityMode);
-
-    bool copyPath(const char *path);
-    bool reopenAfterSuspend(paf::common::SharedPtr<paf::File> &activeFile);
-
-    void *m_cacheHandle;
-    uint8_t m_initialized;
-    uint8_t m_padInit[3];
-    char *m_filePath;
-    paf::common::SharedPtr<paf::File> m_file;
-    int m_priorityMode;
-    int m_padPriority;
-    int64_t m_filePos;
-    int m_chunkSize;
-    int m_blockCount;
-};
 
 /* 0x811F3C98 */
 LocalCacheIo *createLocalCacheIo(const char *path, int chunkSize, int blockCount, uint8_t readAhead)
@@ -1407,96 +1360,6 @@ StreamIoInterface *createLocalCacheIoEx(const char *path, int chunkSize, int blo
         return NULL;
     return reinterpret_cast<StreamIoInterface *>(
         new (mem) LocalCacheIo(path, chunkSize, blockCount, readAhead, extraChunk, extraBlocks));
-}
-
-class LocalCacheIoBase {
-public:
-    virtual ~LocalCacheIoBase();
-    virtual int initialize();
-    virtual int open();
-    virtual int close();
-    virtual int isOpen();
-    virtual int getFileSize();
-    virtual int getPosition();
-    virtual int seek(int offset, int whence);
-    virtual int read(void *dst, unsigned int size, int *outErr);
-    virtual int readAt(int offset, void *dst, unsigned int size, int *outErr);
-    virtual int setPath(const char *path);
-    virtual int setIoHint(int hintMode, int hintParam);
-    virtual int flushCache();
-    virtual void *mapRange(unsigned int offset, unsigned int size, int flags,
-                           int *outMapped, int *outErr, int extra);
-    virtual int checkRangeReadable(int sizeBytes, int *outErr);
-};
-
-LocalCacheIoBase::~LocalCacheIoBase() { reinterpret_cast<LocalCacheIo *>(this)->~LocalCacheIo(); }
-int LocalCacheIoBase::initialize() { return reinterpret_cast<LocalCacheIo *>(this)->isInitialized(); }
-int LocalCacheIoBase::open() { return reinterpret_cast<LocalCacheIo *>(this)->open(); }
-int LocalCacheIoBase::close() { return reinterpret_cast<LocalCacheIo *>(this)->close(); }
-int LocalCacheIoBase::isOpen() { return reinterpret_cast<LocalCacheIo *>(this)->isOpen(); }
-int LocalCacheIoBase::getFileSize() { return reinterpret_cast<LocalCacheIo *>(this)->getFileSize(); }
-int LocalCacheIoBase::getPosition() { return 0; }
-int LocalCacheIoBase::seek(int offset, int whence) { (void)offset; (void)whence; return 0; }
-int LocalCacheIoBase::read(void *dst, unsigned int size, int *outErr)
-{
-    (void)dst; (void)size;
-    if (outErr != NULL) *outErr = 0;
-    return 0;
-}
-int LocalCacheIoBase::readAt(int offset, void *dst, unsigned int size, int *outErr)
-{
-    void *src = reinterpret_cast<LocalCacheIo *>(this)->mapRangeSimple(offset, static_cast<int>(size), 0, outErr, 0);
-    if (src != NULL && dst != NULL && size > 0) {
-        for (unsigned int i = 0; i < size; ++i)
-            static_cast<uint8_t *>(dst)[i] = static_cast<const uint8_t *>(src)[i];
-        return static_cast<int>(size);
-    }
-    return 0;
-}
-int LocalCacheIoBase::setPath(const char *path) { return reinterpret_cast<LocalCacheIo *>(this)->setPath(path); }
-int LocalCacheIoBase::setIoHint(int hintMode, int hintParam) { (void)hintParam; return reinterpret_cast<LocalCacheIo *>(this)->setCacheHint(hintMode); }
-int LocalCacheIoBase::flushCache() { return 0; }
-void *LocalCacheIoBase::mapRange(unsigned int offset, unsigned int size, int flags,
-                                 int *outMapped, int *outErr, int extra)
-{
-    void *ptr = reinterpret_cast<LocalCacheIo *>(this)->mapRangeSimple(
-        static_cast<int>(offset), static_cast<int>(size), flags, outErr, extra);
-    if (outMapped != NULL)
-        *outMapped = (ptr != NULL) ? static_cast<int>(size) : 0;
-    return ptr;
-}
-int LocalCacheIoBase::checkRangeReadable(int sizeBytes, int *outErr)
-{
-    return reinterpret_cast<LocalCacheIo *>(this)->checkRangeReadable(sizeBytes, outErr);
-}
-
-void localCacheIoConstruct(LocalCacheIoBase *io, const char *path,
-                           int chunkSize, int blockCount, int readAhead,
-                           int extraChunk, int extraBlocks)
-{
-    new (reinterpret_cast<LocalCacheIo *>(io))
-        LocalCacheIo(path, chunkSize, blockCount, readAhead, extraChunk, extraBlocks);
-}
-
-void localCacheIoDestroy(LocalCacheIoBase *io)
-{
-    if (io != NULL)
-        reinterpret_cast<LocalCacheIo *>(io)->~LocalCacheIo();
-}
-
-int localCacheIoIsOpen(LocalCacheIoBase *io)
-{
-    return (io != NULL) ? reinterpret_cast<LocalCacheIo *>(io)->isOpen() : 0;
-}
-
-int localCacheIoClose(LocalCacheIoBase *io)
-{
-    return (io != NULL) ? reinterpret_cast<LocalCacheIo *>(io)->close() : -1;
-}
-
-int localCacheIoSetPath(LocalCacheIoBase *io, const char *path)
-{
-    return (io != NULL) ? reinterpret_cast<LocalCacheIo *>(io)->setPath(path) : -1;
 }
 
 } /* namespace MusicCore */
