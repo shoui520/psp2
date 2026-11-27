@@ -35,9 +35,9 @@ typedef struct PocsTimer {
 	uint16_t       reloadValue;
 	uint16_t       currentValue;
 	uint16_t       irqMask;
-	uint16_t       control;
-	uint32_t       startCycle;
-	uint32_t       prescaleShift;
+	uint8_t        prescaleShift;
+	uint8_t        control;
+	uint8_t        padBytes[8];
 } PocsTimer;
 
 _Static_assert(sizeof(PocsTimer) == 32U, "PocsTimer size");
@@ -66,8 +66,8 @@ typedef struct PocsMachineState {
 	uint8_t        clockMode;
 	uint16_t       sysCtrl;
 	uint32_t       serialId;
-	uint32_t       sysRegs[4];
-	uint8_t        sysKey[16];
+	uint8_t        flashBankMap[16];
+	int8_t         flashPhysMap[16];
 	uint16_t       flashReg;
 	uint8_t        flashMode;
 	uint8_t        lcdRefreshRate;
@@ -179,6 +179,11 @@ _Static_assert(sizeof(PocsMachineState) == 0xC88U, "PocsMachineState size");
 
 extern PocsMachineState g_pocsState;
 extern uint8_t g_pocsBiosRom[POCS_BIOS_ROM_SIZE];
+extern const uint8_t g_pocsVertexShaderGxp[];
+extern const uint8_t g_pocsFragmentShaderGxp[];
+extern const uint8_t g_pocsLedShadowData[120];
+extern const uint8_t g_pocsLedLargeData[8928];
+extern const uint8_t g_pocsLedSmallData[1792];
 
 static inline int32_t pocsScaleCpuCycles(int32_t cycles)
 {
@@ -236,6 +241,7 @@ int pocsBatteryWrite(int regOffset, uint8_t value);
 void pocsBatteryReset(void);
 
 /* pocs_periph.c */
+int pocsIrdaOnIrqEnabled(void);
 int pocsIrdaBeginFrame(int32_t currentCycle);
 int pocsIrdaSignalConnected(void);
 int pocsIrdaWaitSendReady(void);
@@ -247,6 +253,7 @@ int pocsIrdaReset(void);
 int pocsIrdaSetRole(int isAcceptor);
 int pocsLcdNotifyDirty(int mode);
 int pocsInputPollAndUpdate(void *gxmFramebufferState);
+void *pocsLcdGetFlickerOverlay(void);
 void *pocsLcdReset(void);
 int pocsSpiLock(void);
 int pocsSpiUnlock(void);
@@ -255,6 +262,7 @@ int pocsSpiInit(void);
 int pocsSpiReset(void);
 int pocsSpiAbortPending(void);
 int pocsSpiSyncHost(void);
+int pocsCpuCheckPendingIrq(void);
 int pocsCpuExceptionUndef(void);
 
 /* pocs_cpu.c */
@@ -267,10 +275,21 @@ int pocsGxmRequestRender(int bgType, int channel, int presentMode);
 int pocsGxmWaitFinish(void);
 int pocsPokejimaIsActive(void);
 int pocsPokejimaReceivePacket(unsigned int packetLen, const void *packetData);
+uint32_t pocsPokejimaHandleUndefTrap(uint32_t nextPc);
+void pocsPokejimaPatchFlashTraps(void);
 int pocsPokejimaInit(void);
+void pocsSysFatalAccess(int isRead, int isWrite);
+uint32_t pocsSysRegRead(uint32_t regOffset, int accessWidth);
+void pocsSysRegWrite(uint32_t regOffset, uint16_t value);
 int pocsSysReset(void);
+int pocsIntcRead(int regOffset);
+int pocsIntcWrite(int regOffset, uint16_t value);
 void pocsIntcReset(void);
+uint32_t pocsTimerRead(uint32_t regOffset);
+uint32_t pocsTimerWrite(uint32_t regOffset, uint16_t value);
 int pocsTimerReset(void);
+int pocsClockRead(int regOffset);
+PocsSchedEvent *pocsClockWrite(int regOffset, uint8_t value);
 PocsSchedEvent *pocsClockReset(void);
 int pocsRtcStepBcdField(int fieldIndex);
 

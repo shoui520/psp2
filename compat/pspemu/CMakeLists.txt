@@ -69,7 +69,10 @@ psp2_module(vs0_app_NPXS10028_eboot KIND user COMPILER gcc48 PARTIAL SOURCES
 	settings.c
 	pocs_dlg.c
 	remote_pocs.c
+	pocs_gxm.c
+	pocs_hw_regs.c
 	pocs_rtc_audio.c
+	pocs_assets.c
 	pops_spu.c
 	pops_host.c
 	pops_png_enc.c
@@ -153,7 +156,10 @@ set_source_files_properties(
 	settings.c
 	pocs_dlg.c
 	remote_pocs.c
+	pocs_gxm.c
+	pocs_hw_regs.c
 	pocs_rtc_audio.c
+	pocs_assets.c
 	pops_spu.c
 	pops_host.c
 	pops_png_enc.c

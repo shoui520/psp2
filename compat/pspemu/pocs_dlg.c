@@ -240,8 +240,8 @@ static void *bgDialogCapturePreview(void)
 
 		g_pocsPreviewState = 1;
 		if (popsHostGetPocsBgType() == 2) {
-			int frameIdx = remotePocsGetActiveFrameIndex();
-			srcBuf = (const uint8_t *)remotePocsGetCustomFrameBuffer(frameIdx);
+			pocsRenderCurrentDisplay();
+			srcBuf = (const uint8_t *)remotePocsGetRenderBuffer();
 		} else {
 			srcBuf = (const uint8_t *)remotePocsGetDefaultFrameBuffer();
 		}
@@ -284,7 +284,7 @@ static int bgDialogOnPocsCommand(int cmd, int arg)
 }
 
 /* 0x810221c8 */
-static int __attribute__((noinline)) bgImageEnsureLoaded(void)
+int __attribute__((noinline)) bgImageEnsureLoaded(void)
 {
 	SceIoStat stat;
 	char cfgPath[256];

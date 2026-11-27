@@ -1062,8 +1062,8 @@ int remotePocsHasActiveSession(void);
 int remotePocsMountMediaFromMenu(void);
 int remotePocsUnmountMediaFromMenu(void);
 void *remotePocsGetRenderBuffer(void);
-int remotePocsRenderFrame(int slot, int channel, int flags);
-int remotePocsWaitRenderComplete(int renderResult);
+int pocsGxmRequestRender(int bgType, int channel, int presentMode);
+int pocsGxmWaitFinish(void);
 const char *pspemuCompatGetListVersion(void);
 int meAt3DecodeInternal(const void *esBuf, int16_t *pcmOut, uint32_t *outConsumed,
                         uint32_t *outSamples, void *workCtx, int forceStereoDirect);
@@ -1114,6 +1114,7 @@ int pspemuSettingsRefreshDynamic(PspemuSystemSettings *settings);
 int pspemuSettingsLoadAll(PspemuSystemSettings *settings);
 
 /* pocs_dlg.c */
+int bgImageEnsureLoaded(void);
 int bgDialogMapBgTypeToMode(int bgType);
 int pspemuBgDialogShowMenu(int mode, int hasMedia, int *inOutBgType, int *outAction);
 int pspemuSettingsShowPocsFirstBootDialog(int *outButton);
@@ -1147,9 +1148,7 @@ int remotePocsGetPeerInfo(void *outPeer);
 int remotePocsGetConnectedPeerInfo(void *outPeer);
 int remotePocsSetPeerRequestCallback(int (*callback)(void));
 int remotePocsGetAdhocError(int index);
-int remotePocsGetActiveFrameIndex(void);
 void *remotePocsGetDefaultFrameBuffer(void);
-void *remotePocsGetCustomFrameBuffer(int index);
 void *remotePocsGetBgTextureBuffer(void);
 void remotePocsCommitBgTexture(void);
 void remotePocsClearBgPreviewCache(void);

@@ -655,8 +655,9 @@ int pspemuMenuPollDialog(int mode)
 				int renderRes;
 
 				updateParam.renderTarget.colorSurfaceData = remotePocsGetRenderBuffer();
-				renderRes = remotePocsRenderFrame(slot, channel, -1);
-				remotePocsWaitRenderComplete(renderRes);
+				renderRes = pocsGxmRequestRender(slot, channel, -1);
+				pocsGxmWaitFinish();
+				(void)renderRes;
 			} else {
 				popsHostCaptureScreen(g_menuGxmFrameBufs[g_menuGxmFrontIndex], 0);
 			}
