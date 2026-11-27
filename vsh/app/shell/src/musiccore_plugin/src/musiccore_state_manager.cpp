@@ -234,56 +234,77 @@ static uint64_t makeStateCmdHeader(uint16_t cmdCode, uint32_t origParam, uint32_
     return ((uint64_t)hi << 32) | (uint64_t)origParam;
 }
 
-class StateManager {
+class StateMachineOwner {
+public:
+    virtual int onTrackReadyCallback() = 0;
+    virtual int onAudioErrorCallback(int errCode) = 0;
+    virtual int forwardNotifyMetadata() = 0;
+    virtual int onBufferReadyCallback() = 0;
+    virtual int onTrackInfoCallback(const DecoderTrackInfoMsg *info) = 0;
+    virtual int onStreamEndCallback(int val) = 0;
+    virtual int onMediaChangedCallback(unsigned char hasNewMedia, void *newMedia,
+                                       unsigned char hasUriFlag, const StateMediaSnapshot *state,
+                                       void **ioOldMedia, unsigned char decrementUri) = 0;
+};
+
+class StateManager : public StateMachineOwner {
 public:
     StateManager();
-    virtual ~StateManager();
 
-    virtual int onTrackInfoCallback(const DecoderTrackInfoMsg *info);
-    virtual int onAudioErrorCallback(int errCode);
-    virtual int onBufferReadyCallback();
     virtual int onTrackReadyCallback();
+    virtual int onAudioErrorCallback(int errCode);
+    virtual int forwardNotifyMetadata();
+    virtual int onBufferReadyCallback();
+    virtual int onTrackInfoCallback(const DecoderTrackInfoMsg *info);
     virtual int onStreamEndCallback(int val);
     virtual int onMediaChangedCallback(unsigned char hasNewMedia, void *newMedia,
                                        unsigned char hasUriFlag, const StateMediaSnapshot *state,
                                        void **ioOldMedia, unsigned char decrementUri);
-    virtual int forwardNotifyMetadata();
 
-    int start(const StateManagerCallbacks *cbs, const int *audioCfg);
-    int stop();
-    int enqueueCmd(uint64_t cmdHdr, const StateCmdPayload *req);
+    virtual ~StateManager();
 
-    int activate(const StateMediaSnapshot *initState, void *metaBufs, int fadeMs,
-                 uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
-    int deactivate(int fadeMs, uint32_t origParam, uint32_t origCmdHi,
-                   unsigned char isAsync, unsigned char syncFlag);
-    int seek(const int *seekParams, uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
-    int play(int playParam, uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
-    int pause(unsigned char resetPos, int fadeParam, uint32_t origParam, uint32_t origCmdHi,
-              unsigned char isAsync);
-    int stopPlayback(uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
-    int setRepeat(int repeatVal, uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
-    int setShuffle(int shuffleVal, uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
-    int cancel(uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
-    int setMedia(void *mediaHandle, uint32_t origParam, uint32_t origCmdHi, int shuffleVal,
-                 unsigned char isAsync, int unusedFlag, unsigned char pauseFlag);
-    int setVolume(int vol, int ramp, uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
-    int setEqualizer(int eqType, int bandLow, int bandMid, int bandHigh,
-                     uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
-    int setAudioNormalizer(int mode, uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
-    int seekAndPlay(const int *seekParams, int playParam, uint32_t origParam, uint32_t origCmdHi,
-                    unsigned char isAsync);
-    int setMediaPlaying(void *mediaHandle, uint32_t origParam, uint32_t origCmdHi, int shuffleVal,
-                        unsigned char isAsync);
-    int onTrackReady(uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
-    int onAudioError(int errCode, uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
-    int onTrackInfo(uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
-    int onBufferReady(uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
-    int onStreamEnd(uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
-    int onAudioPortEvent(int flagA, int flagB, uint32_t origParam, uint32_t origCmdHi,
-                         unsigned char isAsync);
-    int suspendForDb(uint32_t origParam, uint32_t origCmdHi, unsigned char suspendFlag,
+    virtual int start(const StateManagerCallbacks *cbs, const int *audioCfg);
+    virtual int stop();
+
+    virtual int activate(const StateMediaSnapshot *initState, void *metaBufs, int fadeMs,
+                         uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
+    virtual int deactivate(int fadeMs, uint32_t origParam, uint32_t origCmdHi,
+                           unsigned char isAsync, unsigned char syncFlag);
+    virtual int seek(const int *seekParams, uint32_t origParam, uint32_t origCmdHi,
                      unsigned char isAsync);
+    virtual int play(int playParam, uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
+    virtual int pause(unsigned char resetPos, int fadeParam, uint32_t origParam, uint32_t origCmdHi,
+                      unsigned char isAsync);
+    virtual int stopPlayback(uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
+    virtual int setRepeat(int repeatVal, uint32_t origParam, uint32_t origCmdHi,
+                          unsigned char isAsync);
+    virtual int setShuffle(int shuffleVal, uint32_t origParam, uint32_t origCmdHi,
+                           unsigned char isAsync);
+    virtual int cancel(uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
+    virtual int setMedia(void *mediaHandle, uint32_t origParam, uint32_t origCmdHi, int shuffleVal,
+                         unsigned char isAsync, int unusedFlag, unsigned char pauseFlag);
+    virtual int setVolume(int vol, int ramp, uint32_t origParam, uint32_t origCmdHi,
+                          unsigned char isAsync);
+    virtual int setEqualizer(int eqType, int bandLow, int bandMid, int bandHigh,
+                             uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
+    virtual int setAudioNormalizer(int mode, uint32_t origParam, uint32_t origCmdHi,
+                                   unsigned char isAsync);
+    virtual int seekAndPlay(const int *seekParams, int playParam, uint32_t origParam,
+                            uint32_t origCmdHi, unsigned char isAsync);
+    virtual int setMediaPlaying(void *mediaHandle, uint32_t origParam, uint32_t origCmdHi,
+                                int shuffleVal, unsigned char isAsync);
+    virtual int onTrackReady(uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
+    virtual int onAudioError(int errCode, uint32_t origParam, uint32_t origCmdHi,
+                             unsigned char isAsync);
+    virtual int onTrackInfo(uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
+    virtual int onBufferReady(uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
+    virtual int onStreamEnd(uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
+    virtual int onAudioPortEvent(int flagA, int flagB, uint32_t origParam, uint32_t origCmdHi,
+                                 unsigned char isAsync);
+    virtual int suspendForDb(uint32_t origParam, uint32_t origCmdHi, unsigned char suspendFlag,
+                             unsigned char isAsync);
+
+    int enqueueCmd(uint64_t cmdHdr, const StateCmdPayload *req);
 
     int checkAndDeferNode(StateQueueNode *node, unsigned char *outDeferred);
     int runThreadLoop();

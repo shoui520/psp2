@@ -251,19 +251,19 @@ struct MediaItemHandle {
 };
 
 struct DecoderSession {
-    virtual ~DecoderSession() {}
-    virtual int onTrackInfoCallback(const void *info)
-    {
-        (void)info;
-        return 0;
-    }
+    virtual int onTrackReadyCallback() { return 0; }
     virtual int onAudioErrorCallback(int errCode)
     {
         (void)errCode;
         return 0;
     }
+    virtual int forwardNotifyMetadata() { return 0; }
     virtual int onBufferReadyCallback() { return 0; }
-    virtual int onTrackReadyCallback() { return 0; }
+    virtual int onTrackInfoCallback(const void *info)
+    {
+        (void)info;
+        return 0;
+    }
     virtual int onStreamEndCallback(int val)
     {
         (void)val;
@@ -280,7 +280,7 @@ struct DecoderSession {
         (void)decUri;
         return 0;
     }
-    virtual int forwardNotifyMetadata() { return 0; }
+    virtual ~DecoderSession() {}
     virtual int start(const void *cbs, const int *audioCfg)
     {
         (void)cbs;
