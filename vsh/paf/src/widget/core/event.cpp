@@ -17,7 +17,7 @@ inline __attribute__((noinline)) int vector<ui::Event>::push_back(const ui::Even
 	int result;
 
 	if (count + 1 <= limit || (result = reserve(limit + 10)) != 0) {
-		new (&ptr[count]) ui::Event(val);
+		PAF_PLACEMENT_NEW_COPY(&ptr[count], ui::Event, val);
 		result = ++count;
 	}
 	return result;

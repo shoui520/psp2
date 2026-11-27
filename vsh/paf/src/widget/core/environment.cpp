@@ -118,7 +118,7 @@ inline __attribute__((noinline)) void list<ui::EntryRequest>::push_back(const ui
 	if (node == NULL)
 		ScePafStdc_D608246A();
 	if (node != NULL)
-		new (&node->value) ui::EntryRequest(val);
+		PAF_PLACEMENT_NEW_COPY(&node->value, ui::EntryRequest, val);
 	else
 		node = head;
 	if (node != head) {
@@ -219,7 +219,7 @@ inline __attribute__((noinline)) void list<ui::Scene *>::push_back(ui::Scene *co
 	if (node == NULL)
 		ScePafStdc_D608246A();
 	if (node != NULL)
-		new (&node->value) ui::Scene *(val);
+		PAF_PLACEMENT_NEW_COPY(&node->value, ui::Scene *, val);
 	else
 		node = head;
 	if (node != head) {

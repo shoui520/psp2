@@ -97,7 +97,11 @@ public:
 	static const char m_param_name[];
 	static const char *ParamName();
 
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) CornerButtonParam();
+#else
 	CornerButtonParam();
+#endif
 	virtual const char *GetParamName() const;
 };
 
@@ -128,10 +132,11 @@ public:
 
 #ifdef PAF_BUILD_2014
 	virtual int32_t Init();
+	inline __attribute__((always_inline)) void InitParam();
 #else
 	int32_t Init();
-#endif
 	void InitParam();
+#endif
 
 	graph::PlaneObjParam m_corner_obj;
 	int32_t m_layout_type;

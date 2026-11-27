@@ -383,7 +383,11 @@ public:
 	/* the value kept, and written at once while a shader object is begun whose
 	   SetupUniforms did not write it */
 	template<class U>
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) void Set(const U &value)
+#else
 	void Set(const U &value)
+#endif
 	{
 		if (m_param == NULL)
 			return;

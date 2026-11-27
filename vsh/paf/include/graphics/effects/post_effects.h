@@ -47,7 +47,7 @@ public:
 };
 
 /* the unit quad drawn over the area: the area's scale and offset, then 0 to 1 across the
-   screen (0x81203f2c, name ours) */
+   screen (0x81203f2c CEX / 0x81201d14 2014, name ours) */
 __attribute__((noinline)) math::matrix GetQuadMatrix(const QuadArea &area);
 
 inline math::matrix GetQuadMatrix(const QuadArea &area)

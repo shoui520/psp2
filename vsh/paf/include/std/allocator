@@ -35,7 +35,7 @@ public:
 
 	void construct(pointer ptr, const _Ty &val)
 	{
-		new ((void *)ptr) _Ty(val);
+		PAF_PLACEMENT_NEW_COPY((void *)ptr, _Ty, val);
 	}
 
 	void destroy(pointer ptr)

@@ -367,7 +367,33 @@ public:
 			   int32_t num_level);
 	void InitObj(int32_t line_bytes);
 	/* every member back to nothing before Initialize (name ours) */
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) void InitMember()
+	{
+		m_div_ratio_v = 0;
+		m_div_ratio_h = 0;
+		m_texture_param_changed = false;
+		m_ref_count = 0;
+		m_locked = 0;
+		m_texturized = 0;
+		m_symmetry_u = 0;
+		m_symmetry_v = 0;
+		m_cleared = 0;
+		m_tex_pages = NULL;
+		m_divide_mode = 0;
+		m_div_ratio = NULL;
+		m_margin_left = 0;
+		m_margin_right = 0;
+		m_margin_top = 0;
+		m_margin_bottom = 0;
+		m_page_counter = 0;
+		m_page_offset = 0;
+		m_page_size = 0;
+		m_depth = NULL;
+	}
+#else
 	void InitMember();
+#endif
 	void SetMemParam(int32_t line_bytes, int16_t adj_width, int16_t adj_height);
 	void SetMemAttr();
 	int32_t CreateMipmap();

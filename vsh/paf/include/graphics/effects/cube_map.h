@@ -133,8 +133,12 @@ public:
 	/* 0x8119e96a (CEX) */
 	CubeMap();
 
-	/* Sony's build keeps the destructor out of line */
+	/* Sony's 3.65 build keeps the destructor out of line; 2014 inlines it into SharedPtr<EnvProbe>::DefaultDeleter */
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) ~CubeMap()
+#else
 	__attribute__((noinline)) ~CubeMap()
+#endif
 	{
 	}
 

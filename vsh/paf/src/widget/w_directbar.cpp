@@ -174,10 +174,12 @@ void DirectBar::AnimDBarState(int32_t state, float time)
 							    &AnimListenerObj::s_prop_obj_move, NULL, NULL);
 
 				SetAnimListener(0x20100 + i, move, 0);
+#ifndef PAF_BUILD_2014
 				if (i == OBJ_LABEL) {
 					hold->m_cb_anim = OnBalloonMove;
 					move->m_cb_anim = OnBalloonMove;
 				}
+#endif
 			}
 		}
 		break;
@@ -920,8 +922,8 @@ void ScePafWidget_A0CEFD28(DirectBar *bar, int32_t index, bool key, float time)
 				&AnimListenerObj::s_prop_obj_move, NULL, &bar->m_balloon_clamped);
 
 			bar->SetAnimListener(0x20103, move, 2);
-			move->m_cb_anim = DirectBar::OnBalloonMove;
 #ifndef PAF_BUILD_2014
+			move->m_cb_anim = DirectBar::OnBalloonMove;
 			if (bar->m_focus_shape != NULL) {
 				bar->m_focus_shape->m_shape = 3;
 				ScePafWidget_13B246E0(bar, bar->m_focus_shape);
@@ -939,7 +941,9 @@ void ScePafWidget_A0CEFD28(DirectBar *bar, int32_t index, bool key, float time)
 				NULL, &bar->m_balloon_clamped);
 
 			bar->SetAnimListener(0x20103, move, 2);
+#ifndef PAF_BUILD_2014
 			move->m_cb_anim = DirectBar::OnBalloonMove;
+#endif
 		}
 	}
 
@@ -1532,10 +1536,10 @@ void DirectBar::SetLaunchBtnY(float y)
 	UpdateFocusShape();
 }
 
+#ifndef PAF_BUILD_2014
 void DirectBar::OnBalloonMove(Timer *t, AnimListener *listener, void *data1, void *data2,
 			      void *data3)
 {
-#ifndef PAF_BUILD_2014
 	Widget *widget = listener->m_widget;
 
 	if (widget == NULL || !widget->IsInherit(DirectBar::m_widget_type))
@@ -1570,8 +1574,8 @@ void DirectBar::OnBalloonMove(Timer *t, AnimListener *listener, void *data1, voi
 	}
 	shape->m_size = math::v2(56.0f, 18.0f);
 	ScePafWidget_13B246E0(bar, shape);
-#endif
 }
+#endif
 
 const char DirectBarParam::m_param_name[] = "directbar_base";
 

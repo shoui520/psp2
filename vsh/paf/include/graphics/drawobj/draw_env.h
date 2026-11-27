@@ -270,6 +270,18 @@ public:
 
 	virtual void Exec() = 0;
 
+#ifdef PAF_BUILD_2014
+	static inline __attribute__((always_inline)) void *operator new(size_t size)
+	{
+		return ::operator new(size);
+	}
+
+	static inline __attribute__((always_inline)) void *operator new(size_t, void *where)
+	{
+		return where;
+	}
+#endif
+
 	bool m_queued;
 };
 

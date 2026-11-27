@@ -27,7 +27,6 @@ paf::ui::AdjustParam ScePafWidget_BE1CEA2E;
 
 #ifdef PAF_BUILD_2014
 PAF_TREE_INLINE_CTOR(_Tmap_traits<ui::Widget *, Timer *, less<ui::Widget *> >)
-PAF_TREE_INLINE_CTOR(_Tmap_traits<ui::Scene *, int32_t, less<ui::Scene *> >)
 #endif
 
 namespace paf {
@@ -69,7 +68,7 @@ inline __attribute__((noinline)) int vector<ui::Widget::DrawObjEntry>::push_back
 	int result;
 
 	if (count + 1 <= limit || (result = reserve(limit + 10)) != 0) {
-		new (&ptr[count]) ui::Widget::DrawObjEntry(val);
+		PAF_PLACEMENT_NEW_COPY(&ptr[count], ui::Widget::DrawObjEntry, val);
 		result = ++count;
 	}
 	return result;
@@ -3254,7 +3253,9 @@ void Widget::UpdateRestruct()
 	if (s_list_restruct.size() == 0)
 		return;
 
+#ifndef PAF_BUILD_2014
 	map<Scene *, int32_t> scenes;
+#endif
 
 	for (list<RestructInfo>::iterator it = s_list_restruct.begin(); it != s_list_restruct.end(); ++it) {
 		Widget *widget = it->m_widget;
@@ -3306,16 +3307,20 @@ void Widget::UpdateRestruct()
 			break;
 		}
 next:
+#ifndef PAF_BUILD_2014
 		scenes[it->m_widget->m_scene] = 1;
+#else
+		(void)0;
+#endif
 	}
 	s_list_restruct.clear();
-	for (map<Scene *, int32_t>::iterator it = scenes.begin(); it != scenes.end(); ++it) {
 #ifndef PAF_BUILD_2014
+	for (map<Scene *, int32_t>::iterator it = scenes.begin(); it != scenes.end(); ++it) {
 		it->first->UpdateLayerWeight();
 		if (it->first->m_env != NULL)
 			it->first->m_env->m_layer_weight_changed = true;
-#endif
 	}
+#endif
 }
 
 extern "C" math::v4 ScePafWidget_301AA80F(Widget *widget, const math::v4 &size)
@@ -5808,8 +5813,10 @@ static HitInfo s_nearest_hit;
 static float s_nearest_dist = 100000000.0f;
 static float s_nearest_area = 100000000.0f;
 
+#ifndef PAF_BUILD_2014
 /* the children's order by depth from the camera (0x81162ea8) */
 static bool DepthLess(Widget *a, Widget *b);
+#endif
 
 int32_t Widget::HitDetectRouting(Event *e, const math::v4 &line_b, const math::v4 &line_a,
 				 TouchInfo *touch, HitInfo *hit)
@@ -5847,6 +5854,7 @@ int32_t Widget::HitDetectRouting(Event *e, const math::v4 &line_b, const math::v
 	hit->m_widget = NULL;
 	if (m_children.size() != 0 && find_mode == 0 && (!m_clip_children || clip_hit) &&
 	    (port != 1 || m_touch_rear_children != 0) && !IsShowHeld(this)) {
+#ifndef PAF_BUILD_2014
 		if (m_scene->m_camera->m_draw_order == Camera::DRAW_ORDER_ZSORT) {
 			if (m_children.size() != 0) {
 				vector<Widget *> children;
@@ -5860,7 +5868,9 @@ int32_t Widget::HitDetectRouting(Event *e, const math::v4 &line_b, const math::v
 						return 2;
 				}
 			}
-		} else {
+		} else
+#endif
+		{
 			list<Widget *>::iterator it = m_children.end();
 
 			do {
@@ -9259,6 +9269,7 @@ uint64_t Widget::GetLayerDepth()
 }
 #endif
 
+#ifndef PAF_BUILD_2014
 void Widget::InsertDrawObj(vector<DrawObjEntry>::iterator it, const DrawObjEntry &entry,
 			   bool update)
 {
@@ -9268,6 +9279,7 @@ void Widget::InsertDrawObj(vector<DrawObjEntry>::iterator it, const DrawObjEntry
 	if (update)
 		UpdateSize();
 }
+#endif
 
 vector<Widget::DrawObjEntry>::iterator Widget::LowerBoundDrawObj(int32_t id)
 {
@@ -9921,12 +9933,9 @@ int32_t Widget::GetBaseDestroyCount()
 	return s_base_destroy_count;
 }
 
+#ifndef PAF_BUILD_2014
 /* the depth of the widget's position in its camera's view (name ours) */
-#ifdef PAF_BUILD_2014
-static inline __attribute__((always_inline)) float CameraDepth(Widget *widget)
-#else
 static float CameraDepth(Widget *widget)
-#endif
 {
 	const math::matrix &view = widget->m_scene->m_camera->GetWorldMatrix();
 	math::v4 pos = widget->GetWorldMatrix().w();
@@ -9940,6 +9949,7 @@ static bool DepthLess(Widget *a, Widget *b)
 {
 	return CameraDepth(a) < CameraDepth(b);
 }
+#endif
 }
 }
 

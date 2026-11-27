@@ -158,6 +158,17 @@
    af_latin2_align_linked_edge( AF_GlyphHints  hints,
                                 AF_Dimension   dim,
                                 AF_Edge        base_edge,
+--- a/src/base/ftadvanc.c
++++ b/src/base/ftadvanc.c
+@@ -21,7 +21,7 @@
+ #include FT_INTERNAL_OBJECTS_H
+ 
+ 
+-  static FT_Error
++  static inline __attribute__(( always_inline )) FT_Error
+   _ft_face_scale_advances( FT_Face    face,
+                            FT_Fixed*  advances,
+                            FT_UInt    count,
 --- a/src/base/ftobjs.c
 +++ b/src/base/ftobjs.c
 @@ -514,7 +514,7 @@
@@ -216,24 +227,6 @@
    FT_Outline_New_Internal( FT_Memory    memory,
                             FT_UInt      numPoints,
                             FT_Int       numContours,
---- a/src/base/ftstream.c
-+++ b/src/base/ftstream.c
-@@ -577,6 +577,7 @@
-   }
- 
- 
-+#ifndef PAF_STATIC_BUILD
-   FT_BASE_DEF( FT_ULong )
-   FT_Stream_ReadUOffset( FT_Stream  stream,
-                         FT_Error*  error )
-@@ -622,6 +623,7 @@
- 
-     return 0;
-   }
-+#endif /* !PAF_STATIC_BUILD */
- 
- 
-   FT_BASE_DEF( FT_ULong )
 --- a/src/base/fttrigon.c
 +++ b/src/base/fttrigon.c
 @@ -182,7 +182,7 @@
@@ -254,24 +247,37 @@
    ft_trig_pseudo_polarize( FT_Vector*  vec )
    {
      FT_Fixed         theta;
---- a/src/base/ftutil.c
-+++ b/src/base/ftutil.c
-@@ -474,6 +474,7 @@
-   }
+--- a/src/cff/cffload.c
++++ b/src/cff/cffload.c
+@@ -578,7 +578,7 @@
  
  
-+#ifndef PAF_STATIC_BUILD
-   FT_BASE_DEF( FT_Error )
-   FT_QRealloc( FT_Memory  memory,
-                FT_Long    current,
-@@ -486,6 +487,7 @@
-     (void)FT_QREALLOC( *p, current, size );
-     return error;
-   }
-+#endif /* !PAF_STATIC_BUILD */
+   /* get an entry from Name INDEX */
+-  FT_LOCAL_DEF( FT_String* )
++  static inline __attribute__(( always_inline )) FT_String*
+   cff_index_get_name( CFF_Font  font,
+                       FT_UInt   element )
+   {
+@@ -775,7 +775,7 @@
+   /*************************************************************************/
+   /*************************************************************************/
  
+-  static FT_Error
++  static inline __attribute__(( always_inline )) FT_Error
+   cff_charset_compute_cids( CFF_Charset  charset,
+                             FT_UInt      num_glyphs,
+                             FT_Memory    memory )
+--- a/src/cff/cffload.h
++++ b/src/cff/cffload.h
+@@ -49,7 +49,7 @@
+   cff_index_forget_element( CFF_Index  idx,
+                             FT_Byte**  pbytes );
  
-   FT_BASE_DEF( void )
+-  FT_LOCAL( FT_String* )
++  static inline __attribute__(( always_inline )) FT_String*
+   cff_index_get_name( CFF_Font  font,
+                       FT_UInt   element );
+ 
 --- a/src/cff/cffobjs.c
 +++ b/src/cff/cffobjs.c
 @@ -102,7 +102,7 @@
@@ -308,7 +314,7 @@
    /* read a floating point number, either integer or real, */
    /* but return `10^scaling' times the number read in      */
 -  static FT_Fixed
-+  static __attribute__(( noinline )) FT_Fixed
++  static inline __attribute__(( always_inline )) FT_Fixed
    cff_parse_fixed_scaled( FT_Byte**  d,
                            FT_Long    scaling )
    {
@@ -350,8 +356,39 @@
    afm_parser_read_int( AFM_Parser  parser,
                         FT_Int*     aint )
    {
+--- a/src/psaux/psconv.c
++++ b/src/psaux/psconv.c
+@@ -116,7 +116,7 @@
+   }
+ 
+ 
+-  FT_LOCAL_DEF( FT_Int )
++  static inline __attribute__(( always_inline )) FT_Int
+   PS_Conv_ToInt( FT_Byte**  cursor,
+                  FT_Byte*   limit )
+ 
+--- a/src/psaux/psconv.h
++++ b/src/psaux/psconv.h
+@@ -32,7 +32,7 @@
+                   FT_Int     base );
+ 
+ 
+-  FT_LOCAL( FT_Int )
++  static inline __attribute__(( always_inline )) FT_Int
+   PS_Conv_ToInt( FT_Byte**  cursor,
+                  FT_Byte*   limit );
+ 
 --- a/src/psaux/psobjs.c
 +++ b/src/psaux/psobjs.c
+@@ -335,7 +335,7 @@
+   /* first character must be `(';                               */
+   /* *acur is positioned at the character after the closing `)' */
+ 
+-  static FT_Error
++  static inline __attribute__(( always_inline )) FT_Error
+   skip_literal_string( FT_Byte*  *acur,
+                        FT_Byte*   limit )
+   {
 @@ -848,7 +848,7 @@
    /* NB: `values' can be NULL if we just want to skip the      */
    /*     array; in this case we ignore `max_values'            */
@@ -435,7 +472,7 @@
  
  
 -  static FT_UInt32*
-+  static inline __attribute__(( always_inline )) FT_UInt32*
++  static __attribute__(( noinline, noclone )) FT_UInt32*
    tt_cmap14_get_def_chars( TT_CMap     cmap,
                             FT_Byte*    p,
                             FT_Memory   memory )
@@ -461,6 +498,17 @@
    ft_smooth_render_generic( FT_Renderer       render,
                              FT_GlyphSlot      slot,
                              FT_Render_Mode    mode,
+--- a/src/truetype/ttgload.c
++++ b/src/truetype/ttgload.c
+@@ -1856,7 +1856,7 @@
+ #endif /* TT_CONFIG_OPTION_EMBEDDED_BITMAPS */
+ 
+ 
+-  static FT_Error
++  static __attribute__(( noinline, noclone )) FT_Error
+   tt_loader_init( TT_Loader     loader,
+                   TT_Size       size,
+                   TT_GlyphSlot  glyph,
 --- a/src/truetype/ttgxvar.c
 +++ b/src/truetype/ttgxvar.c
 @@ -276,7 +276,7 @@

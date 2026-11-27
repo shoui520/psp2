@@ -226,6 +226,20 @@ public:
 
 	Camera(uint32_t flags);
 
+#ifdef PAF_BUILD_2014
+	~Camera()
+	{
+	}
+
+	/* the projection by the view */
+	math::matrix GetViewProjection() const;
+	math::v4 GetEyePos() const;
+	/* the projection and view loaded into the front end's stacks, over what was there */
+	void PushMatrices();
+	void PopMatrices();
+	/* the unit of length: a pixel in the 2D view */
+	float GetUnit();
+#else
 	virtual ~Camera()
 	{
 	}
@@ -238,6 +252,7 @@ public:
 	virtual void PopMatrices();
 	/* the unit of length: a pixel in the 2D view */
 	virtual float GetUnit();
+#endif
 
 	/* the projection set for the 2D or the 3D view in an aspect, and the eye placed */
 	void Reset(float aspect);
@@ -260,8 +275,10 @@ public:
 	Transform m_transform;
 	Projection m_projection;
 	uint32_t m_flags;
+#ifndef PAF_BUILD_2014
 	/* the turn about the view axis, in radians */
 	float m_roll;
+#endif
 	CameraControl m_control;
 };
 

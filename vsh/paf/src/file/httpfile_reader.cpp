@@ -42,12 +42,18 @@ HttpFileReaderConnection::HttpFileReaderConnection(const HttpFileReaderConnectio
 	param.user_agent = src.user_agent;
 	param.host = src.host;
 	param.scheme = src.scheme;
+#ifndef PAF_BUILD_2014
 	param.https_flag = src.https_flag;
+#endif
 	param.auto_proxy = src.auto_proxy;
 	param.port = src.port;
+#ifndef PAF_BUILD_2014
 	param.template_option = src.template_option;
+#endif
 	param.enable_keepalive = src.enable_keepalive;
+#ifndef PAF_BUILD_2014
 	param.response_header_max_size = src.response_header_max_size;
+#endif
 	m_template_id = 0;
 	m_connection_id = 0;
 	m_https_flag = HttpFile::OpenArg::HTTPS_FLAG_DEFAULT &
@@ -147,11 +153,14 @@ int32_t HttpFileReaderContext::GetConnection(common::SharedPtr<HttpFileReaderCon
 			    connection->param.scheme == param.scheme &&
 			    connection->param.user_agent == param.user_agent &&
 			    connection->param.http_version == param.http_version &&
-			    connection->param.auto_proxy == param.auto_proxy &&
-			    connection->param.https_flag == param.https_flag &&
+			    connection->param.auto_proxy == param.auto_proxy
+#ifndef PAF_BUILD_2014
+			    && connection->param.https_flag == param.https_flag &&
 			    connection->param.template_option == param.template_option &&
 			    connection->param.response_header_max_size ==
-				    param.response_header_max_size) {
+				    param.response_header_max_size
+#endif
+			    ) {
 				result = *it;
 				context->m_connections.erase(it);
 				mutex->Unlock();
@@ -200,6 +209,191 @@ int32_t HttpFileReaderContext::ReturnConnection(
 	return 0;
 }
 
+#ifdef PAF_BUILD_2014
+HttpFileHttpReader::HttpFileHttpReader(const HttpFileReaderParam *param)
+	: HttpFileReader(param), m_request_id(0), m_position(0),
+	  m_content_length(SCE_PAF_ERROR_FILE_UNKNOWN_SIZE),
+	  m_lock("ScePafHttpReaderLock", 0), m_aborted(false)
+{
+}
+
+HttpFileHttpReader::~HttpFileHttpReader()
+{
+	m_lock.WriterLock();
+	if (m_request_id > 0)
+		sceHttpDeleteRequest(m_request_id);
+	m_request_id = 0;
+	HttpFileReaderContext::ReturnConnection(m_context, m_connection);
+	m_lock.WriterUnlock();
+}
+
+int32_t HttpFileHttpReader::Open()
+{
+	m_lock.WriterLock();
+	if (m_request_id > 0)
+		sceHttpDeleteRequest(m_request_id);
+	m_request_id = 0;
+	m_connection.reset();
+	m_lock.WriterUnlock();
+
+	m_content_length = SCE_PAF_ERROR_FILE_UNKNOWN_SIZE;
+	m_position = 0;
+
+	string user_agent;
+	string referer;
+
+	user_agent.assign(ScePafMisc_82171187(&m_request_headers, HttpFileReader::header_user_agent, 0));
+	ScePafMisc_E21E796D(&m_request_headers, HttpFileReader::header_user_agent);
+	referer.assign(ScePafMisc_82171187(&m_request_headers, HttpFileReader::header_referer, 0));
+	ScePafMisc_E21E796D(&m_request_headers, HttpFileReader::header_referer);
+
+	SceHttpMethods method_id = SCE_HTTP_METHOD_GET;
+
+	if (sce_paf_strcmp("GET", m_method.c_str()) == 0)
+		method_id = SCE_HTTP_METHOD_GET;
+	else if (sce_paf_strcmp("HEAD", m_method.c_str()) == 0)
+		method_id = SCE_HTTP_METHOD_HEAD;
+	else if (sce_paf_strcmp("POST", m_method.c_str()) == 0)
+		method_id = SCE_HTTP_METHOD_POST;
+	else if (sce_paf_strcmp("PUT", m_method.c_str()) == 0)
+		method_id = SCE_HTTP_METHOD_PUT;
+	else if (sce_paf_strcmp("DELETE", m_method.c_str()) == 0)
+		method_id = SCE_HTTP_METHOD_DELETE;
+	else if (sce_paf_strcmp("TRACE", m_method.c_str()) == 0)
+		method_id = SCE_HTTP_METHOD_TRACE;
+	else if (sce_paf_strcmp("CONNECT", m_method.c_str()) == 0)
+		method_id = SCE_HTTP_METHOD_CONNECT;
+	else if (sce_paf_strcmp("OPTIONS", m_method.c_str()) == 0)
+		method_id = SCE_HTTP_METHOD_OPTIONS;
+
+	m_lock.WriterLock();
+	if (m_aborted) {
+		m_aborted = false;
+		m_lock.WriterUnlock();
+		return SCE_PAF_ERROR_FILE_NOT_OPENED;
+	}
+
+	int32_t ret;
+
+	{
+		HttpFileReaderConnectionParam param;
+
+		sce_paf_memset(&param, 0, sizeof(param));
+		param.http_version = SCE_HTTP_VERSION_1_1;
+		param.user_agent = user_agent;
+		param.host = m_host;
+		param.scheme = m_scheme;
+		param.port = m_port;
+		param.auto_proxy = !m_ignore_proxy;
+		param.enable_keepalive = m_enable_keepalive;
+		ret = HttpFileReaderContext::GetConnection(m_context, param, m_connection);
+		if (ret != 0) {
+			m_lock.WriterUnlock();
+			Close();
+			return ret;
+		}
+		m_request_id = sceHttpCreateRequest(m_connection->m_connection_id, method_id,
+						    m_uri.c_str(), (uint64_t)m_msg_body_len);
+		if (m_request_id <= 0) {
+			ret = m_request_id;
+			m_lock.WriterUnlock();
+			Close();
+			return ret;
+		}
+		{
+			uint32_t flags = 0;
+
+			if (m_open_flag & HttpFile::OpenArg::SUPPRESS_3G_ACCESS)
+				flags = 1;
+			if (m_open_flag & HttpFile::OpenArg::SUPPRESS_WIFI_ACCESS)
+				flags |= 2;
+			if (m_open_flag & HttpFile::OpenArg::HTTP_OPTION4)
+				flags |= 4;
+			SceHttp_F30073EC(m_request_id, flags);
+			if (m_timeout.resolve_timeout >= 0)
+				sceHttpSetResolveTimeOut(m_request_id, m_timeout.resolve_timeout);
+			if (m_timeout.connect_timeout >= 0)
+				sceHttpSetConnectTimeOut(m_request_id, m_timeout.connect_timeout);
+			if (m_timeout.send_timeout >= 0)
+				sceHttpSetSendTimeOut(m_request_id, m_timeout.send_timeout);
+			if (m_timeout.recv_timeout >= 0)
+				sceHttpSetRecvTimeOut(m_request_id, m_timeout.recv_timeout);
+
+			HttpRequestHeaderParam header;
+
+			header.id = m_request_id;
+			header.mode = SCE_HTTP_HEADER_OVERWRITE;
+			ScePafMisc_5D64A09C(&m_request_headers, AddHeader, &header);
+			if (m_accept_encoding_gzip == 1)
+				sceHttpSetAcceptEncodingGZIPEnabled(m_request_id, 1);
+			else if (m_accept_encoding_gzip == 0)
+				sceHttpSetAcceptEncodingGZIPEnabled(m_request_id, 0);
+		}
+	}
+	m_lock.WriterUnlock();
+	{
+		m_lock.ReaderLock();
+
+		int32_t request_id = m_request_id;
+
+		m_lock.ReaderUnlock();
+		ret = sceHttpSendRequest(request_id, m_msg_body, m_msg_body_len);
+	}
+	ScePafMisc_F39DF886(&m_response_headers);
+	{
+		m_lock.ReaderLock();
+
+		int32_t request_id = m_request_id;
+
+		m_lock.ReaderUnlock();
+
+		char *header;
+		size_t header_size;
+
+		if (sceHttpGetAllResponseHeaders(request_id, &header, &header_size) == 0) {
+			ScePafMisc_EA63635D(&m_response, header, header_size);
+			ScePafMisc_DBF32F34(&m_response_headers, header, header_size);
+		}
+	}
+	if (ret != 0) {
+		Close();
+		return ret;
+	}
+	m_position = 0;
+	{
+		m_lock.ReaderLock();
+
+		int32_t request_id = m_request_id;
+
+		m_lock.ReaderUnlock();
+
+		uint64_t content_length;
+
+		if (sceHttpGetResponseContentLength(request_id, &content_length) == 0) {
+			m_content_length = content_length;
+			if (m_content_length < 0)
+				m_content_length = SCE_PAF_ERROR_FILE_UNKNOWN_SIZE;
+		} else {
+			m_content_length = SCE_PAF_ERROR_FILE_UNKNOWN_SIZE;
+		}
+	}
+	return 0;
+}
+
+int32_t HttpFileHttpReader::Close()
+{
+	m_lock.WriterLock();
+	if (m_request_id > 0)
+		sceHttpDeleteRequest(m_request_id);
+	m_request_id = 0;
+	HttpFileReaderContext::ReturnConnection(m_context, m_connection);
+	m_aborted = false;
+	m_lock.WriterUnlock();
+	m_content_length = SCE_PAF_ERROR_FILE_UNKNOWN_SIZE;
+	m_position = 0;
+	return 0;
+}
+#else
 HttpFileHttpReader::HttpFileHttpReader(common::SharedPtr<HttpFileReaderConfig> config)
 	: HttpFileReader(config), m_request_id(0), m_position(0),
 	  m_content_length(SCE_PAF_ERROR_FILE_UNKNOWN_SIZE),
@@ -281,35 +475,9 @@ int32_t HttpFileHttpReader::Open()
 		ret = HttpFileReaderContext::GetConnection(config->context, param, m_connection);
 		if (ret != 0)
 			goto unlock_error;
-#ifdef PAF_BUILD_2014
-		{
-			SceHttpMethods method_id = SCE_HTTP_METHOD_GET;
-
-			if (sce_paf_strcmp("GET", config->method) == 0)
-				method_id = SCE_HTTP_METHOD_GET;
-			else if (sce_paf_strcmp("HEAD", config->method) == 0)
-				method_id = SCE_HTTP_METHOD_HEAD;
-			else if (sce_paf_strcmp("POST", config->method) == 0)
-				method_id = SCE_HTTP_METHOD_POST;
-			else if (sce_paf_strcmp("PUT", config->method) == 0)
-				method_id = SCE_HTTP_METHOD_PUT;
-			else if (sce_paf_strcmp("DELETE", config->method) == 0)
-				method_id = SCE_HTTP_METHOD_DELETE;
-			else if (sce_paf_strcmp("TRACE", config->method) == 0)
-				method_id = SCE_HTTP_METHOD_TRACE;
-			else if (sce_paf_strcmp("CONNECT", config->method) == 0)
-				method_id = SCE_HTTP_METHOD_CONNECT;
-			else if (sce_paf_strcmp("OPTIONS", config->method) == 0)
-				method_id = SCE_HTTP_METHOD_OPTIONS;
-			m_request_id = sceHttpCreateRequest(m_connection->m_connection_id,
-							    method_id, config->uri,
-							    (uint64_t)body_size);
-		}
-#else
 		m_request_id = sceHttpCreateRequestWithURL2(m_connection->m_connection_id,
 							    config->method, config->uri,
 							    (uint64_t)body_size);
-#endif
 		if (m_request_id <= 0) {
 			ret = m_request_id;
 			goto unlock_error;
@@ -353,7 +521,6 @@ int32_t HttpFileHttpReader::Open()
 		m_lock.ReaderUnlock();
 		ret = sceHttpSendRequest(request_id, body, body_size);
 
-#ifndef PAF_BUILD_2014
 		int32_t error;
 		uint32_t detail;
 
@@ -374,7 +541,6 @@ int32_t HttpFileHttpReader::Open()
 			m_result[1] = 0;
 			m_result[2] = 0;
 		}
-#endif
 	}
 	ScePafMisc_F39DF886(&m_response_headers);
 	{
@@ -440,6 +606,7 @@ int32_t HttpFileHttpReader::Close()
 	m_position = 0;
 	return 0;
 }
+#endif
 
 int32_t HttpFileHttpReader::Read(void *buf, size_t nbyte)
 {

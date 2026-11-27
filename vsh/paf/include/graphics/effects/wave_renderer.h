@@ -418,8 +418,14 @@ uint32_t MakeGridStrip(vector<T> *indices, arl::SurfaceSize size, bool join, uin
 template<class Vertex>
 class WaveMesh {
 public:
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) WaveMesh()
+		: m_index_count(0), m_width(0), m_height(0), m_strip_count(0),
+		  m_primitive(arl::TRIANGLE_STRIP), m_line_count(0)
+#else
 	WaveMesh() : m_index_count(0), m_width(0), m_height(0), m_strip_count(0),
 		     m_primitive(arl::TRIANGLE_STRIP), m_line_count(0)
+#endif
 	{
 	}
 

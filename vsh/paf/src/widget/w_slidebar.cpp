@@ -163,6 +163,9 @@ extern const SoundDef s_slidebar_sounds[] = {
 	{ "drag_end", SlideBar::SOUND_DRAG_END },
 };
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline))
+#endif
 SlideBarSoundParam::SlideBarSoundParam()
 {
 	for (uint32_t i = 0; i < 2; i++)

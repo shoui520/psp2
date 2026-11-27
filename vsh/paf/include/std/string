@@ -74,7 +74,11 @@ public:
 	static const size_type npos = (size_type)-1;
 	static _Elem empty_string;
 
+#ifdef PAF_BUILD_2014
+	explicit inline __attribute__((always_inline)) basic_string(const _Ax &al = _Ax())
+#else
 	explicit basic_string(const _Ax &al = _Ax())
+#endif
 	{
 		ptr = &empty_string;
 		count = 0;
@@ -101,11 +105,7 @@ public:
 		append(len, ch);
 	}
 
-#ifdef PAF_BUILD_2014
-	inline __attribute__((always_inline)) basic_string(const _Myt &src)
-#else
 	basic_string(const _Myt &src)
-#endif
 	{
 		ptr = &empty_string;
 		count = 0;
@@ -131,9 +131,6 @@ public:
 
 	_Myt &assign(const _Elem *src, size_type len);
 
-#ifdef PAF_BUILD_2014
-	__attribute__((noinline))
-#endif
 	_Myt &assign(const _Elem *src)
 	{
 		return assign(src, src != NULL ? _Traits::length(src) : 0);

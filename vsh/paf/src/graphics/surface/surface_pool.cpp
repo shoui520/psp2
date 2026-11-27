@@ -25,6 +25,7 @@
 namespace paf {
 namespace graph {
 
+#ifndef PAF_BUILD_2014
 size_t SurfacePool::GetFreeSize() const
 {
 	if (m_allocator != NULL)
@@ -32,6 +33,7 @@ size_t SurfacePool::GetFreeSize() const
 
 	return 0;
 }
+#endif
 
 SurfacePool::SurfacePool(void *pool_addr, int32_t pool_size, const char *pool_name,
 			 const memory::HeapAllocator::Option *option, MemoryType type)

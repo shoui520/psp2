@@ -86,7 +86,7 @@ int32_t MapCanvas::GetDocumentSize()
 	return (int32_t)0x80AF0001;
 }
 
-void MapCanvas::OnStartLoad()
+void MapCanvas::OnMapStartLoad()
 {
 	if (m_map_core != NULL) {
 		MapCanvasEvent ev(2, 0);
@@ -95,7 +95,7 @@ void MapCanvas::OnStartLoad()
 	}
 }
 
-void MapCanvas::OnFinishLoad()
+void MapCanvas::OnMapFinishLoad()
 {
 	if (m_map_core != NULL) {
 		MapCanvasEvent ev(3, 0);

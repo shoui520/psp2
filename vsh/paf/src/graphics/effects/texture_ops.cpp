@@ -35,17 +35,20 @@ namespace paf {
 namespace graph {
 namespace arl {
 
+#ifndef PAF_BUILD_2014
 template<>
 inline __attribute__((noinline)) ShaderInstance<QuadVertShader, VertShaderObject>::ShaderInstance()
 	: m_object(&m_interface)
 {
 }
+#endif
 
 }
 }
 
 namespace common {
 
+#ifndef PAF_BUILD_2014
 template<>
 template<>
 inline __attribute__((noinline))
@@ -66,6 +69,7 @@ SharedPtr<graph::arl::FrameBufferObject>::SharedPtr(graph::arl::FrameBufferObjec
 		m_ref_counter = NULL;
 	}
 }
+#endif
 
 template<>
 inline __attribute__((noinline)) SharedPtr<graph::arl::FrameBufferObject> &

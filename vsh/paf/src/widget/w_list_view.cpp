@@ -2288,7 +2288,11 @@ void Segment::DestroyCell(int32_t index, uint32_t num)
 
 }
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) void ListView::Rebuild()
+#else
 void ListView::Rebuild()
+#endif
 {
 	EndDrag(-1);
 	while (m_cell_map->size() != 0) {

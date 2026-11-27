@@ -18,7 +18,7 @@ vector<common::String>::push_back(const common::String &val)
 	int result;
 
 	if (count + 1 <= limit || (result = reserve(limit + 10)) != 0) {
-		new (&ptr[count]) common::String(val);
+		PAF_PLACEMENT_NEW_COPY(&ptr[count], common::String, val);
 		result = ++count;
 	}
 	return result;

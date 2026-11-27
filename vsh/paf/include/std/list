@@ -104,7 +104,20 @@ public:
 	}
 
 #ifdef PAF_BUILD_2014
-	explicit __attribute__((always_inline)) list(const _Ax &al = _Ax()) : alloc(al)
+	__attribute__((always_inline)) list() : alloc()
+	{
+		count = 0;
+
+		_Node *node = (_Node *)operator new(sizeof(_Node));
+
+		head = node;
+		if (head != NULL) {
+			head->prev = head;
+			head->next = head;
+		}
+	}
+
+	explicit __attribute__((always_inline)) list(const _Ax &al) : alloc(al)
 	{
 		count = 0;
 
@@ -289,7 +302,7 @@ list<_Ty, _Ax>::list(const list &other)
 				ScePafStdc_D608246A();
 #endif
 			if (copy != NULL)
-				new (&copy->value) _Ty(src->value);
+				PAF_PLACEMENT_NEW_COPY(&copy->value, _Ty, src->value);
 			else
 				copy = head;
 			if (copy == head)
@@ -376,7 +389,7 @@ list<_Ty, _Ax>::push_front(const _Ty &val)
 	_Node *node = (_Node *)operator new(sizeof(_Node));
 
 	if (node != NULL)
-		new (&node->value) _Ty(val);
+		PAF_PLACEMENT_NEW_COPY(&node->value, _Ty, val);
 	else
 		node = head;
 	if (node != head) {
@@ -402,7 +415,7 @@ list<_Ty, _Ax>::push_back(const _Ty &val)
 	_Node *node = (_Node *)operator new(sizeof(_Node));
 
 	if (node != NULL)
-		new (&node->value) _Ty(val);
+		PAF_PLACEMENT_NEW_COPY(&node->value, _Ty, val);
 	else
 		node = head;
 	if (node != head) {
@@ -426,7 +439,7 @@ list<_Ty, _Ax>::push_front(const _Ty &val)
 	if (node == NULL)
 		ScePafStdc_D608246A();
 	if (node != NULL)
-		new (&node->value) _Ty(val);
+		PAF_PLACEMENT_NEW_COPY(&node->value, _Ty, val);
 	else
 		node = head;
 	if (node != head) {
@@ -454,7 +467,7 @@ list<_Ty, _Ax>::push_back(const _Ty &val)
 	if (node == NULL)
 		ScePafStdc_D608246A();
 	if (node != NULL)
-		new (&node->value) _Ty(val);
+		PAF_PLACEMENT_NEW_COPY(&node->value, _Ty, val);
 	else
 		node = head;
 	if (node != head) {
@@ -506,7 +519,7 @@ list<_Ty, _Ax>::insert(iterator where, const _Ty &val)
 	_Node *node = (_Node *)operator new(sizeof(_Node));
 
 	if (node != NULL) {
-		new (&node->value) _Ty(val);
+		PAF_PLACEMENT_NEW_COPY(&node->value, _Ty, val);
 	} else {
 		node = head;
 	}
@@ -567,7 +580,7 @@ list<_Ty, _Ax>::insert(iterator where, const _Ty &val)
 	_Node *node = (_Node *)operator new(sizeof(_Node));
 
 	if (node != NULL) {
-		new (&node->value) _Ty(val);
+		PAF_PLACEMENT_NEW_COPY(&node->value, _Ty, val);
 	} else {
 		ScePafStdc_D608246A();
 		node = head;

@@ -38,6 +38,18 @@ public:
 		{
 		}
 
+#ifdef PAF_BUILD_2014
+		static inline __attribute__((always_inline)) void *operator new(size_t size)
+		{
+			return ::operator new(size);
+		}
+
+		static inline __attribute__((always_inline)) void *operator new(size_t, void *where)
+		{
+			return where;
+		}
+#endif
+
 		_Node *parent;
 		_Node *left;
 		_Node *right;
@@ -723,6 +735,53 @@ void _Tree<_Traits>::erase(iterator first, iterator last)
 			node->color = _Black; \
 			head->isnil = true; \
 		} \
+	} \
+	}
+
+/* _Tree<Traits>::_Rebalance inline, for types where Sony's 2014 build inlines it into _Insert */
+#define PAF_TREE_INLINE_REBALANCE(...) \
+	namespace paf { \
+	template<> inline __attribute__((always_inline)) void _Tree<__VA_ARGS__ >::_Rebalance(_Node *node) \
+	{ \
+		if (head == NULL) \
+			return; \
+		node->color = _Red; \
+		while (node != head->parent && node->parent->color != _Black) { \
+			if (node->parent == node->parent->parent->left) { \
+				_Node *uncle = node->parent->parent->right; \
+				if (uncle->color != _Black) { \
+					node->parent->color = _Black; \
+					uncle->color = _Black; \
+					node->parent->parent->color = _Red; \
+					node = node->parent->parent; \
+				} else { \
+					if (node == node->parent->right) { \
+						node = node->parent; \
+						_Lrotate(node); \
+					} \
+					node->parent->color = _Black; \
+					node->parent->parent->color = _Red; \
+					_Rrotate(node->parent->parent); \
+				} \
+			} else { \
+				_Node *uncle = node->parent->parent->left; \
+				if (uncle->color != _Black) { \
+					node->parent->color = _Black; \
+					uncle->color = _Black; \
+					node->parent->parent->color = _Red; \
+					node = node->parent->parent; \
+				} else { \
+					if (node == node->parent->left) { \
+						node = node->parent; \
+						_Rrotate(node); \
+					} \
+					node->parent->color = _Black; \
+					node->parent->parent->color = _Red; \
+					_Lrotate(node->parent->parent); \
+				} \
+			} \
+		} \
+		head->parent->color = _Black; \
 	} \
 	}
 

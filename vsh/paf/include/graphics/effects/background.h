@@ -73,7 +73,7 @@ vector<common::SharedPtr<graph::Background> >::push_back(const common::SharedPtr
 	int result;
 
 	if (count + 1 <= limit || (result = reserve(limit + 10)) != 0) {
-		new (&ptr[count]) common::SharedPtr<graph::Background>(val);
+		PAF_PLACEMENT_NEW_COPY(&ptr[count], common::SharedPtr<graph::Background>, val);
 		result = ++count;
 	}
 	return result;

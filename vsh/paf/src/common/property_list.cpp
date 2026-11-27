@@ -126,14 +126,12 @@ void PropertyList::SetValue(const IDParam &id, PropertyValue value)
 	m_value_map[id] = value;
 }
 
-#ifndef PAF_BUILD_2014
 void PropertyList::SetValue(uint32_t index, PropertyValue value)
 {
 	if (index >= m_value_list.size())
 		m_value_list.resize(index + 1);
 	m_value_list[index] = value;
 }
-#endif
 
 SharedPtr<PropertyElement> PropertyList::GetElement(const IDParam &id) const
 {
@@ -181,12 +179,14 @@ PropertyValue PropertyList::GetValue(const IDParam &id) const
 	return it->second;
 }
 
+#ifndef PAF_BUILD_2014
 PropertyValue PropertyList::GetValue(uint32_t index) const
 {
 	if (index < m_value_list.size())
 		return m_value_list[index];
 	return PropertyValue();
 }
+#endif
 
 bool PropertyList::HasElement(const IDParam &id) const
 {

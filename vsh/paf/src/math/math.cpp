@@ -32,7 +32,6 @@ v2 LerpAngle(v2 a, v2 b, v2 t)
 	return v2(x, y);
 }
 
-#ifndef PAF_BUILD_2014
 v3 LerpAngle(v3 a, v3 b, v3 t)
 {
 	float x = LerpAngle(a.extract_x(), b.extract_x(), t.extract_x());
@@ -51,7 +50,6 @@ v4 LerpAngle(v4 a, v4 b, v4 t)
 
 	return v4(x, y, z, w);
 }
-#endif
 
 }
 }

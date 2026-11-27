@@ -31,8 +31,8 @@ if(EXISTS "${FT2_SCE}/.patched")
 endif()
 if(NOT ft2_stamp STREQUAL ft2_patch_md5)
 	file(REMOVE_RECURSE "${FT2_SCE}")
-	foreach(f src/base/ftsystem.c src/base/ftinit.c src/base/ftbase.c src/base/ftobjs.c
-		  src/base/ftoutln.c src/base/ftstream.c src/base/fttrigon.c src/base/ftutil.c
+	foreach(f src/base/ftadvanc.c src/base/ftsystem.c src/base/ftinit.c src/base/ftbase.c
+		  src/base/ftobjs.c src/base/ftoutln.c src/base/fttrigon.c
 		  include/freetype/internal/ftobjs.h
 		  src/autofit src/cff src/psaux src/pshinter src/raster src/sfnt src/smooth
 		  src/truetype)

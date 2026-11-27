@@ -74,6 +74,9 @@ extern const SoundDef s_scrollbar_touch_sounds[] = {
 	{ "page_scroll_repeat", ScrollBarTouch::SOUND_PAGE_SCROLL_REPEAT },
 };
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline))
+#endif
 ScrollBarTouchSoundParam::ScrollBarTouchSoundParam()
 {
 	for (uint32_t i = 0; i < 4; i++)

@@ -97,8 +97,14 @@ public:
 		s_count--;
 	}
 
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) void AddAttribute(int32_t slot, uint32_t components,
+								SceGxmAttributeFormat format,
+								uint32_t stride, uint16_t offset)
+#else
 	void AddAttribute(int32_t slot, uint32_t components, SceGxmAttributeFormat format,
 			  uint32_t stride, uint16_t offset)
+#endif
 	{
 		Attribute &attribute = m_attributes[m_count++];
 

@@ -31,6 +31,11 @@
 #include <widget/w_scene.h>
 #include <common/transition.h>
 
+#ifdef PAF_BUILD_2014
+PAF_TREE_INLINE_CTOR(_Tmap_traits<string, ui::FactoryFuncTable, less<string> >)
+PAF_TREE_INLINE_CTOR(_Tmap_traits<string, ui::FactoryFuncDrawObj, less<string> >)
+#endif
+
 extern "C" int sceAppMgrConvertVs0UserDrivePath(const char *path, char *out, int out_size);
 
 namespace paf {
@@ -1110,8 +1115,13 @@ __attribute__((noinline)) void Plugin::PageClose(const cxml::Element &node,
 	}
 }
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) void Plugin::SetNodeEntity_CreatePage(const IDParam &id,
+									    ui::Widget *page)
+#else
 __attribute__((noinline)) void Plugin::SetNodeEntity_CreatePage(const IDParam &id,
 								ui::Widget *page)
+#endif
 {
 	typedef map<string, ui::Widget *> Table;
 
@@ -1554,7 +1564,7 @@ vector<WidgetResourceInfo::LayoutData>::push_back(const WidgetResourceInfo::Layo
 	int result;
 
 	if (count + 1 <= limit || (result = reserve(limit + 10)) != 0) {
-		new (&ptr[count]) WidgetResourceInfo::LayoutData(val);
+		PAF_PLACEMENT_NEW_COPY(&ptr[count], WidgetResourceInfo::LayoutData, val);
 		result = ++count;
 	}
 	return result;
@@ -2131,10 +2141,12 @@ void Plugin::PageInactivate(const IDParam &id)
 		PageInactivate(node);
 }
 
+#ifndef PAF_BUILD_2014
 ui::Scene *Plugin::PageRoot(const IDParam &id) const
 {
 	return static_cast<ui::Scene *>(GetNodeEntity_Widget(id));
 }
+#endif
 
 ui::Scene *Plugin::PageRoot(const cxml::Element &node) const
 {

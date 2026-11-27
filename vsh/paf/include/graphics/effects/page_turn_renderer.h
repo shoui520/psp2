@@ -1848,7 +1848,11 @@ public:
 
 /* Sony's build keeps the page set's instance destructor out of line */
 template<>
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) ParamSetInstance<TurnPageParamSet>::~ParamSetInstance()
+#else
 inline __attribute__((noinline)) ParamSetInstance<TurnPageParamSet>::~ParamSetInstance()
+#endif
 {
 }
 

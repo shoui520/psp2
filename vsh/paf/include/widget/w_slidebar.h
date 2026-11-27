@@ -237,7 +237,11 @@ public:
 	static const char m_param_name[];
 	static const char *ParamName();
 
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) SlideBarSoundParam();
+#else
 	SlideBarSoundParam();
+#endif
 	virtual const char *GetParamName() const;
 };
 

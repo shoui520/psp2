@@ -102,9 +102,21 @@ public:
 		    MemoryType type = MemoryType_Normal);
 	SurfacePool(const Option *option);
 	virtual ~SurfacePool();
+#ifdef PAF_BUILD_2014
+	void *Allocate(int32_t align_bytes, int32_t size);
+	void Free(void *ptr);
+	inline __attribute__((always_inline)) size_t GetFreeSize() const
+	{
+		if (m_allocator != NULL)
+			return m_allocator->GetFreeSize();
+
+		return 0;
+	}
+#else
 	virtual void *Allocate(int32_t align_bytes, int32_t size);
 	virtual void Free(void *ptr);
 	virtual size_t GetFreeSize() const;
+#endif
 
 	void SetDisableAssertOnAllocFailure(bool disable);
 

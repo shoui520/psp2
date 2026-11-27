@@ -363,8 +363,27 @@ HttpFileReaderContext::HttpFileReaderContext(size_t capacity)
 }
 
 #ifdef PAF_BUILD_2014
-inline __attribute__((always_inline))
-#endif
+HttpFileReader::HttpFileReader(const HttpFileReaderParam *param)
+	: m_scheme(param->scheme), m_host(param->host), m_port(param->port),
+	  m_method(param->method), m_uri(param->uri), m_user(param->user),
+	  m_passwd(param->passwd), m_request_headers(*param->header),
+	  m_msg_body(param->msg_body), m_msg_body_len(param->msg_body_len),
+	  m_ignore_proxy(false), m_enable_keepalive(false), m_open_flag(0),
+	  m_accept_encoding_gzip(param->accept_encoding_gzip)
+{
+	m_timeout.resolve_timeout = -1;
+	m_timeout.connect_timeout = -1;
+	m_timeout.send_timeout = -1;
+	m_timeout.recv_timeout = -1;
+}
+
+HttpFileRangeReader::HttpFileRangeReader(const HttpFileReaderParam *param)
+	: HttpFileReader(param), m_range_enabled(true), m_range_flag(0), m_reader(NULL),
+	  m_position(0), m_range_begin(-1), m_range_end(-1),
+	  m_content_length(SCE_PAF_ERROR_FILE_UNKNOWN_SIZE)
+{
+}
+#else
 HttpFileReaderConfig::HttpFileReaderConfig(const HttpFileReaderParam &param)
 	: scheme(param.scheme.c_str()), host(param.host.c_str()), port(param.port),
 	  method(param.method.c_str()), version(param.version.c_str()), uri(param.uri.c_str()),
@@ -392,7 +411,6 @@ common::SharedPtr<HttpFileReaderConfig> HttpFileReaderConfig::Clone(
 	return common::SharedPtr<HttpFileReaderConfig>(config);
 }
 
-#ifndef PAF_BUILD_2014
 bool HttpFileReaderConfig::IsHttpsCheckEnabled() const
 {
 	return !(open_flag & HttpFile::OpenArg::DISABLE_HTTPS_CHECK);
@@ -402,13 +420,13 @@ bool HttpFileReaderConfig::IsProxyIgnored() const
 {
 	return (open_flag & HttpFile::OpenArg::IGNORE_PROXY_SETTING) != 0;
 }
-#endif
 
 HttpFileRangeReader::HttpFileRangeReader(common::SharedPtr<HttpFileReaderConfig> config)
 	: HttpFileReader(config), m_range_enabled(true), m_reader(NULL), m_position(0),
 	  m_range_begin(-1), m_range_end(-1), m_content_length(SCE_PAF_ERROR_FILE_UNKNOWN_SIZE)
 {
 }
+#endif
 
 HttpFileRangeReader::~HttpFileRangeReader()
 {
@@ -419,6 +437,90 @@ HttpFileRangeReader::~HttpFileRangeReader()
 
 int32_t HttpFileRangeReader::Open()
 {
+#ifdef PAF_BUILD_2014
+	int32_t ret;
+
+	m_position = 0;
+	m_range_begin = -1;
+	m_range_end = -1;
+	m_content_length = SCE_PAF_ERROR_FILE_UNKNOWN_SIZE;
+	if (m_range_enabled) {
+		HttpHeader header(m_request_headers);
+
+		ScePafMisc_E21E796D(&header, "Range");
+
+		HttpFileReaderParam param;
+
+		param.scheme = m_scheme.c_str();
+		param.host = m_host.c_str();
+		param.port = m_port;
+		param.method = "HEAD";
+		param.uri = m_uri.c_str();
+		param.user = m_user.c_str();
+		param.passwd = m_passwd.c_str();
+		param.header = &header;
+		param.msg_body = NULL;
+		param.msg_body_len = 0;
+		param.accept_encoding_gzip = m_accept_encoding_gzip;
+		m_reader = new HttpFileHttpReader(&param);
+		if (m_reader == NULL)
+			return SCE_PAF_ERROR_FILE_NO_MEMORY;
+		m_reader->m_open_flag = m_open_flag;
+		m_reader->SetTimeout(m_timeout.resolve_timeout, m_timeout.connect_timeout,
+				     m_timeout.send_timeout, m_timeout.recv_timeout);
+		m_reader->m_context = m_context;
+		m_reader->m_accept_encoding_gzip = m_accept_encoding_gzip;
+		ret = m_reader->Open();
+		if (ret != 0) {
+			delete m_reader;
+			m_reader = NULL;
+			return ret;
+		}
+		m_content_length = m_reader->GetFileSize();
+
+		HttpResponse *response = m_reader->GetResponse();
+
+		if (response->code == 200 && response->major == 1 && response->minor == 1)
+			return 0;
+		m_range_enabled = false;
+		m_reader->Close();
+		delete m_reader;
+		m_reader = NULL;
+	}
+	{
+		HttpHeader header(m_request_headers);
+
+		ScePafMisc_E21E796D(&header, "Range");
+
+		HttpFileReaderParam param;
+
+		param.scheme = m_scheme.c_str();
+		param.host = m_host.c_str();
+		param.port = m_port;
+		param.method = m_method.c_str();
+		param.uri = m_uri.c_str();
+		param.user = m_user.c_str();
+		param.passwd = m_passwd.c_str();
+		param.header = &header;
+		param.msg_body = NULL;
+		param.msg_body_len = 0;
+		param.accept_encoding_gzip = m_accept_encoding_gzip;
+		m_reader = new HttpFileHttpReader(&param);
+		if (m_reader == NULL)
+			return SCE_PAF_ERROR_FILE_NO_MEMORY;
+		m_reader->m_open_flag = m_open_flag;
+		m_reader->SetTimeout(m_timeout.resolve_timeout, m_timeout.connect_timeout,
+				     m_timeout.send_timeout, m_timeout.recv_timeout);
+		m_reader->m_context = m_context;
+		m_reader->m_accept_encoding_gzip = m_accept_encoding_gzip;
+		ret = m_reader->Open();
+		if (ret != 0) {
+			delete m_reader;
+			m_reader = NULL;
+		}
+		return ret;
+	}
+#else
 	common::SharedPtr<HttpFileReaderConfig> config;
 	int32_t ret;
 
@@ -468,6 +570,7 @@ int32_t HttpFileRangeReader::Open()
 		m_reader = NULL;
 	}
 	return ret;
+#endif
 }
 
 int32_t HttpFileRangeReader::Close()
@@ -567,9 +670,11 @@ int32_t HttpFileRangeReader::Read(void *buf, size_t nbyte)
 				return SCE_PAF_ERROR_FILE_INVALID_OFFSET;
 			while (remaining > 0) {
 				ret = m_reader->Read(dst, (uint32_t)remaining);
+#ifndef PAF_BUILD_2014
 				m_result[0] = m_reader->m_result[0];
 				m_result[1] = m_reader->m_result[1];
 				m_result[2] = m_reader->m_result[2];
+#endif
 				if (ret < 0)
 					return ret;
 				if (ret == 0)
@@ -587,6 +692,42 @@ int32_t HttpFileRangeReader::Read(void *buf, size_t nbyte)
 			m_reader = NULL;
 		}
 		{
+#ifdef PAF_BUILD_2014
+			HttpHeader header(m_request_headers);
+			char range[64] = { 0 };
+
+			if (FormatRange(range, sizeof(range), nbyte))
+				ScePafMisc_1156F852(&header, "Range", range, true);
+
+			HttpFileReaderParam param;
+
+			param.scheme = m_scheme.c_str();
+			param.host = m_host.c_str();
+			param.port = m_port;
+			param.method = m_method.c_str();
+			param.uri = m_uri.c_str();
+			param.user = m_user.c_str();
+			param.passwd = m_passwd.c_str();
+			param.header = &header;
+			param.msg_body = NULL;
+			param.msg_body_len = 0;
+			param.accept_encoding_gzip = m_accept_encoding_gzip;
+			m_reader = new HttpFileHttpReader(&param);
+			if (m_reader == NULL)
+				return SCE_PAF_ERROR_FILE_NO_MEMORY;
+			m_reader->m_open_flag = m_open_flag;
+			m_reader->SetTimeout(m_timeout.resolve_timeout, m_timeout.connect_timeout,
+					     m_timeout.send_timeout, m_timeout.recv_timeout);
+			m_reader->m_context = m_context;
+			m_reader->m_accept_encoding_gzip = m_accept_encoding_gzip;
+			ret = m_reader->Open();
+			if (ret != 0) {
+				m_reader->Close();
+				delete m_reader;
+				m_reader = NULL;
+				return ret;
+			}
+#else
 			common::SharedPtr<HttpFileReaderConfig> config =
 				HttpFileReaderConfig::Clone(m_config);
 			char range[64] = { 0 };
@@ -602,6 +743,7 @@ int32_t HttpFileRangeReader::Read(void *buf, size_t nbyte)
 			m_result[2] = m_reader->m_result[2];
 			if (ret != 0)
 				goto error;
+#endif
 
 			switch (m_reader->GetResponse()->code) {
 			case 206: {
@@ -642,9 +784,11 @@ int32_t HttpFileRangeReader::Read(void *buf, size_t nbyte)
 				if (count > nbyte)
 					return SCE_PAF_ERROR_FILE_INVALID_OFFSET;
 				ret = m_reader->Read(dst, count);
+#ifndef PAF_BUILD_2014
 				m_result[0] = m_reader->m_result[0];
 				m_result[1] = m_reader->m_result[1];
 				m_result[2] = m_reader->m_result[2];
+#endif
 				if (ret < 0)
 					goto error;
 				m_position = (uint64_t)m_position + (uint64_t)(int64_t)ret;
@@ -675,9 +819,11 @@ int32_t HttpFileRangeReader::Read(void *buf, size_t nbyte)
 	if (m_reader == NULL)
 		return SCE_PAF_ERROR_FILE_NO_MEMORY;
 	ret = m_reader->Read(dst, nbyte);
+#ifndef PAF_BUILD_2014
 	m_result[0] = m_reader->m_result[0];
 	m_result[1] = m_reader->m_result[1];
 	m_result[2] = m_reader->m_result[2];
+#endif
 	return ret;
 
 error:
@@ -699,9 +845,11 @@ int64_t HttpFileRangeReader::Seek(int64_t offset, int32_t whence)
 
 		int32_t ret = (int32_t)m_reader->Seek(offset, whence);
 
+#ifndef PAF_BUILD_2014
 		m_result[0] = m_reader->m_result[0];
 		m_result[1] = m_reader->m_result[1];
 		m_result[2] = m_reader->m_result[2];
+#endif
 		return ret;
 	}
 	switch (whence) {
@@ -724,9 +872,11 @@ int64_t HttpFileRangeReader::Seek(int64_t offset, int32_t whence)
 			int32_t ret = (int32_t)m_reader->Seek((uint64_t)position - (uint64_t)m_position,
 							      SCE_SEEK_CUR);
 
+#ifndef PAF_BUILD_2014
 			m_result[0] = m_reader->m_result[0];
 			m_result[1] = m_reader->m_result[1];
 			m_result[2] = m_reader->m_result[2];
+#endif
 			if (ret >= 0)
 				m_position = ret;
 			return position;
@@ -776,8 +926,12 @@ bool HttpFileRangeReader::FormatRange(char *dst, size_t max, size_t nbyte)
 
 	if (dst == NULL || max < 64)
 		return false;
+#ifdef PAF_BUILD_2014
+	flags = m_range_flag;
+#else
 	if (m_config.get() != NULL)
 		flags = m_config->open_flag;
+#endif
 	if (flags & HttpFile::OpenArg::ENABLE_RANGE_GET) {
 		int64_t position = m_position;
 		int64_t end = (uint64_t)position + (uint64_t)nbyte - 1;

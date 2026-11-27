@@ -37,7 +37,7 @@ list<WidgetResourceInfo::LayoutData>::push_back(const WidgetResourceInfo::Layout
 		ScePafStdc_D608246A();
 #endif
 	if (node != NULL)
-		new (&node->value) WidgetResourceInfo::LayoutData(val);
+		PAF_PLACEMENT_NEW_COPY(&node->value, WidgetResourceInfo::LayoutData, val);
 	else
 		node = head;
 	if (node != head) {
@@ -64,7 +64,7 @@ list<TemplateCache::Item *>::push_back(TemplateCache::Item *const &val)
 	if (node == NULL)
 		ScePafStdc_D608246A();
 	if (node != NULL)
-		new (&node->value) TemplateCache::Item *(val);
+		PAF_PLACEMENT_NEW_COPY(&node->value, TemplateCache::Item *, val);
 	else
 		node = head;
 	if (node != head) {

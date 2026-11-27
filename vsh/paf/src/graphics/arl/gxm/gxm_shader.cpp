@@ -29,7 +29,7 @@ vector<VertProgramEntry>::push_back(const VertProgramEntry &val)
 	int result;
 
 	if (count + 1 <= limit || (result = reserve(limit + 10)) != 0) {
-		new (&ptr[count]) VertProgramEntry(val);
+		PAF_PLACEMENT_NEW_COPY(&ptr[count], VertProgramEntry, val);
 		result = ++count;
 	}
 	return result;
@@ -42,7 +42,7 @@ vector<FragProgramEntry>::push_back(const FragProgramEntry &val)
 	int result;
 
 	if (count + 1 <= limit || (result = reserve(limit + 10)) != 0) {
-		new (&ptr[count]) FragProgramEntry(val);
+		PAF_PLACEMENT_NEW_COPY(&ptr[count], FragProgramEntry, val);
 		result = ++count;
 	}
 	return result;

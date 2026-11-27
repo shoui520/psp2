@@ -36,7 +36,7 @@ vector<common::SharedPtr<graph::EnvProbe> >::push_back(
 	int result;
 
 	if (count + 1 <= limit || (result = reserve(limit + 10)) != 0) {
-		new (&ptr[count]) common::SharedPtr<graph::EnvProbe>(val);
+		PAF_PLACEMENT_NEW_COPY(&ptr[count], common::SharedPtr<graph::EnvProbe>, val);
 		result = ++count;
 	}
 	return result;

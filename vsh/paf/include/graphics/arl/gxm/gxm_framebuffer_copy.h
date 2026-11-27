@@ -38,7 +38,11 @@ public:
 	struct OutOfLine {
 	};
 
+#ifdef PAF_BUILD_2014
+	explicit inline __attribute__((always_inline)) TextureSource(OutOfLine)
+#else
 	explicit __attribute__((noinline)) TextureSource(OutOfLine)
+#endif
 	{
 	}
 

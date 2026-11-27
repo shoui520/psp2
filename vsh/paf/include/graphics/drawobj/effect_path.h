@@ -12,7 +12,11 @@ namespace paf {
 namespace graph {
 
 /* a path in the devkit's host tree */
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) string HostPath(const string &path)
+#else
 inline string HostPath(const string &path)
+#endif
 {
 	return string("host0:") + path;
 }

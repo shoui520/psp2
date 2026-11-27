@@ -198,6 +198,48 @@ T ParamInterpolate(const ParamTransition *transition, const ParamTransitionKeys<
 	return ParamLerp(keys.start, keys.target, t, angle, degrees);
 }
 
+#ifdef PAF_BUILD_2014
+template<>
+inline __attribute__((always_inline))
+math::v3 ParamInterpolate<math::v3>(const ParamTransition *transition,
+				    const ParamTransitionKeys<math::v3> &keys, int32_t mode,
+				    bool angle, bool degrees, float x)
+{
+	if (mode == 1)
+		return ParamLerp(keys.current, keys.target, x, angle, degrees);
+	if (transition->time >= transition->end)
+		return keys.target;
+	if (transition->time <= transition->start)
+		return keys.start;
+
+	float t = (transition->time - transition->start) / (transition->end - transition->start);
+
+	if (mode == 0)
+		t = t * t * (3.0f - t * 2.0f);
+	return ParamLerp(keys.start, keys.target, t, angle, degrees);
+}
+
+template<>
+inline __attribute__((always_inline))
+math::v4 ParamInterpolate<math::v4>(const ParamTransition *transition,
+				    const ParamTransitionKeys<math::v4> &keys, int32_t mode,
+				    bool angle, bool degrees, float x)
+{
+	if (mode == 1)
+		return ParamLerp(keys.current, keys.target, x, angle, degrees);
+	if (transition->time >= transition->end)
+		return keys.target;
+	if (transition->time <= transition->start)
+		return keys.start;
+
+	float t = (transition->time - transition->start) / (transition->end - transition->start);
+
+	if (mode == 0)
+		t = t * t * (3.0f - t * 2.0f);
+	return ParamLerp(keys.start, keys.target, t, angle, degrees);
+}
+#endif
+
 /* a rotation's, which Sony inlines */
 template<>
 inline math::quaternion ParamInterpolate(const ParamTransition *transition,
@@ -620,7 +662,11 @@ public:
 	}
 
 	/* the keys' range (name ours) */
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) void SetRange(T min, T max)
+#else
 	void SetRange(T min, T max)
+#endif
 	{
 		if (m_keys != NULL) {
 			m_keys->m_key[PARAM_KEY_MIN] = min;
@@ -787,7 +833,22 @@ public:
 
 	virtual ParamSet *get_key(const string &variant, bool create)
 	{
+#ifdef PAF_BUILD_2014
+		KeyMap::iterator it = m_keys.find(variant);
+
+		if (it == m_keys.end()) {
+			if (!create)
+				return &m_default;
+
+			S *set = new S(false);
+
+			m_keys[variant] = set;
+			return set;
+		}
+		return static_cast<S *>(it->second);
+#else
 		return GetKey(variant, create);
+#endif
 	}
 
 	virtual ParamSet *GetDefault()
@@ -804,7 +865,14 @@ public:
 		for (ParamLink *link = m_sets.m_next; link != &m_sets; link = link->m_next) {
 			S *set = static_cast<S *>(link);
 
+#ifdef PAF_BUILD_2014
+			KeyMap::iterator it = m_keys.find(variant);
+			S *src = it != m_keys.end() ? static_cast<S *>(it->second) : &m_default;
+
+			set->SetKey(key, src->m_values);
+#else
 			set->SetKey(key, GetKey(variant, false)->m_values);
+#endif
 		}
 	}
 
@@ -873,6 +941,12 @@ inline __attribute__((noinline)) ParamSetKeys<S>::ParamSetKeys(const string &var
 class ParamSetKeysManager {
 public:
 	ParamSetKeysManager(const string &name);
+
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) ~ParamSetKeysManager()
+	{
+	}
+#endif
 
 	void Add(ParamSetKeysBase *keys);
 	/* a variant every member has a set of */

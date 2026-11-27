@@ -343,7 +343,7 @@ vector<ui::WidgetSoundParam::Sound>::push_back(const ui::WidgetSoundParam::Sound
 	int result;
 
 	if (count + 1 <= limit || (result = reserve(limit + 10)) != 0) {
-		new (&ptr[count]) ui::WidgetSoundParam::Sound(val);
+		PAF_PLACEMENT_NEW_COPY(&ptr[count], ui::WidgetSoundParam::Sound, val);
 		result = ++count;
 	}
 	return result;
@@ -1650,7 +1650,18 @@ public:
 	vector<DrawObjEntry>::iterator LowerBoundDrawObj(int32_t id);
 	/* the draw object put before it, the surface drawn as the widget's, and the size updated
 	   with update (0x8115ff82, name ours) */
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) void InsertDrawObj(vector<DrawObjEntry>::iterator it,
+								 const DrawObjEntry &entry,
+								 bool update)
+	{
+		m_drawobjs.insert(it, entry);
+		if (update)
+			UpdateSize();
+	}
+#else
 	void InsertDrawObj(vector<DrawObjEntry>::iterator it, const DrawObjEntry &entry, bool update);
+#endif
 
 	/* deletes the widget's Animator and binds this one (name after ScePaf-RE) */
 	int32_t SetAnimator(Animator *animator)

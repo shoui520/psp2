@@ -9,6 +9,11 @@
 #include <inputdevice/inputlistener.h>
 #include <std/map>
 
+#ifdef PAF_BUILD_2014
+PAF_TREE_INLINE_CTOR(_Tmap_traits<void *, uint32_t, less<void *> >)
+PAF_TREE_INLINE_REBALANCE(_Tmap_traits<void *, uint32_t, less<void *> >)
+#endif
+
 using namespace paf;
 using namespace paf::inputdevice;
 

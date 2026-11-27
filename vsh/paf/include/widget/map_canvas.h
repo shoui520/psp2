@@ -25,8 +25,8 @@ public:
 	virtual ~MapCanvas();
 
 	/* MapCallbackBase overrides. */
-	virtual void OnStartLoad();
-	virtual void OnFinishLoad();
+	virtual void OnMapStartLoad();
+	virtual void OnMapFinishLoad();
 	virtual void OnLoadError(int32_t error_code, int32_t detail);
 	virtual void OnRedirect();
 	virtual void OnBrowserComponentReady();

@@ -16,6 +16,13 @@ using sce::Vectormath::Simd::Aos::Vector4;
 namespace paf {
 namespace graph {
 
+#ifdef PAF_BUILD_2014
+template<>
+inline __attribute__((always_inline)) ParamSetInstance<FocusParamSet>::~ParamSetInstance()
+{
+}
+#endif
+
 namespace {
 
 static inline float NextRandomSigned(uint32_t &seed)

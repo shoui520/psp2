@@ -292,7 +292,13 @@ PageTurnRenderer::PageTurnRenderer(const string &dir)
 	turn_page.findParamAndSet("occluder_shadow_sharpness", 0.033735f);
 	turn_page.findParamAndSet("occluder_shadow_level", 0.723214f);
 	turn_page.findParamAndSet("occluder_shadow_color", 1.0f, 1.0f, 1.0f, 1.0f);
+#ifdef PAF_BUILD_2014
+	static_cast<TurnPageParamSet *>(
+		m_turn_page.m_keys.ParamSetKeys<TurnPageParamSet>::get_key("default", true))
+		->m_values = turn_page.m_values;
+#else
 	m_turn_page.m_keys.GetKey("default", true)->m_values = turn_page.m_values;
+#endif
 
 	m_manager.AddVariant("default");
 	m_manager.SetVariant("default");

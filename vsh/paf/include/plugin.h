@@ -373,7 +373,14 @@ public:
 	void PageInactivateActually();
 	void PageInactivate(const cxml::Element &node);
 	void PageInactivate(const IDParam &id);
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) ui::Scene *PageRoot(const IDParam &id) const
+	{
+		return reinterpret_cast<ui::Scene *>(GetNodeEntity_Widget(id));
+	}
+#else
 	ui::Scene *PageRoot(const IDParam &id) const;
+#endif
 	ui::Scene *PageRoot(const cxml::Element &node) const;
 
 	void Start();
@@ -494,7 +501,11 @@ public:
 	ui::Widget *GetNodeEntity_Widget(const IDParam &id) const;
 	ui::Widget *GetNodeEntity_Widget(const cxml::Element &node) const;
 	void PageClose(const cxml::Element &node, const PageCloseParam &param);
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) void SetNodeEntity_CreatePage(const IDParam &id, ui::Widget *page);
+#else
 	void SetNodeEntity_CreatePage(const IDParam &id, ui::Widget *page);
+#endif
 	ui::Widget *GetNodeEntity_CreatePage(const IDParam &id) const;
 	void PageClose(const IDParam &id, const PageCloseParam &param);
 	ui::HandlerCB GetInitEventHandler(const IDParam &id) const;

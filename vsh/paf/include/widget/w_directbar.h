@@ -172,8 +172,10 @@ public:
 	void OrientClosedState(Event *e);
 
 	/* the balloon's move, kept beside the entry while it is clamped (name ours) */
+#ifndef PAF_BUILD_2014
 	static void OnBalloonMove(Timer *t, AnimListener *listener, void *data1, void *data2,
 				  void *data3);
+#endif
 
 	int32_t m_state;
 	/* where the touch that holds it went down */

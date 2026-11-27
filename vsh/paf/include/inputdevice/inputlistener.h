@@ -187,6 +187,14 @@ public:
 	bool on_detach;
 };
 
+#ifdef PAF_BUILD_2014
+}
+}
+PAF_TREE_INLINE_CTOR(_Tmap_traits<int32_t, inputdevice::GestureListenerPack, greater<int32_t> >)
+namespace paf {
+namespace inputdevice {
+#endif
+
 class InputGestureListener : public InputListener {
 public:
 	enum {

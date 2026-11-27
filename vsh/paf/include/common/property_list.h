@@ -101,16 +101,7 @@ public:
 	void SetWString(const IDParam &id, const wstring &str);
 	void SetWString(uint32_t index, const wstring &str);
 	void SetValue(const IDParam &id, PropertyValue value);
-#ifdef PAF_BUILD_2014
-	inline __attribute__((always_inline)) void SetValue(uint32_t index, PropertyValue value)
-	{
-		if (index >= m_value_list.size())
-			m_value_list.resize(index + 1);
-		m_value_list[index] = value;
-	}
-#else
 	void SetValue(uint32_t index, PropertyValue value);
-#endif
 
 	SharedPtr<PropertyElement> GetElement(const IDParam &id) const;
 	SharedPtr<PropertyElement> GetElement(uint32_t index) const;
@@ -119,7 +110,16 @@ public:
 	const wstring &GetWString(const IDParam &id) const;
 	const wstring &GetWString(uint32_t index) const;
 	PropertyValue GetValue(const IDParam &id) const;
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) PropertyValue GetValue(uint32_t index) const
+	{
+		if (index < m_value_list.size())
+			return m_value_list[index];
+		return PropertyValue();
+	}
+#else
 	PropertyValue GetValue(uint32_t index) const;
+#endif
 
 	bool HasElement(const IDParam &id) const;
 	bool HasValue(const IDParam &id) const;

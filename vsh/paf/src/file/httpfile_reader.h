@@ -60,6 +60,25 @@ public:
 };
 
 /* What HttpFile::Open was asked, kept while the file is open. */
+#ifdef PAF_BUILD_2014
+class HttpFileReaderParam {
+public:
+	const char *scheme;
+	const char *host;
+	uint16_t port;
+	const char *method;
+	const char *uri;
+	const char *user;
+	const char *passwd;
+	const HttpHeader *header;
+	const void *msg_body;
+	size_t msg_body_len;
+	bool ignore_proxy;
+	bool enable_keepalive;
+	uint32_t open_flag;
+	int32_t accept_encoding_gzip;
+};
+#else
 class HttpFileReaderParam {
 public:
 	HttpFileReaderParam()
@@ -107,20 +126,8 @@ public:
 	{
 	}
 
-#ifdef PAF_BUILD_2014
-	inline __attribute__((always_inline)) bool IsHttpsCheckEnabled() const
-	{
-		return !(open_flag & HttpFile::OpenArg::DISABLE_HTTPS_CHECK);
-	}
-
-	inline __attribute__((always_inline)) bool IsProxyIgnored() const
-	{
-		return (open_flag & HttpFile::OpenArg::IGNORE_PROXY_SETTING) != 0;
-	}
-#else
 	bool IsHttpsCheckEnabled() const;
 	bool IsProxyIgnored() const;
-#endif
 
 	static common::SharedPtr<HttpFileReaderConfig> Create(const HttpFileReaderParam &param);
 	static common::SharedPtr<HttpFileReaderConfig> Clone(
@@ -144,6 +151,7 @@ public:
 	uint32_t template_option;
 	size_t response_header_max_size;
 };
+#endif
 
 /* What a connection was made for: a pooled one is reused only for the same. */
 class HttpFileReaderConnectionParam {
@@ -155,15 +163,21 @@ public:
 	uint16_t port;
 	bool auto_proxy;
 	bool enable_keepalive;
+#ifndef PAF_BUILD_2014
 	uint32_t https_flag;
 	uint32_t template_option;
 	size_t response_header_max_size;
+#endif
 };
 
 class HttpFileReaderConnection {
 public:
 	HttpFileReaderConnection(const HttpFileReaderConnectionParam &param);
+#ifdef PAF_BUILD_2014
+	__attribute__((noinline)) ~HttpFileReaderConnection();
+#else
 	~HttpFileReaderConnection();
+#endif
 
 	static int32_t CreateHandles(const HttpFileReaderConnectionParam &param,
 				     int32_t *template_id, int32_t *connection_id);
@@ -196,12 +210,16 @@ public:
 
 class HttpFileReader {
 public:
+#ifdef PAF_BUILD_2014
+	explicit HttpFileReader(const HttpFileReaderParam *param);
+#else
 	HttpFileReader(common::SharedPtr<HttpFileReaderConfig> config) : m_config(config)
 	{
 		m_result[0] = 0;
 		m_result[1] = 0;
 		m_result[2] = 0;
 	}
+#endif
 
 	virtual ~HttpFileReader()
 	{
@@ -253,15 +271,30 @@ public:
 	static const char *const header_user_agent;
 	static const char *const header_referer;
 
-	common::SharedPtr<HttpFileReaderConfig> m_config;
 #ifdef PAF_BUILD_2014
+	string m_scheme;
+	string m_host;
+	uint16_t m_port;
+	string m_method;
+	string m_uri;
+	string m_user;
+	string m_passwd;
 	HttpHeader m_request_headers;
-#endif
+	HttpHeader m_response_headers;
+	const void *m_msg_body;
+	size_t m_msg_body_len;
+	bool m_ignore_proxy;
+	bool m_enable_keepalive;
+	uint32_t m_open_flag;
+	HttpResponse m_response;
+	HttpFile::Timeout m_timeout;
+	int32_t m_accept_encoding_gzip;
+	common::SharedPtr<HttpFileReaderContext> m_context;
+#else
+	common::SharedPtr<HttpFileReaderConfig> m_config;
 	HttpHeader m_response_headers;
 	HttpResponse m_response;
 	int32_t m_result[3];
-#ifdef PAF_BUILD_2014
-	HttpFile::Timeout m_timeout;
 #endif
 };
 
@@ -274,7 +307,11 @@ public:
 
 class HttpFileHttpReader : public HttpFileReader {
 public:
+#ifdef PAF_BUILD_2014
+	explicit HttpFileHttpReader(const HttpFileReaderParam *param);
+#else
 	HttpFileHttpReader(common::SharedPtr<HttpFileReaderConfig> config);
+#endif
 	virtual ~HttpFileHttpReader();
 
 	virtual int32_t Open();
@@ -297,7 +334,11 @@ public:
 /* Reads by "Range: bytes=" requests while the server answers them. */
 class HttpFileRangeReader : public HttpFileReader {
 public:
+#ifdef PAF_BUILD_2014
+	explicit HttpFileRangeReader(const HttpFileReaderParam *param);
+#else
 	HttpFileRangeReader(common::SharedPtr<HttpFileReaderConfig> config);
+#endif
 	virtual ~HttpFileRangeReader();
 
 	virtual int32_t Open();

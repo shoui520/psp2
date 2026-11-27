@@ -146,7 +146,27 @@ void Skydome::Draw(const DrawParam &param, const SkyParamSet::Values &values)
 	if (m_wireframe)
 		m_mesh.DrawLines(gl);
 	else if (m_mesh.m_index_count != 0)
+#ifdef PAF_BUILD_2014
+	{
+		arl::ShaderState *state = gl;
+
+		state->m_dirty_vertex |= m_mesh.m_vertices.m_spec->m_kinds;
+		state = gl;
+		state->m_dirty_fragment |= 1;
+		sceGxmSetVertexStream(gl->m_context, 0,
+				      m_mesh.m_vertices.m_buffer->m_memory->m_addr);
+		if (m_mesh.m_index_count != 0)
+			m_mesh.m_indices.draw(*gl, m_mesh.m_primitive, m_mesh.m_index_count);
+		if (m_mesh.m_index_count != 0) {
+			state = gl;
+			state->m_dirty_vertex = 0;
+			state = gl;
+			state->m_dirty_fragment = 0;
+		}
+	}
+#else
 		m_mesh.Draw(gl, m_mesh.m_height - 1);
+#endif
 	gl->m_model.Pop();
 	if (m_wireframe)
 		gl->PolygonMode(arl::POLYGON_MODE_FILL, arl::FRONT_AND_BACK);

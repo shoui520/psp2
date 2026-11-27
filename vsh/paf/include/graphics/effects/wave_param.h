@@ -147,6 +147,19 @@ public:
 		Param<math::v3> m_diffuse_color;
 		Param<float> m_fade;
 
+#ifdef PAF_BUILD_2014
+		inline __attribute__((always_inline)) Values &operator=(const Values &other)
+		{
+			m_theta_phi = other.m_theta_phi;
+			m_distance = other.m_distance;
+			m_attn = other.m_attn;
+			m_ambient_color = other.m_ambient_color;
+			m_diffuse_color = other.m_diffuse_color;
+			m_fade = other.m_fade;
+			return *this;
+		}
+#endif
+
 		/* the light's place, from its angles and distance, and its attenuation, for the
 		   lighting program's PointLightPack1: out of line in the wave renderer (0x812040d0),
 		   inlined in the panel renderer (names ours) */
@@ -208,6 +221,12 @@ public:
 			  m_d_offset(set, "d_offset", 0.0f, -20.0f, 20.0f, PARAM_FLAG_FINE)
 		{
 		}
+
+#ifdef PAF_BUILD_2014
+		inline __attribute__((always_inline)) ~Values()
+		{
+		}
+#endif
 
 		Param<math::v3> m_color;
 		Param<math::v4> m_density;
@@ -380,6 +399,12 @@ public:
 		{
 		}
 
+#ifdef PAF_BUILD_2014
+		inline __attribute__((always_inline)) ~Values()
+		{
+		}
+#endif
+
 		/* every value set as the parameter's own set would */
 		Values &operator=(const Values &other)
 		{
@@ -488,6 +513,9 @@ public:
 template<class S>
 class ParamSetInstance {
 public:
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline))
+#endif
 	ParamSetInstance(ParamSetKeysManager &manager, const string &variant)
 		: m_keys(variant), m_set(true)
 	{
@@ -503,6 +531,7 @@ public:
 	S m_set;
 };
 
+#ifndef PAF_BUILD_2014
 /* Sony keeps these three out of line */
 template<>
 inline __attribute__((noinline)) ParamSetInstance<SkyParamSet>::~ParamSetInstance()
@@ -518,6 +547,7 @@ template<>
 inline __attribute__((noinline)) ParamSetInstance<WaveRendererParamSet>::~ParamSetInstance()
 {
 }
+#endif
 
 }
 }

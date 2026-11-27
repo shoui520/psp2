@@ -148,7 +148,37 @@ public:
 	   environment's resolution (0x81113c22; name ours, after ScePaf-RE's entry) */
 	int32_t SetEntry(int32_t entry);
 	/* the screen margins, turned with the camera's roll */
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) math::v4 GetRolledMargin()
+	{
+		math::v4 margin = Screen::s_draw_offset;
+
+		if (m_screen != NULL && m_camera != NULL) {
+			float roll = m_camera->GetRollScreen(1);
+
+			if (roll > 3.1415927f)
+				roll -= 6.2831855f;
+			if (roll < -3.1415927f)
+				roll += 6.2831855f;
+
+			float turn = __builtin_fabsf(roll);
+
+			if (turn > 2.3561945f)
+				return math::v4(margin.extract_z(), margin.extract_y(),
+						margin.extract_x(), margin.extract_w());
+			if (turn > 0.7853982f && turn <= 2.3561945f) {
+				if (roll > 0.0f)
+					return math::v4(margin.extract_y(), margin.extract_z(),
+							margin.extract_w(), margin.extract_x());
+				return math::v4(margin.extract_w(), margin.extract_x(),
+						margin.extract_y(), margin.extract_z());
+			}
+		}
+		return margin;
+	}
+#else
 	math::v4 GetRolledMargin();
+#endif
 	/* the debug cube moved onto the debug focus (0x81114436; name ours) */
 	void UpdateDebugCube();
 	/* whether a resolution of the orientation exists, and the layout changed to it over the

@@ -106,6 +106,13 @@ public:
 	WAVE_PARAM_SET_KEYED(EmitParamSet, "Emit", __attribute__((noinline)));
 };
 
+#ifdef PAF_BUILD_2014
+template<>
+inline __attribute__((always_inline)) ParamSetInstance<EmitParamSet>::~ParamSetInstance()
+{
+}
+#endif
+
 /* "Mov" parameter set (240 bytes) */
 class MovParamSet : public ParamSet, public ParamLink {
 public:
@@ -129,6 +136,13 @@ public:
 	WAVE_PARAM_SET_KEYED(MovParamSet, "Mov", __attribute__((noinline)));
 };
 
+#ifdef PAF_BUILD_2014
+template<>
+inline __attribute__((always_inline)) ParamSetInstance<MovParamSet>::~ParamSetInstance()
+{
+}
+#endif
+
 /* "Lit" parameter set (280 bytes) */
 class LitParamSet : public ParamSet, public ParamLink {
 public:
@@ -151,6 +165,13 @@ public:
 
 	WAVE_PARAM_SET_KEYED(LitParamSet, "Lit", __attribute__((noinline)));
 };
+
+#ifdef PAF_BUILD_2014
+template<>
+inline __attribute__((always_inline)) ParamSetInstance<LitParamSet>::~ParamSetInstance()
+{
+}
+#endif
 
 /* "Focus" parameter set (304 bytes) */
 class FocusParamSet : public ParamSet, public ParamLink {

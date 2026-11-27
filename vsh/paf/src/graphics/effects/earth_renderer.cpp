@@ -21,20 +21,48 @@ using sce::Vectormath::Simd::Aos::Vector3;
 using sce::Vectormath::Simd::Aos::Vector4;
 
 namespace paf {
+namespace common {
+
+template<>
+inline __attribute__((always_inline)) SharedPtr<graph::arl::ShaderPatcher>::~SharedPtr()
+{
+	Release();
+}
+
+}
 namespace graph {
 
 /* each vertex where it sits in the 64x64 grid */
-class EarthVertexGenerator : public VertexGenerator<SkydomeVertex> {
+class EarthVertexGenerator : public VertexGenerator<EarthVertex> {
 public:
-	virtual SkydomeVertex operator()(const math::v2 &uv) const;
+	virtual EarthVertex operator()(const math::v2 &uv) const;
 };
 
-SkydomeVertex EarthVertexGenerator::operator()(const math::v2 &uv) const
+EarthVertex EarthVertexGenerator::operator()(const math::v2 &uv) const
 {
-	SkydomeVertex vertex;
+	EarthVertex vertex;
 
 	vertex.m_uv = uv;
 	return vertex;
+}
+
+static inline __attribute__((always_inline)) void
+FillEarthMesh(WaveMesh<EarthVertex> &mesh, const VertexGenerator<EarthVertex> &generator)
+{
+	if (mesh.m_index_count == 0)
+		return;
+
+	EarthVertex *vertex = (EarthVertex *)mesh.m_vertices.m_buffer->m_memory->m_addr;
+	Vector2 scale = recipPerElem(Vector2((float)(int32_t)(mesh.m_width - 1),
+					     (float)(int32_t)(mesh.m_height - 1)));
+
+	for (uint32_t y = 0; y < mesh.m_height; y++) {
+		for (uint32_t x = 0; x < mesh.m_width; x++) {
+			math::v2 uv(mulPerElem(Vector2((float)x, (float)y), scale));
+
+			*vertex++ = generator(uv);
+		}
+	}
 }
 
 struct SphereHit {
@@ -248,11 +276,11 @@ bool EarthRenderer::Load(const string &dir)
 	arl::ArlInstance *gl = arl::Gl();
 	EarthVertexGenerator generator;
 
-	m_mesh = WaveMesh<SkydomeVertex>(arl::SurfaceSize(64, 64),
-					 ScePafGraphics_4D1E289A(gl, arl::VertexArraySpec::ATTRIB0_F2,
-								 SCE_GXM_INDEX_SOURCE_INDEX_16BIT),
-					 gl->m_default_allocator);
-	m_mesh.Fill(generator);
+	m_mesh = WaveMesh<EarthVertex>(arl::SurfaceSize(64, 64),
+				       ScePafGraphics_4D1E289A(gl, arl::VertexArraySpec::ATTRIB0_F2,
+							       SCE_GXM_INDEX_SOURCE_INDEX_16BIT),
+				       gl->m_default_allocator);
+	FillEarthMesh(m_mesh, generator);
 
 	arl::ProgramState *state = gl;
 

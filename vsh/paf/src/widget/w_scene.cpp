@@ -769,6 +769,7 @@ Camera *Scene::SetCamera(Camera *camera)
 	return old;
 }
 
+#ifndef PAF_BUILD_2014
 math::v4 Scene::GetRolledMargin()
 {
 	math::v4 margin = Screen::s_draw_offset;
@@ -796,6 +797,7 @@ math::v4 Scene::GetRolledMargin()
 	}
 	return margin;
 }
+#endif
 
 void Scene::UpdateDebugCube()
 {

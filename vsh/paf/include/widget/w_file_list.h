@@ -300,6 +300,15 @@ public:
 	intrusive_ptr<filelist::CellSource> GetCellSource(int32_t segment);
 
 	ListItem *CreateItem(listview::ItemFactory::CreateParam &param);
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) void StartItem(listview::ItemFactory::StartParam &param);
+	inline __attribute__((always_inline)) void StopItem(listview::ItemFactory::StopParam &param);
+	inline __attribute__((always_inline)) void DisposeItem(listview::ItemFactory::DisposeParam &param);
+	/* the segment's header, from the segment source (no name found) */
+	Widget *ScePafWidget_2FF0AEC2(listview::SegmentHeaderFactory::CreateParam &param);
+	/* the segment's header disposed of by the segment source (no name found) */
+	inline __attribute__((always_inline)) void ScePafWidget_789C5142(listview::SegmentHeaderFactory::DisposeParam &param);
+#else
 	void StartItem(listview::ItemFactory::StartParam &param);
 	void StopItem(listview::ItemFactory::StopParam &param);
 	void DisposeItem(listview::ItemFactory::DisposeParam &param);
@@ -307,6 +316,7 @@ public:
 	Widget *ScePafWidget_2FF0AEC2(listview::SegmentHeaderFactory::CreateParam &param);
 	/* the segment's header disposed of by the segment source (no name found) */
 	void ScePafWidget_789C5142(listview::SegmentHeaderFactory::DisposeParam &param);
+#endif
 
 	intrusive_ptr<filelist::SegmentSource> m_segment_source;
 };

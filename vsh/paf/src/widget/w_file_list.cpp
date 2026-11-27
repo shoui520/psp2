@@ -390,6 +390,9 @@ intrusive_ptr<Visualizer> GetVisualizer(ListItem *item)
 
 }
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline))
+#endif
 void FileList::StartItem(listview::ItemFactory::StartParam &param)
 {
 	intrusive_ptr<Visualizer> visualizer = filelist::GetVisualizer(param.m_item);
@@ -398,6 +401,9 @@ void FileList::StartItem(listview::ItemFactory::StartParam &param)
 		visualizer->Start();
 }
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline))
+#endif
 void FileList::StopItem(listview::ItemFactory::StopParam &param)
 {
 	intrusive_ptr<Visualizer> visualizer = filelist::GetVisualizer(param.m_item);
@@ -407,6 +413,9 @@ void FileList::StopItem(listview::ItemFactory::StopParam &param)
 }
 
 /* the reference the item held let go of, or the plain item destroyed */
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline))
+#endif
 void FileList::DisposeItem(listview::ItemFactory::DisposeParam &param)
 {
 	intrusive_ptr<Visualizer> visualizer = filelist::GetVisualizer(param.m_item);
@@ -431,6 +440,9 @@ Widget *FileList::ScePafWidget_2FF0AEC2(listview::SegmentHeaderFactory::CreatePa
 	return m_segment_source->ScePafWidget_BC736EE9(bind);
 }
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline))
+#endif
 void FileList::ScePafWidget_789C5142(listview::SegmentHeaderFactory::DisposeParam &param)
 {
 	SegmentSource *source = m_segment_source.get();

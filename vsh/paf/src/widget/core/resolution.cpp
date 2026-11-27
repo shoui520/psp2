@@ -20,7 +20,7 @@ __attribute__((noinline)) int vector<ui::SceneResolution, allocator<ui::SceneRes
 	int result;
 
 	if (count + 1 <= limit || (result = reserve(limit + 10)) != 0) {
-		new (&ptr[count]) ui::SceneResolution(val);
+		PAF_PLACEMENT_NEW_COPY(&ptr[count], ui::SceneResolution, val);
 		result = ++count;
 	}
 	return result;

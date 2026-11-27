@@ -51,7 +51,7 @@ vector<ui::Text::Link>::push_back(const ui::Text::Link &val)
 	int result;
 
 	if (count + 1 <= limit || (result = reserve(limit + 10)) != 0) {
-		new (&ptr[count]) ui::Text::Link(val);
+		PAF_PLACEMENT_NEW_COPY(&ptr[count], ui::Text::Link, val);
 		result = ++count;
 	}
 	return result;
@@ -77,7 +77,7 @@ __attribute__((noinline)) int vector<ui::FocusShape>::push_back(const ui::FocusS
 	int result;
 
 	if (count + 1 <= limit || (result = reserve(limit + 10)) != 0) {
-		new (&ptr[count]) ui::FocusShape(val);
+		PAF_PLACEMENT_NEW_COPY(&ptr[count], ui::FocusShape, val);
 		result = ++count;
 	}
 	return result;

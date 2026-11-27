@@ -638,7 +638,11 @@ static inline __attribute__((always_inline)) math::v4 PlaceholderColor()
 static const math::v4 s_placeholder_color = PlaceholderColor();
 
 /* the placeholder made, in the first character's style faded and unmasked */
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) int32_t TextLayout::CreatePlaceholder()
+#else
 int32_t TextLayout::CreatePlaceholder()
+#endif
 {
 	int32_t ret = SCE_PAF_OK;
 
@@ -797,7 +801,7 @@ vector<graph::TextLayoutStyleRun>::push_back(const graph::TextLayoutStyleRun &va
 	int result;
 
 	if (count + 1 <= limit || (result = reserve(limit + 10)) != 0) {
-		new (&ptr[count]) graph::TextLayoutStyleRun(val);
+		PAF_PLACEMENT_NEW_COPY(&ptr[count], graph::TextLayoutStyleRun, val);
 		result = ++count;
 	}
 	return result;

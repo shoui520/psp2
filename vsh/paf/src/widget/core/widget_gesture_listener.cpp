@@ -579,6 +579,12 @@ check:
 MotionGestureListener::MotionGestureListener(uint32_t port, uint32_t touch_id, void *user_data)
 	: MultiTouchGestureListener(port, touch_id, user_data, 1)
 {
+#ifdef PAF_BUILD_2014
+	m_touch_count_max = 8;
+	m_last_result = 1;
+	m_touch_bitmap = 0;
+	RefreshActiveTouch(m_attached_bitmap);
+#else
 	SetTouchCountMax(8);
 	m_still = false;
 	m_sampling = false;
@@ -592,10 +598,12 @@ MotionGestureListener::MotionGestureListener(uint32_t port, uint32_t touch_id, v
 		m_still = false;
 		m_count = 0;
 	}
+#endif
 }
 
 MotionGestureListener::~MotionGestureListener()
 {
+#ifndef PAF_BUILD_2014
 	if (MotionParam::Get().m_enabled)
 		sceMotionStopSampling();
 
@@ -606,6 +614,7 @@ MotionGestureListener::~MotionGestureListener()
 		m_sampling = false;
 	}
 	MotionParam::Get().m_sampling = sampling;
+#endif
 }
 
 int32_t MotionGestureListener::OnUpdateMultiTouch(uint32_t bitmap, uint32_t bitmap_pre,
@@ -619,6 +628,7 @@ int32_t MotionGestureListener::OnUpdateMultiTouch(uint32_t bitmap, uint32_t bitm
 		if (touch->state != 0)
 			ret = 2;
 	}
+#ifndef PAF_BUILD_2014
 	if (MotionParam::Get().m_enabled) {
 		int32_t force = 0;
 		int32_t still = 1;
@@ -634,16 +644,12 @@ int32_t MotionGestureListener::OnUpdateMultiTouch(uint32_t bitmap, uint32_t bitm
 
 		if (!(ms < 1000.0f)) {
 			if (m_sampling) {
-#ifndef PAF_BUILD_2014
 stop:
-#endif
 				sceMotionStopSampling();
 				m_sampling = false;
 				sampling = false;
 			}
-		}
-#ifndef PAF_BUILD_2014
-		else {
+		} else {
 			if (force > 10 && !m_sampling && !m_still) {
 				sceMotionSetTiltCorrection(0);
 				sceMotionSetDeadband(0);
@@ -679,12 +685,12 @@ stop:
 				goto stop;
 		}
 done:
-#endif
 		if (m_still)
 			ret = 2;
 		MotionParam::Get().m_sampling = sampling;
 	}
 	m_result = ret;
+#endif
 	return ret;
 }
 

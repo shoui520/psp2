@@ -44,7 +44,7 @@ vector<ui::RichText::Cell>::push_back(const ui::RichText::Cell &val)
 	int result;
 
 	if (count + 1 <= limit || (result = reserve(limit + 10)) != 0) {
-		new (&ptr[count]) ui::RichText::Cell(val);
+		PAF_PLACEMENT_NEW_COPY(&ptr[count], ui::RichText::Cell, val);
 		result = ++count;
 	}
 	return result;
@@ -670,7 +670,7 @@ inline __attribute__((noinline)) void list<ui::Style>::push_front(const ui::Styl
 	_Node *node = (_Node *)operator new(sizeof(_Node));
 
 	if (node != NULL)
-		new (&node->value) ui::Style(val);
+		PAF_PLACEMENT_NEW_COPY(&node->value, ui::Style, val);
 	else
 		node = head;
 	if (node != head) {
@@ -2759,6 +2759,7 @@ void RichText::LineBuilder::CBMeasure(int32_t type, Handler *self, Event *e, voi
 
 		TextItem *item;
 
+#ifndef PAF_BUILD_2014
 		if (link >= 0) {
 			LinkTextItem *link_item = new LinkTextItem;
 
@@ -2767,6 +2768,9 @@ void RichText::LineBuilder::CBMeasure(int32_t type, Handler *self, Event *e, voi
 		} else {
 			item = new TextItem;
 		}
+#else
+		item = new TextItem;
+#endif
 		item->m_pos = builder->m_cursor;
 		item->m_size = math::v2(info.frame.extract_z(), info.frame.extract_w());
 		item->m_bold = text->m_bold;

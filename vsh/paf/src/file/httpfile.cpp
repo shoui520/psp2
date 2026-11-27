@@ -33,9 +33,14 @@ static HttpFile::Timeout httpFileDefaultTimeout = { -1, -1, -1, -1 };
 
 HttpFile::OpenArg::OpenArg()
 	: scheme("HTTP"), port(80), method("GET"), version("HTTP/1.1"), msg_body(NULL),
-	  msg_body_len(0), https_flag(HTTPS_FLAG_DEFAULT & ~HTTPS_FLAG_CLIENT_VERIFY), open_flag(0),
-	  accept_encoding_gzip(2), timeout(httpFileDefaultTimeout), template_option(0),
-	  response_header_max_size(0), response_code(NULL)
+	  msg_body_len(0),
+#ifndef PAF_BUILD_2014
+	  https_flag(HTTPS_FLAG_DEFAULT & ~HTTPS_FLAG_CLIENT_VERIFY),
+#endif
+	  open_flag(0), accept_encoding_gzip(2), timeout(httpFileDefaultTimeout)
+#ifndef PAF_BUILD_2014
+	  , template_option(0), response_header_max_size(0), response_code(NULL)
+#endif
 {
 	file_type = Type_Http;
 }
@@ -46,12 +51,16 @@ HttpFile::HttpFile()
 	  m_open_flag(0),
 #endif
 	  m_lock_rwlock("ScePafHttpFileRwLock", 0),
-	  m_lock_mutex("ScePafHttpFileCsLock", 0), m_io_thread(NULL), m_http_reader(NULL),
-	  m_reader_param(NULL)
+	  m_lock_mutex("ScePafHttpFileCsLock", 0), m_io_thread(NULL), m_http_reader(NULL)
+#ifndef PAF_BUILD_2014
+	  , m_reader_param(NULL)
+#endif
 {
+#ifndef PAF_BUILD_2014
 	m_reader_result[0] = 0;
 	m_reader_result[1] = 0;
 	m_reader_result[2] = 0;
+#endif
 }
 
 common::SharedPtr<HttpFile> HttpFile::Open(Url *url, int32_t *error, uint32_t flag)
@@ -131,12 +140,13 @@ int64_t HttpFile::GetFileSize() const
 int32_t HttpFile::DeleteReader()
 {
 	delete m_http_reader;
-
+	m_http_reader = NULL;
+#ifndef PAF_BUILD_2014
 	HttpFileReaderParam *param = m_reader_param;
 
-	m_http_reader = NULL;
 	delete param;
 	m_reader_param = NULL;
+#endif
 	return 0;
 }
 
@@ -248,6 +258,56 @@ int32_t HttpFileResponseCodeToError(uint16_t code)
  * Copies the request into m_reader_param and makes the reader for it: a range
  * reader when the open flags ask for byte ranges, a plain one otherwise.
  */
+#ifdef PAF_BUILD_2014
+int32_t HttpFile::CreateReader(const OpenArg *arg, HttpFileReader **out_reader)
+{
+	HttpHeader header;
+	int32_t count = arg->header.size();
+
+	for (int32_t i = 0; i < count; i++)
+		ScePafMisc_DB5A6E15(&header, arg->header[i].c_str(), arg->header[i].size());
+	if (ScePafMisc_82171187(&header, HttpFileReader::header_user_agent, 0) == NULL &&
+	    arg->user_agent.size() != 0)
+		ScePafMisc_1156F852(&header, HttpFileReader::header_user_agent,
+				    arg->user_agent.c_str(), true);
+	if (ScePafMisc_82171187(&header, HttpFileReader::header_referer, 0) == NULL &&
+	    arg->referer.size() != 0)
+		ScePafMisc_1156F852(&header, HttpFileReader::header_referer,
+				    arg->referer.c_str(), true);
+
+	HttpFileReaderParam param;
+
+	param.scheme = arg->scheme.c_str();
+	param.host = arg->host.c_str();
+	param.port = arg->port;
+	param.method = arg->method.c_str();
+	param.uri = arg->uri.c_str();
+	param.user = arg->user.c_str();
+	param.passwd = arg->passwd.c_str();
+	param.header = &header;
+	param.msg_body = arg->msg_body;
+	param.msg_body_len = arg->msg_body_len;
+	param.accept_encoding_gzip = arg->accept_encoding_gzip;
+
+	uint32_t range = arg->open_flag & (OpenArg::ENABLE_RANGE_GET | OpenArg::ENABLE_HALF_RANGE_GET);
+	HttpFileReader *reader = NULL;
+
+	if (range != 0) {
+		reader = new HttpFileRangeReader(&param);
+		*out_reader = reader;
+		if (reader != NULL) {
+			reader->EnableRangeFlag(range);
+			reader = *out_reader;
+		}
+	} else {
+		reader = new HttpFileHttpReader(&param);
+		*out_reader = reader;
+	}
+	if (reader != NULL)
+		return 0;
+	return SCE_PAF_ERROR_FILE_NO_MEMORY;
+}
+#else
 int32_t HttpFile::CreateReader(const OpenArg *arg)
 {
 	uint32_t range = arg->open_flag & (OpenArg::ENABLE_RANGE_GET | OpenArg::ENABLE_HALF_RANGE_GET);
@@ -311,10 +371,12 @@ int32_t HttpFile::CreateReader(const OpenArg *arg)
 	}
 	return 0;
 }
+#endif
 
 /* Keeps the reader's last results, read back by the file's owner. */
 void HttpFile::CopyReaderResult()
 {
+#ifndef PAF_BUILD_2014
 	HttpFileReader *reader = m_http_reader;
 
 	if (reader != NULL) {
@@ -322,6 +384,7 @@ void HttpFile::CopyReaderResult()
 		m_reader_result[1] = reader->m_result[1];
 		m_reader_result[2] = reader->m_result[2];
 	}
+#endif
 }
 
 int32_t HttpFile::Open(const File::OpenArg *param)
@@ -342,21 +405,41 @@ int32_t HttpFile::Open(const File::OpenArg *param)
 		m_lock_mutex.Unlock();
 		return SCE_PAF_ERROR_FILE_ALREADY_OPENED;
 	}
+#ifndef PAF_BUILD_2014
 	if (arg->response_code != NULL)
 		*arg->response_code = 0;
+#endif
 	m_lock_rwlock.WriterLock();
+#ifdef PAF_BUILD_2014
+	DeleteReader();
+	result = CreateReader(arg, &m_http_reader);
+	if (result != 0) {
+		m_lock_mutex.Unlock();
+		return result;
+	}
+	m_http_reader->m_ignore_proxy = (arg->open_flag & OpenArg::IGNORE_PROXY_SETTING) != 0;
+	m_http_reader->m_enable_keepalive = (arg->open_flag & OpenArg::DISABLE_HTTPS_CHECK) == 0;
+	m_http_reader->m_context = m_reader_context;
+	m_http_reader->m_open_flag = arg->open_flag;
+	m_http_reader->SetTimeout(arg->timeout.resolve_timeout, arg->timeout.connect_timeout,
+				  arg->timeout.send_timeout, arg->timeout.recv_timeout);
+	m_lock_rwlock.WriterUnlock();
+#else
 	result = CreateReader(arg);
 	m_lock_rwlock.WriterUnlock();
 	if (result != 0) {
 		m_lock_mutex.Unlock();
 		return result;
 	}
+#endif
 	m_lock_rwlock.ReaderLock();
 	result = m_http_reader->Open();
 	CopyReaderResult();
 	m_lock_rwlock.ReaderUnlock();
+#ifndef PAF_BUILD_2014
 	if (arg->response_code != NULL)
 		*arg->response_code = m_http_reader->GetResponse()->code;
+#endif
 	if (result == 0 && !(arg->open_flag & OpenArg::SKIP_STATUS_CHECK))
 		result = HttpFileResponseCodeToError(m_http_reader->GetResponse()->code);
 	m_lock_rwlock.WriterLock();
@@ -382,7 +465,13 @@ int32_t HttpFile::OpenAsync(const File::OpenArg *param)
 		return SCE_PAF_ERROR_FILE_ALREADY_OPENED;
 	m_lock_rwlock.WriterLock();
 
+#ifdef PAF_BUILD_2014
+	DeleteReader();
+
+	int32_t result = CreateReader(arg, &m_http_reader);
+#else
 	int32_t result = CreateReader(arg);
+#endif
 
 	/* Sony's keeps the writer lock when CreateReader fails. */
 	if (result != 0)
@@ -694,6 +783,9 @@ int32_t HttpFile::PollAsync(int64_t *result)
 	return ret;
 }
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline))
+#endif
 int32_t HttpFile::GetResponseHeader(const char *name, string &value) const
 {
 	int32_t ret;

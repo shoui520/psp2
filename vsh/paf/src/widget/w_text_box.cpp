@@ -1469,7 +1469,11 @@ static VersatileParam *NewTextBoxHandlerParam()
 
 static VersatileParam *NewTextBoxSoundParam()
 {
+#ifdef PAF_BUILD_2014
+	return new WidgetSoundParam;
+#else
 	return new TextBoxSoundParam;
+#endif
 }
 
 FactoryFuncTable g_factoryTextBox = {

@@ -1249,8 +1249,13 @@ void PanelRenderer::Load(const string &dir)
 
 		for (uint32_t i = 0; i < 16; i++) {
 			float angle = ((float)i / 15.0f) * 6.2831855f;
+#ifdef PAF_BUILD_2014
+			Vector2 uv(sce_paf_cosf(angle) * 0.5f + 0.5f,
+				   sce_paf_sinf(angle) * 0.5f + 0.5f);
+#else
 			Vector2 uv = Vector2(sce_paf_cosf(angle), sce_paf_sinf(angle)) * 0.5f +
 				     Vector2(0.5f, 0.5f);
+#endif
 
 			circle[i] = math::v4(Vector4(uv, uv));
 		}
@@ -1267,8 +1272,13 @@ void PanelRenderer::Load(const string &dir)
 
 		for (int32_t y = 0; y < 64; y++) {
 			for (int32_t x = 0; x < 64; x++) {
+#ifdef PAF_BUILD_2014
+				Vector2 pos((float)x * (1.0f / 63.0f) - 0.5f,
+					    (float)y * (1.0f / 63.0f) - 0.5f);
+#else
 				Vector2 pos = Vector2((float)x, (float)y) * (1.0f / 63.0f) -
 					      Vector2(0.5f, 0.5f);
+#endif
 				float val = 1.0f - SmoothStep(m_shadow_edge, 1.0f,
 							      length(pos) * 2.0f);
 

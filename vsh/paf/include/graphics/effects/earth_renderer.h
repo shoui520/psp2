@@ -194,7 +194,13 @@ public:
 		Param<float> m_ambiant_sea;
 	};
 
-	WAVE_PARAM_SET_KEYED(EarthParamSet, "Earth", __attribute__((noinline)));
+	WAVE_PARAM_SET_KEYED(EarthParamSet, "Earth", inline __attribute__((always_inline)));
+};
+
+/* a vertex of the earth globe's 64x64 grid */
+class EarthVertex {
+public:
+	math::v2 m_uv;
 };
 
 /* EarthRenderer (0x918 bytes) */
@@ -223,7 +229,7 @@ public:
 	common::SharedPtr<TextureOps> m_texture_ops;
 	common::SharedPtr<arl::Texture2D> m_specular_map;
 	common::SharedPtr<arl::Texture2D> m_edge_iris;
-	WaveMesh<SkydomeVertex> m_mesh;
+	WaveMesh<EarthVertex> m_mesh;
 	bool m_loaded;
 	bool m_wireframe;
 	int32_t m_blend_mode;

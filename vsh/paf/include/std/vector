@@ -145,7 +145,7 @@ public:
 			count = size;
 			limit = size;
 			for (size_type i = 0; i < count; ++i)
-				new (&ptr[i]) _Ty();
+				PAF_PLACEMENT_NEW(&ptr[i], _Ty);
 		}
 	}
 
@@ -166,7 +166,7 @@ public:
 			count = size;
 			limit = size;
 			for (size_type i = 0; i < count; ++i)
-				new (&ptr[i]) _Ty(val);
+				PAF_PLACEMENT_NEW_COPY(&ptr[i], _Ty, val);
 		}
 	}
 
@@ -319,7 +319,7 @@ vector<_Ty, _Ax>::vector(const _Myt &src) : alloc(src.alloc)
 		count = src.count;
 		limit = src.limit;
 		for (size_type i = 0; i < count; ++i)
-			new (&ptr[i]) _Ty(src.ptr[i]);
+			PAF_PLACEMENT_NEW_COPY(&ptr[i], _Ty, src.ptr[i]);
 	}
 }
 
@@ -441,12 +441,12 @@ vector<_Ty, _Ax>::insert(const iterator &where, const _Ty &val)
 		if (count != 0) {
 			_Ty *last = &ptr[count];
 
-			new (last) _Ty(last[-1]);
+			PAF_PLACEMENT_NEW_COPY(last, _Ty, last[-1]);
 			for (size_type i = count - 1; i > off; --i)
 				ptr[i] = ptr[i - 1];
 			ptr[off] = val;
 		} else {
-			new (&ptr[count]) _Ty(val);
+			PAF_PLACEMENT_NEW_COPY(&ptr[count], _Ty, val);
 		}
 		++count;
 	} else {
@@ -481,16 +481,16 @@ vector<_Ty, _Ax>::insert(const iterator &where, size_type num, const _Ty &val)
 			if (stop < (int)count)
 				stop = count;
 			for (; i >= stop; --i)
-				new (&ptr[i]) _Ty(ptr[i - num]);
+				PAF_PLACEMENT_NEW_COPY(&ptr[i], _Ty, ptr[i - num]);
 			for (; (size_type)i >= count; --i)
-				new (&ptr[i]) _Ty(val);
+				PAF_PLACEMENT_NEW_COPY(&ptr[i], _Ty, val);
 			for (; i >= (int)(off + num); --i)
 				ptr[i] = ptr[i - num];
 			for (_Ty *p = &ptr[off]; p != &ptr[off + num]; ++p)
 				*p = val;
 		} else {
 			for (_Ty *p = &ptr[off]; p != &ptr[off + num]; ++p)
-				new (p) _Ty(val);
+				PAF_PLACEMENT_NEW_COPY(p, _Ty, val);
 		}
 		count += num;
 	} else {
@@ -526,10 +526,10 @@ vector<_Ty, _Ax>::insert(const iterator &where, iterator first, iterator last)
 		if (num + off > count)
 			stop = num + off;
 		for (; i >= (int)stop; --i)
-			new (&ptr[i]) _Ty(ptr[i - num]);
+			PAF_PLACEMENT_NEW_COPY(&ptr[i], _Ty, ptr[i - num]);
 		for (; (size_type)i >= count; --i) {
 			--last;
-			new (&ptr[i]) _Ty(*last);
+			PAF_PLACEMENT_NEW_COPY(&ptr[i], _Ty, *last);
 		}
 		for (; i >= (int)(num + off); --i)
 			ptr[i] = ptr[i - num];
@@ -537,7 +537,7 @@ vector<_Ty, _Ax>::insert(const iterator &where, iterator first, iterator last)
 			ptr[j] = *first;
 	} else {
 		for (size_type j = off; first != last; ++first, ++j)
-			new (&ptr[j]) _Ty(*first);
+			PAF_PLACEMENT_NEW_COPY(&ptr[j], _Ty, *first);
 	}
 	count += num;
 }
@@ -569,7 +569,7 @@ vector<_Ty, _Ax>::push_back(const _Ty &val)
 	int result;
 
 	if (count + 1 <= limit || (result = reserve(limit + 10)) != 0) {
-		new (&ptr[count]) _Ty(val);
+		PAF_PLACEMENT_NEW_COPY(&ptr[count], _Ty, val);
 		result = ++count;
 	}
 	return result;
@@ -628,7 +628,7 @@ vector<_Ty, _Ax>::push_back(const _Ty &val)
 	{ \
 		int result; \
 		if (count + 1 <= limit || (result = reserve(limit + 10)) != 0) { \
-			new (&ptr[count]) T(val); \
+			PAF_PLACEMENT_NEW_COPY(&ptr[count], T, val); \
 			result = ++count; \
 		} \
 		return result; \
@@ -681,7 +681,7 @@ vector<_Ty, _Ax>::push_back(const _Ty &val)
 			count = src.count; \
 			limit = src.limit; \
 			for (size_type i = 0; i < count; ++i) \
-				new (&ptr[i]) T(src.ptr[i]); \
+				PAF_PLACEMENT_NEW_COPY(&ptr[i], T, src.ptr[i]); \
 		} \
 	} \
 	}
@@ -697,6 +697,16 @@ PAF_VECTOR_INLINE_DTOR(ui::RearTap *)
 PAF_VECTOR_INLINE_DTOR(graph::DrawObjParam *)
 #ifdef PAF_STD_STRING
 PAF_VECTOR_NOINLINE_ASSIGN(wstring)
+#ifdef PAF_BUILD_2014
+namespace paf {
+template<>
+inline __attribute__((always_inline)) vector<string, allocator<string> >::~vector()
+{
+	typedef string _Elem;
+	PAF_VECTOR_DESTROY_ALL
+}
+}
+#endif
 #endif
 #ifdef PAF_VERSATILEPARAM_IDPARAM_H
 PAF_VECTOR_NOINLINE_ASSIGN(IDParam)

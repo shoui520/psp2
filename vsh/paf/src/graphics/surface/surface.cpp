@@ -397,6 +397,7 @@ uint32_t Surface::GetN(uint32_t value)
 	return 0;
 }
 
+#ifndef PAF_BUILD_2014
 void Surface::InitMember()
 {
 	m_div_ratio_v = 0;
@@ -420,6 +421,7 @@ void Surface::InitMember()
 	m_page_size = 0;
 	m_depth = NULL;
 }
+#endif
 
 int32_t Surface::Initialize(SurfacePool *pool, int32_t width, int32_t height, ImageMode format,
 			    ImageOrder order, SurfaceType surf_type, int32_t num_page,

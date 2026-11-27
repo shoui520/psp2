@@ -79,7 +79,11 @@ static const struct {
 	{ "texture_corner", CornerButton::OBJ_CORNER },
 };
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) CornerButtonParam::CornerButtonParam()
+#else
 CornerButtonParam::CornerButtonParam()
+#endif
 {
 	for (uint32_t i = 0; i < sizeof(s_corner_button_textures) / sizeof(s_corner_button_textures[0]);
 	     i++)
@@ -100,7 +104,11 @@ extern const char *const s_corner_button_objs[] = {
 	"corner_obj",
 };
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) void CornerButtonStyleParam::InitParam()
+#else
 void CornerButtonStyleParam::InitParam()
+#endif
 {
 	m_layout_type = 0;
 	m_corner_obj.m_name = s_corner_button_objs[0];

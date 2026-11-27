@@ -96,13 +96,17 @@ public:
 		vector<string> header;
 		const void *msg_body;
 		size_t msg_body_len;
+#ifndef PAF_BUILD_2014
 		uint32_t https_flag;
+#endif
 		uint32_t open_flag;
 		int32_t accept_encoding_gzip;
 		Timeout timeout;
+#ifndef PAF_BUILD_2014
 		uint32_t template_option;
 		size_t response_header_max_size;
 		uint16_t *response_code;
+#endif
 	};
 
 	HttpFile();
@@ -134,7 +138,12 @@ public:
 	virtual int32_t Getstat(FileStat *stat);
 	virtual ~HttpFile();
 
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) int32_t GetResponseHeader(const char *name,
+									string &value) const;
+#else
 	int32_t GetResponseHeader(const char *name, string &value) const;
+#endif
 	int32_t GetResponseCode(uint16_t &code) const;
 	int32_t GetResponsePhrase(string &phrase) const;
 	int32_t GetResponseVersion(uint8_t &major, uint8_t &minor) const;
@@ -147,7 +156,11 @@ public:
 	static int32_t Getstat(const char *url, HttpFileStat *stat);
 
 	int32_t DeleteReader();
+#ifdef PAF_BUILD_2014
+	static int32_t CreateReader(const OpenArg *arg, HttpFileReader **out_reader);
+#else
 	int32_t CreateReader(const OpenArg *arg);
+#endif
 
 	inline __attribute__((always_inline)) void CopyReaderResult();
 	inline __attribute__((always_inline)) int32_t StartIoThread();
@@ -160,8 +173,10 @@ public:
 	mutable thread::RMutex m_lock_mutex;
 	thread::Thread *m_io_thread;
 	HttpFileReader *m_http_reader;
+#ifndef PAF_BUILD_2014
 	HttpFileReaderParam *m_reader_param;
 	int32_t m_reader_result[3];
+#endif
 	common::SharedPtr<HttpFileReaderContext> m_reader_context;
 };
 

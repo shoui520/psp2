@@ -467,7 +467,11 @@ public:
 	/* the padding at the head and the tail along the axis set, animated by the timer where
 	   there is one (no name found) */
 	void ScePafWidget_5B94F2B4(const math::v2 &padding, Timer *timer);
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) void Rebuild();
+#else
 	void Rebuild();
+#endif
 	void SetScrollType(ScrollType type);
 	void SetGenerateMargin(const math::v2 &margin);
 	listview::Segment *GetSegment(int32_t index);

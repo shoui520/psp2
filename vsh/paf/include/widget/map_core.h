@@ -39,11 +39,11 @@ public:
 	{
 	}
 
-	virtual void OnStartLoad()
+	virtual void OnMapStartLoad()
 	{
 	}
 
-	virtual void OnFinishLoad()
+	virtual void OnMapFinishLoad()
 	{
 	}
 

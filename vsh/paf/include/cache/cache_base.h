@@ -64,6 +64,18 @@ public:
 	virtual int32_t JobFinish(int32_t result, bool &is_finished);
 	virtual bool IsEnableReleaseInstance();
 
+#ifdef PAF_BUILD_2014
+	static inline __attribute__((always_inline)) void *operator new(size_t size)
+	{
+		return ::operator new(size);
+	}
+
+	static inline __attribute__((always_inline)) void *operator new(size_t, void *where)
+	{
+		return where;
+	}
+#endif
+
 	void Clear();
 	int32_t AddRef();
 	int32_t Release();

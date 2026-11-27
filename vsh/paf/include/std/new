@@ -13,12 +13,41 @@ void operator delete[](void *ptr);
 void operator delete(void *ptr, size_t size, size_t align);
 void operator delete[](void *ptr, size_t size, size_t align);
 
-/* Sony's build calls this one rather than inlining it (_ZnwjPv in the template code). */
+/* Sony's 3.65 build calls this one rather than inlining it (_ZnwjPv in the template code).
+ * Sony's 2014 SNC inlined placement new (keeping only the null check); SNC 3.57 refuses to
+ * inline global ::operator new(size_t, void *), whereas class-scoped placement operator new
+ * is inlined identically without emitting _ZnwjPv. */
 #ifdef PAF_BUILD_2014
-inline __attribute__((always_inline)) void *operator new(size_t, void *where)
+namespace paf {
+
+template<class _Ty>
+struct _PlacementSlot {
+	_Ty value;
+
+	inline __attribute__((always_inline)) _PlacementSlot() : value()
+	{
+	}
+
+	inline __attribute__((always_inline)) _PlacementSlot(const _Ty &arg) : value(arg)
+	{
+	}
+
+	static inline __attribute__((always_inline)) void *operator new(size_t, void *where)
+	{
+		return where;
+	}
+};
+
+}
+
+#define PAF_PLACEMENT_NEW(where, type) new (where) paf::_PlacementSlot<type>()
+#define PAF_PLACEMENT_NEW_COPY(where, type, val) new (where) paf::_PlacementSlot<type>(val)
 #else
-inline __attribute__((noinline)) void *operator new(size_t, void *where)
+#define PAF_PLACEMENT_NEW(where, type) new (where) type()
+#define PAF_PLACEMENT_NEW_COPY(where, type, val) new (where) type(val)
 #endif
+
+inline __attribute__((noinline)) void *operator new(size_t, void *where)
 {
 	return where;
 }

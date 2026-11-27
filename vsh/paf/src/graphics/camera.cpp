@@ -60,7 +60,11 @@ CameraControl::CameraControl(uint32_t flags, float unit)
 
 Camera::Camera(uint32_t flags)
 	: m_unit((flags & FLAG_2D) != 0 ? 500.0f : 1.0f), m_reset_world(math::matrix::Identity()),
-	  m_flags(flags), m_roll(0.0f), m_control(flags, m_unit)
+	  m_flags(flags),
+#ifndef PAF_BUILD_2014
+	  m_roll(0.0f),
+#endif
+	  m_control(flags, m_unit)
 {
 	Reset(1.0f);
 }
@@ -68,6 +72,7 @@ Camera::Camera(uint32_t flags)
 math::matrix Camera::GetViewProjection() const
 {
 	math::matrix view_projection = m_projection.m_matrix * m_transform.m_inverse;
+#ifndef PAF_BUILD_2014
 	float roll = m_roll;
 
 	if (roll != 0.0f) {
@@ -79,6 +84,7 @@ math::matrix Camera::GetViewProjection() const
 						      math::v4(0.0f, 0.0f, 1.0f, 0.0f),
 						      math::v4(0.0f, 0.0f, 0.0f, 1.0f));
 	}
+#endif
 	return view_projection;
 }
 
@@ -190,7 +196,11 @@ math::matrix &Camera::GetResetWorld()
 
 void Camera::SetRoll(float roll)
 {
+#ifndef PAF_BUILD_2014
 	m_roll = roll;
+#else
+	(void)roll;
+#endif
 }
 
 }

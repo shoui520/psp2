@@ -24,6 +24,18 @@ public:
 	LocalFilePsp2Impl();
 	virtual ~LocalFilePsp2Impl();
 
+#ifdef PAF_BUILD_2014
+	static inline __attribute__((always_inline)) void *operator new(size_t size)
+	{
+		return ::operator new(size);
+	}
+
+	static inline __attribute__((always_inline)) void *operator new(size_t, void *where)
+	{
+		return where;
+	}
+#endif
+
 	virtual int32_t Open(const char *filename, uint32_t flag, uint32_t mode);
 	virtual int32_t Close();
 	virtual int32_t Read(void *buf, size_t nbyte);

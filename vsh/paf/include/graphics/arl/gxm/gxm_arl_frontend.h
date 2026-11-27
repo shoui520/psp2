@@ -192,7 +192,11 @@ public:
 	}
 
 	/* the top matrix multiplied by another on its right (name ours) */
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) void MultMatrix(const math::matrix &matrix);
+#else
 	__attribute__((noinline)) void MultMatrix(const math::matrix &matrix);
+#endif
 
 	/* the top matrix scaled on its right (name ours) */
 	__attribute__((noinline)) void Scale(const math::v3 &scale)
@@ -211,7 +215,11 @@ public:
 	string m_name;
 };
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) void MatrixStack::MultMatrix(const math::matrix &matrix)
+#else
 inline __attribute__((noinline)) void MatrixStack::MultMatrix(const math::matrix &matrix)
+#endif
 {
 	Entry &top = m_stack[m_depth - 1];
 

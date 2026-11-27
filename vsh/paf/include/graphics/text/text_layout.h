@@ -332,7 +332,11 @@ public:
 
 private:
 	/* names ours */
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) int32_t CreatePlaceholder();
+#else
 	int32_t CreatePlaceholder();
+#endif
 	/* the selection and the caret given to the graphics */
 	int32_t UpdateSelection();
 	int32_t UpdateCaret();
