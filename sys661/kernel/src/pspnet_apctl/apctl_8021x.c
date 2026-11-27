@@ -1,4 +1,4 @@
-#include "apctl_internal.h"
+#include "pspnet_apctl_internal.h"
 
 static const u8 g_eapol_pae_mac[6] = { 0x01, 0x80, 0xC2, 0x00, 0x00, 0x03 };
 

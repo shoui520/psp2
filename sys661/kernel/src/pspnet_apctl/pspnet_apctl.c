@@ -1,4 +1,4 @@
-#include "apctl_internal.h"
+#include "pspnet_apctl_internal.h"
 
 /* Error codes */
 #define APCTL_ERR_STACK_SMALL       ((int)0x80410005)

@@ -1,4 +1,4 @@
-#include "apctl_internal.h"
+#include "pspnet_apctl_internal.h"
 
 typedef struct BtdunConfig {
     int device_id;            /* 0x000 */

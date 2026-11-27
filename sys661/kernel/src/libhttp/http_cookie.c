@@ -1,4 +1,4 @@
-#include "libhttp_internal.h"
+#include "libhttp_in.h"
 
 /* -------------------------------------------------------------------------
  * Cookie jar globals

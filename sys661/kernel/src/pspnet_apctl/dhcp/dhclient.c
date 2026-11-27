@@ -1,4 +1,4 @@
-#include "apctl_internal.h"
+#include "pspnet_apctl_internal.h"
 
 #define DHCP_ERR_ALREADY_STARTED ((int)0x80410580)
 #define DHCP_ERR_BPF             ((int)0x80410582)

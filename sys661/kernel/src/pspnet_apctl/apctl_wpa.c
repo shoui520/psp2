@@ -1,4 +1,4 @@
-#include "apctl_internal.h"
+#include "pspnet_apctl_internal.h"
 
 /* =========================================================================
  * RC4 (OpenSSL-derived, placed at module offset 0x0000 in original PRX)
