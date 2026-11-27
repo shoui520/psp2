@@ -579,6 +579,8 @@ public:
 	virtual void OnFriendListEvent(int eventType, SceSize count, NpImpsCacheFriendPtr *handles) = 0;
 	virtual void OnFriendRemovedEvent(SceSize count, const SceNpId *npIds) = 0;
 	virtual void OnFriendRequestRemovedEvent(SceSize count, const SceNpId *npIds) = 0;
+	virtual void OnBlockListEvent(int eventType, SceSize count, const SceNpId *npIds) = 0;
+	virtual void OnInGameDataMessageEvent(NpImpsSvcInGameDataMessage **msg) = 0;
 	virtual void OnFriendContextEvent(NpImpsCacheFriendPtr *handle, int contextState, void *extra) = 0;
 	virtual void OnFriendPresenceEvent(NpImpsCacheFriendPtr *handle,
 					   NpImpsSvcPresenceData **curPresence,
@@ -589,14 +591,12 @@ public:
 						   NpImpsSvcPresenceData **prevPresence,
 						   const NpImpsSvcPresenceDiffFlags *diffFlags,
 						   int platform) = 0;
-	virtual void OnBlockListEvent(int eventType, SceSize count, const SceNpId *npIds) = 0;
-	virtual void OnInGameDataMessageEvent(NpImpsSvcInGameDataMessage **msg) = 0;
 };
 
 /* Main SceNpImpsSvc class (0x812F899C..0x812FC13F) */
 class NpImpsSvc : public NpImpsCacheObserver,
-		  public NpImpsSvcAsyncInterface,
-		  public NpImpsSvcMyPresenceObserver {
+		  public NpImpsSvcMyPresenceObserver,
+		  public NpImpsSvcAsyncInterface {
 public:
 	NpImpsSvc(const NpImpsSvcInitParam *param, paf::thread::RMutex *cacheStateMutex);
 	virtual ~NpImpsSvc();
@@ -678,6 +678,8 @@ public:
 	virtual void OnFriendListEvent(int eventType, SceSize count, NpImpsCacheFriendPtr *handles);
 	virtual void OnFriendRemovedEvent(SceSize count, const SceNpId *npIds);
 	virtual void OnFriendRequestRemovedEvent(SceSize count, const SceNpId *npIds);
+	virtual void OnBlockListEvent(int eventType, SceSize count, const SceNpId *npIds);
+	virtual void OnInGameDataMessageEvent(NpImpsSvcInGameDataMessage **msg);
 	virtual void OnFriendContextEvent(NpImpsCacheFriendPtr *handle, int contextState, void *extra);
 	virtual void OnFriendPresenceEvent(NpImpsCacheFriendPtr *handle,
 					   NpImpsSvcPresenceData **curPresence,
@@ -688,8 +690,10 @@ public:
 						   NpImpsSvcPresenceData **prevPresence,
 						   const NpImpsSvcPresenceDiffFlags *diffFlags,
 						   int platform);
-	virtual void OnBlockListEvent(int eventType, SceSize count, const SceNpId *npIds);
-	virtual void OnInGameDataMessageEvent(NpImpsSvcInGameDataMessage **msg);
+
+	/* NpImpsSvcMyPresenceObserver override */
+	virtual void OnMyPresenceUpdated(NpImpsSvcPresenceData **curPresence,
+					 NpImpsSvcPresenceData **prevPresence);
 
 	/* NpImpsSvcAsyncInterface overrides */
 	virtual int CreateContext(SceUInt32 *outContextId);
@@ -707,10 +711,6 @@ public:
 	virtual int DeleteBlock(SceUInt32 contextId, const SceNpId *npId,
 				NpImpsSvcRosterCallback callback);
 	virtual int ForceRosterSync(int syncFlags);
-
-	/* NpImpsSvcMyPresenceObserver override */
-	virtual void OnMyPresenceUpdated(NpImpsSvcPresenceData **curPresence,
-					 NpImpsSvcPresenceData **prevPresence);
 
 	static void FillPresenceSnapshotFromData(NpImpsSvcPresenceSnapshot *outSnapshot,
 						 const NpImpsSvcPresenceData *data);
