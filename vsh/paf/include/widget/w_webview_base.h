@@ -125,13 +125,15 @@ public:
 /* Abstract web edit listener retrieved from wutil::GetWebEditListener(). */
 class WebEditListener {
 public:
-	virtual ~WebEditListener()
-	{
-	}
+	WebEditListener();
+	virtual ~WebEditListener();
 
 	virtual int32_t BeginEdit(WebViewBase *view) = 0;
 	virtual int32_t EndEdit(bool force, WebViewBase *view) = 0;
 	virtual int32_t Update(WebViewBase *view) = 0;
+	virtual int32_t OnBeginEdit(WebViewBase *view) = 0;
+
+	uint32_t reserved[14];
 };
 
 /* Queued asynchronous WebCore permission request (e.g. geolocation). */

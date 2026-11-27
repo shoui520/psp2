@@ -520,6 +520,7 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc SOURCES
 	${PAF}/src/widget/text_box_edit_menu.cpp
 	${PAF}/src/widget/text_auto_scroll.cpp
 	${PAF}/src/widget/text_box_ime_listener.cpp
+	${PAF}/src/widget/web_ime_listener.cpp
 	${PAF}/src/widget/gesture_drag_ratio.cpp
 	${PAF}/src/widget/gesture_drag_ratio_touch.cpp
 	${PAF}/src/widget/gesture_drag.cpp
@@ -775,7 +776,7 @@ set_source_files_properties(
 	${PAF}/src/graphics/drawobj/web_blit_list.cpp ${PAF}/src/graphics/drawobj/web_obj.cpp
 	${PAF}/src/graphics/drawobj/web_bg_obj.cpp
 	${PAF}/src/widget/w_mapview.cpp ${PAF}/src/widget/w_webview.cpp
-	${PAF}/src/widget/map_core.cpp ${PAF}/src/widget/map_canvas.cpp
+	${PAF}/src/widget/map_canvas.cpp
 	${PAF}/src/widget/js_document.cpp ${PAF}/src/widget/web_rect.cpp
 	${PAF}/src/widget/web_renderer.cpp ${PAF}/src/widget/web_controller.cpp
 	${PAF}/src/widget/w_webview_base.cpp ${PAF}/src/widget/map_bg_loader.cpp

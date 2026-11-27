@@ -1069,6 +1069,7 @@ int32_t ButtonBaseParam::Get()
 	return 0;
 }
 
+#ifndef PAF_BUILD_2014
 const char ButtonBaseStyleParam::m_param_name[] = "style_button_base";
 
 const char *ButtonBaseStyleParam::GetParamName() const
@@ -1112,10 +1113,8 @@ int32_t ButtonBaseStyleParam::SetEach(Widget *widget)
 		((ButtonBase *)widget)->m_glow_max = glow_max;
 		if (!m_key_focus)
 			widget->EnableFocusEvent(false);
-#ifndef PAF_BUILD_2014
 		if (!m_focus_in_group)
 			widget->m_focus_in_group = false;
-#endif
 		if (m_direct_key != 0) {
 			uint32_t keycode = 0;
 
@@ -1150,6 +1149,7 @@ int32_t ButtonBaseStyleParam::GetEach(Widget *widget)
 		return ret;
 	return 0;
 }
+#endif
 
 const char *ButtonBaseHandlerParam::GetParamName() const
 {

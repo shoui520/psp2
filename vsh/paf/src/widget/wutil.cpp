@@ -28,6 +28,9 @@
 #include <widget/core/event.h>
 #include <widget/text_box_edit_menu.h>
 #include <widget/text_box_ime_listener.h>
+#ifdef PAF_HAS_WEBVIEW
+#include <widget/web_ime_listener.h>
+#endif
 #include <widget/w_text_box.h>
 #ifdef PAF_BUILD_2014
 #include <widget/w_scene.h>
@@ -47,6 +50,9 @@ static Environment *s_env;
    the listeners it was given) */
 static TextBoxEditMenu *s_edit_menu;
 static TextBoxImeListener *s_ime_listener;
+#ifdef PAF_HAS_WEBVIEW
+static WebImeListener *s_web_ime_listener;
+#endif
 static TextBoxEditMenuListener *s_edit_menu_listener;
 static TextBoxEditListener *s_edit_listener;
 static void *s_web_edit_listener;
@@ -445,6 +451,13 @@ int32_t Init(InitParam &param)
 		if (s_ime_listener != NULL)
 			s_edit_listener = s_ime_listener;
 	}
+#ifdef PAF_HAS_WEBVIEW
+	if (s_web_edit_listener == NULL) {
+		s_web_ime_listener = new WebImeListener();
+		if (s_web_ime_listener != NULL)
+			s_web_edit_listener = s_web_ime_listener;
+	}
+#endif
 	s_message_dialog_listener = (MessageDialogListener *)param.message_dialog_listener;
 	s_webview_listener = param.webview_listener;
 	return 0;
@@ -524,6 +537,13 @@ int32_t Init(const InitParam &param)
 		if (s_ime_listener != NULL)
 			s_edit_listener = s_ime_listener;
 	}
+#ifdef PAF_HAS_WEBVIEW
+	if (s_web_edit_listener == NULL) {
+		s_web_ime_listener = new WebImeListener();
+		if (s_web_ime_listener != NULL)
+			s_web_edit_listener = s_web_ime_listener;
+	}
+#endif
 	s_message_dialog_listener = (MessageDialogListener *)param.message_dialog_listener;
 	s_listener_A55215E5 = param.listener_A55215E5;
 	s_webview_listener = param.webview_listener;
@@ -556,6 +576,12 @@ int32_t Term()
 		delete s_ime_listener;
 		s_ime_listener = NULL;
 	}
+#ifdef PAF_HAS_WEBVIEW
+	if (s_web_ime_listener != NULL) {
+		delete s_web_ime_listener;
+		s_web_ime_listener = NULL;
+	}
+#endif
 	sceImeTerm();
 	s_edit_menu_listener = NULL;
 	s_edit_listener = NULL;

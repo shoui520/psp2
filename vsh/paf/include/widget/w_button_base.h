@@ -313,6 +313,9 @@ public:
 	bool m_enable;
 };
 
+#ifdef PAF_BUILD_2014
+typedef WidgetStyleParam ButtonBaseStyleParam;
+#else
 /* a ButtonBase's style: its glow, and how the focus and the direct keys find it */
 class ButtonBaseStyleParam : public WidgetStyleParam {
 public:
@@ -334,6 +337,7 @@ public:
 	/* 1 to 5: the key that decides it directly */
 	int32_t m_direct_key;
 };
+#endif
 
 /* a ButtonBase's five sounds */
 class ButtonBaseSoundParam : public WidgetSoundParam {

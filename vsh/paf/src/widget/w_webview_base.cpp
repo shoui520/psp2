@@ -62,6 +62,14 @@ WebViewAnalogListener::~WebViewAnalogListener()
 {
 }
 
+WebEditListener::WebEditListener()
+{
+}
+
+WebEditListener::~WebEditListener()
+{
+}
+
 void WebViewAnalogListener::OnUpdate(const inputdevice::Data *data)
 {
 	(void)data;
