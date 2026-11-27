@@ -40,6 +40,10 @@ else()
 		DTCPIP-MW/Src/Mw/SwMwRecordStore.c
 		SWKeyManager/KeyManager/libkm/libswkeystore.c
 		SWKeyManager/KeyManager/libactmgr/libdtcpip_actmgr.c
+		DTCPIP-SW/core/src/common/sw_status.cpp
+		DTCPIP-SW/core/src/common/sw_cert_srm.cpp
+		DTCPIP-SW/core/src/ake/sw_ake_packet.cpp
+		DTCPIP-SW/core/src/ake/sw_ake_transport.cpp
 		DTCPIP-SW/core/src/sdi/sw_sdi_cxd3705.cpp
 		DTCPIP-SW/core/src/sdi/sw_sdi_drv.cpp
 		DTCPIP-SW/core/src/sdi/sw_sdi_buffer.cpp
