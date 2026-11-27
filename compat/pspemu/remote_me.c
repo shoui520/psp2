@@ -91,7 +91,7 @@ static int remoteMeThread(SceSize args, void *argp)
 				retVal = remoteMeAacDispatch((int)meCmd, argA, argB, argC, argD, argE);
 				break;
 			case 256: case 257:
-				retVal = remoteDmacplusMeDispatch((int)(meCmd - 256U), argA, argB, argC, argD, argE);
+				retVal = remoteSas2MeDispatch((int)(meCmd - 256U), argA, argB, argC, argD, argE);
 				break;
 			case 264: case 265: case 266:
 				retVal = remoteMeMixerDispatch((int)meCmd, argA, argB, argC);

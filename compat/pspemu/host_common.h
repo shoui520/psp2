@@ -31,6 +31,7 @@
 #include <avcdec.h>
 #include <audiodec.h>
 #include <scejpeg.h>
+#include <rtc.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -305,8 +306,51 @@ int sceCtrlPeekBufferPositive(int port, SceCtrlData *padData, int count);
 int sceShellUtilInitEvents(int mode);
 int sceShellUtilLock(uint32_t type);
 int sceShellUtilUnlock(uint32_t type);
+int sceShellUtilRegisterEventHandler(int (*handler)(int result, int mode, int type, void *userArg), void *userArg);
 int SceShellUtil_EC5881A5(void);
 int SceShellUtil_CE35B2B8(void *callback, void *userArg);
+
+int sceAppMgrAcquireSoundOutExclusive3(int mode);
+int sceAppMgrReleaseSoundOutExclusive3(void);
+int vshSblQafMgrIsAllowPSPEmuSelectNPEnv(void);
+int vshSblQafMgrIsAllowPSPEmuScreenShot(void);
+
+typedef int (*PspemuImeTextFilter)(uint16_t *outText, uint32_t *outTextLength,
+                                   const uint16_t *srcText, uint32_t srcTextLength);
+
+typedef struct PspemuImeDialogParam {
+	uint32_t            sdkVersion;
+	uint32_t            inputMethod;
+	uint64_t            supportedLanguages;
+	int                 languagesForced;
+	uint32_t            type;
+	uint32_t            option;
+	PspemuImeTextFilter filter;
+	uint32_t            dialogMode;
+	uint32_t            textBoxMode;
+	const uint16_t     *title;
+	uint32_t            maxTextLength;
+	uint16_t           *initialText;
+	uint16_t           *inputTextBuffer;
+	uint8_t             commonParamReserved[0x48];
+	uint32_t            commonParamMagic;
+	uint8_t             tailReserved[0x24];
+} PspemuImeDialogParam;
+
+typedef struct PspemuImeDialogResult {
+	int32_t result;
+	int32_t button;
+	uint8_t reserved[28];
+} PspemuImeDialogResult;
+
+int sceImeDialogInit(const PspemuImeDialogParam *param);
+int sceImeDialogAbort(void);
+int sceImeDialogGetResult(PspemuImeDialogResult *result);
+int sceImeDialogTerm(void);
+
+SceUInt64 sceRtcGetAccumulativeTime(void);
+uint16_t *wcsncpy(uint16_t *dst, const uint16_t *src, size_t count);
+int sceCompatGetCurrentSecureTick(SceRtcTick *tick);
 
 int SceCamera_99B5FB62(unsigned int mode);
 
@@ -340,6 +384,7 @@ int sceCesMbcsStrToUtf8Str(SceCesMbcsUcsContext *context,
                            uint8_t *utf8Buf, uint32_t utf8Max, uint32_t *utf8Len);
 
 /* Shared paths owned by remote_msfs.c */
+extern char g_msfsRootPrefix[16];
 extern char g_originalPath[1024];
 extern char g_selfPath[1024];
 
@@ -403,7 +448,7 @@ typedef struct PspemuKermitRequest {
 	uint32_t semaId;
 	uint32_t retAddr;
 	uint32_t padWord;
-	uint64_t args[9];
+	uint64_t args[13];
 } PspemuKermitRequest;
 
 /* Virtual filesystem operations table for compatFsLoop */
@@ -618,10 +663,14 @@ int meSasSetOutputSize(void *ctx, uint32_t grainSamples, uint32_t optA, uint32_t
 int meSasCopyBuffer(void *ctx, const void *srcBuf, void *dstBuf);
 int meSasTerm(void *ctx, uint32_t optA, uint32_t optB);
 
-/* Cross-module callees from Milestone 4 into Milestone 5 (dmacplus, scejpeg) */
+/* Cross-module callees from Milestone 4 into Milestone 5 (dmacplus, sas2, scejpeg) */
 int remoteDmacplusIsEnabled(void);
 int remoteDmacplusSetEnabled(int enabled);
-int remoteDmacplusMeDispatch(int cmd, uint32_t argA, uint32_t argB, uint32_t argC, uint32_t argD, uint32_t argE);
+int remoteSas2MeDispatch(int cmd, uint32_t ctxGuestAddr, uint32_t outGuestAddr,
+                         uint32_t argC, uint32_t argD, uint32_t argE);
+int pspemuSas2CoreMix(void *ctx, void *outBuf, uint32_t argC);
+int pspemuSas2CoreMixWithVoice(void *ctx, void *outBuf, uint32_t argC, uint32_t argD, uint32_t argE);
+int pspemuSas2CoreInit(void *ctx);
 int sceJpegMjpegCsc(void *dstRgb, const void *srcYuv, uint32_t widthHeight, int pitch, int pixelFormat, int yuvFormat);
 void *sceJpegWorkReset(void);
 void *sceJpegWorkAlloc(uint32_t size);
@@ -644,10 +693,13 @@ int remoteDmacplusInit(void);
 int remoteSas2Init(void);
 
 /* remote_net.c */
+int64_t remoteNetFetchTick(const PspemuKermitRequest *req, int (*tickFn)(SceRtcTick *));
 int remoteNetInit(void);
 int remoteNetSuspend(void);
 int remoteNetResume(void);
+int remoteNetResetOnReboot(void);
 int remoteNetIsAdhocActive(void);
+int remoteNetSetThrottle(int enabled);
 
 /* remote_usb.c & remote_usbpspcm.c & scejpeg */
 int remoteUsbInit(void *workBuf);
@@ -655,20 +707,33 @@ int remoteUsbPspcmInit(void);
 int remoteUsbPspcmSuspend(void);
 void *sceJpegWorkInit(void *edramBase);
 
-/* remote_peripheral.c & remote_osk.c */
+/* remote_peripheral.c & remote_osk.c & osk_filter.c */
 int remotePeripheralIsBusy(void);
 int remotePeripheralInit(void);
 int remotePeripheralUpdateState(void);
 int remoteOskInit(void);
+int remoteOskAbort(void);
+int oskIsCharAllowed(uint16_t ch, const int *langMask, int language, int kanaOnly);
+int oskNeedsFullwidthLatin(uint32_t inputTypes);
+int oskNeedsFullwidthDigits(uint32_t inputTypes);
+int oskPostProcessResult(uint16_t *text, int maxChars, uint32_t inputTypes, int maxLines);
+uint16_t oskConvertHiraToKata(uint16_t ch, const int *langMask);
 
 /* menu_dlg.c */
+int pspemuMenuPreparePhotoExport(void);
 int pspemuMenuDialogSetup(void);
+int pspemuMenuSetImeDeadline(SceUInt64 deadline);
+int pspemuMenuClearImeDeadline(void);
+int pspemuMenuPollDialog(int mode);
 int pspemuMenuDialogInit(void);
+int pspemuMenuLockDialog(int id);
+int pspemuMenuUnlockDialog(int id);
 
 /* remote_low_priority.c */
 int remoteLowPriorityLockPsButton(void);
 int remoteLowPriorityUnlockPsButton(void);
 int remoteLowPriorityInit(void);
+int remoteLowPriorityEnqueuePromoteWithCallback(const char *path, int (*doneCb)(int result));
 int remoteLowPriorityWaitIdle(void);
 
 /* compat_list.c */
@@ -678,12 +743,14 @@ int pspemuCompatIsListOverrideActive(void);
 int pspemuTitleInfoThread(SceSize args, void *argp);
 int pspemuCompatLoadTitleEntry(const char *discId);
 const char *pspemuCompatGetTitleId(void);
+int pspemuCompatIsRestrictedBootTitle(void);
 
 /* settings.c */
 int pspemuSettingsUpdateController(SceCtrlData *padData);
 int pspemuSettingsGetDialogActive(void);
 int pspemuSettingsSetMenuEnabled(int enable);
 int pspemuSettingsApplyDisplay(void);
+int pspemuSettingsNotifyPopsReady(void);
 int pspemuSettingsDialogInit(void);
 int pspemuSettingsShowGuideDialog(int dialogId);
 int pspemuSettingsShowErrorDialog(int errorCode);
@@ -711,6 +778,7 @@ int remotePocsInstallAppSupport(void);
 
 /* pops_host.c */
 SceBool popsHostIsOverlayActive(void);
+int popsHostHandlePeripheralCmd(uint32_t cmd, uint32_t arg);
 void *popsHostGetVmcBuffer(unsigned int slot);
 int popsHostReloadVmc(unsigned int slot);
 int popsHostSetDisplayMode(int pocsMode);
