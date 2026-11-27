@@ -214,7 +214,11 @@ static inline float pvfSinSeries(float x)
 	return x * (1.0f + x2 * p);
 }
 
+#ifdef SCE_PVF_2014
+static __attribute__((noinline)) float pvfSin(float x)
+#else
 static float pvfSin(float x)
+#endif
 {
 	x = pvfReduceAngle(x);
 	if (x == 0.0f)
@@ -230,7 +234,11 @@ static float pvfSin(float x)
 	return pvfSinSeries((float)(PVF_PI - (double)x));
 }
 
+#ifdef SCE_PVF_2014
+static __attribute__((noinline)) float pvfCos(float x)
+#else
 static float pvfCos(float x)
+#endif
 {
 	x = pvfReduceAngle(x);
 	if (x == 0.0f)

@@ -173,7 +173,6 @@ set(swu_ft2_SOURCES
 	${FT2}/src/base/ftbitmap.c
 	${FT2}/src/base/ftglyph.c
 	${FT2_SCE}/src/base/ftinit.c
-	${FT2}/src/base/ftdebug.c
 	${FT2}/src/autofit/autofit.c
 	${FT2_SCE}/src/truetype/truetype.c
 	${FT2}/src/type1/type1.c
@@ -188,7 +187,7 @@ set(swu_ft2_SOURCES
 )
 set_source_files_properties(${swu_ft2_SOURCES} PROPERTIES
 	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;FT2_BUILD_LIBRARY;FT_CONFIG_NO_OTVALID"
-	COMPILE_OPTIONS "-O3;-fno-stack-protector;-fhosted;-fbuiltin;-fdelete-null-pointer-checks;-ffunction-sections;-fdata-sections;-fsigned-char"
+	COMPILE_OPTIONS "-O3;-fno-stack-protector;-fhosted;-fbuiltin;-fdelete-null-pointer-checks;-fsigned-char"
 	INCLUDE_DIRECTORIES "${FT2_DIR}/include;${FT2_SCE}/include;${FT2}/include;${FT2}/src;${FT2}/src/base")
 set_source_files_properties(${FT2_DIR}/libc.c PROPERTIES
 	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;FT2_BUILD_LIBRARY;PAF_STATIC_BUILD"
@@ -203,7 +202,7 @@ set(swu_pvf_SOURCES
 )
 set_source_files_properties(${swu_pvf_SOURCES} PROPERTIES
 	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;SCE_PVF_2014"
-	COMPILE_OPTIONS "-O3;-fno-stack-protector;-mfloat-abi=hard"
+	COMPILE_OPTIONS "-O3;-fno-stack-protector;-fno-ipa-cp-clone;-mfloat-abi=hard"
 	INCLUDE_DIRECTORIES "${FT2}/include")
 
 set(swu_updater_SOURCES
@@ -630,6 +629,7 @@ target_include_directories(${PSP2_TARGET} PRIVATE
 target_link_options(${PSP2_TARGET} PRIVATE
 	-Wl,--gc-sections
 	-Wl,--no-warn-mismatch
+	-Wl,-u,sceSasInit
 	-Wl,--defsym=sceProcessParam=__sce_process_param
 	-Wl,--defsym=__stack_chk_guard=__sce_process_param
 	-Wl,--defsym=__stack_chk_fail=__cxa_pure_virtual
@@ -665,13 +665,13 @@ set_source_files_properties(${PSP2_SRC}/sys/sdk/target/src/aes/aes.S PROPERTIES
 
 set_source_files_properties(${PSP2_SRC}/sys/sdk/target/src/sha256/libsha256.c PROPERTIES
 	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;SCE_PSP2_SDK_VERSION=0x03100010"
-	COMPILE_OPTIONS "-fno-stack-protector;-fno-toplevel-reorder;-ffunction-sections")
+	COMPILE_OPTIONS "-fno-stack-protector;-fno-toplevel-reorder")
 set_source_files_properties(${PSP2_SRC}/sys/sdk/target/src/sha256/sha256.S PROPERTIES
 	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;SCE_PSP2_SDK_VERSION=0x03100010")
 
 set_source_files_properties(${PSP2_SRC}/sys/sdk/target/src/sha1/libsha1.c PROPERTIES
 	COMPILE_DEFINITIONS PSP2_COMPILER_GCC48
-	COMPILE_OPTIONS "-fno-stack-protector;-ffunction-sections")
+	COMPILE_OPTIONS "-fno-stack-protector")
 set_source_files_properties(${PSP2_SRC}/sys/internal/kernel/src/sysmem/sha1_transform.S PROPERTIES
 	COMPILE_DEFINITIONS PSP2_COMPILER_GCC48)
 
