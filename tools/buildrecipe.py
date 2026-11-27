@@ -51,10 +51,19 @@ def instruction_mode(argv):
 
 def compile_options(argv):
     """Options consumed by the Sony compiler wrapper, in configured order."""
+    # Skip `python3 -I .../sonycc.py snc <cc>` launcher tokens so Python's -I isn't read as an include flag.
+    start = 0
+    for i, x in enumerate(argv):
+        if x.endswith('sonycc.py') and i + 2 < len(argv):
+            start = i + 3
+            break
+    argv = argv[start:]
     opts = [x for x in argv if re.fullmatch(r'-O(?:[0-3sg]|fast)', x)]
     includes = []
     for i, x in enumerate(argv):
-        if x.startswith('-I'):
+        if x == '-I' and i + 1 < len(argv):
+            includes.append('-I' + argv[i + 1])
+        elif x.startswith('-I') and len(x) > 2:
             includes.append(x)
         elif x in ('-isystem', '-include') and i + 1 < len(argv):
             includes += argv[i:i + 2]
@@ -77,8 +86,10 @@ def compile_options(argv):
 
 
 def source_options(cmake, cwd, source):
-    recipes = compile_recipes((cmake / 'build.make').read_text(),
-                              read_flags(cmake / 'flags.make'), cwd)
+    name = source.name
+    text = '\n'.join(line for line in (cmake / 'build.make').read_text().splitlines()
+                     if line.startswith('\t') and ' -c ' in line and name in line)
+    recipes = compile_recipes(text, read_flags(cmake / 'flags.make'), cwd)
     matches = [compile_options(argv) for argv in recipes.values()
                if (cwd / argv[argv.index('-c') + 1]).resolve() == source.resolve()]
     if matches and any(value != matches[0] for value in matches[1:]):
