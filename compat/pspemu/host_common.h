@@ -31,7 +31,13 @@
 #include <avcdec.h>
 #include <audiodec.h>
 #include <scejpeg.h>
+#include <scejpegenc.h>
 #include <rtc.h>
+#include <net.h>
+#include <libnetctl.h>
+#include <libnet/netinternal.h>
+#include <camera.h>
+#include <liblocation.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -621,6 +627,7 @@ int remoteMeAvcdecSetPatchFlag(int patchId);
 int remoteMeAvcdecInit(void);
 int remoteMeAvcdecUpscale(void *dstBuf, void *srcBuf);
 int remoteMeAvcdecHasDecoded(void);
+int avcdecClearEdramFrame(void *dstEdram, uint32_t width, uint32_t height);
 int remoteMeAvcdecZoomFrame(void *dstBuf, void *srcBuf, int zoomScale);
 
 int remoteMeUnusedVideoDispatch(int cmd);
@@ -701,8 +708,78 @@ int remoteNetResetOnReboot(void);
 int remoteNetIsAdhocActive(void);
 int remoteNetSetThrottle(int enabled);
 
+/* SceNetInternal / SceNetCtl / SceWlan / SceLibLocationInternal / SceJpegEncArm / SceUsbPspcm imports */
+int SceNetInternal_04E6136D(int timeoutUsec, void *filterCtx, int flags);
+int SceNetInternal_104E4820(int usec);
+int SceNetInternal_235DE96C(int ifId, void *ifInfo, int count);
+int SceNetInternal_333F9CB3(SceNetId s, unsigned int cmd, void *arg);
+int SceNetInternal_EAC33599(int ifId, int (*callback)(int ifId, int eventType, int64_t eventCode), void *userArg, int flags);
+int SceNetInternal_EDAA3453(int ifId, int flags);
+
+int SceNetCtl_229EAA64(int cid);
+int SceNetCtl_2792E1B6(void);
+int SceNetCtl_2CF683AD(void);
+int SceNetCtl_3AB4D791(int cid);
+int SceNetCtl_713394C0(SceNetCtlCallback func, void *arg, int *cid);
+int SceNetCtl_8F09A038(void);
+int SceNetCtl_9629B72F(void);
+int SceNetCtl_AB1462C5(int type);
+int SceNetCtl_AC326DB7(SceNetCtlCallback func, void *arg, int *cid);
+int SceNetCtl_DD96DA85(void);
+int SceNetCtl_E8E8DF18(int *state);
+
+int sceWlanGetConfiguration(void);
+
+SceInt32 SceLibLocationInternal_3500A98C(SceUInt32 open, SceUInt32 mode);
+
+typedef void *SceJpegArmEncoderContext;
+SceSize sceJpegArmEncoderGetContextSize(void);
+int sceJpegArmEncoderInit(SceJpegArmEncoderContext context, SceUInt32 inWidth, SceUInt32 inHeight,
+                          SceUInt32 pixelFormat, void *outBuffer, SceSize outSize);
+int sceJpegArmEncoderEnd(SceJpegArmEncoderContext context);
+int sceJpegArmEncoderSetOutputAddr(SceJpegArmEncoderContext context, void *outBuffer, SceSize outSize);
+int sceJpegArmEncoderSetValidRegion(SceJpegArmEncoderContext context, SceInt32 regionWidth, SceInt32 regionHeight);
+int sceJpegArmEncoderSetHeaderMode(SceJpegArmEncoderContext context, SceUInt32 mode);
+int sceJpegArmEncoderEncode(SceJpegArmEncoderContext context, const void *inBuffer);
+
+int sceUsbPspcmSetTitle(const char *title, unsigned int size);
+int sceUsbPspcmStartDevice(void);
+int sceUsbPspcmStopDevice(void);
+int sceUsbPspcmDevctl(unsigned int command, const void *input, void *output, unsigned int outputSize);
+int sceUsbPspcmOpen(unsigned int unit);
+int sceUsbPspcmClose(unsigned int unit);
+int sceUsbPspcmWrite(unsigned int unit, const void *data, unsigned int size, unsigned int mode);
+int sceUsbPspcmRead(unsigned int unit, void *data, unsigned int size, unsigned int mode);
+int sceUsbPspcmIoctlReset(unsigned int unit);
+int sceUsbPspcmIoctlPollData(unsigned int unit);
+int sceUsbPspcmIoctlWaitData(unsigned int unit, const unsigned int *timeout);
+int sceUsbPspcmIoctlCancelWaitData(unsigned int unit);
+
+/* Static net_config / net_wlan helpers linked in eboot (0x81000744..0x81001668) */
+int sceNetConfigUpInterface(int ifId);
+int sceNetConfigDownInterface(int ifId);
+int sceNetConfigDelIfaddr(int ifId);
+int sceNetConfigSetIfaddr(int ifId, const void *ipAddr, const void *peerAddr, const void *netmask);
+int sceNetConfigDelDefaultRoute(void);
+int sceNetConfigSetDefaultRoute(const void *gateway);
+int sceNetWlanScan(int ifId, const void *req, SceSize reqSize, void *outBuf, SceSize outBufSize,
+                   void **outBssList, SceUInt32 *outBssCount);
+int sceNetWlanStartBackgroundScan(int ifId, void *reqBuf, SceSize reqSize);
+int sceNetWlanReadBackgroundScan(int ifId, void *outBuf, SceSize outBufSize,
+                                 void **outBssList, SceUInt32 *outBssCount);
+int sceNetWlanStopBackgroundScan(int ifId);
+int sceNetWlanAdhocCreate(int ifId, void *req);
+int sceNetWlanAdhocJoin(int ifId, void *req);
+int sceNetWlanAdhocLeave(int ifId);
+int sceNetWlanSetWakeAdhoc(int ifId, void *config);
+int sceNetWlanClearWakeAdhoc(int ifId);
+int sceNetWlanGetWakeDiscoveredSsids(int ifId, void *outSsidList);
+
 /* remote_usb.c & remote_usbpspcm.c & scejpeg */
 int remoteUsbInit(void *workBuf);
+int remoteUsbRequestCameraSwitch(void);
+int remoteUsbIsPspcmEnabled(void);
+int64_t remoteUsbPspcmGetEventPair(void);
 int remoteUsbPspcmInit(void);
 int remoteUsbPspcmSuspend(void);
 void *sceJpegWorkInit(void *edramBase);
@@ -744,6 +821,7 @@ int pspemuTitleInfoThread(SceSize args, void *argp);
 int pspemuCompatLoadTitleEntry(const char *discId);
 const char *pspemuCompatGetTitleId(void);
 int pspemuCompatIsRestrictedBootTitle(void);
+int pspemuCompatGetDefaultCameraDevice(void);
 
 /* settings.c */
 int pspemuSettingsUpdateController(SceCtrlData *padData);
@@ -755,6 +833,7 @@ int pspemuSettingsDialogInit(void);
 int pspemuSettingsShowGuideDialog(int dialogId);
 int pspemuSettingsShowErrorDialog(int errorCode);
 int pspemuSettingsShowFatalNotice(int errorCode);
+int pspemuSettingsIsGuideDialogIdle(void);
 int pspemuSettingsGetPocsFirstBootDone(void);
 int pspemuSettingsMarkPocsFirstBootDone(void);
 int pspemuSettingsGetFirstBootDone(void);

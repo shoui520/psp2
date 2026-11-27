@@ -18,9 +18,12 @@ psp2_module(vs0_app_NPXS10028_eboot KIND user COMPILER gcc48 PARTIAL SOURCES
 	me_edram.c
 	remote_dmacplus.c
 	remote_sas2.c
+	remote_net.c
+	remote_usb.c
 	remote_peripheral.c
 	remote_osk.c
 	me_wrapper_api.c
+	remote_usbpspcm.c
 	remote_low_priority.c
 	iocache.c
 	osk_filter.c
@@ -73,9 +76,12 @@ set_source_files_properties(
 	me_edram.c
 	remote_dmacplus.c
 	remote_sas2.c
+	remote_net.c
+	remote_usb.c
 	remote_peripheral.c
 	remote_osk.c
 	me_wrapper_api.c
+	remote_usbpspcm.c
 	remote_low_priority.c
 	iocache.c
 	osk_filter.c

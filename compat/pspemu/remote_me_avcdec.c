@@ -790,7 +790,7 @@ static int __attribute__((noinline, noclone)) avcdecConvertEdramYuv(const Avcdec
 	return 0;
 }
 
-static int __attribute__((noinline, noclone)) avcdecClearEdramFrame(void *dstEdram, uint32_t width, uint32_t height)
+int __attribute__((noinline, noclone)) avcdecClearEdramFrame(void *dstEdram, uint32_t width, uint32_t height)
 {
 	SceAvcdecPicture srcPic;
 	SceAvcdecPicture dstPic;
