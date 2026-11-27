@@ -4,6 +4,9 @@
  * (0x8129A0E0-0x8129AB7F).
  */
 #include "topmenu_internal.h"
+#if !defined(FW_TYPE_CEX)
+extern "C" void ScePafAutoTestTty_9E10E873(int32_t type, const char *format, ...);
+#endif
 
 namespace {
 
@@ -37,6 +40,11 @@ static int executeRunningCommand(TopmenuProcessBase *proc, SceInt32 command)
 			proc->m_isActive = true;
 			sceAppMgrActivateApp(proc->m_appId);
 			sendProcessAppEvent(proc, SHELL_APP_EVENT_ACTIVATED);
+#if !defined(FW_TYPE_CEX)
+			ScePafAutoTestTty_9E10E873(
+				3, "activate_%s",
+				(proc->m_owner != NULL) ? proc->m_owner->m_titleId.c_str() : "");
+#endif
 			if (proc->m_owner != NULL)
 				proc->m_owner->OnResumeForeground();
 		}
@@ -62,6 +70,11 @@ static int executeRunningCommand(TopmenuProcessBase *proc, SceInt32 command)
 			sceAppMgrDeactivateApp(proc->m_appId);
 			g_topWindow->m_launchSeq.state = 2;
 			sendProcessAppEvent(proc, SHELL_APP_EVENT_DEACTIVATED);
+#if !defined(FW_TYPE_CEX)
+			ScePafAutoTestTty_9E10E873(
+				3, "deactivate_%s",
+				(proc->m_owner != NULL) ? proc->m_owner->m_titleId.c_str() : "");
+#endif
 		}
 		break;
 	case 4:

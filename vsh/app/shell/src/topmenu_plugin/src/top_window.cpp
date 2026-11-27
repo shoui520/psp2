@@ -4,6 +4,9 @@
  * TopmenuPluginInterface table (0x8126F818-0x81281F17).
  */
 #include "topmenu_internal.h"
+#if !defined(FW_TYPE_CEX)
+extern "C" void ScePafAutoTestTty_9E10E873(int32_t type, const char *format, ...);
+#endif
 #include <graphics/surface/surface_pool.h>
 #include <graphics/graphmem/graphmem.h>
 #include <widget/w_pageturn.h>
@@ -805,14 +808,29 @@ static void setFocusedTab(TopWindow *window, TopTab *tab, bool skipIfSystemApp)
 
 	if (tab == NULL || tab->m_appData == NULL) {
 		topmenuSwitchToProcess(window, NULL, true);
+#if !defined(FW_TYPE_CEX)
+		ApplauncherInterface *appIf = topmenuGetApplauncherInterface();
+		if (appIf != NULL && appIf->func[18] != NULL) {
+			SceInt32 page = ((SceInt32 (*)(void))appIf->func[18])();
+			ScePafAutoTestTty_9E10E873(1, "/livespace/home_page%d", page);
+		}
+#endif
 		return;
 	}
 
 	if (tab->m_appData->m_process.m_launchMode != 1 || tab->m_appData->m_viewKind == 1) {
-		if (tab->m_appData->m_viewKind != 1)
+		if (tab->m_appData->m_viewKind != 1) {
 			topmenuSwitchToProcess(window, &tab->m_appData->m_process, true);
-		else
+		} else {
 			topmenuSwitchToProcess(window, NULL, true);
+#if !defined(FW_TYPE_CEX)
+			if (window->m_activeSnapId ==
+			    tab->m_scrollView->GetSnapID(tab->m_widget)) {
+				ScePafAutoTestTty_9E10E873(1, "/livespace/livearea_%s",
+							   tab->m_appData->m_titleId.c_str());
+			}
+#endif
+		}
 	}
 }
 
@@ -1996,6 +2014,13 @@ void topmenuSetShellViewMode(TopWindow *window, SceInt32 viewMode)
 				proc->m_tabAppData->SetAppViewState(0);
 		}
 		playGateCloseTransition();
+#if !defined(FW_TYPE_CEX)
+		if (window->m_currentTab != NULL && window->m_currentTab->m_appData != NULL) {
+			ScePafAutoTestTty_9E10E873(
+				1, "/livespace/livearea_%s",
+				window->m_currentTab->m_appData->m_titleId.c_str());
+		}
+#endif
 	}
 }
 
@@ -3296,6 +3321,9 @@ static void openCarouselView(void)
 		g_topWindow->m_scrollView->GetSnapID(g_topWindow->m_tabs[0]->m_widget);
 	g_topWindow->m_scrollView->DoSnap(
 		homeSnapId, new paf::Timer(300.0f, paf::Timer::FUNC_QUAD_INOUT));
+#if !defined(FW_TYPE_CEX)
+	ScePafAutoTestTty_9E10E873(1, "/livespace/indexview");
+#endif
 }
 
 /* 0x812766F6 */
@@ -6294,6 +6322,9 @@ static void updateTopWindowFrame(TopWindow *window)
 			actEv.appName = status.appName;
 			actEv.fromBoot = (ev.detailCode != 0);
 			shellAppEventSend(SHELL_APP_EVENT_STARTED, &actEv, sizeof(actEv));
+#if !defined(FW_TYPE_CEX)
+			ScePafAutoTestTty_9E10E873(3, "loaded_%s", actEv.appName);
+#endif
 
 			bool alreadyTracked = false;
 			for (paf::list<TopmenuAppFlagEntry>::iterator it =
@@ -6331,6 +6362,9 @@ static void updateTopWindowFrame(TopWindow *window)
 			endEv.appName = ev.titleId;
 			endEv.fromBoot = (ev.isSubProcess != 0);
 			shellAppEventSend(SHELL_APP_EVENT_ENDED, &endEv, sizeof(endEv));
+#if !defined(FW_TYPE_CEX)
+			ScePafAutoTestTty_9E10E873(3, "unloaded_%s", endEv.appName);
+#endif
 
 			clearBgPartnerLiveAreaOnExit(window, ev.targetAppId);
 			topmenuSetPromoteWaitLock(false, ev.titleId);
