@@ -2,27 +2,27 @@
 
 // 00006d04
 SceIoDeviceFunction g_isofsDrvFuncs = {
-    isofsDrvInit,
-    isofsDrvExit,
-    isofsDrvOpen,
-    isofsDrvClose,
-    isofsDrvRead,
+    isofs_init,
+    isofs_exit,
+    isofs_open,
+    isofs_close,
+    isofs_read,
     NULL,
-    isofsDrvLseek,
-    isofsDrvIoctl,
-    NULL,
-    NULL,
-    NULL,
-    isofsDrvDopen,
-    isofsDrvDclose,
-    isofsDrvDread,
-    isofsDrvGetstat,
+    isofs_lseek,
+    isofs_ioctl,
     NULL,
     NULL,
-    isofsDrvChdir,
-    isofsDrvMount,
-    isofsDrvUmount,
-    isofsDrvDevctl,
+    NULL,
+    isofs_dopen,
+    isofs_dclose,
+    isofs_dread,
+    isofs_getstat,
+    NULL,
+    NULL,
+    isofs_chdir,
+    isofs_mount,
+    isofs_umount,
+    isofs_devctl,
     NULL
 };
 
@@ -84,7 +84,7 @@ IsofsDir *g_isofsOpenDirs;
 IsofsMgr g_isofsMgr;
 
 
-int isofsDrvInit(SceIoDeviceEntry *entry) {
+int isofs_init(SceIoDeviceEntry *entry) {
     if (entry == NULL) {
         sceKernelSignalSema(g_isofsMgr.semaId, 1);
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
@@ -97,7 +97,7 @@ int isofsDrvInit(SceIoDeviceEntry *entry) {
     s32 mgrSemaId = sceKernelCreateSema("SceIsofsMgr", 1, 1, 1, NULL);
     if (mgrSemaId > -1) {
         g_isofsMgr.semaId = mgrSemaId;
-        s32 ret = isofsInitUnits();
+        s32 ret = sceIsofsLbInit();
         if (ret == 0 && (ret = sceKernelWaitSema(g_isofsMgr.semaId, 1, NULL), -1 < ret)) {
             for (s32 i = 0; i < g_isofsMgr.maxUnits; ++i) {
                 IsofsUnit *unit = isofsGetUnit(i);
@@ -125,7 +125,7 @@ int isofsDrvInit(SceIoDeviceEntry *entry) {
 
             IsofsUnit *unit = isofsGetUnit(0);
             entry->d_private = unit;
-            if (isofsInitCache() == 0) {
+            if (sceIsofsCacheCheckData() == 0) {
                 g_isofsInitialized = 1;
                 sceKernelSignalSema(g_isofsMgr.semaId, 1);
                 return SCE_ERROR_OK;
@@ -143,7 +143,7 @@ int isofsDrvInit(SceIoDeviceEntry *entry) {
 }
 
 // 00002680
-int isofsDrvMount(SceIoIob *iob, const char *fs, const char *blockDev, int mode, void *outdata, int outlen) {
+int isofs_mount(SceIoIob *iob, const char *fs, const char *blockDev, int mode, void *outdata, int outlen) {
     if (pspGetK1() <= -1) {
         return SCE_ERROR_PRIV_REQUIRED;
     }
@@ -188,7 +188,7 @@ int isofsDrvMount(SceIoIob *iob, const char *fs, const char *blockDev, int mode,
                         return sceKernelSignalSema(g_isofsMgr.semaId, 1);
                     }
                     isofsClearUnitFilesFdw(unit, g_isofsMgr.maxFiles);
-                    isofsClearUnit(unit->unitNum);
+                    isofs_release_blkdev(unit->unitNum);
                 }
             }
         }
@@ -198,7 +198,7 @@ int isofsDrvMount(SceIoIob *iob, const char *fs, const char *blockDev, int mode,
 }
 
 // 000028a4
-s32 isofsClearUnit(s32 unitNum) {
+s32 isofs_release_blkdev(s32 unitNum) {
     if (unitNum < 0) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
@@ -237,7 +237,7 @@ s32 isofsClearUnit(s32 unitNum) {
 }
 
 // 000029c8
-int isofsDrvDopen(SceIoIob *iob, char *path) {
+int isofs_dopen(SceIoIob *iob, char *path) {
     if (iob == NULL || path == NULL) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
@@ -301,7 +301,7 @@ int isofsDrvDopen(SceIoIob *iob, char *path) {
                         dirLevel = dirLevel + 1;
                         pathSeg = pathSep + 1;
                     } while (1);
-                    IsofsPath *paths = isofsFindPath(unit, pathStack, dirLevel, strlen(pathStack + 1), 1, &ret);
+                    IsofsPath *paths = sceIsofsLookupDir(unit, pathStack, dirLevel, strlen(pathStack + 1), 1, &ret);
                     if (paths != NULL) {
                         dir->paths = paths;
                         dir->lbnSize = paths->lbnSize;
@@ -347,7 +347,7 @@ int isofsDrvDopen(SceIoIob *iob, char *path) {
 }
 
 // 	00002d4c
-int isofsDrvDread(SceIoIob *iob, SceIoDirent *dirent) {
+int isofs_dread(SceIoIob *iob, SceIoDirent *dirent) {
     if (iob == NULL || iob->i_private == NULL) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
@@ -373,7 +373,7 @@ int isofsDrvDread(SceIoIob *iob, SceIoDirent *dirent) {
             } else {
                 dir->fplData = data;
                 if (dir->dirRecLen == 0) {
-                    ret = isofsReadDir(unit, dir->lbn, data);
+                    ret = sceIsofsReadDirent(unit, dir->lbn, data);
                     if (ret != 0) {
                         ready = 0;
                     } else if (dir->compatFlag != 0) {
@@ -412,7 +412,7 @@ int isofsDrvDread(SceIoIob *iob, SceIoDirent *dirent) {
                 }
                 dir->lbn = dir->lbn + 2;
                 memset(dir->fplData, 0, 0x1000);
-                ret = isofsReadDir(unit, dir->lbn, dir->fplData);
+                ret = sceIsofsReadDirent(unit, dir->lbn, dir->fplData);
                 if (ret != 0) {
                     dir->lbn = dir->lbn - 2;
                     break;
@@ -439,7 +439,7 @@ int isofsDrvDread(SceIoIob *iob, SceIoDirent *dirent) {
             if (dir->lbnSize != 0 && dir->dirRecLen != 0 && (dir->dirRecLen & 0xfff) == 0) {
                 dir->lbn = dir->lbn + 2;
                 memset(dir->fplData, 0, 0x1000);
-                ret = isofsReadDir(unit, dir->lbn, dir->fplData);
+                ret = sceIsofsReadDirent(unit, dir->lbn, dir->fplData);
                 if (ret != 0) {
                     dir->lbn = dir->lbn - 2;
                 } else if (dir->compatFlag != 0) {
@@ -458,7 +458,7 @@ int isofsDrvDread(SceIoIob *iob, SceIoDirent *dirent) {
 }
 
 // 00003084
-int isofsDrvClose(SceIoIob *iob) {
+int isofs_close(SceIoIob *iob) {
     if (iob == NULL) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
@@ -480,7 +480,7 @@ int isofsDrvClose(SceIoIob *iob) {
 }
 
 // 00003134
-int isofsDrvDclose(SceIoIob *iob) {
+int isofs_dclose(SceIoIob *iob) {
     if (iob == NULL) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
@@ -501,7 +501,7 @@ int isofsDrvDclose(SceIoIob *iob) {
 }
 
 // 000031f4
-int isofsDrvUmount(SceIoIob *iob, __attribute__((unused)) char *blockDev) {
+int isofs_umount(SceIoIob *iob, __attribute__((unused)) char *blockDev) {
     if (iob == NULL) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
@@ -516,7 +516,7 @@ int isofsDrvUmount(SceIoIob *iob, __attribute__((unused)) char *blockDev) {
         isofsClearBlockDevHandler(unit);
         ret = isofsClearUnitFilesFdw(unit, g_isofsMgr.maxFiles);
         if (ret == 0) {
-            ret = isofsClearUnit(unit->unitNum);
+            ret = isofs_release_blkdev(unit->unitNum);
             g_isofsMounted = 0;
             sceIoTerminateFd("isofs");
         }
@@ -527,11 +527,11 @@ int isofsDrvUmount(SceIoIob *iob, __attribute__((unused)) char *blockDev) {
 }
 
 // 000032d8
-int isofsDrvExit(SceIoDeviceEntry *entry) {
+int isofs_exit(SceIoDeviceEntry *entry) {
     if (entry == NULL) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
-    s32 ret = isofsFreeUnits();
+    s32 ret = sceIsofsLbTerm();
     if (ret != 0) {
         return ret;
     }
@@ -546,7 +546,7 @@ int isofsDrvExit(SceIoDeviceEntry *entry) {
 }
 
 // 00003348
-int isofsDrvGetstat(SceIoIob *iob, char *name, SceIoStat *stat) {
+int isofs_getstat(SceIoIob *iob, char *name, SceIoStat *stat) {
     if (iob == NULL || name == NULL) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
@@ -570,7 +570,7 @@ int isofsDrvGetstat(SceIoIob *iob, char *name, SceIoStat *stat) {
         sceKernelSignalSema(unit->semaId, 1);
         return sceUmd_040A7090(ret);
     }
-    IsoDirectory *isoDir = isofsReadIsoDir(unit, name, lastSlash + 1, 2, &ret);
+    IsoDirectory *isoDir = sceIsofsReadDirectoryRecord(unit, name, lastSlash + 1, 2, &ret);
     if (isoDir == NULL) {
         ret = SCE_ERROR_ERRNO_FILE_NOT_FOUND;
         sceKernelSignalSema(unit->semaId, 1);
@@ -672,7 +672,7 @@ s32 __attribute__ ((noinline)) isofsCheckMode(SceMode mode) {
 }
 
 // 00003734
-int isofsDrvOpen(SceIoIob *iob, char *path, int flags, __attribute__((unused)) SceMode mode) {
+int isofs_open(SceIoIob *iob, char *path, int flags, __attribute__((unused)) SceMode mode) {
     if (iob == NULL || path == NULL) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
@@ -703,7 +703,7 @@ int isofsDrvOpen(SceIoIob *iob, char *path, int flags, __attribute__((unused)) S
             } else {
                 pathLen = strlen(pathSep + 1);
                 if (pathLen < 0x20) {
-                    IsoDirectory *isoDir = isofsReadIsoDir(unit, path, pathSep + 1, 2, &ret);
+                    IsoDirectory *isoDir = sceIsofsReadDirectoryRecord(unit, path, pathSep + 1, 2, &ret);
                     if (isoDir == NULL || ret != 0) {
                         if (ret == (s32) SCE_UMD_ERROR_NOT_DEVICE_READY || ret == (s32) SCE_UMD_ERROR_NO_MEDIUM) {
                             unit->openState = 0;
@@ -712,7 +712,7 @@ int isofsDrvOpen(SceIoIob *iob, char *path, int flags, __attribute__((unused)) S
                         }
                         ret = SCE_ERROR_ERRNO_FILE_NOT_FOUND;
                     } else {
-                        file = isofsOpen(unit, iob, isoDir, &ret);
+                        file = sceIsofsFileAllocNfile(unit, iob, isoDir, &ret);
                         if (file != NULL) {
                             if ((flags & 0x4000) != 0) {
                                 file->readFlags = file->readFlags | 8;
@@ -738,7 +738,7 @@ int isofsDrvOpen(SceIoIob *iob, char *path, int flags, __attribute__((unused)) S
                 sceKernelSignalSema(unit->semaId, 1);
                 return sceUmd_040A7090(ret);
             }
-            ret = isofsParseSceLbnPath(path, &lbn, &size);
+            ret = sceIsofsCheckVFile(path, &lbn, &size);
             if (ret == 0) {
                 u32 currentLbn = unit->currentLbn;
                 if (currentLbn < (u32) lbn) {
@@ -757,7 +757,7 @@ int isofsDrvOpen(SceIoIob *iob, char *path, int flags, __attribute__((unused)) S
                 if (currentLbn < lbn + lbnSize - 1) {
                     size = (currentLbn - lbn + 1) * 0x800;
                 }
-                file = isofsOpenRaw(unit, iob, lbn, size, &ret);
+                file = sceIsofsFileAllocVfile(unit, iob, lbn, size, &ret);
                 if (file != NULL) {
                     if ((flags & 0x4000) != 0) {
                         file->readFlags = file->readFlags | 8;
@@ -780,7 +780,7 @@ int isofsDrvOpen(SceIoIob *iob, char *path, int flags, __attribute__((unused)) S
 }
 
 // 00003a1c
-s32 isofsDrvRead(SceIoIob *iob, void *outdata, SceSize size) {
+s32 isofs_read(SceIoIob *iob, void *outdata, SceSize size) {
     if (iob == NULL || outdata == 0) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
@@ -821,7 +821,7 @@ s32 isofsDrvRead(SceIoIob *iob, void *outdata, SceSize size) {
 }
 
 // 00003bd4
-SceOff isofsDrvLseek(SceIoIob *iob, SceOff ofs, int whence) {
+SceOff isofs_lseek(SceIoIob *iob, SceOff ofs, int whence) {
     if (iob == NULL) {
         return (s32) SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
@@ -842,7 +842,7 @@ SceOff isofsDrvLseek(SceIoIob *iob, SceOff ofs, int whence) {
         sceKernelSignalSema(unit->semaId, 1);
         return (s32) SCE_ERROR_ERRNO_IS_DIRECTORY;
     }
-    SceOff seekRet = isofsLseek(file, ofs, whence);
+    SceOff seekRet = isofs_set_lseek(file, ofs, whence);
     if (seekRet > -1) {
         iob->i_fpos = seekRet;
     }
@@ -851,7 +851,7 @@ SceOff isofsDrvLseek(SceIoIob *iob, SceOff ofs, int whence) {
 }
 
 // 00003d0c
-int isofsDrvIoctl(SceIoIob *iob, int cmd, void *indata, SceSize inlen, void *outdata, SceSize outlen) {
+int isofs_ioctl(SceIoIob *iob, int cmd, void *indata, SceSize inlen, void *outdata, SceSize outlen) {
     if (iob == NULL || 0 >= cmd) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
@@ -870,7 +870,7 @@ int isofsDrvIoctl(SceIoIob *iob, int cmd, void *indata, SceSize inlen, void *out
     if ((file->flags & 8) != 0) {
         ret = SCE_ERROR_ERRNO_INVALID_FILE_DESCRIPTOR;
     } else {
-        ret = isofsIoctl(iob, cmd, indata, inlen, outdata, outlen);
+        ret = isofs_exec_ioctl_cmd(iob, cmd, indata, inlen, outdata, outlen);
         if ((file->flags & 8) != 0) {
             ret = SCE_ERROR_ERRNO_INVALID_FILE_DESCRIPTOR;
         }
@@ -880,7 +880,7 @@ int isofsDrvIoctl(SceIoIob *iob, int cmd, void *indata, SceSize inlen, void *out
 }
 
 // 00003e4c
-int isofsDrvDevctl(SceIoIob *iob, char *dev, int cmd, void *indata, SceSize inlen, void *outdata, SceSize outlen) {
+int isofs_devctl(SceIoIob *iob, char *dev, int cmd, void *indata, SceSize inlen, void *outdata, SceSize outlen) {
     if (iob == NULL || dev == NULL || cmd <= 1) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
@@ -921,7 +921,7 @@ s32 isofsUmdMountedCb(int id, IsofsUnit *unit, int arg) {
         } else if (g_isofsMounted == 0 || arg != 0) {
             isofsClearCurrentDirLbn();
             while (1) {
-                ret = isofsUnitSetLbns(unit->blockDev, unit->unitNum);
+                ret = isofs_get_umdpfi(unit->blockDev, unit->unitNum);
                 if (ret == SCE_ERROR_OK) {
                     break;
                 }
@@ -934,7 +934,7 @@ s32 isofsUmdMountedCb(int id, IsofsUnit *unit, int arg) {
                     return ret;
                 }
             }
-            ret = isofsReadPvd(unit->blockDev, unit->unitNum);
+            ret = isofs_get_pvd(unit->blockDev, unit->unitNum);
             if (ret < 0) {
 #ifndef INSTALLER
                 sceKernelSignalSema(g_isofsMgr.semaId, 1);
@@ -943,7 +943,7 @@ s32 isofsUmdMountedCb(int id, IsofsUnit *unit, int arg) {
             }
             while (1) {
                 isofsFreeUnitPaths(unit);
-                ret = isofsCreatePaths(unit);
+                ret = sceIsofsGetPathTable(unit);
                 if (ret == 0) {
                     break;
                 }
@@ -1043,7 +1043,7 @@ s32 isofsHandlerReadSectorsArgs(void *args) {
 }
 
 // 00004418
-int isofsDrvChdir(__attribute__((unused)) SceIoIob *iob, __attribute__((unused)) char *path) {
+int isofs_chdir(__attribute__((unused)) SceIoIob *iob, __attribute__((unused)) char *path) {
     return SCE_ERROR_OK;
 }
 
@@ -1065,7 +1065,7 @@ void isofsUnlinkOpenedDir(IsofsDir *dir) {
 }
 
 // 00004454
-s32 isofsReadPvd(char *blockDev, s32 unitNum) {
+s32 isofs_get_pvd(char *blockDev, s32 unitNum) {
     if ((unitNum >> 0x1f | (u32) (blockDev == NULL)) != 0) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
@@ -1078,7 +1078,7 @@ s32 isofsReadPvd(char *blockDev, s32 unitNum) {
 }
 
 // 000044bc
-s32 isofsUnitSetLbns(char *blockDev, s32 unitNum) {
+s32 isofs_get_umdpfi(char *blockDev, s32 unitNum) {
     if (((u32) (blockDev == NULL) | unitNum >> 0x1f) != 0) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
@@ -1098,7 +1098,7 @@ s32 isofsUnitSetLbns(char *blockDev, s32 unitNum) {
 }
 
 // 00004574
-s32 isofsIoctl(SceIoIob *iob, s32 cmd, void *indata, SceSize inlen, void *outdata, SceSize outlen) {
+s32 isofs_exec_ioctl_cmd(SceIoIob *iob, s32 cmd, void *indata, SceSize inlen, void *outdata, SceSize outlen) {
     if (iob == NULL || cmd < 1) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
@@ -1149,7 +1149,7 @@ s32 isofsIoctl(SceIoIob *iob, s32 cmd, void *indata, SceSize inlen, void *outdat
                         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
                     }
                     const IsofsIoctlSeekParam *seekParam = (const IsofsIoctlSeekParam *) indata;
-                    SceOff pos = isofsLseek(file, seekParam->offset, seekParam->whence);
+                    SceOff pos = isofs_set_lseek(file, seekParam->offset, seekParam->whence);
                     if ((s32) pos < 0) {
                         return pos;
                     }
@@ -1326,7 +1326,7 @@ s32 isofsIoctl(SceIoIob *iob, s32 cmd, void *indata, SceSize inlen, void *outdat
 }
 
 // 00004c8c
-SceOff isofsLseek(IsofsFile *file, SceOff pos, int whence) {
+SceOff isofs_set_lseek(IsofsFile *file, SceOff pos, int whence) {
     if (file == NULL) {
         return (s32) SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }

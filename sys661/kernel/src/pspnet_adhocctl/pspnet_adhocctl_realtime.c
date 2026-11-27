@@ -1,6 +1,6 @@
 #include "pspnet_adhocctl_internal.h"
 
-int adhocctlRunGameModeHost(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameModeCtx *gm)
+int _sce_pspnet_adhocctl_create_realtime_ibss_80211(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameModeCtx *gm)
 {
     s64 start_time;
     u32 rem_timeout = 0;
@@ -246,7 +246,7 @@ int adhocctlRunGameModeHost(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctl
 }
 
 /* 0x46e0 */
-int adhocctlRunGameModeClient(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameModeCtx *gm)
+int _sce_pspnet_adhocctl_join_realtime_ibss_80211(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameModeCtx *gm)
 {
     int ptp_id = -1;
     s64 start_time;
@@ -449,7 +449,7 @@ int adhocctlRunGameModeClient(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocc
         if (res < 0)
             break;
 
-        res = adhocctlRecvGameModePacket(gm, start_time, ptp_id, g_ptp_buf, 6);
+        res = wait_for_read(gm, start_time, ptp_id, g_ptp_buf, 6);
         if (res < 0)
             break;
         if ((s8)g_ptp_buf[0] != 1 || g_ptp_buf[1] != g_ptp_buf[0]) {
@@ -464,7 +464,7 @@ int adhocctlRunGameModeClient(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocc
             break;
         }
 
-        res = adhocctlRecvGameModePacket(gm, start_time, ptp_id, g_ptp_buf + 6, body_len);
+        res = wait_for_read(gm, start_time, ptp_id, g_ptp_buf + 6, body_len);
         if (res < 0)
             break;
 
@@ -473,7 +473,7 @@ int adhocctlRunGameModeClient(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocc
         if (res < 0)
             break;
 
-        val = adhocctlFindIeTag(1, g_ptp_buf + 6, body_len, &tag_len);
+        val = get_taginfo(1, g_ptp_buf + 6, body_len, &tag_len);
         if (val == NULL || tag_len >= 17) {
             res = 0x80410b84;
             break;
@@ -483,7 +483,7 @@ int adhocctlRunGameModeClient(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocc
         if (klen != 0)
             sceKernelMemcpy(gm->gm_param + 0x30, val, klen);
 
-        val = adhocctlFindIeTag(2, g_ptp_buf + 6, body_len, &tag_len);
+        val = get_taginfo(2, g_ptp_buf + 6, body_len, &tag_len);
         if (val == NULL || tag_len < 12 || tag_len >= 97 || (tag_len % 6) != 0) {
             res = 0x80410b85;
             break;
@@ -492,7 +492,7 @@ int adhocctlRunGameModeClient(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocc
         for (i = 0; i < gm->num_peers; i++)
             sceKernelMemcpy(gm->peers[i], (u8 *)val + i * 6, 6);
 
-        val = adhocctlFindIeTag(3, g_ptp_buf + 6, body_len, &tag_len);
+        val = get_taginfo(3, g_ptp_buf + 6, body_len, &tag_len);
         if (val == NULL || tag_len != 2) {
             res = 0x80410b86;
             break;
@@ -500,14 +500,14 @@ int adhocctlRunGameModeClient(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocc
         sceKernelMemcpy(gm->gm_param + 0x40, val, 2);
         ((SceAdhocctlGameModeParam *)gm->gm_param)->port_be = __builtin_bswap16(((SceAdhocctlGameModeParam *)gm->gm_param)->port_be);
 
-        val = adhocctlFindIeTag(4, g_ptp_buf + 6, body_len, &tag_len);
+        val = get_taginfo(4, g_ptp_buf + 6, body_len, &tag_len);
         if (val == NULL || tag_len != 1) {
             res = 0x80410b87;
             break;
         }
         gm->gm_param[0x46] = *(u8 *)val;
 
-        val = adhocctlFindIeTag(5, g_ptp_buf + 6, body_len, &tag_len);
+        val = get_taginfo(5, g_ptp_buf + 6, body_len, &tag_len);
         if (val == NULL || tag_len != 1) {
             res = 0x80410b88;
             break;
@@ -810,7 +810,7 @@ int adhocctlAcceptGameModePeers(struct SceNetAdhocctlGameModeCtx *gm, s64 start_
 }
 
 /* 0x5a18 */
-int adhocctlRecvGameModePacket(struct SceNetAdhocctlGameModeCtx *gm, s64 start_time, int ptp_id, void *buf, int len)
+int wait_for_read(struct SceNetAdhocctlGameModeCtx *gm, s64 start_time, int ptp_id, void *buf, int len)
 {
     int res = 0;
     u8 *p = (u8 *)buf;
@@ -835,7 +835,7 @@ int adhocctlRecvGameModePacket(struct SceNetAdhocctlGameModeCtx *gm, s64 start_t
 }
 
 /* 0x5b28 */
-void *adhocctlFindIeTag(int tag, void *buf, u32 len, int *tag_len_out)
+void *get_taginfo(int tag, void *buf, u32 len, int *tag_len_out)
 {
     u8 *cur = (u8 *)buf;
     u8 *end = cur + len;

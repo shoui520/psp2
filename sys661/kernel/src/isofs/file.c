@@ -1,16 +1,16 @@
 #include "isofs_int.h"
 
-IsofsFile *isofsOpen(IsofsUnit *unit, SceIoIob *iob, IsoDirectory *isoDir, s32 *outRet) {
+IsofsFile *sceIsofsFileAllocNfile(IsofsUnit *unit, SceIoIob *iob, IsoDirectory *isoDir, s32 *outRet) {
     if (unit == NULL || iob == NULL) {
         *outRet = SCE_ERROR_ERRNO_INVALID_ARGUMENT;
         return NULL;
     }
-    IsofsFile *file = isofsFindUnusedFile(unit, isoDir, outRet);
+    IsofsFile *file = isofs_alloc_fd(unit, isoDir, outRet);
     if (file == NULL) {
         isofsClearFile(file);
         return NULL;
     }
-    isofsSetFileFromDir(file, isoDir, iob, outRet);
+    isofs_init_fd(file, isoDir, iob, outRet);
     s32 intr = sceKernelCpuSuspendIntr();
     if (unit->openState == 2) {
         sceKernelCpuResumeIntr(intr);
@@ -24,17 +24,17 @@ IsofsFile *isofsOpen(IsofsUnit *unit, SceIoIob *iob, IsoDirectory *isoDir, s32 *
 }
 
 // 00000924
-IsofsFile *isofsOpenRaw(IsofsUnit *unit, SceIoIob *iob, u32 lbn, u32 size, s32 *outRet) {
+IsofsFile *sceIsofsFileAllocVfile(IsofsUnit *unit, SceIoIob *iob, u32 lbn, u32 size, s32 *outRet) {
     if (unit == NULL || iob == NULL) {
         *outRet = SCE_ERROR_ERRNO_INVALID_ARGUMENT;
         return NULL;
     }
-    IsofsFile *file = isofsFindUnusedFileRaw(unit, lbn, outRet);
+    IsofsFile *file = isofs_alloc_vfd(unit, lbn, outRet);
     if (file == NULL) {
         isofsClearFile(file);
         return NULL;
     }
-    isofsSetFileFromRaw(file, iob, lbn, size, outRet);
+    isofs_init_vfd(file, iob, lbn, size, outRet);
     s32 intr = sceKernelCpuSuspendIntr();
     if (unit->openState == 2) {
         sceKernelCpuResumeIntr(intr);
@@ -48,7 +48,7 @@ IsofsFile *isofsOpenRaw(IsofsUnit *unit, SceIoIob *iob, u32 lbn, u32 size, s32 *
 }
 
 // 00000a58
-IsofsFile *isofsSetFileFromDir(IsofsFile *file, IsoDirectory *isoDir, SceIoIob *iob, s32 *outRet) {
+IsofsFile *isofs_init_fd(IsofsFile *file, IsoDirectory *isoDir, SceIoIob *iob, s32 *outRet) {
     if (iob == NULL || file == NULL || isoDir == NULL) {
         *outRet = SCE_ERROR_ERRNO_INVALID_ARGUMENT;
         return NULL;
@@ -80,7 +80,7 @@ IsofsFile *isofsSetFileFromDir(IsofsFile *file, IsoDirectory *isoDir, SceIoIob *
 }
 
 // 00000b74
-IsofsFile *isofsSetFileFromRaw(IsofsFile *file, SceIoIob *iob, u32 lbn, u32 size, s32 *outRet) {
+IsofsFile *isofs_init_vfd(IsofsFile *file, SceIoIob *iob, u32 lbn, u32 size, s32 *outRet) {
     if (iob == NULL || file == NULL) {
         *outRet = SCE_ERROR_ERRNO_INVALID_ARGUMENT;
         return NULL;
@@ -142,7 +142,7 @@ s32 isofsClearFile(IsofsFile *file) {
 }
 
 // 00000cc0
-s32 isofsFreeFiles(IsofsFile *files) {
+s32 sceIsofsFileTerm(IsofsFile *files) {
     // Original binary dereferences files->fileDesc before checking files == NULL.
     IsofsFd *fileDesc = files->fileDesc;
     if (files == NULL || fileDesc == NULL) {
@@ -151,7 +151,7 @@ s32 isofsFreeFiles(IsofsFile *files) {
     return sceKernelFreeHeapMemory(fileDesc->heapId, fileDesc->files);
 }
 
-// Not in module. Inlined into isofsFindUnusedFile and isofsFindUnusedFileRaw.
+// Not in module. Inlined into isofs_alloc_fd and isofs_alloc_vfd.
 static inline __attribute__((always_inline)) IsofsFile *_isofsFindUnusedFile(IsofsUnit *unit, u32 lbn, s32 *outRet) {
     *outRet = SCE_ERROR_OK;
     if (unit == NULL) {
@@ -184,12 +184,12 @@ static inline __attribute__((always_inline)) IsofsFile *_isofsFindUnusedFile(Iso
 }
 
 // 00000d04
-IsofsFile *isofsFindUnusedFile(IsofsUnit *unit, IsoDirectory *isoDir, s32 *outRet) {
+IsofsFile *isofs_alloc_fd(IsofsUnit *unit, IsoDirectory *isoDir, s32 *outRet) {
     return _isofsFindUnusedFile(unit, isoDir->lbn, outRet);
 }
 
 // 00000e14
-IsofsFile *isofsFindUnusedFileRaw(IsofsUnit *unit, u32 lbn, s32 *outRet) {
+IsofsFile *isofs_alloc_vfd(IsofsUnit *unit, u32 lbn, s32 *outRet) {
     return _isofsFindUnusedFile(unit, lbn, outRet);
 }
 

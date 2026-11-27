@@ -274,66 +274,66 @@ s32 isofsRebootBefore();
 IsofsMgr *isofsGetMgr();
 
 /** Initializes all global units. */
-s32 isofsInitUnits();
+s32 sceIsofsLbInit();
 /** Frees resources for all global units. */
-s32 isofsFreeUnits();
+s32 sceIsofsLbTerm();
 /** Returns global unit by its number. */
 IsofsUnit *isofsGetUnit(s32 unitNum);
 /** Clears unit's fields, e.g. after unmount. */
-s32 isofsClearUnit(s32 unitNum);
+s32 isofs_release_blkdev(s32 unitNum);
 
 /** Initializes global cache. */
-s32 isofsInitCache();
+s32 sceIsofsCacheCheckData();
 /** Frees global cache. */
 s32 isofsFreeCache();
 /** Frees global cache data. */
-s32 isofsFreeCacheData();
+s32 sceIsofsCacheDeleteData();
 
 // Driver functions
-int isofsDrvInit(SceIoDeviceEntry *entry);
-int isofsDrvExit(SceIoDeviceEntry *entry);
-int isofsDrvOpen(SceIoIob *iob, char *path, int flags, SceMode mode);
-int isofsDrvClose(SceIoIob *iob);
-s32 isofsDrvRead(SceIoIob *iob, void *outdata, SceSize size);
-SceOff isofsDrvLseek(SceIoIob *iob, SceOff ofs, int whence);
-int isofsDrvIoctl(SceIoIob *iob, int cmd, void *indata, SceSize inlen, void *outdata, SceSize outlen);
-int isofsDrvDopen(SceIoIob *iob, char *path);
-int isofsDrvDclose(SceIoIob *iob);
-int isofsDrvDread(SceIoIob *iob, SceIoDirent *dirent);
-int isofsDrvGetstat(SceIoIob *iob, char *name, SceIoStat *stat);
-int isofsDrvChdir(SceIoIob *iob, char *path);
-int isofsDrvMount(SceIoIob *iob, const char *fs, const char *blockDev, int mode, void *outdata, int outlen);
-int isofsDrvUmount(SceIoIob *iob, char *blockDev);
-int isofsDrvDevctl(SceIoIob *iob, char *dev, int cmd, void *indata, SceSize inlen, void *outdata, SceSize outlen);
+int isofs_init(SceIoDeviceEntry *entry);
+int isofs_exit(SceIoDeviceEntry *entry);
+int isofs_open(SceIoIob *iob, char *path, int flags, SceMode mode);
+int isofs_close(SceIoIob *iob);
+s32 isofs_read(SceIoIob *iob, void *outdata, SceSize size);
+SceOff isofs_lseek(SceIoIob *iob, SceOff ofs, int whence);
+int isofs_ioctl(SceIoIob *iob, int cmd, void *indata, SceSize inlen, void *outdata, SceSize outlen);
+int isofs_dopen(SceIoIob *iob, char *path);
+int isofs_dclose(SceIoIob *iob);
+int isofs_dread(SceIoIob *iob, SceIoDirent *dirent);
+int isofs_getstat(SceIoIob *iob, char *name, SceIoStat *stat);
+int isofs_chdir(SceIoIob *iob, char *path);
+int isofs_mount(SceIoIob *iob, const char *fs, const char *blockDev, int mode, void *outdata, int outlen);
+int isofs_umount(SceIoIob *iob, char *blockDev);
+int isofs_devctl(SceIoIob *iob, char *dev, int cmd, void *indata, SceSize inlen, void *outdata, SceSize outlen);
 
 /** Opens file from the ISO directory descriptor. */
-IsofsFile *isofsOpen(IsofsUnit *unit, SceIoIob *iob, IsoDirectory *isoDir, s32 *outRet);
+IsofsFile *sceIsofsFileAllocNfile(IsofsUnit *unit, SceIoIob *iob, IsoDirectory *isoDir, s32 *outRet);
 /** Opens file directly by the specified LBN and size params. */
-IsofsFile *isofsOpenRaw(IsofsUnit *unit, SceIoIob *iob, u32 lbn, u32 size, s32 *outRet);
+IsofsFile *sceIsofsFileAllocVfile(IsofsUnit *unit, SceIoIob *iob, u32 lbn, u32 size, s32 *outRet);
 /** Seek to specified position in the file. */
-s64 isofsLseek(IsofsFile *file, s64 pos, int whence);
+s64 isofs_set_lseek(IsofsFile *file, s64 pos, int whence);
 /** Main ioctl implementation. */
-s32 isofsIoctl(SceIoIob *iob, s32 cmd, void *indata, SceSize inlen, void *outdata, SceSize outlen);
+s32 isofs_exec_ioctl_cmd(SceIoIob *iob, s32 cmd, void *indata, SceSize inlen, void *outdata, SceSize outlen);
 
 // Rather simple functions to initialize and free file descriptors related structs.
 s32 isofsInitUnitFdw(IsofsUnit *unit, u32 fdwCount, u16 filesCount);
 void isofsFreeUnitFdw(IsofsUnit *unit);
-s32 isofsInitFdw(IsofsFdw *fdw, u32 idx, u32 filesCount);
+s32 sceIsofsSbInit(IsofsFdw *fdw, u32 idx, u32 filesCount);
 void isofsClearFdwFiles(IsofsFdw *fdw, s32 fdwCount);
 s32 isofsClearUnitFilesFdw(IsofsUnit *unit, s32 fdwCount);
-s32 isofsInitFdFiles(IsofsFd *fileDesc, u32 filesCount);
+s32 sceIsofsSbTerm(IsofsFd *fileDesc, u32 filesCount);
 s32 isofsFreeFdFiles(IsofsFd *fileDesc);
-s32 isofsFreeFiles(IsofsFile *files);
+s32 sceIsofsFileTerm(IsofsFile *files);
 s32 isofsClearFile(IsofsFile *file);
 
 /** Set file params from ISO directory records. */
-IsofsFile *isofsSetFileFromDir(IsofsFile *file, IsoDirectory *isoDir, SceIoIob *iob, s32 *outRet);
+IsofsFile *isofs_init_fd(IsofsFile *file, IsoDirectory *isoDir, SceIoIob *iob, s32 *outRet);
 /** Set file params for raw open with provided LBN and size. */
-IsofsFile *isofsSetFileFromRaw(IsofsFile *file, SceIoIob *iob, u32 lbn, u32 size, s32 *outRet);
+IsofsFile *isofs_init_vfd(IsofsFile *file, SceIoIob *iob, u32 lbn, u32 size, s32 *outRet);
 /** Find unused file descriptor for normal open. */
-IsofsFile *isofsFindUnusedFile(IsofsUnit *unit, IsoDirectory *isoDir, s32 *outRet);
+IsofsFile *isofs_alloc_fd(IsofsUnit *unit, IsoDirectory *isoDir, s32 *outRet);
 /** Find unused file descriptor for raw open. */
-IsofsFile *isofsFindUnusedFileRaw(IsofsUnit *unit, u32 lbn, s32 *outRet);
+IsofsFile *isofs_alloc_vfd(IsofsUnit *unit, u32 lbn, s32 *outRet);
 
 /** Select implementation handlers based on the block device name. */
 s32 isofsSetBlockDevHandler(IsofsUnit *unit);
@@ -341,37 +341,37 @@ s32 isofsSetBlockDevHandler(IsofsUnit *unit);
 s32 isofsClearBlockDevHandler(IsofsUnit *unit);
 
 /** Initialize unit with data from the ISO's primary volume descriptor (PVD). */
-s32 isofsReadPvd(char *blockDev, s32 unitNum);
+s32 isofs_get_pvd(char *blockDev, s32 unitNum);
 /** Reads ISO directory into the output buffer. */
-int isofsReadDir(IsofsUnit *unit, u32 lbn, void *outdata);
+int sceIsofsReadDirent(IsofsUnit *unit, u32 lbn, void *outdata);
 /** Wraps sector reading function for use with sceKernelExtendKernelStack. */
 s32 isofsHandlerReadSectorsArgs(void *args);
 
 /** Checks if the path is in the "/sce_lbn" format (used for raw read from the ISO). */
 s32 isofsIsSceLbnPath(char *path);
 /** Extracts LBN and size from the "/sce_lbn" path. */
-s32 isofsParseSceLbnPath(char *path, s32 *outLbn, s32 *outSize);
+s32 sceIsofsCheckVFile(char *path, s32 *outLbn, s32 *outSize);
 
 /** Reads and parses ISO path table to create unit's paths. */
-s32 isofsCreatePaths(IsofsUnit *unit);
+s32 sceIsofsGetPathTable(IsofsUnit *unit);
 /** Frees unit paths. */
-s32 isofsFreePaths(IsofsUnit *unit);
-/** Frees unit paths. (effectively same as isofsFreePaths) */
+s32 isofs_delete_ptbl(IsofsUnit *unit);
+/** Frees unit paths. (effectively same as isofs_delete_ptbl) */
 s32 isofsFreeUnitPaths(IsofsUnit *unit);
 /** Reads ISO path table. */
-IsoPath *isofsReadPathTable(IsofsUnit *unit, s32 *outRet);
+IsoPath *isofs_new_ptbl(IsofsUnit *unit, s32 *outRet);
 /** Counts entries in the ISO path table. */
-s32 isofsCountPathTableEntries(IsoPath *pathTable, s32 pathTableSize, s32 *outRet);
+s32 isofs_get_direc_count(IsoPath *pathTable, s32 pathTableSize, s32 *outRet);
 /** Parses entries in the ISO path table and converts them to ISOFS path struct. */
-IsofsPath *isofsParsePathTableEntries(IsofsUnit *unit, IsoPath *pathTable, s32 pathTableSize, s32 pathTableEntryCount,
+IsofsPath *isofs_create_ptbl(IsofsUnit *unit, IsoPath *pathTable, s32 pathTableSize, s32 pathTableEntryCount,
                                       s32 *outRet);
 /** Calculate and update LBN size of the path table. */
-s32 isofsUpdatePathsLbnSize(IsofsUnit *unit);
+s32 isofs_set_topend_dirsize(IsofsUnit *unit);
 
 /** Check if the unit is already mounted. */
 s32 isofsCheckUnitMounted(IsofsUnit *unit, s32 unitNum);
 /** Sets LBN bounds fields in the unit based on data queried from the block device. */
-s32 isofsUnitSetLbns(char *blockDev, s32 unitNum);
+s32 isofs_get_umdpfi(char *blockDev, s32 unitNum);
 /** Clear global variable with the current directory LBN. */
 void isofsClearCurrentDirLbn();
 /** Remove directory for the open directories linked list. */
@@ -380,15 +380,15 @@ s32 isofsCheckMode(SceMode mode);
 /** Checks paths for invalid characters. */
 s32 isofsCheckPath(char *name, u32 flag);
 /** Find ISO directory entry by name. */
-IsoDirectory *isofsFindIsoDirectory(char *path, IsoDirectory *isoDirs, s32 flag, s32 *outRet);
+IsoDirectory *sceIsofsLookupFile(char *path, IsoDirectory *isoDirs, s32 flag, s32 *outRet);
 /** Set dirent fields from ISO directory. */
 IsoDirectory *isofsSetDirentFromIsoDirectory(IsofsDir *dir, SceIoDirent *dirent, s32 *outRet);
 /** Read ISO directory for file open or stat. */
-IsoDirectory *isofsReadIsoDir(IsofsUnit *unit, char *path, char *file, u32 flag, s32 *outRet);
+IsoDirectory *sceIsofsReadDirectoryRecord(IsofsUnit *unit, char *path, char *file, u32 flag, s32 *outRet);
 /** Find the path record for directory. */
-IsofsPath *isofsFindPath(IsofsUnit *unit, char *pathSplit, u32 dirLevel, int pathLen, u32 flag, s32 *outRet);
+IsofsPath *sceIsofsLookupDir(IsofsUnit *unit, char *pathSplit, u32 dirLevel, int pathLen, u32 flag, s32 *outRet);
 /** Split path by slash separator. */
-char *isofsSplitPath(char *path, u32 *outLen, u32 flag, s32 *outRet);
+char *isofs_get_dirname(char *path, u32 *outLen, u32 flag, s32 *outRet);
 
 // Simple functions delegating work to the actual device implementation.
 s32 isofsHandlerReadDirSectors(IsofsUnit *unit, s64 lbn, s32 size, void *outdata, s32 outlen, s32 cmd, u32 reservedParam);

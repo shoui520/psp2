@@ -1,11 +1,11 @@
 #include "pmpvar.h"
 
 int __attribute__((noinline))
-matchingSendCtrlPkt(MatchingCtx *ctx, MatchingPeer *peer, int pkt_type, int optlen, const void *opt)
+_sce_pspnet_pmp_sendmsg(MatchingCtx *ctx, MatchingPeer *peer, int pkt_type, int optlen, const void *opt)
 {
     int has_trailer = ((u32)(pkt_type - 2) < 2u);
     int total_len = has_trailer ? (optlen + 20) : (optlen + 4);
-    u8 *pkt = (u8 *)matchingAllocVpl(total_len);
+    u8 *pkt = (u8 *)_sce_pspnet_pmp_malloc(total_len);
     u16 be_len = matchingSwap16((u16)optlen);
     u32 be_sess;
     int ret;
@@ -24,13 +24,13 @@ matchingSendCtrlPkt(MatchingCtx *ctx, MatchingPeer *peer, int pkt_type, int optl
         sceKernelMemset(pkt + optlen + 8, 0, 12);
     }
     ret = sceNetAdhocPdpSend(ctx->pdp_id, peer->mac, ctx->port, pkt, total_len, 0, 1);
-    matchingFreeVpl(pkt);
+    _sce_pspnet_pmp_free(pkt);
     return (ret == MATCHING_ERR_PDP_WOULDBLOCK) ? 0 : ret;
 }
 
 /* 0x002bc4 */
 int __attribute__((noinline))
-matchingCreatePdp(MatchingCtx *ctx)
+_sce_pspnet_pmp_createsocket(MatchingCtx *ctx)
 {
     int pdp = sceNetAdhocPdpCreate(g_self_mac, ctx->port, (u32)ctx->rx_buflen, 0);
     if (pdp >= 0) {
@@ -42,7 +42,7 @@ matchingCreatePdp(MatchingCtx *ctx)
 
 /* 0x002c10 */
 int __attribute__((noinline))
-matchingDeletePdp(MatchingCtx *ctx)
+_sce_pspnet_pmp_deletesocket(MatchingCtx *ctx)
 {
     int ret = sceNetAdhocPdpDelete(ctx->pdp_id, 0);
     ctx->pdp_id = 0;
@@ -54,7 +54,7 @@ int __attribute__((noinline))
 matchingSendDataPkt(MatchingCtx *ctx, MatchingPeer *peer, int pkt_type, int datalen, const void *data)
 {
     int total_len = datalen + 12;
-    u8 *pkt = (u8 *)matchingAllocVpl(total_len);
+    u8 *pkt = (u8 *)_sce_pspnet_pmp_malloc(total_len);
     u16 be_len = matchingSwap16((u16)(datalen + 8));
     u32 be_val;
     int ret;
@@ -73,16 +73,16 @@ matchingSendDataPkt(MatchingCtx *ctx, MatchingPeer *peer, int pkt_type, int data
         sceKernelMemcpy(pkt + 12, data, (u32)datalen);
 
     ret = sceNetAdhocPdpSend(ctx->pdp_id, peer->mac, ctx->port, pkt, total_len, 0, 1);
-    matchingFreeVpl(pkt);
+    _sce_pspnet_pmp_free(pkt);
     return (ret == MATCHING_ERR_PDP_WOULDBLOCK) ? 0 : ret;
 }
 
 /* 0x002d88 */
 int __attribute__((noinline))
-matchingBuildHelloPkt(MatchingCtx *ctx, int optlen, const void *opt)
+_sce_pspnet_pmp_setupmsg_hello(MatchingCtx *ctx, int optlen, const void *opt)
 {
     int total_len = optlen + 28;
-    u8 *pkt = (u8 *)matchingAllocVpl(total_len);
+    u8 *pkt = (u8 *)_sce_pspnet_pmp_malloc(total_len);
     u16 be_len = matchingSwap16((u16)(optlen + 8));
     u32 be_val;
 
@@ -102,7 +102,7 @@ matchingBuildHelloPkt(MatchingCtx *ctx, int optlen, const void *opt)
     sceKernelMemset(pkt + optlen + 16, 0, 12);
 
     if (ctx->hello_pkt != NULL)
-        matchingFreeVpl(ctx->hello_pkt);
+        _sce_pspnet_pmp_free(ctx->hello_pkt);
     ctx->hello_pkt = pkt;
     ctx->hello_pkt_len = total_len;
     return 0;
@@ -110,10 +110,10 @@ matchingBuildHelloPkt(MatchingCtx *ctx, int optlen, const void *opt)
 
 /* 0x002ebc */
 void __attribute__((noinline))
-matchingFreeHelloPkt(MatchingCtx *ctx)
+_sce_pspnet_pmp_clearmsg_hello(MatchingCtx *ctx)
 {
     if (ctx->hello_pkt_len > 0) {
-        matchingFreeVpl(ctx->hello_pkt);
+        _sce_pspnet_pmp_free(ctx->hello_pkt);
         ctx->hello_pkt = NULL;
         ctx->hello_pkt_len = 0;
     }
@@ -121,7 +121,7 @@ matchingFreeHelloPkt(MatchingCtx *ctx)
 
 /* 0x002ef4 */
 int __attribute__((noinline))
-matchingBroadcastHello(MatchingCtx *ctx)
+_sce_pspnet_pmp_sendmsg_hello(MatchingCtx *ctx)
 {
     u8 bcast[16];
     int ret;
@@ -133,11 +133,11 @@ matchingBroadcastHello(MatchingCtx *ctx)
 
 /* 0x002f54 */
 int __attribute__((noinline))
-matchingBuildMembersPkt(MatchingCtx *ctx)
+_sce_pspnet_pmp_setupmsg_keepaliverequest(MatchingCtx *ctx)
 {
-    int count = matchingCountPeersAtLeast(ctx, PEER_STATE_ESTABLISHED);
+    int count = _sce_pspnet_pmp_handle_getnum(ctx, PEER_STATE_ESTABLISHED);
     int total_len = count * 6 + 10;
-    u8 *pkt = (u8 *)matchingAllocVpl(total_len);
+    u8 *pkt = (u8 *)_sce_pspnet_pmp_malloc(total_len);
     u16 be_len = matchingSwap16((u16)(count * 6 + 6));
 
     if (pkt == NULL)
@@ -147,9 +147,9 @@ matchingBuildMembersPkt(MatchingCtx *ctx)
     pkt[1] = PKT_KEEPALIVE;
     sceKernelMemcpy(pkt + 2, &be_len, 2);
     sceKernelMemcpy(pkt + 4, g_self_mac, 6);
-    matchingCollectPeerMacs(ctx, PEER_STATE_ESTABLISHED, pkt + 10, &count);
+    _sce_pspnet_pmp_handle_getarray(ctx, PEER_STATE_ESTABLISHED, pkt + 10, &count);
     if (ctx->members_pkt != NULL)
-        matchingFreeVpl(ctx->members_pkt);
+        _sce_pspnet_pmp_free(ctx->members_pkt);
     ctx->members_pkt = pkt;
     ctx->members_pkt_len = total_len;
     return 0;
@@ -157,7 +157,7 @@ matchingBuildMembersPkt(MatchingCtx *ctx)
 
 /* 0x003040 */
 int __attribute__((noinline))
-matchingSendMembersPkt(MatchingCtx *ctx, MatchingPeer *peer)
+_sce_pspnet_pmp_sendmsg_keepaliverequest(MatchingCtx *ctx, MatchingPeer *peer)
 {
     int ret = sceNetAdhocPdpSend(ctx->pdp_id, peer->mac, ctx->port, ctx->members_pkt, ctx->members_pkt_len, 0, 1);
     return (ret == MATCHING_ERR_PDP_WOULDBLOCK) ? 0 : ret;
@@ -165,14 +165,14 @@ matchingSendMembersPkt(MatchingCtx *ctx, MatchingPeer *peer)
 
 /* 0x003088 */
 int __attribute__((noinline))
-matchingCopyMembersPkt(MatchingCtx *ctx, const void *pkt, int len)
+_sce_pspnet_pmp_savemsg_keepaliverequest(MatchingCtx *ctx, const void *pkt, int len)
 {
-    u8 *buf = (u8 *)matchingAllocVpl(len);
+    u8 *buf = (u8 *)_sce_pspnet_pmp_malloc(len);
     if (buf == NULL)
         return MATCHING_ERR_NO_SPACE;
     sceKernelMemcpy(buf, pkt, (u32)len);
     if (ctx->members_pkt != NULL)
-        matchingFreeVpl(ctx->members_pkt);
+        _sce_pspnet_pmp_free(ctx->members_pkt);
     ctx->members_pkt_len = len;
     ctx->members_pkt = buf;
     return 0;
@@ -180,10 +180,10 @@ matchingCopyMembersPkt(MatchingCtx *ctx, const void *pkt, int len)
 
 /* 0x00311c */
 void __attribute__((noinline))
-matchingFreeMembersPkt(MatchingCtx *ctx)
+_sce_pspnet_pmp_clearmsg_keepaliverequest(MatchingCtx *ctx)
 {
     if (ctx->members_pkt_len > 0) {
-        matchingFreeVpl(ctx->members_pkt);
+        _sce_pspnet_pmp_free(ctx->members_pkt);
         ctx->members_pkt = NULL;
         ctx->members_pkt_len = 0;
     }
@@ -207,7 +207,7 @@ matchingBroadcastBye(MatchingCtx *ctx)
 
 /* 0x0031d4 */
 int __attribute__((noinline))
-matchingStartInputThread(MatchingCtx *ctx, int prio, int stack, int mpid)
+_sce_pspnet_pmp_input_start(MatchingCtx *ctx, int prio, int stack, int mpid)
 {
     MatchingThreadOpt opt;
     MatchingCtx *arg = ctx;
@@ -217,7 +217,7 @@ matchingStartInputThread(MatchingCtx *ctx, int prio, int stack, int mpid)
     sceKernelMemset(&opt, 0, sizeof(opt));
     opt.size = sizeof(opt);
     opt.stack_mpid = mpid;
-    thid = sceKernelCreateThread("SceNetAdhocMatchingInput", (void *)matchingInputThread, prio, stack, 0, &opt);
+    thid = sceKernelCreateThread("SceNetAdhocMatchingInput", (void *)pmp_input_thread, prio, stack, 0, &opt);
     arg->input_thid = thid;
     if (thid < 0)
         return arg->input_thid;
@@ -231,18 +231,18 @@ matchingStartInputThread(MatchingCtx *ctx, int prio, int stack, int mpid)
 
 /* 0x0032a4 */
 int __attribute__((noinline))
-matchingStopInputThread(MatchingCtx *ctx, int *lock_res)
+_sce_pspnet_pmp_input_term(MatchingCtx *ctx, int *lock_res)
 {
     sceNetAdhocSetSocketAlert(ctx->pdp_id, 0x20);
-    matchingUnlock(*lock_res);
+    _sce_pspnet_pmp_unlock(*lock_res);
     sceKernelWaitThreadEnd(ctx->input_thid, NULL);
-    *lock_res = matchingLock();
+    *lock_res = _sce_pspnet_pmp_lock();
     sceNetFreeThreadinfo(ctx->input_thid);
     return sceKernelDeleteThread(ctx->input_thid);
 }
 
 /* 0x00330c */
-int matchingInputThread(u32 arglen, void *argp)
+int pmp_input_thread(u32 arglen, void *argp)
 {
     MatchingCtx *ctx = *(MatchingCtx **)argp;
     u8 src_mac[16];
@@ -270,17 +270,17 @@ int matchingInputThread(u32 arglen, void *argp)
             if (recv_len < wire_len)
                 continue;
 
-            lock_res = matchingLock();
-            peer = matchingFindPeerByMac(ctx, src_mac);
+            lock_res = _sce_pspnet_pmp_lock();
+            peer = _sce_pspnet_pmp_handle_lookup(ctx, src_mac);
             if (peer == NULL) {
                 u8 pkt_type = ctx->rx_buf[1];
                 if ((pkt_type == PKT_JOIN && (ctx->mode == MATCHING_MODE_HOST || ctx->mode == MATCHING_MODE_PTP)) ||
                     (pkt_type == PKT_HELLO && (u32)(ctx->mode - 2) < 2u)) {
-                    peer = matchingCreatePeer(ctx, src_mac);
+                    peer = _sce_pspnet_pmp_handle_create(ctx, src_mac);
                 }
             }
             if (peer != NULL && (peer->rx_msg.pending_flag & 1u) == 0) {
-                u8 *pkt_copy = (u8 *)matchingAllocVpl(recv_len);
+                u8 *pkt_copy = (u8 *)_sce_pspnet_pmp_malloc(recv_len);
                 if (pkt_copy != NULL) {
                     sceKernelMemcpy(pkt_copy, ctx->rx_buf, (u32)recv_len);
                     peer->rx_wire_len = wire_len;
@@ -292,7 +292,7 @@ int matchingInputThread(u32 arglen, void *argp)
                     sceKernelSendMbx(ctx->event_mbx, &peer->rx_msg);
                 }
             }
-            matchingUnlock(lock_res);
+            _sce_pspnet_pmp_unlock(lock_res);
         }
     }
 }

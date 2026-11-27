@@ -1,6 +1,6 @@
 #include "pspnet_adhocctl_internal.h"
 
-int adhocctlFormatSsid(struct SceNetAdhocctlCtx *ctx, char *ssid, int mode_char, const char *group_name)
+int make_ssid(struct SceNetAdhocctlCtx *ctx, char *ssid, int mode_char, const char *group_name)
 {
     char mch = (char)mode_char;
     char tch;
@@ -53,14 +53,14 @@ int adhocctlBuildGroupSsidAndChannel(struct SceNetAdhocctlCtx *ctx, char *ssid, 
     }
     if ((u32)(*ch_out - 1) >= 14)
         return 0x80410b81;
-    return adhocctlFormatSsid(ctx, ssid, 'L', ctx->group_name);
+    return make_ssid(ctx, ssid, 'L', ctx->group_name);
 }
 
 /* 0x25b0 */
 int adhocctlBuildGameModeSsid(struct SceNetAdhocctlCtx *ctx, char *ssid)
 {
     sceKernelMemset(ssid, 0, 0x21);
-    return adhocctlFormatSsid(ctx, ssid, 'G', ctx->group_name);
+    return make_ssid(ctx, ssid, 'G', ctx->group_name);
 }
 
 /* 0x2600 */

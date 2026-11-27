@@ -1,6 +1,6 @@
 #include "pspnet_adhocctl_internal.h"
 
-int adhocctlNotifyHandlers(int event, int error)
+int adhocctl_call_handler(int event, int error)
 {
     int lock_res = adhocctlLock();
     int i;
@@ -37,7 +37,7 @@ int adhocctlNotifyHandlers(int event, int error)
 }
 
 /* 0x277c */
-int adhocctlInitInternal(int stackSize, int priority, const void *adhoc_id)
+int _sce_pspnet_adhocctl_init(int stackSize, int priority, const void *adhoc_id)
 {
     struct SceNetAdhocctlCtx *ctx = &g_ctx;
     sceWlanDrv_lib_768E275B();
@@ -65,7 +65,7 @@ int adhocctlInitInternal(int stackSize, int priority, const void *adhoc_id)
         return res;
     }
 
-    ctx->thid = sceKernelCreateThread("SceNetAdhocctl", adhocctlWorkerThread, priority, stackSize, 0, NULL);
+    ctx->thid = sceKernelCreateThread("SceNetAdhocctl", adhocctl_thread, priority, stackSize, 0, NULL);
     if (ctx->thid < 0) {
         res = ctx->thid;
         sceKernelDeleteEventFlag(ctx->evfid);
@@ -90,7 +90,7 @@ int adhocctlInitInternal(int stackSize, int priority, const void *adhoc_id)
 }
 
 /* 0x2914 */
-int adhocctlAddHandlerInternal(void (*func)(int, int, void *), void *arg, int *id_out)
+int _sce_pspnet_adhocctl_add_handler(void (*func)(int, int, void *), void *arg, int *id_out)
 {
     int lock_res = adhocctlLock();
     if (lock_res < 0)
@@ -240,7 +240,7 @@ int adhocctlNotifyGameModeHandlers(int event, int error)
 }
 
 /* 0x2e04 */
-int adhocctlTermInternal(void)
+int _sce_pspnet_adhocctl_term(void)
 {
     if (g_ctx.flags & 8)
         return 0x80410b10;
@@ -311,7 +311,7 @@ int adhocctlRequestJoin(const void *scan_info)
 }
 
 /* 0x30cc */
-int adhocctlRequestCreateGameMode(const char *name, int num_peers, const u8 *macs, const void *param, u32 timeout, int flag, int min_peers)
+int _sce_pspnet_adhocctl_create_realtime_ibss(const char *name, int num_peers, const u8 *macs, const void *param, u32 timeout, int flag, int min_peers)
 {
     if (g_ctx.flags & 1)
         return 0x80410b10;
@@ -333,7 +333,7 @@ int adhocctlRequestCreateGameMode(const char *name, int num_peers, const u8 *mac
 }
 
 /* 0x31f0 */
-int adhocctlRequestJoinGameMode(const char *name, const u8 *gc_mac, const void *param, u32 timeout, int flag)
+int _sce_pspnet_adhocctl_join_realtime_ibss(const char *name, const u8 *gc_mac, const void *param, u32 timeout, int flag)
 {
     if (g_ctx.flags & 1)
         return 0x80410b10;
@@ -387,7 +387,7 @@ int adhocctlRequestExitGameMode(void)
 }
 
 /* 0x3404 */
-int adhocctlDelHandlerInternal(int id)
+int _sce_pspnet_adhocctl_del_handler(int id)
 {
     int lock_res = adhocctlLock();
     if (lock_res < 0)
@@ -402,7 +402,7 @@ int adhocctlDelHandlerInternal(int id)
 }
 
 /* 0x3470 */
-int adhocctlGetStateInternal(int *state)
+int _sce_pspnet_adhocctl_get_state(int *state)
 {
     *state = g_ctx.state;
     return 0;
@@ -416,7 +416,7 @@ int adhocctlGetAdhocIdInternal(void *adhoc_id)
 }
 
 /* 0x34b0 */
-int adhocctlGetParameterInternal(void *param)
+int _sce_pspnet_adhocctl_get_param(void *param)
 {
     SceNetAdhocctlParameter *out = (SceNetAdhocctlParameter *)param;
     u8 bssid[0x60];
@@ -498,7 +498,7 @@ int adhocctlRequestCreateRaw(const char *name)
 }
 
 /* 0x37c4 */
-int adhocctlWorkerThread(u32 arglen, void *argp)
+int adhocctl_thread(u32 arglen, void *argp)
 {
     (void)arglen;
     struct SceNetAdhocctlCtx *ctx = *(struct SceNetAdhocctlCtx **)argp;
@@ -516,16 +516,16 @@ int adhocctlWorkerThread(u32 arglen, void *argp)
         if (bits & 8) {
             sceKernelClearEventFlag(ctx->evfid, ~8u);
             if (ctx->state == 1 || ctx->state == 4 || ctx->state == 5) {
-                int res = adhocctlPollWlanEvent(ctx);
+                int res = _sce_pspnet_adhocctl_poll_ifevent(ctx);
                 if (res < 0) {
                     adhocctlDisconnectWlan(ctx);
-                    adhocctlNotifyHandlers(0, res);
+                    adhocctl_call_handler(0, res);
                     ctx->flags &= ~1u;
                     continue;
                 }
                 if (ctx->state == 4) {
                     adhocctlDetachWlan(ctx);
-                    adhocctlNotifyHandlers(6, 0);
+                    adhocctl_call_handler(6, 0);
                 } else if (ctx->state == 5) {
                     adhocctlDetachWlan(ctx);
                     int ev = 7;
@@ -533,15 +533,15 @@ int adhocctlWorkerThread(u32 arglen, void *argp)
                         ctx->flags &= ~0x10u;
                         ev = 8;
                     }
-                    adhocctlNotifyHandlers(ev, 0);
+                    adhocctl_call_handler(ev, 0);
                 }
                 if (ctx->flags & 0x10)
                     ctx->flags &= ~0x10u;
             } else if (ctx->state == 3) {
-                int res = adhocctlPollWlanEvent(ctx);
+                int res = _sce_pspnet_adhocctl_poll_ifevent(ctx);
                 if (res < 0) {
                     adhocctlCleanupGameMode(ctx, &g_gm_ctx);
-                    adhocctlNotifyHandlers(0, res);
+                    adhocctl_call_handler(0, res);
                     ctx->flags &= ~1u;
                     continue;
                 }
@@ -554,47 +554,47 @@ int adhocctlWorkerThread(u32 arglen, void *argp)
                 sceKernelClearEventFlag(ctx->evfid, ~1u);
                 err_res = adhocctlDoConnect(ctx);
                 if (err_res < 0) has_err = 1;
-                else adhocctlNotifyHandlers(1, 0);
+                else adhocctl_call_handler(1, 0);
             }
             if (!has_err && (bits & 2)) {
                 sceKernelClearEventFlag(ctx->evfid, ~2u);
                 adhocctlDisconnectWlan(ctx);
-                adhocctlNotifyHandlers(2, 0);
+                adhocctl_call_handler(2, 0);
             }
             if (!has_err && (bits & 4)) {
                 sceKernelClearEventFlag(ctx->evfid, ~4u);
                 err_res = adhocctlDoScan(ctx);
                 if (err_res < 0) has_err = 1;
-                else adhocctlNotifyHandlers(3, 0);
+                else adhocctl_call_handler(3, 0);
             }
             if (!has_err && (bits & 0x10)) {
                 sceKernelClearEventFlag(ctx->evfid, ~0x10u);
-                err_res = adhocctlRunGameModeHost(ctx, &g_gm_ctx);
+                err_res = _sce_pspnet_adhocctl_create_realtime_ibss_80211(ctx, &g_gm_ctx);
                 if (err_res < 0) has_err = 1;
-                else adhocctlNotifyHandlers(4, 0);
+                else adhocctl_call_handler(4, 0);
             }
             if (!has_err && (bits & 0x20)) {
                 sceKernelClearEventFlag(ctx->evfid, ~0x20u);
-                err_res = adhocctlRunGameModeClient(ctx, &g_gm_ctx);
+                err_res = _sce_pspnet_adhocctl_join_realtime_ibss_80211(ctx, &g_gm_ctx);
                 if (err_res < 0) has_err = 1;
-                else adhocctlNotifyHandlers(4, 0);
+                else adhocctl_call_handler(4, 0);
             }
             if (!has_err && (bits & 0x40)) {
                 sceKernelClearEventFlag(ctx->evfid, ~0x40u);
                 adhocctlCleanupGameMode(ctx, &g_gm_ctx);
-                adhocctlNotifyHandlers(2, 0);
+                adhocctl_call_handler(2, 0);
             }
             if (!has_err && (bits & 0x80)) {
                 sceKernelClearEventFlag(ctx->evfid, ~0x80u);
                 err_res = adhocctlDoCreate(ctx);
                 if (err_res < 0) has_err = 1;
-                else adhocctlNotifyHandlers(1, 0);
+                else adhocctl_call_handler(1, 0);
             }
             if (!has_err && (bits & 0x100)) {
                 sceKernelClearEventFlag(ctx->evfid, ~0x100u);
                 err_res = adhocctlDoJoin(ctx);
                 if (err_res < 0) has_err = 1;
-                else adhocctlNotifyHandlers(1, 0);
+                else adhocctl_call_handler(1, 0);
             }
             if (!has_err && (bits & 0x400)) {
                 sceKernelClearEventFlag(ctx->evfid, ~0x400u);
@@ -612,7 +612,7 @@ int adhocctlWorkerThread(u32 arglen, void *argp)
                 int poll_res = adhocctlCheckCancelFlag(ctx);
                 if (poll_res < 0)
                     err_res = poll_res;
-                adhocctlNotifyHandlers(0, err_res);
+                adhocctl_call_handler(0, err_res);
             }
         }
         ctx->flags &= ~1u;

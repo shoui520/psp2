@@ -1,15 +1,15 @@
 #include "isofs_int.h"
 
-s32 isofsInitFdw(IsofsFdw *fdw, u32 idx, u32 filesCount) {
+s32 sceIsofsSbInit(IsofsFdw *fdw, u32 idx, u32 filesCount) {
     fdw->fileDesc.idx = idx;
     fdw->fileDesc.fdw = fdw;
     fdw->fileDesc.filesCount = (u16) filesCount;
-    return isofsInitFdFiles(&fdw->fileDesc, filesCount);
+    return sceIsofsSbTerm(&fdw->fileDesc, filesCount);
 }
 
 // 00000650
 s32 isofsFreeFdFiles(IsofsFd *fileDesc) {
-    s32 ret = isofsFreeFiles(fileDesc->files);
+    s32 ret = sceIsofsFileTerm(fileDesc->files);
     fileDesc->files = NULL;
     return ret;
 }
@@ -36,7 +36,7 @@ void isofsClearFdwFiles(IsofsFdw *fdw, s32 fdwCount) {
 }
 
 // 00000718
-s32 isofsInitFdFiles(IsofsFd *fileDesc, u32 filesCount) {
+s32 sceIsofsSbTerm(IsofsFd *fileDesc, u32 filesCount) {
     IsofsMgr *mgr = isofsGetMgr();
 
     fileDesc->heapId = mgr->heapId;

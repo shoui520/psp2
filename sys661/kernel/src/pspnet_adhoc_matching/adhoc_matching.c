@@ -21,12 +21,12 @@ int sceNetAdhocMatchingInit(int poolsize)
     if (g_initialized > 0)
         return MATCHING_ERR_ALREADY_INITIALIZED;
 
-    ret = matchingCreateLock();
+    ret = _sce_pspnet_pmp_lockinit();
     if (ret < 0)
         return ret;
-    ret = matchingCreateVpl(poolsize);
+    ret = _sce_pspnet_pmp_malloc_init(poolsize);
     if (ret >= 0) {
-        ret = matchingInitCtxList();
+        ret = _sce_pspnet_pmp_ctx_init();
         if (ret >= 0) {
             ret = sceWlanGetEtherAddr(mac);
             if (ret >= 0) {
@@ -34,11 +34,11 @@ int sceNetAdhocMatchingInit(int poolsize)
                 g_initialized = 1;
                 return 0;
             }
-            matchingFreeAllCtxs();
+            _sce_pspnet_pmp_ctx_term();
         }
-        matchingDeleteVpl();
+        _sce_pspnet_pmp_malloc_term();
     }
-    matchingDeleteLock();
+    _sce_pspnet_pmp_lockterm();
     return ret;
 }
 
@@ -55,7 +55,7 @@ int sceNetAdhocMatchingCreate(int mode, int maxpeers, u16 port, int bufsize,
     if (g_initialized == 0)
         return MATCHING_ERR_NOT_INITIALIZED;
 
-    lock_res = matchingLock();
+    lock_res = _sce_pspnet_pmp_lock();
     if (lock_res < 0)
         return lock_res;
 
@@ -69,16 +69,16 @@ int sceNetAdhocMatchingCreate(int mode, int maxpeers, u16 port, int bufsize,
                 if (((mode != MATCHING_MODE_HOST && mode != MATCHING_MODE_PTP) ||
                      (hellodelay != 0 && pingdelay != 0)) &&
                     initcount >= 0 && msgdelay != 0) {
-                    int id = matchingAllocCtx(port);
+                    int id = _sce_pspnet_pmp_create_ctx(port);
                     ret = id;
                     if (id >= 0) {
-                        MatchingCtx *ctx = matchingFindCtxById(id);
+                        MatchingCtx *ctx = _sce_pspnet_pmp_get_ctx(id);
                         void *rx_buf;
                         ctx->mode = mode;
                         ctx->max_peers = (mode == MATCHING_MODE_HOST) ? maxpeers : 2;
                         ctx->port = port;
                         ctx->rx_buflen = bufsize;
-                        rx_buf = matchingAllocVpl(bufsize);
+                        rx_buf = _sce_pspnet_pmp_malloc(bufsize);
                         ctx->rx_buf = (u8 *)rx_buf;
                         if (rx_buf != NULL) {
                             u32 cur_gp;
@@ -99,7 +99,7 @@ int sceNetAdhocMatchingCreate(int mode, int maxpeers, u16 port, int bufsize,
                             }
                             ret = id;
                         } else {
-                            matchingFreeCtx(ctx);
+                            _sce_pspnet_pmp_delete_ctx(ctx);
                             ret = MATCHING_ERR_NO_SPACE;
                         }
                     }
@@ -108,7 +108,7 @@ int sceNetAdhocMatchingCreate(int mode, int maxpeers, u16 port, int bufsize,
         }
     }
 
-    matchingUnlock(lock_res);
+    _sce_pspnet_pmp_unlock(lock_res);
     return ret;
 }
 
@@ -124,31 +124,31 @@ int sceNetAdhocMatchingStop(int matchingid)
     if (g_initialized == 0)
         return MATCHING_ERR_NOT_INITIALIZED;
 
-    lock_res = matchingLock();
+    lock_res = _sce_pspnet_pmp_lock();
     if (lock_res < 0)
         return lock_res;
 
-    ctx = matchingFindCtxById(matchingid);
+    ctx = _sce_pspnet_pmp_get_ctx(matchingid);
     if (ctx != NULL) {
         if (ctx->running == 2) {
             ctx->running = 1;
-            matchingStopInputThread(ctx, &lock_res);
-            matchingStopEventThread(ctx, &lock_res);
+            _sce_pspnet_pmp_input_term(ctx, &lock_res);
+            _sce_pspnet_pmp_event_term(ctx, &lock_res);
             if (ctx->mode == MATCHING_MODE_HOST || ctx->mode == MATCHING_MODE_PTP) {
-                matchingCancelHelloAlarm(ctx);
-                matchingFreeHelloPkt(ctx);
+                _sce_pspnet_pmp_stoptimer_hello(ctx);
+                _sce_pspnet_pmp_clearmsg_hello(ctx);
                 ctx->hello_msg.pending_flag &= ~1u;
             }
-            matchingDestroyAllPeers(ctx);
-            matchingFreeMembersPkt(ctx);
-            matchingDeletePdp(ctx);
+            _sce_pspnet_pmp_handle_term(ctx);
+            _sce_pspnet_pmp_clearmsg_keepaliverequest(ctx);
+            _sce_pspnet_pmp_deletesocket(ctx);
             ctx->running = 0;
         }
     } else {
         ret = MATCHING_ERR_INVALID_ID;
     }
 
-    matchingUnlock(lock_res);
+    _sce_pspnet_pmp_unlock(lock_res);
     return ret;
 }
 
@@ -164,24 +164,24 @@ int sceNetAdhocMatchingDelete(int matchingid)
     if (g_initialized == 0)
         return MATCHING_ERR_NOT_INITIALIZED;
 
-    lock_res = matchingLock();
+    lock_res = _sce_pspnet_pmp_lock();
     if (lock_res < 0)
         return lock_res;
 
-    ctx = matchingFindCtxById(matchingid);
+    ctx = _sce_pspnet_pmp_get_ctx(matchingid);
     if (ctx != NULL) {
         if (ctx->running != 0) {
             ret = MATCHING_ERR_IS_RUNNING;
         } else {
-            matchingFreeVpl(ctx->rx_buf);
+            _sce_pspnet_pmp_free(ctx->rx_buf);
             ctx->rx_buf = NULL;
-            matchingFreeCtx(ctx);
+            _sce_pspnet_pmp_delete_ctx(ctx);
         }
     } else {
         ret = MATCHING_ERR_INVALID_ID;
     }
 
-    matchingUnlock(lock_res);
+    _sce_pspnet_pmp_unlock(lock_res);
     return ret;
 }
 
@@ -199,23 +199,23 @@ int sceNetAdhocMatchingSelectTarget(int matchingid, const u8 *target, int optlen
     if (target == NULL)
         return MATCHING_ERR_INVALID_ARG;
 
-    lock_res = matchingLock();
+    lock_res = _sce_pspnet_pmp_lock();
     if (lock_res < 0)
         return lock_res;
 
-    ctx = matchingFindCtxById(matchingid);
+    ctx = _sce_pspnet_pmp_get_ctx(matchingid);
     if (ctx == NULL) {
         ret = MATCHING_ERR_INVALID_ID;
     } else if (ctx->running != 2) {
         ret = MATCHING_ERR_NOT_RUNNING;
     } else {
-        MatchingPeer *peer = matchingFindPeerByMac(ctx, target);
+        MatchingPeer *peer = _sce_pspnet_pmp_handle_lookup(ctx, target);
         if (peer == NULL) {
             ret = MATCHING_ERR_UNKNOWN_TARGET;
         } else if ((u32)optlen > 0xFFD7u || (optlen > 0 && opt == NULL)) {
             ret = MATCHING_ERR_INVALID_OPTLEN;
         } else {
-            int active_count = matchingCountPeersAtLeast(ctx, PEER_STATE_ACCEPTED);
+            int active_count = _sce_pspnet_pmp_handle_getnum(ctx, PEER_STATE_ACCEPTED);
             switch (peer->state) {
             case PEER_STATE_IDLE:
                 if (ctx->mode == MATCHING_MODE_HOST) {
@@ -224,12 +224,12 @@ int sceNetAdhocMatchingSelectTarget(int matchingid, const u8 *target, int optlen
                     ret = MATCHING_ERR_EXCEED_MAXNUM;
                 } else {
                     if (peer->opt_len > 0) {
-                        matchingFreeVpl(peer->opt_buf);
+                        _sce_pspnet_pmp_free(peer->opt_buf);
                         peer->opt_len = 0;
                         peer->opt_buf = NULL;
                     }
                     if (optlen > 0) {
-                        void *buf = matchingAllocVpl(optlen);
+                        void *buf = _sce_pspnet_pmp_malloc(optlen);
                         peer->opt_buf = buf;
                         if (buf == NULL) {
                             ret = MATCHING_ERR_NO_SPACE;
@@ -241,9 +241,9 @@ int sceNetAdhocMatchingSelectTarget(int matchingid, const u8 *target, int optlen
                     peer->own_session_id++;
                     if (peer->own_session_id == 0)
                         peer->own_session_id = 1;
-                    matchingSendCtrlPkt(ctx, peer, PKT_JOIN, peer->opt_len, peer->opt_buf);
-                    matchingSetCtrlRetryAlarm(ctx, peer);
-                    matchingSetPeerState(ctx, peer, PEER_STATE_SELECT_SENT);
+                    _sce_pspnet_pmp_sendmsg(ctx, peer, PKT_JOIN, peer->opt_len, peer->opt_buf);
+                    _sce_pspnet_pmp_settimer_rexmt(ctx, peer);
+                    _sce_pspnet_pmp_state_change(ctx, peer, PEER_STATE_SELECT_SENT);
                     peer->select_retry = ctx->init_count;
                 }
                 break;
@@ -252,12 +252,12 @@ int sceNetAdhocMatchingSelectTarget(int matchingid, const u8 *target, int optlen
                     ret = MATCHING_ERR_EXCEED_MAXNUM;
                 } else {
                     if (peer->opt_len > 0) {
-                        matchingFreeVpl(peer->opt_buf);
+                        _sce_pspnet_pmp_free(peer->opt_buf);
                         peer->opt_len = 0;
                         peer->opt_buf = NULL;
                     }
                     if (optlen > 0) {
-                        void *buf = matchingAllocVpl(optlen);
+                        void *buf = _sce_pspnet_pmp_malloc(optlen);
                         peer->opt_buf = buf;
                         if (buf == NULL) {
                             ret = MATCHING_ERR_NO_SPACE;
@@ -269,9 +269,9 @@ int sceNetAdhocMatchingSelectTarget(int matchingid, const u8 *target, int optlen
                     peer->own_session_id++;
                     if (peer->own_session_id == 0)
                         peer->own_session_id = 1;
-                    matchingSendCtrlPkt(ctx, peer, PKT_ACCEPT, peer->opt_len, peer->opt_buf);
-                    matchingSetCtrlRetryAlarm(ctx, peer);
-                    matchingSetPeerState(ctx, peer, PEER_STATE_ACCEPTED);
+                    _sce_pspnet_pmp_sendmsg(ctx, peer, PKT_ACCEPT, peer->opt_len, peer->opt_buf);
+                    _sce_pspnet_pmp_settimer_rexmt(ctx, peer);
+                    _sce_pspnet_pmp_state_change(ctx, peer, PEER_STATE_ACCEPTED);
                     peer->select_retry = ctx->init_count;
                 }
                 break;
@@ -288,7 +288,7 @@ int sceNetAdhocMatchingSelectTarget(int matchingid, const u8 *target, int optlen
         }
     }
 
-    matchingUnlock(lock_res);
+    _sce_pspnet_pmp_unlock(lock_res);
     return ret;
 }
 
@@ -304,22 +304,22 @@ int sceNetAdhocMatchingSetHelloOpt(int matchingid, int optlen, const void *opt)
     if (g_initialized == 0)
         return MATCHING_ERR_NOT_INITIALIZED;
 
-    lock_res = matchingLock();
+    lock_res = _sce_pspnet_pmp_lock();
     if (lock_res < 0)
         return lock_res;
 
     ret = MATCHING_ERR_INVALID_ID;
-    ctx = matchingFindCtxById(matchingid);
+    ctx = _sce_pspnet_pmp_get_ctx(matchingid);
     if (ctx != NULL) {
         ret = MATCHING_ERR_INVALID_MODE;
         if (ctx->mode != MATCHING_MODE_CLIENT) {
             ret = MATCHING_ERR_NOT_RUNNING;
             if (ctx->running == 2)
-                ret = matchingBuildHelloPkt(ctx, optlen, opt);
+                ret = _sce_pspnet_pmp_setupmsg_hello(ctx, optlen, opt);
         }
     }
 
-    matchingUnlock(lock_res);
+    _sce_pspnet_pmp_unlock(lock_res);
     return ret;
 }
 
@@ -337,11 +337,11 @@ int sceNetAdhocMatchingGetHelloOpt(int matchingid, int *optlen, void *opt)
     if (optlen == NULL)
         return MATCHING_ERR_INVALID_ARG;
 
-    lock_res = matchingLock();
+    lock_res = _sce_pspnet_pmp_lock();
     if (lock_res < 0)
         return lock_res;
 
-    ctx = matchingFindCtxById(matchingid);
+    ctx = _sce_pspnet_pmp_get_ctx(matchingid);
     if (ctx != NULL) {
         if (ctx->mode == MATCHING_MODE_CLIENT) {
             ret = MATCHING_ERR_INVALID_MODE;
@@ -360,7 +360,7 @@ int sceNetAdhocMatchingGetHelloOpt(int matchingid, int *optlen, void *opt)
         ret = MATCHING_ERR_INVALID_ID;
     }
 
-    matchingUnlock(lock_res);
+    _sce_pspnet_pmp_unlock(lock_res);
     return ret;
 }
 
@@ -380,21 +380,21 @@ int sceNetAdhocMatchingGetMembers(int matchingid, int *buflen, void *buf)
     if (buflen == NULL)
         return MATCHING_ERR_INVALID_ARG;
 
-    lock_res = matchingLock();
+    lock_res = _sce_pspnet_pmp_lock();
     if (lock_res < 0)
         return lock_res;
 
-    ctx = matchingFindCtxById(matchingid);
+    ctx = _sce_pspnet_pmp_get_ctx(matchingid);
     if (ctx != NULL) {
         if (ctx->running == 2)
-            matchingGetMembersInternal(ctx, buflen, buf);
+            _sce_pspnet_pmp_getmembers(ctx, buflen, buf);
         else
             ret = MATCHING_ERR_NOT_RUNNING;
     } else {
         ret = MATCHING_ERR_INVALID_ID;
     }
 
-    matchingUnlock(lock_res);
+    _sce_pspnet_pmp_unlock(lock_res);
     return ret;
 }
 
@@ -412,14 +412,14 @@ int sceNetAdhocMatchingSendData(int matchingid, const u8 *target, int datalen, c
     if (target == NULL)
         return MATCHING_ERR_INVALID_ARG;
 
-    lock_res = matchingLock();
+    lock_res = _sce_pspnet_pmp_lock();
     if (lock_res < 0)
         return lock_res;
 
-    ctx = matchingFindCtxById(matchingid);
+    ctx = _sce_pspnet_pmp_get_ctx(matchingid);
     if (ctx != NULL) {
         if (ctx->running == 2) {
-            MatchingPeer *peer = matchingFindPeerByMac(ctx, target);
+            MatchingPeer *peer = _sce_pspnet_pmp_handle_lookup(ctx, target);
             if (peer != NULL) {
                 if ((u32)(datalen - 1) > 0xFFD6u) {
                     ret = MATCHING_ERR_INVALID_DATALEN;
@@ -428,11 +428,11 @@ int sceNetAdhocMatchingSendData(int matchingid, const u8 *target, int datalen, c
                         if (peer->data_state == DATA_STATE_IDLE) {
                             void *buf;
                             if (peer->data_len > 0) {
-                                matchingFreeVpl(peer->data_buf);
+                                _sce_pspnet_pmp_free(peer->data_buf);
                                 peer->data_len = 0;
                                 peer->data_buf = NULL;
                             }
-                            buf = matchingAllocVpl(datalen);
+                            buf = _sce_pspnet_pmp_malloc(datalen);
                             peer->data_buf = buf;
                             if (buf != NULL) {
                                 sceKernelMemcpy(buf, data, (u32)datalen);
@@ -464,7 +464,7 @@ int sceNetAdhocMatchingSendData(int matchingid, const u8 *target, int datalen, c
         ret = MATCHING_ERR_INVALID_ID;
     }
 
-    matchingUnlock(lock_res);
+    _sce_pspnet_pmp_unlock(lock_res);
     return ret;
 }
 
@@ -482,14 +482,14 @@ int sceNetAdhocMatchingAbortSendData(int matchingid, const u8 *target)
     if (target == NULL)
         return MATCHING_ERR_INVALID_ARG;
 
-    lock_res = matchingLock();
+    lock_res = _sce_pspnet_pmp_lock();
     if (lock_res < 0)
         return lock_res;
 
-    ctx = matchingFindCtxById(matchingid);
+    ctx = _sce_pspnet_pmp_get_ctx(matchingid);
     if (ctx != NULL) {
         if (ctx->running == 2) {
-            MatchingPeer *peer = matchingFindPeerByMac(ctx, target);
+            MatchingPeer *peer = _sce_pspnet_pmp_handle_lookup(ctx, target);
             if (peer != NULL) {
                 matchingCancelDataAlarm(peer);
                 matchingSetPeerDataState(ctx, peer, DATA_STATE_IDLE);
@@ -503,7 +503,7 @@ int sceNetAdhocMatchingAbortSendData(int matchingid, const u8 *target)
         ret = MATCHING_ERR_INVALID_ID;
     }
 
-    matchingUnlock(lock_res);
+    _sce_pspnet_pmp_unlock(lock_res);
     return ret;
 }
 
@@ -519,9 +519,9 @@ int sceNetAdhocMatchingTerm(void)
 
     ret = matchingCheckNoActiveCtx();
     if (ret >= 0) {
-        matchingFreeAllCtxs();
-        matchingDeleteVpl();
-        matchingDeleteLock();
+        _sce_pspnet_pmp_ctx_term();
+        _sce_pspnet_pmp_malloc_term();
+        _sce_pspnet_pmp_lockterm();
         g_initialized = 0;
     }
     return ret;
@@ -565,7 +565,7 @@ int sceNetAdhocMatchingGetPoolMaxAlloc(void)
 {
     if (sceKernelCheckThreadStack() < 3056)
         return MATCHING_ERR_STACK_SMALL;
-    return matchingGetPoolMaxAllocInternal();
+    return _sce_pspnet_adhoc_matching_pool_maxalloc();
 }
 
 /* 0x001104 */
@@ -597,42 +597,42 @@ matchingStartInternal(int id, int evth_prio, int evth_stack, int evth_mpid,
     if ((evth_mpid != 2 && evth_mpid != 5) || (inth_mpid != 2 && inth_mpid != 5))
         return MATCHING_ERR_INVALID_ID;
 
-    lock_res = matchingLock();
+    lock_res = _sce_pspnet_pmp_lock();
     if (lock_res < 0)
         return lock_res;
 
-    ctx = matchingFindCtxById(id);
+    ctx = _sce_pspnet_pmp_get_ctx(id);
     ret = MATCHING_ERR_INVALID_ID;
     if (ctx != NULL) {
         ret = MATCHING_ERR_IS_RUNNING;
         if (ctx->running == 0) {
             if (((u32)optlen <= 0xFFCFu && (optlen <= 0 || opt != NULL)) ||
                 sceKernelGetCompiledSdkVersion() <= 0x05FFFFFF) {
-                ret = matchingCreatePdp(ctx);
+                ret = _sce_pspnet_pmp_createsocket(ctx);
                 if (ret >= 0) {
-                    ret = matchingStartEventThread(ctx, evth_prio, evth_stack, evth_mpid);
+                    ret = _sce_pspnet_pmp_event_start(ctx, evth_prio, evth_stack, evth_mpid);
                     if (ret >= 0) {
-                        ret = matchingStartInputThread(ctx, inth_prio, 3072, inth_mpid);
+                        ret = _sce_pspnet_pmp_input_start(ctx, inth_prio, 3072, inth_mpid);
                         if (ret >= 0) {
                             if (ctx->mode == MATCHING_MODE_HOST || ctx->mode == MATCHING_MODE_PTP) {
-                                ret = matchingBuildHelloPkt(ctx, optlen, opt);
+                                ret = _sce_pspnet_pmp_setupmsg_hello(ctx, optlen, opt);
                                 if (ret >= 0) {
                                     u32 now = sceKernelGetSystemTimeLow();
-                                    matchingSetHelloAlarm(ctx, now / (0xFFFFFFFFu / ctx->hello_delay + 1u));
+                                    _sce_pspnet_pmp_settimer_hello(ctx, now / (0xFFFFFFFFu / ctx->hello_delay + 1u));
                                 }
                             }
                             if (ret >= 0) {
-                                matchingBuildMembersPkt(ctx);
+                                _sce_pspnet_pmp_setupmsg_keepaliverequest(ctx);
                                 ctx->min_stack = evth_stack - 3072;
                                 ctx->running = 2;
-                                matchingUnlock(lock_res);
+                                _sce_pspnet_pmp_unlock(lock_res);
                                 return 0;
                             }
-                            matchingStopInputThread(ctx, &lock_res);
+                            _sce_pspnet_pmp_input_term(ctx, &lock_res);
                         }
-                        matchingStopEventThread(ctx, &lock_res);
+                        _sce_pspnet_pmp_event_term(ctx, &lock_res);
                     }
-                    matchingDeletePdp(ctx);
+                    _sce_pspnet_pmp_deletesocket(ctx);
                 }
             } else {
                 ret = MATCHING_ERR_INVALID_OPTLEN;
@@ -640,7 +640,7 @@ matchingStartInternal(int id, int evth_prio, int evth_stack, int evth_mpid,
         }
     }
 
-    matchingUnlock(lock_res);
+    _sce_pspnet_pmp_unlock(lock_res);
     return ret;
 }
 
@@ -658,17 +658,17 @@ matchingCancelTargetInternal(int id, const u8 *target, int optlen, const void *o
     if (target == NULL)
         return MATCHING_ERR_INVALID_ARG;
 
-    lock_res = matchingLock();
+    lock_res = _sce_pspnet_pmp_lock();
     if (lock_res < 0)
         return lock_res;
 
-    ctx = matchingFindCtxById(id);
+    ctx = _sce_pspnet_pmp_get_ctx(id);
     if (ctx == NULL) {
         ret = MATCHING_ERR_INVALID_ID;
     } else if (ctx->running != 2) {
         ret = MATCHING_ERR_NOT_RUNNING;
     } else {
-        MatchingPeer *peer = matchingFindPeerByMac(ctx, target);
+        MatchingPeer *peer = _sce_pspnet_pmp_handle_lookup(ctx, target);
         if (peer == NULL) {
             ret = MATCHING_ERR_UNKNOWN_TARGET;
         } else if ((u32)optlen > 0xFFD7u || (optlen > 0 && opt == NULL)) {
@@ -676,7 +676,7 @@ matchingCancelTargetInternal(int id, const u8 *target, int optlen, const void *o
         } else if (peer->state != PEER_STATE_IDLE) {
             int ok = 1;
             if (peer->state > 0 && peer->state < 6 && optlen > 0) {
-                opt_copy = matchingAllocVpl(optlen);
+                opt_copy = _sce_pspnet_pmp_malloc(optlen);
                 if (opt_copy == NULL) {
                     ret = MATCHING_ERR_NO_SPACE;
                     ok = 0;
@@ -685,11 +685,11 @@ matchingCancelTargetInternal(int id, const u8 *target, int optlen, const void *o
                 }
             }
             if (ok) {
-                matchingCancelPeerAlarms(peer);
-                matchingSendCtrlPkt(ctx, peer, PKT_CANCEL, optlen, opt);
-                matchingSetPeerState(ctx, peer, PEER_STATE_IDLE);
+                _sce_pspnet_pmp_stoptimer(peer);
+                _sce_pspnet_pmp_sendmsg(ctx, peer, PKT_CANCEL, optlen, opt);
+                _sce_pspnet_pmp_state_change(ctx, peer, PEER_STATE_IDLE);
                 if (peer->opt_len > 0) {
-                    matchingFreeVpl(peer->opt_buf);
+                    _sce_pspnet_pmp_free(peer->opt_buf);
                     peer->opt_len = 0;
                     peer->opt_buf = NULL;
                 }
@@ -701,7 +701,7 @@ matchingCancelTargetInternal(int id, const u8 *target, int optlen, const void *o
         }
     }
 
-    matchingUnlock(lock_res);
+    _sce_pspnet_pmp_unlock(lock_res);
     return ret;
 }
 

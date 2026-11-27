@@ -1621,22 +1621,16 @@ int sceDisplayWaitVblankStartCB(void)
 }
 
 /* 0x268C */
-int sceDisplay_driver_A70066A1(int vblankCount)
+int sceDisplayWaitVblankStartMulti(int vblankCount)
 {
 	return displayWaitVblankInternal(vblankCount, 0);
 }
 
-int sceDisplayWaitVblankStartMulti(int vblankCount)
-	__attribute__((alias("sceDisplay_driver_A70066A1")));
-
 /* 0x26A8 */
-int sceDisplay_driver_113958AE(int vblankCount)
+int sceDisplayWaitVblankStartMultiCB(int vblankCount)
 {
 	return displayWaitVblankInternal(vblankCount, 1);
 }
-
-int sceDisplayWaitVblankStartMultiCB(int vblankCount)
-	__attribute__((alias("sceDisplay_driver_113958AE")));
 
 /* 0x26C4 */
 int sceDisplay_driver_CE8A328E(void)

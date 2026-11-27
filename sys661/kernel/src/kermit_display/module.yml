@@ -27,12 +27,12 @@ exports:
       - sceDisplaySetFrameBuf: 0x289d82fe
       - sceDisplayGetBrightness: 0x31c4baa8
       - sceDisplayWaitVblank: 0x36cdfade
-      - sceDisplay_driver_A70066A1: 0x40f1469c
+      - sceDisplayWaitVblankStartMulti: 0x40f1469c
       - sceDisplayWaitVblankStartCB: 0x46f186c3
       - sceDisplayIsVblank: 0x4d4e10ec
       - sceDisplayGetVblankRest: 0x69b53541
       - sceDisplayGetCurrentHcount: 0x773dd3a3
-      - sceDisplay_driver_113958AE: 0x77ed8b3a
+      - sceDisplayWaitVblankStartMultiCB: 0x77ed8b3a
       - sceDisplaySetHoldMode: 0x7ed59bc4
       - sceDisplayWaitVblankCB: 0x8eb9ec49
       - sceDisplayWaitVblankStart: 0x984c27e7
@@ -55,7 +55,7 @@ exports:
       - sceDisplayGetBrightness: 0x0043973f
       - sceDisplaySetResumeMode: 0x03f16fd4
       - sceDisplaySetMode: 0x0e20f177
-      - sceDisplay_driver_113958AE: 0x113958ae
+      - sceDisplayWaitVblankStartMultiCB: 0x113958ae
       - sceDisplayEnable: 0x117c3e2c
       - sceDisplayGetFramePerSec: 0x1eaa0bdc
       - sceDisplayGetVcount: 0x1fbe8856
@@ -80,7 +80,7 @@ exports:
       - sceDisplayIsForeground: 0x99e358f1
       - sceDisplay_driver_9B18DDDD: 0x9b18dddd
       - sceDisplaySetFrameBuf: 0xa38b3f89
-      - sceDisplay_driver_A70066A1: 0xa70066a1
+      - sceDisplayWaitVblankStartMulti: 0xa70066a1
       - sceDisplay_driver_AF2E6CDC: 0xaf2e6cdc
       - sceDisplayWaitVblankStart: 0xb0942511
       - sceDisplay_driver_BA3ADBF0: 0xba3adbf0

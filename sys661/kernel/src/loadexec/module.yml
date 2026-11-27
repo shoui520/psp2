@@ -69,7 +69,7 @@ exports:
       - sceKernelExitGameWithStatus: 0x2ac9954b
       - LoadExecForUser_362A956B: 0x362a956b
       - sceKernelRegisterExitCallback: 0x4ac57943
-      - LoadExecForUser_8ADA38D3: 0x8ada38d3
+      - sceKernelLoadExecNpDrm: 0x8ada38d3
       - sceKernelLoadExec: 0xbd2f1094
       - LoadExecForUser_D1FB50DC: 0xd1fb50dc
 imports:

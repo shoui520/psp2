@@ -1,6 +1,6 @@
 #include "isofs_int.h"
 
-s32 isofsInitCache() {
+s32 sceIsofsCacheCheckData() {
     IsofsMgr *mgr = isofsGetMgr();
     g_isofsCache = (IsofsCacheEntry *) sceKernelAllocHeapMemory(mgr->heapId,
                                                                 sizeof(IsofsCacheEntry) * ISOFS_CACHE_ENTRIES);
@@ -33,7 +33,7 @@ s32 isofsInitCache() {
 }
 
 // 00000550
-s32 isofsFreeCacheData() {
+s32 sceIsofsCacheDeleteData() {
     IsofsMgr *mgr = isofsGetMgr();
     for (u32 i = 0; i < ISOFS_CACHE_ENTRIES; i++) {
         IsofsCacheEntry *entry = &g_isofsCache[i];
@@ -47,7 +47,7 @@ s32 isofsFreeCacheData() {
 // 000005dc
 s32 isofsFreeCache() {
     IsofsMgr *mgr = isofsGetMgr();
-    isofsFreeCacheData();
+    sceIsofsCacheDeleteData();
     sceKernelFreeHeapMemory(mgr->heapId, g_isofsCache);
     sceKernelDeleteFpl(mgr->fplId);
     return SCE_ERROR_OK;

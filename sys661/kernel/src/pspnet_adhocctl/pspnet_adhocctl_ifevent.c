@@ -1,6 +1,6 @@
 #include "pspnet_adhocctl_internal.h"
 
-int adhocctlDrainWlanEvents(struct SceNetAdhocctlCtx *ctx)
+int _sce_pspnet_adhocctl_handle_ifevent(struct SceNetAdhocctlCtx *ctx)
 {
     int ev, reason;
     while (1) {
@@ -26,7 +26,7 @@ int adhocctlDrainWlanEvents(struct SceNetAdhocctlCtx *ctx)
 }
 
 /* 0x3d0c */
-int adhocctlPollWlanEvent(struct SceNetAdhocctlCtx *ctx)
+int _sce_pspnet_adhocctl_poll_ifevent(struct SceNetAdhocctlCtx *ctx)
 {
     int ev, reason;
     return adhocctlWaitWlanEvent(ctx, &ev, &reason);
@@ -78,7 +78,7 @@ int adhocctlWaitWlanEvent(struct SceNetAdhocctlCtx *ctx, int *ev, int *reason)
                 ctx->pending_error = 0x80410b84;
             }
             adhocctlNotifyGameModeHandlers(5, 0);
-            res = adhocctlDrainWlanEvents(ctx);
+            res = _sce_pspnet_adhocctl_handle_ifevent(ctx);
             if (res < 0)
                 ret = res;
             else if (ctx->state != 5)

@@ -1,7 +1,7 @@
 #include "isofs_int.h"
 
 // 00000000
-s32 isofsInitUnits() {
+s32 sceIsofsLbInit() {
     IsofsMgr *mgr = isofsGetMgr();
     sceKernelWaitSema(mgr->semaId, 1, NULL);
     g_isofsUnits = (IsofsUnit *) sceKernelAllocHeapMemory(mgr->heapId, mgr->maxUnits * sizeof(IsofsUnit));
@@ -47,7 +47,7 @@ s32 isofsInitUnits() {
 }
 
 // 0000019c
-s32 isofsFreeUnits() {
+s32 sceIsofsLbTerm() {
     IsofsMgr *mgr = isofsGetMgr();
     sceKernelWaitSema(mgr->semaId, 1, NULL);
     for (s32 i = 0; i < mgr->maxUnits; ++i) {
@@ -78,7 +78,7 @@ s32 isofsInitUnitFdw(IsofsUnit *unit, u32 fdwCount, u16 filesCount) {
     }
     memset(unit->fdw, 0, fdwCount * sizeof(IsofsFdw));
     for (u32 i = 0; i < fdwCount; i++) {
-        s32 ret = isofsInitFdw(&unit->fdw[i], i, filesCount);
+        s32 ret = sceIsofsSbInit(&unit->fdw[i], i, filesCount);
         if (ret != 0) {
             sceKernelFreeHeapMemory(unit->heapId, unit->fdw);
             return ret;

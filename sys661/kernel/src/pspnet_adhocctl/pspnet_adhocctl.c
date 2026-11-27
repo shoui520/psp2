@@ -79,7 +79,7 @@ int sceNetAdhocctlInit(int stackSize, int priority, const void *adhoc_id)
     }
 
     adhocctlLoadSsidPrefix(g_ssid_prefix);
-    int res = adhocctlInitInternal(stackSize, priority, adhoc_id);
+    int res = _sce_pspnet_adhocctl_init(stackSize, priority, adhoc_id);
     if (res < 0) {
         g_initialized = 0;
         return res;
@@ -192,7 +192,7 @@ int sceNetAdhocctlTerm(void)
     if (g_initialized == 0)
         return 0;
 
-    int res = adhocctlTermInternal();
+    int res = _sce_pspnet_adhocctl_term();
     if (res >= 0)
         g_initialized = 0;
     return res;
@@ -262,7 +262,7 @@ int adhocctlCreateGameModeInternal(const char *name, int game_type, int num_peer
     if (tmpl[0x44] < num_peers)
         return 0x80410b04;
 
-    return adhocctlRequestCreateGameMode(name, num_peers, macs, tmpl, timeout, flag, min_peers);
+    return _sce_pspnet_adhocctl_create_realtime_ibss(name, num_peers, macs, tmpl, timeout, flag, min_peers);
 }
 
 /* 0x07d0 */
@@ -301,7 +301,7 @@ int sceNetAdhocctlJoinEnterGameMode(const char *name, const u8 *gc_mac, u32 time
     if (i < 0)
         return i;
 
-    return adhocctlRequestJoinGameMode(name, gc_mac, g_gm_templates[0], timeout, flag);
+    return _sce_pspnet_adhocctl_join_realtime_ibss(name, gc_mac, g_gm_templates[0], timeout, flag);
 }
 
 /* 0x0a08 */
@@ -344,7 +344,7 @@ int sceNetAdhocctlAddHandler(void (*func)(int, int, void *), void *arg)
         return 0x80410b08;
     if (func == NULL)
         return 0x80410b04;
-    int res = adhocctlAddHandlerInternal(func, arg, &id);
+    int res = _sce_pspnet_adhocctl_add_handler(func, arg, &id);
     return (res < 0) ? res : id;
 }
 
@@ -355,7 +355,7 @@ int sceNetAdhocctlDelHandler(int id)
         return 0x80410005;
     if (g_initialized == 0)
         return 0x80410b08;
-    return adhocctlDelHandlerInternal(id);
+    return _sce_pspnet_adhocctl_del_handler(id);
 }
 
 /* 0x0bf0 */
@@ -367,7 +367,7 @@ int sceNetAdhocctlGetState(int *state)
         return 0x80410b08;
     if (state == NULL)
         return 0x80410b04;
-    return adhocctlGetStateInternal(state);
+    return _sce_pspnet_adhocctl_get_state(state);
 }
 
 /* 0x0c5c */
@@ -403,7 +403,7 @@ int sceNetAdhocctlGetParameter(void *param)
         return 0x80410b08;
     if (param == NULL)
         return 0x80410b04;
-    return adhocctlGetParameterInternal(param);
+    return _sce_pspnet_adhocctl_get_param(param);
 }
 
 /* 0x0dbc */
@@ -437,7 +437,7 @@ int sceNetAdhocctl_lib_EFA6AEAF(const void *param, int num_peers, const u8 *macs
         return 0x80410b08;
     if (param == NULL)
         return 0x80410b04;
-    adhocctlRequestCreateGameMode(NULL, num_peers, macs, param, timeout, flag | 1, num_peers);
+    _sce_pspnet_adhocctl_create_realtime_ibss(NULL, num_peers, macs, param, timeout, flag | 1, num_peers);
     return 0;
 }
 
@@ -448,7 +448,7 @@ int sceNetAdhocctl_lib_1593C05D(const void *param, const u8 *gc_mac, u32 timeout
         return 0x80410b08;
     if (param == NULL)
         return 0x80410b04;
-    adhocctlRequestJoinGameMode(NULL, gc_mac, param, timeout, flag | 1);
+    _sce_pspnet_adhocctl_join_realtime_ibss(NULL, gc_mac, param, timeout, flag | 1);
     return 0;
 }
 

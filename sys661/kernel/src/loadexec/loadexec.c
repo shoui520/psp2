@@ -376,8 +376,7 @@ s32 sceKernelLoadExec(char *file, SceKernelLoadExecParam *opt)
     return ret;
 }
 
-s32 sceKernelLoadExecNpDrm(char *file, SceKernelLoadExecParam *opt) __attribute__((alias("LoadExecForUser_8ADA38D3")));
-s32 LoadExecForUser_8ADA38D3(char *file, SceKernelLoadExecParam *opt)
+s32 sceKernelLoadExecNpDrm(char *file, SceKernelLoadExecParam *opt)
 {
     RunExecParams args;
     SceKernelLoadExecVSHParam vshParam __attribute__((aligned(16)));

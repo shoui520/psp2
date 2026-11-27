@@ -1,7 +1,7 @@
 #include "pmpvar.h"
 
 int __attribute__((noinline))
-matchingSetCtrlRetryAlarm(MatchingCtx *ctx, MatchingPeer *peer)
+_sce_pspnet_pmp_settimer_rexmt(MatchingCtx *ctx, MatchingPeer *peer)
 {
     int intr = sceKernelCpuSuspendIntr();
     if (peer->ctrl_alarm_id >= 0) {
@@ -9,7 +9,7 @@ matchingSetCtrlRetryAlarm(MatchingCtx *ctx, MatchingPeer *peer)
         peer->ctrl_alarm_id = -1;
     }
     sceKernelCpuResumeIntr(intr);
-    peer->ctrl_alarm_id = sceKernelSetAlarm(ctx->msg_delay, matchingCtrlRetryAlarmCb, peer);
+    peer->ctrl_alarm_id = sceKernelSetAlarm(ctx->msg_delay, pmp_rexmt_handler, peer);
     return peer->ctrl_alarm_id;
 }
 
@@ -29,7 +29,7 @@ matchingSetDataRetryAlarm(MatchingCtx *ctx, MatchingPeer *peer)
 
 /* 0x0035f8 */
 int __attribute__((noinline))
-matchingSetKeepAliveAlarm(MatchingCtx *ctx, MatchingPeer *peer)
+_sce_pspnet_pmp_settimer_keepalive(MatchingCtx *ctx, MatchingPeer *peer)
 {
     u32 delay = (ctx->mode == MATCHING_MODE_CLIENT) ? peer->peer_ping_delay : ctx->ping_delay;
     int intr = sceKernelCpuSuspendIntr();
@@ -38,13 +38,13 @@ matchingSetKeepAliveAlarm(MatchingCtx *ctx, MatchingPeer *peer)
         peer->ctrl_alarm_id = -1;
     }
     sceKernelCpuResumeIntr(intr);
-    peer->ctrl_alarm_id = sceKernelSetAlarm(delay, matchingKeepAliveAlarmCb, peer);
+    peer->ctrl_alarm_id = sceKernelSetAlarm(delay, pmp_keepalive_handler, peer);
     return peer->ctrl_alarm_id;
 }
 
 /* 0x003684 */
 int __attribute__((noinline))
-matchingSetHelloAlarm(MatchingCtx *ctx, u32 delay)
+_sce_pspnet_pmp_settimer_hello(MatchingCtx *ctx, u32 delay)
 {
     int intr = sceKernelCpuSuspendIntr();
     if (ctx->hello_alarm_id >= 0) {
@@ -52,13 +52,13 @@ matchingSetHelloAlarm(MatchingCtx *ctx, u32 delay)
         ctx->hello_alarm_id = -1;
     }
     sceKernelCpuResumeIntr(intr);
-    ctx->hello_alarm_id = sceKernelSetAlarm(delay, matchingHelloAlarmCb, ctx);
+    ctx->hello_alarm_id = sceKernelSetAlarm(delay, pmp_hello_handler, ctx);
     return ctx->hello_alarm_id;
 }
 
 /* 0x0036fc */
 int __attribute__((noinline))
-matchingCancelPeerAlarms(MatchingPeer *peer)
+_sce_pspnet_pmp_stoptimer(MatchingPeer *peer)
 {
     int intr = sceKernelCpuSuspendIntr();
     if (peer->ctrl_alarm_id >= 0) {
@@ -88,7 +88,7 @@ matchingCancelDataAlarm(MatchingPeer *peer)
 
 /* 0x0037c0 */
 int __attribute__((noinline))
-matchingCancelHelloAlarm(MatchingCtx *ctx)
+_sce_pspnet_pmp_stoptimer_hello(MatchingCtx *ctx)
 {
     int intr = sceKernelCpuSuspendIntr();
     if (ctx->hello_alarm_id >= 0) {
@@ -100,7 +100,7 @@ matchingCancelHelloAlarm(MatchingCtx *ctx)
 }
 
 /* 0x003814 */
-u32 matchingCtrlRetryAlarmCb(void *common)
+u32 pmp_rexmt_handler(void *common)
 {
     MatchingPeer *peer = (MatchingPeer *)common;
     if ((peer->ctrl_alarm_msg.pending_flag & 1u) == 0) {
@@ -128,7 +128,7 @@ u32 matchingDataRetryAlarmCb(void *common)
 }
 
 /* 0x0038d4 */
-u32 matchingKeepAliveAlarmCb(void *common)
+u32 pmp_keepalive_handler(void *common)
 {
     MatchingPeer *peer = (MatchingPeer *)common;
     if ((peer->ctrl_alarm_msg.pending_flag & 1u) == 0) {
@@ -142,7 +142,7 @@ u32 matchingKeepAliveAlarmCb(void *common)
 }
 
 /* 0x003934 */
-u32 matchingHelloAlarmCb(void *common)
+u32 pmp_hello_handler(void *common)
 {
     MatchingCtx *ctx = (MatchingCtx *)common;
     if ((ctx->hello_msg.pending_flag & 1u) == 0) {

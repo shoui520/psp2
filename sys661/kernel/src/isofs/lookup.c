@@ -1,6 +1,6 @@
 #include "isofs_int.h"
 
-IsoDirectory *isofsFindIsoDirectory(char *path, IsoDirectory *isoDirs, s32 flag, s32 *outRet) {
+IsoDirectory *sceIsofsLookupFile(char *path, IsoDirectory *isoDirs, s32 flag, s32 *outRet) {
     if (path == NULL || isoDirs == NULL || flag < 1 || outRet == NULL) {
         *outRet = SCE_ERROR_ERRNO_INVALID_ARGUMENT;
         // bug, there is no return here!
@@ -54,7 +54,7 @@ IsoDirectory *isofsFindIsoDirectory(char *path, IsoDirectory *isoDirs, s32 flag,
 }
 
 // 00001094
-IsofsPath *isofsFindPath(IsofsUnit *unit, char *pathSplit, u32 dirLevel, int pathLen, u32 flag, s32 *outRet) {
+IsofsPath *sceIsofsLookupDir(IsofsUnit *unit, char *pathSplit, u32 dirLevel, int pathLen, u32 flag, s32 *outRet) {
     if (outRet == NULL) {
         return NULL;
     }
@@ -81,7 +81,7 @@ IsofsPath *isofsFindPath(IsofsUnit *unit, char *pathSplit, u32 dirLevel, int pat
     u32 curDirLevel = 1;
     for (u32 iDirLevel = 2; iDirLevel <= dirLevel; iDirLevel++) {
         u32 outSegLen = 0;
-        pathSplit = isofsSplitPath(pathSplit, &outSegLen, flag, outRet);
+        pathSplit = isofs_get_dirname(pathSplit, &outSegLen, flag, outRet);
         if (pathSplit == NULL) {
             return NULL;
         }
@@ -113,32 +113,32 @@ IsofsPath *isofsFindPath(IsofsUnit *unit, char *pathSplit, u32 dirLevel, int pat
 }
 
 // 000012e4
-s32 isofsCreatePaths(IsofsUnit *unit) {
+s32 sceIsofsGetPathTable(IsofsUnit *unit) {
     if (unit == NULL) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
     s32 outRet = SCE_ERROR_OK;
-    IsoPath *pathTable = isofsReadPathTable(unit, &outRet);
+    IsoPath *pathTable = isofs_new_ptbl(unit, &outRet);
     unit->pathTable = pathTable;
     if (pathTable == NULL) {
         return outRet;
     }
-    s32 pathTableEntryCount = isofsCountPathTableEntries(pathTable, unit->pathTableSize, &outRet);
+    s32 pathTableEntryCount = isofs_get_direc_count(pathTable, unit->pathTableSize, &outRet);
     if (pathTableEntryCount > 0) {
         unit->pathTableEntryCount = (u16) pathTableEntryCount;
-        IsofsPath *paths = isofsParsePathTableEntries(unit, unit->pathTable, unit->pathTableSize, pathTableEntryCount,
+        IsofsPath *paths = isofs_create_ptbl(unit, unit->pathTable, unit->pathTableSize, pathTableEntryCount,
                                                       &outRet);
         unit->paths = paths;
         if (paths != NULL) {
-            return isofsUpdatePathsLbnSize(unit);
+            return isofs_set_topend_dirsize(unit);
         }
     }
-    isofsFreePaths(unit);
+    isofs_delete_ptbl(unit);
     return outRet;
 }
 
 // 00001388
-IsoPath *isofsReadPathTable(IsofsUnit *unit, s32 *outRet) {
+IsoPath *isofs_new_ptbl(IsofsUnit *unit, s32 *outRet) {
     if (outRet == NULL) {
         return NULL;
     }
@@ -170,7 +170,7 @@ IsoPath *isofsReadPathTable(IsofsUnit *unit, s32 *outRet) {
 }
 
 // 00001474
-s32 isofsCountPathTableEntries(IsoPath *pathTable, s32 pathTableSize, s32 *outRet) {
+s32 isofs_get_direc_count(IsoPath *pathTable, s32 pathTableSize, s32 *outRet) {
     if (pathTable == NULL || pathTableSize < 9) {
         *outRet = SCE_ERROR_ERRNO_INVALID_ARGUMENT;
         return 0;
@@ -190,7 +190,7 @@ s32 isofsCountPathTableEntries(IsoPath *pathTable, s32 pathTableSize, s32 *outRe
 }
 
 // 000014e0
-IsofsPath *isofsParsePathTableEntries(IsofsUnit *unit, IsoPath *pathTable, s32 pathTableSize, s32 pathTableEntryCount,
+IsofsPath *isofs_create_ptbl(IsofsUnit *unit, IsoPath *pathTable, s32 pathTableSize, s32 pathTableEntryCount,
                                       s32 *outRet) {
     if (outRet == NULL) {
         return NULL;
@@ -284,7 +284,7 @@ IsofsPath *isofsParsePathTableEntries(IsofsUnit *unit, IsoPath *pathTable, s32 p
 }
 
 // 0000177c
-s32 isofsFreePaths(IsofsUnit *unit) {
+s32 isofs_delete_ptbl(IsofsUnit *unit) {
     if (unit == NULL) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
@@ -338,7 +338,7 @@ s32 isofsIsSceLbnPath(char *path) {
 }
 
 // 000019a0
-IsoDirectory *isofsReadIsoDir(IsofsUnit *unit, char *path, char *file, u32 flag, s32 *outRet) {
+IsoDirectory *sceIsofsReadDirectoryRecord(IsofsUnit *unit, char *path, char *file, u32 flag, s32 *outRet) {
     *outRet = SCE_ERROR_OK;
     if (unit == NULL || path == NULL || file == NULL) {
         *outRet = SCE_ERROR_ERRNO_INVALID_ARGUMENT;
@@ -371,7 +371,7 @@ IsoDirectory *isofsReadIsoDir(IsofsUnit *unit, char *path, char *file, u32 flag,
     if (strcmp(pathStack, "/") == 0) {
         readLbn = unit->rootDirLbn;
     } else {
-        IsofsPath *foundPath = isofsFindPath(unit, pathStack, levels - 1, strlen(pathStack), flag, outRet);
+        IsofsPath *foundPath = sceIsofsLookupDir(unit, pathStack, levels - 1, strlen(pathStack), flag, outRet);
         if (*outRet != 0) {
             if (*outRet != 0x20) {
                 return NULL;
@@ -400,7 +400,7 @@ IsoDirectory *isofsReadIsoDir(IsofsUnit *unit, char *path, char *file, u32 flag,
         openState = unit->openState;
     } else {
         // Read the directory
-        s32 ret = isofsReadDir(unit, readLbn, g_isofsCurrentDir);
+        s32 ret = sceIsofsReadDirent(unit, readLbn, g_isofsCurrentDir);
         if (ret != 0) {
             *outRet = ret;
             return NULL;
@@ -428,7 +428,7 @@ IsoDirectory *isofsReadIsoDir(IsofsUnit *unit, char *path, char *file, u32 flag,
             memset(g_isofsCurrentDir + 0x800, 0, 0x800);
             findFlag = 1;
         }
-        foundDir = isofsFindIsoDirectory(path, (IsoDirectory *) g_isofsCurrentDir, findFlag, outRet);
+        foundDir = sceIsofsLookupFile(path, (IsoDirectory *) g_isofsCurrentDir, findFlag, outRet);
         if (foundDir != NULL) {
             break;
         }
@@ -448,7 +448,7 @@ IsoDirectory *isofsReadIsoDir(IsofsUnit *unit, char *path, char *file, u32 flag,
             openState = unit->openState;
         } else {
             // Read the directory
-            s32 ret = isofsReadDir(unit, readLbn, g_isofsCurrentDir);
+            s32 ret = sceIsofsReadDirent(unit, readLbn, g_isofsCurrentDir);
             if (ret != 0) {
                 *outRet = ret;
                 g_isofsCurrentDirLbn = 0;
@@ -469,7 +469,7 @@ IsoDirectory *isofsReadIsoDir(IsofsUnit *unit, char *path, char *file, u32 flag,
 }
 
 // 00001dbc
-s32 isofsParseSceLbnPath(char *path, s32 *outLbn, s32 *outSize) {
+s32 sceIsofsCheckVFile(char *path, s32 *outLbn, s32 *outSize) {
     if (path == NULL || outLbn == NULL || outSize == NULL) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
@@ -489,7 +489,7 @@ s32 isofsParseSceLbnPath(char *path, s32 *outLbn, s32 *outSize) {
 }
 
 // 00002274
-int isofsReadDir(IsofsUnit *unit, u32 lbn, void *outdata) {
+int sceIsofsReadDirent(IsofsUnit *unit, u32 lbn, void *outdata) {
     if (unit == NULL) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
@@ -628,7 +628,7 @@ s32 isofsFreeUnitPaths(IsofsUnit *unit) {
     if (unit == NULL) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
-    return isofsFreePaths(unit);
+    return isofs_delete_ptbl(unit);
 }
 
 // 000022f0
@@ -637,7 +637,7 @@ void __attribute__ ((noinline)) isofsClearCurrentDirLbn() {
 }
 
 // 000022fc
-char *isofsSplitPath(char *path, u32 *outLen, u32 flag, s32 *outRet) {
+char *isofs_get_dirname(char *path, u32 *outLen, u32 flag, s32 *outRet) {
     if (path == NULL || outLen == NULL || outRet == NULL) {
         return NULL;
     }
@@ -678,7 +678,7 @@ char *isofsSplitPath(char *path, u32 *outLen, u32 flag, s32 *outRet) {
 }
 
 // 0000241c
-s32 isofsUpdatePathsLbnSize(IsofsUnit *unit) {
+s32 isofs_set_topend_dirsize(IsofsUnit *unit) {
     if (unit == NULL) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
