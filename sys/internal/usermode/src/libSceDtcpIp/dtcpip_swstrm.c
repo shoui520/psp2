@@ -534,6 +534,36 @@ int dtcpIpMapIpcStatus3(int status)
 		if (status > 12000) {
 			if (status > 12205) {
 				if (status > 12402) {
+#if FW_VERSION == 0x03630011
+					if (status > 13000 && status <= 13008) {
+						switch (status) {
+						case 13001:
+							result = 22;
+							break;
+						case 13002:
+							result = 23;
+							break;
+						case 13003:
+							result = 24;
+							break;
+						case 13004:
+							return 5;
+						case 13005:
+							result = 25;
+							break;
+						case 13006:
+							result = 26;
+							break;
+						case 13007:
+							result = 28;
+							break;
+						case 13008:
+							result = 27;
+							break;
+						}
+						return result;
+					}
+#else
 					if (status > 13000 && status <= 13017) {
 						switch (status) {
 						case 13001:
@@ -573,6 +603,7 @@ int dtcpIpMapIpcStatus3(int status)
 						}
 						return result;
 					}
+#endif
 				} else if (status > 12400) {
 					if (status <= 12401)
 						return 20;
