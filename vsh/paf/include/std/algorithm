@@ -107,6 +107,64 @@ inline void swap(_Ty &left, _Ty &right)
 	right = tmp;
 }
 
+#ifdef PAF_BUILD_2014
+/* 2014 PAF: direct recursive quicksort without introsort depth limit or heapsort fallback. */
+template<class _RanIt>
+void sort(_RanIt _First, _RanIt _Last)
+{
+	if (_First == _Last)
+		return;
+
+	--_Last;
+
+	_RanIt _Lo = _First;
+	_RanIt _Hi = _Last;
+
+	for (;;) {
+		while (*_Lo < *_First)
+			++_Lo;
+		while (*_First < *_Hi)
+			--_Hi;
+		if (!(_Lo < _Hi))
+			break;
+		swap(*_Lo, *_Hi);
+		++_Lo;
+		--_Hi;
+	}
+	if (_First < _Lo + -1)
+		sort(_First, _Lo);
+	if (_Hi + 1 < _Last)
+		sort(_Hi + 1, _Last + 1);
+}
+
+template<class _RanIt, class _Pr>
+void sort(_RanIt _First, _RanIt _Last, _Pr _Pred)
+{
+	if (_First == _Last)
+		return;
+
+	--_Last;
+
+	_RanIt _Lo = _First;
+	_RanIt _Hi = _Last;
+
+	for (;;) {
+		while (_Pred(*_Lo, *_First))
+			++_Lo;
+		while (_Pred(*_First, *_Hi))
+			--_Hi;
+		if (!(_Lo < _Hi))
+			break;
+		swap(*_Lo, *_Hi);
+		++_Lo;
+		--_Hi;
+	}
+	if (_First < _Lo + -1)
+		sort(_First, _Lo, _Pred);
+	if (_Hi + 1 < _Last)
+		sort(_Hi + 1, _Last + 1, _Pred);
+}
+#else
 /* [_First, _Last) made a heap, and the heap sorted (the names Dinkumware's) */
 template<class _RanIt>
 inline void _Make_heap(_RanIt _First, _RanIt _Last)
@@ -297,6 +355,7 @@ inline void sort(_RanIt _First, _RanIt _Last, _Pr _Pred)
 {
 	_Sort(_First, _Last, _Pred, 16);
 }
+#endif
 
 }
 

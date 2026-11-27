@@ -13,7 +13,11 @@ namespace graph {
 
 class FrameClock {
 public:
+#ifdef PAF_BUILD_2014
+	__attribute__((always_inline)) FrameClock() : m_start(get_time_internal())
+#else
 	FrameClock() : m_start(get_time_internal())
+#endif
 	{
 	}
 

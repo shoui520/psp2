@@ -31,7 +31,8 @@ private:
 	static int clearCache(void);
 	int openCachedPup(const char *fileName);
 	int readCachedHeader(void);
-	int getPupInfoCached(const char *fileName, SceUpdaterPupInformation *information);
+	__attribute__((noinline)) int getPupInfoCached(const char *fileName,
+						       SceUpdaterPupInformation *information);
 	int getPupInfoDirect(const char *fileName, SceUpdaterPupInformation *information);
 #endif
 	int getSegmentInfo(const char *fileName, SceUInt64 segmentId, SceUInt64 *size,

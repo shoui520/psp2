@@ -28,13 +28,20 @@ typedef struct {
 	struct jpeg_source_mgr pub;
 	JpegPafSource *source;
 	JOCTET *buffer;
+#ifndef PAF_BUILD_2014
 	JpegPafReadFunc read;
+#endif
 	boolean start_of_file;		/* have we gotten any data yet? */
 } my_source_mgr;
 
 typedef my_source_mgr *my_src_ptr;
 
 #define INPUT_BUF_SIZE	8192		/* choose an efficiently fread'able size */
+#ifdef PAF_BUILD_2014
+#define INPUT_BUF_ALLOC	8255		/* 8192 + 63 alignment slack */
+#endif
+
+static int32_t read_file(JpegPafSource *source, JOCTET *buf, size_t size);
 
 static void init_source(j_decompress_ptr cinfo)
 {
@@ -48,7 +55,11 @@ static boolean fill_input_buffer(j_decompress_ptr cinfo)
 	my_src_ptr src = (my_src_ptr)cinfo->src;
 	size_t nbytes;
 
+#ifdef PAF_BUILD_2014
+	nbytes = read_file(src->source, src->buffer, INPUT_BUF_SIZE);
+#else
 	nbytes = src->read(src->source, src->buffer, INPUT_BUF_SIZE);
+#endif
 
 	if (nbytes == 0) {
 		if (src->start_of_file)	/* Treat empty input file as fatal error */
@@ -85,11 +96,13 @@ static void term_source(j_decompress_ptr cinfo)
 	/* no work necessary here */
 }
 
+#ifndef PAF_BUILD_2014
 /* a buffer is handed over whole: nothing more to read */
 static int32_t read_mem(JpegPafSource *source, JOCTET *buf, size_t size)
 {
 	return 0;
 }
+#endif
 
 static int32_t read_file(JpegPafSource *source, JOCTET *buf, size_t size)
 {
@@ -99,6 +112,7 @@ static int32_t read_file(JpegPafSource *source, JOCTET *buf, size_t size)
 	return 0;
 }
 
+#ifndef PAF_BUILD_2014
 int jpeg_paf_mem_src(j_decompress_ptr cinfo, void *source)
 {
 	JpegPafSource *s = (JpegPafSource *)source;
@@ -142,6 +156,7 @@ int jpeg_paf_mem_src(j_decompress_ptr cinfo, void *source)
 
 	return ret;
 }
+#endif
 
 int jpeg_paf_file_src(j_decompress_ptr cinfo, void *source)
 {
@@ -152,9 +167,15 @@ int jpeg_paf_file_src(j_decompress_ptr cinfo, void *source)
 			(*cinfo->mem->alloc_small)((j_common_ptr)cinfo, JPOOL_PERMANENT,
 						   sizeof(my_source_mgr));
 		src = (my_src_ptr)cinfo->src;
+#ifdef PAF_BUILD_2014
+		src->buffer = (JOCTET *)
+			(*cinfo->mem->alloc_small)((j_common_ptr)cinfo, JPOOL_PERMANENT,
+						   INPUT_BUF_ALLOC * sizeof(JOCTET));
+#else
 		src->buffer = (JOCTET *)
 			(*cinfo->mem->alloc_large)((j_common_ptr)cinfo, JPOOL_PERMANENT,
 						   INPUT_BUF_SIZE * sizeof(JOCTET));
+#endif
 	}
 
 	src = (my_src_ptr)cinfo->src;
@@ -163,7 +184,9 @@ int jpeg_paf_file_src(j_decompress_ptr cinfo, void *source)
 	src->source = (JpegPafSource *)source;
 	src->pub.resync_to_restart = jpeg_resync_to_restart;
 	src->pub.term_source = term_source;
+#ifndef PAF_BUILD_2014
 	src->read = read_file;
+#endif
 	src->pub.init_source = init_source;
 	src->pub.bytes_in_buffer = 0;
 	src->pub.next_input_byte = NULL;

@@ -12,7 +12,11 @@ namespace paf {
 template<class T>
 class intrusive_ptr {
 public:
+#ifdef PAF_BUILD_2014
+	__attribute__((always_inline)) intrusive_ptr() : m_ptr(NULL)
+#else
 	intrusive_ptr() : m_ptr(NULL)
+#endif
 	{
 	}
 

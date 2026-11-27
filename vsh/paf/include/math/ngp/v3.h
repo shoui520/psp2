@@ -14,7 +14,7 @@ public:
 	}
 
 #ifdef PAF_BUILD_2014
-	v3(float x, float y, float z)
+	__attribute__((always_inline)) v3(float x, float y, float z)
 		: _raw(sce::Vectormath::Simd::Aos::Vector3(x, y, z).get128())
 	{
 	}

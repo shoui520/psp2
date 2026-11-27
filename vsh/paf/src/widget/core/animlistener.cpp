@@ -843,7 +843,11 @@ static __attribute__((always_inline)) Widget *GetUpper(Widget *a, Widget *b, con
    the first and destroyed with the last (names ours) */
 class TouchBlockList : public vector<Widget *> {
 public:
+#ifdef PAF_BUILD_2014
+	__attribute__((always_inline)) TouchBlockList() : m_blocker(NULL)
+#else
 	TouchBlockList() : m_blocker(NULL)
+#endif
 	{
 	}
 

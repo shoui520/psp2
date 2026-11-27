@@ -10,6 +10,39 @@
 
 using paf::memory::HeapAllocator;
 
+#ifdef PAF_BUILD_2014
+void *jpeg_paf_malloc_small(void *heap, size_t size)
+{
+	if (heap != NULL)
+		return ((HeapAllocator *)heap)->sce_paf_malloc(size);
+	else
+		return sce_paf_malloc(size);
+}
+
+void jpeg_paf_free_small(void *heap, void *ptr)
+{
+	if (heap != NULL)
+		((HeapAllocator *)heap)->sce_paf_free(ptr);
+	else
+		sce_paf_free(ptr);
+}
+
+void *jpeg_paf_malloc_large(void *heap, size_t size)
+{
+	if (heap != NULL)
+		return ((HeapAllocator *)heap)->sce_paf_malloc(size);
+	else
+		return sce_paf_malloc(size);
+}
+
+void jpeg_paf_free_large(void *heap, void *ptr)
+{
+	if (heap != NULL)
+		((HeapAllocator *)heap)->sce_paf_free(ptr);
+	else
+		sce_paf_free(ptr);
+}
+#else
 void *jpeg_paf_malloc(size_t size, void *heap)
 {
 	if (heap != NULL)
@@ -33,3 +66,4 @@ void jpeg_paf_free(void *ptr, void *heap)
 	else
 		sce_paf_free(ptr);
 }
+#endif

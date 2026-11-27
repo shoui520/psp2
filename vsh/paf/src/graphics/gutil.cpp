@@ -44,7 +44,7 @@ namespace gutil {
 class State {
 public:
 #ifdef PAF_BUILD_2014
-	State() : m_debug_heap(NULL), m_default_surface_pool(NULL)
+	__attribute__((always_inline)) State() : m_debug_heap(NULL), m_default_surface_pool(NULL)
 	{
 	}
 

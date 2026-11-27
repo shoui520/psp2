@@ -771,7 +771,11 @@ public:
 template<class T>
 class GlobalPtr {
 public:
+#ifdef PAF_BUILD_2014
+	__attribute__((always_inline)) GlobalPtr(T *ptr) : m_ptr(ptr)
+#else
 	GlobalPtr(T *ptr) : m_ptr(ptr)
+#endif
 	{
 	}
 

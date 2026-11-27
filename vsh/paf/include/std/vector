@@ -120,7 +120,11 @@ public:
 
 	/* how a vector kept in a global is made; libpaf's build calls it out of line wherever
 	   it is used */
+#ifdef PAF_BUILD_2014
+	explicit __attribute__((always_inline)) vector(const _Ax &al) : alloc(al)
+#else
 	explicit PAF_VECTOR_NOINLINE vector(const _Ax &al) : alloc(al)
+#endif
 	{
 		ptr = NULL;
 		limit = 0;

@@ -85,7 +85,12 @@ public:
 	SceGxmColorSurface *GetRawColorSurface(int32_t page);
 	int32_t InitColorSurface();
 	int32_t InitDepthSurface();
+#ifdef PAF_BUILD_2014
+	int32_t Init();
+	__attribute__((noinline)) int32_t GetDepthFormat();
+#else
 	int32_t GetDepthFormat();
+#endif
 	/* -1 for a mode or an order GXM cannot draw into */
 	SceGxmColorFormat ConvertColorSurfaceFormat(ImageMode format);
 	SceGxmColorFormat GetColorSurfaceFormat();

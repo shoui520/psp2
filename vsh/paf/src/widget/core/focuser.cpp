@@ -448,7 +448,6 @@ extern "C" void ScePafWidget_EA117CF8(Widget::FocusSearchInfo *info, Widget *wid
 }
 }
 
-#ifndef PAF_BUILD_2014
 /* two exports with nothing to do, called by Widget::HandleGestureEvent after a gesture of type 7 or
    10 it consumed and of type 9 or 12 (no name found) */
 extern "C" void ScePafWidget_8A132DF7(paf::ui::Event *e, paf::ui::Widget *widget, bool on)
@@ -458,4 +457,3 @@ extern "C" void ScePafWidget_8A132DF7(paf::ui::Event *e, paf::ui::Widget *widget
 extern "C" void ScePafWidget_727885B3(paf::ui::Event *e)
 {
 }
-#endif

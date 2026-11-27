@@ -20,9 +20,16 @@ int jpeg_paf_file_src(j_decompress_ptr cinfo, void *source);
 int jpeg_paf_mem_src(j_decompress_ptr cinfo, void *source);
 
 /* heap is a paf::memory::HeapAllocator, or NULL for the global heap */
+#ifdef PAF_BUILD_2014
+void *jpeg_paf_malloc_small(void *heap, size_t size);
+void jpeg_paf_free_small(void *heap, void *ptr);
+void *jpeg_paf_malloc_large(void *heap, size_t size);
+void jpeg_paf_free_large(void *heap, void *ptr);
+#else
 void *jpeg_paf_malloc(size_t size, void *heap);
 void *jpeg_paf_memalign(size_t align, size_t size, void *heap);
 void jpeg_paf_free(void *ptr, void *heap);
+#endif
 
 #ifdef __cplusplus
 }

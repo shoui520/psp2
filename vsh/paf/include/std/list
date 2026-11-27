@@ -103,6 +103,20 @@ public:
 		ptr->~_Ty();
 	}
 
+#ifdef PAF_BUILD_2014
+	explicit __attribute__((always_inline)) list(const _Ax &al = _Ax()) : alloc(al)
+	{
+		count = 0;
+
+		_Node *node = (_Node *)operator new(sizeof(_Node));
+
+		head = node;
+		if (head != NULL) {
+			head->prev = head;
+			head->next = head;
+		}
+	}
+#else
 	explicit list(const _Ax &al = _Ax()) : alloc(al)
 	{
 		count = 0;
@@ -117,6 +131,7 @@ public:
 			head->next = head;
 		}
 	}
+#endif
 
 	list(const list &other);
 
@@ -254,8 +269,10 @@ list<_Ty, _Ax>::list(const list &other)
 
 	_Node *node = (_Node *)operator new(sizeof(_Node));
 
+#ifndef PAF_BUILD_2014
 	if (node == NULL)
 		ScePafStdc_D608246A();
+#endif
 	head = node;
 	if (node != NULL) {
 		_Node *tail = node;
@@ -264,8 +281,10 @@ list<_Ty, _Ax>::list(const list &other)
 		while (src != other.head) {
 			_Node *copy = (_Node *)operator new(sizeof(_Node));
 
+#ifndef PAF_BUILD_2014
 			if (copy == NULL)
 				ScePafStdc_D608246A();
+#endif
 			if (copy != NULL)
 				new (&copy->value) _Ty(src->value);
 			else
@@ -343,6 +362,55 @@ list<_Ty, _Ax>::pop_front()
 	}
 }
 
+#ifdef PAF_BUILD_2014
+template<class _Ty, class _Ax>
+void
+list<_Ty, _Ax>::push_front(const _Ty &val)
+{
+	if (head == NULL)
+		return;
+
+	_Node *node = (_Node *)operator new(sizeof(_Node));
+
+	if (node != NULL)
+		new (&node->value) _Ty(val);
+	else
+		node = head;
+	if (node != head) {
+		node->prev = head;
+		node->next = head->next;
+
+		_Node *first = head;
+		size_type size = count + 1;
+
+		first->next->prev = node;
+		first->next = node;
+		count = size;
+	}
+}
+
+template<class _Ty, class _Ax>
+void
+list<_Ty, _Ax>::push_back(const _Ty &val)
+{
+	if (head == NULL)
+		return;
+
+	_Node *node = (_Node *)operator new(sizeof(_Node));
+
+	if (node != NULL)
+		new (&node->value) _Ty(val);
+	else
+		node = head;
+	if (node != head) {
+		node->prev = head->prev;
+		node->next = head;
+		head->prev->next = node;
+		head->prev = node;
+		++count;
+	}
+}
+#else
 template<class _Ty, class _Ax>
 void
 list<_Ty, _Ax>::push_front(const _Ty &val)
@@ -394,6 +462,7 @@ list<_Ty, _Ax>::push_back(const _Ty &val)
 		++count;
 	}
 }
+#endif
 
 template<class _Ty, class _Ax>
 void
@@ -425,6 +494,67 @@ list<_Ty, _Ax>::_Splice(const iterator &where, _Myt &right, const iterator &firs
 	count += moved;
 }
 
+#ifdef PAF_BUILD_2014
+template<class _Ty, class _Ax>
+typename list<_Ty, _Ax>::iterator
+list<_Ty, _Ax>::insert(iterator where, const _Ty &val)
+{
+	_Node *next = where.node;
+	_Node *node = (_Node *)operator new(sizeof(_Node));
+
+	if (node != NULL) {
+		new (&node->value) _Ty(val);
+	} else {
+		node = head;
+	}
+	if (node != head) {
+		node->prev = next->prev;
+		node->next = next;
+		next->prev->next = node;
+		next->prev = node;
+		++count;
+	}
+	return iterator(node);
+}
+
+template<class _Ty, class _Ax>
+typename list<_Ty, _Ax>::iterator
+list<_Ty, _Ax>::erase(iterator where)
+{
+	_Node *node = where.node;
+	_Node *next = node->next;
+
+	node->next->prev = node->prev;
+	node->prev->next = node->next;
+	destroy(&node->value);
+	operator delete(node);
+	--count;
+	return iterator(next);
+}
+
+template<class _Ty, class _Ax>
+void
+list<_Ty, _Ax>::remove(const _Ty &val)
+{
+	_Node *node = begin().node;
+
+	while (node != head) {
+		if (node->value == val) {
+			_Node *prev = node->prev;
+			_Node *next = node->next;
+
+			next->prev = prev;
+			prev->next = node->next;
+			destroy(&node->value);
+			operator delete(node);
+			--count;
+			node = next;
+		} else if (node != NULL) {
+			node = node->next;
+		}
+	}
+}
+#else
 /* Sony's build calls insert rather than inlining it. */
 template<class _Ty, class _Ax>
 __attribute__((noinline)) typename list<_Ty, _Ax>::iterator
@@ -487,6 +617,7 @@ list<_Ty, _Ax>::remove(const _Ty &val)
 		}
 	}
 }
+#endif
 
 }
 

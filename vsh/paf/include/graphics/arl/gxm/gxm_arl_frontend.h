@@ -452,7 +452,11 @@ public:
 /* the flag GetTemporaryInitCheckFlag returns: 2 while the front end is set up */
 class InitCheckFlag {
 public:
+#ifdef PAF_BUILD_2014
+	__attribute__((always_inline)) InitCheckFlag() : m_value(0)
+#else
 	InitCheckFlag() : m_value(0)
+#endif
 	{
 	}
 

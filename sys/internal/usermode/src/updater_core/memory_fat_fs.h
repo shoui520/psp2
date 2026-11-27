@@ -36,7 +36,11 @@ public:
 	SceUInt32 AllocateCluster(int *error);
 	int WriteDirectoryEntry(const char *name, const SceIoStat *stat, int needsLfn,
 				int lfnLength, SceUInt32 timestamp, SceUInt32 firstCluster);
+#ifdef UPDATER_CORE_2014
+	__attribute__((noinline)) bool IsEndOfClusterChain(SceUInt32 cluster);
+#else
 	bool IsEndOfClusterChain(SceUInt32 cluster);
+#endif
 	SceUInt32 GetFatEntry(SceUInt32 cluster);
 	int ShortNameExistsInCurrentDir(const void *shortName);
 	int MakeShortAndLongName(const char *name, int *lfnLength);

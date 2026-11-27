@@ -18,7 +18,11 @@ struct MapDirStepList;
 /* Geographic coordinate (latitude/longitude in degrees; -200.0 means unset). */
 class MapGeoCoord {
 public:
+#ifdef PAF_BUILD_2014
+	__attribute__((always_inline)) MapGeoCoord() : m_latitude(-200.0), m_longitude(-200.0)
+#else
 	MapGeoCoord() : m_latitude(-200.0), m_longitude(-200.0)
+#endif
 	{
 	}
 

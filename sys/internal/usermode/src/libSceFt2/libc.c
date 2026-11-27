@@ -52,21 +52,22 @@ int __sceLibFt2DoneLibCHook(void)
 
 #ifdef PAF_STATIC_BUILD
 __attribute__((optimize("no-tree-loop-distribute-patterns")))
-#endif
-void *memset(void *dst, int ch, size_t len)
+void *ft2_memset(void *dst, int ch, size_t len)
 {
-#ifdef PAF_STATIC_BUILD
 	unsigned char *out = dst;
 	size_t i;
 
 	for (i = 0; i < len; i++)
 		out[i] = (unsigned char)ch;
 	return dst;
+}
 #else
+void *memset(void *dst, int ch, size_t len)
+{
 	sceClibMemset(dst, ch, len);
 	return dst;
-#endif
 }
+#endif
 
 int memcmp(const void *s1, const void *s2, size_t n)
 {
@@ -451,7 +452,16 @@ void *memchr(const void *s, int c, size_t n)
 	return NULL;
 }
 
+#ifdef PAF_STATIC_BUILD
+void __stack_chk_fail(void)
+{
+	__asm__ volatile("bkpt 0");
+}
+
+void *ft2_memcpy(void *dst, const void *src, size_t n)
+#else
 void *memcpy(void *dst, const void *src, size_t n)
+#endif
 {
 	unsigned char *d = dst;
 	const unsigned char *s = src;

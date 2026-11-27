@@ -304,7 +304,11 @@ public:
    name from the export, the fields' names ours) */
 class HitInfo {
 public:
+#ifdef PAF_BUILD_2014
+	__attribute__((always_inline)) HitInfo() : m_widget_rot(0.0f, 0.0f, 0.0f, 1.0f)
+#else
 	HitInfo() : m_widget_rot(0.0f, 0.0f, 0.0f, 1.0f)
+#endif
 	{
 		sce_paf_memset(this, 0, sizeof(HitInfo));
 	}

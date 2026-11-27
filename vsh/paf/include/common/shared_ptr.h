@@ -196,7 +196,11 @@ private:
 template<class T>
 class WeakPtr {
 public:
+#ifdef PAF_BUILD_2014
+	__attribute__((always_inline)) WeakPtr() : m_ref_counter(NULL)
+#else
 	WeakPtr() : m_ref_counter(NULL)
+#endif
 	{
 	}
 

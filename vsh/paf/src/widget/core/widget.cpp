@@ -2520,7 +2520,6 @@ int32_t Widget::HandleGestureEvent(Event *e)
 
 	int32_t ret = Handler::HandleGestureEvent(e);
 
-#ifndef PAF_BUILD_2014
 	switch (type) {
 	case 7:
 		if ((e->m_type & Event::STATE_CONSUME) != 0)
@@ -2535,7 +2534,6 @@ int32_t Widget::HandleGestureEvent(Event *e)
 		ScePafWidget_727885B3(e);
 		break;
 	}
-#endif
 	return ret;
 }
 

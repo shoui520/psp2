@@ -21,7 +21,11 @@ public:
 /* One sample of SceMotion's state. */
 class Data {
 public:
+#ifdef PAF_BUILD_2014
+	__attribute__((always_inline)) Data() : device_quat(math::quaternion::Identity())
+#else
 	Data() : device_quat(math::quaternion::Identity())
+#endif
 	{
 	}
 

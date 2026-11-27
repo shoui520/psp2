@@ -36,6 +36,9 @@ namespace graph {
 
 ScreenCopy *ScreenCopy::s_instance;
 arl::VertexArray *ScreenCopy::s_quad;
+#ifdef PAF_BUILD_2014
+GateBlurPrograms *s_gate_blur_programs;
+#endif
 
 /* a strip over the whole surface, white */
 static const GateBlurVertex s_copy_vertices[4] = {

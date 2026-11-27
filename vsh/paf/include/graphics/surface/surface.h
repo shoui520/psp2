@@ -81,7 +81,11 @@ public:
 class SurfaceListNode {
 public:
 	/* alone, in no list */
+#ifdef PAF_BUILD_2014
+	__attribute__((always_inline)) SurfaceListNode()
+#else
 	SurfaceListNode()
+#endif
 	{
 		m_prev = this;
 		m_next = this;

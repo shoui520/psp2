@@ -186,7 +186,7 @@ DisplaySurface::DisplaySurface(int32_t width, int32_t height, ImageMode format, 
 				m_offscreen_base, TypeDisplay);
 
 			s_offscreen = offscreen;
-			((ScreenSurface *)s_offscreen.get())->InitColorSurface();
+			((ScreenSurface *)s_offscreen.get())->Init();
 			s_offscreen->GenTexture();
 			break;
 		}

@@ -139,6 +139,21 @@ public:
 		_Node *node;
 	};
 
+#ifdef PAF_BUILD_2014
+	__attribute__((noinline)) _Tree() : count(0)
+	{
+		_Node *node = (_Node *)operator new(sizeof(_Node));
+
+		head = node;
+		if (node != NULL) {
+			node->parent = node;
+			node->left = node;
+			node->right = node;
+			node->color = _Black;
+			head->isnil = true;
+		}
+	}
+#else
 	_Tree() : count(0)
 	{
 		_Node *node = (_Node *)operator new(sizeof(_Node));
@@ -154,6 +169,7 @@ public:
 			head->isnil = true;
 		}
 	}
+#endif
 
 	_Tree(const _Tree &src);
 
@@ -303,8 +319,10 @@ _Tree<_Traits>::_Tree(const _Tree &src) : count(0)
 {
 	_Node *node = (_Node *)operator new(sizeof(_Node));
 
+#ifndef PAF_BUILD_2014
 	if (node == NULL)
 		ScePafStdc_D608246A();
+#endif
 	head = node;
 	if (node != NULL) {
 		node->parent = node;
@@ -346,7 +364,9 @@ typename _Tree<_Traits>::_Node *_Tree<_Traits>::_Copy(_Node *parent, const _Node
 	_Node *node = (_Node *)operator new(sizeof(_Node));
 
 	if (node == NULL) {
+#ifndef PAF_BUILD_2014
 		ScePafStdc_D608246A();
+#endif
 		return head;
 	}
 	new (node) _Node(parent, head, head, src->value, src->color);
@@ -432,7 +452,9 @@ typename _Tree<_Traits>::_Node *_Tree<_Traits>::_Insert(const value_type &val, b
 	_Node *newnode = (_Node *)operator new(sizeof(_Node));
 
 	if (newnode == NULL) {
+#ifndef PAF_BUILD_2014
 		ScePafStdc_D608246A();
+#endif
 		return head;
 	}
 	new (newnode) _Node(where, head, head, val);

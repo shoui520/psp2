@@ -296,6 +296,39 @@ int32_t ScreenSurface::InitColorSurface()
 }
 
 #ifdef PAF_BUILD_2014
+int32_t ScreenSurface::Init()
+{
+	int32_t ret = InitColorSurface();
+
+	if (ret < 0)
+		return ret;
+
+	SceGxmRenderTargetParams params;
+	SceSize size;
+
+	sce_paf_memset(&params, 0, sizeof(params));
+	params.flags = 0;
+	params.width = (uint16_t)m_width;
+	params.height = (uint16_t)m_height;
+	params.scenesPerFrame = 1;
+	params.multisampleMode = SCE_GXM_MULTISAMPLE_NONE;
+	params.multisampleLocations = 0;
+	params.driverMemBlock = -1;
+	if (sce_paf_is_common_dialog_mode)
+		params.flags = 4;
+	sceGxmGetRenderTargetMemSize(&params, &size);
+	params.driverMemBlock = sceKernelAllocMemBlock("ScePafSurfaceRenderTarget",
+						       SCE_KERNEL_MEMBLOCK_TYPE_USER_NC_RW,
+						       size, NULL);
+	ret = sceGxmCreateRenderTarget(&params, &m_render_target);
+	if (ret < 0)
+		return ret;
+	m_own_render_target = true;
+	return 0;
+}
+#endif
+
+#ifdef PAF_BUILD_2014
 void ScreenSurface::SetScissor(int32_t left, int32_t top, uint32_t right, uint32_t bottom,
 			       bool update)
 {

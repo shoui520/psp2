@@ -150,6 +150,9 @@ void WebViewLoadingPlane::Hide()
 		m_state = 1;
 }
 
+#ifdef PAF_BUILD_2014
+__attribute__((noinline))
+#endif
 void WebViewLoadingPlane::SetStyle(int32_t style)
 {
 	if (style == 0) {
@@ -731,8 +734,13 @@ void WebViewBase::HandleDebugMagic(const string &command)
 	if (command.find("requestBadCertificate") == 0) {
 		datetime::DateTime sample_date;
 
+#ifdef PAF_BUILD_2014
+		sample_date = datetime::DateTime::Now();
+		sample_date = datetime::DateTime::Now();
+#else
 		sample_date = datetime::DateTime::UTC();
 		sample_date = datetime::DateTime::UTC();
+#endif
 		OnRequestBadCertificateDetail(2, "aaaaaaaaaaaa", 12,
 					      "bbbbbbbbbbbb", 12,
 					      0.0, 0.0,

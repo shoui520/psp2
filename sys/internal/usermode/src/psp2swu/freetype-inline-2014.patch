@@ -260,3 +260,54 @@
    psh_hint_table_activate_mask( PSH_Hint_Table  table,
                                  PS_Mask         hint_mask )
    {
+@@ -845,7 +845,7 @@
+ #endif /* 0 */
+ 
+ 
+-  static void
++  static __attribute__(( noinline )) void
+   psh_hint_table_align_hints( PSH_Hint_Table  table,
+                               PSH_Globals     globals,
+                               FT_Int          dimension,
+@@ -1875,7 +1875,7 @@
+ 
+ #define  PSH_MAX_STRONG_INTERNAL  16
+ 
+-  static void
++  static __attribute__(( noinline )) void
+   psh_glyph_interpolate_normal_points( PSH_Glyph  glyph,
+                                        FT_Int     dimension )
+   {
+--- a/src/cff/cffobjs.c
++++ b/src/cff/cffobjs.c
+@@ -102,7 +102,7 @@
+   /* CFF and Type 1 private dictionaries have slightly different      */
+   /* structures; we need to synthesize a Type 1 dictionary on the fly */
+ 
+-  static void
++  static __attribute__(( noinline )) void
+   cff_make_private_dict( CFF_SubFont  subfont,
+                          PS_Private   priv )
+   {
+--- a/src/truetype/ttgxvar.c
++++ b/src/truetype/ttgxvar.c
+@@ -276,7 +276,7 @@
+   /* <InOut>                                                               */
+   /*    face :: The font face.                                             */
+   /*                                                                       */
+-  static void
++  static __attribute__(( noinline )) void
+   ft_var_load_avar( TT_Face  face )
+   {
+     FT_Stream       stream = FT_FACE_STREAM(face);
+--- a/src/sfnt/ttpost.c
++++ b/src/sfnt/ttpost.c
+@@ -152,7 +152,7 @@
+ #endif /* FT_CONFIG_OPTION_POSTSCRIPT_NAMES */
+ 
+ 
+-  static FT_Error
++  static __attribute__(( noinline )) FT_Error
+   load_format_20( TT_Face    face,
+                   FT_Stream  stream,
+                   FT_Long    post_limit )

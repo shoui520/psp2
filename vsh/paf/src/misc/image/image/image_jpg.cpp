@@ -8,6 +8,9 @@
 #include <kernel/iofilemgr.h>
 #include <std/setjmp.h>
 #include <std/string.h>
+#ifdef PAF_BUILD_2014
+#include <jerror.h>
+#endif
 #include "image_codec.h"
 #include "image_source.h"
 #include "../../../paf_types.h"
@@ -16,6 +19,46 @@ using namespace paf;
 using namespace paf::image;
 
 static void ErrorExit(j_common_ptr cinfo);
+
+#ifdef PAF_BUILD_2014
+#define MEM_INPUT_BUF_SIZE	4096
+
+struct JpegMemSourceMgr {
+	struct jpeg_source_mgr pub;
+	JpgCodec::Source *source;
+	JOCTET *buffer;
+	boolean start_of_file;
+};
+
+static size_t mem_read_chunk(JpgCodec::Source *source, JOCTET *buf)
+{
+	if (source == NULL || buf == NULL)
+		return 0;
+
+	int64_t remain = source->size - source->pos;
+	size_t nbytes;
+
+	if (remain > MEM_INPUT_BUF_SIZE) {
+		nbytes = MEM_INPUT_BUF_SIZE;
+	} else {
+		nbytes = (size_t)remain;
+		if (nbytes == 0)
+			return 0;
+	}
+	sce_paf_memcpy(buf, source->data, nbytes);
+
+	uint8_t *cursor = static_cast<uint8_t *>(source->data);
+
+	source->data = cursor + nbytes;
+	source->pos += nbytes;
+	return nbytes;
+}
+
+static void mem_init_source(j_decompress_ptr cinfo);
+static boolean mem_fill_input_buffer(j_decompress_ptr cinfo);
+static void mem_skip_input_data(j_decompress_ptr cinfo, long num_bytes);
+static void mem_term_source(j_decompress_ptr cinfo);
+#endif
 
 /* size / scale, rounded up. */
 static inline int32_t DivideRoundUp(int32_t size, uint32_t scale)
@@ -364,10 +407,36 @@ bool JpgCodec::ReadHeader(common::SharedPtr<File> file, ImageAttribute *attr,
 	}
 
 	jpeg_create_decompress(&m_cinfo);
-	if (file.get() != NULL)
+	if (file.get() != NULL) {
 		jpeg_paf_file_src(&m_cinfo, &m_source);
-	else
+	} else {
+#ifdef PAF_BUILD_2014
+		JpegMemSourceMgr *src;
+
+		if (m_cinfo.src == NULL) {
+			m_cinfo.src = (struct jpeg_source_mgr *)
+				(*m_cinfo.mem->alloc_small)((j_common_ptr)&m_cinfo,
+							    JPOOL_PERMANENT,
+							    sizeof(JpegMemSourceMgr));
+			src = (JpegMemSourceMgr *)m_cinfo.src;
+			src->buffer = (JOCTET *)
+				(*m_cinfo.mem->alloc_small)((j_common_ptr)&m_cinfo,
+							    JPOOL_PERMANENT,
+							    MEM_INPUT_BUF_SIZE * sizeof(JOCTET));
+		}
+		src = (JpegMemSourceMgr *)m_cinfo.src;
+		src->pub.init_source = mem_init_source;
+		src->pub.fill_input_buffer = mem_fill_input_buffer;
+		src->pub.skip_input_data = mem_skip_input_data;
+		src->source = &m_source;
+		src->pub.resync_to_restart = jpeg_resync_to_restart;
+		src->pub.term_source = mem_term_source;
+		src->pub.bytes_in_buffer = 0;
+		src->pub.next_input_byte = NULL;
+#else
 		jpeg_paf_mem_src(&m_cinfo, &m_source);
+#endif
+	}
 	if (jpeg_read_header(&m_cinfo, 1) != JPEG_HEADER_OK)
 		return false;
 
@@ -684,3 +753,48 @@ static void ErrorExit(j_common_ptr cinfo)
 	sce_paf_longjmp(((JpgCodec::ErrorManager *)cinfo->err)->setjmp_buffer,
 			cinfo->err->msg_code);
 }
+
+#ifdef PAF_BUILD_2014
+static void mem_init_source(j_decompress_ptr cinfo)
+{
+	JpegMemSourceMgr *src = (JpegMemSourceMgr *)cinfo->src;
+
+	src->start_of_file = TRUE;
+}
+
+static boolean mem_fill_input_buffer(j_decompress_ptr cinfo)
+{
+	JpegMemSourceMgr *src = (JpegMemSourceMgr *)cinfo->src;
+	size_t nbytes = mem_read_chunk(src->source, src->buffer);
+
+	if (nbytes == 0) {
+		if (src->start_of_file)
+			ERREXIT(cinfo, JERR_INPUT_EMPTY);
+		src->buffer[0] = (JOCTET)0xFF;
+		src->buffer[1] = (JOCTET)JPEG_EOI;
+		nbytes = 2;
+	}
+	src->pub.next_input_byte = src->buffer;
+	src->pub.bytes_in_buffer = nbytes;
+	src->start_of_file = FALSE;
+	return TRUE;
+}
+
+static void mem_skip_input_data(j_decompress_ptr cinfo, long num_bytes)
+{
+	struct jpeg_source_mgr *src = cinfo->src;
+
+	if (num_bytes > 0) {
+		while (num_bytes > (long)src->bytes_in_buffer) {
+			num_bytes -= (long)src->bytes_in_buffer;
+			mem_fill_input_buffer(cinfo);
+		}
+		src->next_input_byte += (size_t)num_bytes;
+		src->bytes_in_buffer -= (size_t)num_bytes;
+	}
+}
+
+static void mem_term_source(j_decompress_ptr cinfo)
+{
+}
+#endif

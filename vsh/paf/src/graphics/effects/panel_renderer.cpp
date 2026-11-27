@@ -1092,7 +1092,11 @@ void PanelRenderer::AddBubbleObj(BubbleParam *param, int32_t type, const common:
 
 math::matrix PanelRenderer::GetPointLightPack1()
 {
+#ifdef PAF_BUILD_2014
+	return m_bubble_light.m_set.m_values.GetPack1();
+#else
 	return m_bubble_light.m_set.m_values.MakePack1();
+#endif
 }
 
 math::matrix PanelRenderer::GetPointLightPack2()

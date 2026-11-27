@@ -662,7 +662,11 @@ public:
  */
 class AdjustParam {
 public:
+#ifdef PAF_BUILD_2014
+	__attribute__((always_inline)) AdjustParam()
+#else
 	AdjustParam()
+#endif
 		: m_ref_count(0), m_min_size(0.0f, 0.0f, 0.0f, 0.0f),
 		  m_max_size(3.4028235e+18f, 3.4028235e+18f, 3.4028235e+18f, 3.4028235e+18f),
 		  m_top_margin(0.0f), m_bottom_margin(0.0f), m_left_margin(0.0f),

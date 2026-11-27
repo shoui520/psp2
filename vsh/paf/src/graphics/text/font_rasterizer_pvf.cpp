@@ -56,7 +56,7 @@ static const uint32_t s_clut_table[16] = {
 class FontSource {
 public:
 #ifdef PAF_BUILD_2014
-	FontSource() : mem_addr(NULL), mem_size(0), path(""), font(NULL)
+	__attribute__((always_inline)) FontSource() : mem_addr(NULL), mem_size(0), path(""), font(NULL)
 #else
 	FontSource() : mem_addr(NULL), mem_size(0), path(""), font(NULL),
 		       mode(SCE_PVF_FILEBASEDSTREAM)

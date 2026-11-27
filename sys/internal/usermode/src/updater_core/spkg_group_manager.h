@@ -142,7 +142,11 @@ private:
 	int updateAllGroups(SceUID pupFd);
 	int inspectAllGroups(SceUID pupFd);
 	int unmountPartitions(void);
+#ifdef UPDATER_CORE_2014
+	__attribute__((noinline)) void calculateEstimateTime(void);
+#else
 	void calculateEstimateTime(void);
+#endif
 	int getGroupIndex(int spkgType);
 	int registerSpkg(SpkgEntry *entry, SceUInt64 segmentId);
 	int parsePup(SceUID pupFd);

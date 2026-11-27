@@ -26,6 +26,19 @@ void exit(int status)
 }
 
 #ifdef PAF_BUILD_2014
+extern void *sce_paf_memcpy(void *dst, const void *src, size_t count);
+extern void *sce_paf_memset(void *dst, int ch, size_t count);
+
+void *memcpy(void *dst, const void *src, size_t count)
+{
+	return sce_paf_memcpy(dst, src, count);
+}
+
+void *memset(void *dst, int ch, size_t count)
+{
+	return sce_paf_memset(dst, ch, count);
+}
+
 extern int CallListListenerInitialize(void);
 
 int (*const g_pafStaticInit[])(void) __attribute__((section(".init_array"), used)) = {

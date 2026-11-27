@@ -32,7 +32,8 @@ endif()
 if(NOT ft2_stamp STREQUAL ft2_patch_md5)
 	file(REMOVE_RECURSE "${FT2_SCE}")
 	foreach(f src/base/ftsystem.c src/base/ftinit.c src/base/ftbase.c src/base/fttrigon.c
-		  include/freetype/internal/ftobjs.h src/psaux src/pshinter src/raster src/truetype)
+		  include/freetype/internal/ftobjs.h src/cff src/psaux src/pshinter src/raster
+		  src/sfnt src/truetype)
 		get_filename_component(d ${f} DIRECTORY)
 		file(COPY "${FT2}/${f}" DESTINATION "${FT2_SCE}/${d}")
 	endforeach()
@@ -177,19 +178,21 @@ set(swu_ft2_SOURCES
 	${FT2}/src/autofit/autofit.c
 	${FT2_SCE}/src/truetype/truetype.c
 	${FT2}/src/type1/type1.c
-	${FT2}/src/cff/cff.c
+	${FT2_SCE}/src/cff/cff.c
 	${FT2_SCE}/src/base/ftsystem.c
 	${FT2_SCE}/src/psaux/psaux.c
 	${FT2}/src/psnames/psnames.c
 	${FT2_SCE}/src/pshinter/pshinter.c
 	${FT2_SCE}/src/raster/raster.c
-	${FT2}/src/sfnt/sfnt.c
+	${FT2_SCE}/src/sfnt/sfnt.c
 	${FT2}/src/smooth/smooth.c
 )
 set_source_files_properties(${swu_ft2_SOURCES} PROPERTIES
-	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;FT2_BUILD_LIBRARY;FT_CONFIG_NO_OTVALID"
-	COMPILE_OPTIONS "-O3;-fno-stack-protector;-fhosted;-fbuiltin;-fdelete-null-pointer-checks;-fsigned-char"
+	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;FT2_BUILD_LIBRARY;FT_CONFIG_NO_OTVALID;PAF_STATIC_BUILD"
+	COMPILE_OPTIONS "-O3;-fno-stack-protector;-fno-ipa-sra;-fno-partial-inlining;-fhosted;-fbuiltin;-fdelete-null-pointer-checks;-fsigned-char"
 	INCLUDE_DIRECTORIES "${FT2_DIR}/include;${FT2_SCE}/include;${FT2_SCE}/src/base;${FT2}/include;${FT2}/src;${FT2}/src/base")
+set_source_files_properties(${FT2_SCE}/src/base/ftbase.c PROPERTIES
+	COMPILE_OPTIONS "-O3;-fstack-protector;-fno-ipa-sra;-fno-partial-inlining;-fhosted;-fbuiltin;-fdelete-null-pointer-checks;-fsigned-char")
 set_source_files_properties(${FT2_DIR}/libc.c PROPERTIES
 	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;FT2_BUILD_LIBRARY;PAF_STATIC_BUILD"
 	COMPILE_OPTIONS "-O3;-fno-stack-protector;-ffreestanding;-fno-builtin;-fsigned-char")
@@ -640,7 +643,6 @@ target_link_options(${PSP2_TARGET} PRIVATE
 	-Wl,-u,png_create_read_struct
 	-Wl,--defsym=sceProcessParam=__sce_process_param
 	-Wl,--defsym=__stack_chk_guard=__sce_process_param
-	-Wl,--defsym=__stack_chk_fail=__cxa_pure_virtual
 	-Wl,--defsym=SceFt2_04DCBE87=FT_New_Memory
 	-Wl,--defsym=sce_paf_private_exit=exit)
 
