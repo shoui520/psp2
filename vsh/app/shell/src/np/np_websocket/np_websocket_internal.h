@@ -329,15 +329,341 @@ public:
 };
 
 /* ============================================================================
- * WebSocket Connection & State Machine (np_websocket_connection.cpp)
+ * WebSocket Connection, State Machine, Visitor Handlers, & Events
+ * (np_websocket_connection.cpp)
  * ============================================================================ */
+
+class WsConnection;
+class WsHandlerBase;
+class WsStateContext;
 
 enum WsConnectionState {
 	WS_STATE_INIT		= 0,
 	WS_STATE_CONNECTING	= 1,
-	WS_STATE_HANDSHAKING	= 2,
+	WS_STATE_CONNECTED	= 2,
 	WS_STATE_OPEN		= 3,
-	WS_STATE_CLOSING	= 4
+	WS_STATE_CLOSING	= 4,
+	WS_STATE_COUNT		= 5
+};
+
+/* --- Event Hierarchy (Visitor Acceptors) --- */
+
+class WsEventBase {
+public:
+	explicit WsEventBase(WsConnection *conn);
+	virtual ~WsEventBase();
+
+	WsConnection *GetConnection(void) const { return m_connection; }
+	virtual int Accept(WsHandlerBase *handler) = 0;
+
+protected:
+	WsConnection *m_connection;
+};
+
+class WsSendEventBase : public WsEventBase {
+public:
+	explicit WsSendEventBase(WsConnection *conn);
+	virtual ~WsSendEventBase();
+
+	int AllocEncodedBuffer(NpPushAllocator *allocator, SceSize size);
+	int FreeEncodedBuffer(NpPushAllocator *allocator);
+	void SetEncodedLength(SceSize len) { m_encodedLen = len; }
+	SceSize GetEncodedLength(void) const { return m_encodedLen; }
+
+	virtual int Accept(WsHandlerBase *handler);
+	virtual void GetEncodedBuffer(SceUInt8 **outBuf, SceSize *outCap) const;
+	virtual int GetPayload(const void **outData, SceSize *outLen) const;
+
+	WsSendEventBase *m_next;
+	WsSendEventBase *m_prev;
+
+protected:
+	SceSize m_encodedLen;
+	SceUInt8 *m_encodedBuf;
+	SceSize m_encodedBufCap;
+};
+
+class WsControlEventBase : public WsSendEventBase {
+public:
+	explicit WsControlEventBase(WsConnection *conn);
+	virtual ~WsControlEventBase();
+
+	int SetPayload(const void *data, SceSize len);
+	virtual int GetPayload(const void **outData, SceSize *outLen) const;
+
+protected:
+	SceUInt8 m_payload[NP_WS_CTRL_PAYLOAD_MAX + 3];
+	SceSize m_payloadLen;
+};
+
+class WsCloseEvent : public WsControlEventBase {
+public:
+	explicit WsCloseEvent(WsConnection *conn);
+	virtual ~WsCloseEvent();
+	virtual int Accept(WsHandlerBase *handler);
+};
+
+class WsPingEvent : public WsControlEventBase {
+public:
+	explicit WsPingEvent(WsConnection *conn);
+	virtual ~WsPingEvent();
+	virtual int Accept(WsHandlerBase *handler);
+};
+
+class WsPongEvent : public WsControlEventBase {
+public:
+	explicit WsPongEvent(WsConnection *conn);
+	virtual ~WsPongEvent();
+	virtual int Accept(WsHandlerBase *handler);
+};
+
+class WsSendTextEvent : public WsSendEventBase {
+public:
+	explicit WsSendTextEvent(WsConnection *conn);
+	virtual ~WsSendTextEvent();
+
+	int SetText(const char *text, SceSize maxLen);
+	virtual int Accept(WsHandlerBase *handler);
+	virtual int GetPayload(const void **outData, SceSize *outLen) const;
+
+private:
+	const char *m_text;
+	SceSize m_textLen;
+};
+
+class WsRecvEvent : public WsEventBase {
+public:
+	explicit WsRecvEvent(WsConnection *conn);
+	virtual ~WsRecvEvent();
+	virtual int Accept(WsHandlerBase *handler);
+};
+
+/* --- Handler Hierarchy (Chain-of-Responsibility Visitors) --- */
+
+class WsHandlerBase {
+public:
+	WsHandlerBase();
+	virtual ~WsHandlerBase();
+
+	void SetNext(WsHandlerBase *next) { m_next = next; }
+	WsHandlerBase *GetNext(void) const { return m_next; }
+	int InitChain(WsConnection *conn);
+	void DestroyChain(NpPushAllocator *allocator);
+	void EnterChain(void);
+	void ExitChain(void);
+
+	virtual int VisitPing(WsPingEvent *event, int prevResult);
+	virtual int VisitPong(WsPongEvent *event, int prevResult);
+	virtual int VisitClose(WsCloseEvent *event, int prevResult);
+	virtual int VisitBinary(WsSendEventBase *event, int prevResult);
+	virtual int VisitText(WsSendTextEvent *event, int prevResult);
+	virtual int VisitRecv(WsRecvEvent *event, int prevResult);
+	virtual int Init(void);
+	virtual void OnEnter(void);
+	virtual void OnExit(void);
+
+protected:
+	WsHandlerBase *m_next;
+	WsConnection *m_connection;
+};
+
+class WsResolveHandler : public WsHandlerBase {
+public:
+	WsResolveHandler();
+	virtual ~WsResolveHandler();
+	virtual int VisitRecv(WsRecvEvent *event, int prevResult);
+};
+
+class WsConnectHandler : public WsHandlerBase {
+public:
+	WsConnectHandler();
+	virtual ~WsConnectHandler();
+	virtual int VisitRecv(WsRecvEvent *event, int prevResult);
+};
+
+class WsHandshakeHandler : public WsHandlerBase {
+public:
+	WsHandshakeHandler();
+	virtual ~WsHandshakeHandler();
+	virtual int VisitRecv(WsRecvEvent *event, int prevResult);
+};
+
+class WsRecvHandler : public WsHandlerBase {
+public:
+	WsRecvHandler();
+	virtual ~WsRecvHandler();
+	virtual int VisitRecv(WsRecvEvent *event, int prevResult);
+	virtual void OnEnter(void);
+	virtual void OnExit(void);
+
+private:
+	SceNetEpollEvent m_epollEvent;
+};
+
+class WsStreamHandler : public WsHandlerBase {
+public:
+	WsStreamHandler();
+	virtual ~WsStreamHandler();
+	virtual int VisitRecv(WsRecvEvent *event, int prevResult);
+};
+
+class WsCtrlFrameHandler : public WsHandlerBase {
+public:
+	WsCtrlFrameHandler();
+	virtual ~WsCtrlFrameHandler();
+	virtual int VisitPing(WsPingEvent *event, int prevResult);
+	virtual int VisitPong(WsPongEvent *event, int prevResult);
+	virtual int VisitClose(WsCloseEvent *event, int prevResult);
+	virtual int VisitRecv(WsRecvEvent *event, int prevResult);
+
+private:
+	int BuildControlFrame(WsSendEventBase *event, int prevResult, WsConnection *conn,
+			      int opcode);
+	WsFrameBuilder m_frameBuilder;
+};
+
+class WsSendHandler : public WsHandlerBase {
+public:
+	WsSendHandler();
+	virtual ~WsSendHandler();
+	virtual int VisitPing(WsPingEvent *event, int prevResult);
+	virtual int VisitPong(WsPongEvent *event, int prevResult);
+	virtual int VisitClose(WsCloseEvent *event, int prevResult);
+	virtual int VisitBinary(WsSendEventBase *event, int prevResult);
+	virtual int VisitText(WsSendTextEvent *event, int prevResult);
+	virtual int VisitRecv(WsRecvEvent *event, int prevResult);
+	virtual int Init(void);
+	virtual void OnEnter(void);
+	virtual void OnExit(void);
+	virtual int SendEncodedEvent(WsSendEventBase *event, int prevResult, WsConnection *conn);
+	virtual int BuildDataFrame(WsSendEventBase *event, int prevResult, WsConnection *conn,
+				   int opcode);
+
+private:
+	SceNetEpollEvent m_epollEvent;
+	WsFrameBuilder m_frameBuilder;
+	NpPushMutex m_sendLock;
+};
+
+/* --- State Hierarchy (GoF State Pattern) --- */
+
+class WsStateBase {
+public:
+	WsStateBase();
+	virtual ~WsStateBase();
+
+	void SetAllocator(NpPushAllocator *allocator) { m_allocator = allocator; }
+	WsHandlerBase *GetHandlerChain(void) const { return m_handlerChain; }
+
+	virtual int Init(WsConnection *conn) = 0;
+	virtual int Finalize(void);
+	virtual int OnEnter(void);
+	virtual int OnExit(void);
+	virtual int GetResponseStatusCode(WsConnection *conn);
+	virtual int GetResponseHeader(WsConnection *conn, const char *name, const char **outValue,
+				      SceSize *outValueLen);
+	virtual int PrepareConnect(WsStateContext *ctx);
+	virtual int StartConnect(WsStateContext *ctx);
+	virtual int CompleteHandshake(WsStateContext *ctx);
+	virtual int SendBinary(WsStateContext *ctx, WsSendEventBase *event);
+	virtual int SendText(WsStateContext *ctx, WsSendEventBase *event);
+	virtual int BeginClose(WsStateContext *ctx);
+	virtual int SendClose(WsStateContext *ctx, WsSendEventBase *event);
+	virtual int Receive(WsStateContext *ctx);
+
+protected:
+	void CleanupChain(void);
+
+	int m_stateId;
+	WsHandlerBase *m_handlerChain;
+	NpPushAllocator *m_allocator;
+};
+
+class WsInitState : public WsStateBase {
+public:
+	WsInitState();
+	virtual ~WsInitState();
+	virtual int Init(WsConnection *conn);
+	virtual int PrepareConnect(WsStateContext *ctx);
+};
+
+class WsConnectingState : public WsStateBase {
+public:
+	WsConnectingState();
+	virtual ~WsConnectingState();
+	virtual int Init(WsConnection *conn);
+	virtual int PrepareConnect(WsStateContext *ctx);
+	virtual int StartConnect(WsStateContext *ctx);
+};
+
+class WsConnectedState : public WsStateBase {
+public:
+	WsConnectedState();
+	virtual ~WsConnectedState();
+	virtual int Init(WsConnection *conn);
+	virtual int GetResponseStatusCode(WsConnection *conn);
+	virtual int GetResponseHeader(WsConnection *conn, const char *name, const char **outValue,
+				      SceSize *outValueLen);
+	virtual int CompleteHandshake(WsStateContext *ctx);
+};
+
+class WsOpenState : public WsStateBase {
+public:
+	WsOpenState();
+	virtual ~WsOpenState();
+	virtual int Init(WsConnection *conn);
+	virtual int GetResponseStatusCode(WsConnection *conn);
+	virtual int GetResponseHeader(WsConnection *conn, const char *name, const char **outValue,
+				      SceSize *outValueLen);
+	virtual int SendBinary(WsStateContext *ctx, WsSendEventBase *event);
+	virtual int SendText(WsStateContext *ctx, WsSendEventBase *event);
+	virtual int BeginClose(WsStateContext *ctx);
+	virtual int Receive(WsStateContext *ctx);
+};
+
+class WsClosingState : public WsStateBase {
+public:
+	WsClosingState();
+	virtual ~WsClosingState();
+	virtual int Init(WsConnection *conn);
+	virtual int SendClose(WsStateContext *ctx, WsSendEventBase *event);
+};
+
+/* --- State Context ("SceNpWsStateCtx") --- */
+
+class WsStateContext {
+public:
+	explicit WsStateContext(NpPushAllocator *allocator);
+	virtual ~WsStateContext();
+
+	int Init(WsConnection *conn);
+	int Finalize(void);
+
+	int GetResponseStatusCode(WsConnection *conn);
+	int GetResponseHeader(WsConnection *conn, const char *name, const char **outValue,
+			      SceSize *outValueLen);
+	int Connect(void);
+	int SendText(WsSendEventBase *event);
+	int SendClose(WsSendEventBase *event);
+	int Receive(void);
+
+	int SetState(unsigned int stateIndex);
+	int DispatchRecv(WsHandlerBase *chain);
+	int DispatchSend(WsHandlerBase *chain, WsSendEventBase *event);
+	int EnqueuePing(const void *payload, SceSize len);
+	int EnqueuePong(const void *payload, SceSize len);
+	int EnqueueControlEvent(WsSendEventBase *event);
+	int RemoveControlEvent(WsSendEventBase *event);
+
+private:
+	NpPushAllocator *m_allocator;
+	NpPushMutex m_mutex;
+	int m_currentState;
+	WsStateBase *m_states[WS_STATE_COUNT];
+	WsConnection *m_connection;
+	WsRecvEvent *m_recvEvent;
+	WsSendEventBase *m_controlHead;
+	WsSendEventBase *m_controlTail;
 };
 
 class WsConnection {
@@ -356,19 +682,62 @@ public:
 	int Connect(char *respHeaderBuf, SceSize respHeaderBufSize, SceSize *outRespHeaderSize);
 	int Disconnect(void);
 	int Abort(bool forceClose);
-	int SendFrame(int opcode, const void *payload, SceSize payloadLen);
+	int SendText(const char *text, SceSize length);
+	int SendClose(void);
 	int Receive(int *outMsgType, void *outBuf, SceSize bufSize, SceSize *outReceived);
-	int GetResponseStatusCode(void) const;
-	int GetResponseHeader(const char *name, const char **outValue, SceSize *outValueLen) const;
+	int GetResponseStatusCode(void);
+	int GetResponseHeader(const char *name, const char **outValue, SceSize *outValueLen);
+
+	NpPushAllocator *GetAllocator(void) { return &m_allocator; }
+	WsStateContext *GetStateContext(void) const { return m_stateCtx; }
+	WsNet *GetNet(void) const { return m_net; }
+	WsHandshake *GetHandshake(void) const { return m_handshake; }
+	WsStream *GetStream(void) const { return m_stream; }
+	const NpWebSocketOpenParam &GetOpenParam(void) const { return m_openParam; }
+	const char *GetHost(void) const { return m_host; }
+	const char *GetPath(void) const { return m_path; }
+	const char *GetOrigin(void) const { return m_origin; }
+	const char *GetSubProtocol(void) const { return m_subProtocol; }
+	int GetHeaderCount(void) const { return m_headerCount; }
+	const char *GetHeaderName(int index) const { return m_headerNames[index]; }
+	const char *GetHeaderValue(int index) const { return m_headerValues[index]; }
+
+	SceNetId &RecvEpollId(void) { return m_recvEpollId; }
+	SceNetId &SendEpollId(void) { return m_sendEpollId; }
+	SceUInt8 *GetNetRecvBuf(void) const { return m_netRecvBuf; }
+	SceSize GetNetRecvBufSize(void) const { return m_netRecvBufSize; }
+	SceSize &NetRecvBytes(void) { return m_netRecvBytes; }
+	SceInt64 &LastPingClockUsec(void) { return m_lastPingClockUsec; }
+
+	void SetReceiveTargets(void *outBuf, SceSize bufSize, int *outMsgType,
+			       SceSize *outReceived)
+	{
+		m_recvOutBuf = outBuf;
+		m_recvOutCap = bufSize;
+		m_recvOutMsgType = outMsgType;
+		m_recvOutLen = outReceived;
+		m_recvDone = 0;
+	}
+	void *GetRecvOutBuf(void) const { return m_recvOutBuf; }
+	SceSize GetRecvOutCap(void) const { return m_recvOutCap; }
+	int *GetRecvOutMsgType(void) const { return m_recvOutMsgType; }
+	SceSize *GetRecvOutLen(void) const { return m_recvOutLen; }
+	int &RecvDone(void) { return m_recvDone; }
+
+	void SetHandshakeRespBuffer(char *buf, SceSize cap, SceSize *outLen)
+	{
+		m_respHeaderBuf = buf;
+		m_respHeaderBufCap = cap;
+		m_respHeaderOutLen = outLen;
+	}
+	char *GetHandshakeRespBuf(void) const { return m_respHeaderBuf; }
+	SceSize GetHandshakeRespCap(void) const { return m_respHeaderBufCap; }
+	SceSize *GetHandshakeRespOutLen(void) const { return m_respHeaderOutLen; }
 
 private:
 	WsConnection();
 	~WsConnection();
 	void DestroyNow(void);
-
-	int SendRawBuffer(const void *buf, SceSize len);
-	int EnsureSendEpoll(void);
-	int EnsureRecvEpoll(void);
 	void CloseEpolls(void);
 
 	volatile SceUInt32 m_refCount;
@@ -387,14 +756,22 @@ private:
 	int m_headerCount;
 	char *m_headerNames[NP_WS_MAX_CUSTOM_HEADERS];
 	char *m_headerValues[NP_WS_MAX_CUSTOM_HEADERS];
-	WsConnectionState m_state;
+	WsStateContext *m_stateCtx;
 	WsNet *m_net;
 	WsHandshake *m_handshake;
 	WsStream *m_stream;
 	SceUInt8 *m_netRecvBuf;
 	SceSize m_netRecvBufSize;
+	SceSize m_netRecvBytes;
 	SceInt64 m_lastPingClockUsec;
-	NpPushMutex m_sendLock;
+	void *m_recvOutBuf;
+	SceSize m_recvOutCap;
+	SceSize *m_recvOutLen;
+	int *m_recvOutMsgType;
+	int m_recvDone;
+	char *m_respHeaderBuf;
+	SceSize m_respHeaderBufCap;
+	SceSize *m_respHeaderOutLen;
 };
 
 } /* namespace WebSocket */
