@@ -63,7 +63,7 @@ struct SwMwStreamEvent;
  * interface in dispatch-table order. Only the calls the middleware makes are named; the
  * rest carry the behaviour their bodies showed. Ours (no Sony record names the library
  * class; recorded in agent/namecheck). */
-struct SwMwTransfer {
+struct SwMwTransferBase {
 	virtual void destroy() = 0;				/* 0x00 */
 	virtual void dispose() = 0;				/* 0x04 */
 	virtual int setEvent(struct SwMwStreamEvent *event) = 0;	/* 0x08 */
@@ -80,6 +80,9 @@ struct SwMwTransfer {
 	virtual int setSessionData(const void *data) = 0;	/* 0x34 */
 	virtual int getSessionData(int *out) = 0;		/* 0x38 */
 	virtual int isKeyExpiring() = 0;			/* 0x3C */
+};
+
+struct SwMwTransfer : public virtual SwMwTransferBase {
 	virtual int startMove(int value) = 0;			/* 0x40 */
 };
 

@@ -26,16 +26,6 @@ struct SwPubKeyObj;
 struct SwStreamCallback;
 struct SwStreamEventListener;
 
-extern "C" {
-int swCertConstruct(void *certObj);
-int swCertDestruct(void *certObj);
-int swCertSetRaw(void *certObj, const void *data, unsigned int len);
-int swCertGetDeviceId(const void *certObj, void *outId5);
-int swPubKeySerialize(const void *pubKeyObj, void *out40);
-int swSrmSetRaw(void *srmObj, const void *data, unsigned int len, const void *certObj);
-int swSrmGetRaw(const void *srmObj, void **outPtr, size_t *outLen);
-}
-
 /* ---- Scatter/gather chunk descriptor (8 bytes) ---- */
 struct SdiBufferChunk {
 	void *ptr;

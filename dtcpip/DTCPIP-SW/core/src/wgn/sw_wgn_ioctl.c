@@ -556,49 +556,19 @@ void swMarkPortDone(struct SwWgnInfo *info, unsigned char streamId, int portIdx,
 	}
 }
 
-static int swValidateRoute(uint32_t route)
-{
-	switch (route) {
-	case 0x10010002u:
-	case 0x10040002u:
-	case 0x10080002u:
-	case 0x10100002u:
-	case 0x10200002u:
-	case 0x10400002u:
-	case 0x10800002u:
-	case 0x11000002u:
-	case 0x12000002u:
-	case 0x50010001u:
-	case 0x50010004u:
-	case 0x50010008u:
-	case 0x50010010u:
-	case 0x50010020u:
-	case 0x50010040u:
-	case 0x50010080u:
-	case 0x50010100u:
-	case 0x50010200u:
-	case 0x50040001u:
-	case 0x50080001u:
-	case 0x50100001u:
-	case 0x50200001u:
-	case 0x50400001u:
-	case 0x50800001u:
-	case 0x51000001u:
-	case 0x52000001u:
-	case 0x90020001u:
-	case 0x90020004u:
-	case 0x90020008u:
-	case 0x90020010u:
-	case 0x90020020u:
-	case 0x90020040u:
-	case 0x90020080u:
-	case 0x90020100u:
-	case 0x90020200u:
-		return 1;
-	default:
-		return 0;
-	}
-}
+#define SW_IS_VALID_ROUTE(r) ( \
+	(r) == 0x10010002u || (r) == 0x10040002u || (r) == 0x10080002u || \
+	(r) == 0x10100002u || (r) == 0x10200002u || (r) == 0x10400002u || \
+	(r) == 0x10800002u || (r) == 0x11000002u || (r) == 0x12000002u || \
+	(r) == 0x50010001u || (r) == 0x50010004u || (r) == 0x50010008u || \
+	(r) == 0x50010010u || (r) == 0x50010020u || (r) == 0x50010040u || \
+	(r) == 0x50010080u || (r) == 0x50010100u || (r) == 0x50010200u || \
+	(r) == 0x50040001u || (r) == 0x50080001u || (r) == 0x50100001u || \
+	(r) == 0x50200001u || (r) == 0x50400001u || (r) == 0x50800001u || \
+	(r) == 0x51000001u || (r) == 0x52000001u || (r) == 0x90020001u || \
+	(r) == 0x90020004u || (r) == 0x90020008u || (r) == 0x90020010u || \
+	(r) == 0x90020020u || (r) == 0x90020040u || (r) == 0x90020080u || \
+	(r) == 0x90020100u || (r) == 0x90020200u)
 
 static int swCheckStartTransParam(struct SwWgnInfo *info, unsigned char *param)
 {
@@ -643,7 +613,7 @@ static int swCheckStartTransParam(struct SwWgnInfo *info, unsigned char *param)
 			return 11;
 		}
 		*(uint32_t *)(param + 64) = route;
-	} else if (!swValidateRoute(route)) {
+	} else if (!SW_IS_VALID_ROUTE(route)) {
 		swMwTrace("sw: WAGNER_IOC_STT_TRANS illegal route(0x%08x)\n", route);
 		return 11;
 	}
@@ -1287,49 +1257,40 @@ static void swBuildSyncStatus(struct SwDmaPort *port, uint32_t streamBits,
 	}
 }
 
-static void swFinishSyncResponse(struct SwWgnInfo *info, struct SwStreamState *st,
-				 struct SwDmaPort *port, int portIdx,
-				 unsigned char *arg, struct SwFilePrivate *priv,
-				 int hasData)
-{
-	uint32_t savedFlags;
-
-	if (hasData) {
-		*(uint32_t *)(arg + 8) = (uint32_t)port->doneHead->addr;
-		*(uint32_t *)(arg + 12) = port->doneHead->length;
-		port->lastSyncPos = port->doneHead->pos;
-		if (port->doneHead == port->doneTail) {
-			port->doneHead->addr += port->doneHead->length;
-			port->doneHead->length = 0;
-		} else {
-			struct SwDmaDoneInfo *old = port->doneHead;
-
-			port->doneHead = old->next;
-			swRecycleDoneInfo(port, old);
-		}
-	} else {
-		uint32_t addr = (port->doneHead != NULL) ? (uint32_t)port->doneHead->addr : 0;
-
-		*(uint32_t *)(arg + 8) = addr;
-		*(uint32_t *)(arg + 12) = 0;
-	}
-
-	savedFlags = port->stateFlags;
-	if ((savedFlags & 0x113000u) != 0)
-		port->stateFlags &= ~0x113000u;
-	swUnlockMtx(&port->dmaMutex);
-
-	if ((savedFlags & 0x10u) != 0 && (savedFlags & 0x200u) == 0)
-		swPostDoneDma(info, 0, portIdx, priv);
-	if (arg[73] == 1) {
-		swMarkPortDone(info, 0, portIdx, priv);
-		if (portIdx == 0 && (port->stateFlags & 8u) == 0)
-			swQueryStreamNc(info, 0, arg + 65);
-	}
-	st->nextSyncPort = (portIdx == 0) ? 1 : 0;
-	port->syncCalled = 1;
-	swUnlockMtx(&port->opMutex);
-}
+#define SW_FINISH_SYNC_RESPONSE(info, st, port, portIdx, arg, priv, hasData) do { \
+	uint32_t _savedFlags; \
+	if (hasData) { \
+		*(uint32_t *)((arg) + 8) = (uint32_t)(port)->doneHead->addr; \
+		*(uint32_t *)((arg) + 12) = (port)->doneHead->length; \
+		(port)->lastSyncPos = (port)->doneHead->pos; \
+		if ((port)->doneHead == (port)->doneTail) { \
+			(port)->doneHead->addr += (port)->doneHead->length; \
+			(port)->doneHead->length = 0; \
+		} else { \
+			struct SwDmaDoneInfo *_old = (port)->doneHead; \
+			(port)->doneHead = _old->next; \
+			swRecycleDoneInfo((port), _old); \
+		} \
+	} else { \
+		uint32_t _addr = ((port)->doneHead != NULL) ? (uint32_t)(port)->doneHead->addr : 0; \
+		*(uint32_t *)((arg) + 8) = _addr; \
+		*(uint32_t *)((arg) + 12) = 0; \
+	} \
+	_savedFlags = (port)->stateFlags; \
+	if ((_savedFlags & 0x113000u) != 0) \
+		(port)->stateFlags &= ~0x113000u; \
+	swUnlockMtx(&(port)->dmaMutex); \
+	if ((_savedFlags & 0x10u) != 0 && (_savedFlags & 0x200u) == 0) \
+		swPostDoneDma((info), 0, (portIdx), (priv)); \
+	if ((arg)[73] == 1) { \
+		swMarkPortDone((info), 0, (portIdx), (priv)); \
+		if ((portIdx) == 0 && ((port)->stateFlags & 8u) == 0) \
+			swQueryStreamNc((info), 0, (arg) + 65); \
+	} \
+	(st)->nextSyncPort = ((portIdx) == 0) ? 1 : 0; \
+	(port)->syncCalled = 1; \
+	swUnlockMtx(&(port)->opMutex); \
+} while (0)
 
 static int swIoctlSyncTrans(struct SwWgnInfo *info, unsigned char *arg, struct SwFilePrivate *priv)
 {
@@ -1395,13 +1356,13 @@ static int swIoctlSyncTrans(struct SwWgnInfo *info, unsigned char *arg, struct S
 			if (port->doneHead != NULL && port->doneHead->length != 0) {
 				if (arg[73] == 1)
 					arg[73] = 0;
-				swFinishSyncResponse(info, st, port, portIdx, arg, priv, 1);
+				SW_FINISH_SYNC_RESPONSE(info, st, port, portIdx, arg, priv, 1);
 				return 0;
 			}
 			if (arg[73] != 0) {
 				if ((g_swWgnLogMask & 0x80u) != 0)
 					swMwTrace("sw: stat_found#%d:%d %08x\n", 0, portIdx, arg[73]);
-				swFinishSyncResponse(info, st, port, portIdx, arg, priv, 0);
+				SW_FINISH_SYNC_RESPONSE(info, st, port, portIdx, arg, priv, 0);
 				return 0;
 			}
 			if (firstTry != 0)
@@ -1434,13 +1395,13 @@ static int swIoctlSyncTrans(struct SwWgnInfo *info, unsigned char *arg, struct S
 		if (timeoutMs == 0 || (timeoutMs > 0 && elapsed >= timeoutMs)) {
 			if (elapsed < timeoutMs) {
 				swLockMtx(&port->dmaMutex);
-				swFinishSyncResponse(info, st, port, portIdx, arg, priv, 1);
+				SW_FINISH_SYNC_RESPONSE(info, st, port, portIdx, arg, priv, 1);
 				return 0;
 			}
 			if ((g_swWgnLogMask & 0x80u) != 0)
 				swMwTrace("sw: sync_trans#%d:%d timeout\n", 0, portIdx);
 			swLockMtx(&port->dmaMutex);
-			swFinishSyncResponse(info, st, port, portIdx, arg, priv, 0);
+			SW_FINISH_SYNC_RESPONSE(info, st, port, portIdx, arg, priv, 0);
 			return 0;
 		}
 

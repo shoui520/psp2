@@ -3,6 +3,7 @@
  */
 
 #include "sw_sdi.h"
+#include "../common/sw_cert_srm.h"
 
 #include <string.h>
 
@@ -308,7 +309,7 @@ int SdiDeviceCXD3705::verifySignature(const void *msg, size_t msgLen,
 	memcpy(req.sig, sig40, 40);
 	if (pubKeyObj) {
 		req.hasPubKey = 1;
-		int err = swPubKeySerialize(pubKeyObj, req.pubKey);
+		int err = static_cast<const SwPubKey *>(pubKeyObj)->get(req.pubKey);
 		if (err != 0)
 			return err;
 	}
@@ -652,7 +653,7 @@ int SdiDeviceCXD3705::verifyRemoteCert(uint32_t *outResult, uint8_t sessionId,
 	memset(&req, 0, sizeof(req));
 	req.sessionId = sessionId;
 	req.flags = flags;
-	int err = swCertGetDeviceId(certObj, req.deviceId);
+	int err = static_cast<const SwDeviceId *>(certObj)->get(req.deviceId);
 	if (err != 0)
 		return err;
 
@@ -765,7 +766,7 @@ int SdiDeviceCXD3705::checkCertRevoked(uint8_t *outRevoked, const void *certObj)
 		uint8_t reserved4[3];
 	} req;
 	memset(&req, 0, sizeof(req));
-	int err = swCertGetDeviceId(certObj, req.deviceId);
+	int err = static_cast<const SwDeviceId *>(certObj)->get(req.deviceId);
 	if (err != 0)
 		return err;
 
@@ -804,16 +805,15 @@ int SdiDeviceCXD3705::getSrm(void *srmObj)
 	if (ret != 0)
 		return ret;
 
-	uint8_t certObj[40];
-	swCertConstruct(certObj);
-	ret = getDeviceCert(certObj);
+	SwCert cert;
+	ret = getDeviceCert(&cert);
 	if (ret == 0) {
 		if (req.status != 0)
 			ret = 1;
 		else
-			ret = swSrmSetRaw(srmObj, req.len ? req.data : NULL, req.len, certObj);
+			ret = static_cast<SwSrm *>(srmObj)->setRaw(
+				req.len ? req.data : NULL, req.len, &cert);
 	}
-	swCertDestruct(certObj);
 	return ret;
 }
 
@@ -824,7 +824,7 @@ int SdiDeviceCXD3705::setSrm(const void *srmObj)
 
 	void *rawPtr = NULL;
 	size_t rawLen = 0;
-	int err = swSrmGetRaw(srmObj, &rawPtr, &rawLen);
+	int err = static_cast<const SwSrm *>(srmObj)->getRaw(&rawPtr, &rawLen);
 	if (err != 0)
 		return err;
 	if (rawLen > 2048)
@@ -895,59 +895,27 @@ struct SdiStreamStartReq {
 	uint8_t optionData[1024];	/* +0xB0 */
 };
 
-static bool swIsTxDirectOnly(uint32_t t)
-{
-	switch (t) {
-	case 0x10040002u: case 0x10080002u: case 0x10100002u: case 0x10200002u:
-	case 0x10400002u: case 0x10800002u: case 0x11000002u: case 0x12000002u:
-		return true;
-	default:
-		return false;
-	}
-}
+#define swIsTxDirectOnly(t) ( \
+	(t) == 0x10040002u || (t) == 0x10080002u || (t) == 0x10100002u || (t) == 0x10200002u || \
+	(t) == 0x10400002u || (t) == 0x10800002u || (t) == 0x11000002u || (t) == 0x12000002u)
 
-static bool swIsTxOutOnly(uint32_t t)
-{
-	switch (t) {
-	case 0x50040001u: case 0x50080001u: case 0x50100001u: case 0x50200001u:
-	case 0x50400001u: case 0x50800001u: case 0x51000001u: case 0x52000001u:
-		return true;
-	default:
-		return false;
-	}
-}
+#define swIsTxOutOnly(t) ( \
+	(t) == 0x50040001u || (t) == 0x50080001u || (t) == 0x50100001u || (t) == 0x50200001u || \
+	(t) == 0x50400001u || (t) == 0x50800001u || (t) == 0x51000001u || (t) == 0x52000001u)
 
-static bool swIsTxDualBuf(uint32_t t)
-{
-	return t == 0x10010002u || t == 0x20020228u || t == 0x20020231u;
-}
+#define swIsTxDualBuf(t) ( \
+	(t) == 0x10010002u || (t) == 0x20020228u || (t) == 0x20020231u)
 
-static bool swIsRxInOnly(uint32_t t)
-{
-	switch (t) {
-	case 0x90010004u: case 0x90010008u: case 0x90010010u: case 0x90010020u:
-	case 0x90010040u: case 0x90010080u: case 0x90010100u: case 0x90010200u:
-		return true;
-	default:
-		return false;
-	}
-}
+#define swIsRxInOnly(t) ( \
+	(t) == 0x90010004u || (t) == 0x90010008u || (t) == 0x90010010u || (t) == 0x90010020u || \
+	(t) == 0x90010040u || (t) == 0x90010080u || (t) == 0x90010100u || (t) == 0x90010200u)
 
-static bool swIsRxOutOnly(uint32_t t)
-{
-	switch (t) {
-	case 0x50010004u: case 0x50010008u: case 0x50010010u: case 0x50010020u:
-	case 0x50010040u: case 0x50010080u: case 0x50010100u: case 0x50010200u:
-		return true;
-	default:
-		return false;
-	}
-}
+#define swIsRxOutOnly(t) ( \
+	(t) == 0x50010004u || (t) == 0x50010008u || (t) == 0x50010010u || (t) == 0x50010020u || \
+	(t) == 0x50010040u || (t) == 0x50010080u || (t) == 0x50010100u || (t) == 0x50010200u)
 
-static bool swIsRxDualBuf(uint32_t t)
-{
-	return t == 0x90010001u || t == 0xA0020228u || t == 0xA0020231u;
-}
+#define swIsRxDualBuf(t) ( \
+	(t) == 0x90010001u || (t) == 0xA0020228u || (t) == 0xA0020231u)
 
 int SdiDeviceCXD3705::startTxStream(uint32_t *outStreamId, uint8_t sessionId,
 				    SdiBufferCXD3705 *buf, void *streamCb,
@@ -1518,7 +1486,7 @@ int SdiDeviceCXD3705::getDeviceCert(void *certObj)
 		return 1005;
 	if (req.status != 0)
 		return 1;
-	return swCertSetRaw(certObj, req.data, req.len);
+	return static_cast<SwCert *>(certObj)->setRaw(req.data, req.len);
 }
 
 int SdiDeviceCXD3705::getCkcInfo(void *outNonce8, bool *outFlag, uint8_t *outA,

@@ -58,16 +58,11 @@ static const unsigned char g_swJaesIvConst[8] = {
 	0x95, 0xdc, 0x3a, 0x44, 0x90, 0x28, 0xeb, 0x3c,
 };
 
-static uint16_t readBe16(const unsigned char *p)
-{
-	return (uint16_t)(((uint16_t)p[0] << 8) | p[1]);
-}
+#define readBe16(p) ((uint16_t)(((uint16_t)(p)[0] << 8) | (p)[1]))
 
-static uint32_t readBe32(const unsigned char *p)
-{
-	return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) |
-	       ((uint32_t)p[2] << 8) | p[3];
-}
+#define readBe32(p) ( \
+	((uint32_t)(p)[0] << 24) | ((uint32_t)(p)[1] << 16) | \
+	((uint32_t)(p)[2] << 8) | (p)[3])
 
 static int swLockMtx(SceKernelLwMutexWork *mtx)
 {
@@ -768,19 +763,6 @@ int swCryptoSelfTestWrap(void)
 const struct SwEccCurveTable *swGetEccCurveTableRaw(void)
 {
 	return &g_swEccCurveTable;
-}
-
-int swCheckEccScalarRange(const unsigned char scalar[20])
-{
-	int i;
-
-	for (i = 0; i < 20 && scalar[i] == 0; ++i)
-		;
-	if (i == 20)
-		return -1;
-	if (memcmp(g_swEccCurveTable.order, scalar, 20) <= 0)
-		return -1;
-	return 0;
 }
 
 int swGetDeviceIduWrap(struct SwWgnCtx *ctx, unsigned char *outIdu)

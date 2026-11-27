@@ -10,65 +10,32 @@
 SdiBufferFactoryCXD3705 g_sdiBufferFactory;
 uint32_t g_sdiTransferUnit = 0x8000u;
 
-static bool swIsTxStreamType(uint32_t streamType)
-{
-	switch (streamType) {
-	case 0x10040002u: case 0x10080002u: case 0x10100002u: case 0x10200002u:
-	case 0x10400002u: case 0x10800002u: case 0x11000002u: case 0x12000002u:
-	case 0x50040001u: case 0x50080001u: case 0x50100001u: case 0x50200001u:
-	case 0x50400001u: case 0x50800001u: case 0x51000001u: case 0x52000001u:
-		return true;
-	default:
-		return false;
-	}
-}
+#define swIsTxStreamType(t) ( \
+	(t) == 0x10040002u || (t) == 0x10080002u || (t) == 0x10100002u || (t) == 0x10200002u || \
+	(t) == 0x10400002u || (t) == 0x10800002u || (t) == 0x11000002u || (t) == 0x12000002u || \
+	(t) == 0x50040001u || (t) == 0x50080001u || (t) == 0x50100001u || (t) == 0x50200001u || \
+	(t) == 0x50400001u || (t) == 0x50800001u || (t) == 0x51000001u || (t) == 0x52000001u)
 
-static bool swIsTxWithAuxType(uint32_t streamType)
-{
-	return streamType == 0x10010002u || streamType == 0x20020228u ||
-	       streamType == 0x20020231u;
-}
+#define swIsTxWithAuxType(t) ( \
+	(t) == 0x10010002u || (t) == 0x20020228u || (t) == 0x20020231u)
 
-static bool swIsRxDirectType(uint32_t streamType)
-{
-	switch (streamType) {
-	case 0x90010004u: case 0x90010008u: case 0x90010010u: case 0x90010020u:
-	case 0x90010040u: case 0x90010080u: case 0x90010100u: case 0x90010200u:
-	case 0x50010004u: case 0x50010008u: case 0x50010010u: case 0x50010020u:
-	case 0x50010040u: case 0x50010080u: case 0x50010100u: case 0x50010200u:
-		return true;
-	default:
-		return false;
-	}
-}
+#define swIsRxDirectType(t) ( \
+	(t) == 0x90010004u || (t) == 0x90010008u || (t) == 0x90010010u || (t) == 0x90010020u || \
+	(t) == 0x90010040u || (t) == 0x90010080u || (t) == 0x90010100u || (t) == 0x90010200u || \
+	(t) == 0x50010004u || (t) == 0x50010008u || (t) == 0x50010010u || (t) == 0x50010020u || \
+	(t) == 0x50010040u || (t) == 0x50010080u || (t) == 0x50010100u || (t) == 0x50010200u)
 
-static bool swIsRxWithAuxType(uint32_t streamType)
-{
-	return streamType == 0x90010001u || streamType == 0xA0020228u ||
-	       streamType == 0xA0020231u;
-}
+#define swIsRxWithAuxType(t) ( \
+	(t) == 0x90010001u || (t) == 0xA0020228u || (t) == 0xA0020231u)
 
-static bool swIsAnyRxType(uint32_t streamType)
-{
-	return swIsRxDirectType(streamType) || swIsRxWithAuxType(streamType);
-}
+#define swIsAnyRxType(t) (swIsRxDirectType(t) || swIsRxWithAuxType(t))
 
-static bool swIsAnyTxType(uint32_t streamType)
-{
-	return swIsTxStreamType(streamType) || swIsTxWithAuxType(streamType);
-}
+#define swIsAnyTxType(t) (swIsTxStreamType(t) || swIsTxWithAuxType(t))
 
-static bool swIsRxDecryptType(uint32_t streamType)
-{
-	switch (streamType) {
-	case 0x90010004u: case 0x90010008u: case 0x90010010u: case 0x90010020u:
-	case 0x90010040u: case 0x90010080u: case 0x90010100u: case 0x90010200u:
-	case 0x90010001u: case 0xA0020228u: case 0xA0020231u:
-		return true;
-	default:
-		return false;
-	}
-}
+#define swIsRxDecryptType(t) ( \
+	(t) == 0x90010004u || (t) == 0x90010008u || (t) == 0x90010010u || (t) == 0x90010020u || \
+	(t) == 0x90010040u || (t) == 0x90010080u || (t) == 0x90010100u || (t) == 0x90010200u || \
+	(t) == 0x90010001u || (t) == 0xA0020228u || (t) == 0xA0020231u)
 
 /* ---- Scoped lock helper for SdiBuffer ---- */
 class SdiBufferLock {

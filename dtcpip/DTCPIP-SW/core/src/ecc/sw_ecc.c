@@ -28,7 +28,7 @@ static const struct SwEccWinEntry g_swEccWindowTable[4] = {
 	{ 3, 3 },
 };
 
-static int bnCountLeadingZerosWord(uint32_t x)
+static __inline int bnCountLeadingZerosWord(uint32_t x)
 {
 	int n = 0;
 
@@ -55,7 +55,7 @@ static int bnCountLeadingZerosWord(uint32_t x)
 	return n;
 }
 
-static int bnCountLeadingZeros(const uint32_t *a, int words)
+static __inline int bnCountLeadingZeros(const uint32_t *a, int words)
 {
 	int total = 0;
 	int i;
@@ -70,7 +70,7 @@ static int bnCountLeadingZeros(const uint32_t *a, int words)
 	return total;
 }
 
-static int bnIsZero(const uint32_t *a, int words)
+static __inline int bnIsZero(const uint32_t *a, int words)
 {
 	int i;
 
@@ -81,7 +81,7 @@ static int bnIsZero(const uint32_t *a, int words)
 	return 1;
 }
 
-static uint32_t bnComputeN0Inv(uint32_t p0)
+static __inline uint32_t bnComputeN0Inv(uint32_t p0)
 {
 	uint32_t inv = 1;
 	uint32_t neg = (uint32_t)(0u - p0);

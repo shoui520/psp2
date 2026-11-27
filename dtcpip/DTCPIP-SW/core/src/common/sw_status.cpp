@@ -27,36 +27,48 @@ int SwMwStatus(int status)
 
 } /* extern "C" */
 
-class SwMoveMessageImpl {
-public:
-	SwMoveMessageImpl()
-		: m_label(0)
-	{
-		memset(m_key, 0, sizeof(m_key));
-		memset(m_first, 0, sizeof(m_first));
-		memset(m_second, 0, sizeof(m_second));
-		memset(m_reserved, 0, sizeof(m_reserved));
-	}
-	virtual ~SwMoveMessageImpl() {}
-
-	uint8_t m_label;
-	uint8_t m_key[8];
-	uint8_t m_first[10];
-	uint8_t m_second[10];
-	uint8_t m_reserved[3];
+struct SwMoveMessageRaw {
+	void *vtable;
+	uint8_t label;
+	uint8_t key[8];
+	uint8_t first[10];
+	uint8_t second[10];
+	uint8_t reserved[3];
 };
+
+static void swMwMoveMessageDelete(void *message);
+
+extern "C" int SwMwMoveMessageDone(void *message);
+
+static void *g_swMoveMessageVtable[2] = {
+	(void *)SwMwMoveMessageDone,
+	(void *)swMwMoveMessageDelete,
+};
+
+static void swMwMoveMessageDelete(void *message)
+{
+	SwMwMoveMessageDone(message);
+	::operator delete(message);
+}
 
 extern "C" {
 
 int SwMwMoveMessageInit(void *message)
 {
-	new (message) SwMoveMessageImpl();
+	SwMoveMessageRaw *m = static_cast<SwMoveMessageRaw *>(message);
+	m->vtable = g_swMoveMessageVtable;
+	m->label = 0;
+	memset(m->key, 0, sizeof(m->key));
+	memset(m->first, 0, sizeof(m->first));
+	memset(m->second, 0, sizeof(m->second));
+	memset(m->reserved, 0, sizeof(m->reserved));
 	return 0;
 }
 
 int SwMwMoveMessageDone(void *message)
 {
-	reinterpret_cast<SwMoveMessageImpl *>(message)->~SwMoveMessageImpl();
+	SwMoveMessageRaw *m = static_cast<SwMoveMessageRaw *>(message);
+	m->vtable = g_swMoveMessageVtable;
 	return 0;
 }
 

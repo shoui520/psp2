@@ -426,7 +426,7 @@ private:
 };
 
 /* ---- SwTransfer (implements SwMwTransfer via virtual inheritance) ---- */
-class SwTransfer : public virtual SwMwTransfer {
+class SwTransfer : public SwMwTransfer {
 public:
 	SwTransfer(void *extMem, uint32_t bufferSize);
 	~SwTransfer();

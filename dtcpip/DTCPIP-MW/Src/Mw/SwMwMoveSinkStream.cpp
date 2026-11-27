@@ -1204,7 +1204,7 @@ extern "C" struct SwMwSinkStream *SwMwMoveSinkStreamDestructCopy(struct SwMwSink
 }
 
 /* move stream event vtable and lifecycle helpers */
-static void swMwMoveStreamEventNoop(void) {}
+extern "C" void swMwStreamEventNoop(void);
 
 static void swMwMoveStreamEventDelete(struct SwMwStreamEvent *event)
 {
@@ -1215,9 +1215,9 @@ static void swMwMoveStreamEventDelete(struct SwMwStreamEvent *event)
 static void *g_swMwMoveStreamEventVtable[8] = {
 	(void *)SwMwMoveStreamEventDestruct,
 	(void *)swMwMoveStreamEventDelete,
-	(void *)swMwMoveStreamEventNoop,
-	(void *)swMwMoveStreamEventNoop,
-	(void *)swMwMoveStreamEventNoop,
+	(void *)swMwStreamEventNoop,
+	(void *)swMwStreamEventNoop,
+	(void *)swMwStreamEventNoop,
 	(void *)SwMwMoveSinkStreamOnEemi,
 	(void *)SwMwMoveSinkStreamOnDiscard,
 	(void *)SwMwMoveSinkStreamOnKeyExpired,

@@ -4,24 +4,20 @@
  */
 #include "sw_ecc.h"
 
-static uint32_t rotl32(uint32_t x, unsigned int n)
-{
-	return (x << n) | (x >> (32u - n));
-}
+#define rotl32(x, n) (((uint32_t)(x) << (n)) | ((uint32_t)(x) >> (32u - (n))))
 
-static uint32_t readBe32(const unsigned char *p)
-{
-	return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) |
-	       ((uint32_t)p[2] << 8) | (uint32_t)p[3];
-}
+#define readBe32(p) ( \
+	((uint32_t)(p)[0] << 24) | ((uint32_t)(p)[1] << 16) | \
+	((uint32_t)(p)[2] << 8) | (uint32_t)(p)[3])
 
-static void writeBe32(unsigned char *p, uint32_t v)
-{
-	p[0] = (unsigned char)(v >> 24);
-	p[1] = (unsigned char)(v >> 16);
-	p[2] = (unsigned char)(v >> 8);
-	p[3] = (unsigned char)v;
-}
+#define writeBe32(p, v) do { \
+	unsigned char *_wbp = (p); \
+	uint32_t _wbv = (v); \
+	_wbp[0] = (unsigned char)(_wbv >> 24); \
+	_wbp[1] = (unsigned char)(_wbv >> 16); \
+	_wbp[2] = (unsigned char)(_wbv >> 8); \
+	_wbp[3] = (unsigned char)_wbv; \
+} while (0)
 
 /* SHA-1 single 64-byte block compression */
 int swSha1Compress(uint32_t state[5], const unsigned char block[64])

@@ -361,16 +361,8 @@ static void swDepStreamFreeRingCallback(struct SwDepMsgMgr *mgr, void *arg, stru
 	swDepRingConsume(ring, msg->bufLen);
 }
 
-static unsigned int swDepWorkBufSize(const unsigned int *cfg, int isDecStage)
-{
-	if (cfg[1] == 0)
-		return 51200u;
-	if (isDecStage)
-		return 24576u;
-	if (cfg[4] != 0)
-		return 24576u;
-	return 48128u;
-}
+#define swDepWorkBufSize(cfg, isDecStage) \
+	(((cfg)[1] == 0) ? 51200u : (((isDecStage) || (cfg)[4] != 0) ? 24576u : 48128u))
 
 static int swDepBuildPipelineEnc1ToDma(struct SwDepStream *stream, const int *flags)
 {

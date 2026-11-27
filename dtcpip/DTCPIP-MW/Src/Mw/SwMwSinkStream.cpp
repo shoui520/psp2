@@ -457,7 +457,7 @@ extern "C" int SwMwSinkStreamAbort(struct SwMwSinkStream *stream)
 }
 
 /* stream event vtable and lifecycle helpers */
-static void swMwStreamEventNoop(void) {}
+extern "C" void swMwStreamEventNoop(void) {}
 
 static void swMwStreamEventDelete(struct SwMwStreamEvent *event)
 {
