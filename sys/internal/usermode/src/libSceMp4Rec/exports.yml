@@ -4,8 +4,8 @@ SceLibMp4Recorder:
     major: 1
     minor: 1
   main:
-    start: module_start
-    stop: module_stop
+    start: sceMp4RecRecorderInit
+    stop: sceMp4RecRecorderEnd
   libraries:
     SceLibMp4Recorder:
       syscall: false

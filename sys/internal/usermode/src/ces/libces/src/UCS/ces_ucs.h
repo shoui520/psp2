@@ -17,14 +17,22 @@ typedef int CesUtf16ToUcsUtf8Func(const uint16_t *utf16buf, uint32_t utf16max, u
 				  uint32_t *utf8Size);
 
 /* UTF-8 */
+int sceCesUtf8CheckCode(const uint8_t *utf8buf, uint32_t bufsize, uint32_t *codeSize);
+int sceCesUtf8CheckFirstByte(const uint8_t *utf8buf);
 int sceCesUtf8ToUcs4(const uint8_t *utf8buf, uint32_t utf8max, uint32_t *convSize, uint32_t *ucs4);
 int sceCesUtf8ToUtf32(const uint8_t *utf8buf, uint32_t utf8max, uint32_t *convSize, uint32_t *utf32);
 int sceCesUtf8ToUcs2(const uint8_t *utf8buf, uint32_t utf8max, uint32_t *utf8Len, uint16_t *ucs2);
+int sceCesUcs4GetUtf8CodeLen(uint32_t ucs4, uint32_t *utf8Size);
 int sceCesUcs4ToUtf8(uint32_t ucs4, uint8_t *utf8buf, uint32_t bufSize, uint32_t *utf8Size);
 int sceCesUtf8ToCopyAndUcs(const uint8_t *utf8, uint32_t utf8max, uint32_t *utf8Len,
 			   uint8_t *copyBuf, uint32_t copyMax, uint32_t *copyLen, uint32_t *ucs);
+int sceCesUtf8ToCopy(const uint8_t *utf8, uint32_t utf8max, uint32_t *utf8Len,
+		     uint8_t *copyBuf, uint32_t copyMax, uint32_t *copyLen);
+int sceCesUcs2GetUtf8CodeLen(uint16_t ucs2, uint32_t *utf8Size);
+int sceCesUcs2ToUtf8(uint16_t ucs2, uint8_t *utf8buf, uint32_t bufSize, uint32_t *utf8Size);
 
 /* UTF-16 */
+int sceCesUcs4GetUtf16CodeLen(uint32_t ucs4, uint32_t *utf16Count);
 int sceCesUtf16ToUcs4(const uint16_t *utf16buf, uint32_t utf16max, uint32_t *utf16size,
 		      uint32_t *ucs4);
 int sceCesUcs4ToUtf16(uint32_t ucs4, uint16_t *utf16buf, uint32_t utf16max, uint32_t *utf16Count);

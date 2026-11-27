@@ -367,3 +367,71 @@ int sceCesUcs4ToUtf8(uint32_t ucs4, uint8_t *utf8buf, uint32_t bufSize, uint32_t
 		*utf8Size = 0;
 	return SCE_CES_ERROR_INVALID_ENCODE;
 }
+
+int sceCesUtf8CheckFirstByte(const uint8_t *utf8buf)
+{
+	uint8_t c;
+
+	if (utf8buf == NULL)
+		return SCE_CES_ERROR_INVALID_SRC_BUFFER;
+	c = utf8buf[0];
+	if (c < 0x80)
+		return SCE_CES_OK;
+	if (c < 0xc0)
+		return SCE_CES_ERROR_INVALID_ENCODE;
+	if (c < 0xc2)
+		return SCE_CES_ERROR_ILLEGAL_CODE;
+	if (c < 0xfe)
+		return SCE_CES_OK;
+	return SCE_CES_ERROR_INVALID_ENCODE;
+}
+
+int sceCesUtf8ToCopy(const uint8_t *utf8, uint32_t utf8max, uint32_t *utf8Len,
+		     uint8_t *copyBuf, uint32_t copyMax, uint32_t *copyLen)
+{
+	uint32_t utf8N;
+	uint32_t n;
+	int ret;
+
+	ret = cesUtf8ToUcs4(utf8, utf8max, &utf8N, NULL);
+	if (utf8N != 0) {
+		if (copyBuf == NULL) {
+			ret = SCE_CES_ERROR_INVALID_DST_BUFFER;
+		} else if (utf8N > copyMax) {
+			ret = SCE_CES_ERROR_DST_BUFFER_END;
+		} else {
+			for (n = utf8N; n != 0; n--)
+				copyBuf[n - 1] = utf8[n - 1];
+		}
+	}
+	if (utf8Len != NULL)
+		*utf8Len = utf8N;
+	if (copyLen != NULL)
+		*copyLen = utf8N;
+	return ret;
+}
+
+int sceCesUcs4GetUtf8CodeLen(uint32_t ucs4, uint32_t *utf8Size)
+{
+	uint32_t n;
+
+	if (utf8Size == NULL)
+		return SCE_CES_ERROR_INVALID_PARAMETER;
+	n = UTF8_CODE_LEN(ucs4);
+	*utf8Size = n;
+	if (n == 0)
+		return SCE_CES_ERROR_INVALID_ENCODE;
+	if (UCS4_IS_SURROGATE(ucs4))
+		return SCE_CES_ERROR_ILLEGAL_CODE;
+	return SCE_CES_OK;
+}
+
+int sceCesUcs2GetUtf8CodeLen(uint16_t ucs2, uint32_t *utf8Size)
+{
+	return sceCesUcs4GetUtf8CodeLen(ucs2, utf8Size);
+}
+
+int sceCesUcs2ToUtf8(uint16_t ucs2, uint8_t *utf8buf, uint32_t bufSize, uint32_t *utf8Size)
+{
+	return sceCesUcs4ToUtf8(ucs2, utf8buf, bufSize, utf8Size);
+}

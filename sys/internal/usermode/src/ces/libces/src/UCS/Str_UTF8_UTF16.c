@@ -286,3 +286,26 @@ int sceCesUtf8StrToUtf16Str(SceCesUcsContext *ces, const uint8_t *utf8str, uint3
 		*utf16Len = 0;
 	return ret;
 }
+
+int sceCesUtf8StrToUtf16Codes(SceCesUcsContext *ces, const uint8_t *utf8str, uint32_t utf8max,
+			      uint32_t *utf8Size, uint16_t *utf16buf, uint32_t utf16max,
+			      uint32_t *utf16Len)
+{
+	int ret;
+
+	if (utf8str != NULL) {
+		ret = cesUtf8StrToUtf16Codes(ces, utf8str, utf8max, utf8Size, utf16buf, utf16max,
+					     utf16Len);
+		if (utf16buf != NULL)
+			return ret;
+		ret = SCE_CES_ERROR_INVALID_DST_BUFFER;
+	} else {
+		ret = _sceCesStrResetReport((CesStrContext *)ces, sizeof(uint8_t), sizeof(uint16_t),
+					    SCE_CES_ERROR_INVALID_SRC_BUFFER);
+	}
+	if (utf8Size != NULL)
+		*utf8Size = 0;
+	if (utf16Len != NULL)
+		*utf16Len = 0;
+	return ret;
+}

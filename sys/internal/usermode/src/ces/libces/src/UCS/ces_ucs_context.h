@@ -82,6 +82,24 @@ typedef struct SceCesUcsContext {
 } SceCesUcsContext;
 
 int sceCesUcsContextInit(SceCesUcsContext *context);
+int sceCesUcsContextInitCopy(SceCesUcsContext *context, const SceCesUcsContext *src);
+int sceCesUcsSetUtf16StrEndian(SceCesUcsContext *context, SceCesEndianParam srcEndian,
+			       SceCesEndianParam dstEndian);
+int sceCesUcsGetUtf16StrEndian(const SceCesUcsContext *context, SceCesEndianParam *srcEndian,
+			       SceCesEndianParam *dstEndian);
+int sceCesUcsSetEndianUtf16(SceCesUcsContext *context, SceCesEndianParam endian);
+int sceCesUcsSetUtf32StrEndian(SceCesUcsContext *context, SceCesEndianParam srcEndian,
+			       SceCesEndianParam dstEndian);
+int sceCesUcsGetUtf32StrEndian(const SceCesUcsContext *context, SceCesEndianParam *srcEndian,
+			       SceCesEndianParam *dstEndian);
+int sceCesUcsSetEndianUtf32(SceCesUcsContext *context, SceCesEndianParam endian);
+int sceCesUcsSetPolicyDetectBom(SceCesUcsContext *context, int policy);
+int sceCesUcsSetPolicyOutputBom(SceCesUcsContext *context, int policy);
+int sceCesUcsBindCallbacks(SceCesUcsContext *context, const CesUcsCallbacks *callbacks);
+int sceCesUcsSetReplacementCharCode(SceCesUcsContext *context, uint32_t ucode);
+int sceCesUcsGetReplacementCharCode(const SceCesUcsContext *context, uint32_t *ucode);
+int sceCesSetReplacementCharUCode(SceCesUcsContext *context, uint32_t ucode);
+int sceCesSetUtf7EncodingForm(SceCesUcsContext *context, uint32_t form);
 
 /* UTF-16 strings to UTF-8 */
 int sceCesUtf16StrGetUtf8Len(SceCesUcsContext *ces, const uint16_t *utf16str, uint32_t utf16max,

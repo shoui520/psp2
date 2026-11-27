@@ -146,3 +146,235 @@ int sceCesUtf16ToUcs4(const uint16_t *utf16buf, uint32_t utf16max, uint32_t *utf
 	}
 	return ret;
 }
+
+int sceCesUtf16CheckCode(const uint16_t *utf16buf, uint32_t utf16max, uint32_t *utf16size)
+{
+	return _cesUtf16ToUcs4(utf16buf, utf16max, utf16size, NULL);
+}
+
+int sceCesUtf16ToCopyAndUcs(const uint16_t *utf16buf, uint32_t utf16max, uint32_t *utf16size,
+			    uint16_t *copyBuf, uint32_t copyMax, uint32_t *copyLen, uint32_t *ucs4)
+{
+	uint32_t n;
+	int ret;
+
+	ret = _cesUtf16ToUcs4(utf16buf, utf16max, &n, ucs4);
+	if (n != 0) {
+		if (copyBuf != NULL) {
+			if (copyMax < n) {
+				ret = SCE_CES_ERROR_DST_BUFFER_END;
+			} else {
+				copyBuf[0] = utf16buf[0];
+				if (n == 2)
+					copyBuf[1] = utf16buf[1];
+			}
+		} else {
+			ret = SCE_CES_ERROR_INVALID_DST_BUFFER;
+		}
+	}
+	if (utf16size != NULL)
+		*utf16size = n;
+	if (copyLen != NULL)
+		*copyLen = n;
+	return ret;
+}
+
+int sceCesUtf16ToCopy(const uint16_t *utf16buf, uint32_t utf16max, uint32_t *utf16size,
+		      uint16_t *copyBuf, uint32_t copyMax, uint32_t *copyLen)
+{
+	uint32_t n;
+	int ret;
+
+	ret = _cesUtf16ToUcs4(utf16buf, utf16max, &n, NULL);
+	if (n != 0) {
+		if (copyBuf != NULL) {
+			if (copyMax < n) {
+				ret = SCE_CES_ERROR_DST_BUFFER_END;
+			} else {
+				copyBuf[0] = utf16buf[0];
+				if (n == 2)
+					copyBuf[1] = utf16buf[1];
+			}
+		} else {
+			ret = SCE_CES_ERROR_INVALID_DST_BUFFER;
+		}
+	}
+	if (utf16size != NULL)
+		*utf16size = n;
+	if (copyLen != NULL)
+		*copyLen = n;
+	return ret;
+}
+
+int sceCesUcs2GetUtf16CodeLen(uint16_t ucs2, uint32_t *utf16Count)
+{
+	int ret = UTF16_IS_SURROGATE(ucs2) ? SCE_CES_ERROR_ILLEGAL_CODE : SCE_CES_OK;
+
+	if (utf16Count == NULL)
+		return SCE_CES_ERROR_INVALID_PARAMETER;
+	*utf16Count = 1;
+	return ret;
+}
+
+int sceCesUcs2ToUtf16(uint16_t ucs2, uint16_t *utf16buf, uint32_t utf16max, uint32_t *utf16Count)
+{
+	return sceCesUcs4ToUtf16(ucs2, utf16buf, utf16max, utf16Count);
+}
+
+int sceCesUtf16ToUcs2(const uint16_t *utf16buf, uint32_t utf16max, uint32_t *utf16size,
+		      uint16_t *ucs2)
+{
+	uint32_t ucs4;
+	int ret;
+
+	ret = _cesUtf16ToUcs4(utf16buf, utf16max, utf16size, &ucs4);
+	if (ucs4 > 0xffff) {
+		if (ucs2 != NULL)
+			*ucs2 = 0;
+		ret = SCE_CES_ERROR_OUT_OF_CODE_RANGE;
+	} else if (ucs2 != NULL) {
+		*ucs2 = (uint16_t)ucs4;
+	} else if (ret == SCE_CES_OK) {
+		ret = SCE_CES_ERROR_INVALID_DST_BUFFER;
+	}
+	return ret;
+}
+
+int sceCesUtf32GetUtf16CodeLen(uint32_t utf32, uint32_t *utf16Count)
+{
+	if (utf32 > 0x10ffff) {
+		if (utf16Count != NULL)
+			*utf16Count = 0;
+		return SCE_CES_ERROR_INVALID_ENCODE;
+	}
+	if (utf32 > 0xffff) {
+		if (utf16Count != NULL)
+			*utf16Count = 2;
+		return SCE_CES_OK;
+	}
+	if (utf16Count != NULL) {
+		*utf16Count = 1;
+		return UTF16_IS_SURROGATE(utf32) ? SCE_CES_ERROR_ILLEGAL_CODE : SCE_CES_OK;
+	}
+	return SCE_CES_ERROR_INVALID_PARAMETER;
+}
+
+int sceCesUtf32beGetUtf16CodeLen(const uint32_t *utf32be, uint32_t *utf16Count)
+{
+	const uint8_t *p;
+	uint32_t v;
+
+	if (utf32be == NULL) {
+		if (utf16Count != NULL)
+			*utf16Count = 0;
+		return SCE_CES_ERROR_INVALID_SRC_BUFFER;
+	}
+	p = (const uint8_t *)utf32be;
+	v = ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | p[3];
+	return sceCesUtf32GetUtf16CodeLen(v, utf16Count);
+}
+
+int sceCesUtf32leGetUtf16CodeLen(const uint32_t *utf32le, uint32_t *utf16Count)
+{
+	const uint8_t *p;
+	uint32_t v;
+
+	if (utf32le == NULL) {
+		if (utf16Count != NULL)
+			*utf16Count = 0;
+		return SCE_CES_ERROR_INVALID_SRC_BUFFER;
+	}
+	p = (const uint8_t *)utf32le;
+	v = ((uint32_t)p[3] << 24) | ((uint32_t)p[2] << 16) | ((uint32_t)p[1] << 8) | p[0];
+	return sceCesUtf32GetUtf16CodeLen(v, utf16Count);
+}
+
+int sceCesUtf32ToUtf16(uint32_t utf32, uint16_t *utf16buf, uint32_t utf16max, uint32_t *utf16Count)
+{
+	if (utf32 > 0x10ffff) {
+		if (utf16Count != NULL)
+			*utf16Count = 0;
+		return SCE_CES_ERROR_INVALID_ENCODE;
+	}
+	return sceCesUcs4ToUtf16(utf32, utf16buf, utf16max, utf16Count);
+}
+
+int sceCesUtf32beToUtf16(const uint32_t *utf32be, uint16_t *utf16buf, uint32_t utf16max,
+			 uint32_t *utf16Count)
+{
+	const uint8_t *p;
+	uint32_t v;
+
+	if (utf32be == NULL) {
+		if (utf16Count != NULL)
+			*utf16Count = 0;
+		return SCE_CES_ERROR_INVALID_SRC_BUFFER;
+	}
+	p = (const uint8_t *)utf32be;
+	v = ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | p[3];
+	if (v > 0x10ffff) {
+		if (utf16Count != NULL)
+			*utf16Count = 0;
+		return SCE_CES_ERROR_INVALID_ENCODE;
+	}
+	return sceCesUcs4ToUtf16(v, utf16buf, utf16max, utf16Count);
+}
+
+int sceCesUtf32leToUtf16(const uint32_t *utf32le, uint16_t *utf16buf, uint32_t utf16max,
+			 uint32_t *utf16Count)
+{
+	const uint8_t *p;
+	uint32_t v;
+
+	if (utf32le == NULL) {
+		if (utf16Count != NULL)
+			*utf16Count = 0;
+		return SCE_CES_ERROR_INVALID_SRC_BUFFER;
+	}
+	p = (const uint8_t *)utf32le;
+	v = ((uint32_t)p[3] << 24) | ((uint32_t)p[2] << 16) | ((uint32_t)p[1] << 8) | p[0];
+	if (v > 0x10ffff) {
+		if (utf16Count != NULL)
+			*utf16Count = 0;
+		return SCE_CES_ERROR_INVALID_ENCODE;
+	}
+	return sceCesUcs4ToUtf16(v, utf16buf, utf16max, utf16Count);
+}
+
+int sceCesUtf16ToUtf32(const uint16_t *utf16buf, uint32_t utf16max, uint32_t *utf16size,
+		       uint32_t *utf32)
+{
+	int ret;
+
+	ret = _cesUtf16ToUcs4(utf16buf, utf16max, utf16size, utf32);
+	if (utf32 == NULL && ret == SCE_CES_OK)
+		ret = SCE_CES_ERROR_INVALID_DST_BUFFER;
+	return ret;
+}
+
+int sceCesUtf16ToUtf32be(const uint16_t *utf16buf, uint32_t utf16max, uint32_t *utf16size,
+			 uint32_t *utf32be)
+{
+	int ret;
+
+	ret = _cesUtf16ToUcs4(utf16buf, utf16max, utf16size, utf32be);
+	if (utf32be == NULL && ret == SCE_CES_OK)
+		ret = SCE_CES_ERROR_INVALID_DST_BUFFER;
+	if (utf32be != NULL) {
+		uint32_t v = *utf32be;
+		*utf32be = ((v & 0xffu) << 24) | ((v & 0xff00u) << 8) |
+			   ((v & 0xff0000u) >> 8) | ((v & 0xff000000u) >> 24);
+	}
+	return ret;
+}
+
+int sceCesUtf16ToUtf32le(const uint16_t *utf16buf, uint32_t utf16max, uint32_t *utf16size,
+			 uint32_t *utf32le)
+{
+	int ret;
+
+	ret = _cesUtf16ToUcs4(utf16buf, utf16max, utf16size, utf32le);
+	if (utf32le == NULL && ret == SCE_CES_OK)
+		ret = SCE_CES_ERROR_INVALID_DST_BUFFER;
+	return ret;
+}
