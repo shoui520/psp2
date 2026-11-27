@@ -23,7 +23,10 @@ class WidgetParam;
 class FactoryFuncTable {
 public:
 #ifdef PAF_STATIC_BUILD
-	static inline const char *TypeName(const char *name) { return name; }
+	static inline __attribute__((always_inline)) const char *TypeName(const char *name)
+	{
+		return name;
+	}
 #endif
 	const char *m_name;
 	Widget *(*m_factory_widget)(Widget *parent);

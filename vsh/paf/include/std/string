@@ -119,12 +119,17 @@ public:
 	{
 		if (ptr != &empty_string)
 			alloc.deallocate(ptr, count + 1);
+#ifndef PAF_BUILD_2014
 		ptr = (_Elem *)-1;
 		count = (size_type)-1;
+#endif
 	}
 
 	_Myt &assign(const _Elem *src, size_type len);
 
+#ifdef PAF_BUILD_2014
+	__attribute__((noinline))
+#endif
 	_Myt &assign(const _Elem *src)
 	{
 		return assign(src, src != NULL ? _Traits::length(src) : 0);

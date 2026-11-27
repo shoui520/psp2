@@ -13,6 +13,16 @@ public:
 	{
 	}
 
+#ifdef PAF_BUILD_2014
+	__attribute__((always_inline)) v2(float x, float y)
+		: _raw(sce::Vectormath::Simd::Aos::Vector2(x, y).get64())
+	{
+	}
+
+	v2(sce::Vectormath::Simd::Aos::Vector2 value) : _raw(value.get64())
+	{
+	}
+#else
 	__attribute__((always_inline)) v2(float x, float y) : _impl(x, y)
 	{
 	}
@@ -20,82 +30,103 @@ public:
 	v2(sce::Vectormath::Simd::Aos::Vector2 value) : _impl(value)
 	{
 	}
+#endif
 
 	float extract_x() const
 	{
-		return vget_lane_f32(_impl.get64(), 0);
+		return vget_lane_f32(getImpl().get64(), 0);
 	}
 
 	float extract_y() const
 	{
-		return vget_lane_f32(_impl.get64(), 1);
+		return vget_lane_f32(getImpl().get64(), 1);
 	}
 
 	/* the element idx, 0 or 1 */
 	float extract(int idx) const
 	{
-		return sce_vectormath_extract_f2(_impl.get64(), idx);
+		return sce_vectormath_extract_f2(getImpl().get64(), idx);
 	}
 
 	void set_x(float value)
 	{
-		_impl.setX(value);
+		getImpl().setX(value);
 	}
 
 	void set_y(float value)
 	{
-		_impl.setY(value);
+		getImpl().setY(value);
 	}
 
-	v2 operator+(v2 rhs) const
+#ifdef PAF_BUILD_2014
+#define PAF_V2_OP_INLINE __attribute__((always_inline))
+#else
+#define PAF_V2_OP_INLINE
+#endif
+
+	PAF_V2_OP_INLINE v2 operator+(v2 rhs) const
 	{
-		return v2(_impl + rhs._impl);
+		return v2(getImpl() + rhs.getImpl());
 	}
 
-	v2 operator-(v2 rhs) const
+	PAF_V2_OP_INLINE v2 operator-(v2 rhs) const
 	{
-		return v2(_impl - rhs._impl);
+		return v2(getImpl() - rhs.getImpl());
 	}
 
-	v2 operator*(v2 rhs) const
+	PAF_V2_OP_INLINE v2 operator*(v2 rhs) const
 	{
-		return v2(mulPerElem(_impl, rhs._impl));
+		return v2(mulPerElem(getImpl(), rhs.getImpl()));
 	}
 
-	v2 operator*(float rhs) const
+	PAF_V2_OP_INLINE v2 operator*(float rhs) const
 	{
-		return v2(_impl * rhs);
+		return v2(getImpl() * rhs);
 	}
 
-	v2 operator/(float rhs) const
+	PAF_V2_OP_INLINE v2 operator/(float rhs) const
 	{
-		return v2(_impl / rhs);
+		return v2(getImpl() / rhs);
 	}
 
 	/* divided by the scalar, the result also returned by value */
 	__attribute__((noinline)) v2 operator/=(sce::Vectormath::Simd::floatInVec rhs)
 	{
-		_impl /= rhs;
+		getImpl() /= rhs;
 		return *this;
 	}
 
-	bool operator==(v2 rhs) const
+	PAF_V2_OP_INLINE bool operator==(v2 rhs) const
 	{
-		return sce::Vectormath::Simd::Aos::allElemEqual(_impl, rhs._impl).getAsBool();
+		return sce::Vectormath::Simd::Aos::allElemEqual(getImpl(), rhs.getImpl()).getAsBool();
 	}
+#undef PAF_V2_OP_INLINE
 
 	const sce::Vectormath::Simd::Aos::Vector2 &getImpl() const
 	{
+#ifdef PAF_BUILD_2014
+		return *reinterpret_cast<const sce::Vectormath::Simd::Aos::Vector2 *>(&_raw);
+#else
 		return _impl;
+#endif
 	}
 
 	sce::Vectormath::Simd::Aos::Vector2 &getImpl()
 	{
+#ifdef PAF_BUILD_2014
+		return *reinterpret_cast<sce::Vectormath::Simd::Aos::Vector2 *>(&_raw);
+#else
 		return _impl;
+#endif
 	}
 
 private:
+#ifdef PAF_BUILD_2014
+	/* SDK 3.10 Vector2 was trivially copyable (passed/returned in NEON vector registers). */
+	float32x2_t _raw;
+#else
 	sce::Vectormath::Simd::Aos::Vector2 _impl;
+#endif
 };
 
 }

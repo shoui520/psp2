@@ -11,6 +11,14 @@
 #include <sce_atomic.h>
 #include <std/new>
 
+#ifdef PAF_BUILD_2014
+#define PAF_SHARED_ATOMIC_INC32(p) sceAtomicIncrement32Relaxed(p)
+#define PAF_SHARED_ATOMIC_DEC32(p) sceAtomicDecrement32Relaxed(p)
+#else
+#define PAF_SHARED_ATOMIC_INC32(p) sceAtomicIncrement32AcqRel(p)
+#define PAF_SHARED_ATOMIC_DEC32(p) sceAtomicDecrement32AcqRel(p)
+#endif
+
 namespace paf {
 namespace common {
 
@@ -56,7 +64,7 @@ public:
 	SharedPtr(const SharedPtr &src) : m_ptr(src.m_ptr), m_ref_counter(src.m_ref_counter)
 	{
 		if (m_ptr != NULL)
-			sceAtomicIncrement32AcqRel(&m_ref_counter->m_counter);
+			PAF_SHARED_ATOMIC_INC32(&m_ref_counter->m_counter);
 	}
 
 	/* From a SharedPtr of a derived (or less const) class: the same counter block. */
@@ -65,7 +73,7 @@ public:
 		: m_ptr(src.m_ptr), m_ref_counter((RefCounter *)src.m_ref_counter)
 	{
 		if (m_ptr != NULL)
-			sceAtomicIncrement32AcqRel(&m_ref_counter->m_counter);
+			PAF_SHARED_ATOMIC_INC32(&m_ref_counter->m_counter);
 	}
 
 	/* What a weak pointer holds while a strong reference remains, else nothing. */
@@ -74,7 +82,7 @@ public:
 		if (m_ref_counter != NULL && m_ref_counter->m_counter != 0) {
 			m_ptr = m_ref_counter->m_ptr;
 			if (m_ptr != NULL)
-				sceAtomicIncrement32AcqRel(&m_ref_counter->m_counter);
+				PAF_SHARED_ATOMIC_INC32(&m_ref_counter->m_counter);
 		} else {
 			m_ptr = NULL;
 		}
@@ -95,7 +103,7 @@ public:
 			m_ptr = ptr;
 			m_ref_counter = counter;
 			if (m_ptr != NULL)
-				sceAtomicIncrement32AcqRel(&m_ref_counter->m_counter);
+				PAF_SHARED_ATOMIC_INC32(&m_ref_counter->m_counter);
 		}
 		return *this;
 	}
@@ -112,7 +120,7 @@ public:
 			m_ptr = ptr;
 			m_ref_counter = counter;
 			if (m_ptr != NULL)
-				sceAtomicIncrement32AcqRel(&m_ref_counter->m_counter);
+				PAF_SHARED_ATOMIC_INC32(&m_ref_counter->m_counter);
 		}
 		return *this;
 	}
@@ -176,9 +184,9 @@ private:
 	void Release()
 	{
 		if (m_ptr != NULL &&
-		    sceAtomicDecrement32AcqRel(&m_ref_counter->m_counter) == 1) {
+		    PAF_SHARED_ATOMIC_DEC32(&m_ref_counter->m_counter) == 1) {
 			m_ref_counter->m_deleter(m_ptr);
-			if (sceAtomicDecrement32AcqRel(&m_ref_counter->m_weak_counter) == 1)
+			if (PAF_SHARED_ATOMIC_DEC32(&m_ref_counter->m_weak_counter) == 1)
 				delete m_ref_counter;
 		}
 	}
@@ -195,13 +203,13 @@ public:
 	WeakPtr(const SharedPtr<T> &src) : m_ref_counter(src.m_ref_counter)
 	{
 		if (m_ref_counter != NULL)
-			sceAtomicIncrement32AcqRel(&m_ref_counter->m_weak_counter);
+			PAF_SHARED_ATOMIC_INC32(&m_ref_counter->m_weak_counter);
 	}
 
 	WeakPtr(const WeakPtr &src) : m_ref_counter(src.m_ref_counter)
 	{
 		if (m_ref_counter != NULL)
-			sceAtomicIncrement32AcqRel(&m_ref_counter->m_weak_counter);
+			PAF_SHARED_ATOMIC_INC32(&m_ref_counter->m_weak_counter);
 	}
 
 	/* the shared pointer's block kept instead */
@@ -211,11 +219,11 @@ public:
 
 		if (counter != m_ref_counter) {
 			if (m_ref_counter != NULL &&
-			    sceAtomicDecrement32AcqRel(&m_ref_counter->m_weak_counter) == 1)
+			    PAF_SHARED_ATOMIC_DEC32(&m_ref_counter->m_weak_counter) == 1)
 				delete m_ref_counter;
 			m_ref_counter = counter;
 			if (counter != NULL)
-				sceAtomicIncrement32AcqRel(&counter->m_weak_counter);
+				PAF_SHARED_ATOMIC_INC32(&counter->m_weak_counter);
 		}
 		return *this;
 	}
@@ -223,7 +231,7 @@ public:
 	~WeakPtr()
 	{
 		if (m_ref_counter != NULL &&
-		    sceAtomicDecrement32AcqRel(&m_ref_counter->m_weak_counter) == 1)
+		    PAF_SHARED_ATOMIC_DEC32(&m_ref_counter->m_weak_counter) == 1)
 			delete m_ref_counter;
 	}
 

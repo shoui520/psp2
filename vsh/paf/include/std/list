@@ -286,6 +286,23 @@ list<_Ty, _Ax>::list(const list &other)
 
 /* the destructor body; also the inline destructor of the element types Sony keeps no
    out-of-line copy for (PAF_LIST_INLINE_DTOR) */
+#ifdef PAF_BUILD_2014
+#define PAF_LIST_DESTROY_ALL \
+	if (head != NULL) { \
+		_Node *node = head->next; \
+ \
+		if (node != head) { \
+			do { \
+				_Node *next = node->next; \
+ \
+				destroy(&node->value); \
+				operator delete(node); \
+				node = next; \
+			} while (node != head); \
+		} \
+		operator delete(head); \
+	}
+#else
 #define PAF_LIST_DESTROY_ALL \
 	if (head != NULL) { \
 		_Node *node = head->next; \
@@ -303,6 +320,7 @@ list<_Ty, _Ax>::list(const list &other)
 	} \
 	head = (_Node *)-1; \
 	count = (size_type)-1;
+#endif
 
 template<class _Ty, class _Ax>
 list<_Ty, _Ax>::~list()

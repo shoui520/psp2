@@ -34,8 +34,9 @@ enum {
 
 static int s_coord_sys_error;
 
-matrix::matrix(quaternion quat) : _impl(quat.toMatrix(0.0001f)._impl)
+matrix::matrix(quaternion quat)
 {
+	*this = quat.toMatrix(0.0001f);
 }
 
 matrix matrix::Frustum(float l, float r, float b, float t, float n, float f)
@@ -100,9 +101,9 @@ matrix matrix::LookAt(v4 eye, v4 center, v4 up, float epsilon)
 /* The inverse of the upper 3x3 part (adjugate over determinant), without translation. */
 matrix matrix::inverse3() const
 {
-	Vector4 a = _impl.getCol0();
-	Vector4 b = _impl.getCol1();
-	Vector4 c = _impl.getCol2();
+	Vector4 a = getImpl().getCol0();
+	Vector4 b = getImpl().getCol1();
+	Vector4 c = getImpl().getCol2();
 	floatInVec det = b.getY() * a.getX() * c.getZ() + c.getY() * b.getX() * a.getZ() +
 			 a.getY() * c.getX() * b.getZ() - b.getY() * c.getX() * a.getZ() -
 			 a.getY() * b.getX() * c.getZ() - c.getY() * a.getX() * b.getZ();
@@ -122,8 +123,8 @@ matrix matrix::inverse3() const
 /* The inverse of a rotation and translation: the transposed rotation, translated back. */
 matrix matrix::inverse1() const
 {
-	Matrix4 inv(sce::Vectormath::Simd::Aos::transpose(_impl.getUpper3x3()), Vector3(0.0f));
-	Vector4 t = -_impl.getCol3();
+	Matrix4 inv(sce::Vectormath::Simd::Aos::transpose(getImpl().getUpper3x3()), Vector3(0.0f));
+	Vector4 t = -getImpl().getCol3();
 
 	inv.setCol3(inv * Vector4(t.getXYZ(), 1.0f));
 	return matrix(inv);
@@ -131,12 +132,12 @@ matrix matrix::inverse1() const
 
 matrix matrix::inverse() const
 {
-	return matrix(sce::Vectormath::Simd::Aos::inverse(_impl));
+	return matrix(sce::Vectormath::Simd::Aos::inverse(getImpl()));
 }
 
 matrix matrix::transpose() const
 {
-	return matrix(sce::Vectormath::Simd::Aos::transpose(_impl));
+	return matrix(sce::Vectormath::Simd::Aos::transpose(getImpl()));
 }
 
 /* A NaN compares unequal to itself. */
@@ -190,13 +191,13 @@ bool matrix::isCoordSys(float epsilon) const
 		s_coord_sys_error = COORD_SYS_ZX_NOT_PERPENDICULAR;
 		return false;
 	}
-	if (!(_impl.getCol3().getW() == one).getAsBool()) {
+	if (!(getImpl().getCol3().getW() == one).getAsBool()) {
 		s_coord_sys_error = COORD_SYS_WW_NOT_1;
 		return false;
 	}
-	if (!(_impl.getCol0().getW() == floatInVec(0.0f)).getAsBool() ||
-	    !(_impl.getCol1().getW() == floatInVec(0.0f)).getAsBool() ||
-	    !(_impl.getCol2().getW() == floatInVec(0.0f)).getAsBool()) {
+	if (!(getImpl().getCol0().getW() == floatInVec(0.0f)).getAsBool() ||
+	    !(getImpl().getCol1().getW() == floatInVec(0.0f)).getAsBool() ||
+	    !(getImpl().getCol2().getW() == floatInVec(0.0f)).getAsBool()) {
 		s_coord_sys_error = COORD_SYS_LAST_ROW_NOT_0001;
 		return false;
 	}

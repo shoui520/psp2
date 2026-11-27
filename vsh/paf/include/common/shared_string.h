@@ -49,12 +49,20 @@ public:
 #ifdef PAF_LIBRARY_BUILD
 	int32_t AddRef()
 	{
+#ifdef PAF_BUILD_2014
+		return sceAtomicIncrement32Relaxed(&m_ref_count) + 1;
+#else
 		return sceAtomicIncrement32AcqRel(&m_ref_count) + 1;
+#endif
 	}
 
 	int32_t Release()
 	{
+#ifdef PAF_BUILD_2014
+		int32_t count = sceAtomicDecrement32Relaxed(&m_ref_count) - 1;
+#else
 		int32_t count = sceAtomicDecrement32AcqRel(&m_ref_count) - 1;
+#endif
 
 		if (count == 0)
 			delete this;

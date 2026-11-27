@@ -186,7 +186,9 @@ Camera::~Camera()
 {
 	if (m_scene != NULL)
 		m_scene->SetCamera(NULL);
+#ifndef PAF_BUILD_2014
 	m_screen = (Screen *)-1;
+#endif
 }
 
 const math::rect &Camera::PushScissor(math::rect rect, int32_t mode)

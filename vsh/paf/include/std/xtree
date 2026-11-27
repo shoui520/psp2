@@ -183,8 +183,10 @@ public:
 		_Tidy();
 		if (head != NULL)
 			operator delete(head);
+#ifndef PAF_BUILD_2014
 		head = (_Node *)-1;
 		count = (size_type)-1;
+#endif
 	}
 
 	iterator begin()

@@ -13,6 +13,21 @@ public:
 	{
 	}
 
+#ifdef PAF_BUILD_2014
+	v3(float x, float y, float z)
+		: _raw(sce::Vectormath::Simd::Aos::Vector3(x, y, z).get128())
+	{
+	}
+
+	/* every element value */
+	explicit v3(float value) : _raw(sce::Vectormath::Simd::Aos::Vector3(value).get128())
+	{
+	}
+
+	v3(sce::Vectormath::Simd::Aos::Vector3 value) : _raw(value.get128())
+	{
+	}
+#else
 	v3(float x, float y, float z) : _impl(x, y, z)
 	{
 	}
@@ -25,6 +40,7 @@ public:
 	v3(sce::Vectormath::Simd::Aos::Vector3 value) : _impl(value)
 	{
 	}
+#endif
 
 	static v3 _000()
 	{
@@ -38,77 +54,97 @@ public:
 
 	float extract_x() const
 	{
-		return vgetq_lane_f32(_impl.get128(), 0);
+		return vgetq_lane_f32(getImpl().get128(), 0);
 	}
 
 	float extract_y() const
 	{
-		return vgetq_lane_f32(_impl.get128(), 1);
+		return vgetq_lane_f32(getImpl().get128(), 1);
 	}
 
 	float extract_z() const
 	{
-		return vgetq_lane_f32(_impl.get128(), 2);
+		return vgetq_lane_f32(getImpl().get128(), 2);
 	}
 
 	void set_x(float value)
 	{
-		_impl.setX(value);
+		getImpl().setX(value);
 	}
 
 	void set_y(float value)
 	{
-		_impl.setY(value);
+		getImpl().setY(value);
 	}
 
 	void set_z(float value)
 	{
-		_impl.setZ(value);
+		getImpl().setZ(value);
 	}
 
 	/* the element idx, 0 to 2 */
 	float extract(int idx) const
 	{
-		return sce_vectormath_extract_f4(_impl.get128(), idx);
+		return sce_vectormath_extract_f4(getImpl().get128(), idx);
 	}
 
 	void set(int idx, float value)
 	{
-		_impl.setElem(idx, value);
+		getImpl().setElem(idx, value);
 	}
 
-	v3 operator+(v3 rhs) const
+#ifdef PAF_BUILD_2014
+#define PAF_V3_OP_INLINE __attribute__((always_inline))
+#else
+#define PAF_V3_OP_INLINE
+#endif
+
+	PAF_V3_OP_INLINE v3 operator+(v3 rhs) const
 	{
-		return v3(_impl + rhs._impl);
+		return v3(getImpl() + rhs.getImpl());
 	}
 
-	v3 operator-(v3 rhs) const
+	PAF_V3_OP_INLINE v3 operator-(v3 rhs) const
 	{
-		return v3(_impl - rhs._impl);
+		return v3(getImpl() - rhs.getImpl());
 	}
 
-	v3 operator*(float rhs) const
+	PAF_V3_OP_INLINE v3 operator*(float rhs) const
 	{
-		return v3(_impl * rhs);
+		return v3(getImpl() * rhs);
 	}
 
-	bool operator==(v3 rhs) const
+	PAF_V3_OP_INLINE bool operator==(v3 rhs) const
 	{
-		return sce::Vectormath::Simd::Aos::allElemEqual(_impl, rhs._impl).getAsBool();
+		return sce::Vectormath::Simd::Aos::allElemEqual(getImpl(), rhs.getImpl()).getAsBool();
 	}
+#undef PAF_V3_OP_INLINE
 
 	const sce::Vectormath::Simd::Aos::Vector3 &getImpl() const
 	{
+#ifdef PAF_BUILD_2014
+		return *reinterpret_cast<const sce::Vectormath::Simd::Aos::Vector3 *>(&_raw);
+#else
 		return _impl;
+#endif
 	}
 
 	sce::Vectormath::Simd::Aos::Vector3 &getImpl()
 	{
+#ifdef PAF_BUILD_2014
+		return *reinterpret_cast<sce::Vectormath::Simd::Aos::Vector3 *>(&_raw);
+#else
 		return _impl;
+#endif
 	}
 
 private:
+#ifdef PAF_BUILD_2014
+	/* SDK 3.10 Vector3 was trivially copyable (passed/returned in NEON vector registers). */
+	float32x4_t _raw;
+#else
 	sce::Vectormath::Simd::Aos::Vector3 _impl;
+#endif
 };
 
 }

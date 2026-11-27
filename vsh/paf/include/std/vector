@@ -317,6 +317,14 @@ vector<_Ty, _Ax>::vector(const _Myt &src) : alloc(src.alloc)
 
 /* the destructor body; also the inline destructor of the element types Sony keeps no
    out-of-line copy for (PAF_VECTOR_INLINE_DTOR) */
+#ifdef PAF_BUILD_2014
+#define PAF_VECTOR_DESTROY_ALL \
+	if (ptr != NULL) { \
+		for (size_type i = count; i != 0; --i) \
+			ptr[i - 1].~_Elem(); \
+		alloc.deallocate(ptr, limit); \
+	}
+#else
 #define PAF_VECTOR_DESTROY_ALL \
 	if (ptr != NULL) { \
 		for (size_type i = count; i != 0; --i) \
@@ -326,6 +334,7 @@ vector<_Ty, _Ax>::vector(const _Myt &src) : alloc(src.alloc)
 	ptr = (_Elem *)-1; \
 	count = -1; \
 	limit = -1;
+#endif
 
 template<class _Ty, class _Ax>
 vector<_Ty, _Ax>::~vector()
