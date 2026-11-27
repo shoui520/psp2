@@ -128,3 +128,23 @@ int strcmp(const char *a, const char *b)
 	return *a - *b;
 }
 
+int strncmp(const char *a, const char *b, SceSize n)
+{
+	int rem = (int)n;
+
+	if (a == NULL || b == NULL) {
+		if (a == b)
+			return 0;
+		return a == NULL ? -1 : 1;
+	}
+	while (rem-- > 0) {
+		if (*a != *b)
+			return *a - *b;
+		if (*a == '\0')
+			return 0;
+		a++;
+		b++;
+	}
+	return 0;
+}
+
