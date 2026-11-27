@@ -145,7 +145,10 @@ int dtcpIpSysInit(struct SwSysClient **outClient, struct SceDtcpIpIpcObject *con
 		message.command = SW_SYS_CONNECT;
 		message.channel = 0;
 		message.size = 0;
-		if (dtcpIpIpcRequest(connection->stream, &message) != 0 || message.result != 0) {
+		ret = dtcpIpIpcRequest(connection->stream, &message);
+		if (ret != 0) {
+			ret = dtcpIpMapIpcStatus2(ret);
+		} else if (message.result != 0) {
 			ret = dtcpIpMapIpcStatus2(message.result);
 		} else {
 			client->session = message.out0;
