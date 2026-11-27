@@ -452,10 +452,10 @@ void dtcpIpSessionClear(void)
 
 /* the STOP export asks the worker to cancel what it is holding out on (the 3.630 build
  * keeps its closed word where the later builds keep this flag, so it has no cancel) */
+#if FW_VERSION != 0x03630011
 void dtcpIpSessionCancelled(void)
 {
-#if FW_VERSION != 0x03630011
 	g_session.cancelled = 1;
-#endif
 }
+#endif
 

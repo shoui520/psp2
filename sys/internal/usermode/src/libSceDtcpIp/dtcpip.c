@@ -111,7 +111,7 @@ eventFlagDropped:
 			sceKernelDeleteEventFlag(g_dtcpIp.workerEvent);
 		g_dtcpIp.workerThread = -1;
 		g_dtcpIp.state = SCE_DTCP_IP_STATE_STOPPED;
-		g_dtcpIp.commandState = SCE_DTCP_IP_COMMAND_IDLE;
+		g_dtcpIp.commandState = 0;	/* not started */
 		goto destroyLocks;
 	}
 	g_dtcpIp.workerThread = worker;
@@ -156,7 +156,9 @@ int SceDtcpIp_82672A89(void)
 	if (g_dtcpIp.state == SCE_DTCP_IP_STATE_STOPPED)
 		return SCE_DTCP_IP_ERROR_SEQUENCE;
 
+#if FW_VERSION != 0x03630011
 	dtcpIpSessionCancelled();
+#endif
 	if (g_dtcpIp.manager != NULL) {
 		result = g_dtcpIp.manager->pauseStream();
 		if (result != 0)
@@ -223,7 +225,7 @@ int SceDtcpIp_82672A89(void)
 		ret = result;
 
 	g_dtcpIp.state = SCE_DTCP_IP_STATE_STOPPED;
-	g_dtcpIp.commandState = SCE_DTCP_IP_COMMAND_IDLE;
+	g_dtcpIp.commandState = 0;
 	return ret;
 }
 
