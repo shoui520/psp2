@@ -242,7 +242,7 @@ ConsoleInfoCiKey::ConsoleInfoCiKey(SceUInt16 id, char type, SceUInt16 size, bool
 }
 
 /* (0x814098DC: an empty function the build shares) */
-ConsoleInfoCiKey::~ConsoleInfoCiKey()
+__attribute__((noinline)) ConsoleInfoCiKey::~ConsoleInfoCiKey()
 {
 }
 
