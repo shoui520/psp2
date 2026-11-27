@@ -429,7 +429,9 @@ bool SwNetAddress::isAnyHost() const
 
 extern "C" int SwMwUriInit(void *uri, const char *text)
 {
-	new (uri) SwString(text);
+	SwString tmp(text);
+	memcpy(uri, &tmp, sizeof(SwString));
+	tmp.detachBuf();
 	return 0;
 }
 
@@ -452,8 +454,10 @@ extern "C" int SwMwUriSet(void *uri, const void *text, unsigned short port)
 
 extern "C" int SwMwUriFormatText(void *outText, const void *uri)
 {
-	SwString *dst = new (outText) SwString();
-	reinterpret_cast<const SwNetAddress *>(uri)->toString(*dst);
+	SwString tmp;
+	reinterpret_cast<const SwNetAddress *>(uri)->toString(tmp);
+	memcpy(outText, &tmp, sizeof(SwString));
+	tmp.detachBuf();
 	return 0;
 }
 

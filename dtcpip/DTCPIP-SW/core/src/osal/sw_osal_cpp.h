@@ -123,6 +123,7 @@ public:
 	int compare(const char *other) const;
 	bool equals(const char *other) const { return compare(other) == 0; }
 	void clear();
+	__attribute__((always_inline)) void detachBuf() { m_buf = NULL; }
 
 private:
 	int initFrom(const char *src, size_t len);
