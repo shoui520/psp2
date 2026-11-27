@@ -595,8 +595,8 @@ public:
 
 /* Main SceNpImpsSvc class (0x812F899C..0x812FC13F) */
 class NpImpsSvc : public NpImpsCacheObserver,
-		  public NpImpsSvcMyPresenceObserver,
-		  public NpImpsSvcAsyncInterface {
+		  public NpImpsSvcAsyncInterface,
+		  public NpImpsSvcMyPresenceObserver {
 public:
 	NpImpsSvc(const NpImpsSvcInitParam *param, paf::thread::RMutex *cacheStateMutex);
 	virtual ~NpImpsSvc();
