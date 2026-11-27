@@ -54,7 +54,7 @@ static const struct SwDepModeChanEntry g_swDepModeChanTable[16] = {
 };
 
 /* debug/logging globals shared with the driver */
-extern unsigned int g_swDebugFlags;
+extern uint32_t g_swWgnLogMask;
 static int g_swLastFullPopIdx = -1;
 
 /* forward declarations */
@@ -110,7 +110,7 @@ int swDepInitCore(struct SwDepCore *core)
 {
 	int status;
 
-	status = swDriverInitCore(core);
+	status = swBaseInit(core, &core->driverCtx);
 	swDepCoreInitSubsystems(core);
 	return status;
 }
@@ -118,7 +118,8 @@ int swDepInitCore(struct SwDepCore *core)
 int swDepFiniCore(struct SwDepCore *core)
 {
 	swDepCoreFiniSubsystems(core);
-	return swDriverFiniCore(core->driverCtx);
+	swBaseExit(core->driverCtx);
+	return 0;
 }
 
 int swDepCoreSetChanMap(struct SwDepCore *core, unsigned char key, unsigned char val)
@@ -222,13 +223,13 @@ int swDepStreamInit(struct SwDepStream *stream, struct SwDepCore *core, unsigned
 	stream->streamId = id;
 	stream->state = 0;
 	stream->workerStarted = 0;
-	swDepMutexInit(&stream->mutex);
+	swDepMutexCreate(&stream->mutex);
 	swDepWorkerEventInit(&stream->worker);
 
 	status = swDepMsgMgrInit(&stream->msgMgr, stream);
 	if (status != 0) {
 		swDepWorkerEventFini(&stream->worker);
-		swDepMutexDestroy(&stream->mutex);
+		swDepMutexDelete(&stream->mutex);
 		return status;
 	}
 
@@ -264,7 +265,7 @@ int swDepStreamInit(struct SwDepStream *stream, struct SwDepCore *core, unsigned
 				swDepProcFini(procs[i]);
 			swDepMsgMgrFini(&stream->msgMgr);
 			swDepWorkerEventFini(&stream->worker);
-			swDepMutexDestroy(&stream->mutex);
+			swDepMutexDelete(&stream->mutex);
 			return status;
 		}
 	}
@@ -293,7 +294,7 @@ int swDepStreamFini(struct SwDepStream *stream)
 	swDepProcFini((struct SwDepProc *)stream->procRingSrc);
 	swDepProcFini((struct SwDepProc *)stream->procInput);
 	swDepMsgMgrFini(&stream->msgMgr);
-	return swDepMutexDestroy(&stream->mutex);
+	return swDepMutexDelete(&stream->mutex);
 }
 
 static unsigned int swDepStreamAppendProc(struct SwDepStream *stream, struct SwDepProc *proc)
@@ -338,8 +339,8 @@ static void swDepStreamFreeTxCallback(struct SwDepMsgMgr *mgr, void *arg, struct
 
 	(void)mgr;
 	(void)msg;
-	swDriverTxComplete(stream->core->driverCtx, stream->streamId, 1);
-	swDriverTxSchedule(stream->core->driverCtx, stream->streamId);
+	swTxCompEvent(stream->core->driverCtx, stream->streamId, 1);
+	swTxAvailEvent(stream->core->driverCtx, stream->streamId);
 }
 
 static int swDepStreamAllocRingNoop(struct SwDepMsgMgr *mgr, void *arg, struct SwDepMsg *msg)
@@ -1045,28 +1046,29 @@ void swDepStreamOnExit(void *ctx)
 {
 	struct SwDepStream *stream = (struct SwDepStream *)ctx;
 
-	swDriverNotifyStreamDone(stream->core->driverCtx, stream->streamId);
+	swStopCompCallback(stream->core->driverCtx, stream->streamId);
 	swDepStreamCloseSession(stream);
 }
 
 int swDepStreamNotifyError(struct SwDepStream *stream, int errorBits)
 {
-	return swDriverNotifyError(stream->core->driverCtx, stream->streamId, errorBits);
+	return swSetStreamStatusWrap(stream->core->driverCtx, stream->streamId, (uint32_t)errorBits);
 }
 
 void swDepStreamGetKey(struct SwDepStream *stream, unsigned char emi, int forceNext,
 		       void *outKeyInfo, void *outPcpHeader)
 {
-	swDriverGetKey(stream->core->driverCtx, stream->streamId, emi, forceNext,
-		       outKeyInfo, outPcpHeader);
+	swGetEncParamWrap(stream->core->driverCtx, stream->streamId, emi, forceNext,
+			  outKeyInfo, outPcpHeader);
 	swDepStreamTraceNoop(stream);
 }
 
 int swDepStreamNotifyCci(struct SwDepStream *stream, void *cciDesc, unsigned char cci,
 			 unsigned char prevCci)
 {
-	return swDriverNotifyCci(stream->core->driverCtx, stream->streamId,
-				 (unsigned char *)cciDesc + 4, cci, prevCci);
+	swSetCciExt(stream->core->driverCtx, stream->streamId,
+		    (const unsigned char *)cciDesc + 4, cci, prevCci);
+	return 0;
 }
 
 void swDepStreamNoop(void)
@@ -1132,12 +1134,12 @@ int swDepStreamDump(struct SwDepStream *stream)
 {
 	unsigned int i;
 
-	swLogPrintf("sw dep:==============================================\n");
-	swLogPrintf("sw dep:stream %d:\n", stream->streamId);
-	swLogPrintf("sw dep:state  %d:\n", stream->state);
+	swMwTrace("sw dep:==============================================\n");
+	swMwTrace("sw dep:stream %d:\n", stream->streamId);
+	swMwTrace("sw dep:state  %d:\n", stream->state);
 	for (i = 0; i < stream->activeProcCount; ++i)
 		swDepProcDump(stream->activeProcs[i]);
-	return swLogPrintf("sw dep:==============================================\n");
+	return swMwTrace("sw dep:==============================================\n");
 }
 
 void swDepStreamTraceNoop(void *stream)
@@ -1202,7 +1204,7 @@ int swDepRingInit(struct SwDepRingBuf *ring, struct SwDepCore *core, unsigned ch
 {
 	(void)core;
 	memset(ring, 0, sizeof(*ring));
-	swDepMutexInit(&ring->mutex);
+	swDepMutexCreate(&ring->mutex);
 	ring->id = id;
 	ring->readerStream = 255u;
 	ring->writerStream = 255u;
@@ -1219,7 +1221,7 @@ int swDepRingInit(struct SwDepRingBuf *ring, struct SwDepCore *core, unsigned ch
 
 int swDepRingFini(struct SwDepRingBuf *ring)
 {
-	return swDepMutexDestroy(&ring->mutex);
+	return swDepMutexDelete(&ring->mutex);
 }
 
 int swDepRingPeekRead(struct SwDepRingBuf *ring, void **outPtr, unsigned int *outLen,
@@ -1389,10 +1391,10 @@ int swDepRingRelease(struct SwDepRingBuf *ring, int isWriter)
 int swDepMsgDump(const char *prefix, const struct SwDepMsg *msg)
 {
 	if (msg != NULL)
-		return swLogPrintf("sw dep:%s%p (msgtype=%d seqno=%d mqueueid=%d len=%d buflen=%d)\n",
+		return swMwTrace("sw dep:%s%p (msgtype=%d seqno=%d mqueueid=%d len=%d buflen=%d)\n",
 				   prefix, msg, msg->type, msg->seqNo, msg->queueId,
 				   msg->len, msg->bufLen);
-	return swLogPrintf("sw dep:%s(nil)\n", prefix);
+	return swMwTrace("sw dep:%s(nil)\n", prefix);
 }
 
 int swDepMsgQueueInit(struct SwDepMsgQueue *q)
@@ -1464,7 +1466,7 @@ void swDepMsgQueueDumpNoop(void)
 int swDepMsgMgrInit(struct SwDepMsgMgr *mgr, struct SwDepStream *stream)
 {
 	memset(mgr, 0, sizeof(*mgr));
-	swDepMutexInit(&mgr->mutex);
+	swDepMutexCreate(&mgr->mutex);
 	mgr->stream = stream;
 	mgr->poolCount = 0;
 	return 0;
@@ -1472,7 +1474,7 @@ int swDepMsgMgrInit(struct SwDepMsgMgr *mgr, struct SwDepStream *stream)
 
 int swDepMsgMgrFini(struct SwDepMsgMgr *mgr)
 {
-	return swDepMutexDestroy(&mgr->mutex);
+	return swDepMutexDelete(&mgr->mutex);
 }
 
 unsigned char swDepMsgMgrAddPool(struct SwDepMsgMgr *mgr, unsigned char *outId,
@@ -1631,7 +1633,7 @@ int swDepMsgMgrFree(struct SwDepMsgMgr *mgr, struct SwDepMsg *msg)
 int swDepMsgMgrDumpPool(struct SwDepMsgMgr *mgr, const char *prefix, unsigned char poolId)
 {
 	(void)mgr;
-	return swLogPrintf("sw dep:%smqueue_id %d\n", prefix, poolId);
+	return swMwTrace("sw dep:%smqueue_id %d\n", prefix, poolId);
 }
 
 int swDepMsgMgrCheckPools(struct SwDepMsgMgr *mgr)
@@ -1718,10 +1720,10 @@ int swDepProcPushEos(struct SwDepProc *proc)
 
 void swDepProcDumpHeader(struct SwDepProc *proc)
 {
-	swLogPrintf("sw dep:------------------------------------\n");
-	swLogPrintf("sw dep:[proc %d] %-10s\n", proc->index, swDepProcGetName(proc));
-	swLogPrintf("sw dep:is_ready         = %d\n", proc->isReady);
-	swLogPrintf("sw dep:is_eos           = %d\n", proc->isEos);
+	swMwTrace("sw dep:------------------------------------\n");
+	swMwTrace("sw dep:[proc %d] %-10s\n", proc->index, swDepProcGetName(proc));
+	swMwTrace("sw dep:is_ready         = %d\n", proc->isReady);
+	swMwTrace("sw dep:is_eos           = %d\n", proc->isEos);
 }
 
 int swDepProcIsReadyStub(struct SwDepProc *proc, int arg)
@@ -1757,9 +1759,9 @@ int swDepGetRxBuff(struct SwRxChannel *chan, void **outBuf, unsigned int *outLen
 
 	if (popIdx == chan->readIdx) {
 		chan->fullFlag = 1;
-		if ((int)popIdx != g_swLastFullPopIdx && (g_swDebugFlags & 0x10u) != 0) {
+		if ((int)popIdx != g_swLastFullPopIdx && (g_swWgnLogMask & 0x10u) != 0) {
 			g_swLastFullPopIdx = (int)popIdx;
-			swLogPrintf("sw: get_rxbuff: full pp=%d\n", popIdx);
+			swMwTrace("sw: get_rxbuff: full pp=%d\n", popIdx);
 		}
 		return 6;
 	}
@@ -1784,8 +1786,8 @@ int swDepRxOne(void *driverCtx, unsigned char streamId, unsigned int writtenLen,
 	int notify = 0;
 	void *parentCtx;
 
-	if ((g_swDebugFlags & 0x10u) != 0)
-		swLogPrintf("sw: rx_one: p=%d w=%d r=%d\n",
+	if ((g_swWgnLogMask & 0x10u) != 0)
+		swMwTrace("sw: rx_one: p=%d w=%d r=%d\n",
 			    chan->popIdx, chan->writeIdx, chan->readIdx);
 	idx = chan->writeIdx;
 	chan->writeIdx = idx + 1u;
@@ -1808,7 +1810,7 @@ int swDepRxOne(void *driverCtx, unsigned char streamId, unsigned int writtenLen,
 	desc->flags = descFlags;
 	if (notify != 0) {
 		memcpy(&parentCtx, (unsigned char *)driverCtx + 4, sizeof(parentCtx));
-		return swDriverRxNotify(parentCtx, streamId, pktInfo);
+		return swRxCompCallback(parentCtx, streamId, (uint32_t)pktInfo);
 	}
 	return 0;
 }

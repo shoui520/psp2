@@ -40,6 +40,12 @@ else()
 		DTCPIP-MW/Src/Mw/SwMwRecordStore.c
 		SWKeyManager/KeyManager/libkm/libswkeystore.c
 		SWKeyManager/KeyManager/libactmgr/libdtcpip_actmgr.c
+		DTCPIP-SW/core/src/osal/sw_net_vita.c
+		DTCPIP-SW/core/src/osal/sw_vshbridge.c
+		DTCPIP-SW/core/src/wgn/sw_wgn_ioctl.c
+		DTCPIP-SW/core/src/wgn/sw_wgn_core.c
+		DTCPIP-SW/core/src/wgn/sw_wgn_dma.c
+		DTCPIP-SW/core/src/wgn/sw_wgn_crypto.c
 		DTCPIP-SW/core/src/dep/sw_dep_vita.c
 		DTCPIP-SW/core/src/dep/sw_dep_core.c
 		DTCPIP-SW/core/src/dep/sw_dep_procs.c

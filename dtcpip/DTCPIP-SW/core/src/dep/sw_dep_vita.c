@@ -85,10 +85,10 @@ struct SwDepCurveTable {
 /* external SWS core, VshBridge, DMAC5 and ECC bignum hooks */
 int vshRtcGetCurrentSecureTick(SceRtcTick *tick);
 int sceSblDmac5EncDec(struct SwDepDmac5Param *param, SceUInt32 command);
-int swLogPrintf(const char *format, ...);
-int swUseSoftwareAes(void);
-int swGetDepCpuAffinity(void);
-int swThreadTrampoline(SceSize args, void *argp);
+int swMwTrace(const char *format, ...);
+int SwsGetToolMode(void);
+int SwsGetAffinity(void);
+int SwMwThreadTrampoline(SceSize args, void *argp);
 struct SwDepCurveTable *swGetEccCurveTable(void);
 int swDepInitCore(void *dep);
 int swDepFiniCore(void *dep);
@@ -265,7 +265,7 @@ int swDepThreadCreateRaw(struct SwDepThread *thread, int (*entry)(void *), void 
 	stackSize = 0x4000;
 	memset(name, 0, sizeof(name));
 	memcpy(name, "SWS_THREAD_NO_NAME", 19);
-	initPriority = (swUseSoftwareAes() == 0) ? 268435712 : 111;
+	initPriority = (SwsGetToolMode() == 0) ? 268435712 : 111;
 	cpuAffinityMask = 0;
 
 	switch (threadType) {
@@ -315,7 +315,7 @@ int swDepThreadCreateRaw(struct SwDepThread *thread, int (*entry)(void *), void 
 		break;
 	case 17:
 		strncpy(name, "SWS_THREAD_TYPE_SW_DEP", 31);
-		cpuAffinityMask = swGetDepCpuAffinity();
+		cpuAffinityMask = SwsGetAffinity();
 		if (cpuAffinityMask != 0) {
 			cpuAffinityMask |= 0x80000;
 			if (cpuAffinityMask != 0x80000)
@@ -328,7 +328,7 @@ int swDepThreadCreateRaw(struct SwDepThread *thread, int (*entry)(void *), void 
 		break;
 	case 19:
 		strncpy(name, "SWS_THREAD_TYPE_ANONYMOUS", 31);
-		cpuAffinityMask = swGetDepCpuAffinity();
+		cpuAffinityMask = SwsGetAffinity();
 		if (cpuAffinityMask != 0) {
 			cpuAffinityMask |= 0x80000;
 			if (cpuAffinityMask != 0x80000)
@@ -340,7 +340,7 @@ int swDepThreadCreateRaw(struct SwDepThread *thread, int (*entry)(void *), void 
 	}
 	name[31] = '\0';
 
-	thid = sceKernelCreateThread(name, (SceKernelThreadEntry)swThreadTrampoline,
+	thid = sceKernelCreateThread(name, (SceKernelThreadEntry)SwMwThreadTrampoline,
 				     initPriority, stackSize, 0, cpuAffinityMask, NULL);
 	if (thid < 0)
 		return thid;
@@ -358,7 +358,7 @@ int swDepThreadCreate(struct SwDepThread *thread, int (*entry)(void *), void *us
 	status = swDepThreadCreateRaw(thread, entry, user, threadType);
 	if (status == 0)
 		return 0;
-	swLogPrintf("sw: ERROR, pthread_create(id=%d) %d\n", threadType, status);
+	swMwTrace("sw: ERROR, pthread_create(id=%d) %d\n", threadType, status);
 	return -1;
 }
 
@@ -378,7 +378,7 @@ int swDepWorkerStart(struct SwDepWorker *worker, const char *unusedName,
 	worker->stopped = 0;
 	if (swDepThreadCreate(&worker->thread, swDepWorkerLoop, worker, "dep", 17) == 0)
 		return 0;
-	swLogPrintf("failed to start thread\n");
+	swMwTrace("failed to start thread\n");
 	return 6;
 }
 
@@ -410,7 +410,7 @@ int swDepThreadJoin(struct SwDepThread *thread)
 	status = swDepThreadJoinRaw(thread);
 	if (status == 0)
 		return 0;
-	swLogPrintf("sw: ERROR, pthread_join %d\n", status);
+	swMwTrace("sw: ERROR, pthread_join %d\n", status);
 	return -1;
 }
 
@@ -704,7 +704,7 @@ int swDepAes128CbcDecrypt(const unsigned char *src, unsigned char *dst, unsigned
 	if (src == NULL || dst == NULL || key == NULL || iv == NULL || (size & 0xFu) != 0)
 		return -1;
 
-	if (swUseSoftwareAes() == 0) {
+	if (SwsGetToolMode() == 0) {
 		unsigned int remain = size;
 
 		while (remain != 0) {

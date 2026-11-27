@@ -272,7 +272,7 @@ static void swDepProcAesEnc1Dump(struct SwDepProc *proc)
 
 	swDepProcDumpHeader(proc);
 	swDepAesEngineDump(&self->engine);
-	swLogPrintf("sw dep:<msgmgr mqueueid_dst>\n");
+	swMwTrace("sw dep:<msgmgr mqueueid_dst>\n");
 }
 
 static const struct SwDepProcVtable g_swDepProcAesEnc1Vtable = {
@@ -386,7 +386,7 @@ static void swDepProcAesEnc2Dump(struct SwDepProc *proc)
 
 	swDepProcDumpHeader(proc);
 	swDepAesEngineDump(&self->engine);
-	swLogPrintf("sw dep:<msgmgr mqueueid_dst>\n");
+	swMwTrace("sw dep:<msgmgr mqueueid_dst>\n");
 }
 
 static const struct SwDepProcVtable g_swDepProcAesEnc2Vtable = {
@@ -508,7 +508,7 @@ static void swDepProcAesDecHdrDump(struct SwDepProc *proc)
 
 	swDepProcDumpHeader(proc);
 	swDepAesEngineDump(&self->engine);
-	swLogPrintf("sw dep:<msgmgr mqueueid_dst>\n");
+	swMwTrace("sw dep:<msgmgr mqueueid_dst>\n");
 }
 
 static const struct SwDepProcVtable g_swDepProcAesDecHdrVtable = {
@@ -674,7 +674,7 @@ static void swDepProcAesEncKeyDump(struct SwDepProc *proc)
 
 	swDepProcDumpHeader(proc);
 	swDepAesEngineDump(&self->engine);
-	swLogPrintf("sw dep:<msgmgr mqueueid_dst>\n");
+	swMwTrace("sw dep:<msgmgr mqueueid_dst>\n");
 }
 
 static const struct SwDepProcVtable g_swDepProcAesEncKeyVtable = {
@@ -903,7 +903,7 @@ static int swDepProcOptParseRxCtrl(struct SwDepProc *proc, int cmd, void *arg)
 static void swDepProcOptParseRxDump(struct SwDepProc *proc)
 {
 	swDepProcDumpHeader(proc);
-	swLogPrintf("sw dep:<mqueue>\n");
+	swMwTrace("sw dep:<mqueue>\n");
 }
 
 static const struct SwDepProcVtable g_swDepProcOptParseRxVtable = {
@@ -1107,7 +1107,7 @@ static int swDepProcOptParseTxCtrl(struct SwDepProc *proc, int cmd, void *arg)
 static void swDepProcOptParseTxDump(struct SwDepProc *proc)
 {
 	swDepProcDumpHeader(proc);
-	swLogPrintf("sw dep:<mqueue>\n");
+	swMwTrace("sw dep:<mqueue>\n");
 }
 
 static const struct SwDepProcVtable g_swDepProcOptParseTxVtable = {
@@ -1191,7 +1191,7 @@ static int swDepProcCciTagCtrl(struct SwDepProc *proc, int cmd, void *arg)
 static void swDepProcCciTagDump(struct SwDepProc *proc)
 {
 	swDepProcDumpHeader(proc);
-	swLogPrintf("sw dep:<mqueue>\n");
+	swMwTrace("sw dep:<mqueue>\n");
 }
 
 static const struct SwDepProcVtable g_swDepProcCciTagVtable = {
@@ -1279,7 +1279,7 @@ static int swDepProcInputCtrl(struct SwDepProc *proc, int cmd, void *arg)
 static void swDepProcInputDump(struct SwDepProc *proc)
 {
 	swDepProcDumpHeader(proc);
-	swLogPrintf("sw dep:<mqueue>\n");
+	swMwTrace("sw dep:<mqueue>\n");
 }
 
 static const struct SwDepProcVtable g_swDepProcInputVtable = {
@@ -2003,35 +2003,35 @@ const struct SwDepProcVtable *swDepProcTsConvVtable(void)
 
 static void swDepAesAddReqDump(const struct SwDepAesAddReq *add)
 {
-	swLogPrintf("sw dep:  <addreq>\n");
-	swLogPrintf("sw dep:    is_eosmsg    = %d\n", add->isEosMsg);
-	swLogPrintf("sw dep:    is_eos       = %d\n", add->isEos);
-	swLogPrintf("sw dep:    is_hdr_active= %d\n", add->isHdrActive);
-	swLogPrintf("sw dep:    hdr_src      = %p\n", add->hdrSrc);
-	swLogPrintf("sw dep:    hdr_srclen   = %d\n", add->hdrSrcLen);
-	swLogPrintf("sw dep:    src          = %p\n", add->src);
-	swLogPrintf("sw dep:    srclen       = %d\n", add->srcLen);
-	swLogPrintf("sw dep:    dst          = %p\n", add->dst);
-	swLogPrintf("sw dep:    dstlen       = %d\n", add->dstLen);
-	swLogPrintf("sw dep:    tmpsrc       = %p\n", add->tmpSrc);
-	swLogPrintf("sw dep:    tmpsrclen    = %d\n", add->tmpSrcLen);
-	swLogPrintf("sw dep:    tmpdst       = %p\n", add->tmpDst);
-	swLogPrintf("sw dep:    tmpdstlen    = %d\n", add->tmpDstLen);
-	swLogPrintf("sw dep:    maxlen       = %d\n", add->maxLen);
-	swLogPrintf("sw dep:    chunklen     = %d\n", add->chunkLen);
+	swMwTrace("sw dep:  <addreq>\n");
+	swMwTrace("sw dep:    is_eosmsg    = %d\n", add->isEosMsg);
+	swMwTrace("sw dep:    is_eos       = %d\n", add->isEos);
+	swMwTrace("sw dep:    is_hdr_active= %d\n", add->isHdrActive);
+	swMwTrace("sw dep:    hdr_src      = %p\n", add->hdrSrc);
+	swMwTrace("sw dep:    hdr_srclen   = %d\n", add->hdrSrcLen);
+	swMwTrace("sw dep:    src          = %p\n", add->src);
+	swMwTrace("sw dep:    srclen       = %d\n", add->srcLen);
+	swMwTrace("sw dep:    dst          = %p\n", add->dst);
+	swMwTrace("sw dep:    dstlen       = %d\n", add->dstLen);
+	swMwTrace("sw dep:    tmpsrc       = %p\n", add->tmpSrc);
+	swMwTrace("sw dep:    tmpsrclen    = %d\n", add->tmpSrcLen);
+	swMwTrace("sw dep:    tmpdst       = %p\n", add->tmpDst);
+	swMwTrace("sw dep:    tmpdstlen    = %d\n", add->tmpDstLen);
+	swMwTrace("sw dep:    maxlen       = %d\n", add->maxLen);
+	swMwTrace("sw dep:    chunklen     = %d\n", add->chunkLen);
 }
 
 static void swDepAesEndReqDump(const struct SwDepAesEndReq *end)
 {
-	swLogPrintf("sw dep:  <endreq>\n");
-	swLogPrintf("sw dep:    srclen       = %d\n", end->srcLen);
-	swLogPrintf("sw dep:    dst          = %p\n", end->dst);
-	swLogPrintf("sw dep:    dstlen       = %d\n", end->dstLen);
-	swLogPrintf("sw dep:    req          = %p\n", end->req);
-	swLogPrintf("sw dep:    reqdst       = %p\n", end->reqDst);
-	swLogPrintf("sw dep:    reqlen       = %d\n", end->reqLen);
-	swLogPrintf("sw dep:    reqpadding   = %d\n", end->reqPadding);
-	swLogPrintf("sw dep:    to_tmpdst    = %d\n", end->toTmpDst);
+	swMwTrace("sw dep:  <endreq>\n");
+	swMwTrace("sw dep:    srclen       = %d\n", end->srcLen);
+	swMwTrace("sw dep:    dst          = %p\n", end->dst);
+	swMwTrace("sw dep:    dstlen       = %d\n", end->dstLen);
+	swMwTrace("sw dep:    req          = %p\n", end->req);
+	swMwTrace("sw dep:    reqdst       = %p\n", end->reqDst);
+	swMwTrace("sw dep:    reqlen       = %d\n", end->reqLen);
+	swMwTrace("sw dep:    reqpadding   = %d\n", end->reqPadding);
+	swMwTrace("sw dep:    to_tmpdst    = %d\n", end->toTmpDst);
 }
 
 static int swDepAesHwNotify(struct SwDepAesHw *hw, int count, void *ctx)
@@ -2129,7 +2129,7 @@ static void swDepAesEngineInit(struct SwDepAesProc *eng, struct SwDepProc *proc,
 			       int isEncrypt, int isPcp)
 {
 	memset(eng, 0, sizeof(*eng));
-	swDepMutexInit(&eng->mutex);
+	swDepMutexCreate(&eng->mutex);
 	swDepAesHwInit(&eng->hw, isEncrypt, swDepAesHwNotify, eng);
 	swDepAesReqRingInit(&eng->ring);
 	swDepAesAddReqInit(&eng->addReq, eng);
@@ -2143,7 +2143,7 @@ static void swDepAesEngineInit(struct SwDepAesProc *eng, struct SwDepProc *proc,
 static int swDepAesEngineFini(struct SwDepAesProc *eng)
 {
 	swDepAesHwFini(&eng->hw);
-	return swDepMutexDestroy(&eng->mutex);
+	return swDepMutexDelete(&eng->mutex);
 }
 
 static int swDepAesEngineOpen(struct SwDepAesProc *eng, unsigned char dstQueueId, void *config)
@@ -2837,13 +2837,13 @@ static void swDepAesEngineStepEos(struct SwDepAesProc *eng, int *cont)
 
 static void swDepAesEngineDump(struct SwDepAesProc *eng)
 {
-	swLogPrintf("sw dep:<aesproc>\n");
-	swLogPrintf("sw dep:  state          = %s\n", "");
-	swLogPrintf("sw dep:  req_count      = %d\n", eng->reqCount);
-	swLogPrintf("sw dep:  notify_count   = %d\n", eng->notifyCount);
-	swLogPrintf("sw dep:  <mqueue_src>\n");
-	swLogPrintf("sw dep:  <mqueue_reqsrc>\n");
-	swLogPrintf("sw dep:  <mqueue_reqdst>\n");
+	swMwTrace("sw dep:<aesproc>\n");
+	swMwTrace("sw dep:  state          = %s\n", "");
+	swMwTrace("sw dep:  req_count      = %d\n", eng->reqCount);
+	swMwTrace("sw dep:  notify_count   = %d\n", eng->notifyCount);
+	swMwTrace("sw dep:  <mqueue_src>\n");
+	swMwTrace("sw dep:  <mqueue_reqsrc>\n");
+	swMwTrace("sw dep:  <mqueue_reqdst>\n");
 	swDepAesAddReqDump(&eng->addReq);
 	swDepAesEndReqDump(&eng->endReq);
 }

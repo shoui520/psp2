@@ -286,28 +286,28 @@ int swDepWorkerStart(struct SwDepWorker *worker, const char *unusedName,
 		     void (*process)(void *), void (*onExit)(void *), void *ctx);
 int swDepWorkerStop(struct SwDepWorker *worker);
 int swDepWorkerWake(struct SwDepWorker *worker);
-int swDepMutexInit(SceKernelLwMutexWork *mutex);
-int swDepMutexDestroy(SceKernelLwMutexWork *mutex);
+int swDepMutexCreate(SceKernelLwMutexWork *mutex);
+int swDepMutexDelete(SceKernelLwMutexWork *mutex);
 int swDepMutexLock(SceKernelLwMutexWork *mutex);
 int swDepMutexUnlock(SceKernelLwMutexWork *mutex);
 int swDepAes128CbcEncrypt(const unsigned char *src, unsigned char *dst, unsigned int len,
 			  const void *key, const void *iv);
 int swDepAes128CbcDecrypt(const unsigned char *src, unsigned char *dst, unsigned int len,
 			  const void *key, void *iv);
-int swLogPrintf(const char *format, ...);
+int swMwTrace(const char *format, ...);
 
-/* Wagner driver hooks (0x8105xxxx..0x8106xxxx) */
-int swDriverInitCore(struct SwDepCore *core);
-int swDriverFiniCore(void *driverCtx);
-int swDriverNotifyError(void *driverCtx, unsigned char streamId, int errorBits);
-int swDriverNotifyStreamDone(void *driverCtx, unsigned char streamId);
-int swDriverNotifyCci(void *driverCtx, unsigned char streamId, void *cciDesc,
-		      unsigned char cci, unsigned char prevCci);
-int swDriverGetKey(void *driverCtx, unsigned char streamId, unsigned char emi,
-		   int forceNext, void *outKeyInfo, void *outPcpHeader);
-int swDriverTxComplete(void *driverCtx, unsigned char streamId, int count);
-int swDriverTxSchedule(void *driverCtx, unsigned char streamId);
-int swDriverRxNotify(void *driverCtx, unsigned char streamId, int pktInfo);
+/* Wagner driver hooks */
+int swBaseInit(void *depCore, void **outInfo);
+void swBaseExit(void *driverCtx);
+int swSetStreamStatusWrap(void *driverCtx, unsigned char streamId, uint32_t errorBits);
+void swStopCompCallback(void *driverCtx, unsigned char streamId);
+void swSetCciExt(void *driverCtx, unsigned char streamId, const unsigned char *cciDesc,
+		 unsigned char cci, unsigned char prevCci);
+void swGetEncParamWrap(void *driverCtx, int streamId, int emi,
+		       int forceNext, void *outKeyInfo, void *outPcpHeader);
+void swTxCompEvent(void *driverCtx, unsigned char streamId, int count);
+void swTxAvailEvent(void *driverCtx, unsigned char streamId);
+int swRxCompCallback(void *driverCtx, unsigned char streamId, uint32_t pktInfo);
 
 /* sw_opt_parser.c hooks */
 int swOptSectionInit(void *section);
