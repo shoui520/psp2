@@ -160,8 +160,10 @@ public:
 	bool m_word_wrap;
 	bool m_kinsoku;
 	bool m_ellipsis;
+#ifndef PAF_BUILD_2014
 	/* -1: the layout's own */
 	int8_t m_enlarge_line_pitch;
+#endif
 	int32_t m_family;
 	float m_font_size;
 	math::v4 m_font_color;
@@ -176,9 +178,11 @@ public:
 	bool m_mask;
 	bool m_shadow;
 	bool m_emboss;
+#ifndef PAF_BUILD_2014
 	/* -1: the style's own */
 	int8_t m_enlarge_font_size;
 	int8_t m_force_bold;
+#endif
 };
 
 /* the style texts are made with (blend 1, depth 4), exported as its word: a DrawStyle constant

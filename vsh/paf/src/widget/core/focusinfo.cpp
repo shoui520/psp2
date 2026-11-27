@@ -28,6 +28,7 @@ extern "C" void ScePafAutoTestTty_9E10E873(int32_t type, const char *format, ...
 namespace paf {
 namespace ui {
 
+#ifndef PAF_BUILD_2014
 /* the child of the list item its text auto scroll target names, if it is of the type */
 template<class T>
 static inline __attribute__((always_inline)) T *FindAutoScrollChild(ListItem *item)
@@ -47,6 +48,7 @@ static inline __attribute__((always_inline)) T *FindAutoScrollChild(ListItem *it
 	}
 	return found;
 }
+#endif
 
 /* the focus cursor: a plane drawn with its draw objects, or with the part planes alone where
    its target is drawn as part shapes (TypeName "focusplane"; class name ours) */
@@ -125,6 +127,7 @@ void FocusInfo::CreateCursor(Widget *parent)
 
 void FocusInfo::UpdateHighlight()
 {
+#ifndef PAF_BUILD_2014
 	if (!m_shown)
 		return;
 
@@ -194,6 +197,7 @@ void FocusInfo::UpdateHighlight()
 				text->StopAutoScroll();
 		}
 	}
+#endif
 }
 
 #if !defined(FW_TYPE_CEX)

@@ -675,12 +675,20 @@ TextObjParam::TextObjParam()
 	  m_text_align(0), m_max_line_count(0), m_line_space(0.0f), m_line_pitch(0.0f),
 	  m_visible_pos(0.0f, 0.0f), m_visible_size(0.0f, 0.0f), m_adjust_x(false),
 	  m_adjust_y(false), m_condense_x(false), m_condense_y(false), m_word_wrap(false),
+#ifndef PAF_BUILD_2014
 	  m_kinsoku(true), m_ellipsis(false), m_enlarge_line_pitch(-1), m_family(0),
+#else
+	  m_kinsoku(true), m_ellipsis(false), m_family(0),
+#endif
 	  m_font_size(0.0f), m_font_color(1.0f, 1.0f, 1.0f, 1.0f),
 	  m_shadow_color(0.0f, 0.0f, 0.0f, 0.4f), m_back_color(0.0f, 0.0f, 0.0f, 0.0f),
 	  m_underline_color(0.0f, 0.0f, 0.0f, 0.0f), m_strike_color(0.0f, 0.0f, 0.0f, 0.0f),
 	  m_bold(false), m_oblique(false), m_underline(false), m_strike(false), m_mask(false),
+#ifndef PAF_BUILD_2014
 	  m_shadow(false), m_emboss(false), m_enlarge_font_size(-1), m_force_bold(-1)
+#else
+	  m_shadow(false), m_emboss(false)
+#endif
 {
 }
 
@@ -729,9 +737,11 @@ int32_t TextObjParam::Create(int32_t mode)
 		m_serial->AddParam("kinsoku", &m_kinsoku, ResourceParam::SEMANTIC_BOOL);
 	if (m_serial != NULL)
 		m_serial->AddParam("ellipsis", &m_ellipsis, ResourceParam::SEMANTIC_BOOL);
+#ifndef PAF_BUILD_2014
 	if (m_serial != NULL)
 		m_serial->AddParam("enlarge_line_pitch", &m_enlarge_line_pitch,
 				   ResourceParam::SEMANTIC_BOOL);
+#endif
 	if (m_serial != NULL)
 		m_serial->AddParam("family", &m_family, ResourceParam::SEMANTIC_INT);
 	if (m_serial != NULL)
@@ -761,11 +771,13 @@ int32_t TextObjParam::Create(int32_t mode)
 		m_serial->AddParam("shadow", &m_shadow, ResourceParam::SEMANTIC_BOOL);
 	if (m_serial != NULL)
 		m_serial->AddParam("emboss", &m_emboss, ResourceParam::SEMANTIC_BOOL);
+#ifndef PAF_BUILD_2014
 	if (m_serial != NULL)
 		m_serial->AddParam("enlarge_font_size", &m_enlarge_font_size,
 				   ResourceParam::SEMANTIC_BOOL);
 	if (m_serial != NULL)
 		m_serial->AddParam("force_bold", &m_force_bold, ResourceParam::SEMANTIC_BOOL);
+#endif
 	return ret;
 }
 
@@ -798,9 +810,11 @@ int32_t TextObjParam::SetEach(DrawObj *obj)
 	text->SetLayoutAttribute(TextLayoutAttribute_WordWrap, m_word_wrap);
 	text->SetLayoutAttribute(TextLayoutAttribute_Kinsoku, m_kinsoku);
 	text->SetLayoutAttribute(TextLayoutAttribute_Ellipsis, m_ellipsis);
+#ifndef PAF_BUILD_2014
 	if (m_enlarge_line_pitch != -1)
 		text->SetLayoutAttribute(TextLayoutAttribute_EnlargeLinePitch,
 					 m_enlarge_line_pitch != 0);
+#endif
 
 	TextStyle style;
 
@@ -855,7 +869,9 @@ int32_t TextObjParam::GetEach(DrawObj *obj)
 	text->GetLayoutAttribute(TextLayoutAttribute_WordWrap, m_word_wrap);
 	text->GetLayoutAttribute(TextLayoutAttribute_Kinsoku, m_kinsoku);
 	text->GetLayoutAttribute(TextLayoutAttribute_Ellipsis, m_ellipsis);
+#ifndef PAF_BUILD_2014
 	text->GetLayoutAttribute(TextLayoutAttribute_EnlargeLinePitch, (bool &)m_enlarge_line_pitch);
+#endif
 
 	TextStyle style;
 

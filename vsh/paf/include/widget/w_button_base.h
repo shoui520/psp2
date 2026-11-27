@@ -266,8 +266,10 @@ public:
 
 	/* the draw object that glows */
 	int32_t m_glow_obj;
+#ifndef PAF_BUILD_2014
 	/* the glow's largest alpha (the style's "glow_max") */
 	float m_glow_max;
+#endif
 	uint32_t m_btn_mode;
 	ButtonState m_btn_state;
 	/* the color it fades to while disabled: (1, 1, 1, 0.3) without one */
@@ -294,9 +296,11 @@ public:
 	int32_t m_glow_anim;
 	/* the sounds given it, by index (AddSound) */
 	list<WidgetSoundParam::Sound> m_sound_list;
+#ifndef PAF_BUILD_2014
 	/* a long press scrolls the text, and one holds the scroll now (names ours) */
 	bool m_long_press_text_auto_scroll : 1;
 	bool m_text_auto_scroll_locked : 1;
+#endif
 };
 
 /* a ButtonBase's resource parameters: whether it is enabled ("enable") */

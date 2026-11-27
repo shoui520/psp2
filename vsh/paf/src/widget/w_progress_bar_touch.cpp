@@ -118,7 +118,11 @@ static inline void HideLabelSlider(Widget *label)
 ProgressBarTouch::ProgressBarTouch(Widget *parent, CreateParam *param)
 	: ProgressBar(parent, param), m_slider_mode(SLIDER_MODE_BAR),
 	  m_label_slider_mode(LABEL_MODE_PERCENTAGE), m_label_slider_pos_mode(LABEL_POS_MODE_CENTER),
+#ifndef PAF_BUILD_2014
 	  m_label_slider_margin(5.0f), m_drag_touch_id(-1), m_key(-1), m_key_step(1.0f)
+#else
+	  m_label_slider_margin(5.0f), m_drag_touch_id(-1)
+#endif
 {
 	m_event_enable |= 0xFBF0;
 	m_hit_find_mode = 0;
@@ -235,7 +239,11 @@ int32_t ProgressBarTouch::SetSliderMode(SliderMode mode)
 
 int32_t ProgressBarTouch::SetValue(float value, bool anim, BarId id)
 {
+#ifndef PAF_BUILD_2014
 	if (id == BAR_FORE && (m_drag_touch_id >= 0 || m_key >= 0))
+#else
+	if (id == BAR_FORE && m_drag_touch_id >= 0)
+#endif
 		return 0x80AF0021;
 	return ProgressBar::SetValue(value, anim, id);
 }

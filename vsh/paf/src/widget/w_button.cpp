@@ -168,7 +168,9 @@ static const struct {
 };
 
 ButtonParam::ButtonParam()
+#ifndef PAF_BUILD_2014
 	: m_enable_long_press_text_auto_scroll(false), m_long_press_text_auto_scroll_begin_msec(-1)
+#endif
 {
 	for (uint32_t i = 0; i < sizeof(s_button_strings) / sizeof(s_button_strings[0]); i++)
 		m_string_list.push_back(IndexedRef(s_button_strings[i].name, s_button_strings[i].index));
@@ -426,31 +428,49 @@ void Button::UpdateButtonSize()
 	math::v4 children_layout = GetLayoutSize(children_size, children_offs);
 	math::v4 size(maxPerElem(children_layout.getImpl(), fit_layout.getImpl()));
 	math::v4 lo(0.0f, 0.0f, 0.0f, 0.0f);
+#ifndef PAF_BUILD_2014
 	math::v4 hi(3.4028235e+18f, 3.4028235e+18f, 3.4028235e+18f, 3.4028235e+18f);
+#endif
 	math::v4 min_size;
+#ifndef PAF_BUILD_2014
 	math::v4 max_size;
+#endif
 
 	if (m_adjust_param != NULL) {
 		min_size = m_adjust_param->m_min_size;
+#ifndef PAF_BUILD_2014
 		max_size = m_adjust_param->m_max_size;
+#endif
 	} else {
 		min_size = ScePafWidget_BE1CEA2E.m_min_size;
+#ifndef PAF_BUILD_2014
 		max_size = ScePafWidget_BE1CEA2E.m_max_size;
+#endif
 	}
 
 	if (m_adjust_x != 0) {
 		lo.set_x(min_size.extract_x());
+#ifndef PAF_BUILD_2014
 		hi.set_x(max_size.extract_x());
+#endif
 	}
 	if (m_adjust_y != 0) {
 		lo.set_y(min_size.extract_y());
+#ifndef PAF_BUILD_2014
 		hi.set_y(max_size.extract_y());
+#endif
 	}
 	if (m_adjust_z != 0) {
 		lo.set_z(min_size.extract_z());
+#ifndef PAF_BUILD_2014
 		hi.set_z(max_size.extract_z());
+#endif
 	}
+#ifdef PAF_BUILD_2014
+	size = math::v4(maxPerElem(lo.getImpl(), size.getImpl()));
+#else
 	size = math::v4(minPerElem(hi.getImpl(), maxPerElem(lo.getImpl(), size.getImpl())));
+#endif
 	if (!(m_size == size))
 		SetSize_core(size, 0xFF02, false);
 }
@@ -754,9 +774,11 @@ int32_t ButtonStyleParam::Create(int32_t mode)
 	if (m_serial != NULL)
 		m_serial->AddParam("adjust_min_size", &m_adjust->m_min_size,
 				   ResourceParam::SEMANTIC_VEC4);
+#ifndef PAF_BUILD_2014
 	if (m_serial != NULL)
 		m_serial->AddParam("adjust_max_size", &m_adjust->m_max_size,
 				   ResourceParam::SEMANTIC_VEC4);
+#endif
 	if (m_serial != NULL)
 		m_serial->AddParam("top_margin", &m_adjust->m_top_margin,
 				   ResourceParam::SEMANTIC_FLOAT);

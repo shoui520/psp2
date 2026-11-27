@@ -63,7 +63,11 @@ static void GlowPulse(ButtonBase *button, int32_t mode)
 	math::v4 color = glow->GetColor();
 	math::v4 bright = color;
 
+#ifdef PAF_BUILD_2014
+	bright.set_w(0.85f);
+#else
 	bright.set_w(button->m_glow_max);
+#endif
 	if (mode <= 0) {
 		if (mode < 0)
 			return;
@@ -115,12 +119,20 @@ static void GlowPulse(ButtonBase *button, int32_t mode)
 }
 
 ButtonBase::ButtonBase(Widget *parent, CreateParam *param)
+#ifndef PAF_BUILD_2014
 	: Widget(parent, param), m_glow_obj(-1), m_glow_max(0.85f), m_btn_mode(BTN_MODE_BASIC),
+#else
+	: Widget(parent, param), m_glow_obj(-1), m_btn_mode(BTN_MODE_BASIC),
+#endif
 	  m_btn_state(ST_BTN_NORMAL), m_disable_color(NULL), m_enable(true), m_active(true),
 	  m_enable_long_press(false), m_enable_repeat(false), m_keep_press(false),
 	  m_long_press_flag(true), m_disable_fade(0), reserved(0), m_long_press_msec(0),
+#ifndef PAF_BUILD_2014
 	  m_repeat_begin(0), m_repeat_msec(0), m_repeat_count(0), m_glow_anim(0),
 	  m_long_press_text_auto_scroll(false), m_text_auto_scroll_locked(false)
+#else
+	  m_repeat_begin(0), m_repeat_msec(0), m_repeat_count(0), m_glow_anim(0)
+#endif
 {
 	if (!(m_event_enable & 0x400))
 		static_cast<Widget *>(this)->EnableFocusEvent(true);
@@ -411,47 +423,52 @@ void ButtonBase::SetGlowAnim(int32_t type, bool store)
 
 	if (store)
 		m_glow_anim = type;
+#ifdef PAF_BUILD_2014
+	const float glow_max = 0.85f;
+#else
+	const float glow_max = m_glow_max;
+#endif
 	switch (type) {
 	case GLOW_OFF:
-		to.set_w(m_glow_max * 0.0f);
+		to.set_w(glow_max * 0.0f);
 		SetObjAnimCB(this, obj, 0x20300, to, new Timer(400.0f, Timer::FUNC_QUAD_OUT), 2,
 			     OnGlowAnimFinish, this);
 		break;
 	case GLOW_HIDE:
-		to.set_w(m_glow_max * 0.0f);
+		to.set_w(glow_max * 0.0f);
 		glow->SetColor(to);
 		break;
 	case GLOW_PRESS:
-		to.set_w(m_glow_max);
+		to.set_w(glow_max);
 		SetObjAnim(obj, 0x20300, to, new Timer(100.0f, Timer::FUNC_QUAD_OUT), 2);
 		break;
 	case GLOW_REPEAT:
-		to.set_w(m_glow_max * 0.5f);
+		to.set_w(glow_max * 0.5f);
 		SetObjAnim(obj, 0x20300, to, new Timer(100.0f, Timer::FUNC_QUAD_OUT), 2);
 		break;
 	case GLOW_PRESS_OUT:
-		to.set_w(m_glow_max * 0.3f);
+		to.set_w(glow_max * 0.3f);
 		SetObjAnimCB(this, obj, 0x20300, to, new Timer(300.0f, Timer::FUNC_QUAD_OUT), 2,
 			     OnGlowAnimFinish, this);
 		break;
 	case GLOW_DECIDE: {
-		float max = m_glow_max + 0.15f;
+		float max = glow_max + 0.15f;
 
 		if (max > 1.0f)
 			max = 1.0f;
 		from.set_w(max);
 		SetObjAnim(obj, 0x20300, from, new Timer(50.0f, Timer::FUNC_QUAD_OUT), 2);
-		to.set_w(m_glow_max * 0.0f);
+		to.set_w(glow_max * 0.0f);
 		SetObjAnimCB(this, m_glow_obj, 0x20300, to,
 			     new Timer(600.0f, Timer::FUNC_QUAD_IN), 0, OnGlowAnimFinish, this);
 		break;
 	}
 	case GLOW_FLASH:
-		from.set_w(m_glow_max * 0.5f);
+		from.set_w(glow_max * 0.5f);
 		SetObjAnim(obj, 0x20300, from, new Timer(100.0f, Timer::FUNC_QUAD_IN), 2);
-		from.set_w(m_glow_max);
+		from.set_w(glow_max);
 		SetObjAnim(m_glow_obj, 0x20300, from, new Timer(160.0f, Timer::FUNC_QUAD_OUT), 0);
-		to.set_w(m_glow_max * 0.0f);
+		to.set_w(glow_max * 0.0f);
 		SetObjAnimCB(this, m_glow_obj, 0x20300, to,
 			     new Timer(600.0f, Timer::FUNC_QUAD_IN), 0, OnGlowAnimFinish, this);
 		break;

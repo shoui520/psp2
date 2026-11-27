@@ -119,7 +119,11 @@ graph::DrawObj *StateButtonBase::CreateDrawObj(int32_t obj)
 
 StateButtonBase::StateButtonBase(Widget *parent, CreateParam *param)
 	: ButtonBase(parent, param), m_is_checked(false), m_frame_num(2),
+#ifndef PAF_BUILD_2014
 	  m_frame_time(16.666666f), m_tuck(false), m_text_auto_scroll_origin(0.0f, 0.0f)
+#else
+	  m_frame_time(16.666666f), m_tuck(false)
+#endif
 {
 	if (param == NULL || param->m_create_drawobj)
 		StateButtonBase::CreateDrawObj(OBJ_IMAGE);
@@ -376,22 +380,32 @@ void StateButtonBase::UpdateButtonSize()
 	math::v2 fit = GetFitSize();
 	math::v2 children = GetChildrenFitSize();
 	math::v2 lo(0.0f, 0.0f);
+#ifndef PAF_BUILD_2014
 	math::v2 hi(3.4028235e+18f, 3.4028235e+18f);
+#endif
 
 	if (m_adjust_param != NULL) {
 		if (m_adjust_x != 0) {
 			lo.set_x(m_adjust_param->m_min_size.extract_x());
+#ifndef PAF_BUILD_2014
 			hi.set_x(m_adjust_param->m_max_size.extract_x());
+#endif
 		}
 		if (m_adjust_y != 0) {
 			lo.set_y(m_adjust_param->m_min_size.extract_y());
+#ifndef PAF_BUILD_2014
 			hi.set_y(m_adjust_param->m_max_size.extract_y());
+#endif
 		}
 	}
 
+#ifdef PAF_BUILD_2014
+	math::v2 size(maxPerElem(lo.getImpl(), maxPerElem(children.getImpl(), fit.getImpl())));
+#else
 	math::v2 size(minPerElem(hi.getImpl(),
 				 maxPerElem(lo.getImpl(),
 					    maxPerElem(children.getImpl(), fit.getImpl()))));
+#endif
 
 	if (!(size == math::v2(m_size.getImpl().getXY())))
 		SetSize_core(math::v4(size.extract_x(), size.extract_y(), m_size.extract_z(),
@@ -516,9 +530,11 @@ int32_t StateButtonBaseStyleParam::Create(int32_t mode)
 	if (m_serial == NULL)
 		return 0;
 	m_serial->AddParam("adjust_min_size", &m_adjust->m_min_size, ResourceParam::SEMANTIC_VEC4);
+#ifndef PAF_BUILD_2014
 	if (m_serial == NULL)
 		return 0;
 	m_serial->AddParam("adjust_max_size", &m_adjust->m_max_size, ResourceParam::SEMANTIC_VEC4);
+#endif
 	if (m_serial == NULL)
 		return 0;
 	m_serial->AddParam("top_margin", &m_adjust->m_top_margin, ResourceParam::SEMANTIC_FLOAT);

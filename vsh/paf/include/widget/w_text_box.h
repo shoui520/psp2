@@ -68,7 +68,11 @@ public:
 	public:
 		ImeParam()
 			: supportedLanguages(0), languagesForced(false), type(0), option(0),
+#ifndef PAF_BUILD_2014
 			  enterLabel(0), filter(NULL)
+#else
+			  enterLabel(0)
+#endif
 		{
 		}
 
@@ -81,8 +85,10 @@ public:
 		int32_t type;
 		uint32_t option;
 		int32_t enterLabel;
+#ifndef PAF_BUILD_2014
 		int32_t (*filter)(wchar_t *out, uint32_t *out_len, const wchar_t *src,
 				  uint32_t src_len);
+#endif
 	};
 
 	static const char m_widget_type[];
@@ -211,7 +217,9 @@ public:
 	wstring (*m_text_filter)(const wstring &in);
 	/* how far the text scrolls, and the caret scroll's target and start (names ours) */
 	math::v2 m_scroll_max;
+#ifndef PAF_BUILD_2014
 	math::v2 m_caret_scroll_to;
+#endif
 	math::v2 m_caret_scroll_from;
 };
 
@@ -319,7 +327,11 @@ public:
 	static const char m_param_name[];
 	static const char *ParamName();
 
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) TextBoxSoundParam();
+#else
 	TextBoxSoundParam();
+#endif
 	virtual const char *GetParamName() const;
 	virtual ~TextBoxSoundParam();
 };

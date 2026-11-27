@@ -68,6 +68,7 @@ public:
 	/* its focus request cleared (no name found) */
 	void ScePafWidget_1F9DB221();
 
+#ifndef PAF_BUILD_2014
 	/* the text auto scroll target (ListItemParam's Set; name ours) */
 	void SetTextAutoScrollTarget(IDParam id)
 	{
@@ -78,6 +79,7 @@ public:
 	{
 		return m_text_auto_scroll_target;
 	}
+#endif
 
 	/* its cell */
 	listview::Cell *m_cell;
@@ -85,7 +87,9 @@ public:
 	bool m_focus_requested;
 	/* its cell's properties */
 	common::property_list::PropertyList m_property_list;
+#ifndef PAF_BUILD_2014
 	IDParam m_text_auto_scroll_target;
+#endif
 };
 
 /* the widget the focus goes to from the item in the direction, or from the widget where it is

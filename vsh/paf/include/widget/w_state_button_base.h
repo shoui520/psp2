@@ -144,8 +144,10 @@ public:
 	float m_frame_time;
 	/* decided as it is pressed, not as it is released (the parameter's "tuck") */
 	bool m_tuck;
+#ifndef PAF_BUILD_2014
 	/* where the text auto scroll's press began (name ours) */
 	math::v2 m_text_auto_scroll_origin;
+#endif
 };
 
 /* a StateButtonBase's resource parameters: its label, and whether it is decided as it is

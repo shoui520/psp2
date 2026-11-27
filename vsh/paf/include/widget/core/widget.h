@@ -130,8 +130,10 @@ public:
 	IDParam m_sound_id;
 	list<IndexedRef> m_texture_list;
 	list<IndexedRef> m_string_list;
+#ifndef PAF_BUILD_2014
 	/* strings by their alias (ScePafToplevel_D8801CA4) */
 	list<IndexedRef> m_alias_string_list;
+#endif
 };
 
 /*
@@ -668,7 +670,9 @@ public:
 	AdjustParam()
 #endif
 		: m_ref_count(0), m_min_size(0.0f, 0.0f, 0.0f, 0.0f),
+#ifndef PAF_BUILD_2014
 		  m_max_size(3.4028235e+18f, 3.4028235e+18f, 3.4028235e+18f, 3.4028235e+18f),
+#endif
 		  m_top_margin(0.0f), m_bottom_margin(0.0f), m_left_margin(0.0f),
 		  m_right_margin(0.0f)
 	{
@@ -676,7 +680,9 @@ public:
 
 	int32_t m_ref_count;
 	math::v4 m_min_size;
+#ifndef PAF_BUILD_2014
 	math::v4 m_max_size;
+#endif
 	float m_top_margin;
 	float m_bottom_margin;
 	float m_left_margin;

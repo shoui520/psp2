@@ -265,7 +265,9 @@ int32_t TextBoxImeListener::BeginEdit(TextBox *text_box)
 				option |= 0x8;
 			param.option = option;
 			param.enterLabel = ConvertEnterLabel(ime_param.enterLabel);
+#ifndef PAF_BUILD_2014
 			param.filter = ime_param.filter;
+#endif
 			param.arg = this;
 			param.handler = OnImeEvent;
 			param.work = m_work;

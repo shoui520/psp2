@@ -66,7 +66,10 @@ TextBox::TextBox(Widget *parent, CreateParam *param)
 	: Text(parent, param), m_glow(NULL), m_hscroll_bar(NULL), m_vscroll_bar(NULL),
 	  m_max_length(1024), m_edit_listener(wutil::GetEditListener()), m_edit_auto_transition(false),
 	  m_ellipsis_saved(false), m_text_filter(NULL), m_scroll_max(0.0f, 0.0f),
-	  m_caret_scroll_to(0.0f, 0.0f), m_caret_scroll_from(0.0f, 0.0f)
+#ifndef PAF_BUILD_2014
+	  m_caret_scroll_to(0.0f, 0.0f),
+#endif
+	  m_caret_scroll_from(0.0f, 0.0f)
 {
 	sce_paf_memset(&m_ime_param, 0, sizeof(m_ime_param));
 	m_touch_state1 = false;
@@ -196,7 +199,12 @@ int32_t TextBox::SetCaretScroll()
 		m_text->GetCharInfo(caret, ci);
 		m_text->GetLineInfo(ci.line, line);
 		m_text->GetLayoutAttribute(graph::TextLayoutAttribute_VisiblePos, m_caret_scroll_from);
-		m_caret_scroll_to = m_caret_scroll_from;
+#ifdef PAF_BUILD_2014
+		math::v2 &caret_scroll_to = m_auto_scroll_length;
+#else
+		math::v2 &caret_scroll_to = m_caret_scroll_to;
+#endif
+		caret_scroll_to = m_caret_scroll_from;
 		if (m_scroll_view != NULL) {
 			size = math::v2(m_scroll_view->GetSize(0)->getImpl().getXY());
 			if (m_adjust_param != NULL) {
@@ -217,21 +225,21 @@ int32_t TextBox::SetCaretScroll()
 		float max_x = ci.x - size.extract_x() * 0.5f;
 		float min_x = (ci.x + 2.0f + right) - size.extract_x();
 
-		if (m_caret_scroll_to.extract_x() > max_x)
-			m_caret_scroll_to.set_x(max_x);
-		if (m_caret_scroll_to.extract_x() < min_x)
-			m_caret_scroll_to.set_x(min_x);
+		if (caret_scroll_to.extract_x() > max_x)
+			caret_scroll_to.set_x(max_x);
+		if (caret_scroll_to.extract_x() < min_x)
+			caret_scroll_to.set_x(min_x);
 
 		float line_y = line.frame.extract_y();
 		float max_y = line_y - size.extract_y() * 0.5f;
 		float min_y = ((line_y + line.frame.extract_w()) + bottom) - size.extract_y();
 
-		if (m_caret_scroll_to.extract_y() > max_y)
-			m_caret_scroll_to.set_y(max_y);
-		if (m_caret_scroll_to.extract_y() < min_y)
-			m_caret_scroll_to.set_y(min_y);
+		if (caret_scroll_to.extract_y() > max_y)
+			caret_scroll_to.set_y(max_y);
+		if (caret_scroll_to.extract_y() < min_y)
+			caret_scroll_to.set_y(min_y);
 		if (m_scroll_view != NULL) {
-			math::v2 pos = (m_caret_scroll_to + math::v2(left, top) -
+			math::v2 pos = (caret_scroll_to + math::v2(left, top) -
 					(math::v2(m_size.getImpl().getXY()) - size) * 0.5f) *
 				       math::v2(1.0f, -1.0f);
 			math::v4 center = GetPosCenter(0, m_scroll_view->GetInternalWidget(),
@@ -248,11 +256,11 @@ int32_t TextBox::SetCaretScroll()
 				pos.set_y(limit.extract_y());
 			m_scroll_view->SetViewFocus(pos, new Timer(Text::c_caretScrollPosMsec), true, true);
 		} else {
-			if (m_caret_scroll_to.extract_x() < 0.0f)
-				m_caret_scroll_to.set_x(0.0f);
-			if (m_caret_scroll_to.extract_y() < 0.0f)
-				m_caret_scroll_to.set_y(0.0f);
-			if (!(m_caret_scroll_from == m_caret_scroll_to))
+			if (caret_scroll_to.extract_x() < 0.0f)
+				caret_scroll_to.set_x(0.0f);
+			if (caret_scroll_to.extract_y() < 0.0f)
+				caret_scroll_to.set_y(0.0f);
+			if (!(m_caret_scroll_from == caret_scroll_to))
 				SetAnimListener(ANIM_CARET_SCROLL,
 						new AnimListener(new Timer(Text::c_caretScrollPosMsec), this,
 								 OnCaretScrollPos,
@@ -825,7 +833,9 @@ int32_t TextBox::SetImeParam(const ImeParam &param)
 	m_ime_param.languagesForced = param.languagesForced;
 	m_ime_param.option = param.option;
 	m_ime_param.enterLabel = param.enterLabel;
+#ifndef PAF_BUILD_2014
 	m_ime_param.filter = param.filter;
+#endif
 	return 0;
 }
 
@@ -836,7 +846,9 @@ int32_t TextBox::GetImeParam(ImeParam &param)
 	param.languagesForced = m_ime_param.languagesForced;
 	param.option = m_ime_param.option;
 	param.enterLabel = m_ime_param.enterLabel;
+#ifndef PAF_BUILD_2014
 	param.filter = m_ime_param.filter;
+#endif
 	return 0;
 }
 
@@ -1082,9 +1094,14 @@ void TextBox::OnCaretScrollPos(Timer *t, AnimListener *listener, void *data1, vo
 			       void *data3)
 {
 	TextBox *text_box = (TextBox *)data1;
+#ifdef PAF_BUILD_2014
+	const math::v2 &caret_scroll_to = text_box->m_auto_scroll_length;
+#else
+	const math::v2 &caret_scroll_to = text_box->m_caret_scroll_to;
+#endif
 
 	text_box->SetVisiblePos(text_box->m_caret_scroll_from +
-				(text_box->m_caret_scroll_to - text_box->m_caret_scroll_from) *
+				(caret_scroll_to - text_box->m_caret_scroll_from) *
 					t->m_mapped_x);
 }
 
@@ -1410,7 +1427,11 @@ int32_t TextBoxStyleParam::SetEach(Widget *widget)
 
 const char TextBoxSoundParam::m_param_name[] = "sound_text_box";
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) TextBoxSoundParam::TextBoxSoundParam()
+#else
 TextBoxSoundParam::TextBoxSoundParam()
+#endif
 {
 	m_sound_list.push_back(Sound("tapped", 1));
 }
@@ -1469,11 +1490,7 @@ static VersatileParam *NewTextBoxHandlerParam()
 
 static VersatileParam *NewTextBoxSoundParam()
 {
-#ifdef PAF_BUILD_2014
-	return new WidgetSoundParam;
-#else
 	return new TextBoxSoundParam;
-#endif
 }
 
 FactoryFuncTable g_factoryTextBox = {

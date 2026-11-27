@@ -436,9 +436,11 @@ public:
 	float m_label_slider_margin;
 	/* the touch dragging the slider, and the key moving it: -1 for none */
 	int32_t m_drag_touch_id;
+#ifndef PAF_BUILD_2014
 	int32_t m_key;
 	/* what a key press moves the value by (1 for 0) */
 	float m_key_step;
+#endif
 	/* the sounds added to it, by index */
 	list<WidgetSoundParam::Sound> m_sound_list;
 };

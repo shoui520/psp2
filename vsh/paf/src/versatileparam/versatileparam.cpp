@@ -354,9 +354,11 @@ int32_t WidgetParam::Init()
 		it->id.m_idhash = 0;
 	for (list<IndexedRef>::iterator it = m_string_list.begin(); it != m_string_list.end(); ++it)
 		it->id.m_idhash = 0;
+#ifndef PAF_BUILD_2014
 	for (list<IndexedRef>::iterator it = m_alias_string_list.begin();
 	     it != m_alias_string_list.end(); ++it)
 		it->id.m_idhash = 0;
+#endif
 	return 0;
 }
 
@@ -432,11 +434,13 @@ int32_t WidgetParam::Create(int32_t mode)
 		if (m_serial != NULL)
 			m_serial->AddParam(it->name, &it->id, ResourceParam::SEMANTIC_LABELREF);
 	}
+#ifndef PAF_BUILD_2014
 	for (list<IndexedRef>::iterator it = m_alias_string_list.begin();
 	     it != m_alias_string_list.end(); ++it) {
 		if (m_serial != NULL)
 			m_serial->AddParam(it->name, &it->id, ResourceParam::SEMANTIC_LABELREF);
 	}
+#endif
 	return 0;
 }
 

@@ -127,11 +127,11 @@ public:
 	virtual int32_t Set();
 	virtual int32_t Get();
 	virtual int32_t Create(int32_t mode);
-#endif
 
 	bool m_enable_long_press_text_auto_scroll;
 	/* -1: 500 */
 	int32_t m_long_press_text_auto_scroll_begin_msec;
+#endif
 };
 
 /* a Button's style: its four draw objects, how it lays them out and its texture animation */
