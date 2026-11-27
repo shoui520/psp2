@@ -803,15 +803,109 @@ int oskNeedsFullwidthDigits(uint32_t inputTypes);
 int oskPostProcessResult(uint16_t *text, int maxChars, uint32_t inputTypes, int maxLines);
 uint16_t oskConvertHiraToKata(uint16_t ch, const int *langMask);
 
+/* SceGxm types & imports used by menu_dlg.c and PocketStation */
+typedef struct SceGxmSyncObject SceGxmSyncObject;
+typedef void (SceGxmDisplayQueueCallback)(const void *callbackData);
+
+typedef struct SceGxmInitializeParams {
+	uint32_t flags;
+	uint32_t displayQueueMaxPendingCount;
+	SceGxmDisplayQueueCallback *displayQueueCallback;
+	uint32_t displayQueueCallbackDataSize;
+	uint32_t parameterBufferSize;
+} SceGxmInitializeParams;
+
+typedef struct SceCommonDialogRenderTargetInfo {
+	void *colorSurfaceData;
+	void *depthSurfaceData;
+	uint32_t width;
+	uint32_t height;
+	uint32_t strideInPixels;
+	uint32_t colorFormat;
+	uint32_t surfaceType;
+	uint8_t reserved[32];
+} SceCommonDialogRenderTargetInfo;
+
+typedef struct SceCommonDialogUpdateParam {
+	SceCommonDialogRenderTargetInfo renderTarget;
+	SceGxmSyncObject *displaySyncObject;
+	uint8_t reserved[32];
+} SceCommonDialogUpdateParam;
+
+#define PSPEMU_GXM_MEMORY_ATTRIB_RW          3U
+#define PSPEMU_GXM_COLOR_FORMAT_U8U8U8U8_ABGR 0x0C001000U
+#define PSPEMU_GXM_COLOR_SURFACE_LINEAR      0U
+
+int sceGxmInitialize(const SceGxmInitializeParams *params);
+int sceGxmMapMemory(void *base, SceSize size, uint32_t attr);
+int sceGxmSyncObjectCreate(SceGxmSyncObject **syncObject);
+int sceGxmDisplayQueueAddEntry(SceGxmSyncObject *oldBuffer, SceGxmSyncObject *newBuffer,
+                               const void *callbackData);
+int sceCommonDialogUpdate(const SceCommonDialogUpdateParam *updateParam);
+
+/* SceCommonDialog internal PSP/PS1 settings dialog imports */
+int SceCommonDialog_9FA21E09(const void *param);
+int SceCommonDialog_FA26EB30(void);
+int SceCommonDialog_64F65B8D(void *result);
+int SceCommonDialog_C2D6F7F2(void);
+
 /* menu_dlg.c */
+typedef struct PspemuMenuSettings {
+	uint32_t words[16];
+} PspemuMenuSettings;
+
+int pspemuMenuRunDialog(PspemuMenuSettings *settings);
 int pspemuMenuPreparePhotoExport(void);
 int pspemuMenuDialogSetup(void);
+int pspemuMenuSetScreenshotEnabled(uint8_t enabled);
 int pspemuMenuSetImeDeadline(SceUInt64 deadline);
 int pspemuMenuClearImeDeadline(void);
 int pspemuMenuPollDialog(int mode);
 int pspemuMenuDialogInit(void);
 int pspemuMenuLockDialog(int id);
 int pspemuMenuUnlockDialog(int id);
+SceBool pspemuMenuIsOskDialogLocked(void);
+void *pspemuMenuCapturePocsScreen(void);
+int pspemuMenuLoadVmcPreview(unsigned int slot);
+int pspemuMenuImportVmcPreviewEntries(int entryCount);
+
+/* pops_host.c / vmc_manager.c / sfo helpers used by menu_dlg.c */
+extern uint8_t g_popsMenuConfig[64];
+int popsHostGetCurrentDisc(void);
+int popsHostIsSingleDisc(void);
+int popsHostIsAnalogDisabled(void);
+int popsHostSetScreenScale(int mode, int scale, uint16_t *outWidth, int16_t *outHeight);
+int popsHostGetDiscCount(void);
+int popsHostCaptureScreen(void *dstBuf, int forExport);
+int popsHostGetPocsDisplaySlot(void);
+int popsHostGetPocsDisplayChannel(void);
+int popsHostGetPocsAutoBoot(void);
+uint8_t popsHostSetPocsAutoBoot(uint8_t enabled);
+int popsPngEncodeRgba(void *dstPng, const void *srcRgba, int width, int height,
+                      int stride, int flags);
+int sfoParseBuffer(const void *buf, uint32_t size, void **outHandle);
+int sfoDestroy(void *handle);
+int sfoFindKey(void *handle, const char *key, int *outIndex);
+int sfoGetEntryMeta(void *handle, int index, const char **outKey,
+                    size_t *outUsedSize, size_t *outMaxSize);
+int sfoGetEntryValue(void *handle, int index, char **outValue);
+int vmcManagerFlushAndVerify(unsigned int slot);
+int vmcManagerListEntries(unsigned int slot, void *outEntries);
+int vmcManagerCopyEntry(unsigned int dstSlot, unsigned int srcSlot, const void *entryName);
+int vmcManagerDeleteEntry(unsigned int slot, const void *entryName);
+int vmcManagerFindEntryIndex(unsigned int slot, const char *entryName);
+const char *remotePocsGetMcxPath(void);
+int remotePocsGetInsertedSlot(void);
+int remotePocsHasActiveSession(void);
+int remotePocsMountMediaFromMenu(void);
+int remotePocsUnmountMediaFromMenu(void);
+void *remotePocsGetRenderBuffer(void);
+int remotePocsRenderFrame(int slot, int channel, int flags);
+int remotePocsWaitRenderComplete(int renderResult);
+const char *pspemuCompatGetListVersion(void);
+int meAt3DecodeInternal(const void *esBuf, int16_t *pcmOut, uint32_t *outConsumed,
+                        uint32_t *outSamples, void *workCtx, int forceStereoDirect);
+int sceCompatAvailableColorSpaceSetting(void);
 
 /* remote_low_priority.c */
 int remoteLowPriorityLockPsButton(void);

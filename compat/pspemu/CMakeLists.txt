@@ -63,6 +63,8 @@ psp2_module(vs0_app_NPXS10028_eboot KIND user COMPILER gcc48 PARTIAL SOURCES
 	remote_usb.c
 	remote_peripheral.c
 	remote_osk.c
+	menu_dlg.c
+	sas2_core.c
 	me_wrapper_api.c
 	remote_usbpspcm.c
 	scejpeg_decmain.c
@@ -134,6 +136,8 @@ set_source_files_properties(
 	remote_usb.c
 	remote_peripheral.c
 	remote_osk.c
+	menu_dlg.c
+	sas2_core.c
 	me_wrapper_api.c
 	remote_usbpspcm.c
 	scejpeg_decmain.c

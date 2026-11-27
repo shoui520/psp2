@@ -430,10 +430,11 @@ static int __attribute__((noinline, noclone)) meAt3FindModeIndex(int channelMode
 	return -1;
 }
 
-static int __attribute__((noinline, noclone)) meAt3DecodeInternal(
+int __attribute__((noinline, noclone)) meAt3DecodeInternal(
 	const void *esBuf, int16_t *pcmOut, uint32_t *outConsumed, uint32_t *outSamples,
-	MeAt3WorkCtx *workCtx, int forceStereoDirect)
+	void *workCtxPtr, int forceStereoDirect)
 {
+	MeAt3WorkCtx *workCtx = (MeAt3WorkCtx *)workCtxPtr;
 	int created = 0;
 	MeAdecSlot *slot = meAdecAcquireSlot(workCtx, sizeof(*workCtx), ME_ADEC_BACKEND_AUDIOCODEC, &created);
 	if (slot == NULL)
