@@ -1662,8 +1662,9 @@ struct ApplauncherSaveDataInfo {
 	SceUInt32 headPad;
 	SceUInt32 inUse;		/* the save data is in use */
 	SceUInt32 midPad[2];
-	SceUInt32 attr;			/* bit 0 picks the information's text */
-	SceUInt32 tailPad[2];
+	SceUInt32 attr;			/* bit 0 picks the information's text; bit 1 is local/offline */
+	SceUInt32 quotaKb;		/* save data quota in KiB */
+	SceUInt32 usedKb;		/* save data used in KiB */
 };
 
 #endif

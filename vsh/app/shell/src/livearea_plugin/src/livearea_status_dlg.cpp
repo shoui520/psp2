@@ -123,6 +123,12 @@ int LiveAreaStatusDlg::LockFeed()
 		m_locked = true;
 	}
 	m_lockRequested = true;
+#if !defined(FW_TYPE_CEX)
+	if (page != NULL && page->m_isActive)
+		ScePafAutoTestTty_9E10E873(1, "/livespace/livearea_%s/activity/comment_%lld",
+					   page->m_titleId.c_str(),
+					   m_record->m_activityId);
+#endif
 	return 1;
 }
 

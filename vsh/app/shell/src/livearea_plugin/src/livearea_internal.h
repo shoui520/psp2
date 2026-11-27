@@ -238,7 +238,8 @@ public:
 
 struct ActivityRecord : public paf::common::RefObj {
 	virtual int GetRecordKind() = 0;			/* slot 2 (+0x08) */
-	unsigned char recordHeaderPadding[36];			/* +0x0C..+0x2F */
+	SceInt64 m_activityId;					/* +0x08 */
+	unsigned char recordHeaderPadding[32];			/* +0x10..+0x2F */
 	SceUInt64 m_updateTimestamp;				/* +0x30 */
 	unsigned char recordMiddlePadding[64];			/* +0x38..+0x77 */
 	int m_commentCount;					/* +0x78 */

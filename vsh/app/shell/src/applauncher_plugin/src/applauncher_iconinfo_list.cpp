@@ -618,6 +618,15 @@ enum {
 
 /* (0x815443E0) */
 int g_applauncherIconInfoSaveDataState = APPLAUNCHER_INFO_SAVEDATA_NOT_READ;
+#if !defined(FW_TYPE_CEX)
+static bool g_applauncherIconInfoSaveDataIsOnline = false;
+static SceUInt32 g_applauncherIconInfoSaveDataQuotaKb = 0;
+static SceUInt32 g_applauncherIconInfoSaveDataUsedKb = 0;
+extern void shellSizeTextKb(paf::wstring *text, SceUInt32 sizeKb);
+
+#define APPLAUNCHER_INFO_LABEL_SAVEDATA_MODE	0xC2400D6Du
+#define APPLAUNCHER_INFO_LABEL_SAVEDATA_SIZE	0xFCB9D3CCu
+#endif
 
 /* PLACEHOLDER: the texts of the save data's state */
 #define APPLAUNCHER_INFO_MSG_SAVEDATA		0x18C0105A
@@ -716,6 +725,11 @@ static int applauncherIconInfoSaveDataRun(ApplauncherIconInfoItemJob *job, void 
 		if (ret >= 0) {
 			g_applauncherIconInfoSaveDataState = (info.attr & 1) != 0 ?
 				APPLAUNCHER_INFO_SAVEDATA_ATTR : APPLAUNCHER_INFO_SAVEDATA_FOUND;
+#if !defined(FW_TYPE_CEX)
+			g_applauncherIconInfoSaveDataQuotaKb = info.quotaKb;
+			g_applauncherIconInfoSaveDataUsedKb = info.usedKb;
+			g_applauncherIconInfoSaveDataIsOnline = (info.attr & 2) == 0;
+#endif
 			ret = 0;
 		} else {
 			g_applauncherIconInfoSaveDataState = ret == SCE_ERROR_ERRNO_ENOENT ?
@@ -768,6 +782,154 @@ ApplauncherIconInfoSaveDataItem::~ApplauncherIconInfoSaveDataItem()
 
 #if !defined(FW_TYPE_CEX)
 extern "C" int vshAppMgrCloudDataSrcMount(int mountType, const void *titleId, void *mountPoint);
+
+static int applauncherIconInfoSaveDataDetailRun(ApplauncherIconInfoItemJob *job, void *userContext);
+static void applauncherIconInfoSaveDataDetailFinish(int result, void *userContext);
+
+ApplauncherIconInfoSaveDataDetailItem::ApplauncherIconInfoSaveDataDetailItem(
+	ui::Widget *saveDataItem, ui::Widget *parent, ui::ListItem::CreateParam *param)
+	: ui::ListItem(parent, param), m_saveDataItem(saveDataItem), m_label(0)
+{
+}
+
+ApplauncherIconInfoSaveDataDetailItem::~ApplauncherIconInfoSaveDataDetailItem()
+{
+	if (m_job.get() != NULL) {
+		m_job->Cancel();
+		m_job.reset();
+	}
+}
+
+void ApplauncherIconInfoSaveDataDetailItem::SetModeValue(ui::Widget *valueText)
+{
+	wstring text;
+
+	if (g_applauncherIconInfoSaveDataState == APPLAUNCHER_INFO_SAVEDATA_NONE) {
+		text = applauncherGetString(IDParam(s_empty_name, APPLAUNCHER_INFO_MSG_NONE));
+	} else if (g_applauncherIconInfoSaveDataIsOnline) {
+		text = wstring(L"Online");
+	} else {
+		text = wstring(L"Local");
+	}
+	if (valueText != NULL)
+		valueText->SetString(text);
+	valueText->SetColor(math::v4(1.0f, 1.0f, 1.0f, 1.0f));
+}
+
+void ApplauncherIconInfoSaveDataDetailItem::SetSizeValue(ui::Widget *valueText)
+{
+	wstring text;
+	wstring part;
+
+	if (g_applauncherIconInfoSaveDataState == APPLAUNCHER_INFO_SAVEDATA_NONE) {
+		text = applauncherGetString(IDParam(s_empty_name, APPLAUNCHER_INFO_MSG_NONE));
+	} else {
+		shellSizeText(&part, (SceUInt64)(g_applauncherIconInfoSaveDataUsedKb << 10));
+		text = part;
+		shellSizeTextKb(&part, g_applauncherIconInfoSaveDataQuotaKb);
+		text.append(L" / ");
+		text.append(part);
+	}
+	if (valueText != NULL)
+		valueText->SetString(text);
+	valueText->SetColor(math::v4(1.0f, 1.0f, 1.0f, 1.0f));
+}
+
+void ApplauncherIconInfoSaveDataDetailItem::Setup(unsigned int label)
+{
+	m_label = label;
+
+	Plugin *plugin = Plugin::Find("applauncher_plugin");
+
+	if (plugin == NULL)
+		return;
+
+	plugin->TemplateOpen(this, IDParam(s_empty_name, APPLAUNCHER_INFO_ITEM_TEMPLATE),
+			     Plugin::TemplateOpenParam());
+
+	ui::Widget *box = APPLAUNCHER_INFO_FIND(this, ui::ListItem, APPLAUNCHER_INFO_ITEM_BOX);
+
+	if (box == NULL)
+		return;
+
+	ui::Widget *labelText = box->FindChild(IDParam(s_empty_name, APPLAUNCHER_INFO_ITEM_LABEL), 0);
+
+	if (labelText != NULL) {
+		HideWidget(labelText, NULL);
+		labelText->SetString(wstring(applauncherGetString(IDParam(s_empty_name, label))));
+		labelText->AddEventListener(ui::Handler::CB_STATE_READY,
+			new ui::EventCBListener(applauncherIconInfoItemOnReady, this));
+	}
+
+	ui::Widget *valueText = box->FindChild(IDParam(s_empty_name, APPLAUNCHER_INFO_ITEM_VALUE), 0);
+
+	if (valueText != NULL) {
+		HideWidget(valueText, NULL);
+		if (g_applauncherIconInfoSaveDataState != APPLAUNCHER_INFO_SAVEDATA_NOT_READ) {
+			if (m_label == APPLAUNCHER_INFO_LABEL_SAVEDATA_MODE)
+				SetModeValue(valueText);
+			else if (m_label == APPLAUNCHER_INFO_LABEL_SAVEDATA_SIZE)
+				SetSizeValue(valueText);
+			valueText->AddEventListener(ui::Handler::CB_STATE_READY,
+				new ui::EventCBListener(applauncherIconInfoItemOnReady, this));
+			return;
+		}
+		valueText->SetString(wstring(applauncherGetString(
+			IDParam(s_empty_name, APPLAUNCHER_INFO_MSG_NONE))));
+		valueText->AddEventListener(ui::Handler::CB_STATE_READY,
+			new ui::EventCBListener(applauncherIconInfoItemOnReady, this));
+	}
+
+	if (m_saveDataItem == NULL)
+		return;
+
+	m_job = common::SharedPtr<job::JobItem>(new ApplauncherIconInfoItemJob("InfoApp", this,
+		applauncherIconInfoSaveDataDetailRun, applauncherIconInfoSaveDataDetailFinish));
+	if (m_job.get() != NULL)
+		job::JobQueue::default_queue->Enqueue(m_job);
+}
+
+static int applauncherIconInfoSaveDataDetailRun(ApplauncherIconInfoItemJob *job, void *userContext)
+{
+	ApplauncherIconInfoSaveDataDetailItem *item =
+		(ApplauncherIconInfoSaveDataDetailItem *)userContext;
+
+	if (job->IsCanceled())
+		return APPLAUNCHER_ERROR_CANCELED;
+	if (item != NULL && item->m_saveDataItem == NULL)
+		return -2146422015;
+	return 0;
+}
+
+static void applauncherIconInfoSaveDataDetailFinish(int result, void *userContext)
+{
+	ApplauncherIconInfoSaveDataDetailItem *item =
+		(ApplauncherIconInfoSaveDataDetailItem *)userContext;
+
+	if (result == APPLAUNCHER_ERROR_CANCELED)
+		return;
+
+	item->m_job.reset();
+
+	ui::Widget *valueText = item->FindChild(IDParam(s_empty_name, APPLAUNCHER_INFO_ITEM_VALUE),
+						0);
+
+	if (valueText == NULL)
+		return;
+
+	if (result != 0) {
+		wstring text(applauncherGetString(IDParam(s_empty_name, APPLAUNCHER_INFO_MSG_NONE)));
+
+		valueText->SetString(text);
+		valueText->SetColor(math::v4(1.0f, 1.0f, 1.0f, 1.0f));
+	} else if (item->m_label == APPLAUNCHER_INFO_LABEL_SAVEDATA_MODE) {
+		item->SetModeValue(valueText);
+	} else if (item->m_label == APPLAUNCHER_INFO_LABEL_SAVEDATA_SIZE) {
+		item->SetSizeValue(valueText);
+	}
+	valueText->AddEventListener(ui::Handler::CB_STATE_READY,
+		new ui::EventCBListener(applauncherIconInfoItemOnReady, item));
+}
 
 /* SaveData slot chunk reader constants (TOOL/DEBUGGER) */
 #define APPLAUNCHER_SDSLOT_CHUNK_SHIFT		15

@@ -108,6 +108,26 @@ public:
 
 #if !defined(FW_TYPE_CEX)
 /*
+ * DevKit/Debugger savedata mode/quota detail item (736 bytes, constructor 0x810DCBCA in TOOL):
+ * displays Online/Local storage mode (0xC2400D6D) or used/quota size (0xFCB9D3CC).
+ */
+class ApplauncherIconInfoSaveDataDetailItem : public paf::ui::ListItem {
+public:
+	ApplauncherIconInfoSaveDataDetailItem(paf::ui::Widget *saveDataItem,
+					      paf::ui::Widget *parent,
+					      paf::ui::ListItem::CreateParam *param);
+	virtual ~ApplauncherIconInfoSaveDataDetailItem();
+
+	void SetModeValue(paf::ui::Widget *valueText);
+	void SetSizeValue(paf::ui::Widget *valueText);
+	void Setup(unsigned int label);
+
+	paf::common::SharedPtr<paf::job::JobItem> m_job;
+	paf::ui::Widget *m_saveDataItem;
+	unsigned int m_label;
+};
+
+/*
  * DevKit/Debugger savedata slot list item (1040 bytes, constructor 0x810DD974 in TOOL):
  * mounts the title's savedata via vshAppMgrCloudDataSrcMount and parses sce_sys/sdslot.dat.
  */

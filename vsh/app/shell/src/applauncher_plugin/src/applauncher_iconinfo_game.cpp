@@ -16,6 +16,10 @@
 #include <job/job.h>
 #include <common/shared_ptr.h>
 #include <common/char_encoding.h>
+#if !defined(FW_TYPE_CEX)
+#include <file/localfile.h>
+extern "C" int sceFsUtilGetDevInfo(const char *path, SceUInt64 *maxSize, SceUInt64 *freeSize);
+#endif
 #include <vshbridge/vshbridge.h>
 #include "../../livespace_db/lsdb_keys.h"
 #include "../../../shell.h"
@@ -38,8 +42,14 @@ enum {
 	APPLAUNCHER_INFO_GAME_EXPIRE_TIME	= 7,
 	APPLAUNCHER_INFO_GAME_REMAINING		= 8,
 	APPLAUNCHER_INFO_GAME_CHECK		= 9,
-	APPLAUNCHER_INFO_GAME_UP_STATUS		= 10,
-#if !defined(FW_TYPE_CEX)
+#if defined(FW_TYPE_CEX)
+	APPLAUNCHER_INFO_GAME_UP_STATUS		= 10
+#else
+	APPLAUNCHER_INFO_GAME_TITLE_ID		= 10,
+	APPLAUNCHER_INFO_GAME_CARD_RW_AREA	= 11,
+	APPLAUNCHER_INFO_GAME_UP_STATUS		= 12,
+	APPLAUNCHER_INFO_GAME_SAVEDATA_MODE	= 13,
+	APPLAUNCHER_INFO_GAME_SAVEDATA_SIZE	= 14,
 	APPLAUNCHER_INFO_GAME_SAVEDATA_SLOT	= 15
 #endif
 };
@@ -54,6 +64,10 @@ enum {
 #define APPLAUNCHER_INFO_GAME_LABEL_START	0x40D2B66C
 #define APPLAUNCHER_INFO_GAME_LABEL_EXPIRE	0x1C2C0E54
 #define APPLAUNCHER_INFO_GAME_LABEL_REMAINING	0x5747EC79
+#if !defined(FW_TYPE_CEX)
+#define APPLAUNCHER_INFO_GAME_LABEL_SD_MODE	0xC2400D6Du
+#define APPLAUNCHER_INFO_GAME_LABEL_SD_SIZE	0xFCB9D3CCu
+#endif
 
 /* PLACEHOLDER: the parental level's text (its number), the remaining time of a license without
    an end, and a value not known */
@@ -72,6 +86,7 @@ enum {
  * The items of a game (sceLsdbGetType 1): with the license's period, with the upgrade's status
  * where the system shows it ("Store"), with the check of #appconf ("Check").
  */
+#if defined(FW_TYPE_CEX)
 static unsigned char s_gameItemsPeriod[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
 static unsigned char s_gameItems[] = { 0, 1, 2, 3, 4, 5 };
 static unsigned char s_gameItemsPeriodStore[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 10 };
@@ -88,6 +103,23 @@ static unsigned char s_type2ItemsPeriod[] = { 0, 2, 3, 4, 5, 6, 7, 8 };
 static unsigned char s_type2Items[] = { 0, 2, 3, 4, 5 };
 static unsigned char s_type3ItemsPeriod[] = { 0, 2, 3, 4, 5, 6, 7, 8 };
 static unsigned char s_type3Items[] = { 0, 2, 3, 4, 5 };
+#else
+static unsigned char s_gameItemsPeriod[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15 };
+static unsigned char s_gameItems[] = { 0, 1, 2, 3, 4, 5, 10, 11, 12, 13, 14, 15 };
+static unsigned char s_gameItemsPeriodStore[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15 };
+static unsigned char s_gameItemsStore[] = { 0, 1, 2, 3, 4, 5, 10, 11, 12, 13, 14, 15 };
+static unsigned char s_gameItemsPeriodCheck[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+static unsigned char s_gameItemsCheck[] = { 0, 1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 14, 15 };
+static unsigned char s_gameItemsPeriodCheckStore[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+static unsigned char s_gameItemsCheckStore[] = { 0, 1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 14, 15 };
+
+static unsigned char s_type45Items[] = { 0, 3, 4, 5, 10 };
+static unsigned char s_type45ItemsStore[] = { 0, 2, 3, 4, 5, 10 };
+static unsigned char s_type2ItemsPeriod[] = { 0, 2, 3, 4, 5, 6, 7, 8, 10 };
+static unsigned char s_type2Items[] = { 0, 2, 3, 4, 5, 10 };
+static unsigned char s_type3ItemsPeriod[] = { 0, 2, 3, 4, 5, 6, 7, 8, 10 };
+static unsigned char s_type3Items[] = { 0, 2, 3, 4, 5, 10 };
+#endif
 
 /* whether the system shows what may be upgraded */
 static inline bool applauncherIconInfoShowsUpgrade(void)
@@ -410,6 +442,48 @@ ui::ListItem *ApplauncherIconInfoGameFactory::CreateItem(int type, CreateParam &
 			item->Setup();
 		return item;
 	}
+#if !defined(FW_TYPE_CEX)
+	case APPLAUNCHER_INFO_GAME_TITLE_ID: {
+		LsdbAppInfo::iterator it = appInfo->find(LSDB_KEY_TITLE_ID);
+		if (it == end)
+			return NULL;
+
+		wstring text(applauncherIconInfoUtf16(string(LsdbValueText(it->second))));
+		ApplauncherIconInfoItem *item = new ApplauncherIconInfoItem(param.m_parent, NULL);
+
+		if (item != NULL)
+			item->Set(wstring(L"★ Title ID"), text);
+		return item;
+	}
+	case APPLAUNCHER_INFO_GAME_CARD_RW_AREA: {
+		SceUInt64 maxSize = 0;
+		SceUInt64 freeSize = 0;
+		wstring text;
+
+		LsdbAppInfo::iterator it = appInfo->find(LSDB_KEY_TITLE_ID);
+		if (it == end)
+			return NULL;
+
+		string cardPath(string("gro0:app/") + string(LsdbValueText(it->second)));
+		LocalFileStat cardStat;
+
+		if (LocalFile::Getstat(cardPath.c_str(), &cardStat) == 0 &&
+		    sceFsUtilGetDevInfo("grw0:", &maxSize, &freeSize) == 0) {
+			wstring maxText;
+
+			shellSizeText(&text, freeSize);
+			text.append(L" / ");
+			shellSizeText(&maxText, maxSize);
+			text.append(maxText);
+		}
+
+		ApplauncherIconInfoItem *item = new ApplauncherIconInfoItem(param.m_parent, NULL);
+
+		if (item != NULL)
+			item->Set(wstring(L"★ PS Vita card R/W Area"), text);
+		return item;
+	}
+#endif
 	case APPLAUNCHER_INFO_GAME_UP_STATUS: {
 		unsigned int status = 0;
 
@@ -439,6 +513,26 @@ ui::ListItem *ApplauncherIconInfoGameFactory::CreateItem(int type, CreateParam &
 		return item;
 	}
 #if !defined(FW_TYPE_CEX)
+	case APPLAUNCHER_INFO_GAME_SAVEDATA_MODE: {
+		ui::Widget *saveDataItem = param.m_list_view != NULL ?
+			param.m_list_view->GetListItem(0, 1) : NULL;
+		ApplauncherIconInfoSaveDataDetailItem *item =
+			new ApplauncherIconInfoSaveDataDetailItem(saveDataItem, param.m_parent, NULL);
+
+		if (item != NULL)
+			item->Setup(APPLAUNCHER_INFO_GAME_LABEL_SD_MODE);
+		return item;
+	}
+	case APPLAUNCHER_INFO_GAME_SAVEDATA_SIZE: {
+		ui::Widget *saveDataItem = param.m_list_view != NULL ?
+			param.m_list_view->GetListItem(0, 1) : NULL;
+		ApplauncherIconInfoSaveDataDetailItem *item =
+			new ApplauncherIconInfoSaveDataDetailItem(saveDataItem, param.m_parent, NULL);
+
+		if (item != NULL)
+			item->Setup(APPLAUNCHER_INFO_GAME_LABEL_SD_SIZE);
+		return item;
+	}
 	case APPLAUNCHER_INFO_GAME_SAVEDATA_SLOT: {
 		LsdbAppInfo::iterator it = appInfo->find(LSDB_KEY_ORG_PATH);
 		if (it == end)
