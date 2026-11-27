@@ -18,7 +18,7 @@ struct SystemUpdateVersionInfo {
 	int version;
 	int reserved;
 	int flag;			/* 0: the registry's server may be used */
-	int reserved2;
+	int targetType;			/* 2 on retail CEX, 1 on dev/test kits */
 };
 
 /* what removes a file for the system update's own process (PLACEHOLDER) */

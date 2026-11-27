@@ -85,6 +85,12 @@ void ApplauncherPageBase::Unload()
 	m_view = NULL;
 }
 
+/* (0x81413CB1) */
+bool ApplauncherPageBase::IsOpened()
+{
+	return true;
+}
+
 /* whether the slot holds an icon with a widget */
 #define APPLAUNCHER_PAGE_HAS_WIDGET(slot) \
 	(m_slots[slot].get() != NULL && m_slots[slot]->GetWidget() != NULL)
@@ -751,19 +757,17 @@ static void placeIcon(ApplauncherPage *page, const common::SharedPtr<Applauncher
 
 		dest = item != NULL ? static_cast<ApplauncherPage *>(item) : NULL;
 		from = dest;
-		if (dest != NULL) {
+		if (dest != NULL)
 			slot = dest->GetEmptySlot();
-			if (slot >= 0)
-				goto place;
-		}
 	} else {
 		from = page;
 	}
-	dest = applauncherHomeGetNextPage(from);
-	if (dest != NULL)
-		slot = dest->GetEmptySlot();
+	if (slot < 0) {
+		dest = applauncherHomeGetNextPage(from);
+		if (dest != NULL)
+			slot = dest->GetEmptySlot();
+	}
 
-place:
 	ui::Widget *widget = icon->m_icon->m_widget;
 	math::v4 screen = widget->GetWorldMatrix().w();
 

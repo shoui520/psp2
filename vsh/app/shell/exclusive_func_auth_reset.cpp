@@ -91,6 +91,12 @@ int shellExclusiveFuncPasscodeLockoutStop(void)
 	return -1;
 }
 
+int shellExclusiveFuncPasscodeLockoutStart(AuthResetLoadedCallback loadedCb,
+					   AuthResetUnloadedCallback unloadedCb, void *userData)
+{
+	return shellExclusiveFuncAuthResetStart(loadedCb, unloadedCb, userData);
+}
+
 /* 0x813C48A0 */
 __attribute__((noinline)) int ExclusiveFuncAuthReset::Setup(const ExclusiveFuncMemBlock *mem)
 {

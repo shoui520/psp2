@@ -13,7 +13,7 @@
 #include "nptrophy_net.h"
 
 extern "C" {
-extern SceInt64 sceKernelGetSystemTimeWideForUser(void);
+extern SceInt64 sceKernelGetSystemTimeWide(void);
 }
 
 namespace {
@@ -432,7 +432,7 @@ struct ModifiedPrivacyList {
 			int ret = cur->dateAcc.ParseTick(&cur->entry.lastUpdated);
 			if (ret < 0)
 				return ret;
-			sceClibMemcpy(outSlots[count], &cur->entry, sizeof(cur->entry));
+			sceClibMemcpy_safe(outSlots[count], &cur->entry, sizeof(cur->entry));
 			++count;
 		}
 		*outCount = count;
@@ -1153,7 +1153,7 @@ int TrophyStatusInfo::Set(const char *hostFqdn, uint64_t interval)
 	char *copy = static_cast<char *>(TrophyHeapObject::operator new(len + 1));
 	if (copy == NULL)
 		return NP_TROPHY_ERR_OUT_OF_MEMORY;
-	sceClibMemcpy(copy, hostFqdn, len);
+	sceClibMemcpy_safe(copy, hostFqdn, len);
 	copy[len] = '\0';
 
 	if (fqdn != NULL)
@@ -1186,7 +1186,7 @@ int TrophyStatusXmlParser::VerifyHeaderSignature(char *rawXml, SceSize xmlLen, S
 		return NP_TROPHY_ERR_XML_PARSE_ERROR;
 
 	char headerLine[68];
-	sceClibMemcpy(headerLine, rawXml, 65);
+	sceClibMemcpy_safe(headerLine, rawXml, 65);
 	headerLine[65] = '\0';
 	if (sceClibStrncmp(headerLine, "Sce-Np-Signature:", 17) != 0)
 		return NP_TROPHY_ERR_XML_PARSE_ERROR;
@@ -1466,7 +1466,7 @@ void TrophyNetClient::Term()
 int TrophyNetClient::EnsureStatusFresh(TrophyHandle *handle, const TrophyHttpTimeouts *timeouts)
 {
 	TrophyStatusFetcher fetcher;
-	uint64_t nowUsec = static_cast<uint64_t>(sceKernelGetSystemTimeWideForUser());
+	uint64_t nowUsec = static_cast<uint64_t>(sceKernelGetSystemTimeWide());
 
 	m_mutex.Lock();
 	if (m_statusInfo.IsValid() && nowUsec < m_statusFetchedTimeUsec + kStatusCacheTtlUsec) {
@@ -1590,7 +1590,7 @@ int TrophyXmlDateAccumulator::Append(const char *chars, SceSize length)
 		char *fresh = static_cast<char *>(TrophyHeapObject::operator new(length + 1));
 		if (fresh == NULL)
 			return NP_TROPHY_ERR_OUT_OF_MEMORY;
-		sceClibMemcpy(fresh, chars, length);
+		sceClibMemcpy_safe(fresh, chars, length);
 		fresh[length] = '\0';
 		m_text = fresh;
 		return 0;
@@ -1600,8 +1600,8 @@ int TrophyXmlDateAccumulator::Append(const char *chars, SceSize length)
 	char *grown = static_cast<char *>(TrophyHeapObject::operator new(curLen + length + 1));
 	if (grown == NULL)
 		return NP_TROPHY_ERR_OUT_OF_MEMORY;
-	sceClibMemcpy(grown, m_text, curLen);
-	sceClibMemcpy(grown + curLen, chars, length);
+	sceClibMemcpy_safe(grown, m_text, curLen);
+	sceClibMemcpy_safe(grown + curLen, chars, length);
 	grown[curLen + length] = '\0';
 	TrophyHeapObject::operator delete(m_text);
 	m_text = grown;
@@ -1920,7 +1920,7 @@ int TrophyXmlDocBuilder::AppendNpIdJidElement(BxceNodeId parent, const char *tag
 					      const SceNpId *npId)
 {
 	SceNpId sanitized;
-	sceClibMemcpy(&sanitized, npId, sizeof(sanitized));
+	sceClibMemcpy_safe(&sanitized, npId, sizeof(sanitized));
 	sceClibMemset(sanitized.opt, 0, 4);
 
 	TrophyNpJidParts jidParts;
@@ -2298,7 +2298,7 @@ TrophyNetTitleListFetcher::~TrophyNetTitleListFetcher()
 /* 0x812E1C04 */
 int TrophyNetTitleListFetcher::Init(const SceNpId *npId, const SceRtcTick *sinceUtc)
 {
-	sceClibMemcpy(&m_npId, npId, sizeof(m_npId));
+	sceClibMemcpy_safe(&m_npId, npId, sizeof(m_npId));
 	m_sinceUtc = *sinceUtc;
 	m_entries = static_cast<TrophyModifiedPrivacyEntry *>(
 		TrophyHeapObject::operator new(10 * sizeof(TrophyModifiedPrivacyEntry)));
@@ -2400,7 +2400,7 @@ int TrophySyncRequestPayload::SetCommSign(const void *signBuf)
 	uint8_t *copy = static_cast<uint8_t *>(TrophyHeapObject::operator new(160));
 	if (copy == NULL)
 		return NP_TROPHY_ERR_OUT_OF_MEMORY;
-	sceClibMemcpy(copy, signBuf, 160);
+	sceClibMemcpy_safe(copy, signBuf, 160);
 	if (m_commSign != NULL)
 		TrophyHeapObject::operator delete(m_commSign);
 	m_commSign = copy;
@@ -3124,7 +3124,7 @@ int TrophySignatureVerifierCore::Verify(const TrophySfmVerifyKeyEntry *keyEntry,
 	TrophyRsaSlice digestSlice = { computedSha1, sizeof(computedSha1) };
 	TrophyRsaSlice sigSlice = { sig->bytes + 32, 128 };
 	TrophyRsaKeyPair pubKey = { keyEntry->rsaModulus, keyEntry->rsaExponent };
-	if (npTrophyRsa1024VerifySha1(&sigSlice, &digestSlice, &pubKey, 5) != 0)
+	if (GcAuthRsaVerify1024(&sigSlice, &digestSlice, &pubKey, 5) != 0)
 		return NP_TROPHY_ERR_SIG_VERIFIER_FAILED;
 	return 0;
 }

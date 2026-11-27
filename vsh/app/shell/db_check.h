@@ -23,10 +23,10 @@ typedef struct DbCheckParam {
 	const char *initialPath;	/* by path: its initial image */
 	int copyFlags;			/* how the initial image is copied */
 	int dirMode;			/* by path: the mode of the folders made for it */
-	int reserved0;
-	SceUInt64 reserved1;
-	int reserved2;
-	int reserved3;
+	int alignPad;
+	SceUInt64 optionalParam;
+	int optionalFlags;
+	int tailPad;
 	SceUInt64 option;		/* DB_CHECK_OPTION_* */
 } DbCheckParam;
 

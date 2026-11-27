@@ -1326,3 +1326,13 @@ void npCommunityFree(void *ptr)
 {
 	sceNpCommonFreeNpServerName(ptr);
 }
+
+void *npCommerce2Alloc(SceSize size)
+{
+	return npCommunityAlloc(size);
+}
+
+void npCommerce2Free(void *ptr)
+{
+	npCommunityFree(ptr);
+}

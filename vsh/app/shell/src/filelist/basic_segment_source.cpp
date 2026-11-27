@@ -43,6 +43,11 @@ BasicSegmentSource::BasicSegmentSource()
 {
 }
 
+paf::ui::filelist::SegmentSource *createBasicSegmentSource()
+{
+	return new BasicSegmentSource();
+}
+
 BasicSegmentSource::~BasicSegmentSource()
 {
 }
@@ -114,6 +119,39 @@ paf::intrusive_ptr<paf::ui::filelist::CellSource> BasicSegmentSource::GetSegment
 
 	return simulated[static_cast<size_t>(index)]->cellSource;
 }
+
+} /* namespace filelist */
+
+class ActivityFeedCellSource;
+
+void activityUiSegmentSetCell(paf::ui::filelist::SegmentSource *source, int segmentIndex,
+			      paf::common::RefObj **cellSource,
+			      paf::ui::filelist::SegmentListAccessor::OptionParam *option)
+{
+	paf::intrusive_ptr<paf::ui::filelist::CellSource> cellRef(
+		cellSource != NULL ? reinterpret_cast<paf::ui::filelist::CellSource *>(*cellSource) : NULL);
+	static_cast<filelist::BasicSegmentSource *>(source)->InsertSegment(
+		segmentIndex, cellRef, *option);
+}
+
+void activityUiSegmentRemoveCell(paf::ui::filelist::SegmentSource *source, int segmentIndex)
+{
+	static_cast<filelist::BasicSegmentSource *>(source)->RemoveSegment(segmentIndex);
+}
+
+void activityUiSegmentGetCell(ActivityFeedCellSource **outCellSource,
+			      paf::ui::filelist::SegmentSource *source, int segmentIndex)
+{
+	paf::intrusive_ptr<paf::ui::filelist::CellSource> cellRef =
+		static_cast<filelist::BasicSegmentSource *>(source)->GetSegmentCellSource(segmentIndex);
+	paf::ui::filelist::CellSource *rawCell = cellRef.get();
+	if (rawCell != NULL)
+		rawCell->AddRef();
+	if (outCellSource != NULL)
+		*outCellSource = reinterpret_cast<ActivityFeedCellSource *>(rawCell);
+}
+
+namespace filelist {
 
 /* 0x8134AC6A */
 int64_t BasicSegmentSource::GetID(int32_t index)

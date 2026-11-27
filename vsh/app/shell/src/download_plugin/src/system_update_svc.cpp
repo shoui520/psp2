@@ -23,6 +23,7 @@
 #include <regmgr/regmgr.h>
 
 #include "src/livespace_db/livespace_db_internal.h"
+#include "src/trigger_mgr/trigger_mgr.h"
 #include "download_plugin.h"
 #include "system_update_svc.h"
 
@@ -34,8 +35,7 @@ using namespace paf;
 
 SystemUpdateSvc *g_systemUpdateSvc;			/* (0x81544898) */
 
-/* another file's (PLACEHOLDER names) */
-int Bgdl_81199EC0(common::SharedPtr<job::JobItem> &job);
+extern int liveareaCronEnqueueJob(common::SharedPtr<job::JobItem> &job);
 
 /* the update's check given back: its job queued */
 int SystemUpdateSvc::Bgdl_8112CFD8(SystemUpdateResult result)
@@ -109,7 +109,7 @@ int SystemUpdateSvc::Bgdl_8112D508(Plugin *plugin, DownloadPluginObject *object)
 	m_started = false;
 	m_busy = false;
 	m_checking = false;
-	m_reserved3 = false;
+	m_unusedFlag = false;
 	m_job = NULL;
 	m_taskId = 0;
 	m_object = object;
@@ -125,17 +125,17 @@ int SystemUpdateSvc::Bgdl_8112D508(Plugin *plugin, DownloadPluginObject *object)
 	m_state = 2;
 	m_autoUpdate = 0;
 
-	Bgdl_812A4C6C(SYSTEM_UPDATE_SETTING);
+	shellTriggerMgrRegisterService(SYSTEM_UPDATE_SETTING);
 
 	int value = 0;
 	bool enabled = sceRegMgrGetKeyInt("/CONFIG/NP2/AUTOUPDATE", "system", &value) == 0 &&
 		       value == 1;
 	bool current = false;
 
-	Bgdl_812A4FC8(SYSTEM_UPDATE_SETTING, &current);
+	shellTriggerMgrIsServiceEnabled(SYSTEM_UPDATE_SETTING, &current);
 	if (enabled != current)
-		Bgdl_812A4FBA(SYSTEM_UPDATE_SETTING, enabled);
-	Bgdl_812A5032(SYSTEM_UPDATE_SETTING, Bgdl_8112ED3C, this);
+		shellTriggerMgrSetServiceEnabled(SYSTEM_UPDATE_SETTING, enabled);
+	shellTriggerMgrSetServiceCallback(SYSTEM_UPDATE_SETTING, Bgdl_8112ED3C, this);
 	m_object->Bgdl_8112F2C4(2, Bgdl_8112ED58, this);
 
 	int count = 0;
@@ -167,7 +167,7 @@ int SystemUpdateSvc::Bgdl_8112D508(Plugin *plugin, DownloadPluginObject *object)
 /* the service stopped */
 int SystemUpdateSvc::Bgdl_8112D7F0(void)
 {
-	Bgdl_812A509E(SYSTEM_UPDATE_SETTING);
+	shellTriggerMgrClearServiceCallback(SYSTEM_UPDATE_SETTING);
 	if (m_registLock != NULL) {
 		delete m_registLock;
 		m_registLock = NULL;
@@ -303,45 +303,46 @@ SystemUpdateResult SystemUpdateSvc::Bgdl_8112DA94(SystemUpdateInfo *info)
 	sce_paf_strncat(m_detail.fileName, "PSP2UPDAT.PUP", sizeof(m_detail.fileName) - 1);
 	sce_paf_strncat(m_detail.dir, "ud0:PSP2UPDATE/", sizeof(m_detail.dir) - 1);
 	sce_paf_strncat(m_detail.type, "SETTINGS", sizeof(m_detail.type) - 1);
-	if (info->offset == 0) {
-		result = m_ctrl->Bgdl_81131280(*info);
-		if (result.error != 0)
-			goto end;
-		path = m_detail.dir;
-		path += m_detail.fileName;
-		file = LocalFile::Open(path.c_str(), SCE_O_RDWR | SCE_O_CREAT | SCE_O_TRUNC, 6, &error);
-		if (file.get() == NULL || error != 0) {
-			result.error = SYSTEM_UPDATE_ERROR;
-			result.detail = error;
-			goto end;
+	do {
+		if (info->offset == 0) {
+			result = m_ctrl->Bgdl_81131280(*info);
+			if (result.error != 0)
+				break;
+			path = m_detail.dir;
+			path += m_detail.fileName;
+			file = LocalFile::Open(path.c_str(), SCE_O_RDWR | SCE_O_CREAT | SCE_O_TRUNC, 6, &error);
+			if (file.get() == NULL || error != 0) {
+				result.error = SYSTEM_UPDATE_ERROR;
+				result.detail = error;
+				break;
+			}
+			file->Close();
 		}
-		file->Close();
-	}
 
-	SceInt64 times;		/* never set: Sony's code stores whatever its register holds */
+		SceInt64 times;		/* never set: Sony's code stores whatever its register holds */
 
-	m_detail.offset = info->offset;
-	m_detail.size = info->size;
-	m_detail.times[0] = times;
-	m_detail.times[1] = times;
-	m_detail.times[2] = times;
-	m_detail.times[3] = times;
-	m_detail.times[4] = times;
-	m_detail.times[5] = times;
-	m_detail.times[6] = times;
-	m_detail.times[7] = times;
-	if (Bgdl_81138F80(0, SYSTEM_UPDATE_TASK_KIND, &m_detail, &m_taskId) != 0) {
-		result.error = SYSTEM_UPDATE_ERROR;
-		goto end;
-	}
-	m_hasTask = true;
-	m_state = 1;
-	if (info->offset != 0) {
-		SystemUpdateInfo current;
+		m_detail.offset = info->offset;
+		m_detail.size = info->size;
+		m_detail.times[0] = times;
+		m_detail.times[1] = times;
+		m_detail.times[2] = times;
+		m_detail.times[3] = times;
+		m_detail.times[4] = times;
+		m_detail.times[5] = times;
+		m_detail.times[6] = times;
+		m_detail.times[7] = times;
+		if (Bgdl_81138F80(0, SYSTEM_UPDATE_TASK_KIND, &m_detail, &m_taskId) != 0) {
+			result.error = SYSTEM_UPDATE_ERROR;
+			break;
+		}
+		m_hasTask = true;
+		m_state = 1;
+		if (info->offset != 0) {
+			SystemUpdateInfo current;
 
-		result = m_ctrl->Bgdl_81131CE6(0, &current, 0);
-	}
-end:
+			result = m_ctrl->Bgdl_81131CE6(0, &current, 0);
+		}
+	} while (0);
 	m_registLock->Unlock();
 	ScePafMisc_B45A7521(&title);
 	return result;
@@ -359,6 +360,9 @@ SystemUpdateResult SystemUpdateSvc::Bgdl_8112E7F8(SystemUpdateInfo *info)
 	SystemUpdateStatus status;
 	SystemUpdateResult ret = m_ctrl->Bgdl_81132734(&status);
 
+	bool shouldFetch = true;
+	bool resetOffset = true;
+
 	if (ret.error == 0) {
 		if (status.state == 2) {
 			bool ok = false;
@@ -366,7 +370,7 @@ SystemUpdateResult SystemUpdateSvc::Bgdl_8112E7F8(SystemUpdateInfo *info)
 			result = m_ctrl->Bgdl_8113276C(string(info->url), string(info->lastModified),
 						       info->size, &ok);
 			if (result.error == 0 && ok == true)
-				goto end;
+				shouldFetch = false;
 		} else {
 			int error = 0;
 			int count = 0;
@@ -391,16 +395,16 @@ SystemUpdateResult SystemUpdateSvc::Bgdl_8112E7F8(SystemUpdateInfo *info)
 			}
 			result.error = error;
 			result.detail = 0;
-			if (error != 0)
-				goto end;
-			if (have == true) {
+			if (error != 0) {
+				shouldFetch = false;
+			} else if (have == true) {
 				bool ok = false;
 
 				result = m_ctrl->Bgdl_8113276C(string(info->url), string(info->lastModified),
 							       info->size, &ok);
 				if (result.error == 0 && ok == true) {
 					Bgdl_81139190(0, id);
-					goto end;
+					shouldFetch = false;
 				}
 			} else if (status.state == 0) {
 				bool ok = false;
@@ -410,15 +414,16 @@ SystemUpdateResult SystemUpdateSvc::Bgdl_8112E7F8(SystemUpdateInfo *info)
 
 				if (check.error == 0 && ok == true) {
 					info->offset = status.value;
-					goto fetch;
+					resetOffset = false;
 				}
 			}
 		}
 	}
-	info->offset = 0;
-fetch:
-	result = Bgdl_8112DA94(info);
-end:
+	if (shouldFetch) {
+		if (resetOffset)
+			info->offset = 0;
+		result = Bgdl_8112DA94(info);
+	}
 	m_checking = false;
 	m_seqLock->Unlock();
 	return result;
@@ -447,7 +452,7 @@ int SystemUpdateSvc::Bgdl_8112EBB0(void)
 				if (m_job != NULL) {
 					common::SharedPtr<job::JobItem> job(m_job);
 
-					Bgdl_81199EC0(job);
+					liveareaCronEnqueueJob(job);
 				}
 				m_checking = true;
 			}

@@ -1064,6 +1064,11 @@ int shellMtpWiFiTerminate(void)
 	return 0;
 }
 
+paf::job::JobQueue *shellGetMtpJobQueue(void)
+{
+	return paf::job::JobQueue::default_queue;
+}
+
 /* 0x812B1C8A */
 void mtpNotifyAccountLinkResult(const MtpAccountLinkInfo *linkInfo, int broadcastFlag)
 {

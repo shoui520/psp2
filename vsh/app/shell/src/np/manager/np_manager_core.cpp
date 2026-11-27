@@ -14,6 +14,8 @@
 #include <regmgr/regmgr.h>
 #include "../auth/np_auth_core.h"
 
+extern "C" int SceThreadmgrCoredumpTime_sceKernelExitThread(int status);
+
 extern "C" {
 extern int SceNetInternal_9DBD2F60(SceUID threadId, int enable, int reserved);
 extern int SceNpCommon_652FC5E0(const char *environment);
@@ -21,18 +23,16 @@ extern int SceNpCommon_DA04BA55(const void *settings);
 extern int SceNpCommon_F585C86C(void);
 extern int sceAppMgrGetUserDirPath(int partitionId, char *path, SceSize size);
 extern int sceAppMgrUpdateSaveDataParam(const char *path);
-extern int sceRegMgrGetKeyIntForUser(const char *category, const char *name, int *outVal);
-extern int sceRegMgrSetKeyIntForUser(const char *category, const char *name, int value);
-extern int sceRegMgrGetKeyStrForUser(const char *category, const char *name,
+extern int sceRegMgrGetKeyInt(const char *category, const char *name, int *outVal);
+extern int sceRegMgrSetKeyInt(const char *category, const char *name, int value);
+extern int sceRegMgrGetKeyStr(const char *category, const char *name,
 				     char *buf, SceSize size);
-extern int sceRegMgrSetKeyStrForUser(const char *category, const char *name,
+extern int sceRegMgrSetKeyStr(const char *category, const char *name,
 				     const char *buf, SceSize size);
-extern int sceRegMgrGetKeyBinForUser(const char *category, const char *name,
+extern int sceRegMgrGetKeyBin(const char *category, const char *name,
 				     void *buf, SceSize size);
-extern int sceRegMgrSetKeyBinForUser(const char *category, const char *name,
+extern int sceRegMgrSetKeyBin(const char *category, const char *name,
 				     const void *buf, SceSize size);
-extern int sceRegMgrGetKeysForUser(const char *category, RegMgrKeyInfo *keys, int count);
-extern int sceRegMgrSetKeysForUser(const char *category, const RegMgrKeyInfo *keys, int count);
 extern int sceKernelSignalCondTo(SceUID condId, SceUID threadId);
 extern int vshRtcSetCurrentTick(const SceRtcTick *tick);
 extern int vshRtcSetCurrentSecureTick(const SceRtcTick *tick);
@@ -318,15 +318,15 @@ int npManagerCoreInit(void)
 	sceClibMemset(s_cachedPassword, 0, sizeof(s_cachedPassword));
 	s_cachedAccountId = 0;
 
-	sceRegMgrGetKeyStrForUser("/CONFIG/NP", "login_id", s_cachedLoginId, 65);
-	ret = sceRegMgrGetKeyStrForUser("/CONFIG/NP", "password", s_cachedPassword, 33);
+	sceRegMgrGetKeyStr("/CONFIG/NP", "login_id", s_cachedLoginId, 65);
+	ret = sceRegMgrGetKeyStr("/CONFIG/NP", "password", s_cachedPassword, 33);
 	if (ret >= 0) {
-		ret = sceRegMgrGetKeyBinForUser("/CONFIG/NP", "account_id",
+		ret = sceRegMgrGetKeyBin("/CONFIG/NP", "account_id",
 						&s_cachedAccountId, sizeof(s_cachedAccountId));
 	}
 	if (ret >= 0) {
 		char envName[20];
-		ret = sceRegMgrGetKeyStrForUser("/CONFIG/NP", "env", envName, 17);
+		ret = sceRegMgrGetKeyStr("/CONFIG/NP", "env", envName, 17);
 		if (ret >= 0) {
 			SceNpCommon_652FC5E0(envName);
 			NpCommonSettings settings;
@@ -497,7 +497,7 @@ int npAccountUpdateCredentials(int reqHandle, const void *loginId, const void *p
 void npAccountNotifyBootSignIn(void)
 {
 	int enableNp = 0;
-	if (sceRegMgrGetKeyIntForUser("/CONFIG/NP", "enable_np", &enableNp) >= 0 &&
+	if (sceRegMgrGetKeyInt("/CONFIG/NP", "enable_np", &enableNp) >= 0 &&
 	    enableNp == 1) {
 		npMgrCallbackNotifySignInState(0);
 	}
@@ -689,7 +689,7 @@ int npAccountReadRegistryCredentials(void *loginId, void *password, SceUInt64 *a
 	keys[2].valueSize = sizeof(accountBuf);
 	keys[2].data = &accountBuf;
 
-	int ret = sceRegMgrGetKeysForUser("/CONFIG/NP", keys, 3);
+	int ret = sceRegMgrGetKeys("/CONFIG/NP", keys, 3);
 	if (ret >= 0) {
 		if (loginId != NULL)
 			sceClibMemcpy_safe(loginId, loginBuf, sizeof(loginBuf));
@@ -951,6 +951,17 @@ int npAccountRegisterNetCallback(NpAccountEventCallback callback, void *userArg)
 	return ret;
 }
 
+int shellCallbackTableAdd(void (*callback)(int, void *), void *userData)
+{
+	return npAccountRegisterNetCallback(
+		reinterpret_cast<NpAccountEventCallback>(callback), userData);
+}
+
+bool shellActivityIsEnabled(void)
+{
+	return npAccountIsSignedIn() != 0;
+}
+
 /* 0x813277B8 */
 int npAccountUnregisterNetCallback(int callbackId)
 {
@@ -1054,7 +1065,7 @@ static int npMgrCallbackThreadEntry(SceSize args, void *argp)
 		}
 	}
 
-	sceKernelExitThread(0);
+	SceThreadmgrCoredumpTime_sceKernelExitThread(0);
 	return 0;
 }
 
@@ -1362,7 +1373,7 @@ static bool npMgrExtractValidMiniTicket(NpAccountSession *session, void *outData
 static int npMgrGetAutoClockSetting(void)
 {
 	int autoSet = 0;
-	int ret = sceRegMgrGetKeyIntForUser("/CONFIG/DATE", "set_automatically", &autoSet);
+	int ret = sceRegMgrGetKeyInt("/CONFIG/DATE", "set_automatically", &autoSet);
 	return (ret >= 0) ? autoSet : ret;
 }
 
@@ -1370,7 +1381,7 @@ static int npMgrGetAutoClockSetting(void)
 static int npMgrLoadEnableNpSetting(void)
 {
 	int enabled = 0;
-	int ret = sceRegMgrGetKeyIntForUser("/CONFIG/NP", "enable_np", &enabled);
+	int ret = sceRegMgrGetKeyInt("/CONFIG/NP", "enable_np", &enabled);
 	s_enableNpFlag = (ret >= 0) ? enabled : 0;
 	return ret;
 }
@@ -1387,7 +1398,7 @@ static int npMgrSetEnableNp(int enabled)
 	if (s_enableNpFlag == enabled)
 		return 0;
 
-	int ret = sceRegMgrSetKeyIntForUser("/CONFIG/NP", "enable_np", enabled);
+	int ret = sceRegMgrSetKeyInt("/CONFIG/NP", "enable_np", enabled);
 	if (ret < 0)
 		return ret;
 
@@ -1415,17 +1426,17 @@ static int npMgrWriteRegistryCredsRaw(const char *loginId, const char *password,
 {
 	int ret;
 	if (loginId != NULL) {
-		ret = sceRegMgrSetKeyStrForUser("/CONFIG/NP", "login_id", loginId, 65);
+		ret = sceRegMgrSetKeyStr("/CONFIG/NP", "login_id", loginId, 65);
 		if (ret < 0)
 			return ret;
 	}
 	if (password != NULL) {
-		ret = sceRegMgrSetKeyStrForUser("/CONFIG/NP", "password", password, 31);
+		ret = sceRegMgrSetKeyStr("/CONFIG/NP", "password", password, 31);
 		if (ret < 0)
 			return ret;
 	}
 	if (accountId != NULL) {
-		ret = sceRegMgrSetKeyBinForUser("/CONFIG/NP", "account_id",
+		ret = sceRegMgrSetKeyBin("/CONFIG/NP", "account_id",
 						accountId, sizeof(*accountId));
 		if (ret < 0)
 			return ret;
@@ -1440,7 +1451,7 @@ static int npMgrUpdateRegistryCredsVerified(SceUInt64 accountId, const char *log
 					    const char *password)
 {
 	SceUInt64 storedAccountId = 0;
-	int ret = sceRegMgrGetKeyBinForUser("/CONFIG/NP", "account_id",
+	int ret = sceRegMgrGetKeyBin("/CONFIG/NP", "account_id",
 					    &storedAccountId, sizeof(storedAccountId));
 	if (ret < 0)
 		return ret;
@@ -1448,12 +1459,12 @@ static int npMgrUpdateRegistryCredsVerified(SceUInt64 accountId, const char *log
 		return NP_MGR_ERR_CREDENTIAL_MISMATCH;
 
 	if (loginId != NULL) {
-		ret = sceRegMgrSetKeyStrForUser("/CONFIG/NP", "login_id", loginId, 65);
+		ret = sceRegMgrSetKeyStr("/CONFIG/NP", "login_id", loginId, 65);
 		if (ret < 0)
 			return ret;
 	}
 	if (password != NULL) {
-		ret = sceRegMgrSetKeyStrForUser("/CONFIG/NP", "password", password, 31);
+		ret = sceRegMgrSetKeyStr("/CONFIG/NP", "password", password, 31);
 		if (ret < 0)
 			return ret;
 	}
@@ -1464,7 +1475,7 @@ static int npMgrUpdateRegistryCredsVerified(SceUInt64 accountId, const char *log
 static int npMgrClearRegistryCreds(void)
 {
 	SceUInt64 zeroAccountId = 0;
-	int ret = sceRegMgrSetKeyBinForUser("/CONFIG/NP", "account_id",
+	int ret = sceRegMgrSetKeyBin("/CONFIG/NP", "account_id",
 					    &zeroAccountId, sizeof(zeroAccountId));
 	if (ret < 0)
 		return ret;
@@ -1473,13 +1484,13 @@ static int npMgrClearRegistryCreds(void)
 
 	char emptyLogin[68];
 	sceClibMemset(emptyLogin, 0, sizeof(emptyLogin));
-	ret = sceRegMgrSetKeyStrForUser("/CONFIG/NP", "login_id", emptyLogin, 65);
+	ret = sceRegMgrSetKeyStr("/CONFIG/NP", "login_id", emptyLogin, 65);
 	if (ret < 0)
 		return ret;
 
 	char emptyPassword[36];
 	sceClibMemset(emptyPassword, 0, sizeof(emptyPassword));
-	ret = sceRegMgrSetKeyStrForUser("/CONFIG/NP", "password", emptyPassword, 31);
+	ret = sceRegMgrSetKeyStr("/CONFIG/NP", "password", emptyPassword, 31);
 	return (ret >= 0) ? 0 : ret;
 }
 
@@ -1533,13 +1544,13 @@ static int npMgrSyncRegionRegistry(const NpAccountSession *session)
 	readKeys[4].type = REGMGR_KEY_TYPE_INT;
 	readKeys[4].valueSize = 4;
 
-	int ret = sceRegMgrGetKeysForUser("/CONFIG/NP", readKeys, 5);
+	int ret = sceRegMgrGetKeys("/CONFIG/NP", readKeys, 5);
 	if (ret >= 0)
-		ret = sceRegMgrGetKeyIntForUser("/CONFIG/NP", "yob", &storedYob);
+		ret = sceRegMgrGetKeyInt("/CONFIG/NP", "yob", &storedYob);
 	if (ret >= 0)
-		ret = sceRegMgrGetKeyIntForUser("/CONFIG/NP", "mob", &storedMob);
+		ret = sceRegMgrGetKeyInt("/CONFIG/NP", "mob", &storedMob);
 	if (ret >= 0)
-		ret = sceRegMgrGetKeyIntForUser("/CONFIG/NP", "dob", &storedDob);
+		ret = sceRegMgrGetKeyInt("/CONFIG/NP", "dob", &storedDob);
 	if (ret < 0)
 		return ret;
 
@@ -1591,7 +1602,7 @@ static int npMgrSyncRegionRegistry(const NpAccountSession *session)
 	writeKeys[4].valueSize = 4;
 	writeKeys[4].value = static_cast<int>(session->birthDay);
 
-	return sceRegMgrSetKeysForUser("/CONFIG/NP", writeKeys, 5);
+	return sceRegMgrSetKeys("/CONFIG/NP", writeKeys, 5);
 }
 
 /* --- Core sign-in & session state machine (0x81328748..0x81328E67) --- */

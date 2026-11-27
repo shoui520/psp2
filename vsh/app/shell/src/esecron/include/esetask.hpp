@@ -139,9 +139,9 @@ struct BgdlEvent {
 	SceUInt64 value;
 };
 
-/* what a task says of its package (PLACEHOLDER names), copied under "SceBgdlRMutexPackage" */
+/* what a task says of its package, copied under "SceBgdlRMutexPackage" */
 struct BgdlTaskPackage {
-	BgdlTaskPackage() : reserved2(0), reserved3(0)
+	BgdlTaskPackage() : serverCategory(0), serverAttribute(0)
 	{
 		key220.clear();
 	}
@@ -150,15 +150,15 @@ struct BgdlTaskPackage {
 	{
 		key220 = !src.key220.empty() ? src.key220.c_str() : NULL;
 		key217 = !src.key217.empty() ? src.key217.c_str() : NULL;
-		reserved2 = src.reserved2;
-		reserved3 = src.reserved3;
+		serverCategory = src.serverCategory;
+		serverAttribute = src.serverAttribute;
 		return *this;
 	}
 
 	paf::string key220;		/* the title id (13 characters kept) */
 	paf::string key217;		/* the content id */
-	int reserved2;			/* PLACEHOLDER: the server's category, not read yet */
-	int reserved3;			/* and its attributes */
+	int serverCategory;		/* the server's category */
+	int serverAttribute;		/* and its attributes */
 };
 
 class EseTask {
@@ -246,9 +246,9 @@ struct BgdlTaskSummary {
 	bool ready;			/* done: no error, not to run again, key 113 set */
 	EseParamCache param;
 	char titleId[13];
-	char padding0;
+	char titlePad;
 	char contentId[51];
-	char padding1[3];
+	char contentPad[3];
 };
 
 /* the manager's list of its tasks, cleared before anything else is made (PLACEHOLDER name) */
@@ -294,12 +294,12 @@ struct BgdlPackageRequest {
 struct BgdlDownloadRequest {
 	SceUInt32 type;			/* key 111 */
 	SceUInt32 flags;		/* BGDL_REQUEST_FLAG_*; 0x02: not started at once */
-	int installMode;		/* PLACEHOLDER: from 0 up, grw0: needs QAF's fake AC install */
-	char reserved1[20];
+	int installMode;		/* from 0 up, grw0: needs QAF's fake AC install */
+	char installPad[20];
 	SceUInt64 key208;
 	SceUInt64 key206;
-	char reserved2[40];
-	char gameTitleId[24];		/* PLACEHOLDER: the game the content is for */
+	char sizePad[40];
+	char gameTitleId[24];		/* the game the content is for */
 	char url[2048];			/* key 202 */
 	char iconPath[256];		/* key 106: the icon, copied into the task's folder */
 	char name[257];			/* key 105 */
@@ -309,12 +309,12 @@ struct BgdlDownloadRequest {
 	char contentId[52];		/* key 217 */
 	char key222[52];
 	char key230[128];		/* a file copied into the task's folder */
-	char key221[1];			/* PLACEHOLDER: its length is not known yet */
-	char reserved3[63];
+	char key221[1];
+	char key221Pad[63];
 	char key234[62];
-	SceUInt32 version;		/* PLACEHOLDER: from 0x01800000 to 0x01FFFFFF with platform 2 */
-	int platform;			/* PLACEHOLDER: the content's package keeps its id when 2 */
-	char reserved5[16];
+	SceUInt32 version;		/* from 0x01800000 to 0x01FFFFFF with platform 2 */
+	int platform;			/* the content's package keeps its id when 2 */
+	char tailPad[16];
 };
 
 /* the request's flags (PLACEHOLDER names) */
@@ -359,14 +359,14 @@ struct BgdlPackageEntry {
 
 /* a device's space (Bgdl_8111234C; constructor 0x8141523C) PLACEHOLDER names */
 struct BgdlStorageInfo {
-	BgdlStorageInfo() : max(0), free(0), clusterSize(0), reserved2(0)
+	BgdlStorageInfo() : max(0), free(0), clusterSize(0), tailPad(0)
 	{
 	}
 
 	SceUInt64 max;			/* the device's size */
 	SceUInt64 free;
 	SceUInt32 clusterSize;
-	int reserved2;
+	int tailPad;
 };
 
 /* a file closed when it goes (constructor 0x814152A0, destructor 0x814152C8) PLACEHOLDER */
@@ -525,7 +525,7 @@ public:
 	int Bgdl_81106390(SceUInt32 *id);	/* (0x81106390) PLACEHOLDER name */
 	/* (0x8110671E) PLACEHOLDER name: the PSM runtime's download task made, or its patch looked
 	 * for when it is installed; *iconPath its icon */
-	int AddPsmRuntimeTask(paf::string *iconPath, int reserved0, int reserved1, SceUInt64 *needed);
+	int AddPsmRuntimeTask(paf::string *iconPath, int unusedOption, int unusedFlags, SceUInt64 *needed);
 	/* (0x81107BDE) PLACEHOLDER name: a download the server describes made a task; *id its id */
 	int Bgdl_81107BDE(const BgdlDownloadRequest *request, BgdlContentInfo *info, SceUInt32 *id);
 	/* (0x81109CAC) PLACEHOLDER name: a list's package files added to the package task id */
@@ -613,11 +613,11 @@ public:
 	bool m_hasPending;		/* PLACEHOLDER name: a task of kind 5 or key 111 = 2 is listed */
 	BgdlListener m_listeners[BGDL_LISTENER_MAX];
 	int m_listenerCount;
-	char reserved9[0x40];		/* PLACEHOLDER: cleared by the constructor, not read yet */
-	char reserved10[0x40];
+	char unusedStateBuf[0x40];	/* cleared by the constructor */
+	char unusedExtraBuf[0x40];
 	SceUID m_drmHeap;		/* "SceNpDrmInstallHeap", or -1 */
 	BgdlQueueItem m_queue[BGDL_QUEUE_MAX];
-	char reserved13[0x400];		/* PLACEHOLDER: not even cleared so far */
+	char tailPadBuf[0x400];
 };
 
 /* UpdateFlags run by the job queue (0.990's name; made in 0x81104574) */
@@ -642,15 +642,8 @@ public:
 	SceUInt32 m_mask;
 };
 
-/* the next file's (0x8113AF58): a content's auto download (PLACEHOLDER names) */
-class BgdlAutoDownload {
-public:
-	BgdlAutoDownload(const char *contentId);
-	~BgdlAutoDownload();
-	int Bgdl_8113B164(void);
-
-	char reserved[104];		/* PLACEHOLDER: the next file's */
-};
+/* (0x8113AF58 / 0x8113B164 in download_service_drm.cpp) */
+int bgdlUnsetAutoDownload(const char *contentId);
 
 /* a content's auto download turned off ("Job_EseUnsetAutoDownload") */
 class Job_EseUnsetAutoDownload : public paf::job::JobItem {
@@ -666,9 +659,7 @@ public:
 
 	virtual int Run()
 	{
-		BgdlAutoDownload download(m_contentId.c_str());
-
-		return download.Bgdl_8113B164();
+		return bgdlUnsetAutoDownload(m_contentId.c_str());
 	}
 
 	virtual void Finish(int result)
@@ -780,9 +771,9 @@ int bgdlCountAppTasks(const char *titleId, SceUInt32 *count);	/* (0x8110BFE4) PL
 int bgdlDeletePrepare(const char *titleId);			/* (0x8110CD86) PLACEHOLDER name */
 /* (0x8110E400 to 0x8110E48C, 0x8110E6DE) PLACEHOLDER names */
 int bgdlInstallTitleTasks(const char *titleId, struct BgdlTaskInfo *failed, bool *patched);
-int bgdlInstallTitleTasksType1(const char *titleId, struct BgdlTaskInfo *failed);
-int bgdlInstallTitleTasksType2(const char *titleId, struct BgdlTaskInfo *failed);
-int bgdlInstallTitleTasksType3(const char *titleId, int type, SceUInt32 flags,
+int bgdlInstallTitleTasksPsp(const char *titleId, struct BgdlTaskInfo *failed);
+int bgdlInstallTitleTasksPsm(const char *titleId, struct BgdlTaskInfo *failed);
+int bgdlInstallTitleTasksPspContent(const char *titleId, int type, SceUInt32 flags,
 			       struct BgdlTaskInfo *failed, bool *patched);
 int bgdlInstallTitleTasksOfKinds(const char *titleId, int type, SceUInt32 flags, bool dialog,
 				 struct BgdlTaskInfo *failed, bool *patched);
@@ -796,7 +787,7 @@ int bgdlInstallTask2(struct BgdlTaskInfo *info);		/* (0x8110F03C) PLACEHOLDER na
 void bgdlHold(void);						/* (0x8110F1DE) PLACEHOLDER name */
 void bgdlSuspend(bool reserved);				/* (0x8110F1F4) PLACEHOLDER name */
 /* (0x8110F208) PLACEHOLDER name */
-int bgdlAddPsmRuntimeTask(paf::string *iconPath, int arg1, SceUInt64 *needed);
+int bgdlAddPsmRuntimeTask(paf::string *iconPath, int unusedFlags, SceUInt64 *needed);
 bool bgdlGetPsmRuntimeVersion(SceUInt16 *version);		/* (0x8110F3A2) PLACEHOLDER name */
 bool bgdlHasPending(void);					/* (0x8110F718) PLACEHOLDER name */
 int bgdlGetPatchVersion(const char *titleId, SceUInt8 *version);	/* (0x8110FB04) PLACEHOLDER name */

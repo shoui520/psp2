@@ -112,10 +112,10 @@ int GameInstaller::Run(GameAppRegistration *reg, bool registerApp, GameCancelFun
 	}
 
 	bool replace = false;
-	bool notifyTopmenu = !m_param->flag2;
+	bool notifyTopmenu = !m_param->skipTopmenuNotify;
 
 	if (registerApp) {
-		reg->otherFlag = !m_param->flag1;
+		reg->otherFlag = !m_param->skipOtherFlag;
 
 		int mode = 0;
 

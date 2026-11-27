@@ -16,7 +16,7 @@
 #include "livearea_internal.h"
 
 extern "C" {
-extern int sceRegMgrGetKeyIntForUser(const char *category, const char *name, int *buf);
+extern int sceRegMgrGetKeyInt(const char *category, const char *name, int *buf);
 extern int sceRtcGetDayOfWeek(int year, int month, int day);
 extern float sce_paf_ceilf(float x);
 }
@@ -198,19 +198,19 @@ int liveareaParentalGetDailyLimitSec(void)
 	int minutes = 0;
 	int regValue = 0;
 	paf::datetime::DateTime now = paf::datetime::DateTime::Now();
-	if (sceRegMgrGetKeyIntForUser("/CONFIG/SECURITY/PARENTAL", "restrict_mode", &regValue) == 0 &&
+	if (sceRegMgrGetKeyInt("/CONFIG/SECURITY/PARENTAL", "restrict_mode", &regValue) == 0 &&
 	    (regValue == 1 || regValue == 2)) {
 		int dayIndex = 0;
 		if (regValue == 2)
 			dayIndex = sceRtcGetDayOfWeek(now.m_year, now.m_month, now.m_day) + 1;
-		if (sceRegMgrGetKeyIntForUser("/CONFIG/SECURITY/PARENTAL",
+		if (sceRegMgrGetKeyInt("/CONFIG/SECURITY/PARENTAL",
 					      s_restrictDurationKeys[dayIndex], &regValue) == 0 &&
 		    regValue >= 0) {
 			minutes = regValue;
 			int today = 10000 * now.m_year + 100 * now.m_month + now.m_day;
-			if (sceRegMgrGetKeyIntForUser("/CONFIG/SECURITY/PARENTAL", "change_date", &regValue) == 0 &&
+			if (sceRegMgrGetKeyInt("/CONFIG/SECURITY/PARENTAL", "change_date", &regValue) == 0 &&
 			    regValue == today &&
-			    sceRegMgrGetKeyIntForUser("/CONFIG/SECURITY/PARENTAL", "change_duration", &regValue) == 0 &&
+			    sceRegMgrGetKeyInt("/CONFIG/SECURITY/PARENTAL", "change_duration", &regValue) == 0 &&
 			    regValue >= -minutes) {
 				minutes += regValue;
 			}
@@ -260,7 +260,7 @@ static void liveareaParentalOnTimer(SceInt32, paf::ui::Handler *, paf::ui::Event
 
 	paf::string utf8Time(timeBuf);
 	paf::wstring utf16Time;
-	paf::common::Utf8ToUtf16(utf8Time, &utf16Time);
+	paf::common::Utf8ToUtf16(utf8Time.c_str(), &utf16Time);
 	s_parentalTimeText->SetString(utf16Time);
 }
 

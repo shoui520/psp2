@@ -30,8 +30,8 @@
 extern "C" {
 extern paf::string SceLsdb_C2B7D81B(void);
 extern paf::string SceLsdb_88FDC55C(int source);
-extern int shellAesInitEncrypt(void *aesCtx, SceSize blockBits, SceSize keyBits, const void *key);
-extern void shellAesEncryptBlock(const void *aesCtx, const void *inBlock, void *outBlock);
+extern "C" int sceAesScheduleKey(void *aesCtx, SceSize blockBits, SceSize keyBits, const void *key);
+extern "C" int sceAesEncrypt(const void *aesCtx, const void *inBlock, void *outBlock);
 }
 
 extern int liveareaCronEnqueueJob(paf::common::SharedPtr<paf::job::JobItem> &item);
@@ -117,7 +117,7 @@ static int encryptDevicePayloadAesCbc(SceUInt8 *buffer, int length)
 
 	NsxAesContext aesCtx;
 	sce_paf_memset(&aesCtx, 0, sizeof(aesCtx));
-	int ret = shellAesInitEncrypt(&aesCtx, 128, 128, key);
+	int ret = sceAesScheduleKey(&aesCtx, 128, 128, key);
 	if (ret < 0)
 		return ret;
 
@@ -131,7 +131,7 @@ static int encryptDevicePayloadAesCbc(SceUInt8 *buffer, int length)
 	for (int offset = 0; offset < length; offset += 16) {
 		for (SceUInt32 bytePos = 0; bytePos < blockBytes; ++bytePos)
 			xoredBlock[bytePos] = buffer[offset + bytePos] ^ chainBlock[bytePos];
-		shellAesEncryptBlock(&aesCtx, xoredBlock, &buffer[offset]);
+		sceAesEncrypt(&aesCtx, xoredBlock, &buffer[offset]);
 		sce_paf_memcpy(chainBlock, &buffer[offset], blockBytes);
 	}
 	return 0;

@@ -182,10 +182,7 @@ void shellClosedCaptionMigrate(void)
 	keys[0].value = 0;
 	if (sceRegMgrGetKeyInt("/CONFIG/NP2", "current_account2", &account) != 0)
 		account = 0;
-	else if (account < 0 || account > 99)
-		goto out;
-
-	{
+	if (account >= 0 && account <= 99) {
 		IniFileProcessor *ini = new IniFileProcessor();
 
 		if (ini != NULL) {
@@ -216,7 +213,6 @@ void shellClosedCaptionMigrate(void)
 			delete ini;
 		}
 	}
-out:
 	sceRegMgrSetKeys("/CONFIG/ACCESSIBILITY/CC", keys, 12);
 }
 
@@ -869,4 +865,9 @@ static void zoomOnAppEvent(int code, const void *data, SceSize size, void *arg)
 		zoom->Enable();
 		break;
 	}
+}
+
+void shellReloadAccessibilityState(void)
+{
+	shellAccessibilityApply();
 }

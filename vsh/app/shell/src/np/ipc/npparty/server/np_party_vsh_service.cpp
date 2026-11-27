@@ -84,9 +84,8 @@ extern int sceNpWebApiAbortRequest(SceInt64 requestId);
 
 extern int shellNpGetWebApiLibCtx(int *outLibCtx);				/* 0x81003D20 */
 extern paf::job::JobQueue *shellGetNpBackgroundJobQueue(void);			/* 0x813C5BE0 */
-extern int shellNpPushRegister(const char *serviceName, int filterKind,
-			       NpPushNotificationCallback callback, void *userArg,
-			       int *outHandle);					/* 0x813AF03A */
+extern int shellNpPushRegisterService(const char *servicePrefix, int matchMode,
+				      void *callback, void *userContext, int *outHandle);					/* 0x813AF03A */
 
 /* New-indicator notification payload passed to SceNpPartyVSHNewIndicator thread */
 struct PartyNewIndicatorState {
@@ -337,7 +336,7 @@ static int partyNewIndicatorThreadEntry(SceSize args, void *argp)
 			paf::wstring formatted = shellFormatText(fmtText, wideArg.c_str());
 
 			paf::string utf8Desc;
-			paf::common::Utf16ToUtf8(formatted, &utf8Desc, 2);
+			paf::common::Utf16ToUtf8(formatted, &utf8Desc);
 			event.desc = utf8Desc;
 		}
 
@@ -625,7 +624,13 @@ private:
 		m_accumulatedCount += pageSize;
 
 		const char *limit = json + jsonSize;
-		const char *sessionsKey = sce_paf_strstr(json, "\"sessions\"");
+		const char *sessionsKey = NULL;
+		for (const char *scan = json; scan + 10 <= limit && *scan != '\0'; ++scan) {
+			if (sce_paf_strncmp(scan, "\"sessions\"", 10) == 0) {
+				sessionsKey = scan;
+				break;
+			}
+		}
 		if (sessionsKey == NULL || sessionsKey >= limit)
 			return 0;
 
@@ -650,7 +655,13 @@ private:
 			if (sessionEnd == NULL)
 				break;
 
-			const char *friendsKey = sce_paf_strstr(cursor, "\"friends\"");
+			const char *friendsKey = NULL;
+			for (const char *scan = cursor; scan + 9 <= sessionEnd && *scan != '\0'; ++scan) {
+				if (sce_paf_strncmp(scan, "\"friends\"", 9) == 0) {
+					friendsKey = scan;
+					break;
+				}
+			}
 			if (friendsKey != NULL && friendsKey < sessionEnd) {
 				const char *friendsOpen = sce_paf_strchr(friendsKey, '[');
 				const char *friendsClose = (friendsOpen != NULL && friendsOpen < sessionEnd)
@@ -866,7 +877,8 @@ static int initPartyNewIndicatorSystem(void)
 	if (ret < 0)
 		return ret;
 
-	shellNpPushRegister(NP_PARTY_PUSH_SERVICE_NAME, 1, onPartyPushNotification,
+	shellNpPushRegisterService(NP_PARTY_PUSH_SERVICE_NAME, 1,
+				   reinterpret_cast<void *>(onPartyPushNotification),
 			    NULL, &s_partyPushHandle);
 
 	paf::job::JobQueue::Option queueOption;

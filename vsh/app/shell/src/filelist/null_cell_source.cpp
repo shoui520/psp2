@@ -79,3 +79,9 @@ paf::intrusive_ptr<paf::ui::filelist::Visualizer> NullCellSource::GetVisualizer(
 }
 
 } /* namespace filelist */
+
+paf::ui::filelist::CellSource *activityUiCreateSingleCellSource(void)
+{
+	paf::common::SharedPtr<filelist::NullVisualizerFactory> emptyFactory;
+	return new filelist::NullCellSource(emptyFactory, 1);
+}

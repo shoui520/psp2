@@ -50,5 +50,28 @@ int shellIncomingDialogServerAsyncDispatch(IPMI::Session *session, SceUInt32 req
 					   SceUInt32 methodId, const IPMI::DataInfo *inList,
 					   SceUInt32 inCount)
 {
+	(void)session;
+	(void)requestId;
+	(void)methodId;
+	(void)inList;
+	(void)inCount;
+	return IPMI_ERROR_UNKNOWN_METHOD;
+}
+
+int shellSvcLiveAreaSyncDefault(IPMI::Session *session, SceUInt32 methodId,
+				const IPMI::DataInfo *inList, SceUInt32 inCount,
+				IPMI::BufferInfo *outList, SceUInt32 outCount)
+{
+	(void)session;
+	(void)methodId;
+	(void)inList;
+	(void)inCount;
+	(void)outList;
+	(void)outCount;
+	return IPMI_ERROR_UNKNOWN_METHOD;
+}
+
+int ipmiAsyncNotSupported(void)
+{
 	return IPMI_ERROR_UNKNOWN_METHOD;
 }

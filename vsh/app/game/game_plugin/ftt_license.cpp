@@ -131,10 +131,10 @@ int gameFttLicenseRead(common::SharedPtr<File> file, GameFttLicense *license)
 
 	sce_paf_memcpy(license, &ftt.license, sizeof(*license));
 
-	rtc::Tick time1 = license->time1;
-	datetime::DateTime date1 = datetime::DateTime::ConvertRtcTickToDateTime(&time1);
-	rtc::Tick time2 = license->time2;
-	datetime::DateTime date2 = datetime::DateTime::ConvertRtcTickToDateTime(&time2);
+	rtc::Tick startTick = license->startTime;
+	datetime::DateTime startDate = datetime::DateTime::ConvertRtcTickToDateTime(&startTick);
+	rtc::Tick expireTick = license->expireTime;
+	datetime::DateTime expireDate = datetime::DateTime::ConvertRtcTickToDateTime(&expireTick);
 
 	return ret;
 }

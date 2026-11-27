@@ -11,7 +11,6 @@
 #include "np_imps_svc.h"
 
 static paf::memory::HeapAllocator *s_svcAllocator = NULL;	/* 0x815C386C */
-static paf::memory::HeapAllocator *s_cacheAllocator = NULL;	/* 0x815C3870 */
 
 /* 0x812FF2E8..0x812FF337: SceNpImpsSvc heap helpers */
 void npImpsSvcHeapSet(paf::memory::HeapAllocator *heap)
@@ -35,30 +34,6 @@ void npImpsSvcFree(void *ptr)
 {
 	if (s_svcAllocator != NULL)
 		s_svcAllocator->sce_paf_free(ptr);
-}
-
-/* 0x812FFE4C..0x812FFE9D: SceNpImpsCache heap helpers */
-void npImpsCacheHeapSet(paf::memory::HeapAllocator *heap)
-{
-	s_cacheAllocator = heap;
-}
-
-void npImpsCacheHeapClear(void)
-{
-	s_cacheAllocator = NULL;
-}
-
-void *npImpsCacheMalloc(SceSize size)
-{
-	if (s_cacheAllocator != NULL)
-		return s_cacheAllocator->sce_paf_malloc(size);
-	return NULL;
-}
-
-void npImpsCacheFree(void *ptr)
-{
-	if (s_cacheAllocator != NULL)
-		s_cacheAllocator->sce_paf_free(ptr);
 }
 
 /* 0x812FF4BC: trigger roster cache sync if not yet fully online */

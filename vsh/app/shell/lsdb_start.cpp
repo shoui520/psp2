@@ -31,12 +31,10 @@
 #include "shell.h"
 #include "db_check.h"
 #include "src/livespace_db/livespace_db.h"
+#include "src/livespace_db/livespace_db_internal.h"
 #include "src/livespace_db/lsdb_keys.h"
 
 using namespace paf;
-
-/* the activity database's open flags */
-#define ACTIVITY_DB_OPEN_FLAGS	0x1000010A
 
 /* the content databases the shell checks at start, by their DbCheck IDs */
 #define SHELL_DB_CHECK_COUNT	8
@@ -45,11 +43,13 @@ static Module *s_lsdbModule;
 static SceUID s_lsdbRegCallback = -1;
 static int s_databaseNeedsRecovery;
 
+extern int npAccountGetContentRating(int *isRestricted, int *age);
+
 void shellLsdbStart(void)
 {
 	s_lsdbModule = new Module("vs0:vsh/shell/livespace_db.suprx");
 	SceLsdb_2944E643(shellStartupNeedsInitialSetup() ? -60 : 60);
-	SceLsdb_AADCDCFC((void *)shellLsdbCallback);
+	SceLsdb_AADCDCFC((void *)npAccountGetContentRating);
 
 	const char *keys[2] = { "/CONFIG/NP/country", "/CONFIG/NP/lang" };
 
@@ -133,8 +133,8 @@ void shellDbCheckAll(void)
 		param.initialPath = NULL;
 		param.copyFlags = 6;
 		param.dirMode = 0x106;
-		param.reserved1 = 0;
-		param.reserved2 = 0;
+		param.optionalParam = 0;
+		param.optionalFlags = 0;
 		param.id = id;
 		param.option = DB_CHECK_OPTION_RESET_ON_VERSION;
 
@@ -162,6 +162,12 @@ void shellDatabaseCheckRecovery(void)
 }
 
 int shellDatabaseNeedsRecovery(void)
+{
+	return s_databaseNeedsRecovery;
+}
+
+/* 0x81002A3A */
+int shellDatabaseGetState(void)
 {
 	return s_databaseNeedsRecovery;
 }
@@ -254,8 +260,48 @@ public:
 	}
 
 	/* the applications of one category group with a LiveArea of their own, and each one's
-	   LiveArea path (0x8140A7EC; its query's conditions are livespace_db's, not written yet) */
-	int FindTitles(int attribute, vector<string> *titles);
+	   LiveArea path (0x8140A7EC) */
+	int FindTitles(int attribute, vector<string> *titles)
+	{
+		static const char *const kCategories[] = {
+			"gc", "gda", "gd", "gp", "gdb",
+			"wda", "gdc", "gpc", "gdd", "gpd"
+		};
+
+		LsdbQueryCondition categoryCond;
+		categoryCond.key = LSDB_KEY_CATEGORY;
+		categoryCond.op = LSDB_QUERY_OP_EQUAL;
+		categoryCond.mask = 0;
+		categoryCond.next = NULL;
+		for (int i = 0; i < 10; i++)
+			categoryCond.values.push_back(LsdbValue(kCategories[i]));
+
+		LsdbQueryCondition attrCond;
+		attrCond.key = LSDB_KEY_ATTRIBUTE;
+		attrCond.op = LSDB_QUERY_OP_BITS;
+		attrCond.mask = 0x6000;
+		attrCond.next = NULL;
+		LsdbValue attrVal;
+		attrVal.SetInteger((SceInt64)((attribute & 3) << 13));
+		attrCond.values.push_back(attrVal);
+		categoryCond.next = &attrCond;
+
+		AppInfoQClient client;
+		SceLsdb_A6D8772C(&client);
+		int ret = SceLsdb_E90B81CD(&client);
+		if (ret == 0)
+			ret = SceLsdb_76B75713(&client, &categoryCond, titles, 4);
+		SceLsdb_E2101B03(&client);
+		if (ret != 0)
+			return ret;
+
+		for (vector<string>::iterator it = titles->begin(); it != titles->end(); ++it) {
+			string liveareaPath;
+			if (SceLsdb_EF880EFE(&(*it), &liveareaPath) == 0)
+				m_liveareaPaths[*it] = liveareaPath;
+		}
+		return 0;
+	}
 
 	vector<string> m_gameTitles;
 	vector<string> m_appTitles;

@@ -34,12 +34,12 @@ struct BgdlTaskDetail {
 	SceInt64 size;
 	SceInt64 times[8];
 	char path[2048];		/* where it is written */
-	char reserved2[256];
+	char midPad[256];
 	char title[257];
 	char fileName[193];
 	char dir[256];
 	char type[13];
-	char reserved3[385];
+	char tailPad[385];
 };
 
 /* a download task's state, as the bgdl library gives it (PLACEHOLDER names) */
@@ -105,7 +105,7 @@ public:
 	paf::string m_url;		/* its image's */
 	SceInt64 m_size;
 	paf::string m_lastModified;	/* the image's date */
-	bool m_reserved3;
+	bool m_unusedFlag;
 	bool m_checking;
 	DownloadPluginObject *m_object;
 	SystemUpdateIpmiServer *m_server;
@@ -206,7 +206,7 @@ public:
 	SystemUpdateHandler m_onResume;		/* 1002 */
 	SystemUpdateHandler m_onStart;		/* 1004 */
 	SystemUpdateHandler m_onCheck;		/* 1001 */
-	int m_reserved2;
+	int m_unusedPad;
 	void *m_arg;
 };
 

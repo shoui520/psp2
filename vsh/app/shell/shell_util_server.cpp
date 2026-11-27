@@ -54,7 +54,11 @@ extern bool SceLsdb_41019D89(const LsdbAppInfoPtr *appInfo);
 }
 
 /* External shell helpers in other TUs */
-extern bool shellHasMediaInfoFeature(void);
+extern bool shellBootArePluginsLoaded(void);
+static inline bool shellHasMediaInfoFeature(void)
+{
+	return shellBootArePluginsLoaded();
+}
 extern void shellReloadAccessibilityState(void);
 extern void shellNetCtlTerm(void);
 extern int musicCoreSetSystemPause(SceUInt8 pause);

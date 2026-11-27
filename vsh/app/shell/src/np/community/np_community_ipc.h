@@ -401,7 +401,7 @@ int npCommunitySetTimeout(void *session, SceInt32 requestId,
 			  const NpCommunityTimeoutConfig *timeoutCfg);
 
 /* External NP community/account/shell bridges */
-extern int npCommunityNoop(void);							/* 0x81409E2C */
+inline int npCommunityNoop(void) { return 0; }						/* 0x81409E2C */
 extern void *npCommunityAlloc(SceSize size);						/* 0x8132DA00 */
 extern void npCommunityFree(void *ptr);							/* 0x8132DA08 */
 extern int npCommunityCreateTx(const SceNpId *selfNpId, int serviceType,

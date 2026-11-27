@@ -23,7 +23,7 @@ using namespace paf;
 GameTreeMover::GameTreeMover(const GameTreeMoveParam *param)
 	: m_cancel(param->cancel), m_cancelArg(param->cancelArg), m_maxDepth(param->maxDepth),
 	  m_depth(0), m_count(0), m_moved(0), m_progress(param->progress), m_detail(param->detail),
-	  m_reserved(param->reserved), m_reserved2(param->reserved2), m_moveFiles(param->moveFiles)
+	  m_reserved(param->reserved), m_unusedFlag(param->unusedFlag), m_moveFiles(param->moveFiles)
 {
 	sce_paf_memset(&m_dirent, 0, sizeof(m_dirent));
 	sce_paf_memset(m_srcPath, 0, sizeof(m_srcPath));

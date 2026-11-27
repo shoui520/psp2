@@ -116,7 +116,7 @@ static SceNetEtherAddr s_deviceMacAddr;			/* 0x81598228 */
 /* 0x8120F1B4 */
 int netCtlCoreIsAdhocCooldownExpired(void)
 {
-	SceUInt64 now = sceKernelGetSystemTimeWideForUser();
+	SceUInt64 now = sceKernelGetSystemTimeWide();
 
 	if (g_netCtlAdhocLeaveTime == 0 || (now - g_netCtlAdhocLeaveTime) > NETCTL_ADHOC_COOLDOWN_USEC)
 		return 1;
@@ -1691,8 +1691,8 @@ int netCtlCoreLinkProcess(SceUID childPid, SceUID parentPid)
 	if (ret < 0)
 		return ret;
 
-	if (sceKernelGetRemoteProcessTimeForUser(parentPid, &clock) < 0 ||
-	    sceKernelGetRemoteProcessTimeForUser(childPid, &clock) < 0) {
+	if (sceKernelGetRemoteProcessTime(parentPid, &clock) < 0 ||
+	    sceKernelGetRemoteProcessTime(childPid, &clock) < 0) {
 		netCtlCoreUnlock();
 		return NETCTL_ERR_INVALID_ID;
 	}
@@ -2319,10 +2319,10 @@ int netCtlCoreWaitEvent(NetCtlChannel *ch, int isScan, SceUInt32 mask, SceUInt32
 		return 0;
 	}
 
-	SceUInt64 startTime = sceKernelGetSystemTimeWideForUser();
+	SceUInt64 startTime = sceKernelGetSystemTimeWide();
 
 	for (;;) {
-		SceUInt64 now = sceKernelGetSystemTimeWideForUser();
+		SceUInt64 now = sceKernelGetSystemTimeWide();
 
 		if (timeoutUsec != 0 && (now - startTime) >= (SceUInt64)timeoutUsec) {
 			if (ch->isInet == 1 && netCtlCoreHasEthernetCap()) {

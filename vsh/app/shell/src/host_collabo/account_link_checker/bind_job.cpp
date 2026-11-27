@@ -44,7 +44,7 @@ extern "C" {
 extern int SceNpManager_B24FC028(int *isBound);
 extern int SceNpManager_DDF30B0E(char *signInId, char *password, SceUInt64 *accountId);
 extern int sceMtpGetCurrentInterface(int *interfaceType);
-extern SceInt64 sceKernelGetSystemTimeWideForUser(void);
+extern SceInt64 sceKernelGetSystemTimeWide(void);
 extern int sceKernelDelayThread(SceUInt32 delayUsec);
 extern int vshSysconIsIduMode(void);
 extern int sceClibPrintf(const char *fmt, ...);
@@ -326,9 +326,9 @@ static int mtpr3GetConnectionInfo(int *outConnected)
 		return MTPR3_ERROR_INVALID_ARGUMENT;
 
 	*outConnected = 0;
-	SceInt64 startUs = sceKernelGetSystemTimeWideForUser();
+	SceInt64 startUs = sceKernelGetSystemTimeWide();
 	for (;;) {
-		if (static_cast<SceUInt64>(sceKernelGetSystemTimeWideForUser() - startUs) >
+		if (static_cast<SceUInt64>(sceKernelGetSystemTimeWide() - startUs) >
 		    MTPR3_POLL_TIMEOUT_US)
 			return MTPR3_ERROR_TIMEOUT;
 
@@ -379,9 +379,9 @@ static int mtpr3GetHostInfo(int *outHostKind)
 	if (outHostKind == NULL)
 		return MTPR3_ERROR_INVALID_ARGUMENT;
 
-	SceInt64 startUs = sceKernelGetSystemTimeWideForUser();
+	SceInt64 startUs = sceKernelGetSystemTimeWide();
 	for (;;) {
-		if (static_cast<SceUInt64>(sceKernelGetSystemTimeWideForUser() - startUs) >
+		if (static_cast<SceUInt64>(sceKernelGetSystemTimeWide() - startUs) >
 		    MTPR3_POLL_TIMEOUT_US)
 			return MTPR3_ERROR_TIMEOUT;
 
@@ -766,6 +766,12 @@ void mtpStartAccountLinkCheck(AccountLinkFinishedCallback callback, void *userDa
 {
 	ConnectJob *connectJob = new ConnectJob(callback, userData);
 	bindJobEnqueue(connectJob);
+}
+
+int mtpRegisterAccountLinkCb(void (*callback)(const void *, int))
+{
+	mtpStartAccountLinkCheck(reinterpret_cast<AccountLinkFinishedCallback>(callback), NULL);
+	return 0;
 }
 
 /* 0x813C028C */

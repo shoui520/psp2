@@ -10,11 +10,11 @@
 
 extern "C" {
 extern int sceSblQafMgrIsAllowNpTest(void);
-extern int sceRegMgrGetKeyBinForUser(const char *category, const char *name,
+extern int sceRegMgrGetKeyBin(const char *category, const char *name,
 				     void *buf, SceSize size);
-extern int sceRegMgrSetKeyIntForUser(const char *category, const char *name, int value);
-extern int sceRegMgrGetKeysForUser(const char *category, RegMgrKeyInfo *keys, int count);
-extern int sceRegMgrSystemParamGetIntForUser(int id, int *outVal);
+extern int sceRegMgrSetKeyInt(const char *category, const char *name, int value);
+extern int sceRegMgrGetKeys(const char *category, RegMgrKeyInfo *keys, int count);
+extern int sceRegMgrSystemParamGetInt(int id, int *outVal);
 extern int vshNpDrmUpdateAccountId(SceUInt64 accountId);
 }
 
@@ -32,6 +32,11 @@ int npCommonServiceIsSignedIn(int *outSignedIn)
 {
 	*outSignedIn = (s_npCommonAccountId != 0) ? 1 : 0;
 	return 0;
+}
+
+int shellNpHasAccountId(int *outSignedIn)
+{
+	return npCommonServiceIsSignedIn(outSignedIn);
 }
 
 /* 0x81329E4A */
@@ -70,10 +75,10 @@ int npCommonServiceGetSettings(void *outSettings)
 	keys[2].type = NP_COMMON_REG_KEY_TYPE_INT;
 	keys[2].valueSize = 4;
 
-	sceRegMgrGetKeysForUser("/CONFIG/NP", keys, 3);
+	sceRegMgrGetKeys("/CONFIG/NP", keys, 3);
 
 	int fullTestVal = 0;
-	sceRegMgrSystemParamGetIntForUser(NP_COMMON_SYSPARAM_FULL_TEST, &fullTestVal);
+	sceRegMgrSystemParamGetInt(NP_COMMON_SYSPARAM_FULL_TEST, &fullTestVal);
 
 	settings->fullTest = (fullTestVal != 0) ? 1 : 0;
 	settings->navOnly = (keys[0].value != 0) ? 1 : 0;
@@ -87,10 +92,10 @@ int npCommonServiceGetSettings(void *outSettings)
 	keys[0].valueSize = 38;
 	keys[0].data = settings->titleId;
 
-	int ret = sceRegMgrGetKeysForUser("/CONFIG/NP", keys, 1);
+	int ret = sceRegMgrGetKeys("/CONFIG/NP", keys, 1);
 	if (ret >= 0 || ret == NP_COMMON_REG_ERR_KEY_NOT_FOUND) {
 		int debugVal = 0;
-		ret = sceRegMgrSystemParamGetIntForUser(NP_COMMON_SYSPARAM_DEBUG_FLAG, &debugVal);
+		ret = sceRegMgrSystemParamGetInt(NP_COMMON_SYSPARAM_DEBUG_FLAG, &debugVal);
 		if (ret < 0)
 			ret = 0;
 		settings->debugFlag = debugVal;
@@ -110,7 +115,7 @@ int npCommonServiceGetPrivacyConfirm(int *outConfirmed)
 	key.type = NP_COMMON_REG_KEY_TYPE_INT;
 	key.valueSize = 4;
 
-	int ret = sceRegMgrGetKeysForUser("/CONFIG/NP2", &key, 1);
+	int ret = sceRegMgrGetKeys("/CONFIG/NP2", &key, 1);
 	if (ret >= 0)
 		*outConfirmed = key.value;
 	return ret;
@@ -119,13 +124,13 @@ int npCommonServiceGetPrivacyConfirm(int *outConfirmed)
 /* 0x8132A016 */
 int npCommonServiceSetPrivacyConfirm(int confirmed)
 {
-	return sceRegMgrSetKeyIntForUser("/CONFIG/NP2", "privacy_confirmation", confirmed);
+	return sceRegMgrSetKeyInt("/CONFIG/NP2", "privacy_confirmation", confirmed);
 }
 
 /* 0x8132A030 */
 int npCommonServiceLoadAccountId(void)
 {
-	return sceRegMgrGetKeyBinForUser("/CONFIG/NP", "account_id",
+	return sceRegMgrGetKeyBin("/CONFIG/NP", "account_id",
 					 &s_npCommonAccountId, sizeof(s_npCommonAccountId));
 }
 

@@ -20,7 +20,7 @@ extern int sceKernelPowerTick(SceUInt32 type);
 
 extern int liveareaCronEnqueueJob(paf::common::SharedPtr<paf::job::JobItem> &item);
 extern void liveareaCronRegister(void (*callback)(void *), void *arg);
-extern int shellNpIsSignedIn(void);
+extern int npAccountIsSignedIn(void);
 
 namespace {
 
@@ -95,7 +95,7 @@ public:
 static void nsxPushInfoCronCallback(void *userArg)
 {
 	(void)userArg;
-	if (shellNpIsSignedIn() != 0)
+	if (npAccountIsSignedIn() != 0)
 		nsxPushInfoEnqueueJob();
 }
 

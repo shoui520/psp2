@@ -62,7 +62,6 @@ struct RtcUtilRegKeySpec {
 	int *target;
 };
 
-extern paf::job::JobQueue *g_activityJobQueue;
 
 extern "C" {
 extern int sceRegMgrGetKeyInt(const char *category, const char *name, int *outVal);
@@ -621,7 +620,7 @@ int shellRtcUtilSync(bool fromCallback)
 		if (useBackgroundJob) {
 			paf::common::SharedPtr<paf::job::JobItem> job(
 				new SetConfJob(dateFormat, timeFormat, timeZone, summerTime));
-			g_activityJobQueue->Enqueue(job);
+			paf::job::JobQueue::default_queue->Enqueue(job);
 		} else {
 			rtcUtilApplySystemConf(dateFormat, timeFormat, timeZone, summerTime);
 		}

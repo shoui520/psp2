@@ -162,9 +162,9 @@ static int onCoredumpRegChanged(int notifyId, int notifyCount, int notifyArg, vo
 	(void)notifyArg;
 	(void)userData;
 	int flagVal = 0;
-	if (sceRegMgrGetKeyIntForUser("/CONFIG/COREDUMP/UPLOADER", "enable_flag", &flagVal) == 0)
+	if (sceRegMgrGetKeyInt("/CONFIG/COREDUMP/UPLOADER", "enable_flag", &flagVal) == 0)
 		g_uploaderEnabled = (flagVal != 0);
-	if (sceRegMgrGetKeyIntForUser("/CONFIG/COREDUMP/UPLOADER", "auto_flag", &flagVal) == 0)
+	if (sceRegMgrGetKeyInt("/CONFIG/COREDUMP/UPLOADER", "auto_flag", &flagVal) == 0)
 		g_uploaderAutoSend = (flagVal != 0);
 	return 0;
 }
@@ -189,7 +189,7 @@ static void onLiveCrashPowerEvent(int event, const void *eventBuf, SceSize event
 	(void)eventSize;
 	(void)userData;
 	SceCommonGuiDialog_BC311DC0(g_crashDialogId);
-	appmgrFinishCoredumpForShellSyscall();
+	sceAppMgrFinishCoredumpForShell();
 	g_crashDialogId = -1;
 	g_crashedAppId = -1;
 	if (g_topWindow->m_powerManageIf != NULL)
@@ -431,7 +431,7 @@ public:
 
 		if (button == suggestBtn) {
 			SceCommonGuiDialog_BC311DC0(g_crashDialogId);
-			appmgrFinishCoredumpForShellSyscall();
+			sceAppMgrFinishCoredumpForShell();
 			g_crashDialogId = -1;
 			g_crashedAppId = -1;
 			if (g_topWindow->m_powerManageIf != NULL) {
@@ -444,7 +444,7 @@ public:
 			TopmenuCoredumpState dumpState;
 			int stateRet = sceAppMgrGetCoredumpStateForShell(&dumpState);
 			SceCommonGuiDialog_BC311DC0(g_crashDialogId);
-			appmgrFinishCoredumpForShellSyscall();
+			sceAppMgrFinishCoredumpForShell();
 			g_crashDialogId = -1;
 			g_crashedAppId = -1;
 			if (g_topWindow->m_powerManageIf != NULL) {
@@ -461,7 +461,7 @@ public:
 			}
 		} else if (button == closeBtn) {
 			SceCommonGuiDialog_BC311DC0(g_crashDialogId);
-			appmgrFinishCoredumpForShellSyscall();
+			sceAppMgrFinishCoredumpForShell();
 			g_crashDialogId = -1;
 			g_crashedAppId = -1;
 			if (g_topWindow->m_powerManageIf != NULL) {
@@ -543,7 +543,7 @@ public:
 
 			if (dumpState.isAutoUpload == 0 && g_uploaderAutoSend) {
 				SceCommonGuiDialog_BC311DC0(g_crashDialogId);
-				appmgrFinishCoredumpForShellSyscall();
+				sceAppMgrFinishCoredumpForShell();
 				g_crashDialogId = -1;
 				g_crashedAppId = -1;
 				if (g_topWindow->m_powerManageIf != NULL) {
@@ -565,7 +565,7 @@ public:
 
 				paf::string pathUtf8(dumpState.path);
 				paf::wstring pathWide;
-				paf::common::Utf8ToUtf16(pathUtf8, &pathWide);
+				paf::common::Utf8ToUtf16(pathUtf8.c_str(), &pathWide);
 
 				const wchar_t *statusLine = (dumpState.saveResult != 0) ?
 					L"\nSaved Core File Failed.\n" :
@@ -673,7 +673,7 @@ int topmenuHandleAppCrash(const TopmenuCrashEvent *crashEvent)
 		    (sce_paf_strcmp(appStatus.appName, "NPXS10083") == 0 &&
 		     sce_paf_strcmp(appStatus.appName, "NPXS10084") == 0) ||
 		    fgApp == NULL || appStatus.launchSourceAppId != fgApp->m_appId) {
-			appmgrFinishCoredumpForShellSyscall();
+			sceAppMgrFinishCoredumpForShell();
 			return 0;
 		}
 	}
@@ -716,7 +716,7 @@ int topmenuHandleAppCrash(const TopmenuCrashEvent *crashEvent)
 
 	SceInt32 dialogId = SceCommonGuiDialog_20B141F1(&param);
 	if (dialogId < 0) {
-		appmgrFinishCoredumpForShellSyscall();
+		sceAppMgrFinishCoredumpForShell();
 		return 0;
 	}
 
@@ -767,7 +767,7 @@ int topmenuHandleAppCrash(const TopmenuCrashEvent *crashEvent)
 						if (appTitle != NULL) {
 							paf::string titleUtf8(appTitle);
 							paf::wstring titleWide;
-							paf::common::Utf8ToUtf16(titleUtf8,
+							paf::common::Utf8ToUtf16(titleUtf8.c_str(),
 										 &titleWide);
 							titleWidget->SetString(titleWide);
 						}
@@ -846,7 +846,7 @@ void topmenuCloseCrashDialogForApp(SceInt32 appId)
 {
 	if (appId > 0 && g_crashedAppId == appId) {
 		SceCommonGuiDialog_BC311DC0(g_crashDialogId);
-		appmgrFinishCoredumpForShellSyscall();
+		sceAppMgrFinishCoredumpForShell();
 		g_crashDialogId = -1;
 		g_crashedAppId = -1;
 		if (g_topWindow->m_powerManageIf != NULL) {
@@ -892,32 +892,32 @@ void topmenuCoredumpInit(void)
 {
 	SceShell_83D16CA8(SHELL_APP_EVENT_ENDED, onCrashReportEnded, NULL);
 
-	SceUID cbId = sceKernelCreateCallbackForUser("SceShellCoreDumpReg", 0,
+	SceUID cbId = sceKernelCreateCallback("SceShellCoreDumpReg", 0,
 						     onCoredumpRegChanged, NULL);
 	if (cbId < 0)
 		return;
 
 	g_coredumpRegCbId = cbId;
-	if (sceRegMgrRegisterCallbackForUser(g_coredumpRegCbId) < 0 ||
-	    sceRegMgrAddRegistryCallbackForUser(g_coredumpRegCbId,
+	if (sceRegMgrRegisterCallback(g_coredumpRegCbId) < 0 ||
+	    sceRegMgrAddRegistryCallback(g_coredumpRegCbId,
 						"/CONFIG/COREDUMP/UPLOADER/enable_flag") < 0 ||
-	    sceRegMgrAddRegistryCallbackForUser(g_coredumpRegCbId,
+	    sceRegMgrAddRegistryCallback(g_coredumpRegCbId,
 						"/CONFIG/COREDUMP/UPLOADER/auto_flag") < 0) {
-		sceKernelDeleteCallbackForUser(g_coredumpRegCbId);
+		sceKernelDeleteCallback(g_coredumpRegCbId);
 		g_coredumpRegCbId = -1;
 		return;
 	}
 
-	if (sceRegMgrStartCallbackForUser(g_coredumpRegCbId) < 0) {
-		sceRegMgrUnregisterCallbackForUser(g_coredumpRegCbId);
-		sceKernelDeleteCallbackForUser(g_coredumpRegCbId);
+	if (sceRegMgrStartCallback(g_coredumpRegCbId) < 0) {
+		sceRegMgrUnregisterCallback(g_coredumpRegCbId);
+		sceKernelDeleteCallback(g_coredumpRegCbId);
 		g_coredumpRegCbId = -1;
 		return;
 	}
 
 	int flagVal = 0;
-	if (sceRegMgrGetKeyIntForUser("/CONFIG/COREDUMP/UPLOADER", "enable_flag", &flagVal) == 0)
+	if (sceRegMgrGetKeyInt("/CONFIG/COREDUMP/UPLOADER", "enable_flag", &flagVal) == 0)
 		g_uploaderEnabled = (flagVal != 0);
-	if (sceRegMgrGetKeyIntForUser("/CONFIG/COREDUMP/UPLOADER", "auto_flag", &flagVal) == 0)
+	if (sceRegMgrGetKeyInt("/CONFIG/COREDUMP/UPLOADER", "auto_flag", &flagVal) == 0)
 		g_uploaderAutoSend = (flagVal != 0);
 }

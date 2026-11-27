@@ -33,8 +33,7 @@ using namespace paf;
 /* the notice of the volume limited, and its text (PLACEHOLDER name) */
 #define IMPOSE_VOLUME_MSG_AVLS_FORCED	0x81BCB60A
 
-/* PLACEHOLDER: a notice of the shell's (0x811CBDE6, in the shell's own code) */
-int Shell_811CBDE6(int type, int arg);
+int musicCorePlayerControl(SceUInt8 cmd, int param);
 
 /* (0x81564D3C) */
 ImposeVolume *g_imposeVolume;
@@ -341,7 +340,7 @@ static int imposeVolumeOnAVConfig(int notifyId, int notifyCount, int notifyArg, 
 		g_imposeInterface->showNotice(&notice);
 	}
 	if (notifyArg & IMPOSE_VOLUME_EVENT_HEADSET)
-		Shell_811CBDE6(1, 0);
+		musicCorePlayerControl(1, 0);
 	return 0;
 }
 

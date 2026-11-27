@@ -18,12 +18,12 @@ extern int vshIoDeleteMountEvent(int eventId);
 extern int vshIoCreateErrorEvent(int id, int flags, void *outInfo);
 extern int vshIoDeleteErrorEvent(int eventId);
 extern int vshPowerRequestColdReset(void);
-extern int sceKernelProcessPowerUnlock(int type);
+extern int sceKernelPowerUnlock(int type);
 extern int sceKernelPowerTick(int type);
 extern int sceKernelRegisterCallbackToEvent(SceUID eventId, SceUID cbId);
 extern int sceKernelUnregisterCallbackFromEvent(SceUID eventId, SceUID cbId);
-extern int sceSblSsMgr_ReadNvs(int index, void *buf, SceSize size);	/* 0x81417CF8 */
-extern int sceSblSsMgr_WriteNvs(int index, const void *buf, SceSize size); /* 0x81417D0C */
+extern int vshSblSsGetNvsData(int index, void *buf, SceSize size);	/* 0x81417CF8 */
+extern int vshSblSsSetNvsData(int index, const void *buf, SceSize size); /* 0x81417D0C */
 }
 
 typedef void (*MediaDetectCallbackFn)(int eventType, void *arg, void *userData);
@@ -159,14 +159,14 @@ MediaDetectMgr::MediaDetectMgr(SceUInt8 checkMediaSwitch)
 		m_ioErrorInfo[i] = 0;
 
 	char devName[20];
-	sce_paf_strcpy(devName, "xmc-lp-act-entire");
+	sce_paf_strlcpy(devName, "xmc-lp-act-entire", sizeof(devName));
 	if (sceIoDevctl("sdstor0:", 3, devName, 18, NULL, 0) == 0) {
 		SceUID fd = sceIoOpen("sdstor0:int-lp-ign-userext", 1, 0);
 		if (fd >= 0) {
 			sceIoClose(fd);
 			m_hasInternalStorage = 1;
 			SceUInt8 nvsFlag[8];
-			if (sceSblSsMgr_ReadNvs(5, nvsFlag, 1) == 0) {
+			if (vshSblSsGetNvsData(5, nvsFlag, 1) == 0) {
 				m_useInternalUx0 = ((nvsFlag[0] & 1) == 0);
 				if (checkMediaSwitch != 0) {
 					SceUID xmcFd = sceIoOpen("sdstor0:xmc-lp-ign-entire", 1, 0);
@@ -180,9 +180,9 @@ MediaDetectMgr::MediaDetectMgr(SceUInt8 checkMediaSwitch)
 						} else {
 							nvsFlag[0] &= (SceUInt8)~1;
 						}
-						if (sceSblSsMgr_WriteNvs(5, nvsFlag, 1) == 0) {
+						if (vshSblSsSetNvsData(5, nvsFlag, 1) == 0) {
 							vshPowerRequestColdReset();
-							sceKernelProcessPowerUnlock(0);
+							sceKernelPowerUnlock(0);
 							while (1)
 								paf::thread::Sleep(100);
 						}
@@ -236,6 +236,11 @@ int MediaDetectMgr::Create(SceUInt8 checkMediaSwitch)
 	if (s_mediaDetectMgr != NULL)
 		return 0;
 	return (int)0x80AF0022;
+}
+
+int shellNetworkMgrCreate(bool checkMediaSwitch)
+{
+	return MediaDetectMgr::Create(checkMediaSwitch ? 1 : 0);
 }
 
 /* 0x811C90BA */

@@ -81,25 +81,25 @@ int InitNet(void)
 	if (s_netInitialized)
 		return SCE_NP_PUSH_ERROR_ALREADY_INITIALIZED;
 
-	SceInt32 httpCtxId = SceNpManager_F66A7AAE();
-	if (httpCtxId < 0)
-		return httpCtxId;
-
 	void *rawMem = SceNpCommonPs4_0C922423(sizeof(NpPushHttpContext), GetAllocator());
 	if (rawMem == NULL)
 		return SCE_NP_PUSH_ERROR_OUT_OF_MEMORY;
 
 	NpPushHttpContext *httpClient = SceNpCommonPs4_53D6E2C9(
 		static_cast<NpPushHttpContext *>(rawMem), GetAllocatorWithError());
-	int ret = SceNpCommonPs4_100E042E(httpClient, httpCtxId, 4);
+	s_npHttpClient = httpClient;
+	if (httpClient == NULL)
+		return SCE_NP_PUSH_ERROR_OUT_OF_MEMORY;
+
+	int ret = SceNpCommonPs4_100E042E(httpClient, -1, 0);
 	if (ret < 0) {
 		typedef void (*DestructorFn)(NpPushHttpContext *);
 		DestructorFn deleteFn = reinterpret_cast<DestructorFn>(httpClient->vtable[1]);
 		deleteFn(httpClient);
+		s_npHttpClient = NULL;
 		return ret;
 	}
 
-	s_npHttpClient = httpClient;
 	s_netInitialized = true;
 	return 0;
 }

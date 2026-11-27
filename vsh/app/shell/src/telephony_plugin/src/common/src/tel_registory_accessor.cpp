@@ -8,15 +8,15 @@
 #include "../tel_common.h"
 
 extern "C" {
-extern int sceRegMgrGetKeyIntForUser(const char *category, const char *name, int *buf);
-extern int sceRegMgrGetKeyStrForUser(const char *category, const char *name, char *buf,
+extern int sceRegMgrGetKeyInt(const char *category, const char *name, int *buf);
+extern int sceRegMgrGetKeyStr(const char *category, const char *name, char *buf,
 				     SceSize size);
-extern int sceRegMgrGetKeyBinForUser(const char *category, const char *name, void *buf,
+extern int sceRegMgrGetKeyBin(const char *category, const char *name, void *buf,
 				     SceSize size);
-extern int sceRegMgrSetKeyIntForUser(const char *category, const char *name, int buf);
-extern int sceRegMgrSetKeyStrForUser(const char *category, const char *name, const char *buf,
+extern int sceRegMgrSetKeyInt(const char *category, const char *name, int buf);
+extern int sceRegMgrSetKeyStr(const char *category, const char *name, const char *buf,
 				     SceSize size);
-extern int sceRegMgrSetKeyBinForUser(const char *category, const char *name, const void *buf,
+extern int sceRegMgrSetKeyBin(const char *category, const char *name, const void *buf,
 				     SceSize size);
 }
 
@@ -52,7 +52,7 @@ TelephonyResult TelRegistoryAccessor::Close()
 /* 0x813E2638 */
 TelephonyResult TelRegistoryAccessor::GetInt(const paf::string &key, int *outValue)
 {
-	int err = sceRegMgrGetKeyIntForUser(m_category.c_str(), key.c_str(), outValue);
+	int err = sceRegMgrGetKeyInt(m_category.c_str(), key.c_str(), outValue);
 	if (err != 0) {
 		shellRegMgrLogError(err, 1);
 		return TelephonyResult(TEL_ERR_FAILED);
@@ -74,7 +74,7 @@ TelephonyResult TelRegistoryAccessor::GetString(const paf::string &key, paf::str
 		return TelephonyResult(TEL_ERR_NO_MEMORY);
 
 	sce_paf_memset(buf, 0, 256);
-	int err = sceRegMgrGetKeyStrForUser(m_category.c_str(), key.c_str(), buf, 256);
+	int err = sceRegMgrGetKeyStr(m_category.c_str(), key.c_str(), buf, 256);
 	TelephonyResult res(TEL_OK);
 	if (err != 0) {
 		shellRegMgrLogError(err, 1);
@@ -89,7 +89,7 @@ TelephonyResult TelRegistoryAccessor::GetString(const paf::string &key, paf::str
 /* 0x813E274A */
 TelephonyResult TelRegistoryAccessor::GetBinary(const paf::string &key, void *outBuf, SceSize size)
 {
-	int err = sceRegMgrGetKeyBinForUser(m_category.c_str(), key.c_str(), outBuf, size);
+	int err = sceRegMgrGetKeyBin(m_category.c_str(), key.c_str(), outBuf, size);
 	if (err != 0) {
 		shellRegMgrLogError(err, 1);
 		return TelephonyResult(TEL_ERR_FAILED);
@@ -100,7 +100,7 @@ TelephonyResult TelRegistoryAccessor::GetBinary(const paf::string &key, void *ou
 /* 0x813E2786 */
 TelephonyResult TelRegistoryAccessor::SetInt(const paf::string &key, int value)
 {
-	int err = sceRegMgrSetKeyIntForUser(m_category.c_str(), key.c_str(), value);
+	int err = sceRegMgrSetKeyInt(m_category.c_str(), key.c_str(), value);
 	if (err != 0) {
 		shellRegMgrLogError(err, 1);
 		return TelephonyResult(TEL_ERR_FAILED);
@@ -118,7 +118,7 @@ TelephonyResult TelRegistoryAccessor::SetFloat(const paf::string &key, float val
 TelephonyResult TelRegistoryAccessor::SetString(const paf::string &key, const paf::string &value,
 						SceSize maxSize)
 {
-	int err = sceRegMgrSetKeyStrForUser(m_category.c_str(), key.c_str(), value.c_str(),
+	int err = sceRegMgrSetKeyStr(m_category.c_str(), key.c_str(), value.c_str(),
 					    maxSize);
 	if (err != 0) {
 		shellRegMgrLogError(err, 1);
@@ -131,7 +131,7 @@ TelephonyResult TelRegistoryAccessor::SetString(const paf::string &key, const pa
 TelephonyResult TelRegistoryAccessor::SetBinary(const paf::string &key, const void *buf,
 						SceSize size)
 {
-	int err = sceRegMgrSetKeyBinForUser(m_category.c_str(), key.c_str(), buf, size);
+	int err = sceRegMgrSetKeyBin(m_category.c_str(), key.c_str(), buf, size);
 	if (err != 0) {
 		shellRegMgrLogError(err, 1);
 		return TelephonyResult(TEL_ERR_FAILED);

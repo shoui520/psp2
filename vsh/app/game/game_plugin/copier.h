@@ -28,7 +28,7 @@ struct GameCopyParam {
 	unsigned int maxDepth;			/* the folders a copy goes down at most */
 	bool reserved;
 	bool replace;				/* what is at the destination removed first */
-	bool reserved2;				/* kept by the copier, read by nothing */
+	bool unusedFlag;			/* kept by the copier, read by nothing */
 	void *buf;				/* split in two, when there is no heap */
 	SceSize bufSize;
 	GameJobProgress *progress;		/* the copy's progress, or NULL */
@@ -110,7 +110,7 @@ struct GameTreeMoveParam {
 	void *cancelArg;
 	unsigned int maxDepth;			/* the folders a move goes down at most */
 	bool reserved;				/* kept by the mover, read by nothing */
-	bool reserved2;				/* kept by the mover, read by nothing */
+	bool unusedFlag;			/* kept by the mover, read by nothing */
 	bool moveFiles;				/* the files renamed into place, else left */
 	GameJobProgress *progress;		/* the files counted first when not NULL */
 	paf::string *detail;			/* where a move that failed was */
@@ -143,7 +143,7 @@ private:
 	GameJobProgress *m_progress;
 	paf::string *m_detail;
 	bool m_reserved;
-	bool m_reserved2;
+	bool m_unusedFlag;
 	bool m_moveFiles;
 };
 

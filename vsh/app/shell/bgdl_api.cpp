@@ -25,8 +25,8 @@ BgdlTaskInfo::BgdlTaskInfo()
 	progress = 0;
 	progressFunc = NULL;
 	progressArg = NULL;
-	reserved5 = false;
-	reserved6 = false;
+	unusedFlag = false;
+	needsRestart = false;
 }
 
 /* (0x810FCA36) */
@@ -105,15 +105,15 @@ int shellBgdlInstallTitleTasks(const char *titleId, BgdlTaskInfo *failed, bool *
 }
 
 /* (0x810FCAC6) */
-int shellBgdlInstallTitleTasksType1(const char *titleId, BgdlTaskInfo *failed)
+int shellBgdlInstallTitleTasksPsp(const char *titleId, BgdlTaskInfo *failed)
 {
-	return bgdlInstallTitleTasksType1(titleId, failed);
+	return bgdlInstallTitleTasksPsp(titleId, failed);
 }
 
 /* (0x810FCACE) */
-int shellBgdlInstallTitleTasksType2(const char *titleId, BgdlTaskInfo *failed)
+int shellBgdlInstallTitleTasksPsm(const char *titleId, BgdlTaskInfo *failed)
 {
-	return bgdlInstallTitleTasksType2(titleId, failed);
+	return bgdlInstallTitleTasksPsm(titleId, failed);
 }
 
 /* (0x810FCAD6) type 3 is a PSP title's */
@@ -121,7 +121,7 @@ int shellBgdlInstallTitleTasksOfKinds(const char *titleId, int type, SceUInt32 f
 				      BgdlTaskInfo *failed, bool *patched)
 {
 	if (type == 3)
-		return bgdlInstallTitleTasksType3(titleId, type, flags, failed, patched);
+		return bgdlInstallTitleTasksPspContent(titleId, type, flags, failed, patched);
 	return bgdlInstallTitleTasksOfKinds(titleId, type, flags, dialog, failed, patched);
 }
 
@@ -196,6 +196,11 @@ int shellBgdlAddPsmRuntimeTask(paf::string *iconPath)
 bool shellBgdlGetPsmRuntimeVersion(SceUInt16 *version)
 {
 	return bgdlGetPsmRuntimeVersion(version);
+}
+
+bool shellPsmGetRuntimeVersion(SceUInt16 *version)
+{
+	return shellBgdlGetPsmRuntimeVersion(version);
 }
 
 /* (0x810FCBAE) */

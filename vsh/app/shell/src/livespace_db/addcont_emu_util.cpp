@@ -21,7 +21,7 @@
 #define PSPEMU_LIST_BUFFER_SIZE		(PSPEMU_LIST_MAX_ENTRIES * PSPEMU_LIST_ENTRY_LEN)
 
 extern "C" {
-int sceRegMgrGetKeyIntForUser(const char *category, const char *name, int *outVal);
+int sceRegMgrGetKeyInt(const char *category, const char *name, int *outVal);
 }
 
 struct EmuListEntry {
@@ -240,7 +240,7 @@ bool shellPspEmuCheckList(const char *titleId)
 		return false;
 
 	int enableList = 0;
-	if (sceRegMgrGetKeyIntForUser("/CONFIG/PSPEMU", "enable_list", &enableList) == 0 &&
+	if (sceRegMgrGetKeyInt("/CONFIG/PSPEMU", "enable_list", &enableList) == 0 &&
 	    enableList == 0) {
 		return true;
 	}
@@ -293,4 +293,29 @@ bool shellPspEmuCheckList(const char *titleId)
 	}
 
 	return listMode != 0;
+}
+
+int Bgdl_81371C70(const char *addcontTitleId, int *outOnMemoryCard)
+{
+	return shellAddcontCheckInstalled(addcontTitleId, outOnMemoryCard);
+}
+
+int gameAppRecordNamesTitle(const char *addcontTitleId, const char *appTitleId)
+{
+	return shellAddcontMatchAppTitle(addcontTitleId, appTitleId);
+}
+
+int Game_81372130(const char *addcontTitleId, const LsdbAppInfoPtr *appInfo)
+{
+	return shellAddcontMatchAppInfo(addcontTitleId, appInfo);
+}
+
+int Game_81372196(const char *addcontTitleId, char *outParentTitleId)
+{
+	return shellAddcontResolveParentTitle(addcontTitleId, outParentTitleId);
+}
+
+bool gamePspEmuListAllows(const char *titleId)
+{
+	return shellPspEmuCheckList(titleId);
 }

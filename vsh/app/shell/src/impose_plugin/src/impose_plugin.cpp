@@ -38,6 +38,10 @@ void imposePluginStop(Plugin *plugin)
 	Impose::Stop();
 }
 
+void imposeExitReserved(void)
+{
+}
+
 /* (0x81140C74) */
 void imposePluginExit(Plugin *plugin)
 {

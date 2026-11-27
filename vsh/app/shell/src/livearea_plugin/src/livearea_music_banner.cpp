@@ -397,7 +397,7 @@ static void liveareaMusicOnTimer(SceInt32, paf::ui::Handler *, paf::ui::Event *,
 			s_musicCurTitle = s_musicInfo.title;
 			paf::string utf8Title(s_musicInfo.title);
 			paf::wstring wTitle;
-			paf::common::Utf8ToUtf16(utf8Title, &wTitle);
+			paf::common::Utf8ToUtf16(utf8Title.c_str(), &wTitle);
 
 			if (s_musicStatusText != NULL) {
 				paf::math::v4 transparent(1.0f, 1.0f, 1.0f, 0.0f);
@@ -412,11 +412,11 @@ static void liveareaMusicOnTimer(SceInt32, paf::ui::Handler *, paf::ui::Event *,
 
 			paf::string utf8Artist(s_musicInfo.artist);
 			paf::wstring wArtist;
-			paf::common::Utf8ToUtf16(utf8Artist, &wArtist);
+			paf::common::Utf8ToUtf16(utf8Artist.c_str(), &wArtist);
 
 			paf::string utf8Album(s_musicInfo.album);
 			paf::wstring wAlbum;
-			paf::common::Utf8ToUtf16(utf8Album, &wAlbum);
+			paf::common::Utf8ToUtf16(utf8Album.c_str(), &wAlbum);
 
 			if (impose != NULL) {
 				if (wArtist.size() == 0) {

@@ -144,17 +144,17 @@ struct NpAuthAccountCache {
 	SceUInt32 reservedTail;		/* +0x1CC */
 };
 
-extern int npAuthCoreCreateRequest(void);						/* 0x813268BC */
-extern int npAuthCoreDestroyRequest(int reqId);						/* 0x813268DC */
-extern int npAuthCoreGetTicket(int reqId, void *ticketBuf, SceSize *inOutSize);		/* 0x81326906 */
-extern int npAuthCoreAbortRequest(int reqId);						/* 0x813269E2 */
-extern int npAuthCoreGetAccountCache(int reqId, NpAuthAccountCache *outCache,
-				     void *outExtra);					/* 0x81326B18 */
+struct NpCommunityServerNode;
+extern int npAccountCreateRequest(void);						/* 0x813268BC */
+extern int npAccountDestroyRequest(int reqHandle);					/* 0x813268DC */
+extern int npAccountGetTicket(int reqHandle, void *ticketBuf, SceSize *ioSize);		/* 0x81326906 */
+extern int npAccountAbortRequest(int reqHandle);					/* 0x813269E2 */
+extern int npAccountGetProfileAndMeta(int reqHandle, void *profileBuf, void *metaBuf);	/* 0x81326B18 */
 
-extern int npServiceStatusCreateRequest(const NpAuthAccountCache *accountCache,
-					int serviceId, const char *reservedArg);	/* 0x8132A252 */
-extern int npServiceStatusAbortRequest(int reqId);					/* 0x8132A322 */
-extern int npServiceStatusDestroyRequest(int reqId);					/* 0x8132A378 */
-extern int npServiceStatusQuery(int reqId, NpServiceStatusNode **outList);		/* 0x8133888E */
+extern int npProfileCreateRequest(const void *onlineId, int reservedFlag,
+				  const char *optName);					/* 0x8132A252 */
+extern int npProfileAbortRequest(int reqHandle);					/* 0x8132A322 */
+extern int npProfileDestroyRequest(int reqHandle);					/* 0x8132A378 */
+extern int npTusBackendGetServerList(SceInt32 txId, NpCommunityServerNode **outList);	/* 0x8133888E */
 
 #endif

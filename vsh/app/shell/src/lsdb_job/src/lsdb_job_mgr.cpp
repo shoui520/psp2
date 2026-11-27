@@ -17,28 +17,40 @@ struct LsdbJobClientHolder {
 	void *client;
 };
 
-LsdbJobClientHolder *g_lsdbJobClientHolder = NULL;		/* 0x8156B860 */
+LsdbJobClientHolder *g_shellLsdbClient = NULL;		/* 0x8156B860 */
 
 /* 0x811C4BF8 */
+int shellLsdbClientCreate(void)
+{
+	LsdbJobClientHolder *holder =
+		(LsdbJobClientHolder *)operator new(sizeof(LsdbJobClientHolder));
+	if (holder != NULL) {
+		g_shellLsdbClient = holder;
+		void *mem = operator new(4);
+		holder->client = (mem != NULL) ? SceLsdb_D322A870(mem) : NULL;
+	}
+	return 0;
+}
+
 void lsdbJobMgrInit(void)
 {
-	LsdbJobClientHolder *h = (LsdbJobClientHolder *)operator new(sizeof(LsdbJobClientHolder));
-	if (h != NULL) {
-		g_lsdbJobClientHolder = h;
-		void *mem = operator new(4);
-		h->client = (mem != NULL) ? SceLsdb_D322A870(mem) : NULL;
-	}
+	shellLsdbClientCreate();
 }
 
 /* 0x811C4C24 */
+void shellLsdbClientDestroy(void)
+{
+	LsdbJobClientHolder *holder = g_shellLsdbClient;
+	if (holder != NULL) {
+		if (holder->client != NULL) {
+			void *clientMem = SceLsdb_56D8DCF0(holder->client);
+			operator delete(clientMem);
+		}
+		operator delete(holder);
+	}
+}
+
 void lsdbJobMgrFini(void)
 {
-	LsdbJobClientHolder *h = g_lsdbJobClientHolder;
-	if (h != NULL) {
-		if (h->client != NULL) {
-			void *p = SceLsdb_56D8DCF0(h->client);
-			operator delete(p);
-		}
-		operator delete(h);
-	}
+	shellLsdbClientDestroy();
 }

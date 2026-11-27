@@ -13,8 +13,8 @@
 struct GameFttLicense {
 	SceUInt64 macSeed;
 	char contentId[48];
-	SceUInt64 time1;
-	SceUInt64 time2;
+	SceUInt64 startTime;
+	SceUInt64 expireTime;
 	int otherField;
 	SceUInt32 flags;	/* bit 0: GameFttInfo's flag */
 };

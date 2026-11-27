@@ -517,6 +517,24 @@ int netCtlApiResetExclusivePrompt(void)
 	return netCtlCoreResetExclusivePrompt();
 }
 
+extern int netCtlApiIncActiveRef(void);
+extern int netCtlApiDecActiveRef(void);
+
+void netCtlIntAcquire(void)
+{
+	netCtlApiIncActiveRef();
+}
+
+void netCtlIntRelease(void)
+{
+	netCtlApiDecActiveRef();
+}
+
+void netCtlIntRequestConnect(void)
+{
+	netCtlApiResetExclusivePrompt();
+}
+
 /* 0x8120EF62 */
 int netCtlApiGetWisprStatus(NetCtlWisprStatus *outStatus)
 {

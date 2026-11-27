@@ -451,7 +451,7 @@ int npOAuthParseRedirectLocation(NpOAuthRequest *request, const void *locationHe
 		return NP_OAUTH_ERR_OUT_OF_MEMORY;
 
 	sceClibMemset(urlCopy, 0, locationLength + 1U);
-	sceClibMemcpy(urlCopy, locationHeader, locationLength);
+	sceClibMemcpy_safe(urlCopy, locationHeader, locationLength);
 
 	SceSize poolRequired = 0;
 	int ret = sceHttpUriParse(NULL, urlCopy, NULL, &poolRequired, 0);

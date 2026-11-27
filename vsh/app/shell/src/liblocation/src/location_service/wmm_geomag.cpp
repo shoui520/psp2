@@ -116,8 +116,8 @@ void wmmSynthField(const WmmContext *ctx, float *outX, float *outY, float *outZ,
 	float aa = equatorialSq * clat * clat;
 	float bb = polarSq * slat * slat;
 	float cc = aa + bb;
-	float dd = sqrtf(cc);
-	float r = sqrtf(alt * (alt + 2.0f * dd) + (equatorialSq * aa + polarSq * bb) / cc);
+	float dd = __builtin_sqrtf(cc);
+	float r = __builtin_sqrtf(alt * (alt + 2.0f * dd) + (equatorialSq * aa + polarSq * bb) / cc);
 	float cd = (alt + dd) / r;
 	float sd = (equatorialSq - polarSq) / dd * slat * clat / r;
 	float ct = slat * cd - clat * sd;
@@ -150,7 +150,7 @@ void wmmSynthField(const WmmContext *ctx, float *outX, float *outY, float *outZ,
 		float fm = (float)m;
 		if (k >= 5) {
 			if (m == n) {
-				float one = sqrtf(1.0f - 0.5f / fm);
+				float one = __builtin_sqrtf(1.0f - 0.5f / fm);
 				int j = k - n - 1;
 				p[k - 1] = (1.0f + 1.0f / fm) * one * st * p[j - 1];
 				q[k - 1] = one * (st * q[j - 1] + ct / fm * p[j - 1]);
@@ -158,9 +158,9 @@ void wmmSynthField(const WmmContext *ctx, float *outX, float *outY, float *outZ,
 				sl[m - 1] = sl[m - 2] * cl[0] + cl[m - 2] * sl[0];
 			} else {
 				float gmm = fn * fn - fm * fm;
-				float normDenom = sqrtf(gmm);
+				float normDenom = __builtin_sqrtf(gmm);
 				float prevCoeff =
-					sqrtf((fn - 1.0f) * (fn - 1.0f) - fm * fm) / normDenom;
+					__builtin_sqrtf((fn - 1.0f) * (fn - 1.0f) - fm * fm) / normDenom;
 				float curCoeff = (2.0f * fn - 1.0f) / normDenom;
 				int i = k - n;
 				int j = k - 2 * n + 1;
@@ -212,8 +212,8 @@ void wmmCalcDeclination(WmmContext *ctx, float lat, float lon, float alt)
 	float x, y, z;
 	wmmSynthField(ctx, &x, &y, &z, lat, lon, alt);
 	float horizSq = x * x + y * y;
-	float f = sqrtf(horizSq + z * z);
-	float h = sqrtf(horizSq);
+	float f = __builtin_sqrtf(horizSq + z * z);
+	float h = __builtin_sqrtf(horizSq);
 	float decl;
 	if (f < 0.0001f || h < 0.0001f) {
 		decl = 0.0f;

@@ -34,8 +34,8 @@ struct IndicatorStatus {
 	int bluetooth;		/* function 7: Bluetooth on, from its configuration */
 	int flightMode;		/* function 5: /CONFIG/SYSTEM/flight_mode */
 	int value8;		/* function 8 */
-	int flag1;		/* 1 at construction */
-	int flag2;		/* 1 at construction */
+	int initLeftReady;	/* 1 at construction */
+	int initRightReady;	/* 1 at construction */
 	int notification;	/* function 11: /CONFIG/SHELL/notification */
 	int value6;		/* function 6: the bar's two counters shown or hidden */
 	paf::math::v4 barColor;		/* the theme's bar color */

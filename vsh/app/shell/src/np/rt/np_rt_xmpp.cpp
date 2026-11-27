@@ -14,7 +14,9 @@
 #include <net/resolver.h>
 #include <net/inet.h>
 #include <net/errno.h>
+extern "C" {
 #include <libssl/sslinternal.h>
+}
 #include <bXCe/bxce_internal.h>
 #include <np_common/np_common.h>
 #include "np_rt_core.h"

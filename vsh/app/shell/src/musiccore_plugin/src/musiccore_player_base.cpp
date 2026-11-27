@@ -2203,5 +2203,222 @@ int BasePlayer::cmdResetSpeed(uint32_t param, uint32_t cmdHi, unsigned char *fla
     return ret;
 }
 
+struct PlayerCommandPacket;
+struct TrackMetadataBuffers;
+
+size_t getPlayerBasePoolSize(void *heap)
+{
+    (void)heap;
+    return BasePlayer::calcBaseExtraSize(1);
+}
+
+void playerBaseConstruct(void *self, int playerType, void *controller,
+                         void *dbMgr, int *outErr, unsigned int slotSize, int hdrSize)
+{
+    (void)dbMgr;
+    new (self) BasePlayer(static_cast<char>(playerType), controller, 1, outErr,
+                          slotSize, static_cast<unsigned int>(hdrSize));
+}
+
+void playerBaseDestroy(void *self)
+{
+    if (self != NULL)
+        static_cast<BasePlayer *>(self)->~BasePlayer();
+}
+
+int playerBaseStopAndReset(void *self)
+{
+    unsigned char flags = 0;
+    return static_cast<BasePlayer *>(self)->close(&flags);
+}
+
+int playerBaseClearActiveList(void *self)
+{
+    unsigned char flags = 0;
+    return static_cast<BasePlayer *>(self)->cmdStop(NULL, &flags);
+}
+
+void playerBaseResetMetadataStrings(void *self, TrackMetadataBuffers *meta)
+{
+    static_cast<BasePlayer *>(self)->getContentInfo(reinterpret_cast<MetadataBuffers *>(meta));
+}
+
+int playerBaseHandleSeek(void *self, const PlayerCommandPacket *cmd)
+{
+    unsigned char flags = 0;
+    return static_cast<BasePlayer *>(self)->cmdSeek(
+        reinterpret_cast<CmdNode *>(const_cast<PlayerCommandPacket *>(cmd)), &flags);
+}
+
+int playerBaseHandleSkipNext(void *self, const PlayerCommandPacket *cmd)
+{
+    unsigned char flags = 0;
+    return static_cast<BasePlayer *>(self)->cmdSeekAndPlay(
+        reinterpret_cast<CmdNode *>(const_cast<PlayerCommandPacket *>(cmd)), &flags);
+}
+
+int playerBaseHandleSkipPrev(void *self, const PlayerCommandPacket *cmd)
+{
+    unsigned char flags = 0;
+    return static_cast<BasePlayer *>(self)->cmdCancel(
+        reinterpret_cast<CmdNode *>(const_cast<PlayerCommandPacket *>(cmd)), &flags);
+}
+
+int playerBaseHandleSetRepeat(void *self, const PlayerCommandPacket *cmd)
+{
+    unsigned char flags = 0;
+    return static_cast<BasePlayer *>(self)->cmdSetRepeat(
+        reinterpret_cast<CmdNode *>(const_cast<PlayerCommandPacket *>(cmd)), &flags);
+}
+
+int playerBaseHandleSetShuffle(void *self, const PlayerCommandPacket *cmd)
+{
+    unsigned char flags = 0;
+    return static_cast<BasePlayer *>(self)->cmdSetShuffle(
+        reinterpret_cast<CmdNode *>(const_cast<PlayerCommandPacket *>(cmd)), &flags);
+}
+
+int playerBaseOnTrackEvent(void *self, const PlayerCommandPacket *cmd)
+{
+    unsigned char flags = 0;
+    return static_cast<BasePlayer *>(self)->onDecoderEvent(
+        reinterpret_cast<CmdNode *>(const_cast<PlayerCommandPacket *>(cmd)), &flags);
+}
+
+int playerBaseResumeOrStart(void *self)
+{
+    unsigned char flags = 0;
+    return static_cast<BasePlayer *>(self)->cmdPlay(NULL, &flags);
+}
+
+int playerBasePause(void *self)
+{
+    unsigned char flags = 0;
+    return static_cast<BasePlayer *>(self)->cmdPause(NULL, &flags);
+}
+
+int playerBaseHandleNotify(void *self, const PlayerCommandPacket *cmd, int extra)
+{
+    (void)extra;
+    unsigned char flags = 0;
+    return static_cast<BasePlayer *>(self)->cmdNotifyStatus(
+        reinterpret_cast<CmdNode *>(const_cast<PlayerCommandPacket *>(cmd)), &flags);
+}
+
+unsigned int basePlayerCalcExtraSize(int capacity)
+{
+    return BasePlayer::calcBaseExtraSize(capacity);
+}
+
+void basePlayerConstruct(void *self, char kind, void *factory, int capacity,
+                         int *outErr, unsigned int slotSize, unsigned int hdrSize)
+{
+    new (self) BasePlayer(kind, factory, capacity, outErr, slotSize, hdrSize);
+}
+
+void basePlayerDestruct(void *self)
+{
+    if (self != NULL)
+        static_cast<BasePlayer *>(self)->~BasePlayer();
+}
+
+int playerDispatchCmd(BasePlayer *player, CmdNode *node, unsigned char *flags)
+{
+    return (player != NULL) ? player->dispatchCmd(node, flags) : -1;
+}
+
+void playerNotifyStatus(BasePlayer *player, int unused, uint32_t param, uint32_t cmdHi,
+                        int errCode, unsigned char *flags)
+{
+    if (player != NULL)
+        player->notifyStatus(unused, param, cmdHi, errCode, flags);
+}
+
+int playerActivateDecoder(BasePlayer *player, int fadeMs, void *decoderMgr)
+{
+    return (player != NULL)
+        ? player->activateDecoder(fadeMs, static_cast<DecoderSession *>(decoderMgr))
+        : -1;
+}
+
+int playerDeactivateDecoder(BasePlayer *player, int fadeMs, uint32_t param, uint32_t cmdHi,
+                            unsigned char syncFlag)
+{
+    return (player != NULL) ? player->deactivateDecoder(fadeMs, param, cmdHi, syncFlag) : -1;
+}
+
+int playerFlushStatus(BasePlayer *player)
+{
+    return (player != NULL) ? player->flushTimeCallback() : -1;
+}
+
+int playerGetStatus(BasePlayer *player, void *statusBuf, void *outPos, void *outPosValid)
+{
+    return (player != NULL)
+        ? player->getStatus(static_cast<PlayerStatusSnapshot *>(statusBuf),
+                            static_cast<int *>(outPos), static_cast<unsigned char *>(outPosValid))
+        : -1;
+}
+
+int playerGetExtraStatus(BasePlayer *player, int *outMode, int flag, void *workBuf,
+                         unsigned char *outDirty)
+{
+    return (player != NULL)
+        ? player->getExtraStatus(outMode, static_cast<char>(flag),
+                                 static_cast<char *>(workBuf), outDirty)
+        : -1;
+}
+
+void playerTick(BasePlayer *player)
+{
+    if (player != NULL)
+        player->tickStatus();
+}
+
+int playerSetSuspended(BasePlayer *player, int suspended)
+{
+    return (player != NULL) ? player->setSuspended(static_cast<char>(suspended)) : -1;
+}
+
+unsigned int calcMediaQueueSize(int capacity, int itemSize, int slotCount, int headerSize)
+{
+    return static_cast<unsigned int>(capacity * itemSize * slotCount + headerSize);
+}
+
+void computePlaybackRange(int repeatMode, int shuffleMode, int step, int totalTracks,
+                          int currentIndex, int *outNextIndex, int *outWrapped, int *outValid)
+{
+    (void)shuffleMode;
+    int nextIdx = currentIndex + step;
+    int wrapped = 0;
+    int valid = 1;
+    if (totalTracks <= 0) {
+        nextIdx = 0;
+        valid = 0;
+    } else if (nextIdx < 0) {
+        if (repeatMode != 0) {
+            nextIdx = totalTracks - 1;
+            wrapped = 1;
+        } else {
+            nextIdx = 0;
+            valid = 0;
+        }
+    } else if (nextIdx >= totalTracks) {
+        if (repeatMode != 0) {
+            nextIdx = 0;
+            wrapped = 1;
+        } else {
+            nextIdx = totalTracks - 1;
+            valid = 0;
+        }
+    }
+    if (outNextIndex != NULL)
+        *outNextIndex = nextIdx;
+    if (outWrapped != NULL)
+        *outWrapped = wrapped;
+    if (outValid != NULL)
+        *outValid = valid;
+}
+
 } /* namespace MusicCore */
 } /* namespace sce */

@@ -21,6 +21,8 @@
 #include "../rt/np_rt_stanza.h"
 #include "np_polling.h"
 
+extern "C" int SceThreadmgrCoredumpTime_sceKernelExitThread(int status);
+
 namespace {
 
 static const SceUInt32 kMaxCallbacks = 4;
@@ -1478,7 +1480,7 @@ static int pollingWorkerThreadMain(SceSize argSize, void *argBlock)
 	SceUID tid = sceKernelGetThreadId();
 	if (SceNetInternal_9DBD2F60(tid, 1, 0) >= 0)
 		pollingRunStateMachine(session);
-	sceKernelExitThread(0);
+	SceThreadmgrCoredumpTime_sceKernelExitThread(0);
 	return 0;
 }
 

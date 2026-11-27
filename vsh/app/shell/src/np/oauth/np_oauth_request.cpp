@@ -110,7 +110,7 @@ int npOAuthRequestAbort(NpOAuthRequest *request)
 	if (request->httpReqId != 0)
 		ret = sceHttpAbortRequest(request->httpReqId);
 	if (request->ticketReqId != 0)
-		ret = SceNpManagerTicket_A30BF29A(request->ticketReqId);
+		ret = SceNpManager_29C9B8A5(request->ticketReqId);
 	if (request->cslaReqId != 0)
 		ret = npCslaAbortRequest(request->cslaReqId);
 	request->aborted = 1;

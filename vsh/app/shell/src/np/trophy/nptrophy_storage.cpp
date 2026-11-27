@@ -713,7 +713,7 @@ int npTrophyReadDecodedSfmText(TrophyHandle *handle, TrophyFileBase *file, uint6
 				SceSize actualLen = sceClibStrnlen(entityBuf, sizeof(entityBuf));
 				if (actualLen > remaining)
 					return NP_TROPHY_ERR_INSUFFICIENT_BUFFER;
-				sceClibMemcpy(dst, entityBuf, actualLen);
+				sceClibMemcpy_safe(dst, entityBuf, actualLen);
 				dst += actualLen;
 				remaining -= actualLen;
 				produced += actualLen;

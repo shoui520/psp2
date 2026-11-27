@@ -1764,7 +1764,7 @@ void PopupListInstance::ConfigureListItem(int cellIndex, ui::ListItem *listItem)
 			}
 		}
 		partShape.m_changed = true;
-		buttonBase->m_focus_parts.push_back(partShape);
+		buttonBase->m_focus_parts.insert(buttonBase->m_focus_parts.end(), partShape);
 	}
 
 	if (cellIndex >= 0 && cellIndex < static_cast<int>(m_items.size()) &&

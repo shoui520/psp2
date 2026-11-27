@@ -33,7 +33,7 @@ public:
 };
 
 /* sysupchk_plugin's InitParam: its name, resource and entry points (0x81362410) */
-class ShellSysupchkInitParam : public paf::Plugin::InitParam {
+class ShellSysupchkInitParam {
 public:
 	ShellSysupchkInitParam();
 
@@ -46,6 +46,8 @@ public:
 
 	/* the plugin loaded with Plugin::LoadAsync (0x81362AA0) */
 	int Load(paf::Plugin::LoadFinishCallback callback, int option);
+
+	paf::Plugin::InitParam m_initParam;
 };
 
 /* what the update check asks the shell, and the shell's own answers (0x81547534, 0x8154753C) */

@@ -350,6 +350,11 @@ void shellXmlAppendEscaped(paf::string *outXml, const char *text)
 	}
 }
 
+void XmlAppendEscaped(paf::string *outXml, const char *text)
+{
+	shellXmlAppendEscaped(outXml, text);
+}
+
 /* 0x8138AB3C */
 int shellXmlNodeSerialize(paf::string *outXml, const NsxXmlNode *node, SceUInt32 indent)
 {

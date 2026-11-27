@@ -19,9 +19,9 @@
 #define NP_PARTY_IPC_MSG_QUEUE_SIZE		640
 #define NP_PARTY_IPC_MSG_QUEUE_DEPTH		8
 
-extern int ipmiAsyncNotSupported(IPMI::Session *session, SceUInt32 requestId,
-				 SceUInt32 methodId, const IPMI::DataInfo *inList,
-				 SceUInt32 inCount);	/* 0x8115B554 */
+extern int shellIncomingDialogServerAsyncDispatch(IPMI::Session *session, SceUInt32 requestId,
+						  SceUInt32 methodId, const IPMI::DataInfo *inList,
+						  SceUInt32 inCount);	/* 0x8115B554 */
 
 struct PartyAppGameInitMsg {
 	SceUInt32 eventType;
@@ -726,7 +726,7 @@ int npPartyIpcServerInit(void)
 	config.msgQueue[0].msgSize = NP_PARTY_IPC_MSG_QUEUE_SIZE;
 	config.msgQueue[0].msgCount = NP_PARTY_IPC_MSG_QUEUE_DEPTH;
 	config.callbacks.onSyncMethod = onPartySyncMethod;
-	config.callbacks.onAsyncMethod = ipmiAsyncNotSupported;
+	config.callbacks.onAsyncMethod = shellIncomingDialogServerAsyncDispatch;
 	config.callbacks.onSessionKilled = onPartySessionDisconnected;
 
 	SceSize bufferSize = IpmiWrapper::Server::getBufferSize(&config);

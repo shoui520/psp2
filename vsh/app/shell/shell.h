@@ -133,7 +133,7 @@ int shellAppEventSend(int event, const void *data, int flags);
 int main(int argc, char *argv[]);			/* the process main (0x81004AE4) */
 SceUInt64 shellStartGetTime(void);			/* (0x81004C4C) */
 /* SceThreadmgr's system time, low word (the user library's export; vitasdk:
-   sceKernelGetSystemTimeLow) */
+   SceThreadmgr_47F6DE49) */
 extern "C" SceUInt32 SceThreadmgr_47F6DE49(void);
 int shellStartAppDataMount(void);			/* ux0 application data, id 105 (0x81004C1E) */
 int shellStartAppDataUmount(void);			/* (0x81004C3C) */
@@ -183,7 +183,7 @@ struct ShellIncomingDialogRequest : SceIncomingDialogParam {
 	SceUID processId;		/* the application's; -1 for a free slot */
 	SceUInt64 startTime;		/* sceKernelGetProcessTimeWide when it was shown */
 	char *param;			/* the launch's param= argument, or NULL */
-	SceInt32 reserved2;		/* nothing reads or writes it */
+	SceInt32 unusedPadding;		/* nothing reads or writes it */
 	SceUInt32 sequence;		/* the oldest pending request is taken first */
 	SceInt32 state;			/* 1 pending, 2 taken, else its result */
 	bool taken;
@@ -359,12 +359,12 @@ int shellMtpWiFiCreate(void);
 int shellMtpWiFiTerminate(void);
 /* the host's functions given to libmtp (0x810FCC30, 0x810FCC3A, 0x810FCC42, 0x810FCC4A,
    0x810FCC52, 0x810FCC5A) */
-int shellMtpHostFunc0(int arg);
-int shellMtpHostFunc1(int arg);
-int shellMtpHostFunc2(int arg);
-int shellMtpHostFunc3(int arg);
-int shellMtpHostFunc4(int arg);
-paf::string shellMtpHostFunc5(int taskId);	/* a task's folder, returned in libmtp's string */
+int shellMtpHostCheckContent(int arg);
+int shellMtpHostAddTask(int arg);
+int shellMtpHostRemoveTask(int arg);
+int shellMtpHostReloadTask(int arg);
+int shellMtpHostListTasks(int arg);
+paf::string shellMtpHostGetTaskFolder(int taskId);	/* a task's folder, returned in libmtp's string */
 
 /* the MTP Marlin service (SceMtpMlnSvc, 0x812BC4F0) started at boot (0x81003250) */
 int shellMtpMarlinServiceStart(void);
@@ -374,7 +374,8 @@ void shellMtpMarlinStart(void);
 void shellNetStart(void);
 
 /* what the WISPr login reports its events to */
-typedef void (*ShellNetWisprCallback)(int event, int arg0, int arg1, int arg2, int arg3, int arg4);
+typedef void (*ShellNetWisprCallback)(int prevState, int newState, int eventCode, int errorCode,
+				      int resultInfoPtr, int userArg);
 
 /* what the shell's NetCtl server asks the shell (net.cpp's functions, in this order) */
 struct ShellNetCtlHostFuncs {
@@ -419,21 +420,21 @@ int shellNetCtlGetNatInfo(SceNetCtlNatInfo *natinfo);
 int shellNetCtlHandle_F30365D6(void *info);
 int shellNetCtlHandle_6A56FC3A(const char **ssids, SceUInt32 count, void *param);
 int shellNetCtlHandle_47980B9B(void);
-int shellNetCtlHandle_92EB6B1A(int a0, void *out);
+int shellNetCtlHandle_92EB6B1A(int index, void *out);
 int shellNetCtlHandle_A840C74C(void *buf, int count);
-int shellNetCtlHandle_1A254169(void *a0, void *a1, int a2, int *a3);
-int shellNetCtlHandle_27932A1B(void *a0, int a1, int *a2);
+int shellNetCtlHandle_1A254169(void *bssid, void *info, int ieBuf, int *ieSize);
+int shellNetCtlHandle_27932A1B(void *info, int ieBuf, int *ieSize);
 int shellNetCtlHandle_484EE0B2(void *buf, int count);
-int shellNetCtlHandle_A59146E1(void *a0, void *a1, int a2, int *a3);
+int shellNetCtlHandle_A59146E1(void *bssid, void *info, int ieBuf, int *ieSize);
 int shellNetCtlHandle_147B054C(int *out);
 int shellNetCtlHandle_C15740E9(int *out);
-int shellNetCtlHandle_CCF30B92(int a0);
+int shellNetCtlHandle_CCF30B92(int enable);
 /* also the table's 0x54 entry (one function for both) */
 int shellNetCtlGetIfStat(int device, SceNetCtlIfStat *ifstat);
 /* PLACEHOLDER name: shellNetCtlGetIfStat's body, the service started or not (0x8120EFAA) */
 int shellNetGetIfStat(int device, SceNetCtlIfStat *ifstat);
-int shellNetCtlHandle_777FE4C2(int a0, int a1);
-int shellNetCtlHandle_8B2FEFAA(int a0, int a1);
+int shellNetCtlHandle_777FE4C2(int childPid, int parentPid);
+int shellNetCtlHandle_8B2FEFAA(int childPid, int parentPid);
 
 /* the exclusive function the NetCtl server runs under (0x810E26CC, 0x810E290A) */
 int shellExclusiveFuncNetBegin(int id, void *callback, void *arg);

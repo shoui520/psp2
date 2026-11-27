@@ -123,9 +123,9 @@ struct DrmKeyRequest {
 	SceUInt8 reserved[31];
 };
 
-/* another file's (0x81425E88, PLACEHOLDER name): the console key, from the secure kernel */
-int Bgdl_81425E88(const DrmKeyRequest *request, const SceRtcTick *tick, SceUInt8 *key,
-		  char *out);
+/* another file's (0x81425E88): the console key, from the secure kernel */
+extern "C" int vshSblGcAuthMgrMlnpsnlAuth1(const DrmKeyRequest *request, const SceRtcTick *tick,
+					   SceUInt8 *key, char *out);
 
 static const DrmParamDesc s_paramDescs[DRM_NUM_PARAMS] = {
 	{ 8, "loginid=" },
@@ -336,6 +336,13 @@ int DownloadServiceRequest::Bgdl_8113B164(void)
 	return ret;
 }
 
+int bgdlUnsetAutoDownload(const char *contentId)
+{
+	DownloadServiceRequest request(contentId);
+
+	return request.Bgdl_8113B164();
+}
+
 /* the account server's address for the environment the account is in */
 __attribute__((noinline)) static int DrmGetUrl(int type, char **ppUrl)
 {
@@ -417,7 +424,7 @@ __attribute__((noinline)) static int DrmOpenRequest(int type, char **ppUrl, DrmR
 	}
 	ret = vshRtcGetCurrentSecureTick(&tick);
 	if (ret == 0)
-		ret = Bgdl_81425E88(&keyRequest, &tick, consoleKey, out);
+		ret = vshSblGcAuthMgrMlnpsnlAuth1(&keyRequest, &tick, consoleKey, out);
 	if (ret != 0) {
 		if (ret >= 0)
 			return ret;
@@ -578,121 +585,121 @@ __attribute__((noinline)) static int DrmSendRequest(DrmRequest *pRequest, const 
 							  (SceUInt64)bodySize - 1);
 			if (ret >= 0) {
 				pRequest->requestId = ret;
+				bool headerFailed = false;
 				for (i = 0; i < 3; i++) {
 					ret = sceHttpAddRequestHeader(pRequest->requestId,
 								      s_requestHeaders[i].pName,
 								      s_requestHeaders[i].pValue, 0);
-					if (ret < 0)
-						goto fail;
+					if (ret < 0) {
+						headerFailed = true;
+						break;
+					}
 				}
-				ret = sceHttpSendRequest(pRequest->requestId, pRequest->pBody,
-							 bodySize - 1);
-				if (ret < 0) {
-					if (ret == (int)0x80431075) {
-						SceUInt32 detail;
-						int errNum;
+				if (!headerFailed) {
+					ret = sceHttpSendRequest(pRequest->requestId, pRequest->pBody,
+								 bodySize - 1);
+					if (ret < 0) {
+						if (ret == (int)0x80431075) {
+							SceUInt32 detail;
+							int errNum;
 
-						ret = sceHttpsGetSslError(pRequest->requestId, &errNum,
-									  &detail);
-						if (ret >= 0) {
-							ret = errNum;
-							if (errNum == (int)0x80435060) {
-								ret = DRM_ERROR_SSL_UNTRUSTED;
-								if ((detail & 4) == 0) {
-									ret = DRM_ERROR_SSL_EXPIRED;
-									if ((detail & 0x20) == 0) {
-										ret = DRM_ERROR_SSL_NAME;
-										if ((detail & 2) == 0) {
-											ret = DRM_ERROR_SSL_BAD_CERT;
-											if ((detail & 1) != 0)
-												ret = DRM_ERROR_SSL_UNKNOWN_CA;
+							ret = sceHttpsGetSslError(pRequest->requestId, &errNum,
+										  &detail);
+							if (ret >= 0) {
+								ret = errNum;
+								if (errNum == (int)0x80435060) {
+									ret = DRM_ERROR_SSL_UNTRUSTED;
+									if ((detail & 4) == 0) {
+										ret = DRM_ERROR_SSL_EXPIRED;
+										if ((detail & 0x20) == 0) {
+											ret = DRM_ERROR_SSL_NAME;
+											if ((detail & 2) == 0) {
+												ret = DRM_ERROR_SSL_BAD_CERT;
+												if ((detail & 1) != 0)
+													ret = DRM_ERROR_SSL_UNKNOWN_CA;
+											}
 										}
 									}
 								}
 							}
 						}
-					}
-					goto check;
-				}
-				ret = sceHttpGetStatusCode(pRequest->requestId, &statusCode);
-				if (ret < 0)
-					goto fail;
-				if (statusCode != 200) {
-					ret = DRM_ERROR_BAD_STATUS_CODE;
-					goto fail;
-				}
-				ret = sceHttpGetAllResponseHeaders(pRequest->requestId, &pHeader,
-								   &headerSize);
-				if (ret < 0)
-					goto fail;
-				ret = DrmCheckHeader(pHeader, headerSize, s_versionHeader);
-				if (ret < 0)
-					goto fail;
-				if (sceHttpParseResponseHeader(pHeader, headerSize, "X-I-5-DL-Status",
-							       &pStatus, &statusSize) < 0) {
-					ret = DRM_ERROR_BAD_RESPONSE;
-					goto fail;
-				}
-				pEnd = sce_paf_private_strtok(pStatus, "\r\n");
-				if (sce_paf_strncmp("OK", pStatus, 2) != 0) {
-					SceSize length;
-					char *pSemicolon;
+					} else {
+						do {
+							ret = sceHttpGetStatusCode(pRequest->requestId, &statusCode);
+							if (ret < 0)
+								break;
+							if (statusCode != 200) {
+								ret = DRM_ERROR_BAD_STATUS_CODE;
+								break;
+							}
+							ret = sceHttpGetAllResponseHeaders(pRequest->requestId, &pHeader,
+											   &headerSize);
+							if (ret < 0)
+								break;
+							ret = DrmCheckHeader(pHeader, headerSize, s_versionHeader);
+							if (ret < 0)
+								break;
+							if (sceHttpParseResponseHeader(pHeader, headerSize, "X-I-5-DL-Status",
+										       &pStatus, &statusSize) < 0) {
+								ret = DRM_ERROR_BAD_RESPONSE;
+								break;
+							}
+							pEnd = sce_paf_private_strtok(pStatus, "\r\n");
+							ret = 0;
+							if (sce_paf_strncmp("OK", pStatus, 2) != 0) {
+								SceSize length;
+								char *pSemicolon;
 
-					pRequest->refused = 1;
-					pValue = sce_paf_private_strtok(pStatus, "reason=");
-					if (pValue == NULL) {
-						ret = DRM_ERROR_BAD_REASON;
-						goto parsed;
+								pRequest->refused = 1;
+								pValue = sce_paf_private_strtok(pStatus, "reason=");
+								if (pValue == NULL) {
+									ret = DRM_ERROR_BAD_REASON;
+								} else {
+									pValue += 7;
+									pSemicolon = sce_paf_strchr(pValue, ';');
+									if (pSemicolon != NULL)
+										pEnd = pSemicolon;
+									length = pEnd - pValue;
+									if (length > 15
+									    || (sce_paf_memcpy(reasonText, pValue, length),
+										reasonText[length] = 0,
+										pRequest->reason = sce_paf_strtol(reasonText, NULL, 16),
+										pRequest->reason == (int)0x80000000)
+									    || pRequest->reason == 0x7FFFFFFF) {
+										ret = DRM_ERROR_BAD_REASON;
+									}
+								}
+							} else {
+								pRequest->refused = 0;
+							}
+							if (ret < 0)
+								break;
+							if (pRequest->refused == 0) {
+								ret = sceHttpGetResponseContentLength(pRequest->requestId,
+												      &contentLength);
+								if (ret >= 0) {
+									if (contentLength == 0)
+										return 0;
+									ret = DrmCheckHeader(pHeader, headerSize, s_contentHeader);
+									if (ret >= 0)
+										return 0;
+								}
+								break;
+							}
+							if (pRequest->reason > 255) {
+								ret = DRM_ERROR_REFUSED;
+								break;
+							}
+							ret = pRequest->reason | DRM_ERROR_SERVER_BASE;
+						} while (0);
 					}
-					pValue += 7;
-					pSemicolon = sce_paf_strchr(pValue, ';');
-					if (pSemicolon != NULL)
-						pEnd = pSemicolon;
-					length = pEnd - pValue;
-					if (length > 15
-					    || (sce_paf_memcpy(reasonText, pValue, length),
-						reasonText[length] = 0,
-						pRequest->reason = sce_paf_strtol(reasonText, NULL, 16),
-						pRequest->reason == (int)0x80000000)
-					    || pRequest->reason == 0x7FFFFFFF) {
-						ret = DRM_ERROR_BAD_REASON;
-						goto parsed;
-					}
-				} else {
-					pRequest->refused = 0;
 				}
-				ret = 0;
-parsed:
-				if (ret < 0)
-					goto fail;
-				if (pRequest->refused == 0) {
-					ret = sceHttpGetResponseContentLength(pRequest->requestId,
-									      &contentLength);
-					if (ret >= 0) {
-						if (contentLength == 0)
-							return 0;
-						ret = DrmCheckHeader(pHeader, headerSize, s_contentHeader);
-						if (ret >= 0)
-							return 0;
-					}
-					goto fail;
-				}
-				if (pRequest->reason > 255) {
-					ret = DRM_ERROR_REFUSED;
-					goto fail;
-				}
-				ret = pRequest->reason | DRM_ERROR_SERVER_BASE;
-check:
-				if (ret >= 0)
-					goto release;
 			}
 		}
-fail:
-		if (pRequest->requestId > 0) {
+		if (ret < 0 && pRequest->requestId > 0) {
 			sceHttpDeleteRequest(pRequest->requestId);
 			pRequest->requestId = 0;
 		}
-release:
 		if (pRequest->pBody != NULL) {
 			sce_paf_free(pRequest->pBody);
 			pRequest->pBody = NULL;

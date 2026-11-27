@@ -162,27 +162,27 @@ int Bgdl_811108C4(const char *src, const char *dst, bool overwrite)
 	common::SharedPtr<File> out;
 	common::SharedPtr<File> in;
 
-	if (src == NULL || dst == NULL)
-		goto done;
-	size = LocalFile::GetFileSize(src);
-	if (size <= 0)
-		goto done;
-	in = LocalFile::Open(src, SCE_O_RDONLY | 0x10000, 6, &ret);
-	if (ret != 0)
-		goto done;
-	{
+	do {
+		if (src == NULL || dst == NULL)
+			break;
+		size = LocalFile::GetFileSize(src);
+		if (size <= 0)
+			break;
+		in = LocalFile::Open(src, SCE_O_RDONLY | 0x10000, 6, &ret);
+		if (ret != 0)
+			break;
 		BgdlFileCloser inCloser(in);
 
 		out = LocalFile::Open(dst, SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC | 0x10000, 6, &ret);
 		if (ret != 0)
-			goto done;
+			break;
 
 		BgdlFileCloser outCloser(out);
 		common::SharedPtr<MallocBuffer> buf = MallocBuffer::Allocate(0x8000);
 
 		if (buf.get() == NULL || buf->GetSize() == 0) {
 			ret = BGDL_ERROR_NO_MEMORY;
-			goto done;
+			break;
 		}
 		while (size > copied) {
 			int read = in->Read(buf->GetAddr(), buf->GetSize());
@@ -196,8 +196,7 @@ int Bgdl_811108C4(const char *src, const char *dst, bool overwrite)
 			copied += written;
 		}
 		ret = size <= copied ? 0 : -1;
-	}
-done:
+	} while (0);
 	if (ret != 0 && dst != NULL && copied != 0)
 		LocalFile::RemoveFile(dst);
 	return ret;
@@ -219,11 +218,8 @@ int BgdlLicenseFolder::Bgdl_8111102A(const char *file, const char *contentId)
 			name += ".MNL";
 			path.append(name);
 			ret = Bgdl_811108C4(file, path.c_str(), true);
-			if (ret != 0)
-				goto done;
 		}
 	}
-done:
 	return ret;
 }
 
@@ -303,34 +299,33 @@ int Bgdl_81111724(const char *path, int reserved, SceUInt64 size)
 	SceUInt64 written = 0;
 	common::SharedPtr<File> file;
 
-	if (path == NULL || size == written)
-		goto done;
-	file = LocalFile::Open(path, SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC | 0x10000, 6, &ret);
-	if (ret != 0)
-		goto done;
-	{
+	do {
+		if (path == NULL || size == written)
+			break;
+		file = LocalFile::Open(path, SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC | 0x10000, 6, &ret);
+		if (ret != 0)
+			break;
 		BgdlFileCloser closer(file);
 		common::SharedPtr<MallocBuffer> buf = MallocBuffer::Allocate(0x8000);
 
 		if (buf.get() == NULL || buf->GetSize() == 0) {
 			ret = BGDL_ERROR_NO_MEMORY;
-			goto done;
+			break;
 		}
 		sce_paf_memset(buf->GetAddr(), 0, buf->GetSize());
 		while (written < size) {
 			SceUInt64 left = size - written;
-			int ret2;
+			int chunkWritten;
 
 			if (left >= buf->GetSize())
 				left = buf->GetSize();
-			ret2 = file->Write(buf->GetAddr(), (size_t)left);
-			if (ret2 <= 0)
+			chunkWritten = file->Write(buf->GetAddr(), (size_t)left);
+			if (chunkWritten <= 0)
 				break;
-			written += ret2;
+			written += chunkWritten;
 		}
 		ret = written == size ? 0 : -1;
-	}
-done:
+	} while (0);
 	return ret;
 }
 
@@ -855,6 +850,11 @@ bool Bgdl_81113900(const LsdbAppInfoPtr *info, string *titleId)
 	return titleId->length() != 0;
 }
 
+bool bgdlResolvePspInstallTitleId(const LsdbAppInfoPtr *appInfo, string *outTitleId)
+{
+	return Bgdl_81113900(appInfo, outTitleId);
+}
+
 /* (0x81113984) 1: the path, resolved, is in a download folder */
 int Bgdl_81113984(const char *path)
 {
@@ -996,14 +996,17 @@ int Bgdl_81114128(const string *titleId, int kind)
 		ret = BGDL_ERROR_NOT_ON_CARD;
 	} else {
 		SceUInt32 i;
+		bool matched = false;
 
 		for (i = 0; i < titles.size(); i++) {
-			if (titles[i] == *titleId)
-				goto found;
+			if (titles[i] == *titleId) {
+				matched = true;
+				break;
+			}
 		}
-		ret = BGDL_ERROR_NOT_ON_CARD;
+		if (!matched)
+			ret = BGDL_ERROR_NOT_ON_CARD;
 	}
-found:
 	return ret;
 }
 
@@ -1022,14 +1025,17 @@ int Bgdl_81114220(const string *titleId, int kind)
 		ret = BGDL_ERROR_NOT_ON_CARD;
 	} else {
 		SceUInt32 i;
+		bool matched = false;
 
 		for (i = 0; i < titles.size(); i++) {
-			if (titles[i] == *titleId)
-				goto found;
+			if (titles[i] == *titleId) {
+				matched = true;
+				break;
+			}
 		}
-		ret = BGDL_ERROR_NOT_ON_CARD;
+		if (!matched)
+			ret = BGDL_ERROR_NOT_ON_CARD;
 	}
-found:
 	return ret;
 }
 

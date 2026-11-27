@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <scetypes.h>
 #include <std/string.h>
+#include <std/new>
 #include <kernel.h>
 #include <thread/thread.h>
 #include <plugin.h>
@@ -15,9 +16,10 @@
 extern "C" {
 extern int sceAppMgrGetStatusByName(const char *name, void *status);
 extern int sceAppMgrGetStatusByAppId(SceUID appId, void *status);
-extern int appmgrGetAppIdByAppIdSyscall(int target);
+extern int sceAppMgrGetAppIdByAppId(int target);
 extern int sceBtAvrcpSetPlayStatus(int status);
 extern int sceBtAvrcpSetTitle(const char *title, SceSize len);
+extern int SceThreadmgrCoredumpTime_sceKernelExitThread(int status);
 }
 
 extern void *musicCoreHeapAlloc(SceSize size);			/* 0x811D3490 */
@@ -811,8 +813,8 @@ int MusicCoreMain::HandleOpenChannel(const MusicCoreQueueMsg *msg)
 	slot->appId = appId;
 	slot->slotId = slotId;
 
-	int activeApp = appmgrGetAppIdByAppIdSyscall(-4);
-	int fallbackApp = appmgrGetAppIdByAppIdSyscall(-2);
+	int activeApp = sceAppMgrGetAppIdByAppId(-4);
+	int fallbackApp = sceAppMgrGetAppIdByAppId(-2);
 	SceUInt8 status[0x80];
 	sce_paf_memset(status, 0, sizeof(status));
 	ret = sceAppMgrGetStatusByAppId(appId, status);
@@ -1491,7 +1493,7 @@ int MusicCoreMain::ThreadEntry(SceSize args, void *argp)
 	(void)args;
 	if (argp != NULL)
 		(*(MusicCoreMain **)argp)->MainLoop();
-	sceKernelExitThread(1);
+	SceThreadmgrCoredumpTime_sceKernelExitThread(1);
 	return 0;
 }
 
@@ -1923,4 +1925,109 @@ static int musicCoreOnMediaCb(int kind, const void *rawStatusPtr, const void *da
 		return 0;
 	}
 	return (int)0x80100D01;
+}
+
+/* Global C-style bridge wrappers for musiccore_plugin.cpp */
+void *musicCoreMainCtor(void *mem, int *outErr)
+{
+	return new (mem) MusicCoreMain(outErr);
+}
+
+void *musicCoreMainDtor(void *mainObj)
+{
+	if (mainObj != NULL)
+		static_cast<MusicCoreMain *>(mainObj)->~MusicCoreMain();
+	return mainObj;
+}
+
+int musicCoreMainSendCmd(void *mainObj, SceUInt32 cmdTag, int seqId,
+			 SceUInt32 packedCmd, const void *payload, SceSize payloadSize)
+{
+	return static_cast<MusicCoreMain *>(mainObj)->SendCmd(cmdTag, seqId, packedCmd, payload, payloadSize);
+}
+
+int musicCoreMainSetCallback(void *mainObj, void *cb)
+{
+	return static_cast<MusicCoreMain *>(mainObj)->SetCallback(reinterpret_cast<MusicCoreNotifyCb>(cb));
+}
+
+int musicCoreMainClearCallback(void *mainObj, void *cb)
+{
+	return static_cast<MusicCoreMain *>(mainObj)->ClearCallback(reinterpret_cast<MusicCoreNotifyCb>(cb));
+}
+
+int musicCoreMainGetStatus(void *mainObj, const void *ctx, void *outRaw)
+{
+	return static_cast<MusicCoreMain *>(mainObj)->GetStatus(
+		static_cast<const MusicCoreClientReq *>(ctx), outRaw);
+}
+
+int musicCoreMainGetError(void *mainObj, const void *ctx, int *outErr)
+{
+	return static_cast<MusicCoreMain *>(mainObj)->GetError(
+		static_cast<const MusicCoreClientReq *>(ctx), outErr);
+}
+
+int musicCoreMainGetTrackInfo(void *mainObj, const void *ctx, void *outTrack, void *outRaw)
+{
+	return static_cast<MusicCoreMain *>(mainObj)->GetTrackInfo(
+		static_cast<const MusicCoreClientReq *>(ctx), outTrack, outRaw);
+}
+
+int musicCoreMainGetUri(void *mainObj, const void *ctx, char *outUri)
+{
+	return static_cast<MusicCoreMain *>(mainObj)->GetUri(
+		static_cast<const MusicCoreClientReq *>(ctx), outUri);
+}
+
+int musicCoreMainGetFlag(void *mainObj, const void *ctx, int *outFlag)
+{
+	return static_cast<MusicCoreMain *>(mainObj)->GetPlayTimeFlag(
+		static_cast<const MusicCoreClientReq *>(ctx), outFlag);
+}
+
+int musicCoreMainGetCap(void *mainObj, const void *ctx, void *outCap)
+{
+	return static_cast<MusicCoreMain *>(mainObj)->GetCap(
+		static_cast<const MusicCoreClientReq *>(ctx), outCap);
+}
+
+int musicCoreMainGetMeta(void *mainObj, const void *ctx, void *outMeta)
+{
+	return static_cast<MusicCoreMain *>(mainObj)->GetMeta(
+		static_cast<const MusicCoreClientReq *>(ctx), static_cast<char *>(outMeta));
+}
+
+int musicCoreMainGetPlayTime(void *mainObj, const void *ctx, void *outTime)
+{
+	return static_cast<MusicCoreMain *>(mainObj)->GetPlayTimeEntry(
+		static_cast<const MusicCoreClientReq *>(ctx), outTime);
+}
+
+int musicCoreMainSetBgmMute(void *mainObj, int mode, int enable)
+{
+	return static_cast<MusicCoreMain *>(mainObj)->GetAllAppSlots(mode, reinterpret_cast<void *>(enable));
+}
+
+int musicCoreMainGetBgmMute(void *mainObj, int mode, void *outState)
+{
+	return static_cast<MusicCoreMain *>(mainObj)->GetBgmSlot(mode, outState);
+}
+
+int musicCoreMainSetAvrcpActive(void *mainObj, const void *ctx, int active)
+{
+	return static_cast<MusicCoreMain *>(mainObj)->SetAvrcpActive(
+		static_cast<const MusicCoreClientReq *>(ctx), static_cast<SceUInt8>(active));
+}
+
+int musicCoreMainSetNoticeSuppress(void *mainObj, const void *ctx, int suppressMode)
+{
+	return static_cast<MusicCoreMain *>(mainObj)->SetErrorSuppression(
+		static_cast<const MusicCoreClientReq *>(ctx), static_cast<SceUInt8>(suppressMode));
+}
+
+int musicCoreMainClearNoticeSuppress(void *mainObj, const void *ctx, int suppressMode)
+{
+	return static_cast<MusicCoreMain *>(mainObj)->ClearErrorSuppression(
+		static_cast<const MusicCoreClientReq *>(ctx), static_cast<SceUInt8>(suppressMode));
 }

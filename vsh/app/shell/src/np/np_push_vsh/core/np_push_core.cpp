@@ -38,7 +38,7 @@ int InitProtocolConfig(void)
 	char envName[20];
 	sceClibMemset(envName, 0, sizeof(envName));
 
-	int ret = SceNpCommon_32E4735D(envName);
+	int ret = sceNpCommonGetNpEnviroment(envName);
 	if (ret < 0) {
 		s_activeProtocolConfig = &kProtocolConfigTable[2];
 		return 0;

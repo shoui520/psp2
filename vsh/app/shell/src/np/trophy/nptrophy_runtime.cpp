@@ -18,11 +18,11 @@ extern int sceNpCommonGetNpEnviroment(char *environment);
 extern int sceNpManagerGetNpId(SceNpId *npId);
 extern int SceNpManager_DDF30B0E(void *loginId, void *onlineId, uint64_t *outAccountId);
 extern int SceNpCommon_A1CF53F3(uint32_t lo, uint32_t hi, uint64_t otherAccountId);
-extern int SceNpManagerTicket_37F7F258(void);
-extern int SceNpManagerTicket_2B813EC7(int ticketCtxId);
-extern int SceNpManagerTicket_80895A1E(int ticketCtxId, void *outBuf, SceSize *ioSize);
-extern int SceNpManagerTicket_877251F3(int ticketCtxId, SceNpId *outNpId);
-extern int SceNpManagerTicket_A30BF29A(int ticketCtxId);
+extern int SceNpManager_8D7981D4(void);
+extern int SceNpManager_80036A44(int ticketCtxId);
+extern int SceNpManager_7CE94530(int ticketCtxId, void *outBuf, SceSize *ioSize);
+extern int SceNpManager_82DA7CFD(int ticketCtxId, SceNpId *outNpId);
+extern int SceNpManager_29C9B8A5(int ticketCtxId);
 }
 
 /* Global heap state (0x815460B8..0x815460D4, 0x815C383C) */
@@ -295,7 +295,7 @@ protected:
 	virtual void OnCancel(int errorCode)
 	{
 		(void)errorCode;
-		SceNpManagerTicket_A30BF29A(m_ticketCtxId);
+		SceNpManager_29C9B8A5(m_ticketCtxId);
 	}
 
 private:
@@ -310,14 +310,14 @@ TrophyTicketClient::TrophyTicketClient()
 TrophyTicketClient::~TrophyTicketClient()
 {
 	if (m_ticketCtxId != -1) {
-		SceNpManagerTicket_2B813EC7(m_ticketCtxId);
+		SceNpManager_80036A44(m_ticketCtxId);
 		m_ticketCtxId = -1;
 	}
 }
 
 int TrophyTicketClient::Init()
 {
-	int ctxId = SceNpManagerTicket_37F7F258();
+	int ctxId = SceNpManager_8D7981D4();
 	if (ctxId < 0)
 		return ctxId;
 	m_ticketCtxId = ctxId;
@@ -331,7 +331,7 @@ int TrophyTicketClient::GetTicket(TrophyHandle *handle, void *outBuf, SceSize *i
 	if (err < 0)
 		return err;
 
-	int ticketErr = SceNpManagerTicket_80895A1E(m_ticketCtxId, outBuf, ioSize);
+	int ticketErr = SceNpManager_7CE94530(m_ticketCtxId, outBuf, ioSize);
 	err = cancelToken.Detach(ticketErr);
 	if (err < 0)
 		return err;
@@ -345,7 +345,7 @@ int TrophyTicketClient::GetNpId(TrophyHandle *handle, SceNpId *outNpId)
 	if (err < 0)
 		return err;
 
-	int npIdErr = SceNpManagerTicket_877251F3(m_ticketCtxId, outNpId);
+	int npIdErr = SceNpManager_82DA7CFD(m_ticketCtxId, outNpId);
 	err = cancelToken.Detach(npIdErr);
 	if (err < 0)
 		return err;

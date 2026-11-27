@@ -24,10 +24,13 @@
 
 #include "../../shell/boot.h"
 #include "../../shell/plugins.h"
+#include "../../shell/savedata_backup.h"
 #include "../../shell/src/livespace_db/livespace_db_internal.h"
 #include "../../shell/src/livespace_db/lsdb_keys.h"
+#include "../../gamedata_plus_util/src/plus_list.h"
 #include "game_plugin.h"
 #include "game_appinfo.h"
+#include "game_util.h"
 #include "alarm.h"
 #include "promoter.h"
 #include "license_updater.h"
@@ -89,8 +92,10 @@ public:
 	{
 	}
 
-	virtual void OnFinish(void *data1, void *data2)
+	virtual void OnFinish(void *target, void *userData)
 	{
+		(void)target;
+		(void)userData;
 		sceKernelPowerTick(SCE_KERNEL_POWER_TICK_DISABLE_OLED_OFF |
 				   SCE_KERNEL_POWER_TICK_DISABLE_AUTO_SUSPEND);
 	}
@@ -1631,8 +1636,8 @@ int gamePluginFttRead(const char *titleId, GameFttInfo *info)
 							} else {
 								sce_paf_memcpy(info->contentId, license.contentId,
 									       sizeof(info->contentId));
-								info->time1 = license.time1;
-								info->time2 = license.time2;
+								info->startTime = license.startTime;
+								info->expireTime = license.expireTime;
 								info->otherField = license.otherField;
 								info->flag = (license.flags & 1) != 0;
 							}
@@ -1693,9 +1698,9 @@ int gamePluginLicenseUpdateInstall(const string &titleId)
 				sce_paf_memset(&param, 0, sizeof(param));
 				sce_paf_strncpy(param.path, path.c_str(), path.length());
 				sce_paf_strncpy(param.titleId, titleId.c_str(), titleId.length());
-				param.flag2 = false;
+				param.skipTopmenuNotify = false;
 				param.kind = 2;
-				param.flag1 = true;
+				param.skipOtherFlag = true;
 
 				GameInstallJob *job = new GameInstallJob(&param, true, NULL, 0);
 
@@ -1806,7 +1811,8 @@ int gamePluginDirGetAttributeMinor(const string &dir, bool *valid, bool *bit2Cle
  * An operation on an application's data, kinds 1 to 3, with the shell locked and held
  * (0x81030136). PLACEHOLDER: what the operation and its words are is not read yet.
  */
-int gamePluginAppDataOperate(const char *titleId, int kind, int arg2, int arg3, int arg4)
+int gamePluginAppDataOperate(const char *titleId, int kind, int userNo, int unusedOption,
+			     int unusedFlags)
 {
 	int ret;
 
@@ -1823,7 +1829,7 @@ int gamePluginAppDataOperate(const char *titleId, int kind, int arg2, int arg3, 
 		case 1:
 		case 2:
 		case 3:
-			ret = gameAppDataOperate(titleId, kind, arg2, arg3, arg4);
+			ret = gameAppDataOperate(titleId, kind, userNo, unusedOption, unusedFlags);
 			break;
 		default:
 			ret = GAME_ERROR_INVALID_ARGUMENT;
@@ -1864,3 +1870,96 @@ static void gameOnShellEvent(int result, int event, int param, void *arg)
 		s_condMutex.Unlock();
 	}
 }
+
+/* (0x8100D60C) */
+static int gamePluginCheckAddcontTitles(void)
+{
+	vector<string> titles;
+	int ret = gamePluginGetAddcontTitles(&titles);
+	return (ret >= 0) ? 0 : ret;
+}
+
+extern int gameGcPromoteDialogOpen(const string &title, intrusive_ptr<graph::Surface> icon,
+				   const wstring &text, bool frame, const float *progress,
+				   bool second);
+extern void gameGcPromoteDialogSet(int dialogId, const string &title,
+				   const intrusive_ptr<graph::Surface> &icon, const wstring &text,
+				   bool frame, bool show);
+extern void gameGcPromoteDialogClose(int dialogId);
+extern int gameGcPromoteNoticeOpen(int *dialogId, GameDialogFuncHandler::Func func, void *firstArg,
+				   void *secondArg, intrusive_ptr<graph::Surface> icon,
+				   const wstring &title, const wstring &text, const wstring &message,
+				   bool frame, const intrusive_ptr<graph::Surface> *secondIcon,
+				   bool secondFrame, const wstring &secondText);
+extern int gameAppCheckStart(const LsdbAppInfoPtr *info, char *version);
+
+/* Game plugin GetInterface(1) table (65 slots, 0x815431FC) */
+GamePluginInterface gamePluginInterface = {
+	{
+		(void (*)(void))gamePluginGetCategoryKind,		/* [ 0] 0x8102B5BA */
+		(void (*)(void))gamePluginGetStorage,			/* [ 1] 0x8102B5D8 */
+		(void (*)(void))gamePluginGetPool,			/* [ 2] 0x8102B5F6 */
+		(void (*)(void))gamePluginReleasePool,			/* [ 3] 0x8102B6CC */
+		(void (*)(void))gameAppDirMount,			/* [ 4] 0x8102B736 */
+		(void (*)(void))gameAppDirUnmount,			/* [ 5] 0x8102B7FC */
+		(void (*)(void))gamePluginPspemuWorkMount,		/* [ 6] 0x8102B860 */
+		(void (*)(void))gamePluginPspemuWorkUnmount,		/* [ 7] 0x8102B886 */
+		(void (*)(void))gamePluginGetJobQueue,			/* [ 8] 0x8102B8AC */
+		(void (*)(void))gamePluginGetAddcontTitles,		/* [ 9] 0x8102B8C4 */
+		(void (*)(void))gamePluginSetDialogHold,		/* [10] 0x8102B8E2 */
+		(void (*)(void))gamePluginPromoteLocked,		/* [11] 0x8102BBAC */
+		(void (*)(void))gamePluginInstall,			/* [12] 0x8102BFB2 */
+		(void (*)(void))gamePluginInstallEx,			/* [13] 0x8102C228 */
+		(void (*)(void))gamePluginRequestStop,			/* [14] 0x8102C644 */
+		(void (*)(void))gamePluginSfoLoad,			/* [15] 0x8102CBA2 */
+		(void (*)(void))gamePluginReadEbootParam,		/* [16] 0x8102CC2C */
+		(void (*)(void))gamePluginPromote,			/* [17] 0x8102B8F8 */
+		(void (*)(void))gamePluginAppDelete,			/* [18] 0x8102CD0A */
+		(void (*)(void))gamePluginAppDeletePart,		/* [19] 0x8102CF30 */
+		(void (*)(void))gamePluginTitleGetSize,			/* [20] 0x8102D372 */
+		(void (*)(void))gameDirGetSize,				/* [21] 0x8101898E */
+		(void (*)(void))gamePluginShellLockedJob,		/* [22] 0x8102D456 */
+		(void (*)(void))gamePluginLicenseGetStatus,		/* [23] 0x8102D654 */
+		(void (*)(void))gamePluginLicenseCheck,			/* [24] 0x8102D67C */
+		(void (*)(void))gamePluginAlarmSet,			/* [25] 0x8102D90A */
+		(void (*)(void))gamePluginAlarmUpdate,			/* [26] 0x8102D94A */
+		(void (*)(void))gamePluginAlarmRemove,			/* [27] 0x8102D988 */
+		(void (*)(void))gamePluginAlarmRemoveQuiet,		/* [28] 0x8102D9C6 */
+		(void (*)(void))gamePluginLicenseUpdate,		/* [29] 0x8102D9E8 */
+		(void (*)(void))gamePluginContentImportPrepare,		/* [30] 0x8102DA28 */
+		(void (*)(void))gamePluginContentImportRun,		/* [31] 0x8102DA46 */
+		(void (*)(void))gamePluginContentImportCheck,		/* [32] 0x8102DA64 */
+		(void (*)(void))gamePluginContentImportDelete,		/* [33] 0x8102DA82 */
+		(void (*)(void))gameGcPromoteDialogOpen,		/* [34] 0x810214CC */
+		(void (*)(void))gameGcPromoteDialogSet,			/* [35] 0x81020B42 */
+		(void (*)(void))gameGcPromoteDialogClose,		/* [36] 0x810218A6 */
+		(void (*)(void))gameGcPromoteNoticeOpen,		/* [37] 0x8102265A */
+		(void (*)(void))gamePluginCheckAddcontTitles,		/* [38] 0x8100D60C */
+		(void (*)(void))gameAppCheckStart,			/* [39] 0x81029E56 */
+		(void (*)(void))gameAppCheckUpdate,			/* [40] 0x8102A4AC */
+		(void (*)(void))plusSdListDelete,			/* [41] 0x8102ADBE */
+		(void (*)(void))plusSdListDeleteAllUsers,		/* [42] 0x8102AF02 */
+		(void (*)(void))plusAppListSetStatus,			/* [43] 0x8102A860 */
+		(void (*)(void))plusAppListSetStatusAllUsers,		/* [44] 0x8102A9AC */
+		(void (*)(void))gamePluginAddcontInfoCheck,		/* [45] 0x8102DB94 */
+		(void (*)(void))gamePluginAddcontLicenseUpdate,		/* [46] 0x8102E442 */
+		(void (*)(void))gamePluginAppIsAllowed,			/* [47] 0x8102E480 */
+		(void (*)(void))gamePluginEmuAppIsAllowed,		/* [48] 0x8102E78C */
+		(void (*)(void))gamePluginPocketStationLicenseCheck,	/* [49] 0x8102E7CE */
+		(void (*)(void))gamePluginPsmAppIsAllowed,		/* [50] 0x8102E928 */
+		(void (*)(void))gamePluginSetupUr0,			/* [51] 0x8102ECC4 */
+		(void (*)(void))gamePluginSetupUr0Appmeta,		/* [52] 0x8102ED34 */
+		(void (*)(void))gamePluginUmassCheck,			/* [53] 0x8102ED72 */
+		(void (*)(void))gamePluginAppGetDirsSize,		/* [54] 0x8102ED90 */
+		(void (*)(void))gamePluginPresetGetDataSize,		/* [55] 0x8102EE36 */
+		(void (*)(void))gamePluginPresetCheckTitle,		/* [56] 0x8102EED0 */
+		(void (*)(void))gamePluginParamJobRun,			/* [57] 0x8102EF54 */
+		(void (*)(void))gamePluginFttRead,			/* [58] 0x8102F198 */
+		(void (*)(void))gamePluginLicenseUpdateInstall,		/* [59] 0x8102F79C */
+		(void (*)(void))gamePluginAppGetInstalledSizes,		/* [60] 0x8102FCC8 */
+		(void (*)(void))gamePluginTitleGetSizes,		/* [61] 0x8102FDCA */
+		(void (*)(void))gamePluginDirGetAttributeMinor,		/* [62] 0x8102FE80 */
+		(void (*)(void))shellSavedataBackupGetInfo,		/* [63] 0x81006FBC */
+		(void (*)(void))gamePluginAppDataOperate,		/* [64] 0x81030136 */
+	}
+};

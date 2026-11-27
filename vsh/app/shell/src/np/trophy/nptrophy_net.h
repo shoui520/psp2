@@ -832,7 +832,7 @@ struct TrophyRsaKeyPair {
 	const uint8_t *exponent;
 };
 
-int npTrophyRsa1024VerifySha1(const TrophyRsaSlice *signature, const TrophyRsaSlice *digest,
-			      const TrophyRsaKeyPair *publicKey, int hashType);
+extern "C" int GcAuthRsaVerify1024(const TrophyRsaSlice *signature, const TrophyRsaSlice *digest,
+				   const TrophyRsaKeyPair *publicKey, int hashType);
 
 #endif /* SHELL_NP_TROPHY_NET_H */

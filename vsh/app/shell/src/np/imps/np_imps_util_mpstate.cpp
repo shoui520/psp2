@@ -25,25 +25,28 @@ extern int SceNpManager_9554802B(const char *tag, const char *detail, const char
 }
 
 /* SceNpManager / SceNpCommonPs4 / Shell job-queue bridges */
-extern int npAccountGetLegacySignInStatus(SceUInt32 sdkVersion);			/* 0x81326D30 */
+extern int npAccountIsSignedIn(void);							/* 0x81326D30 */
 extern paf::job::JobQueue *shellGetNpBackgroundJobQueue(void);				/* 0x813C5BE0 */
 extern int npPushNotifyAppOnline(int appId);						/* 0x813B9D0C */
 extern void npPushNotifyAppExit(void);							/* 0x813B9D1A */
 extern int npPushNotifySignedOut(void);							/* 0x813B9D22 */
 
 /* NpFriendStorage play session log bridges (vsh/app/shell/np_friend_list.cpp) */
+struct NpFriendSessionLogEntry;
+struct NpFriendPlayerSessionLogEntry;
 extern int npFriendSessionLogAdd(const paf::rtc::Tick *date, const SceNpId *npId,
 				 const SceNpCommunicationId *commId, const char *description,
 				 SceUID processId);
 extern int npFriendSessionLogGetCount(int queryKind, const SceNpCommunicationId *commId,
 				      unsigned int *outCount);
 extern int npFriendSessionLogGetList(int queryKind, const SceNpCommunicationId *commId,
-				     unsigned int startIndex, void *outEntries,
+				     unsigned int startIndex, NpFriendSessionLogEntry *outEntries,
 				     unsigned int maxCount, unsigned int *outCount);
-extern int npFriendSessionLogDelete(SceUInt32 dateLow, SceUInt32 dateHigh);
+extern int npFriendSessionLogDelete(SceInt64 logId);
 extern int npFriendSessionLogDeleteAll(void);
-extern int npFriendPlayerSessionLogGetCount(const SceNpId *npId, unsigned int *outCount);
-extern int npFriendPlayerSessionLogGet(const SceNpId *npId, unsigned int index, void *outEntry);
+extern int npFriendPlayerSessionLogGetCount(const char *onlineId, unsigned int *outCount);
+extern int npFriendPlayerSessionLogGet(const char *onlineId, unsigned int index,
+				       NpFriendPlayerSessionLogEntry *outEntry);
 
 /* AppMgr status struct layout used by ProcessHsm constructor (128 bytes) */
 struct NpImpsUtilAppStatus {
@@ -831,7 +834,7 @@ int NpImpsProcessHsm::GetServiceState(SceUInt8 rawMode)
 	SceUInt32 sdkVersion = 0;
 	vshKernelGetCompiledSdkVersionByPid(m_processId, &sdkVersion);
 	if (rawMode == 0 && state <= NP_IMPS_SVC_STATE_SIGNED_OUT &&
-	    npAccountGetLegacySignInStatus(sdkVersion) == 1) {
+	    npAccountIsSignedIn() == 1) {
 		return NP_IMPS_SVC_STATE_SIGNED_IN;
 	}
 	return state;
@@ -2942,7 +2945,8 @@ int npImpsUtilHandleGetPlayLogList(IPMI::Session *session, int queryKind,
 				   void *outEntries, SceUInt32 maxCount, SceUInt32 *outCount)
 {
 	(void)session;
-	return npFriendSessionLogGetList(queryKind, commId, startIndex, outEntries,
+	return npFriendSessionLogGetList(queryKind, commId, startIndex,
+					 static_cast<NpFriendSessionLogEntry *>(outEntries),
 					 maxCount, outCount);
 }
 
@@ -2950,7 +2954,8 @@ int npImpsUtilHandleGetPlayLogList(IPMI::Session *session, int queryKind,
 int npImpsUtilHandleDeletePlayLog(IPMI::Session *session, SceUInt32 dateLow, SceUInt32 dateHigh)
 {
 	(void)session;
-	return npFriendSessionLogDelete(dateLow, dateHigh);
+	return npFriendSessionLogDelete(static_cast<SceInt64>(
+		static_cast<SceUInt64>(dateLow) | (static_cast<SceUInt64>(dateHigh) << 32)));
 }
 
 /* 0x812F5FE2 */
@@ -2986,7 +2991,7 @@ int npImpsUtilHandleGetPlayerPlayLogCount(IPMI::Session *session, const SceNpId 
 {
 	(void)session;
 	*outCount = 0;
-	return npFriendPlayerSessionLogGetCount(npId, outCount);
+	return npFriendPlayerSessionLogGetCount(npId->handle.data, outCount);
 }
 
 /* 0x812F6C6C */
@@ -2995,5 +3000,6 @@ int npImpsUtilHandleGetPlayerPlayLog(IPMI::Session *session, const SceNpId *npId
 {
 	(void)session;
 	sce_paf_memset(outEntry, 0, 0x2B8u);
-	return npFriendPlayerSessionLogGet(npId, index, outEntry);
+	return npFriendPlayerSessionLogGet(npId->handle.data, index,
+					   static_cast<NpFriendPlayerSessionLogEntry *>(outEntry));
 }

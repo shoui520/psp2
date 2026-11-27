@@ -251,7 +251,7 @@ public:
 			paf::ui::Widget *titleWidget = innerBox->FindChild(titleId, 0);
 			if (titleWidget != NULL) {
 				paf::wstring wideTitle;
-				paf::common::Utf8ToUtf16(it->second.title, &wideTitle);
+				paf::common::Utf8ToUtf16(it->second.title.c_str(), &wideTitle);
 				titleWidget->SetString(wideTitle);
 			}
 		}
@@ -327,7 +327,7 @@ SceInt32 ImportSaveDataDialog::ShowIntroDialog(const char *titleId)
 		paf::ui::Widget *bodyWidget = content->FindChild(bodyId, 0);
 		if (bodyWidget != NULL) {
 			paf::wstring wideInfo;
-			paf::common::Utf8ToUtf16(m_infoText, &wideInfo);
+			paf::common::Utf8ToUtf16(m_infoText.c_str(), &wideInfo);
 			bodyWidget->SetString(wideInfo);
 		}
 	}
@@ -472,7 +472,7 @@ SceInt32 ImportSaveDataDialog::ShowCloseRunningAppDialog(const char *runningTitl
 				if (titleUtf8 != NULL) {
 					paf::string utf8Str(titleUtf8);
 					paf::wstring wideTitle;
-					paf::common::Utf8ToUtf16(utf8Str, &wideTitle);
+					paf::common::Utf8ToUtf16(utf8Str.c_str(), &wideTitle);
 					titleWidget->SetString(wideTitle);
 				}
 			}
@@ -597,7 +597,7 @@ SceInt32 ImportSaveDataDialog::ShowOverwriteConfirmDialog(const char *titleId)
 		if (lookupRet == 0 && titleVal != NULL) {
 			paf::string utf8Title(static_cast<const char *>(titleVal));
 			paf::wstring wideTitle;
-			paf::common::Utf8ToUtf16(utf8Title, &wideTitle);
+			paf::common::Utf8ToUtf16(utf8Title.c_str(), &wideTitle);
 			titleWidget->SetString(wideTitle);
 		}
 

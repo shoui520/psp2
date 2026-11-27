@@ -11,7 +11,14 @@
 #include "../../../shell_cron.h"
 #include "livearea_internal.h"
 
-extern void liveareaDisableAutoSuspendCb(void *arg);		/* 0x8141FF6C */
+extern "C" int sceKernelPowerTick(SceUInt32 type);
+
+/* 0x8141FF6C */
+void liveareaDisableAutoSuspendCb(void *arg)
+{
+	(void)arg;
+	sceKernelPowerTick(4);
+}
 
 class LiveAreaDisableAutoSuspendJob : public paf::job::JobItem {
 public:
@@ -124,6 +131,26 @@ int LiveAreaDailyCronJob::Start(void)
 	if (ret != 0)
 		return ret;
 	return 0;
+}
+
+int liveareaCronEnqueueJob(paf::common::SharedPtr<paf::job::JobItem> &item)
+{
+	return LiveAreaDailyCronJob::Enqueue(item);
+}
+
+void liveareaCronRegister(void (*cb)(void *), void *arg)
+{
+	LiveAreaDailyCronJob::RegisterCallback(cb, arg);
+}
+
+void liveareaCronUnregister(void (*cb)(void *))
+{
+	LiveAreaDailyCronJob::UnregisterCallback(cb);
+}
+
+int shellLiveAreaDailyCronStart(void)
+{
+	return LiveAreaDailyCronJob::Start();
 }
 
 /* 0x8119A14E */

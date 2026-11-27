@@ -17,6 +17,7 @@
 
 #include "../../../plugins.h"
 #include "../../livespace_db/lsdb_keys.h"
+#include "../../livespace_db/livearea.h"
 
 struct LiTemplateLayout {
 	paf::string m_style;					/* +0 */
@@ -35,12 +36,9 @@ extern int SceLsdb_D239031A(void *ctx, const paf::string *titleId, paf::common::
 extern int sceLsdbGetSystemVersion(paf::common::SharedPtr<int> *row);
 extern int sceLsdbGetType(paf::common::SharedPtr<int> *row);
 extern int SceLsdb_BE72A404(const char *titleId);
-extern LiTemplateLayout *SceLsdb_D3EF2C98(void *mem);
 extern int SceLsdb_60B535FD(int sysVer, int mode);
 extern void SceLsdb_88FDC55C(paf::string *out, int sysVer);
 extern int SceLsdb_1673AD48(void);
-extern int SceLsdb_5BDC6351(void **outNode, const char *xml, SceSize len, int *outError,
-	const char *schema, int flags, SceUInt8 allowAny, int type);
 extern int SceLsdb_BA1D0DB8(void *ctx, paf::string *titleId, paf::string *frameId,
 	paf::string *outContent, SceUID pid);
 }
@@ -60,7 +58,7 @@ extern int shellSvcLiveAreaEnqueueGetTs(IPMI::Session *session, SceUInt32 reqId,
 extern int shellSvcLiveAreaEnqueueGetContent(IPMI::Session *session, SceUInt32 reqId,
 	const char *frameId, SceUInt32 maxSize, SceUInt8 flag);	/* 0x811B8250 */
 
-extern void shellSvcResolveClientTitleId(paf::string *out, SceUID appId, SceUInt8 flag, int mode); /* 0x811C1300 */
+extern void shellSvcResolveClientTitleId(paf::string *out, SceUID appId, SceUInt8 flag, SceUInt8 mode); /* 0x811C1300 */
 extern int shellSvcLiveAreaUpdateFromPath(SceUID pid, const char *path, paf::string *titleId,
 	SceUInt64 *ts, SceUInt8 allowAny, paf::string *outDir, int *outFlag); /* 0x811B9710 */
 extern int shellSvcLiveAreaSetFromPath(SceUID pid, const char *path, paf::common::SharedPtr<int> *parsed,
@@ -288,8 +286,7 @@ int shellSvcLiveAreaSetContentJobRun(void *rawJob)
 		paf::vector<paf::string> m_xmls;
 	} *job = (SetJob *)rawJob;
 
-	void *mem = operator new(sizeof(LiTemplateLayout));
-	LiTemplateLayout *parsed = mem ? SceLsdb_D3EF2C98(mem) : NULL;
+	LiTemplate *parsed = new LiTemplate();
 	paf::common::SharedPtr<int> spParsed(reinterpret_cast<int *>(parsed));
 
 	paf::string outDir;
@@ -315,9 +312,10 @@ int shellSvcLiveAreaSetContentJobRun(void *rawJob)
 
 		while (job->m_xmls.size() != 0) {
 			paf::string &xml = job->m_xmls[job->m_xmls.size() - 1];
-			void *node = NULL;
-			if (SceLsdb_5BDC6351(&node, xml.c_str(), xml.size(), &verInfo,
-			                     schema.c_str(), schemaArg, job->m_allowAny, typeVal) == 0) {
+			LiFrame *node = NULL;
+			if (SceLsdb_5BDC6351(&node, xml.c_str(), static_cast<int>(xml.size()),
+			                     &verInfo, schema.c_str(), schemaArg,
+			                     job->m_allowAny != 0) == 0) {
 				res = (int)0x80104004;
 				break;
 			}

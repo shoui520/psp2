@@ -22,7 +22,7 @@ static void onPatchChkFinished(int result, const PatchChkResultData *resultData,
 
 	paf::thread::RMutex::main_thread_mutex.Lock();
 	PatchChkInterface *iface =
-		(PatchChkInterface *)topmenuFindPluginInterface("patch_chk_plugin", 1);
+		(PatchChkInterface *)applauncherPluginGetInterface("patch_chk_plugin", 1);
 	if (iface != NULL)
 		iface->setStateCallback(NULL, NULL);
 

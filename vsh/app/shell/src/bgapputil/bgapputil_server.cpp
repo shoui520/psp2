@@ -48,7 +48,7 @@ extern const char *sceLsdbGetDiscId(const LsdbAppInfoPtr *appInfo);
 extern int shellSvcLiveAreaSyncDefault(IPMI::Session *session, SceUInt32 methodId,
 				       const IPMI::DataInfo *inList, SceUInt32 inCount,
 				       IPMI::BufferInfo *outList, SceUInt32 outCount); /* 0x8115B554 */
-extern int shellFiosOverlayResolveSync(SceUID processId, int resolveFlags,
+extern "C" int sceFiosKernelOverlayResolveSync(SceUID processId, int resolveFlags,
 				       const char *inputPath, char *outPath,
 				       SceSize outSize); /* 0x8144DA0C */
 
@@ -99,7 +99,7 @@ private:
 int BgAppUtilLaunchJob::ResolveDiscId(char *outTitleId)
 {
 	char sfoPath[256];
-	int ret = shellFiosOverlayResolveSync(m_clientPid, 0, "app0:sce_sys/param" "2.sfo",
+	int ret = sceFiosKernelOverlayResolveSync(m_clientPid, 0, "app0:sce_sys/param" "2.sfo",
 					      sfoPath, sizeof(sfoPath));
 	if (ret != 0)
 		return ret;
@@ -145,7 +145,7 @@ int BgAppUtilLaunchJob::Run()
 
 	char ebootPath[256];
 	SceIoStat fileStat;
-	int ret = shellFiosOverlayResolveSync(m_clientPid, 0, "app0:eboot2.bin",
+	int ret = sceFiosKernelOverlayResolveSync(m_clientPid, 0, "app0:eboot2.bin",
 					      ebootPath, sizeof(ebootPath));
 	if (ret == 0)
 		ret = sceIoGetstat(ebootPath, &fileStat);

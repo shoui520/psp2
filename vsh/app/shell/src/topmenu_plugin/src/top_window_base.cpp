@@ -196,7 +196,7 @@ public:
 				const char *titlePtr = m_promoteTitleId.empty()
 							       ? NULL
 							       : m_promoteTitleId.c_str();
-				result = shellBgdlInstallTitleTasksType1(titlePtr, &failedTask);
+				result = shellBgdlInstallTitleTasksPsp(titlePtr, &failedTask);
 				if (result != 0)
 					topmenuInstallErrorFill(result, &failedTask, &m_installError);
 			}
@@ -214,7 +214,7 @@ public:
 			if (isPsm) {
 				const char *psmTitleId = sceLsdbGetName(&m_appInfo);
 				if (psmTitleId != NULL) {
-					result = shellBgdlInstallTitleTasksType2(
+					result = shellBgdlInstallTitleTasksPsm(
 						psmTitleId, &failedTask);
 					if (result != 0) {
 						topmenuInstallErrorFill(
@@ -355,8 +355,12 @@ bool TopTabBase::IsVisibleInViewport(const paf::math::v4 *boundsSize,
 		if (nz > maxZ) maxZ = nz;
 	}
 
-	float absMinX = (fabsf(minX) < fabsf(maxX)) ? fabsf(minX) : fabsf(maxX);
-	float absMinY = (fabsf(minY) < fabsf(maxY)) ? fabsf(minY) : fabsf(maxY);
+	float absMinX = ((minX < 0.0f ? -minX : minX) < (maxX < 0.0f ? -maxX : maxX))
+				? (minX < 0.0f ? -minX : minX)
+				: (maxX < 0.0f ? -maxX : maxX);
+	float absMinY = ((minY < 0.0f ? -minY : minY) < (maxY < 0.0f ? -maxY : maxY))
+				? (minY < 0.0f ? -minY : minY)
+				: (maxY < 0.0f ? -maxY : maxY);
 
 	if ((minX * maxX < 0.0f || absMinX <= 1.00001f) &&
 	    (minY * maxY < 0.0f || absMinY <= 1.00001f) &&
@@ -604,7 +608,7 @@ TopTabBase *TopWindowBase::FindFocusedTab()
 			0, 0, paf::math::v4(0.0f, 0.0f, 0.0f, 0.0f));
 		float dx = center.extract_x() - focusPos.extract_x();
 		float dy = center.extract_y() - focusPos.extract_y();
-		float dist = sqrtf(dx * dx + dy * dy);
+		float dist = __builtin_sqrtf(dx * dx + dy * dy);
 		if (dist <= bestDist) {
 			bestDist = dist;
 			bestTab = m_tabs[i];
@@ -629,7 +633,7 @@ TopTabBase *TopWindowBase::FindNearestTab()
 			0, 0, paf::math::v4(0.0f, 0.0f, 0.0f, 0.0f));
 		float dx = originX - tabPos.extract_x();
 		float dy = originY - tabPos.extract_y();
-		float dist = sqrtf(dx * dx + dy * dy);
+		float dist = __builtin_sqrtf(dx * dx + dy * dy);
 		if (dist < bestDist) {
 			bestDist = dist;
 			bestTab = m_tabs[i];
@@ -750,4 +754,240 @@ bool topmenuStartAppDataPromote(const LsdbAppInfoPtr *appInfo,
 
 	topmenuEnqueueInstallJob(&job);
 	return true;
+}
+
+SceInt32 topmenuGetFocusedTabPageKey(TopWindow *window)
+{
+	if (window == NULL)
+		return -1;
+	TopTabBase *tab = reinterpret_cast<TopWindowBase *>(window)->FindFocusedTab();
+	return (tab != NULL) ? tab->m_pageKey : -1;
+}
+
+/*
+ * ShellSnapList / ShellSnapListItem bridges (applauncher_plugin views of
+ * TopWindowBase / TopTabBase, 0x812845A8..0x81286222).
+ */
+class ShellSnapList;
+class ShellSnapListListenerList;
+
+class ShellSnapListItem {
+public:
+	ShellSnapListItem(paf::Plugin *plugin, ShellSnapList *list,
+			  const paf::IDParam &templateId, const paf::IDParam &widgetId);
+	virtual ~ShellSnapListItem();
+	virtual void OnSnapped(void) {}
+	virtual void OnUnsnapped(void) {}
+
+	bool IsInView(const paf::math::v4 &size, paf::ui::Widget *other);
+
+	paf::map<SceInt32, TopmenuEventListenerList *> m_eventMap;
+	paf::ui::Widget *m_widget;
+	paf::Plugin *m_plugin;
+	paf::ui::ScrollView *m_scrollView;
+	SceInt32 m_inViewport;
+	SceInt32 m_prevInViewport;
+	SceInt32 m_viewportAlignPad;
+	float m_lastViewPosX;
+	float m_lastViewPosY;
+	int m_index;
+	SceInt32 m_tabKind;
+	paf::math::v2 m_spacing;
+	int m_key;
+};
+
+class ShellSnapList {
+public:
+	typedef paf::vector<ShellSnapListItem *>::iterator iterator;
+
+	ShellSnapList(paf::Plugin *plugin, int axis, int capacity, int spacing);
+	virtual ~ShellSnapList();
+	virtual void Layout(int mode);
+	virtual void MoveTo(ShellSnapListItem *item, float time);
+	virtual void JumpTo(ShellSnapListItem *item);
+
+	void SetScrollView(paf::ui::ScrollView *view);
+	iterator Remove(ShellSnapListItem *item);
+	void Insert(ShellSnapListItem *item, int notify, ShellSnapListItem *after);
+	ShellSnapListItem *GetNearest();
+	ShellSnapListItem *GetFocused();
+	ShellSnapListItem *GetNext(ShellSnapListItem *item);
+	ShellSnapListItem *GetPrevious(ShellSnapListItem *item);
+	ShellSnapListItem *GetItemBySnapID(int id);
+	int GetSnapID(ShellSnapListItem *item);
+	void ScrollTo(ShellSnapListItem *item);
+	ShellSnapListItem *GetItemByKey(int key);
+
+	paf::map<int, ShellSnapListListenerList *> m_listeners;
+	paf::Plugin *m_plugin;
+	paf::ui::ScrollView *m_scrollView;
+	int m_axis;
+	paf::vector<ShellSnapListItem *> m_items;
+	int m_nextKey;
+	int m_capacity;
+	int m_spacing;
+	bool m_notify;
+};
+
+ShellSnapListItem::ShellSnapListItem(paf::Plugin *plugin, ShellSnapList *list,
+				     const paf::IDParam &templateId,
+				     const paf::IDParam &widgetId)
+	: m_eventMap(),
+	  m_widget(NULL),
+	  m_plugin(plugin),
+	  m_scrollView(list->m_scrollView),
+	  m_inViewport(0),
+	  m_prevInViewport(0),
+	  m_viewportAlignPad(0),
+	  m_lastViewPosX(0.0f),
+	  m_lastViewPosY(0.0f),
+	  m_index(-1),
+	  m_tabKind(0),
+	  m_spacing(0.0f, 0.0f),
+	  m_key(list->m_nextKey++)
+{
+	paf::ui::Widget *viewParent = m_scrollView->GetViewParent();
+	paf::math::v4 viewPos = viewParent->GetPos(0, 0, paf::math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+	m_lastViewPosX = -viewPos.extract_x();
+	m_lastViewPosY = -viewPos.extract_y();
+
+	plugin->TemplateOpen(viewParent, templateId, paf::Plugin::TemplateOpenParam());
+	m_widget = viewParent->FindChild(widgetId, 0);
+
+	char nameBuf[64];
+	sce_paf_snprintf(nameBuf, sizeof(nameBuf), "%p", (void *)this);
+	m_widget->m_name = paf::IDParam(nameBuf);
+}
+
+ShellSnapListItem::~ShellSnapListItem()
+{
+	reinterpret_cast<TopTabBase *>(this)->DispatchEvent(0, (void *)(intptr_t)m_key, 0);
+	if (m_widget != NULL)
+		m_widget->DestroyWidget();
+	for (paf::map<SceInt32, TopmenuEventListenerList *>::iterator it = m_eventMap.begin();
+	     it != m_eventMap.end(); ++it) {
+		delete it->second;
+	}
+	m_eventMap.clear();
+}
+
+bool ShellSnapListItem::IsInView(const paf::math::v4 &size, paf::ui::Widget *other)
+{
+	return reinterpret_cast<TopTabBase *>(this)->IsVisibleInViewport(&size, other);
+}
+
+ShellSnapList::ShellSnapList(paf::Plugin *plugin, int axis, int capacity, int spacing)
+	: m_listeners(),
+	  m_plugin(plugin),
+	  m_scrollView(NULL),
+	  m_axis(axis),
+	  m_items(),
+	  m_nextKey(0),
+	  m_capacity(capacity),
+	  m_spacing(spacing),
+	  m_notify(true)
+{
+	if (capacity != 0)
+		m_items.reserve((SceUInt32)capacity);
+}
+
+ShellSnapList::~ShellSnapList()
+{
+	while (!m_items.empty()) {
+		ShellSnapListItem *item = m_items.back();
+		m_items.pop_back();
+		delete item;
+	}
+	for (paf::map<int, ShellSnapListListenerList *>::iterator it = m_listeners.begin();
+	     it != m_listeners.end(); ++it) {
+		delete reinterpret_cast<TopmenuEventListenerList *>(it->second);
+	}
+	m_listeners.clear();
+}
+
+void ShellSnapList::Layout(int mode)
+{
+	(void)mode;
+}
+
+void ShellSnapList::MoveTo(ShellSnapListItem *item, float time)
+{
+	reinterpret_cast<TopWindowBase *>(this)->ScrollToTab(
+		reinterpret_cast<TopTabBase *>(item), time);
+}
+
+void ShellSnapList::JumpTo(ShellSnapListItem *item)
+{
+	reinterpret_cast<TopWindowBase *>(this)->ScrollToTab(
+		reinterpret_cast<TopTabBase *>(item), 0.0f);
+}
+
+void ShellSnapList::SetScrollView(paf::ui::ScrollView *view)
+{
+	reinterpret_cast<TopWindowBase *>(this)->AttachScrollView(view);
+}
+
+ShellSnapList::iterator ShellSnapList::Remove(ShellSnapListItem *item)
+{
+	TopTabBase **nextPtr = NULL;
+	reinterpret_cast<TopWindowBase *>(this)->RemoveTab(
+		&nextPtr, reinterpret_cast<TopTabBase *>(item));
+	return iterator(reinterpret_cast<ShellSnapListItem **>(nextPtr));
+}
+
+void ShellSnapList::Insert(ShellSnapListItem *item, int notify, ShellSnapListItem *after)
+{
+	reinterpret_cast<TopWindowBase *>(this)->AddTab(
+		reinterpret_cast<TopTabBase *>(item), notify != 0,
+		reinterpret_cast<TopTabBase *>(after));
+}
+
+ShellSnapListItem *ShellSnapList::GetNearest()
+{
+	return reinterpret_cast<ShellSnapListItem *>(
+		reinterpret_cast<TopWindowBase *>(this)->FindNearestTab());
+}
+
+ShellSnapListItem *ShellSnapList::GetFocused()
+{
+	return reinterpret_cast<ShellSnapListItem *>(
+		reinterpret_cast<TopWindowBase *>(this)->FindFocusedTab());
+}
+
+ShellSnapListItem *ShellSnapList::GetNext(ShellSnapListItem *item)
+{
+	return reinterpret_cast<ShellSnapListItem *>(
+		reinterpret_cast<TopWindowBase *>(this)->GetNextTab(
+			reinterpret_cast<TopTabBase *>(item)));
+}
+
+ShellSnapListItem *ShellSnapList::GetPrevious(ShellSnapListItem *item)
+{
+	return reinterpret_cast<ShellSnapListItem *>(
+		reinterpret_cast<TopWindowBase *>(this)->GetPrevTab(
+			reinterpret_cast<TopTabBase *>(item)));
+}
+
+ShellSnapListItem *ShellSnapList::GetItemBySnapID(int id)
+{
+	return reinterpret_cast<ShellSnapListItem *>(
+		reinterpret_cast<TopWindowBase *>(this)->FindTabBySnapId(id));
+}
+
+int ShellSnapList::GetSnapID(ShellSnapListItem *item)
+{
+	return reinterpret_cast<TopWindowBase *>(this)->GetTabSnapId(
+		reinterpret_cast<TopTabBase *>(item));
+}
+
+void ShellSnapList::ScrollTo(ShellSnapListItem *item)
+{
+	reinterpret_cast<TopWindowBase *>(this)->ScrollToTabAnimated(
+		reinterpret_cast<TopTabBase *>(item));
+}
+
+ShellSnapListItem *ShellSnapList::GetItemByKey(int key)
+{
+	return reinterpret_cast<ShellSnapListItem *>(
+		reinterpret_cast<TopWindowBase *>(this)->FindTabByPageKey(key));
 }

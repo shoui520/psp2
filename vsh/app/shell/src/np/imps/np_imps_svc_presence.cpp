@@ -26,9 +26,9 @@ struct NpImpsAppMgrStatus {
 extern "C" {
 extern int sceAppMgrGetStatusByAppId(int appId, NpImpsAppMgrStatus *outStatus);
 extern int sceAppMgrAppParamGetString(SceUID pid, int param, char *buf, SceSize size);
-extern int sceRegMgrGetKeyIntForUser(const char *category, const char *name, int *outValue);
+extern int sceRegMgrGetKeyInt(const char *category, const char *name, int *outValue);
 extern int vshKernelGetCompiledSdkVersionByPid(SceUID pid, SceUInt32 *outSdkVersion);
-extern int appmgrIsDevelopmentModeSyscall(void);
+extern int sceAppMgrIsDevelopmentMode(void);
 }
 
 /* SceLsdb lightweight handle & query imports (0x812FCA0E) */
@@ -1091,7 +1091,7 @@ int NpImpsSvcMyPresence::GetAppTitleInfo(int appId, NpImpsAppTitleInfo *outInfo)
 		sce_paf_memcpy(outInfo->titleId, status.titleId, 9);
 		outInfo->titleId[9] = '\0';
 
-		ret = sceRegMgrGetKeyIntForUser("/CONFIG/SYSTEM", "language", &language);
+		ret = sceRegMgrGetKeyInt("/CONFIG/SYSTEM", "language", &language);
 		if (ret >= 0) {
 			ret = SceLsdb_E90B81CD(&lsdb);
 			if (ret >= 0) {
@@ -1400,7 +1400,7 @@ int NpImpsSvcMyPresence::SetGamePresence(SceUID processId, const NpImpsGamePrese
 											  &sdkVersion);
 						if (ret >= 0) {
 							if (sdkVersion >= 0x01500000U &&
-							    appmgrIsDevelopmentModeSyscall() == 0) {
+							    sceAppMgrIsDevelopmentMode() == 0) {
 								ret = NP_IMPS_SVC_ERROR_NO_JOINABLE_COMM_ID;
 							} else {
 								m_presence.SetJoinableCommId(

@@ -20,8 +20,9 @@ extern int SceShell_D4C7D2B7(int id, void *cb, void *arg);
 extern int SceShell_E3D3A162(int id, void *cb, void *arg);
 }
 
-extern void shellAppEventRegister(void);			/* 0x810E17DE */
-extern void shellAppEventUnregister(int type, void *cb, void *arg); /* 0x810E17E6 */
+typedef void (*ShellEventCallback)(int event, const void *data, SceSize size, void *arg);
+extern int shellAppEventServerAddListener(int event, ShellEventCallback callback, void *arg); /* 0x810E17DE */
+extern int shellAppEventServerRemoveListener(int event, ShellEventCallback callback, void *arg); /* 0x810E17E6 */
 
 extern void musicCoreHeapInit(void);				/* 0x811D34C0 */
 extern void musicCoreHeapFini(void);				/* 0x811D3552 */
@@ -46,13 +47,13 @@ extern int musicCoreMainSetAvrcpActive(void *mainObj, const void *ctx, int activ
 extern int musicCoreMainSetNoticeSuppress(void *mainObj, const void *ctx, int suppressMode); /* 0x811D082E */
 extern int musicCoreMainClearNoticeSuppress(void *mainObj, const void *ctx, int suppressMode); /* 0x811D087C */
 extern int musicCoreConvertRepeat(int raw, int *outVal);	/* 0x811D1214 */
-extern int musicCoreConvertShuffle(int raw, int *outVal);	/* 0x811D1248 */
+extern int musicCoreConvertShuffle(SceUInt32 raw, int *outVal);	/* 0x811D1248 */
 extern int musicCoreConvertEq(int raw, int *outVal);		/* 0x811D126C */
-extern int musicCoreConvertAvls(int raw);			/* 0x811D1298 */
-extern int musicCoreConvertStatus(const void *raw, void *outStatus, int flag, const void *cap); /* 0x811D1320 */
-extern int musicCoreConvertTrackInfo(const void *rawTrack, const void *rawStatus, char *outInfo); /* 0x811D1608 */
+extern int musicCoreConvertAvls(int raw, int unusedMode, int unusedRate, int unusedFlags, int *outVal); /* 0x811D1298 */
+extern int musicCoreConvertStatus(const void *raw, void *outStatus, int flag, const SceUInt8 *cap); /* 0x811D1320 */
+extern int musicCoreConvertTrackInfo(const char *rawTrack, const void *rawStatus, char *outInfo); /* 0x811D1608 */
 extern int musicCoreConvertUri(const char *rawUri, char *outUri); /* 0x811D16B2 */
-extern int musicCoreConvertCapFlag(SceUInt8 capByte, void *outVal); /* 0x811D16C6 */
+extern int musicCoreConvertCapFlag(SceInt8 capByte, int *outVal); /* 0x811D16C6 */
 
 typedef void (*MusicCoreEventCb)(int eventId, int eventData, int eventDetail, int eventFlags);
 
@@ -173,7 +174,7 @@ static void musicCoreOnRemoteKey(int eventId, int handler, const void *ev); /* 0
 static void *s_musicCoreInterface[32] = { NULL };		/* 0x81544E38 */
 
 /* 0x811CA5A2 */
-void musicCorePluginInit(paf::Plugin *plugin)
+void musiccorePluginInit(paf::Plugin *plugin)
 {
 	musicCoreHeapInit();
 	s_musicCorePlugin = plugin;
@@ -199,12 +200,12 @@ void musicCorePluginInit(paf::Plugin *plugin)
 }
 
 /* 0x811CA68A */
-void musicCorePluginStart(paf::Plugin *plugin)
+void musiccorePluginStart(paf::Plugin *plugin)
 {
 	SceShell_83D16CA8();
 	SceShell_83D16CA8();
 	SceShell_83D16CA8();
-	shellAppEventRegister();
+	shellAppEventServerAddListener(1, (ShellEventCallback)musicCoreOnAppEvent, NULL);
 	SceShell_7FE4E732(2, (void *)musicCoreOnPowerEvent2, NULL);
 	SceShell_7FE4E732(3, (void *)musicCoreOnPowerEvent3, NULL);
 
@@ -220,12 +221,12 @@ void musicCorePluginStart(paf::Plugin *plugin)
 }
 
 /* 0x811CAB12 */
-void musicCorePluginStop(paf::Plugin *plugin)
+void musiccorePluginStop(paf::Plugin *plugin)
 {
 	SceShell_E3D3A162(5, (void *)musicCoreOnShellEvent, NULL);
 	SceShell_E3D3A162(8, (void *)musicCoreOnShellEvent, NULL);
 	SceShell_E3D3A162(7, (void *)musicCoreOnShellEvent, NULL);
-	shellAppEventUnregister(1, (void *)musicCoreOnAppEvent, NULL);
+	shellAppEventServerRemoveListener(1, (ShellEventCallback)musicCoreOnAppEvent, NULL);
 	SceShell_D4C7D2B7(2, (void *)musicCoreOnPowerEvent2, NULL);
 	SceShell_D4C7D2B7(3, (void *)musicCoreOnPowerEvent3, NULL);
 	plugin->PageCloseAll();
@@ -245,6 +246,12 @@ void musicCorePluginFini(void)
 	s_eventCallbacks.clear();
 	s_musicCorePlugin = NULL;
 	musicCoreHeapFini();
+}
+
+void musiccorePluginExit(paf::Plugin *plugin)
+{
+	(void)plugin;
+	musicCorePluginFini();
 }
 
 /* 0x811CABEA */
@@ -988,6 +995,11 @@ int musicCoreSetAudioFocus(SceUInt8 mode)
 		packed, payload, sizeof(payload));
 }
 
+int shellHomeUpdateRequest(SceUInt8 mode)
+{
+	return musicCoreSetAudioFocus(mode);
+}
+
 /* 0x811CD000 */
 int musicCoreSetSystemPause(SceUInt8 pause)
 {
@@ -1004,6 +1016,16 @@ int musicCoreSetSystemPause(SceUInt8 pause)
 	payload[0] = pause;
 	return musicCoreMainSendCmd(s_musicCoreMain, 0x1A0001, ctx.seqId, 0x1A0001,
 		payload, sizeof(payload));
+}
+
+int shellMusicStart(int mode)
+{
+	return musicCoreBgmOpen(static_cast<SceUInt8>(mode));
+}
+
+int shellMusicSetBgm(bool on)
+{
+	return musicCoreSetSystemPause(on ? 1 : 0);
 }
 
 static int musicCoreSendSimpleCmd(const MusicCoreClientCtx *ctx, SceUInt16 cmdId)
@@ -1281,7 +1303,7 @@ int musicCoreGetParam(const MusicCoreClientCtx *ctx, int paramId, int *outVal)
 		ret = musicCoreMainGetStatus(s_musicCoreMain, ctx, &raw);
 		if (ret == 0) {
 			int mapped = 0;
-			ret = musicCoreConvertShuffle((int)raw.repeatMode, &mapped);
+			ret = musicCoreConvertShuffle(raw.repeatMode, &mapped);
 			if (ret == 0)
 				*outVal = mapped;
 		}
@@ -1298,9 +1320,10 @@ int musicCoreGetParam(const MusicCoreClientCtx *ctx, int paramId, int *outVal)
 	case 4:
 		ret = musicCoreMainGetStatus(s_musicCoreMain, ctx, &raw);
 		if (ret == 0) {
-			ret = musicCoreConvertAvls((int)raw.avlsMode);
+			int mapped = 0;
+			ret = musicCoreConvertAvls((int)raw.avlsMode, 0, 0, 0, &mapped);
 			if (ret == 0)
-				*outVal = 0;
+				*outVal = mapped;
 		}
 		break;
 	default:
@@ -1368,7 +1391,8 @@ int musicCoreGetCapability(const MusicCoreClientCtx *ctx, void *outCap)
 		return 0;
 	int ret = musicCoreMainGetCap(s_musicCoreMain, ctx, capBuf);
 	if (ret == 0)
-		return musicCoreConvertCapFlag(capBuf[8], outCap);
+		return musicCoreConvertCapFlag(static_cast<SceInt8>(capBuf[8]),
+					       static_cast<int *>(outCap));
 	return ret;
 }
 

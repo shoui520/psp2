@@ -62,9 +62,12 @@ extern NpCommonPs4StringHolder *SceNpCommonPs4_483168C0(NpCommonPs4StringHolder 
 extern int sceAppMgrAppParamGetString(SceUID pid, int paramId, char *outString, SceSize maxLen);
 }
 
-extern int ipmiAsyncNotSupported(void); /* 0x8115B554 */
+extern int shellIncomingDialogServerAsyncDispatch(IPMI::Session *session, SceUInt32 requestId,
+						  SceUInt32 methodId, const IPMI::DataInfo *inList,
+						  SceUInt32 inCount); /* 0x8115B554 */
+struct NpPushStringHolder;
 extern int npAsmServiceCacheGet(const char *titleId, const char *serviceName,
-				NpCommonPs4StringHolder *outUrl); /* 0x813B9826 */
+				NpPushStringHolder *outUrl); /* 0x813B9826 */
 extern int npAsmServiceCachePut(const char *titleId, const char *serviceName,
 				const char *url); /* 0x813B983E */
 
@@ -195,7 +198,7 @@ static int npAsmVshGetActiveTitleId(SceUID appId, char *outTitleId)
 }
 
 /* 0x813C105A */
-static int npAsmVshUnregisterActiveTitleId(SceUID appId)
+int npAsmVshUnregisterActiveTitleId(SceUID appId)
 {
 	NpCommonPs4Mutex *mutex = s_npAsmMutex;
 	SceNpCommonPs4_A2A8493B(mutex);
@@ -224,7 +227,8 @@ static int npAsmVshHandleGetServiceUrl(IPMI::Session *session, const char *title
 	NpCommonPs4AllocatorWithError *allocator = SceNpCommonPs4_03C9ACE2();
 	SceNpCommonPs4_FDA863C0(&urlHolder, allocator);
 
-	int found = npAsmServiceCacheGet(titleId, serviceName, &urlHolder);
+	int found = npAsmServiceCacheGet(titleId, serviceName,
+					 reinterpret_cast<NpPushStringHolder *>(&urlHolder));
 	*outFound = static_cast<SceUInt8>(found);
 	if (found != 0) {
 		sceClibMemset(outUrl, 0, urlBufSize);
@@ -345,7 +349,9 @@ int npAsmVshIpcOnSyncMethod(IPMI::Session *session, SceUInt32 methodId,
 }
 
 /* 0x813C10B8 */
-int npAsmVshIpcOnAsyncMethod(void)
+int npAsmVshIpcOnAsyncMethod(IPMI::Session *session, SceUInt32 requestId,
+			     SceUInt32 methodId, const IPMI::DataInfo *inList,
+			     SceUInt32 inCount)
 {
-	return ipmiAsyncNotSupported();
+	return shellIncomingDialogServerAsyncDispatch(session, requestId, methodId, inList, inCount);
 }

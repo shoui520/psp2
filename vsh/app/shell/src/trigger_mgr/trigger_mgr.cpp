@@ -28,8 +28,9 @@
 
 using namespace paf;
 
+#include <memory/heap_allocator.h>
+
 extern "C" {
-void *ScePafStdc_D00387E7(SceSize size, void *heap);
 int sceAppMgrGetStatusById(SceUID processId, SceAppMgrAppStatus *outStatus);
 int sceAppMgrGetStatusByName(const char *appName, SceAppMgrAppStatus *outStatus);
 int SceLsdb_9B5ABE3E(AppInfoQClient *client, const paf::string *titleId);
@@ -152,7 +153,7 @@ void triggerMgrAssertFailNoCode(void)
 
 void *triggerMgrHeapAlloc(SceSize size)
 {
-	return ScePafStdc_D00387E7(size, g_triggerMgrHeap);
+	return operator new(size, static_cast<paf::memory::HeapAllocator *>(g_triggerMgrHeap));
 }
 
 void triggerMgrHeapFree(void *ptr)

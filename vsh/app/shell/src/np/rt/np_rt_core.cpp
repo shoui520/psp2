@@ -15,6 +15,8 @@
 #include <np_common/np_common.h>
 #include "np_rt_core.h"
 
+extern "C" int SceThreadmgrCoredumpTime_sceKernelExitThread(int status);
+
 /* Account ticket request helpers (0x813268BC..0x813269F0) */
 extern int npAccountCreateRequest(void);
 extern int npAccountDestroyRequest(int reqHandle);
@@ -1196,7 +1198,7 @@ static int coreMainThreadEntry(SceSize argSize, void *argBlock)
 	SceUID tid = sceKernelGetThreadId();
 	if (SceNetInternal_9DBD2F60(tid, 1, 0) >= 0)
 		runSessionStateMachine(session);
-	sceKernelExitThread(0);
+	SceThreadmgrCoredumpTime_sceKernelExitThread(0);
 	return 0;
 }
 
@@ -1263,7 +1265,7 @@ static int coreRecvThreadEntry(SceSize argSize, void *argBlock)
 	closedCmd.body.closeResult = status;
 	pipeSend(&session->msgPipeId, &closedCmd, NULL);
 
-	sceKernelExitThread(0);
+	SceThreadmgrCoredumpTime_sceKernelExitThread(0);
 	return 0;
 }
 

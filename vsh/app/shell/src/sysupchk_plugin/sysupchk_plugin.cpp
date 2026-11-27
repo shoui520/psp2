@@ -70,10 +70,20 @@ struct SceKernelSwVersionInfo {
 	SceUInt32 versionExtra;
 };
 
-extern paf::job::JobQueue *g_activityJobQueue;
+extern "C" {
+extern int sceUpdaterGetPupInformation(const char *fileName, void *information);
+extern int sceUpdaterNetworkPreCheckVersion(SceUInt32 version, int *result);
+}
 
-extern int updaterCoreGetPupVersion(const char *pupPath, SysupchkPupVersionInfo *outInfo);
-extern int updaterCoreCheckRequiredVersion(SceUInt32 requiredVersion, int *outNeedsUpdate);
+static inline int updaterCoreGetPupVersion(const char *pupPath, SysupchkPupVersionInfo *outInfo)
+{
+	return sceUpdaterGetPupInformation(pupPath, outInfo);
+}
+
+static inline int updaterCoreCheckRequiredVersion(SceUInt32 requiredVersion, int *outNeedsUpdate)
+{
+	return sceUpdaterNetworkPreCheckVersion(requiredVersion, outNeedsUpdate);
+}
 
 extern "C" {
 extern int sceKernelGetSystemSwVersion(SceKernelSwVersionInfo *outInfo);
@@ -84,8 +94,8 @@ extern int sceAppMgrLaunchAppByUri(SceUInt32 flags, const char *uri);
 extern int SceNpManager_D157DC12(int reqType);
 extern int SceNpManager_0F6AC47E(int reqHandle, int checkLevel, int cacheOpt,
 				 int downloadOpt, int *outNeedsUpdate);
-extern int SceNpManagerTicket_2B813EC7(int reqHandle);
-extern int SceNpManagerTicket_A30BF29A(int reqHandle, int flags);
+extern int SceNpManager_80036A44(int reqHandle);
+extern int SceNpManager_29C9B8A5(int reqHandle, int flags);
 }
 
 static paf::wstring sysupchkDefaultGetVersionString(void);
@@ -129,12 +139,12 @@ ShellSysupchkParam::ShellSysupchkParam()
 /* 0x81362410 */
 ShellSysupchkInitParam::ShellSysupchkInitParam()
 {
-	name = "sysupchk_plugin";
-	resource_file = "vs0:data/external/cdlg/sysupchk_plugin.rco";
-	init_func = sysupchkOnPluginInit;
-	start_func = sysupchkOnPluginStart;
-	stop_func = sysupchkOnPluginStop;
-	exit_func = sysupchkOnPluginDestroy;
+	m_initParam.name = "sysupchk_plugin";
+	m_initParam.resource_file = "vs0:data/external/cdlg/sysupchk_plugin.rco";
+	m_initParam.init_func = sysupchkOnPluginInit;
+	m_initParam.start_func = sysupchkOnPluginStart;
+	m_initParam.stop_func = sysupchkOnPluginStop;
+	m_initParam.exit_func = sysupchkOnPluginDestroy;
 }
 
 ShellSysupchkInitParam::~ShellSysupchkInitParam()
@@ -144,36 +154,36 @@ ShellSysupchkInitParam::~ShellSysupchkInitParam()
 /* 0x81362476 */
 int ShellSysupchkInitParam::SetParam(const ShellSysupchkParam &inParam)
 {
-	caller_name = inParam.caller;
-	notify_callback = (paf::Plugin::NotifyCallback)inParam.callback;
-	unload_callback = (paf::Plugin::UnloadCallback)inParam.reserved;
-	param = inParam.arg;
+	m_initParam.caller_name = inParam.caller;
+	m_initParam.notify_callback = (paf::Plugin::NotifyCallback)inParam.callback;
+	m_initParam.unload_callback = (paf::Plugin::UnloadCallback)inParam.reserved;
+	m_initParam.param = inParam.arg;
 
-	arguments["check_mode"] = paf::Plugin::Argument(inParam.checkMode);
-	arguments["dialog_mode"] = paf::Plugin::Argument(inParam.dialogMode);
-	arguments["launch_mode"] = paf::Plugin::Argument(inParam.launchMode);
-	arguments["launch_api_type"] = paf::Plugin::Argument(inParam.launchApiType);
-	arguments["accepted_flag"] = paf::Plugin::Argument(inParam.acceptedFlag);
-	arguments["required_version"] = paf::Plugin::Argument((int)inParam.requiredVersion);
+	m_initParam.arguments["check_mode"] = paf::Plugin::Argument(inParam.checkMode);
+	m_initParam.arguments["dialog_mode"] = paf::Plugin::Argument(inParam.dialogMode);
+	m_initParam.arguments["launch_mode"] = paf::Plugin::Argument(inParam.launchMode);
+	m_initParam.arguments["launch_api_type"] = paf::Plugin::Argument(inParam.launchApiType);
+	m_initParam.arguments["accepted_flag"] = paf::Plugin::Argument(inParam.acceptedFlag);
+	m_initParam.arguments["required_version"] = paf::Plugin::Argument((int)inParam.requiredVersion);
 
 	paf::Plugin::Argument reqVerStrArg;
 	reqVerStrArg.type = paf::Plugin::ArgumentType_String;
 	reqVerStrArg.str = inParam.requiredVersionString;
-	arguments["required_version_string"] = reqVerStrArg;
+	m_initParam.arguments["required_version_string"] = reqVerStrArg;
 
-	arguments["np_cache_opt"] = paf::Plugin::Argument(inParam.npDownloadOpt);
-	arguments["np_download_opt"] = paf::Plugin::Argument(inParam.npCheckLevel);
-	arguments["np_check_level"] = paf::Plugin::Argument(inParam.npCacheOpt);
+	m_initParam.arguments["np_cache_opt"] = paf::Plugin::Argument(inParam.npDownloadOpt);
+	m_initParam.arguments["np_download_opt"] = paf::Plugin::Argument(inParam.npCheckLevel);
+	m_initParam.arguments["np_check_level"] = paf::Plugin::Argument(inParam.npCacheOpt);
 
 	int drawPriority = (inParam.msgDlgParam != NULL) ? inParam.msgDlgParam->priority : -1;
-	arguments["msg_dlg_param_draw_priority"] = paf::Plugin::Argument(drawPriority);
+	m_initParam.arguments["msg_dlg_param_draw_priority"] = paf::Plugin::Argument(drawPriority);
 	return 0;
 }
 
 /* 0x81362AA0 */
 int ShellSysupchkInitParam::Load(paf::Plugin::LoadFinishCallback callback, int option)
 {
-	paf::Plugin::LoadAsync(*this, callback, option);
+	paf::Plugin::LoadAsync(m_initParam, callback, option);
 	return 0;
 }
 
@@ -301,7 +311,7 @@ SysupchkController::SysupchkController(paf::Plugin *plugin)
 SysupchkController::~SysupchkController()
 {
 	if (m_npReqHandle > 0) {
-		SceNpManagerTicket_2B813EC7(m_npReqHandle);
+		SceNpManager_80036A44(m_npReqHandle);
 		m_npReqHandle = 0;
 	}
 }
@@ -410,7 +420,7 @@ int SysupchkController::BuildDialogMessage()
 		paf::IDParam reqId("", (uint32_t)SYSUPCHK_MSG_REQUIRED_VER);
 		const wchar_t *reqFmt = m_plugin->GetString(reqId);
 		paf::wstring reqVerWide;
-		paf::common::Utf8ToUtf16(m_param.requiredVersionString, &reqVerWide);
+		paf::common::Utf8ToUtf16(m_param.requiredVersionString.c_str(), &reqVerWide);
 
 		m_message = shellFormatText(reqFmt, reqVerWide.c_str());
 		m_message += L"\n";
@@ -431,7 +441,7 @@ int SysupchkController::BuildDialogMessage()
 			if (sceKernelGetSystemSwVersion(&swInfo) == 0)
 				verStr = swInfo.versionString;
 			paf::wstring verWide;
-			paf::common::Utf8ToUtf16(verStr, &verWide);
+			paf::common::Utf8ToUtf16(verStr.c_str(), &verWide);
 			m_message += verWide.c_str();
 		}
 		return 0;
@@ -515,7 +525,7 @@ int SysupchkController::Abort()
 {
 	m_aborted = true;
 	if (m_npReqHandle != 0)
-		return SceNpManagerTicket_A30BF29A(m_npReqHandle, 0);
+		return SceNpManager_29C9B8A5(m_npReqHandle, 0);
 	return 0;
 }
 
@@ -665,7 +675,7 @@ static int sysupchkStart(paf::Plugin *plugin)
 	if (err < 0)
 		return err;
 
-	if (g_activityJobQueue == NULL)
+	if (paf::job::JobQueue::default_queue == NULL)
 		return SYSUPCHK_ERR_INVALID_STATE;
 
 	paf::common::SharedPtr<SceSysupChkJob> job(new SceSysupChkJob(controller));
@@ -674,7 +684,7 @@ static int sysupchkStart(paf::Plugin *plugin)
 		return SYSUPCHK_ERR_NO_MEMORY;
 
 	paf::common::SharedPtr<paf::job::JobItem> baseJob(s_sysupchkState->job.get());
-	err = g_activityJobQueue->Enqueue(baseJob);
+	err = paf::job::JobQueue::default_queue->Enqueue(baseJob);
 	if (err != 0)
 		return err;
 
@@ -755,6 +765,11 @@ static int sysupchkDefaultCheckVersion(SceUInt32 requiredVersion, int *outNeedsU
 			*outNeedsUpdate = (updateFlag != 0) ? 1 : 0;
 	}
 	return 0;
+}
+
+int shellSystemVersionCheck(SceUInt32 requiredVersion, int *outNeedsUpdate)
+{
+	return sysupchkDefaultCheckVersion(requiredVersion, outNeedsUpdate);
 }
 
 /* 0x81363DF2 */

@@ -162,7 +162,7 @@ int TrophyContext::Init(SceUID pid, const TrophyCommId *commId, const void *comm
 			m_commId.Clear();
 			return NP_TROPHY_ERR_OUT_OF_MEMORY;
 		}
-		sceClibMemcpy(m_commSign, commSign, 160);
+		sceClibMemcpy_safe(m_commSign, commSign, 160);
 	} else {
 		m_commSign = NULL;
 	}
@@ -176,7 +176,7 @@ int TrophyContext::Init(SceUID pid, const TrophyCommId *commId, const void *comm
 		m_commId.Clear();
 		return NP_TROPHY_ERR_OUT_OF_MEMORY;
 	}
-	sceClibMemcpy(m_titleId, resolvedTitleId, 16);
+	sceClibMemcpy_safe(m_titleId, resolvedTitleId, 16);
 	m_options = options;
 	return 0;
 }
@@ -1351,7 +1351,7 @@ int SceNpTrophyService::SetDebugParam(const char *name, const void *buf, SceSize
 		return NP_TROPHY_ERR_DEBUG_PARAM_NOT_FOUND;
 
 	m_mutex.Lock();
-	sceClibMemcpy(&s_debugParams[idx].value, buf, sizeof(int));
+	sceClibMemcpy_safe(&s_debugParams[idx].value, buf, sizeof(int));
 	m_mutex.Unlock();
 	return 0;
 }
@@ -1367,7 +1367,7 @@ int SceNpTrophyService::GetDebugParam(const char *name, void *outBuf, SceSize si
 		return NP_TROPHY_ERR_DEBUG_PARAM_NOT_FOUND;
 
 	m_mutex.Lock();
-	sceClibMemcpy(outBuf, &s_debugParams[idx].value, sizeof(int));
+	sceClibMemcpy_safe(outBuf, &s_debugParams[idx].value, sizeof(int));
 	m_mutex.Unlock();
 	return 0;
 }

@@ -9,10 +9,16 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <scetypes.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <kernel/openpsid.h>
+#ifdef __cplusplus
+}
+#endif
 #include <libkernel/libkernel.h>
 #include <np/np_common.h>
-#include <rtc/rtc.h>
+#include <rtc.h>
 #include "../ipc/nptrophy/nptrophy_internal.h"
 
 /* SceNpTrophy error codes */

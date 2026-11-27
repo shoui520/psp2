@@ -41,6 +41,24 @@
 
 using namespace paf;
 
+extern int shellConsoleInfoInit(void);
+extern int consoleInfoFileWriteInt(int index, SceUInt32 value, int mode);
+extern "C" int vshRtcSetCurrentTick(const void *tick);
+extern "C" int _vshAppMgrCloudDataGetMcId(int type, void *mcId);
+extern "C" int _vshAppMgrCloudDataSetMcId(int type, const void *mcId);
+
+/* 0x81417DB4 */
+int shellCloudDataGetMcId(int type, void *mcId)
+{
+	return _vshAppMgrCloudDataGetMcId(type, mcId);
+}
+
+/* 0x81417DBC */
+int shellCloudDataSetMcId(int type, const void *mcId)
+{
+	return _vshAppMgrCloudDataSetMcId(type, mcId);
+}
+
 /* what s_bootState has seen happen */
 enum {
 	BOOT_STATE_COLDBOOT_DONE		= 0x01,
@@ -140,7 +158,7 @@ public:
 		shellRefreshCronStart();
 		shellLiveAreaDailyCronStart();
 		shellRemoteDownloadStart();
-		shellConsoleInfoStart();
+		shellConsoleInfoInit();
 		shellNpFriendInit();
 		shellAppStateMarkForeground();
 		shellThemeApplyPending();
@@ -351,7 +369,7 @@ public:
 	{
 		sceAppMgrLaunchAppByPath4("vs0:vsh/initialsetup/initialsetup.self", "NPXS10062", 0, NULL, 0, NULL);
 		if (m_clockInvalid)
-			shellCounterAdd(230, 1, 0);
+			consoleInfoFileWriteInt(230, 1, 0);
 		return 0;
 	}
 
@@ -367,14 +385,24 @@ public:
  * is checked (set to 2011-01-01 in the special modes, from the network when the date is set
  * automatically) before the database
  */
+static void shellBootStartInitialSetup(bool clockInvalid)
+{
+	SceShell_83D16CA8(SHELL_APP_EVENT_STARTED, shellBootOnAppEvent, NULL);
+	SceShell_83D16CA8(SHELL_APP_EVENT_ENDED, shellBootOnAppEvent, NULL);
+
+	common::SharedPtr<job::JobItem> setupJob(new ShellInitialSetupJob(clockInvalid));
+
+	job::JobQueue::default_queue->Enqueue(setupJob);
+}
+
 static void shellBootCheckInitialSetup(bool clockUpdated)
 {
-	bool clockInvalid = false;
-
 	sceKernelPowerTick(SCE_KERNEL_POWER_TICK_DEFAULT);
 	if (shellStartupGetInitialize() != 1) {
-		if (!shellStartupIsPmMode() && shellStartupGetIduMode() != 1 && !shellStartupIsTestMode())
-			goto initialSetup;
+		if (!shellStartupIsPmMode() && shellStartupGetIduMode() != 1 && !shellStartupIsTestMode()) {
+			shellBootStartInitialSetup(false);
+			return;
+		}
 		sceRegMgrSetKeyInt("/CONFIG/SYSTEM", "initialize", 1);
 	}
 
@@ -395,8 +423,8 @@ static void shellBootCheckInitialSetup(bool clockUpdated)
 					return;
 				}
 			}
-			clockInvalid = true;
-			goto initialSetup;
+			shellBootStartInitialSetup(true);
+			return;
 		}
 
 		SceDateTime time;
@@ -411,19 +439,10 @@ static void shellBootCheckInitialSetup(bool clockUpdated)
 		time.microsecond = 0;
 		sceRtcGetTick(&time, &local);
 		sceRtcConvertLocalTimeToUtc(&local, &tick);
-		shellRtcSetCurrentTick(&tick);
+		vshRtcSetCurrentTick(&tick);
 	}
 	s_bootState |= BOOT_STATE_BOOT_APPS_DONE;
 	shellBootCheckDatabase();
-	return;
-
-initialSetup:
-	SceShell_83D16CA8(SHELL_APP_EVENT_STARTED, shellBootOnAppEvent, NULL);
-	SceShell_83D16CA8(SHELL_APP_EVENT_ENDED, shellBootOnAppEvent, NULL);
-
-	common::SharedPtr<job::JobItem> setupJob(new ShellInitialSetupJob(clockInvalid));
-
-	job::JobQueue::default_queue->Enqueue(setupJob);
 }
 
 /* the system plugins the home screen needs, each counted until it is loaded */

@@ -247,7 +247,7 @@ struct GameLicenseStatus {
 	int result;			/* the license check's result */
 	int expireTextResult;
 	bool valid;
-	bool flag1;			/* PLACEHOLDER: bit 1 of the license's flags */
+	bool hasTimedLicense;		/* bit 1 of the license's flags */
 	char expireText[65];		/* expireTime as text, "-" when it does not fit */
 };
 
@@ -259,8 +259,8 @@ int gameDirGetSize(const char *path, GameCancelFunc cancel, void *arg, SceUInt64
 int gameDeviceGetSpace(const char *device, SceUInt64 *maxSize, SceUInt64 *freeSize);
 
 /* the copies and removals of game_lsdb.cpp (0x8101ACA0, 0x8101AEA0, 0x8101BAC8) */
-int gameCopyFileWithPool(const char *src, const char *dst, int arg2, int arg3, int arg6,
-			 int arg7);
+int gameCopyFileWithPool(const char *src, const char *dst, int cancelFunc, int cancelArg,
+			 int progressPtr, int detailPtr);
 int gameMoveTree(const char *src, const char *dst, GameCancelFunc cancel, void *cancelArg,
 		 paf::string *detail);
 int gameRemoveDirectoryContents(const char *path, GameCancelFunc cancel, void *cancelArg,
@@ -946,7 +946,7 @@ int gameUmassHasFiles(const paf::string *titleId, bool *found);
 
 /* an application's save data deleted, whose by what (psp_license.cpp, 0x81063906) */
 int gameAppDataOperateFiles(const paf::string &titleId, LsdbAppInfoPtr *info, int what,
-			    int userNo, int reserved, int reserved2);
+			    int userNo, int unusedOption, int unusedFlags);
 
 /* the title IDs of the shell's own applications (game_lsdb.cpp, 0x8101CEFA) */
 void gamePresetGetTitleIds(paf::vector<paf::string> *titleIds);
@@ -970,8 +970,8 @@ int gameNpDrmGetFttName(paf::string *fttName);
 /* what gamePluginFttRead gives of an application's free-trial license */
 struct GameFttInfo {
 	char contentId[48];
-	SceUInt64 time1;
-	SceUInt64 time2;
+	SceUInt64 startTime;
+	SceUInt64 expireTime;
 	int otherField;
 	bool flag;
 };
@@ -1205,7 +1205,8 @@ int gameAppGetInstalledSizes(const paf::string &titleId, unsigned int flags, Gam
 			     void *arg, GameAppSizes *sizes);
 
 /* an operation on an application's data (game_lsdb.cpp, 0x8101B746; its words are not read yet) */
-int gameAppDataOperate(const char *titleId, int arg1, int arg2, int arg3, int arg4);
+int gameAppDataOperate(const char *titleId, int what, int userNo, int unusedOption,
+		       int unusedFlags);
 
 /*
  * PLACEHOLDER names: the content import (content_import.cpp): a package folder at path queued

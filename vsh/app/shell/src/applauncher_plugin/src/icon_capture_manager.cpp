@@ -26,7 +26,10 @@
 #include "applauncher.h"
 #include "applauncher_home.h"
 
-extern paf::thread::RMutex g_shellMutex; /* 0x81467AAC */
+static inline paf::thread::RMutex &iconCaptureMainMutex(void)
+{
+	return paf::thread::RMutex::main_thread_mutex;
+}
 
 #define ICON_CAPTURE_DIMENSION		128
 #define ICON_CAPTURE_BUFFER_BYTES	0x10000u
@@ -84,7 +87,7 @@ IconCaptureManager::IconCaptureManager(paf::graph::SurfacePool *pool)
 	  m_doneSemaphore("SceShellIconCaptureManager", 0, 1, 0)
 {
 	s_iconCaptureManager = this;
-	g_shellMutex.Lock();
+	iconCaptureMainMutex().Lock();
 
 	paf::graph::ScreenSurface *screenSurface = new paf::graph::ScreenSurface(
 		pool, ICON_CAPTURE_DIMENSION, ICON_CAPTURE_DIMENSION, ImageMode_RGBA8888,
@@ -113,15 +116,15 @@ IconCaptureManager::IconCaptureManager(paf::graph::SurfacePool *pool)
 	m_scene->Hide(0xFFu, NULL, NULL, 0.0f);
 
 	paf::common::MainThreadCallList::Register(OnMainThreadUpdate, NULL);
-	g_shellMutex.Unlock();
+	iconCaptureMainMutex().Unlock();
 }
 
 IconCaptureManager::~IconCaptureManager()
 {
 	paf::common::MainThreadCallList::Unregister(OnMainThreadUpdate, NULL);
-	g_shellMutex.Lock();
+	iconCaptureMainMutex().Lock();
 	m_scene->DestroyWidget();
-	g_shellMutex.Unlock();
+	iconCaptureMainMutex().Unlock();
 	s_iconCaptureManager = NULL;
 }
 
@@ -142,15 +145,15 @@ void applauncherIconCaptureDestroy(void)
 void *IconCaptureManager::CaptureFolder(const paf::vector<ApplauncherFolderSurface> *surfaces,
 					int *outSize)
 {
-	g_shellMutex.Lock();
+	iconCaptureMainMutex().Lock();
 	if (m_captureState != ICON_CAPTURE_IDLE) {
-		g_shellMutex.Unlock();
+		iconCaptureMainMutex().Unlock();
 		return NULL;
 	}
 
 	paf::Plugin *topmenuPlugin = paf::Plugin::Find("topmenu_plugin");
 	if (topmenuPlugin == NULL) {
-		g_shellMutex.Unlock();
+		iconCaptureMainMutex().Unlock();
 		return NULL;
 	}
 
@@ -161,7 +164,7 @@ void *IconCaptureManager::CaptureFolder(const paf::vector<ApplauncherFolderSurfa
 	paf::IDParam widgetId(ICON_CAPTURE_WIDGET_HASH);
 	m_folderWidget = m_scene->FindChild(widgetId, 0);
 	if (m_folderWidget == NULL) {
-		g_shellMutex.Unlock();
+		iconCaptureMainMutex().Unlock();
 		return NULL;
 	}
 
@@ -184,7 +187,7 @@ void *IconCaptureManager::CaptureFolder(const paf::vector<ApplauncherFolderSurfa
 	}
 
 	m_captureState = ICON_CAPTURE_REQUESTED;
-	g_shellMutex.Unlock();
+	iconCaptureMainMutex().Unlock();
 
 	m_doneSemaphore.Acquire();
 
@@ -204,9 +207,9 @@ void *IconCaptureManager::CaptureFolder(const paf::vector<ApplauncherFolderSurfa
 	SceSize ddsAllocSize = dxtBuffer.size + ICON_CAPTURE_DDS_HEADER_SLACK;
 	void *ddsMemory = paf::Framework::Instance()->GetDecodeHeap()->sce_paf_malloc(ddsAllocSize);
 	if (ddsMemory == NULL) {
-		g_shellMutex.Lock();
+		iconCaptureMainMutex().Lock();
 		m_captureState = ICON_CAPTURE_IDLE;
-		g_shellMutex.Unlock();
+		iconCaptureMainMutex().Unlock();
 		return NULL;
 	}
 
@@ -214,17 +217,17 @@ void *IconCaptureManager::CaptureFolder(const paf::vector<ApplauncherFolderSurfa
 					 dxtBuffer.buff, ICON_CAPTURE_DIMENSION, extent,
 					 ImageMode_DXT5, 0) == 0) {
 		sce_paf_free(ddsMemory);
-		g_shellMutex.Lock();
+		iconCaptureMainMutex().Lock();
 		m_captureState = ICON_CAPTURE_IDLE;
-		g_shellMutex.Unlock();
+		iconCaptureMainMutex().Unlock();
 		return NULL;
 	}
 
 	*outSize = static_cast<int>(ddsAllocSize);
 
-	g_shellMutex.Lock();
+	iconCaptureMainMutex().Lock();
 	m_captureState = ICON_CAPTURE_IDLE;
-	g_shellMutex.Unlock();
+	iconCaptureMainMutex().Unlock();
 	return ddsMemory;
 }
 
@@ -233,6 +236,12 @@ void *applauncherIconCaptureFolder(const paf::vector<ApplauncherFolderSurface> *
 				   int *outSize)
 {
 	return s_iconCaptureManager->CaptureFolder(surfaces, outSize);
+}
+
+void *shellBuildFolderThumbnail(void *surfaces, int *outSize)
+{
+	return s_iconCaptureManager->CaptureFolder(
+		static_cast<const paf::vector<ApplauncherFolderSurface> *>(surfaces), outSize);
 }
 
 /* 0x813C3A8A */

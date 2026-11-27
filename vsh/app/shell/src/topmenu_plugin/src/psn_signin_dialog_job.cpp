@@ -97,17 +97,17 @@ public:
 			return 0;
 
 		paf::thread::Sleep(500);
-		SceUID paramCbId = sceKernelCreateCallbackForUser(
+		SceUID paramCbId = sceKernelCreateCallback(
 			"SceShellPsnSignInDialogJob", 0,
 			onSignInFinishedCallback, &m_signInDone);
-		SceUID launchCbId = sceKernelCreateCallbackForUser(
+		SceUID launchCbId = sceKernelCreateCallback(
 			"SceShellPsnSignInDialogJob2", 0,
 			onSignInLaunchErrorCallback, &m_launchError);
 		if ((paramCbId | launchCbId) < 0) {
 			if (paramCbId >= 0)
-				sceKernelDeleteCallbackForUser(paramCbId);
+				sceKernelDeleteCallback(paramCbId);
 			if (launchCbId >= 0)
-				sceKernelDeleteCallbackForUser(launchCbId);
+				sceKernelDeleteCallback(launchCbId);
 			return TOPMENU_ERROR_SIGNIN_FAILED;
 		}
 
@@ -125,8 +125,8 @@ public:
 		SceShell_83D16CA8(0, OnSignInAppEvent, this);
 
 		if (sceAppMgrLaunchAppByName2("NPXS10016", "signin", &opt) != 0) {
-			sceKernelDeleteCallbackForUser(paramCbId);
-			sceKernelDeleteCallbackForUser(launchCbId);
+			sceKernelDeleteCallback(paramCbId);
+			sceKernelDeleteCallback(launchCbId);
 			SceShell_E3D3A162(5, OnSignInAppEvent, this);
 			SceShell_E3D3A162(6, OnSignInAppEvent, this);
 			SceShell_E3D3A162(4, OnSignInAppEvent, this);
@@ -140,8 +140,8 @@ public:
 				break;
 			paf::thread::Sleep(16);
 		}
-		sceKernelDeleteCallbackForUser(paramCbId);
-		sceKernelDeleteCallbackForUser(launchCbId);
+		sceKernelDeleteCallback(paramCbId);
+		sceKernelDeleteCallback(launchCbId);
 
 		if (m_launchError != 0) {
 			SceShell_E3D3A162(5, OnSignInAppEvent, this);

@@ -1300,7 +1300,7 @@ void Lv1StatusActivityVisualizer::UpdateTimeText(paf::graph::TextObj *timeText)
 
 	if (ShouldShowTitleName() && !statusRec->m_status.titleName.empty()) {
 		paf::wstring titleWide;
-		paf::common::Utf8ToUtf16(statusRec->m_status.titleName, &titleWide);
+		paf::common::Utf8ToUtf16(statusRec->m_status.titleName.c_str(), &titleWide);
 		paf::wstring combined = titleWide + L"  " + timeStr;
 		timeText->SetString(combined);
 	} else {
@@ -1353,9 +1353,9 @@ void Lv1StatusActivityVisualizer::UpdateStatusText(paf::ui::Widget *listItem,
 		paf::string combined = ownerName + " " + message;
 		if (!combined.empty()) {
 			paf::wstring ownerWide;
-			paf::common::Utf8ToUtf16(ownerName, &ownerWide);
+			paf::common::Utf8ToUtf16(ownerName.c_str(), &ownerWide);
 			paf::wstring combinedWide;
-			paf::common::Utf8ToUtf16(combined, &combinedWide);
+			paf::common::Utf8ToUtf16(combined.c_str(), &combinedWide);
 
 			bodyText->SetString(combinedWide);
 			bodyText->SetStyleAttribute(paf::graph::TextStyleAttribute_Bold,
@@ -1962,9 +1962,9 @@ void ActivityStatusDialog::SetupHeader(paf::ui::Widget *headerWidget)
 		paf::string combined = ownerName + "\n" + statusRec->m_status.message;
 		if (!combined.empty()) {
 			paf::wstring ownerWide;
-			paf::common::Utf8ToUtf16(ownerName, &ownerWide);
+			paf::common::Utf8ToUtf16(ownerName.c_str(), &ownerWide);
 			paf::wstring combinedWide;
-			paf::common::Utf8ToUtf16(combined, &combinedWide);
+			paf::common::Utf8ToUtf16(combined.c_str(), &combinedWide);
 			bodyText->SetString(combinedWide);
 			bodyText->SetStyleAttribute(paf::graph::TextStyleAttribute_Bold,
 						    0, 0, false);
@@ -2048,7 +2048,7 @@ void ActivityStatusDialog::SetupControls()
 	paf::ui::TextBox *commentBox = static_cast<paf::ui::TextBox *>(
 		m_dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_COMMENT_BOX), 0));
 	if (commentBox != NULL) {
-		commentBox->SetMaxLength(ACTIVITY_COMMENT_MAX_LENGTH);
+		commentBox->m_max_length = ACTIVITY_COMMENT_MAX_LENGTH;
 		void *idArg = reinterpret_cast<void *>(static_cast<intptr_t>(m_dialogId));
 		commentBox->AddEventCallback(EVENT_TEXTBOX_ENTER,
 					     &OnCommentBoxEnterCallback, idArg);
@@ -2102,7 +2102,7 @@ void ActivityStatusDialog::Open(paf::ui::ListItem *anchorItem)
 				static_cast<SceUInt64>(statusRec->m_status.creationTime));
 			if (ShouldShowTitleName() && !statusRec->m_status.titleName.empty()) {
 				paf::wstring titleWide;
-				paf::common::Utf8ToUtf16(statusRec->m_status.titleName,
+				paf::common::Utf8ToUtf16(statusRec->m_status.titleName.c_str(),
 							 &titleWide);
 				formatted = titleWide + L"  " + formatted;
 			}
@@ -2307,7 +2307,7 @@ void ActivityStatusDialog::UpdateGoodJobArea(int voteCount, bool hasVoteInfo)
 		size_t voterCount = m_voteInfo.ownerIds.size();
 		if (voterCount == 1) {
 			paf::wstring firstVoter;
-			paf::common::Utf8ToUtf16(m_voteInfo.ownerIds[0], &firstVoter);
+			paf::common::Utf8ToUtf16(m_voteInfo.ownerIds[0].c_str(), &firstVoter);
 			BaseActivityVisualizer::TruncateAtWideChar(firstVoter, L'@');
 			const wchar_t *fmt = paf::Framework::Instance()->GetCommonString(
 				paf::IDParam(STR_GOODJOB_ONE));
@@ -2315,8 +2315,8 @@ void ActivityStatusDialog::UpdateGoodJobArea(int voteCount, bool hasVoteInfo)
 		} else if (voterCount == 2) {
 			paf::wstring firstVoter;
 			paf::wstring secondVoter;
-			paf::common::Utf8ToUtf16(m_voteInfo.ownerIds[0], &firstVoter);
-			paf::common::Utf8ToUtf16(m_voteInfo.ownerIds[1], &secondVoter);
+			paf::common::Utf8ToUtf16(m_voteInfo.ownerIds[0].c_str(), &firstVoter);
+			paf::common::Utf8ToUtf16(m_voteInfo.ownerIds[1].c_str(), &secondVoter);
 			BaseActivityVisualizer::TruncateAtWideChar(firstVoter, L'@');
 			BaseActivityVisualizer::TruncateAtWideChar(secondVoter, L'@');
 			const wchar_t *fmt = paf::Framework::Instance()->GetCommonString(
@@ -2335,7 +2335,7 @@ void ActivityStatusDialog::UpdateGoodJobArea(int voteCount, bool hasVoteInfo)
 				shownCount = ACTIVITY_MAX_GOODJOB_NAMES;
 			for (size_t i = 0; i < shownCount; ++i) {
 				paf::wstring voterWide;
-				paf::common::Utf8ToUtf16(m_voteInfo.ownerIds[i], &voterWide);
+				paf::common::Utf8ToUtf16(m_voteInfo.ownerIds[i].c_str(), &voterWide);
 				BaseActivityVisualizer::TruncateAtWideChar(voterWide, L'@');
 				if (i != 0)
 					outText += L", ";
@@ -2704,7 +2704,10 @@ void ActivityStatusDialog::StartGriefReport(const paf::intrusive_ptr<Live2Record
 		return;
 
 	paf::intrusive_ptr<paf::ui::filelist::CellSource> cellSource =
-		m_listView->GetCellSource(0);
+		(m_listView->m_segment_source.get() != NULL)
+			? m_listView->m_segment_source->GetCellSource(
+				  0, m_listView->m_segment_source->GetID(0))
+			: paf::intrusive_ptr<paf::ui::filelist::CellSource>();
 	if (cellSource.get() == NULL || !cellSource->IsInherit(Live2CellSource::TypeName()))
 		return;
 
@@ -3082,4 +3085,108 @@ void activityUiNotifyCacheInfoUpdated(void)
 		if (it->second != NULL)
 			it->second->OnCacheInfoUpdated();
 	}
+}
+
+class ActivityFeedItemBase;
+class ActivityFeedVisualizerBase;
+class ActivityStatusDlgBase;
+class ActivityRecord;
+class LiveAreaSubVisualizer;
+
+void activityUiInitFileList(paf::ui::FileList *fileList)
+{
+	filelist::activityUiInitFileList(fileList);
+}
+
+void activityUiCloseDialog(void)
+{
+	if (filelist::s_dialogManager == NULL)
+		return;
+	paf::vector<filelist::ActivityStatusDialog *> openDialogs;
+	for (paf::map<int, filelist::ActivityStatusDialog *>::iterator it =
+		     filelist::s_dialogManager->dialogs.begin();
+	     it != filelist::s_dialogManager->dialogs.end(); ++it) {
+		if (it->second != NULL)
+			openDialogs.push_back(it->second);
+	}
+	for (size_t idx = 0; idx < openDialogs.size(); ++idx)
+		openDialogs[idx]->Close();
+}
+
+void activityUiCloseDialogFast(void)
+{
+	if (filelist::s_dialogManager == NULL)
+		return;
+	paf::vector<filelist::ActivityStatusDialog *> openDialogs;
+	for (paf::map<int, filelist::ActivityStatusDialog *>::iterator it =
+		     filelist::s_dialogManager->dialogs.begin();
+	     it != filelist::s_dialogManager->dialogs.end(); ++it) {
+		if (it->second != NULL)
+			openDialogs.push_back(it->second);
+	}
+	for (size_t idx = 0; idx < openDialogs.size(); ++idx)
+		openDialogs[idx]->CloseWithReason(1);
+}
+
+int activityUiIsDialogActive(void)
+{
+	if (filelist::s_dialogManager == NULL)
+		return 0;
+	return (filelist::s_dialogManager->dialogs.size() == 0) ? 0 : 1;
+}
+
+void activityUiCreateStatusContexts(paf::common::SharedPtr<int> *outFeedContext,
+				    paf::common::SharedPtr<int> *outOwnerContext,
+				    ActivityDbQueryCondition *condition)
+{
+	filelist::activityUiCreateStatusContexts(
+		reinterpret_cast<paf::common::SharedPtr<filelist::Live2AccessorProxy> *>(outOwnerContext),
+		reinterpret_cast<paf::common::SharedPtr<filelist::Live2Accessor> *>(outFeedContext),
+		condition);
+}
+
+void activityUiItemBaseCtor(ActivityFeedItemBase *self, int itemType, paf::Plugin *plugin,
+			    paf::cache::CacheManager *cacheManager,
+			    paf::common::SharedPtr<int> *context)
+{
+	void *savedVptr = *reinterpret_cast<void **>(self);
+	new (self) filelist::Lv1StatusActivityVisualizer(
+		reinterpret_cast<paf::ui::Widget *>(itemType), plugin, cacheManager,
+		*reinterpret_cast<const paf::common::SharedPtr<filelist::Live2Iterator> *>(context),
+		0);
+	*reinterpret_cast<void **>(self) = savedVptr;
+}
+
+void activityUiFeedVisualizerBaseCtor(ActivityFeedVisualizerBase *self, paf::Plugin *plugin,
+				      paf::cache::CacheManager *cacheManager)
+{
+	void *savedVptr = *reinterpret_cast<void **>(self);
+	new (self) filelist::Lv1StatusVisualizerFactory(plugin, cacheManager);
+	*reinterpret_cast<void **>(self) = savedVptr;
+}
+
+void activityUiStatusDlgBaseCtor(ActivityStatusDlgBase *self, paf::ui::Widget *parent,
+				 paf::Plugin *plugin, paf::cache::CacheManager *cacheManager,
+				 ActivityRecord **record, int displayMode,
+				 paf::common::SharedPtr<int> *feedContext,
+				 paf::common::SharedPtr<LiveAreaSubVisualizer> *subVisualizer)
+{
+	void *savedVptr = *reinterpret_cast<void **>(self);
+	paf::intrusive_ptr<filelist::Live2Record> recRef(
+		record != NULL ? reinterpret_cast<filelist::Live2Record *>(*record) : NULL);
+	new (self) filelist::ActivityStatusDialog(
+		parent, plugin, cacheManager, recRef, displayMode,
+		*reinterpret_cast<const paf::common::SharedPtr<filelist::Live2AccessorProxy> *>(feedContext),
+		*reinterpret_cast<const paf::common::SharedPtr<filelist::Live2VisualizerFactory> *>(subVisualizer));
+	*reinterpret_cast<void **>(self) = savedVptr;
+}
+
+void activityUiStatusDlgBaseDtor(ActivityStatusDlgBase *self)
+{
+	reinterpret_cast<filelist::ActivityStatusDialog *>(self)->~ActivityStatusDialog();
+}
+
+void activityUiStatusDlgOpen(ActivityStatusDlgBase *self, paf::ui::ListItem *anchorItem)
+{
+	reinterpret_cast<filelist::ActivityStatusDialog *>(self)->Open(anchorItem);
 }

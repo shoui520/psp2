@@ -1512,5 +1512,167 @@ WorkerThreadPool *WorkerThreadPool::getInstance()
     return &gWorkerThreadPool;
 }
 
+struct MediaInfoHandle;
+struct TrackMetadataResult;
+
+void *getAudioCodecManager()
+{
+    return WorkerThreadPool::getInstance();
+}
+
+int initAudioCodecManager(void *mgr, void *paramBuf, int paramCount)
+{
+    WorkerThreadPool *pool = static_cast<WorkerThreadPool *>(mgr);
+    return (pool != NULL)
+        ? pool->initialize(static_cast<const ThreadSpec *>(paramBuf), static_cast<unsigned int>(paramCount))
+        : -1;
+}
+
+int termAudioCodecManager(void *mgr)
+{
+    WorkerThreadPool *pool = static_cast<WorkerThreadPool *>(mgr);
+    return (pool != NULL) ? pool->finalize() : -1;
+}
+
+int queryAudioCodecParams(void *outBuf, int *inOutCount)
+{
+    unsigned int count = (inOutCount != NULL) ? static_cast<unsigned int>(*inOutCount) : 0u;
+    DecoderManager::getThreadSpecs(static_cast<ThreadSpec *>(outBuf), &count);
+    if (inOutCount != NULL)
+        *inOutCount = static_cast<int>(count);
+    return 0;
+}
+
+void *getWorkerThreadPool()
+{
+    return WorkerThreadPool::getInstance();
+}
+
+int workerPoolSpawn(void *pool, int workerKind, void *entryFn, void *arg, SceUID *outThreadId)
+{
+    WorkerThreadPool *tp = static_cast<WorkerThreadPool *>(pool);
+    return (tp != NULL)
+        ? tp->startWorker(workerKind, reinterpret_cast<int (*)(void *, void *)>(entryFn), arg, NULL, outThreadId)
+        : -1;
+}
+
+int workerPoolJoin(void *pool, SceUID threadId)
+{
+    WorkerThreadPool *tp = static_cast<WorkerThreadPool *>(pool);
+    return (tp != NULL) ? tp->joinWorker(threadId) : -1;
+}
+
+int workerThreadPoolStart(void *pool, int slotType, void *entryFn,
+                          size_t argSize, void *argData, int *outWorkerId)
+{
+    (void)argSize;
+    WorkerThreadPool *tp = static_cast<WorkerThreadPool *>(pool);
+    return (tp != NULL)
+        ? tp->startWorker(slotType, reinterpret_cast<int (*)(void *, void *)>(entryFn),
+                          argData, NULL, outWorkerId)
+        : -1;
+}
+
+void workerThreadPoolJoin(void *pool, int workerId)
+{
+    WorkerThreadPool *tp = static_cast<WorkerThreadPool *>(pool);
+    if (tp != NULL)
+        tp->joinWorker(workerId);
+}
+
+bool checkLocalMediaPath(const char *path)
+{
+    return path != NULL && path[0] != '\0';
+}
+
+void decoderMgrConstruct(void *mem)
+{
+    new (mem) DecoderManager();
+}
+
+void decoderMgrDestruct(void *mgr)
+{
+    if (mgr != NULL)
+        static_cast<DecoderManager *>(mgr)->~DecoderManager();
+}
+
+int decoderMgrConfigure(void *mgr, int outCtx, int startFn, int enqueueFn, int stopFn, void *flushFn)
+{
+    return (mgr != NULL)
+        ? static_cast<DecoderManager *>(mgr)->setOutputCallbacks(
+              reinterpret_cast<void *>(outCtx), reinterpret_cast<void *>(startFn),
+              reinterpret_cast<void *>(enqueueFn), reinterpret_cast<void *>(stopFn), flushFn)
+        : -1;
+}
+
+int decoderMgrSetCallbacks(void *mgr, void *readyCb, void *errCb, void *eosCb, void *ctx)
+{
+    return (mgr != NULL)
+        ? static_cast<DecoderManager *>(mgr)->setEventCallbacks(
+              reinterpret_cast<CodecAdapter::MediaReadyCallback>(readyCb),
+              reinterpret_cast<CodecAdapter::ErrorCallback>(errCb),
+              reinterpret_cast<CodecAdapter::EndOfStreamCallback>(eosCb), ctx)
+        : -1;
+}
+
+int decoderMgrIsSameFormat(void *mgr, void *mediaInfo)
+{
+    return (mgr != NULL)
+        ? static_cast<DecoderManager *>(mgr)->checkMediaCompat(static_cast<const MediaInfoBase *>(mediaInfo))
+        : 0;
+}
+
+int decoderMgrOpenPipeline(void *mgr, int pipelineKind, int ioMode, int loopCount)
+{
+    return (mgr != NULL)
+        ? static_cast<DecoderManager *>(mgr)->openCodec(pipelineKind, ioMode, loopCount)
+        : -1;
+}
+
+int decoderMgrClosePipeline(void *mgr)
+{
+    return (mgr != NULL) ? static_cast<DecoderManager *>(mgr)->closeCodec() : 0;
+}
+
+int decoderMgrStart(void *mgr, void *mediaInfo, int startMs, int endMs, int playSpeed, void *userCtx)
+{
+    return (mgr != NULL)
+        ? static_cast<DecoderManager *>(mgr)->startMedia(
+              static_cast<MediaInfoBase *>(mediaInfo), startMs, endMs, playSpeed, userCtx)
+        : -1;
+}
+
+int decoderMgrStop(void *mgr)
+{
+    return (mgr != NULL) ? static_cast<DecoderManager *>(mgr)->stopMedia() : -1;
+}
+
+int decoderMgrSetReverseDir(void *mgr, int isReverse)
+{
+    return (mgr != NULL) ? static_cast<DecoderManager *>(mgr)->seekMedia(isReverse, 0) : -1;
+}
+
+int decoderManagerProbeTrack(const char *path, int codecHint, uint8_t parseMeta,
+                             int reservedOpt, MediaInfoHandle **outHandle,
+                             TrackMetadataResult *outMeta, int flags)
+{
+    MediaInfoBase *media = NULL;
+    int ret = DecoderManager::createMediaInfo(path, codecHint, parseMeta,
+                                              reinterpret_cast<CodecAdapter *>(reservedOpt),
+                                              &media, reinterpret_cast<int>(outMeta), flags);
+    if (outHandle != NULL)
+        *outHandle = reinterpret_cast<MediaInfoHandle *>(media);
+    return ret;
+}
+
+void decoderManagerReleaseMediaInfo(MediaInfoHandle **ioHandle, int forceRelease)
+{
+    if (ioHandle == NULL || *ioHandle == NULL)
+        return;
+    MediaInfoBase *media = reinterpret_cast<MediaInfoBase *>(*ioHandle);
+    DecoderManager::releaseMediaInfo(&media, static_cast<uint8_t>(forceRelease));
+    *ioHandle = NULL;
+}
+
 } // namespace MusicCore
 } // namespace sce

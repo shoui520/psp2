@@ -15,12 +15,13 @@ extern "C" {
 void *sce_paf_memset(void *dst, int ch, SceSize len);
 char *sce_paf_strncpy(char *dst, const char *src, SceSize len);
 SceSize sce_paf_strlen(const char *str);
-int sceKernelClearEventFlagForUser(SceUID evfid, unsigned int bitptn);
-int sceKernelSetEventFlagForUser(SceUID evfid, unsigned int bitptn);
-int sceKernelDeleteEventFlagForUser(SceUID evfid);
-int sceKernelSignalSemaForUser(SceUID semaid, int signalCount);
-int sceKernelDeleteSemaForUser(SceUID semaid);
-int sceKernelDeleteThreadForUser(SceUID thid);
+int sceKernelClearEventFlag(SceUID evfid, unsigned int bitptn);
+int sceKernelSetEventFlag(SceUID evfid, unsigned int bitptn);
+int sceKernelDeleteEventFlag(SceUID evfid);
+int sceKernelSignalSema(SceUID semaid, int signalCount);
+int sceKernelDeleteSema(SceUID semaid);
+int sceKernelDeleteThread(SceUID thid);
+int SceThreadmgrCoredumpTime_sceKernelExitThread(int status);
 }
 
 namespace sce {
@@ -118,7 +119,7 @@ SyncMutex::SyncMutex(const char *name)
 SyncMutex::~SyncMutex()
 {
     if (m_semaId != -1) {
-        sceKernelDeleteSemaForUser(m_semaId);
+        sceKernelDeleteSema(m_semaId);
         m_semaId = -1;
     }
 }
@@ -147,7 +148,7 @@ int SyncMutex::unlock()
     if (m_semaId <= 0) {
         return MC_ERR_INTERNAL;
     }
-    if (sceKernelSignalSemaForUser(m_semaId, 1) != 0) {
+    if (sceKernelSignalSema(m_semaId, 1) != 0) {
         return MC_ERR_INTERNAL;
     }
     return 0;
@@ -179,7 +180,7 @@ SyncCond::SyncCond(const char *name)
 SyncCond::~SyncCond()
 {
     if (m_eventFlagId != -1) {
-        sceKernelDeleteEventFlagForUser(m_eventFlagId);
+        sceKernelDeleteEventFlag(m_eventFlagId);
         m_eventFlagId = -1;
     }
 }
@@ -190,7 +191,7 @@ int SyncCond::wait(SyncMutex *mutex, unsigned int waitBits, SceUInt *timeout)
     if (m_eventFlagId <= 0) {
         return MC_ERR_INTERNAL;
     }
-    if (sceKernelClearEventFlagForUser(m_eventFlagId, 0u) != 0) {
+    if (sceKernelClearEventFlag(m_eventFlagId, 0u) != 0) {
         return MC_ERR_INTERNAL;
     }
 
@@ -210,7 +211,7 @@ int SyncCond::signal(unsigned int signalBits)
     if (m_eventFlagId <= 0) {
         return MC_ERR_INTERNAL;
     }
-    if (sceKernelSetEventFlagForUser(m_eventFlagId, signalBits) != 0) {
+    if (sceKernelSetEventFlag(m_eventFlagId, signalBits) != 0) {
         return MC_ERR_INTERNAL;
     }
     return 0;
@@ -261,13 +262,13 @@ uint32_t BufferBlock::getStride() const
     return ((m_payloadSize - 1u) & 0xFFFFFFF8u) + 24u;
 }
 
-class BufferPool {
+class CacheBufferPool {
 public:
     static uint32_t calcBlocksTotalSize(uint32_t payloadSize, uint32_t blockCount);
     static uint32_t calcPoolTotalSize(uint32_t payloadSize, uint32_t blockCount);
 
-    BufferPool(uint32_t payloadSize, uint32_t blockCount, uint32_t arenaSize, uint32_t headerSize);
-    virtual ~BufferPool();
+    CacheBufferPool(uint32_t payloadSize, uint32_t blockCount, uint32_t arenaSize, uint32_t headerSize);
+    virtual ~CacheBufferPool();
 
     BufferBlock *getBlockAt(uint32_t index);
     uint32_t getBlockPayloadSize() const;
@@ -284,20 +285,20 @@ private:
 };
 
 /* 0x811F391A */
-uint32_t BufferPool::calcBlocksTotalSize(uint32_t payloadSize, uint32_t blockCount)
+uint32_t CacheBufferPool::calcBlocksTotalSize(uint32_t payloadSize, uint32_t blockCount)
 {
     uint32_t alignedPayload = (payloadSize - 1u) & 0xFFFFFFF8u;
     return blockCount * (alignedPayload + 24u);
 }
 
 /* 0x811F392C */
-uint32_t BufferPool::calcPoolTotalSize(uint32_t payloadSize, uint32_t blockCount)
+uint32_t CacheBufferPool::calcPoolTotalSize(uint32_t payloadSize, uint32_t blockCount)
 {
     return calcBlocksTotalSize(payloadSize, blockCount) + 16u;
 }
 
 /* 0x811F37BA / 0x811F386E */
-BufferPool::BufferPool(uint32_t payloadSize, uint32_t blockCount,
+CacheBufferPool::CacheBufferPool(uint32_t payloadSize, uint32_t blockCount,
                        uint32_t arenaSize, uint32_t headerSize)
     : m_firstBlock(NULL)
     , m_blockCount(blockCount)
@@ -339,7 +340,7 @@ BufferPool::BufferPool(uint32_t payloadSize, uint32_t blockCount,
 }
 
 /* 0x811F38B0 / 0x811F3902 / 0x811F3912 */
-BufferPool::~BufferPool()
+CacheBufferPool::~CacheBufferPool()
 {
     if (m_blockCount != 0u && m_firstBlock != NULL) {
         uint8_t *cursor = (uint8_t *)m_firstBlock;
@@ -354,7 +355,7 @@ BufferPool::~BufferPool()
 }
 
 /* 0x811F387E */
-BufferBlock *BufferPool::getBlockAt(uint32_t index)
+BufferBlock *CacheBufferPool::getBlockAt(uint32_t index)
 {
     if (index >= m_blockCount || m_firstBlock == NULL) {
         return NULL;
@@ -369,13 +370,13 @@ BufferBlock *BufferPool::getBlockAt(uint32_t index)
 }
 
 /* 0x811F3940 */
-uint32_t BufferPool::getBlockPayloadSize() const
+uint32_t CacheBufferPool::getBlockPayloadSize() const
 {
     return (m_firstBlock != NULL) ? m_firstBlock->m_payloadSize : 0u;
 }
 
 /* 0x811F394A */
-void *BufferPool::acquireBuffer()
+void *CacheBufferPool::acquireBuffer()
 {
     for (uint32_t idx = 0; idx < m_blockCount; ++idx) {
         BufferBlock *block = getBlockAt(idx);
@@ -390,7 +391,7 @@ void *BufferPool::acquireBuffer()
 }
 
 /* 0x811F39A6 */
-void BufferPool::releaseBuffer(void *payloadPtr)
+void CacheBufferPool::releaseBuffer(void *payloadPtr)
 {
     if (m_firstBlock == NULL) {
         return;
@@ -410,14 +411,14 @@ void BufferPool::releaseBuffer(void *payloadPtr)
 }
 
 /* 0x811F39FC */
-void *BufferPool::getPayloadAt(uint32_t index)
+void *CacheBufferPool::getPayloadAt(uint32_t index)
 {
     BufferBlock *block = getBlockAt(index);
     return (block != NULL) ? block->m_payloadPtr : NULL;
 }
 
 /* 0x811F3A32 */
-void BufferPool::setBufferPinned(void *payloadPtr, uint8_t pinned)
+void CacheBufferPool::setBufferPinned(void *payloadPtr, uint8_t pinned)
 {
     if (m_firstBlock == NULL) {
         return;
@@ -435,7 +436,7 @@ void BufferPool::setBufferPinned(void *payloadPtr, uint8_t pinned)
 }
 
 /* 0x811F3A7A */
-uint8_t BufferPool::isBufferPinned(void *payloadPtr) const
+uint8_t CacheBufferPool::isBufferPinned(void *payloadPtr) const
 {
     if (m_firstBlock == NULL) {
         return 0u;
@@ -486,7 +487,7 @@ int joinAndDeleteWorkerThread(SceUID threadId)
 {
     int exitStatus = 0;
     if (sceKernelWaitThreadEnd(threadId, &exitStatus, NULL) == 0) {
-        sceKernelDeleteThreadForUser(threadId);
+        sceKernelDeleteThread(threadId);
     }
     return 0;
 }
@@ -502,14 +503,14 @@ int joinWorkerThread(SceUID threadId)
 /* 0x811F3C6A */
 int deleteWorkerThread(SceUID threadId)
 {
-    sceKernelDeleteThreadForUser(threadId);
+    sceKernelDeleteThread(threadId);
     return 0;
 }
 
 /* 0x811F3C74 */
 int exitWorkerThread()
 {
-    return sceKernelExitThread(1);
+    return SceThreadmgrCoredumpTime_sceKernelExitThread(1);
 }
 
 /* 0x811F3C7E */
@@ -1107,6 +1108,395 @@ int LocalCacheIo::prefetchRange(uint8_t flags, int offset, int size, int *outErr
     }
     *outErr = 0;
     return 0;
+}
+
+/* Synchronization & thread bridges used across musiccore_plugin TUs */
+struct SyncEvent {
+    void *vtablePtr;
+    SceUID evfId;
+};
+
+void syncMutexConstruct(SyncMutex *mutex, const char *name)
+{
+    new (mutex) SyncMutex(name);
+}
+
+void syncMutexInit(SyncMutex *mutex, const char *name)
+{
+    new (mutex) SyncMutex(name);
+}
+
+void syncMutexDestroy(SyncMutex *mutex)
+{
+    if (mutex != NULL)
+        mutex->~SyncMutex();
+}
+
+int syncMutexIsValid(const SyncMutex *mutex)
+{
+    return (mutex != NULL && mutex->isValid()) ? 1 : 0;
+}
+
+int syncMutexLock(SyncMutex *mutex)
+{
+    return (mutex != NULL) ? mutex->lock() : MC_ERR_INTERNAL;
+}
+
+int syncMutexUnlock(SyncMutex *mutex)
+{
+    return (mutex != NULL) ? mutex->unlock() : MC_ERR_INTERNAL;
+}
+
+void syncCondInit(SyncCond *cond, const char *name)
+{
+    new (cond) SyncCond(name);
+}
+
+void syncCondDestroy(SyncCond *cond)
+{
+    if (cond != NULL)
+        cond->~SyncCond();
+}
+
+int syncCondWait(SyncCond *cond, SyncMutex *mutex, unsigned int waitBits, SceUInt timeoutUs)
+{
+    SceUInt timeout = timeoutUs;
+    return (cond != NULL) ? cond->wait(mutex, waitBits, (timeoutUs != 0) ? &timeout : NULL) : MC_ERR_INTERNAL;
+}
+
+int syncCondSignal(SyncCond *cond, unsigned int signalBits)
+{
+    return (cond != NULL) ? cond->signal(signalBits) : MC_ERR_INTERNAL;
+}
+
+void syncEventConstruct(SyncEvent *ev, const char *name)
+{
+    new (reinterpret_cast<SyncCond *>(ev)) SyncCond(name);
+}
+
+void syncEventDestroy(SyncEvent *ev)
+{
+    if (ev != NULL)
+        reinterpret_cast<SyncCond *>(ev)->~SyncCond();
+}
+
+int syncEventWait(SyncEvent *ev, SyncMutex *mutex, uint32_t waitBits, int timeoutMode)
+{
+    SceUInt timeout = static_cast<SceUInt>(timeoutMode);
+    return (ev != NULL)
+        ? reinterpret_cast<SyncCond *>(ev)->wait(mutex, waitBits, (timeoutMode > 0) ? &timeout : NULL)
+        : MC_ERR_INTERNAL;
+}
+
+int syncEventSignal(SyncEvent *ev, uint32_t signalBits)
+{
+    return (ev != NULL) ? reinterpret_cast<SyncCond *>(ev)->signal(signalBits) : MC_ERR_INTERNAL;
+}
+
+int syncEventIsValid(const SyncEvent *ev)
+{
+    return (ev != NULL && ev->evfId > 0) ? 1 : 0;
+}
+
+int joinDetachedWorker(SceUID threadId)
+{
+    return joinAndDeleteWorkerThread(threadId);
+}
+
+void exitCurrentWorkerThread()
+{
+    exitWorkerThread();
+}
+
+int workerThreadDelete(SceUID threadId)
+{
+    return deleteWorkerThread(threadId);
+}
+
+/* FixedPool alias delegating to CacheBufferPool (used by musiccore_factory.cpp) */
+struct PoolSlotHeader {
+    unsigned char reserved[5];
+    unsigned char active;
+    unsigned char pad[6];
+    void *object;
+};
+
+class FixedPool {
+public:
+    FixedPool(unsigned int elemSize, unsigned int count, unsigned int totalBytes,
+              unsigned int headerSize);
+    virtual ~FixedPool();
+
+    static unsigned int calcBodySize(unsigned int elemSize, unsigned int count);
+    static unsigned int calcTotalSize(unsigned int elemSize, unsigned int count);
+
+    PoolSlotHeader *getSlotHeader(unsigned char index);
+    unsigned int getSlotSize() const;
+    void *allocSlot();
+    void freeSlot(void *slot);
+    void *getSlotObject(unsigned int index);
+    void setSlotActive(void *slot, unsigned char active);
+    int isSlotActive(void *slot);
+
+public:
+    void *m_poolMem;
+    unsigned int m_count;
+    unsigned int m_elemSize;
+};
+
+FixedPool::FixedPool(unsigned int elemSize, unsigned int count, unsigned int totalBytes,
+                     unsigned int headerSize)
+    : m_poolMem(NULL), m_count(count), m_elemSize(elemSize)
+{
+    new (reinterpret_cast<CacheBufferPool *>(this))
+        CacheBufferPool(elemSize, count, totalBytes, headerSize);
+}
+
+FixedPool::~FixedPool()
+{
+    reinterpret_cast<CacheBufferPool *>(this)->~CacheBufferPool();
+}
+
+unsigned int FixedPool::calcBodySize(unsigned int elemSize, unsigned int count)
+{
+    return CacheBufferPool::calcBlocksTotalSize(elemSize, count);
+}
+
+unsigned int FixedPool::calcTotalSize(unsigned int elemSize, unsigned int count)
+{
+    return CacheBufferPool::calcPoolTotalSize(elemSize, count);
+}
+
+PoolSlotHeader *FixedPool::getSlotHeader(unsigned char index)
+{
+    return reinterpret_cast<PoolSlotHeader *>(
+        reinterpret_cast<CacheBufferPool *>(this)->getBlockAt(index));
+}
+
+unsigned int FixedPool::getSlotSize() const
+{
+    return reinterpret_cast<const CacheBufferPool *>(this)->getBlockPayloadSize();
+}
+
+void *FixedPool::allocSlot()
+{
+    return reinterpret_cast<CacheBufferPool *>(this)->acquireBuffer();
+}
+
+void FixedPool::freeSlot(void *slot)
+{
+    reinterpret_cast<CacheBufferPool *>(this)->releaseBuffer(slot);
+}
+
+void *FixedPool::getSlotObject(unsigned int index)
+{
+    return reinterpret_cast<CacheBufferPool *>(this)->getPayloadAt(index);
+}
+
+void FixedPool::setSlotActive(void *slot, unsigned char active)
+{
+    reinterpret_cast<CacheBufferPool *>(this)->setBufferPinned(slot, active);
+}
+
+int FixedPool::isSlotActive(void *slot)
+{
+    return reinterpret_cast<CacheBufferPool *>(this)->isBufferPinned(slot);
+}
+
+int isWorkerThreadValid(SceUID threadId)
+{
+    return isValidWorkerThreadId(threadId) ? 1 : 0;
+}
+
+int workerThreadCreate(const char *name, SceUID *outThid, SceKernelThreadEntry entry,
+                       int priority, unsigned int stackSize)
+{
+    return createWorkerThread(name, outThid, entry, priority, stackSize);
+}
+
+int workerThreadWaitEnd(SceUID thid)
+{
+    return joinWorkerThread(thid);
+}
+
+void workerThreadExitSelf()
+{
+    exitWorkerThread();
+}
+
+int workerThreadJoinRaw(SceUID thid)
+{
+    return joinWorkerThread(thid);
+}
+
+struct SyncMutexStorage {
+    void *vtable;
+    SceUID semaId;
+};
+
+struct SyncCondStorage {
+    void *vtable;
+    SceUID evfId;
+};
+
+void syncMutexInit(SyncMutexStorage *mtx, const char *name)
+{
+    new (reinterpret_cast<SyncMutex *>(mtx)) SyncMutex(name);
+}
+
+void syncMutexDestroy(SyncMutexStorage *mtx)
+{
+    if (mtx != NULL)
+        reinterpret_cast<SyncMutex *>(mtx)->~SyncMutex();
+}
+
+int syncMutexIsValid(const SyncMutexStorage *mtx)
+{
+    return (mtx != NULL && reinterpret_cast<const SyncMutex *>(mtx)->isValid()) ? 1 : 0;
+}
+
+int syncMutexLock(SyncMutexStorage *mtx)
+{
+    return (mtx != NULL) ? reinterpret_cast<SyncMutex *>(mtx)->lock() : MC_ERR_INTERNAL;
+}
+
+int syncMutexUnlock(SyncMutexStorage *mtx)
+{
+    return (mtx != NULL) ? reinterpret_cast<SyncMutex *>(mtx)->unlock() : MC_ERR_INTERNAL;
+}
+
+void syncCondInit(SyncCondStorage *cond, const char *name)
+{
+    new (reinterpret_cast<SyncCond *>(cond)) SyncCond(name);
+}
+
+void syncCondDestroy(SyncCondStorage *cond)
+{
+    if (cond != NULL)
+        reinterpret_cast<SyncCond *>(cond)->~SyncCond();
+}
+
+int syncCondWait(SyncCondStorage *cond, SyncMutexStorage *mtx, unsigned int mask, unsigned int *timeout)
+{
+    return (cond != NULL)
+        ? reinterpret_cast<SyncCond *>(cond)->wait(reinterpret_cast<SyncMutex *>(mtx), mask, timeout)
+        : MC_ERR_INTERNAL;
+}
+
+int syncCondSignal(SyncCondStorage *cond, unsigned int mask)
+{
+    return (cond != NULL) ? reinterpret_cast<SyncCond *>(cond)->signal(mask) : MC_ERR_INTERNAL;
+}
+
+struct StreamIoInterface;
+
+StreamIoInterface *createLocalCacheIo(const char *path, int chunkSize, int blockCount, int readAhead)
+{
+    void *mem = allocFromHeap(sizeof(LocalCacheIo));
+    if (mem == NULL)
+        return NULL;
+    return reinterpret_cast<StreamIoInterface *>(
+        new (mem) LocalCacheIo(path, chunkSize, blockCount, readAhead));
+}
+
+StreamIoInterface *createLocalCacheIoEx(const char *path, int chunkSize, int blockCount,
+                                        int readAhead, int extraChunk, int extraBlocks)
+{
+    void *mem = allocFromHeap(sizeof(LocalCacheIo));
+    if (mem == NULL)
+        return NULL;
+    return reinterpret_cast<StreamIoInterface *>(
+        new (mem) LocalCacheIo(path, chunkSize, blockCount, readAhead, extraChunk, extraBlocks));
+}
+
+class LocalCacheIoBase {
+public:
+    virtual ~LocalCacheIoBase();
+    virtual int initialize();
+    virtual int open();
+    virtual int close();
+    virtual int isOpen();
+    virtual int getFileSize();
+    virtual int getPosition();
+    virtual int seek(int offset, int whence);
+    virtual int read(void *dst, unsigned int size, int *outErr);
+    virtual int readAt(int offset, void *dst, unsigned int size, int *outErr);
+    virtual int setPath(const char *path);
+    virtual int setIoHint(int hintMode, int hintParam);
+    virtual int flushCache();
+    virtual void *mapRange(unsigned int offset, unsigned int size, int flags,
+                           int *outMapped, int *outErr, int extra);
+    virtual int checkRangeReadable(int sizeBytes, int *outErr);
+};
+
+LocalCacheIoBase::~LocalCacheIoBase() { reinterpret_cast<LocalCacheIo *>(this)->~LocalCacheIo(); }
+int LocalCacheIoBase::initialize() { return reinterpret_cast<LocalCacheIo *>(this)->isInitialized(); }
+int LocalCacheIoBase::open() { return reinterpret_cast<LocalCacheIo *>(this)->open(); }
+int LocalCacheIoBase::close() { return reinterpret_cast<LocalCacheIo *>(this)->close(); }
+int LocalCacheIoBase::isOpen() { return reinterpret_cast<LocalCacheIo *>(this)->isOpen(); }
+int LocalCacheIoBase::getFileSize() { return reinterpret_cast<LocalCacheIo *>(this)->getFileSize(); }
+int LocalCacheIoBase::getPosition() { return 0; }
+int LocalCacheIoBase::seek(int offset, int whence) { (void)offset; (void)whence; return 0; }
+int LocalCacheIoBase::read(void *dst, unsigned int size, int *outErr)
+{
+    (void)dst; (void)size;
+    if (outErr != NULL) *outErr = 0;
+    return 0;
+}
+int LocalCacheIoBase::readAt(int offset, void *dst, unsigned int size, int *outErr)
+{
+    void *src = reinterpret_cast<LocalCacheIo *>(this)->mapRangeSimple(offset, static_cast<int>(size), 0, outErr, 0);
+    if (src != NULL && dst != NULL && size > 0) {
+        for (unsigned int i = 0; i < size; ++i)
+            static_cast<uint8_t *>(dst)[i] = static_cast<const uint8_t *>(src)[i];
+        return static_cast<int>(size);
+    }
+    return 0;
+}
+int LocalCacheIoBase::setPath(const char *path) { return reinterpret_cast<LocalCacheIo *>(this)->setPath(path); }
+int LocalCacheIoBase::setIoHint(int hintMode, int hintParam) { (void)hintParam; return reinterpret_cast<LocalCacheIo *>(this)->setCacheHint(hintMode); }
+int LocalCacheIoBase::flushCache() { return 0; }
+void *LocalCacheIoBase::mapRange(unsigned int offset, unsigned int size, int flags,
+                                 int *outMapped, int *outErr, int extra)
+{
+    void *ptr = reinterpret_cast<LocalCacheIo *>(this)->mapRangeSimple(
+        static_cast<int>(offset), static_cast<int>(size), flags, outErr, extra);
+    if (outMapped != NULL)
+        *outMapped = (ptr != NULL) ? static_cast<int>(size) : 0;
+    return ptr;
+}
+int LocalCacheIoBase::checkRangeReadable(int sizeBytes, int *outErr)
+{
+    return reinterpret_cast<LocalCacheIo *>(this)->checkRangeReadable(sizeBytes, outErr);
+}
+
+void localCacheIoConstruct(LocalCacheIoBase *io, const char *path,
+                           int chunkSize, int blockCount, int readAhead,
+                           int extraChunk, int extraBlocks)
+{
+    new (reinterpret_cast<LocalCacheIo *>(io))
+        LocalCacheIo(path, chunkSize, blockCount, readAhead, extraChunk, extraBlocks);
+}
+
+void localCacheIoDestroy(LocalCacheIoBase *io)
+{
+    if (io != NULL)
+        reinterpret_cast<LocalCacheIo *>(io)->~LocalCacheIo();
+}
+
+int localCacheIoIsOpen(LocalCacheIoBase *io)
+{
+    return (io != NULL) ? reinterpret_cast<LocalCacheIo *>(io)->isOpen() : 0;
+}
+
+int localCacheIoClose(LocalCacheIoBase *io)
+{
+    return (io != NULL) ? reinterpret_cast<LocalCacheIo *>(io)->close() : -1;
+}
+
+int localCacheIoSetPath(LocalCacheIoBase *io, const char *path)
+{
+    return (io != NULL) ? reinterpret_cast<LocalCacheIo *>(io)->setPath(path) : -1;
 }
 
 } /* namespace MusicCore */

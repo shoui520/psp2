@@ -5,6 +5,7 @@
  */
 
 #include <kernel.h>
+#include <std/new>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -1758,6 +1759,8 @@ int AudioOutput::runOutputLoop()
     return 0;
 }
 
+extern "C" int SceThreadmgrCoredumpTime_sceKernelExitThread(int status);
+
 /* 0x811E91B0 */
 int AudioOutput::outputThreadEntry(SceSize args, void *argp)
 {
@@ -1766,8 +1769,123 @@ int AudioOutput::outputThreadEntry(SceSize args, void *argp)
         AudioOutput *self = *static_cast<AudioOutput **>(argp);
         self->runOutputLoop();
     }
-    sceKernelExitThread(0);
+    SceThreadmgrCoredumpTime_sceKernelExitThread(0);
     return 0;
+}
+
+struct AudioInitParams;
+
+void initAudioOutput(void *audioOut)
+{
+    new (audioOut) AudioOutput();
+}
+
+void stopAudioOutput(void *audioOut)
+{
+    if (audioOut != NULL)
+        static_cast<AudioOutput *>(audioOut)->stopOutput();
+}
+
+void termAudioOutput(void *audioOut)
+{
+    if (audioOut != NULL) {
+        static_cast<AudioOutput *>(audioOut)->finalize();
+        static_cast<AudioOutput *>(audioOut)->~AudioOutput();
+    }
+}
+
+int audioOutputSetCallbacks(void *audioOut, void *focusCb, void *errCb, void *userData)
+{
+    return (audioOut != NULL)
+        ? static_cast<AudioOutput *>(audioOut)->setCallbacks(
+              reinterpret_cast<AudioOutput::BgmAdoptCallback>(focusCb),
+              reinterpret_cast<AudioOutput::FadeCompleteCallback>(errCb), userData)
+        : -1;
+}
+
+int audioOutputSetPriority(void *audioOut, int priority, int flag)
+{
+    return (audioOut != NULL)
+        ? static_cast<AudioOutput *>(audioOut)->setBgmPriority(priority, static_cast<uint8_t>(flag))
+        : -1;
+}
+
+int audioOutputSetPriorityEx(void *audioOut, int priority, const void *extData, int flag)
+{
+    return (audioOut != NULL)
+        ? static_cast<AudioOutput *>(audioOut)->setExclusiveBgmPriority(
+              priority, static_cast<const SoundOutExclusiveParam *>(extData), static_cast<uint8_t>(flag))
+        : -1;
+}
+
+int audioOutputStart(void *audioOut, const AudioInitParams *params, int flags)
+{
+    return (audioOut != NULL)
+        ? static_cast<AudioOutput *>(audioOut)->initialize(
+              reinterpret_cast<const AudioOutputInitParam *>(params), flags)
+        : -1;
+}
+
+int audioOutputGetState(void *audioOut, unsigned char channelId)
+{
+    (void)channelId;
+    return (audioOut != NULL) ? 0 : -1;
+}
+
+int audioOutputSetAlcMode(void *audioOut, int mode)
+{
+    return (audioOut != NULL) ? static_cast<AudioOutput *>(audioOut)->setAlcMode(mode) : -1;
+}
+
+int audioOutputSetStateCallback(void *audioOut, void *cb, void *ctx)
+{
+    return (audioOut != NULL)
+        ? static_cast<AudioOutput *>(audioOut)->setPositionCallback(
+              reinterpret_cast<AudioOutput::PositionCallback>(cb), ctx)
+        : -1;
+}
+
+int audioOutputSetVolume(void *audioOut, int volCmd, int durationMs, unsigned char *outActive)
+{
+    return (audioOut != NULL)
+        ? static_cast<AudioOutput *>(audioOut)->setVolumeOrDbFade(
+              static_cast<unsigned int>(volCmd), durationMs, outActive)
+        : -1;
+}
+
+int audioOutConfigure(void *audioOut, int balance, const void *eq, int normalizer)
+{
+    return (audioOut != NULL)
+        ? static_cast<AudioOutput *>(audioOut)->openPort(
+              static_cast<unsigned int>(balance),
+              static_cast<const AudioEqParam *>(eq),
+              static_cast<unsigned int>(normalizer))
+        : -1;
+}
+
+int audioOutShutdown(void *audioOut)
+{
+    return (audioOut != NULL) ? static_cast<AudioOutput *>(audioOut)->closePort() : -1;
+}
+
+int audioOutSetFade(void *audioOut, int targetState, int fadeMs, uint8_t *outPending)
+{
+    return (audioOut != NULL)
+        ? static_cast<AudioOutput *>(audioOut)->setScaleFade(targetState, fadeMs, outPending)
+        : -1;
+}
+
+int audioOutSetVolumeRamp(void *audioOut, int targetState, int fadeMs, uint8_t *outPending)
+{
+    return (audioOut != NULL)
+        ? static_cast<AudioOutput *>(audioOut)->setVolumeOrDbFade(
+              static_cast<unsigned int>(targetState), fadeMs, outPending)
+        : -1;
+}
+
+int audioOutSetEqType(void *audioOut, int eqType)
+{
+    return (audioOut != NULL) ? static_cast<AudioOutput *>(audioOut)->setEffectType(eqType) : -1;
 }
 
 } // namespace MusicCore

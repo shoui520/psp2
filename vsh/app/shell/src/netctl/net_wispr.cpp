@@ -10,6 +10,8 @@
 #include <libhttp.h>
 #include "netctl_services.h"
 
+extern "C" int SceThreadmgrCoredumpTime_sceKernelExitThread(int status);
+
 #define NET_WISPR_STATE_IDLE		0
 #define NET_WISPR_STATE_REDIRECT	1
 #define NET_WISPR_STATE_AUTH		2
@@ -484,7 +486,7 @@ static int netWisprWorkerThread(SceSize args, void *argp)
 		netWisprNotifyCallback(prevState);
 		s_wisprStateHandlers[ctx->state](ctx, prevState, &nextState, &nextEvent);
 	}
-	sceKernelExitThread(0);
+	SceThreadmgrCoredumpTime_sceKernelExitThread(0);
 	return 0;
 }
 
@@ -1737,7 +1739,7 @@ static int netWisprAttBuildAuthBody(NetWisprContext *ctx, char *outBody, SceSize
 		return NET_WISPR_ERROR_BUFFER_TOO_SMALL;
 
 	SceUInt8 digest[16];
-	shellMd5Digest(digestInput, sceClibStrnlen(digestInput, sizeof(digestInput)), digest);
+	sceMd5Digest(digestInput, sceClibStrnlen(digestInput, sizeof(digestInput)), digest);
 
 	int passLen = sceClibSnprintf(
 		cursor, remaining,

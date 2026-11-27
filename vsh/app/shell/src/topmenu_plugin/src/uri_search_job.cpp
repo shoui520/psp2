@@ -47,18 +47,30 @@ static UriSchemeMapping s_builtinUriSchemes[] = {
 	{ "psm_manual:",	sce_paf_strlen("psm_manual:"),		"NPXS10081" },
 };
 
+static const char *findSubstring(const char *haystack, const char *needle)
+{
+	SceSize needleLen = sce_paf_strlen(needle);
+	if (needleLen == 0)
+		return haystack;
+	for (const char *cursor = haystack; *cursor != '\0'; ++cursor) {
+		if (*cursor == *needle && sce_paf_strncmp(cursor, needle, needleLen) == 0)
+			return cursor;
+	}
+	return NULL;
+}
+
 static int extractQueryValue(const char *uri, const char *keyPrefix, char *outBuf, SceSize bufSize)
 {
-	const char *query = sce_paf_strstr(uri, "?");
+	const char *query = sce_paf_strchr(uri, '?');
 	if (query == NULL)
 		return 0;
 
-	const char *found = sce_paf_strstr(query, keyPrefix);
+	const char *found = findSubstring(query, keyPrefix);
 	if (found == NULL)
 		return 0;
 
 	const char *valueStart = found + sce_paf_strlen(keyPrefix);
-	const char *valueEnd = sce_paf_strstr(valueStart, "&");
+	const char *valueEnd = sce_paf_strchr(valueStart, '&');
 	if (valueEnd == NULL)
 		valueEnd = valueStart + sce_paf_strlen(valueStart);
 

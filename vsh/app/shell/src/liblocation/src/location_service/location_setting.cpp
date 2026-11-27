@@ -25,7 +25,7 @@ int sceRegMgrStartCallback(SceUID cbid);
 }
 
 extern void shellRegMgrLogError(int err, int flag);		/* 0x81345038 */
-extern int shellUsageCounterSet(int id, int value, int flags);	/* 0x81376B3C */
+extern int consoleInfoFileWriteInt(int index, SceUInt32 value, int mode); /* 0x81376B3C */
 
 /* 0x8141F548 */
 LocationMethodState *LocationSetting::GetMethodState()
@@ -820,7 +820,7 @@ int LocationSetting::CountUp(int id, unsigned int delta)
 /* 0x81190EDE */
 int LocationSetting::SetTelemetryValue(int id, int value)
 {
-	return shellUsageCounterSet(id, value, 0);
+	return consoleInfoFileWriteInt(id, (SceUInt32)value, 0);
 }
 
 /* 0x81190EEC */

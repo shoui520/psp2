@@ -358,7 +358,7 @@ int topmenuShowAppErrorMessageDialog(SceInt32 errorCode, const LsdbAppInfoPtr *a
 	if (msgHash != 0) {
 		if (msgHash == ERR_MSG_LOW_MEMORY_ID) {
 			paf::wstring sizeText;
-			shellSizeTextKB(&sizeText, 2048);
+			shellSizeTextKb(&sizeText, 2048);
 			param.title.format = paf::wstring(
 				g_topmenuPlugin->GetString(paf::IDParam(ERR_MSG_LOW_MEMORY_ID)));
 			param.title.args.insert(param.title.args.begin(), sizeText);

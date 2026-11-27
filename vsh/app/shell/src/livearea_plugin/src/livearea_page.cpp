@@ -99,6 +99,18 @@ LiveAreaPage::~LiveAreaPage()
 	s_pages.remove(this);
 }
 
+/* 0x8119982C */
+const char *liveareaPageGetTitleIdRaw(LiveAreaPage *page)
+{
+	return (page != NULL) ? page->m_titleId.c_str() : NULL;
+}
+
+/* 0x811D4E58 */
+paf::ui::Widget *liveareaGetNewsContainer(LiveAreaPage *page)
+{
+	return (page != NULL) ? page->m_fileList : NULL;
+}
+
 /* 0x8119B990 */
 const char *LiveAreaPage::GetTitleId()
 {
@@ -150,7 +162,8 @@ bool LiveAreaPage::IsAtTop()
 {
 	paf::ui::Widget *body = m_fileList->GetInternalWidget();
 	paf::math::v4 pos = body->GetPos(0, NULL, paf::math::v4(0.0f, 0.0f, 0.0f, 0.0f));
-	return fabsf(pos.extract_y() - 256.0f) <= 0.01f;
+	float deltaY = pos.extract_y() - 256.0f;
+	return ((deltaY < 0.0f) ? -deltaY : deltaY) <= 0.01f;
 }
 
 /* 0x8119BE9A */
@@ -326,17 +339,17 @@ void liveareaPageTickAll(bool changed)
 int liveareaPageGetFrameTimestamp(const char *titleId, const char *frameId,
 				  SceUInt64 *outTimestamp)
 {
-	g_shellMutex.Lock();
+	paf::thread::RMutex::main_thread_mutex.Lock();
 	for (paf::list<LiveAreaPage *>::iterator it = s_pages.begin();
 	     it != s_pages.end(); ++it) {
 		LiveAreaPage *page = *it;
 		if (sce_paf_strncmp(titleId, page->m_titleId.c_str(), page->m_titleId.size()) == 0) {
 			int ret = page->m_inner.GetFrameTimestamp(frameId, outTimestamp);
-			g_shellMutex.Unlock();
+			paf::thread::RMutex::main_thread_mutex.Unlock();
 			return ret;
 		}
 	}
-	g_shellMutex.Unlock();
+	paf::thread::RMutex::main_thread_mutex.Unlock();
 	return -1;
 }
 
@@ -361,7 +374,7 @@ void liveareaPageReloadAll(void)
 void liveareaPageReloadPocketStation(void)
 {
 	LiveAreaTopmenuInterface *topmenuIf = g_liveareaMgr->m_topmenuIf;
-	g_shellMutex.Lock();
+	paf::thread::RMutex::main_thread_mutex.Lock();
 	for (paf::list<LiveAreaPage *>::iterator it = s_pages.begin();
 	     it != s_pages.end(); ++it) {
 		LiveAreaPage *page = *it;
@@ -371,7 +384,7 @@ void liveareaPageReloadPocketStation(void)
 				page->m_inner.QueueReload(-1, SceLsdb_C070E42E(&appInfo));
 		}
 	}
-	g_shellMutex.Unlock();
+	paf::thread::RMutex::main_thread_mutex.Unlock();
 }
 
 /* 0x8119C5EC */

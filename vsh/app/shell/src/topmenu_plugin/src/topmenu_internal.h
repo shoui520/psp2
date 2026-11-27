@@ -130,18 +130,18 @@ struct TopmenuCrashEvent {
 
 /* External shell / kernel / registry helpers used across topmenu_plugin */
 extern "C" {
-int sceRegMgrGetKeyIntForUser(const char *category, const char *name, int *outValue);
-int sceRegMgrSetKeyIntForUser(const char *category, const char *name, int value);
-int sceRegMgrGetKeyBinForUser(const char *category, const char *name, void *buf, SceSize size);
-int sceRegMgrRegisterCallbackForUser(SceUID cbId);
-int sceRegMgrUnregisterCallbackForUser(SceUID cbId);
-int sceRegMgrAddRegistryCallbackForUser(SceUID cbId, const char *path);
-int sceRegMgrStartCallbackForUser(SceUID cbId);
-SceUID sceKernelCreateCallbackForUser(const char *name, SceUInt32 attr,
+int sceRegMgrGetKeyInt(const char *category, const char *name, int *outValue);
+int sceRegMgrSetKeyInt(const char *category, const char *name, int value);
+int sceRegMgrGetKeyBin(const char *category, const char *name, void *buf, SceSize size);
+int sceRegMgrRegisterCallback(SceUID cbId);
+int sceRegMgrUnregisterCallback(SceUID cbId);
+int sceRegMgrAddRegistryCallback(SceUID cbId, const char *path);
+int sceRegMgrStartCallback(SceUID cbId);
+SceUID sceKernelCreateCallback(const char *name, SceUInt32 attr,
 				      int (*func)(int notifyId, int notifyCount, int notifyArg, void *common),
 				      void *userData);
-int sceKernelDeleteCallbackForUser(SceUID cbId);
-int sceKernelDeleteSemaForUser(SceUID semaId);
+int sceKernelDeleteCallback(SceUID cbId);
+int sceKernelDeleteSema(SceUID semaId);
 int sceCompatGetPspSystemSoftwareVersion(void);
 int sceAppMgrSetRecommendedScreenOrientationForShell(int orientation);
 int sceAppMgrDestroyAppByName(const char *name);
@@ -159,21 +159,19 @@ int sceAppMgrGetRunningAppIdListForShell(SceInt32 *appIds, SceInt32 maxCount);
 int sceAppMgrReturnLiveAreaOperationResultForShell(int appId, int result);
 int sceAppMgrSetBackRenderPortOwner(int appId);
 int sceAppMgrGetRawPathOfApp0ByAppIdForShell(int appId, char *outPath);
-int appmgrReceiveShellEventNumSyscall(void);
+int sceAppMgrReceiveShellEventNum(void);
 int sceAppMgrGetCoredumpStateForShell(TopmenuCoredumpState *state);
-int appmgrFinishCoredumpForShellSyscall(void);
-SceUID appmgrGetProcessIdByAppIdForShellSyscall(int appId);
-int appmgrDestroyAppByAppIdSyscall(int appId);
-int appmgrNotifyLiveBoardModeForShellSyscall(int appId, int mode);
+int sceAppMgrFinishCoredumpForShell(void);
+SceUID sceAppMgrGetProcessIdByAppIdForShell(int appId);
+int sceAppMgrDestroyAppByAppId(int appId);
+int sceAppMgrNotifyLiveBoardModeForShell(int appId, int mode);
 int sceTouchSetProcessPrivilege(unsigned int privilege);
 int sceAVConfigHdmiSetResolution(int mode, int apply);
 int sceSharedFbGetRenderingInfo(SceUID pid);
-int sceKernelCheckDipswForUser(SceUInt32 bit);
-SceUInt32 sceKernelGetSystemTimeLow(void);
-SceUInt64 sceKernelGetSystemTimeWideForUser(void);
+SceUInt32 SceThreadmgr_47F6DE49(void);
 SceUInt32 vshDisplayRegisterFrameBufCallback(SceUID cbId);
 SceUInt32 vshCoredumpDeleteCrashReportCaf(void);
-int SceNpManagerSP_7C78A608(int *outState);
+int SceNpManager_BF8921C8(int *outState);
 int sceErrorGetExternalString(char *outBuf, int errorCode);
 int SceLsdb_DD7D68C0(AppInfoSClient *client, LsdbQueryCondition *conditions,
 		     paf::vector<paf::string> *outTitleIds, int option);
@@ -220,7 +218,7 @@ int npCommonServiceIsSignedIn(int *outSignedIn);
 
 /* External shell helpers (console_info / format) */
 int consoleInfoFileAddTime(int index, SceUInt64 elapsedUs);		/* 0x81376D44 */
-void shellSizeTextKB(paf::wstring *text, SceUInt32 sizeKB);		/* 0x8134367C */
+void shellSizeTextKb(paf::wstring *text, SceUInt32 sizeKB);		/* 0x8134367C */
 
 /* Forward declarations */
 class TopTabBase;
@@ -823,7 +821,6 @@ extern SceGxmRenderTarget *g_topmenuLargeRenderTarget;		/* 0x815AC4C8 */
 extern bool g_topmenuHeaderFocusByPad;				/* 0x815AC4F8 */
 extern SceInt32 g_topmenuNextTabOrderStamp;			/* 0x8154573C */
 extern SceInt32 g_topmenuDisabledPageTurnCount;			/* 0x81545A30 */
-extern paf::graph::Surface g_topmenuDefaultSnapshotSurface;	/* 0x814D15B8 */
 
 /* ------------------------------------------------------------------ */
 /* Cross-TU internal APIs                                             */
@@ -1001,7 +998,8 @@ int shellParentalControlPause(void);						/* 0x81232834 */
 int shellParentalControlResume(void);						/* 0x8123284E */
 int musicCoreBgmLoadUri(const char *uri, const SceUInt8 *opt);			/* 0x811CAE46 */
 int musicCoreBgmControl(SceUInt8 cmd, int param);				/* 0x811CB03A */
-int musicCoreBgmGetStatus(TopmenuMusicStatus *outStatus);			/* 0x811CB342 */
+struct MusicCorePublicStatus;
+int musicCoreBgmGetStatus(MusicCorePublicStatus *outStatus);			/* 0x811CB342 */
 int musicCorePlayerControl(SceUInt8 cmd, int param);				/* 0x811CBDE6 */
 typedef void (*LsdbJobCallback)(void *job, void *userData);
 struct LsdbGetAppInfoJobResult : public paf::job::JobItem {

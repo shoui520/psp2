@@ -1101,5 +1101,156 @@ public:
     }
 };
 
+struct Mp4FrameInfo;
+
+void *mp4MediaInfoConstruct(void *mem, const char *path, int ioPriority)
+{
+    return new (mem) Mp4MediaInfo(path, ioPriority);
+}
+
+int mp4StreamOpen(Mp4StreamParser *stream, uint32_t *outErr)
+{
+    unsigned int err = 0;
+    int ret = (stream != NULL) ? stream->openStream(&err) : -1;
+    if (outErr != NULL)
+        *outErr = err;
+    return ret;
+}
+
+const char *mp4StreamGetPath(Mp4StreamParser *stream)
+{
+    return (stream != NULL) ? reinterpret_cast<const char *>(stream->getStreamPosition()) : NULL;
+}
+
+int mp4StreamSetReadDirection(Mp4StreamParser *stream, int direction)
+{
+    return (stream != NULL) ? stream->setIoHint(direction) : -1;
+}
+
+int mp4StreamGetDurationMs(Mp4StreamParser *stream, int *outDurationMs, uint32_t *outErr)
+{
+    unsigned int duration = 0;
+    int err = 0;
+    int ret = (stream != NULL) ? stream->getDurationMs(&duration, &err) : -1;
+    if (outDurationMs != NULL)
+        *outDurationMs = static_cast<int>(duration);
+    if (outErr != NULL)
+        *outErr = static_cast<uint32_t>(err);
+    return ret;
+}
+
+int mp4StreamGetSampleRate(Mp4StreamParser *stream, uint32_t *outSampleRate, uint32_t *outErr)
+{
+    int rate = 0;
+    int err = 0;
+    int ret = (stream != NULL) ? stream->getBaseSampleRate(&rate, &err) : -1;
+    if (outSampleRate != NULL)
+        *outSampleRate = static_cast<uint32_t>(rate);
+    if (outErr != NULL)
+        *outErr = static_cast<uint32_t>(err);
+    return ret;
+}
+
+int mp4StreamGetExtSampleRate(Mp4StreamParser *stream, uint32_t *outExtRate, uint32_t *outErr)
+{
+    int rate = 0;
+    int err = 0;
+    int ret = (stream != NULL) ? stream->getSbrSampleRate(&rate, &err) : -1;
+    if (outExtRate != NULL)
+        *outExtRate = static_cast<uint32_t>(rate);
+    if (outErr != NULL)
+        *outErr = static_cast<uint32_t>(err);
+    return ret;
+}
+
+int mp4StreamGetSbrFlag(Mp4StreamParser *stream, uint8_t *outSbrFlag, uint32_t *outErr)
+{
+    int err = 0;
+    int ret = (stream != NULL) ? stream->getHasSbr(outSbrFlag, &err) : -1;
+    if (outErr != NULL)
+        *outErr = static_cast<uint32_t>(err);
+    return ret;
+}
+
+int mp4StreamGetSamplesPerFrame(Mp4StreamParser *stream, uint16_t *outSamples, uint32_t *outErr)
+{
+    int16_t samples = 0;
+    int err = 0;
+    int ret = (stream != NULL) ? stream->getSamplesPerFrame(&samples, &err) : -1;
+    if (outSamples != NULL)
+        *outSamples = static_cast<uint16_t>(samples);
+    if (outErr != NULL)
+        *outErr = static_cast<uint32_t>(err);
+    return ret;
+}
+
+int mp4StreamReadFirstFrame(Mp4StreamParser *stream, Mp4FrameInfo *outFrame, uint32_t *outErr)
+{
+    int err = 0;
+    int ret = (stream != NULL)
+        ? stream->readFirstSample(reinterpret_cast<Mp4FramePacket *>(outFrame), &err)
+        : -1;
+    if (outErr != NULL)
+        *outErr = static_cast<uint32_t>(err);
+    return ret;
+}
+
+int mp4StreamReadNextFrame(Mp4StreamParser *stream, int skipFrames, Mp4FrameInfo *outFrame,
+                           uint32_t *outErr)
+{
+    int err = 0;
+    int ret = (stream != NULL)
+        ? stream->readNextSample(skipFrames, reinterpret_cast<Mp4FramePacket *>(outFrame), &err)
+        : -1;
+    if (outErr != NULL)
+        *outErr = static_cast<uint32_t>(err);
+    return ret;
+}
+
+int mp4StreamReadPrevFrame(Mp4StreamParser *stream, int skipFrames, Mp4FrameInfo *outFrame,
+                           uint32_t *outErr)
+{
+    int err = 0;
+    int ret = (stream != NULL)
+        ? stream->readPrevSample(skipFrames, reinterpret_cast<Mp4FramePacket *>(outFrame), &err)
+        : -1;
+    if (outErr != NULL)
+        *outErr = static_cast<uint32_t>(err);
+    return ret;
+}
+
+int mp4StreamSeekAndReadFrame(Mp4StreamParser *stream, uint32_t targetMs, Mp4FrameInfo *outFrame,
+                              int *outFrameIndex, uint32_t *outErr)
+{
+    unsigned int sampleIdx = 0;
+    int err = 0;
+    int ret = (stream != NULL)
+        ? stream->seekToTimeMs(targetMs, reinterpret_cast<Mp4FramePacket *>(outFrame),
+                               &sampleIdx, &err)
+        : -1;
+    if (outFrameIndex != NULL)
+        *outFrameIndex = static_cast<int>(sampleIdx);
+    if (outErr != NULL)
+        *outErr = static_cast<uint32_t>(err);
+    return ret;
+}
+
+int mp4StreamQueryMetadata(Mp4StreamParser *stream, int titleCap, int artistCap,
+                           int albumCap, int genreCap, int artCap, void *metaOut,
+                           int extraCap, uint32_t *outErr)
+{
+    (void)stream;
+    (void)titleCap;
+    (void)artistCap;
+    (void)albumCap;
+    (void)genreCap;
+    (void)artCap;
+    (void)metaOut;
+    (void)extraCap;
+    if (outErr != NULL)
+        *outErr = 0;
+    return 0;
+}
+
 } // namespace MusicCore
 } // namespace sce

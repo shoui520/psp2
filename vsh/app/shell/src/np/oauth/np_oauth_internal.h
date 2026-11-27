@@ -247,7 +247,7 @@ public:
 /* External C imports from SceNpCommon, SceNpCommonPs4, SceNpManagerTicket, SceHttp, ScePafStdc */
 extern "C" {
 extern int sceNpCommonGetNpEnviroment(char *outEnv);
-extern int SceNpManagerTicket_A30BF29A(int ticketReqId);
+extern int SceNpManager_29C9B8A5(int ticketReqId);
 extern NpOAuthAllocator *SceNpCommonPs4_53484B79(void);
 extern int SceNpCommonPs4_32155BF8(const char *str, const char **endPtr, int base);
 extern int SceNpCommonPs4_2E65CBA6(const char *src, SceSize srcLength);

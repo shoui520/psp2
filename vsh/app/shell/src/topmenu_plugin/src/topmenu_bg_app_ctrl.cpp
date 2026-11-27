@@ -16,7 +16,7 @@ static void sendProcessAppEvent(TopmenuProcessBase *proc, SceInt32 eventCode)
 {
 	ShellAppActivatedEvent ev;
 	ev.processId = (proc->m_procState >= 2) ?
-		appmgrGetProcessIdByAppIdForShellSyscall(proc->m_appId) : -1;
+		sceAppMgrGetProcessIdByAppIdForShell(proc->m_appId) : -1;
 	ev.appId = proc->m_appId;
 	ev.appName = (proc->m_owner != NULL) ? proc->m_owner->m_titleId.c_str() : "";
 	ev.fromBoot = false;
@@ -65,10 +65,10 @@ static int executeRunningCommand(TopmenuProcessBase *proc, SceInt32 command)
 		}
 		break;
 	case 4:
-		appmgrNotifyLiveBoardModeForShellSyscall(proc->m_appId, 1);
+		sceAppMgrNotifyLiveBoardModeForShell(proc->m_appId, 1);
 		break;
 	case 5:
-		appmgrDestroyAppByAppIdSyscall(proc->m_appId);
+		sceAppMgrDestroyAppByAppId(proc->m_appId);
 		topmenuProcessResetAndCancel(proc);
 		return 1;
 	default:
@@ -138,7 +138,7 @@ const char *topmenuProcessGetTitleId(const TopmenuProcessBase *proc)
 SceUID topmenuProcessGetPid(const TopmenuProcessBase *proc)
 {
 	if (proc->m_procState >= 2)
-		return appmgrGetProcessIdByAppIdForShellSyscall(proc->m_appId);
+		return sceAppMgrGetProcessIdByAppIdForShell(proc->m_appId);
 	return -1;
 }
 
@@ -288,7 +288,7 @@ int topmenuProcessCommand(TopmenuProcessBase *proc, SceInt32 command)
 	case 2:
 		if (command == 5) {
 			if (proc->m_appId != -1)
-				appmgrDestroyAppByAppIdSyscall(proc->m_appId);
+				sceAppMgrDestroyAppByAppId(proc->m_appId);
 			topmenuProcessResetAndCancel(proc);
 			return 1;
 		}
@@ -392,7 +392,7 @@ int topmenuProcessPollSharedFb(TopmenuProcessBase *proc)
 		return 0;
 
 	SceUID pid = (proc->m_procState >= 2) ?
-		appmgrGetProcessIdByAppIdForShellSyscall(proc->m_appId) : -1;
+		sceAppMgrGetProcessIdByAppIdForShell(proc->m_appId) : -1;
 	if (sceSharedFbGetRenderingInfo(pid) == 0) {
 		proc->m_hasAppId = true;
 		return 1;

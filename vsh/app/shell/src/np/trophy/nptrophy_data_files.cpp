@@ -59,7 +59,7 @@ static void encodeJournalSection(const JournalSectionHost *host, JournalSectionD
 	disk->commitSecureTickBe = sceNetHtonll(host->commitSecureTick);
 	disk->commitLocalTickBe = sceNetHtonll(host->commitLocalTick);
 	disk->accountIdBe = sceNetHtonll(host->accountId);
-	sceClibMemcpy(disk->openPsId, host->openPsId, sizeof(disk->openPsId));
+	sceClibMemcpy_safe(disk->openPsId, host->openPsId, sizeof(disk->openPsId));
 }
 
 static void decodeJournalSection(const JournalSectionDisk *disk, JournalSectionHost *host)
@@ -71,7 +71,7 @@ static void decodeJournalSection(const JournalSectionDisk *disk, JournalSectionH
 	host->commitSecureTick = sceNetNtohll(disk->commitSecureTickBe);
 	host->commitLocalTick = sceNetNtohll(disk->commitLocalTickBe);
 	host->accountId = sceNetNtohll(disk->accountIdBe);
-	sceClibMemcpy(host->openPsId, disk->openPsId, sizeof(host->openPsId));
+	sceClibMemcpy_safe(host->openPsId, disk->openPsId, sizeof(host->openPsId));
 }
 
 /* =========================================================================
@@ -113,23 +113,23 @@ struct TransSlotRecord {
 static void encodeTransHeader(const TransHeaderRecord *host, TransHeaderRecord *disk)
 {
 	sceClibMemset(disk, 0, sizeof(*disk));
-	sceClibMemcpy(disk->commIdText, host->commIdText, sizeof(disk->commIdText));
+	sceClibMemcpy_safe(disk->commIdText, host->commIdText, sizeof(disk->commIdText));
 	disk->capacity = sceNetHtonl(host->capacity);
 	disk->usedCount = sceNetHtonl(host->usedCount);
 	disk->syncedCount = sceNetHtonl(host->syncedCount);
 	disk->deferredCount = sceNetHtonl(host->deferredCount);
-	sceClibMemcpy(disk->serverTag, host->serverTag, sizeof(disk->serverTag));
+	sceClibMemcpy_safe(disk->serverTag, host->serverTag, sizeof(disk->serverTag));
 }
 
 static void decodeTransHeader(const TransHeaderRecord *disk, TransHeaderRecord *host)
 {
 	sceClibMemset(host, 0, sizeof(*host));
-	sceClibMemcpy(host->commIdText, disk->commIdText, sizeof(host->commIdText));
+	sceClibMemcpy_safe(host->commIdText, disk->commIdText, sizeof(host->commIdText));
 	host->capacity = sceNetNtohl(disk->capacity);
 	host->usedCount = sceNetNtohl(disk->usedCount);
 	host->syncedCount = sceNetNtohl(disk->syncedCount);
 	host->deferredCount = sceNetNtohl(disk->deferredCount);
-	sceClibMemcpy(host->serverTag, disk->serverTag, sizeof(host->serverTag));
+	sceClibMemcpy_safe(host->serverTag, disk->serverTag, sizeof(host->serverTag));
 }
 
 /* 0x812D9AA4 */
@@ -278,7 +278,7 @@ static void encodeTitleProgress(const TitleProgressRecord *host, TitleProgressRe
 	disk->syncedLocalTick = sceNetHtonll(host->syncedLocalTick);
 	disk->serverTimestamp = sceNetHtonll(host->serverTimestamp);
 	disk->deferredCount = sceNetHtonl(host->deferredCount);
-	sceClibMemcpy(disk->unlockedMaskPacked, host->unlockedMaskPacked,
+	sceClibMemcpy_safe(disk->unlockedMaskPacked, host->unlockedMaskPacked,
 		      sizeof(disk->unlockedMaskPacked));
 }
 
@@ -296,7 +296,7 @@ static void decodeTitleProgress(const TitleProgressRecord *disk, TitleProgressRe
 	host->syncedLocalTick = sceNetNtohll(disk->syncedLocalTick);
 	host->serverTimestamp = sceNetNtohll(disk->serverTimestamp);
 	host->deferredCount = sceNetNtohl(disk->deferredCount);
-	sceClibMemcpy(host->unlockedMaskPacked, disk->unlockedMaskPacked,
+	sceClibMemcpy_safe(host->unlockedMaskPacked, disk->unlockedMaskPacked,
 		      sizeof(host->unlockedMaskPacked));
 }
 
@@ -381,10 +381,10 @@ struct UserIndexEntryRecord {
 static void encodeUserIndexEntry(const UserIndexEntryRecord *host, UserIndexEntryRecord *disk)
 {
 	sceClibMemset(disk, 0, sizeof(*disk));
-	sceClibMemcpy(disk->commIdText, host->commIdText, sizeof(disk->commIdText));
+	sceClibMemcpy_safe(disk->commIdText, host->commIdText, sizeof(disk->commIdText));
 	disk->activeFlag = sceNetHtonl(host->activeFlag);
 	disk->confSourceType = sceNetHtonl(host->confSourceType);
-	sceClibMemcpy(disk->confSha1, host->confSha1, sizeof(disk->confSha1));
+	sceClibMemcpy_safe(disk->confSha1, host->confSha1, sizeof(disk->confSha1));
 	disk->confVersion = sceNetHtonl(host->confVersion);
 	disk->numTrophies = sceNetHtonl(host->numTrophies);
 	disk->titleFlags = sceNetHtonl(host->titleFlags);
@@ -405,10 +405,10 @@ static void encodeUserIndexEntry(const UserIndexEntryRecord *host, UserIndexEntr
 static void decodeUserIndexEntry(const UserIndexEntryRecord *disk, UserIndexEntryRecord *host)
 {
 	sceClibMemset(host, 0, sizeof(*host));
-	sceClibMemcpy(host->commIdText, disk->commIdText, sizeof(host->commIdText));
+	sceClibMemcpy_safe(host->commIdText, disk->commIdText, sizeof(host->commIdText));
 	host->activeFlag = sceNetNtohl(disk->activeFlag);
 	host->confSourceType = sceNetNtohl(disk->confSourceType);
-	sceClibMemcpy(host->confSha1, disk->confSha1, sizeof(host->confSha1));
+	sceClibMemcpy_safe(host->confSha1, disk->confSha1, sizeof(host->confSha1));
 	host->confVersion = sceNetNtohl(disk->confVersion);
 	host->numTrophies = sceNetNtohl(disk->numTrophies);
 	host->titleFlags = sceNetNtohl(disk->titleFlags);
@@ -1222,7 +1222,7 @@ int TrophyTransDataFile::InitHeaderSectionCallback(void *recordBuf, SceSize reco
 		return ret;
 	host.capacity = params->capacity;
 	if (params->serverTag != NULL)
-		sceClibMemcpy(host.serverTag, params->serverTag, 160);
+		sceClibMemcpy_safe(host.serverTag, params->serverTag, 160);
 	encodeTransHeader(&host, static_cast<TransHeaderRecord *>(recordBuf));
 	return 0;
 }
@@ -1489,7 +1489,7 @@ int TrophyTransDataFile::GetServerTag(TrophyHandle *handle, bool *outHasTag, voi
 		return ret;
 	TransHeaderRecord host;
 	decodeTransHeader(&disk, &host);
-	sceClibMemcpy(outTagBuf, host.serverTag, 160);
+	sceClibMemcpy_safe(outTagBuf, host.serverTag, 160);
 	const uint8_t *tagBytes = static_cast<const uint8_t *>(outTagBuf);
 	*outHasTag = false;
 	for (SceSize i = 0; i < 160; ++i) {
@@ -2263,22 +2263,22 @@ int TrophyTitleDataFile::InitTitleMetaCallback(void *recordBuf, SceSize recordSi
 
 	TitleStaticMetaRecord *disk = static_cast<TitleStaticMetaRecord *>(recordBuf);
 	sceClibMemset(disk, 0, sizeof(*disk));
-	sceClibMemcpy(disk->commIdText, host.commIdText, sizeof(disk->commIdText));
+	sceClibMemcpy_safe(disk->commIdText, host.commIdText, sizeof(disk->commIdText));
 	disk->trophySetVersion = sceNetHtonll(host.trophySetVersion);
 	disk->confVersion = sceNetHtonl(host.confVersion);
 	disk->numTrophies = sceNetHtonl(host.numTrophies);
 	disk->titleFlags = sceNetHtonl(host.titleFlags);
-	sceClibMemcpy(disk->allMaskPacked, host.allMaskPacked, sizeof(disk->allMaskPacked));
-	sceClibMemcpy(disk->hiddenMaskPacked, host.hiddenMaskPacked,
+	sceClibMemcpy_safe(disk->allMaskPacked, host.allMaskPacked, sizeof(disk->allMaskPacked));
+	sceClibMemcpy_safe(disk->hiddenMaskPacked, host.hiddenMaskPacked,
 		      sizeof(disk->hiddenMaskPacked));
-	sceClibMemcpy(disk->platinumMaskPacked, host.platinumMaskPacked,
+	sceClibMemcpy_safe(disk->platinumMaskPacked, host.platinumMaskPacked,
 		      sizeof(disk->platinumMaskPacked));
-	sceClibMemcpy(disk->goldMaskPacked, host.goldMaskPacked, sizeof(disk->goldMaskPacked));
-	sceClibMemcpy(disk->silverMaskPacked, host.silverMaskPacked,
+	sceClibMemcpy_safe(disk->goldMaskPacked, host.goldMaskPacked, sizeof(disk->goldMaskPacked));
+	sceClibMemcpy_safe(disk->silverMaskPacked, host.silverMaskPacked,
 		      sizeof(disk->silverMaskPacked));
-	sceClibMemcpy(disk->bronzeMaskPacked, host.bronzeMaskPacked,
+	sceClibMemcpy_safe(disk->bronzeMaskPacked, host.bronzeMaskPacked,
 		      sizeof(disk->bronzeMaskPacked));
-	sceClibMemcpy(disk->groupMaskPacked, host.groupMaskPacked, sizeof(disk->groupMaskPacked));
+	sceClibMemcpy_safe(disk->groupMaskPacked, host.groupMaskPacked, sizeof(disk->groupMaskPacked));
 	return 0;
 }
 
@@ -3205,7 +3205,7 @@ int TrophyTitleDataFile::RecordTitleId(TrophyHandle *handle, const char *titleId
 	uint32_t writeSlot = (freeSlot >= 0) ? (uint32_t)freeSlot : 15u;
 	TitleIdRecord disk;
 	sceClibMemset(&disk, 0, sizeof(disk));
-	sceClibMemcpy(disk.titleId, titleId, 16);
+	sceClibMemcpy_safe(disk.titleId, titleId, 16);
 	int ret = WriteRecord(handle, m_titleIdSection, writeSlot, 0, &disk, sizeof(disk));
 	if (ret < 0)
 		return ret;

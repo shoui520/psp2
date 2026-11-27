@@ -30,8 +30,8 @@ struct BgdlTaskInfo {
 	float progress;			/* what the promote dialog's bar shows */
 	void (*progressFunc)(void *arg, float percent);	/* the install's progress, when set */
 	void *progressArg;
-	bool reserved5;
-	bool reserved6;
+	bool unusedFlag;
+	bool needsRestart;
 };
 
 void shellBgdlCreate(bool clean, const int *quota);		/* (0x810FCA36) */
@@ -48,8 +48,8 @@ bool shellBgdlRecordHasTasks(const paf::common::SharedPtr<paf::map<unsigned int,
 bool shellBgdlTitleHasTasks(const char *titleId, SceUInt32 flags);	/* (0x810FCAAE) */
 bool shellBgdlTitleHasTasksOfKind(const char *titleId, int type, SceUInt32 flags);	/* (0x810FCAB6) */
 int shellBgdlInstallTitleTasks(const char *titleId, BgdlTaskInfo *failed, bool *patched);	/* (0x810FCABE) */
-int shellBgdlInstallTitleTasksType1(const char *titleId, BgdlTaskInfo *failed);	/* (0x810FCAC6) */
-int shellBgdlInstallTitleTasksType2(const char *titleId, BgdlTaskInfo *failed);	/* (0x810FCACE) */
+int shellBgdlInstallTitleTasksPsp(const char *titleId, BgdlTaskInfo *failed);	/* (0x810FCAC6) */
+int shellBgdlInstallTitleTasksPsm(const char *titleId, BgdlTaskInfo *failed);	/* (0x810FCACE) */
 /* (0x810FCAD6) */
 int shellBgdlInstallTitleTasksOfKinds(const char *titleId, int type, SceUInt32 flags, bool dialog,
 				      BgdlTaskInfo *failed, bool *patched);

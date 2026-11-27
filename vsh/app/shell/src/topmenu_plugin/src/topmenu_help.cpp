@@ -45,7 +45,7 @@ public:
 
 	virtual int32_t Run()
 	{
-		sceRegMgrSetKeyIntForUser(m_category, m_keyName, m_value);
+		sceRegMgrSetKeyInt(m_category, m_keyName, m_value);
 		return 0;
 	}
 
@@ -142,11 +142,11 @@ TopmenuHelpMgr::TopmenuHelpMgr()
 	  m_liveAreaPeelPending(false)
 {
 	int value = 0;
-	if (sceRegMgrGetKeyIntForUser("/CONFIG/SHELL", "livearea_help", &value) == 0)
+	if (sceRegMgrGetKeyInt("/CONFIG/SHELL", "livearea_help", &value) == 0)
 		m_liveAreaHelpLevel = value;
-	if (sceRegMgrGetKeyIntForUser("/CONFIG/SHELL", "home_help", &value) == 0)
+	if (sceRegMgrGetKeyInt("/CONFIG/SHELL", "home_help", &value) == 0)
 		m_homeHelpLevel = value;
-	if (sceRegMgrGetKeyIntForUser("/CONFIG/SHELL", "edit_help", &value) == 0)
+	if (sceRegMgrGetKeyInt("/CONFIG/SHELL", "edit_help", &value) == 0)
 		m_editHelpLevel = value;
 }
 
@@ -159,7 +159,7 @@ void TopmenuHelpMgr::ShowLiveAreaIntroHelp()
 	m_liveAreaIntroPending = false;
 	m_liveAreaHelpLevel = 1;
 
-	CommonGuiListDialogParam param;
+	CommonGuiListDialogParam param(true);
 	param.handler = new TopmenuHelpDialogHandler("/CONFIG/SHELL", "livearea_help",
 						     m_liveAreaHelpLevel);
 	param.priority = 33;
@@ -214,7 +214,7 @@ void TopmenuHelpMgr::ShowLiveAreaPeelHelp()
 	m_liveAreaPeelPending = false;
 	m_liveAreaHelpLevel = 2;
 
-	CommonGuiListDialogParam param;
+	CommonGuiListDialogParam param(true);
 	param.handler = new TopmenuHelpDialogHandler("/CONFIG/SHELL", "livearea_help",
 						     m_liveAreaHelpLevel);
 	param.priority = 33;
@@ -259,7 +259,7 @@ void TopmenuHelpMgr::ShowHomeHelp()
 	if (paf::system::Model::GetType() == paf::system::Model::Type_Dolce)
 		m_homeHelpLevel = 2;
 
-	CommonGuiListDialogParam param;
+	CommonGuiListDialogParam param(true);
 	param.priority = 33;
 	param.resourcePlugin = g_topmenuPlugin;
 	param.handler = new TopmenuHelpDialogHandler("/CONFIG/SHELL", "home_help",
@@ -329,7 +329,7 @@ void TopmenuHelpMgr::ShowEditHelp()
 		}
 	}
 
-	CommonGuiListDialogParam param;
+	CommonGuiListDialogParam param(true);
 	param.priority = 33;
 	param.resourcePlugin = g_topmenuPlugin;
 	param.handler = new TopmenuHelpDialogHandler("/CONFIG/SHELL", "edit_help",

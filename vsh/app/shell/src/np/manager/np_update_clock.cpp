@@ -346,6 +346,21 @@ int npSignInDialogGetResult(int dialogReqId, int *outResult)
 	return 0;
 }
 
+int npUpdateClockStart(int *outReqId, int threadPriority, int callerPid)
+{
+	return npSignInDialogStartModeA(outReqId, threadPriority, callerPid);
+}
+
+int npUpdateClockGetState(int reqId)
+{
+	return npSignInDialogGetStatus(reqId);
+}
+
+int npUpdateClockGetResult(int reqId, int *outResult)
+{
+	return npSignInDialogGetResult(reqId, outResult);
+}
+
 /* 0x8132951C */
 static int npUpdateClockAuthCallback(int authReqId, int resultOrSize, void *userArg)
 {

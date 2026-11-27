@@ -20,37 +20,37 @@ int SceLibMtp_BF311CC8(const MtpBgCopyRunParam *param);
 }
 
 /* (0x810FCC30) */
-int shellMtpHostFunc0(const BgdlMtpContent *content)
+int shellMtpHostCheckContent(const BgdlMtpContent *content)
 {
 	return bgdlCheckMtpContent(content, 0);
 }
 
 /* (0x810FCC3A) */
-int shellMtpHostFunc1(const BgdlMtpRequest *request, SceUInt32 *id)
+int shellMtpHostAddTask(const BgdlMtpRequest *request, SceUInt32 *id)
 {
 	return bgdlAddMtpTask(request, id);
 }
 
 /* (0x810FCC42) */
-int shellMtpHostFunc2(SceUInt32 id)
+int shellMtpHostRemoveTask(SceUInt32 id)
 {
 	return bgdlRemoveTask(id);
 }
 
 /* (0x810FCC4A) */
-int shellMtpHostFunc3(SceUInt32 id)
+int shellMtpHostReloadTask(SceUInt32 id)
 {
 	return bgdlReloadTask(id);
 }
 
 /* (0x810FCC52) */
-int shellMtpHostFunc4(void)
+int shellMtpHostListTasks(void)
 {
 	return bgdlListMtpTasks();
 }
 
 /* (0x810FCC5A) */
-paf::string shellMtpHostFunc5(int taskId)
+paf::string shellMtpHostGetTaskFolder(int taskId)
 {
 	return bgdlTaskFolder(taskId, false);
 }

@@ -2,9 +2,16 @@ enable_language(CXX)
 # SceShell (vs0:vsh/shell/shell.self), built by Sony with SNC 3.57 in C++: the system software's
 # shell, with its resident plugins linked in. Its paf imports take libpaf's link names.
 set(MODULE_IMPORT_NAMES vsh/paf/fw/3.65-CEX.exports.yml
+	vsh/app/common/src/dbutil/exports.yml
+	vsh/app/shell/src/livespace_db/exports.yml
+	vsh/lowlayer/src/shell_svc/exports.yml
+	sys/internal/usermode/src/activity_db/exports.yml
+	sys/internal/usermode/src/bXCe/exports.yml
+	sys/internal/usermode/src/common_gui_dialog/exports.yml
 	sys/internal/usermode/src/ini_file_processor/exports.yml
+	vsh/app/common/src/sqlite/exports.yml
 	vsh/cdlg/src/npeula_dialog/state_check.imports.yml)
-psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
+psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc SOURCES
 	boot.cpp
 	boot_screen.cpp
 	boot_tasks.cpp
@@ -636,23 +643,30 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/picture_file_creator/picture_encoder.cpp
 	src/photo_export/photo_export_convert.cpp
 	${PSP2_SRC}/sys/sdk/target/src/sha1/libsha1.c
+	${PSP2_SRC}/sys/internal/kernel/src/sysmem/sha1_transform.S
 	src/dbsetup/dbrecovery_notify.cpp
 	src/livespace_db/addcont_emu_util.cpp
+	src/livespace_db/theme_param.cpp
 	src/remotedownload/remote_download_lib.cpp
 	src/liblocation/src/location_service/gps_emulator.cpp
 	console_info/console_info_store.cpp
 	${PSP2_SRC}/sys/internal/kernel/src/gcauthmgr/rsa_verify.c
 	${PSP2_SRC}/sys/internal/kernel/src/gcauthmgr/rsa_digest.c
 	${PSP2_SRC}/sys/internal/driver/src/marlin_hci/rsa_exponent.c
+	${PSP2_SRC}/sys/internal/driver/src/marlin_hci/rsa_public_operation.c
 	${PSP2_SRC}/sys/internal/driver/src/marlin_hci/rsa_montgomery.c
 	${PSP2_SRC}/sys/internal/driver/src/marlin_hci/rsa_integer_arithmetic.c
 	${PSP2_SRC}/sys/internal/driver/src/marlin_hci/rsa_integer_multiply.c
 	${PSP2_SRC}/sys/internal/driver/src/marlin_hci/rsa_integer_remainder.c
 	${PSP2_SRC}/sys/internal/driver/src/marlin_hci/rsa_integer_square.c
+	${PSP2_SRC}/sys/internal/driver/src/marlin_hci/rsa_integer_tail.c
+	${PSP2_SRC}/sys/internal/usermode/src/updater_core/updater_core.cpp
+	${PSP2_SRC}/sys/internal/usermode/src/updater_core/partition_manager.cpp
 	${PSP2_SRC}/sys/internal/usermode/src/updater_core/pup_controller.cpp
 	${PSP2_SRC}/sys/internal/usermode/src/updater_core/update_utility.cpp
 	${PSP2_SRC}/sys/internal/usermode/src/updater_core/segment_analysis.cpp
 	${PSP2_SRC}/sys/sdk/target/src/sha256/libsha256.c
+	${PSP2_SRC}/sys/sdk/target/src/sha256/sha256.S
 	${PSP2_SRC}/sys/sdk/target/src/hmac/libhmac.c
 	${PSP2_SRC}/sys/sdk/target/src/hmac/sha1.c
 	${PSP2_SRC}/sys/sdk/target/src/hmac/sha256.c
@@ -733,11 +747,14 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	ex_sound_out_mgr.cpp
 	${PSP2_SRC}/sys/sdk/target/src/mt19937/libmt19937.c
 	${PSP2_SRC}/sys/sdk/target/src/mt19937/mtrand.S
+	${PSP2_SRC}/sys/sdk/target/src/sfmt19937/sfmt19937.c
 	${PSP2_SRC}/sys/sdk/target/src/md5/libmd5.c
+	${PSP2_SRC}/sys/sdk/target/src/md5/md5.S
 	${PSP2_SRC}/sys/internal/usermode/src/ces/libces/src/ces_context.c
 	${PSP2_SRC}/sys/internal/usermode/src/ces/libces/src/UCS/ces_ucs_context.c
 	${PSP2_SRC}/sys/internal/usermode/src/ces/libces/src/UCS/ces_ucs_callback.c
 	${PSP2_SRC}/sys/internal/usermode/src/ces/libces/src/UCS/Str_UTF8_UCS2.c
+	${PSP2_SRC}/sys/internal/usermode/src/ces/libces/src/UCS/Str_UTF8_UTF16.c
 	${PSP2_SRC}/sys/internal/usermode/src/ces/libces/src/UCS/Str_UTF16_UTF8.c
 	${PSP2_SRC}/sys/internal/usermode/src/ces/libces/src/UCS/UTF8.c
 	${PSP2_SRC}/sys/internal/usermode/src/ces/libces/src/UCS/UTF16.c
@@ -745,9 +762,22 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	${PSP2_SRC}/sys/internal/usermode/src/ces/libces/src/UCS/UTF16BE.c
 	${PSP2_SRC}/sys/internal/usermode/src/ces/libces/src/UCS/UTF16BE_UTF8.c
 	${PSP2_SRC}/sys/internal/usermode/src/ces/libces/src/UCS/UTF32_UTF8.c
-	shell.c
+	${PSP2_SRC}/sys/sdk/target/src/libsnc/i32ops.c
+	${PSP2_SRC}/sys/sdk/target/src/libsnc/i64ops.c
+	${PSP2_SRC}/sys/sdk/target/src/libsnc/i64mod.c
+	${PSP2_SRC}/sys/sdk/target/src/libsnc/i64shr.c
+	${PSP2_SRC}/sys/sdk/target/src/libsnc/unwind_pr0.c
+	${PSP2_SRC}/sys/sdk/target/src/libsnc/unwind_pr1.c
+	${PSP2_SRC}/sys/sdk/target/src/libsnc/weak_calls.c
+	${PSP2_SRC}/sys/sdk/target/src/libSceSblSsUpdateMgr_stub/update_mgr_stub.c
+	${PSP2_SRC}/sys/sdk/target/src/libSceVshBridge_stub/vshbridge_stub.c
+	${PSP2_SRC}/sys/sdk/target/src/libSceVshBridge_stub/vshbridge_io_stub.c
+	${PSP2_SRC}/sys/sdk/target/src/libSceVshBridge_stub/vshbridge_nvs_stub.c
+	vshbridge_wrappers.c
 )
-target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
+target_link_options(vs0_vsh_shell_shell PRIVATE -Wl,--gc-sections)
+target_include_directories(vs0_vsh_shell_shell BEFORE PRIVATE "${PSP2_SRC}/vsh/paf/include")
+target_include_directories(vs0_vsh_shell_shell PRIVATE
 	"${PSP2_SRC}/vsh/paf" "${PSP2_SRC}/contrib/sqlite-3.7.6.3" "${PSP2_SRC}/vsh/app/common/src"
 	"${PSP2_SRC}/sys/internal/usermode/src" "${PSP2_SRC}/vsh/lowlayer/src")
 include("${PSP2_SRC}/vsh/paf/cg/cg.cmake")
@@ -772,19 +802,40 @@ set_source_files_properties(
 	${PSP2_SRC}/sys/internal/kernel/src/gcauthmgr/rsa_verify.c
 	${PSP2_SRC}/sys/internal/kernel/src/gcauthmgr/rsa_digest.c
 	${PSP2_SRC}/sys/internal/driver/src/marlin_hci/rsa_exponent.c
-	PROPERTIES COMPILE_DEFINITIONS "_Static_assert(c,m)=")
-# SDK AES and MT19937 libraries (handwritten Thumb-2 assembly in aes.S / mtrand.S)
+	${PSP2_SRC}/sys/internal/driver/src/marlin_hci/rsa_public_operation.c
+	PROPERTIES COMPILE_OPTIONS "-include;${CMAKE_CURRENT_SOURCE_DIR}/src/fsutil/rsa_snc_compat.h")
+# SDK AES, SHA1, SHA256, MD5, and MT19937 libraries (built with GCC 4.8 and GNU AS)
 set_source_files_properties(
 	${PSP2_SRC}/sys/sdk/target/src/aes/libaes.c
 	${PSP2_SRC}/sys/sdk/target/src/mt19937/libmt19937.c
+	${PSP2_SRC}/sys/sdk/target/src/sha1/libsha1.c
+	${PSP2_SRC}/sys/sdk/target/src/sha256/libsha256.c
 	PROPERTIES COMPILE_DEFINITIONS PSP2_COMPILER_GCC48
 	COMPILE_OPTIONS "-fno-stack-protector;-fno-toplevel-reorder;-ffunction-sections")
 set_source_files_properties(
 	${PSP2_SRC}/sys/sdk/target/src/aes/aes.S
 	${PSP2_SRC}/sys/sdk/target/src/mt19937/mtrand.S
+	${PSP2_SRC}/sys/sdk/target/src/md5/md5.S
+	${PSP2_SRC}/sys/internal/kernel/src/sysmem/sha1_transform.S
+	${PSP2_SRC}/sys/sdk/target/src/sha256/sha256.S
 	PROPERTIES COMPILE_DEFINITIONS PSP2_COMPILER_GCC48)
+# updater_core sources: use sceClibMemcpy_safe and strip unused functions (such as sceUpdaterInitialize)
+set_source_files_properties(
+	${PSP2_SRC}/sys/internal/usermode/src/updater_core/updater_core.cpp
+	${PSP2_SRC}/sys/internal/usermode/src/updater_core/partition_manager.cpp
+	${PSP2_SRC}/sys/internal/usermode/src/updater_core/pup_controller.cpp
+	${PSP2_SRC}/sys/internal/usermode/src/updater_core/update_utility.cpp
+	${PSP2_SRC}/sys/internal/usermode/src/updater_core/segment_analysis.cpp
+	PROPERTIES COMPILE_DEFINITIONS "PSP2_STRIP_UNUSED;sceClibMemcpy=sceClibMemcpy_safe")
 # User-mode build of appmgr FAT/exFAT formatter
 set_source_files_properties(
 	${PSP2_SRC}/sys/internal/kernel/src/appmgr/fat_format.c
 	${PSP2_SRC}/sys/internal/kernel/src/appmgr/fat_format_storage.c
 	PROPERTIES COMPILE_OPTIONS "-include;${CMAKE_CURRENT_SOURCE_DIR}/src/fsutil/fat_format_user_compat.h")
+# Shared stubs/sources whose user-mode import names differ in SceShell
+set_source_files_properties(
+	${PSP2_SRC}/sys/sdk/target/src/libSceSblSsUpdateMgr_stub/update_mgr_stub.c
+	PROPERTIES COMPILE_DEFINITIONS "sceClibMemcpy=sceClibMemcpy_safe")
+set_source_files_properties(
+	src/livespace_db/addcont_emu_util.cpp
+	PROPERTIES COMPILE_DEFINITIONS "sceRegMgrGetKeyIntForUser=sceRegMgrGetKeyInt")

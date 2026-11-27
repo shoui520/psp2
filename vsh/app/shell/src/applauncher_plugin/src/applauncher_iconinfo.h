@@ -63,7 +63,7 @@ public:
  */
 class ApplauncherIconInfoSizeItem : public paf::ui::ListItem {
 public:
-	ApplauncherIconInfoSizeItem(const paf::string &titleId, paf::ui::Widget *parent, int unknown,
+	ApplauncherIconInfoSizeItem(const paf::string &titleId, paf::ui::Widget *parent, int storage,
 				    int appType, bool hasAppSize, SceUInt64 appSize,
 				    paf::ui::ListItem::CreateParam *param);
 	virtual ~ApplauncherIconInfoSizeItem();
@@ -77,7 +77,7 @@ public:
 	int m_dots;				/* the dots the value shows */
 	int m_reserved;				/* PLACEHOLDER: -1 from the constructor, not read */
 	unsigned int m_label;
-	int m_unknown;				/* PLACEHOLDER: 1 shows the size not known */
+	int m_storage;				/* 1: game card storage, shows size unavailable */
 	int m_appType;				/* the application's _apptype */
 	bool m_hasAppSize;			/* the application has a #appsize */
 	SceUInt64 m_appSize;			/* its #appsize */
@@ -204,8 +204,8 @@ public:
 
 	paf::ui::Widget *m_view;
 	paf::common::SharedPtr<paf::job::JobItem> m_job;	/* cancelled when it is destroyed */
-	SceUInt64 m_unknown;		/* PLACEHOLDER: 0 from the constructor, not read */
-	int m_unknown2;			/* PLACEHOLDER: 0 from the constructor, not read */
+	SceUInt64 m_unusedAppSize;	/* 0 from the constructor, never read */
+	int m_unusedStorage;		/* 0 from the constructor, never read */
 	int reserved;			/* nothing in the shell reads or writes it */
 	GameLicenseStatus *m_license;
 	GameFttInfo *m_ftt;

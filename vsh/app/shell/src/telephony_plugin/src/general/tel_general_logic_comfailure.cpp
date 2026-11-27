@@ -7,7 +7,7 @@
 #include "tel_general_internal.h"
 
 extern "C" {
-SceInt64 sceKernelGetSystemTimeWideForUser(void);
+SceInt64 sceKernelGetSystemTimeWide(void);
 }
 
 namespace telephony {
@@ -43,7 +43,7 @@ TelephonyResult TelGeneralComFailureCounter::RecordFailure(int reasonCode)
 {
 	m_failureCodes.push_back(reasonCode);
 
-	SceUInt64 nowUsec = (SceUInt64)sceKernelGetSystemTimeWideForUser();
+	SceUInt64 nowUsec = (SceUInt64)sceKernelGetSystemTimeWide();
 	if (m_windowStartUsec != 0 && (nowUsec - m_windowStartUsec) <= m_windowUsec) {
 		if (m_failureCodes.size() >= m_maxFailures)
 			m_thresholdExceeded = true;

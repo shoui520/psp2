@@ -33,22 +33,26 @@
 
 using namespace paf;
 
+ConsoleInfoCiKey::~ConsoleInfoCiKey()
+{
+}
+
 /* SceCompat's list of the PSP titles played (sceCompatGetTitleList's user call) */
 extern "C" int SceCompatForVsh_4915DEE7(void *buf, SceSize length);
 
 /* PLACEHOLDER: an NP account signed in on the console, in *signedIn */
-extern "C" int SceNpManagerSP_7C78A608(int *signedIn);
+extern "C" int SceNpManager_BF8921C8(int *signedIn);
 
 /* PLACEHOLDER: libmtp's count of the console's connections, in *count */
 extern "C" int SceLibMtp_8E76FE4D(int *count);
 
 /* syscon's log: an entry read (0x81417CBC, placed with the code the build shares, over
    _vshSysconLogReadData) */
-int vshSysconLogReadData(int id, void *buf, SceSize size);
+extern "C" int vshSysconLogReadData(int id, void *buf, SceSize size);
 
 /* syscon's temperature log read (0x81417CD0, placed with the code the build shares, over
    _vshSysconGetTemperatureLog) */
-int vshSysconGetTemperatureLog(SceUInt8 *log);
+extern "C" int vshSysconGetTemperatureLog(SceUInt8 *log);
 
 /* PLACEHOLDER: libnetctl's NAT information in its 0x28-byte form (netctl.c) */
 extern "C" int SceNetCtl_F30365D6(SceSize *info);
@@ -766,6 +770,7 @@ static int consoleInfoCiGetLiveAreaAccess(ConsoleInfoCiStringField *field,
 	}
 
 	int count = 0;
+	bool ok = true;
 
 	for (int i = 0; i < CONSOLE_INFO_CI_ACCESS_TITLES; i++) {
 		char titleId[10];
@@ -782,28 +787,30 @@ static int consoleInfoCiGetLiveAreaAccess(ConsoleInfoCiStringField *field,
 		}
 		if (ret != sizeof(titleId)) {
 			if (ret != 0)
-				goto error;
+				ok = false;
 			break;
 		}
 		if (access.size() != 0)
 			access.append(1, ',');
 		access += titleId;
 		ret = file->Read(&count, sizeof(count));
-		if (ret != sizeof(count))
-			goto error;
+		if (ret != sizeof(count)) {
+			ok = false;
+			break;
+		}
 		if (count > CONSOLE_INFO_CI_ACCESS_MAX)
 			count = CONSOLE_INFO_CI_ACCESS_MAX;
 		ret = sce_paf_snprintf(number, sizeof(number), "%d", count);
-		if (ret < 0)
-			goto error;
+		if (ret < 0) {
+			ok = false;
+			break;
+		}
 		if (access.size() != 0)
 			access.append(1, ',');
 		access += number;
 	}
-	goto done;
-error:
-	access.clear();
-done:
+	if (!ok)
+		access.clear();
 	sce_paf_strncpy(value->text, access.c_str(), access.size());
 	sce_paf_memset(&value->text[access.size()], 0, 1);
 	value->length = access.size();
@@ -951,7 +958,7 @@ static int consoleInfoCiGetNpSignedIn(ConsoleInfoCiIntField *field, int *value)
 
 	*value = 0;
 	signedIn = 0;
-	if (SceNpManagerSP_7C78A608(&signedIn) == 0 && signedIn != 0)
+	if (SceNpManager_BF8921C8(&signedIn) == 0 && signedIn != 0)
 		*value = 1;
 	return 0;
 }

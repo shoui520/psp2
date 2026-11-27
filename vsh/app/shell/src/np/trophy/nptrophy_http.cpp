@@ -667,7 +667,7 @@ int TrophyHttpStream::Read(TrophyHandle *handle, void *outBuf, SceSize size, Sce
 		return NP_TROPHY_ERR_HTTP_BAD_ARGUMENT;
 
 	if (m_hasPeekByte != 0) {
-		sceClibMemcpy(outBuf, &m_peekByte, 1);
+		sceClibMemcpy_safe(outBuf, &m_peekByte, 1);
 		*outRead = 1;
 		--m_hasPeekByte;
 		return 0;
@@ -949,7 +949,7 @@ int TrophyAesCbcDecryptStream::DecryptBlocks(uint8_t *outBuf, SceSize maxBytes,
 			return ret;
 
 		const uint8_t *ivBytes = m_readBuf.GetCursor();
-		sceClibMemcpy(m_cbcChain, ivBytes, 16);
+		sceClibMemcpy_safe(m_cbcChain, ivBytes, 16);
 		m_readBuf.Consume(16);
 		avail = m_readBuf.GetAvailable();
 		m_ivLoaded = 1;

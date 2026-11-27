@@ -5,6 +5,7 @@
  */
 
 #include <kernel.h>
+#include <std/new>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -286,6 +287,12 @@ public:
     int requestSetSpeed(int playSpeed);
     int requestQueryMetadata(void *metaOut);
     int requestGetPosition();
+
+    ParserFilter *getParser() const { return m_parser; }
+    BufRefPipe *getPipe() const { return m_pipe; }
+    DecoderFilter *getDecoder() const { return m_decoder; }
+    AudioOutputSink *getAudioSink() const { return m_audioSink; }
+    void setCallback(PipelineEventCallback *callback) { m_callback = callback; }
 
     virtual void onFilterEvent(int eventKind, void *sourceFilter, int statusCode);
     virtual void onPlaybackProgress(int positionMs);
@@ -1203,6 +1210,99 @@ void DecoderPipeline::onPlaybackProgress(int positionMs)
         speedMode = (speed > 0) ? 3 : 4;
     }
     m_callback->onProgress(positionMs, speedMode);
+}
+
+/* Forwarded C-style pipeline & decoder instance bridges */
+struct PipelineEventListener;
+struct ParserFilterBase;
+struct DecoderFilterBase;
+struct AudioOutputFilter;
+struct PipeInterface;
+struct DecoderInstance;
+struct MediaInfoBase;
+
+void *constructDecoderPipeline(void *mem, int pipelineKind, int codecType,
+                               void *factory, void *audioOut)
+{
+    return new (mem) DecoderPipeline(
+        reinterpret_cast<ParserFilter *>(pipelineKind),
+        reinterpret_cast<BufRefPipe *>(codecType),
+        static_cast<DecoderFilter *>(factory),
+        static_cast<AudioOutputSink *>(audioOut));
+}
+
+int decoderPipelineIsReady(const PipelineEventListener *pipeline)
+{
+    const DecoderPipeline *dp = reinterpret_cast<const DecoderPipeline *>(pipeline);
+    return (dp != NULL && dp->isReady()) ? 1 : 0;
+}
+
+ParserFilterBase *decoderPipelineGetParser(PipelineEventListener *pipeline)
+{
+    DecoderPipeline *dp = reinterpret_cast<DecoderPipeline *>(pipeline);
+    return (dp != NULL) ? reinterpret_cast<ParserFilterBase *>(dp->getParser()) : NULL;
+}
+
+DecoderFilterBase *decoderPipelineGetDecoder(PipelineEventListener *pipeline)
+{
+    DecoderPipeline *dp = reinterpret_cast<DecoderPipeline *>(pipeline);
+    return (dp != NULL) ? reinterpret_cast<DecoderFilterBase *>(dp->getDecoder()) : NULL;
+}
+
+AudioOutputFilter *decoderPipelineGetAudio(PipelineEventListener *pipeline)
+{
+    DecoderPipeline *dp = reinterpret_cast<DecoderPipeline *>(pipeline);
+    return (dp != NULL) ? reinterpret_cast<AudioOutputFilter *>(dp->getAudioSink()) : NULL;
+}
+
+PipeInterface *decoderPipelineGetPipe(PipelineEventListener *pipeline)
+{
+    DecoderPipeline *dp = reinterpret_cast<DecoderPipeline *>(pipeline);
+    return (dp != NULL) ? reinterpret_cast<PipeInterface *>(dp->getPipe()) : NULL;
+}
+
+unsigned int decoderRequestStart(DecoderInstance *decoder, MediaInfoBase *mediaInfo,
+                                 int startMs, int endMs, int playSpeed)
+{
+    DecoderPipeline *dp = reinterpret_cast<DecoderPipeline *>(decoder);
+    return (dp != NULL) ? static_cast<unsigned int>(dp->requestStart(mediaInfo, startMs, endMs, playSpeed)) : 0x8FFF0002u;
+}
+
+unsigned int decoderRequestStop(DecoderInstance *decoder)
+{
+    DecoderPipeline *dp = reinterpret_cast<DecoderPipeline *>(decoder);
+    return (dp != NULL) ? static_cast<unsigned int>(dp->requestStop()) : 0x8FFF0002u;
+}
+
+unsigned int decoderRequestPause(DecoderInstance *decoder)
+{
+    DecoderPipeline *dp = reinterpret_cast<DecoderPipeline *>(decoder);
+    return (dp != NULL) ? static_cast<unsigned int>(dp->requestSetSpeed(0)) : 0x8FFF0002u;
+}
+
+unsigned int decoderRequestSeek(DecoderInstance *decoder, int posMs)
+{
+    DecoderPipeline *dp = reinterpret_cast<DecoderPipeline *>(decoder);
+    return (dp != NULL) ? static_cast<unsigned int>(dp->requestSetSpeed(posMs)) : 0x8FFF0002u;
+}
+
+unsigned int decoderRequestPosition(DecoderInstance *decoder)
+{
+    DecoderPipeline *dp = reinterpret_cast<DecoderPipeline *>(decoder);
+    return (dp != NULL) ? static_cast<unsigned int>(dp->requestGetPosition()) : 0x8FFF0002u;
+}
+
+void *decoderGetParserAdapter(DecoderInstance *decoder)
+{
+    DecoderPipeline *dp = reinterpret_cast<DecoderPipeline *>(decoder);
+    return (dp != NULL) ? static_cast<void *>(dp->getParser()) : NULL;
+}
+
+void decoderSetListener(DecoderInstance *decoder, void *listener)
+{
+    DecoderPipeline *dp = reinterpret_cast<DecoderPipeline *>(decoder);
+    if (dp != NULL)
+        dp->setCallback(static_cast<PipelineEventCallback *>(listener));
 }
 
 } /* namespace MusicCore */

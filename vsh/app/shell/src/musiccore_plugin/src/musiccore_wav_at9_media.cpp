@@ -928,5 +928,52 @@ int At9MediaInfo::parseMetadata(TrackMetadataResult *outMeta, int loopCount)
     return status;
 }
 
+void *wavMediaInfoConstruct(void *mem, const char *path)
+{
+    return new (mem) WavMediaInfo(path);
+}
+
+int wavCacheScanChunks(WavCacheIo *io, uint8_t targetMask)
+{
+    return (io != NULL) ? io->scanChunks(targetMask) : -1;
+}
+
+int wavCacheReadFmtHeader(WavCacheIo *io, WavFmtHeader *outFmt)
+{
+    return (io != NULL) ? io->readFmtHeader(outFmt) : -1;
+}
+
+int wavCacheReadDataRange(WavCacheIo *io, uint32_t offset, uint32_t size,
+                          void **outPtr, uint32_t *outSize)
+{
+    return (io != NULL) ? io->readDataRange(offset, size, outPtr, outSize) : -1;
+}
+
+int wavCacheReadDataRange(void *io, uint32_t offset, uint32_t size,
+                          void **outPtr, uint32_t *outSize)
+{
+    return wavCacheReadDataRange(static_cast<WavCacheIo *>(io), offset, size, outPtr, outSize);
+}
+
+void *at9MediaInfoConstruct(void *mem, const char *path, int loopMode)
+{
+    return new (mem) At9MediaInfo(path, loopMode);
+}
+
+int at9CacheScanChunks(At9CacheIo *io, uint8_t targetMask)
+{
+    return (io != NULL) ? io->scanChunks(targetMask) : -1;
+}
+
+int at9CacheReadFmtHeader(At9CacheIo *io, At9FmtHeader *outFmt)
+{
+    return (io != NULL) ? io->readFmtHeader(outFmt) : -1;
+}
+
+int at9CacheReadSmplLoop(At9CacheIo *io, At9SmplLoopInfo *outLoop)
+{
+    return (io != NULL) ? io->readSmplLoop(outLoop) : -1;
+}
+
 } /* namespace MusicCore */
 } /* namespace sce */

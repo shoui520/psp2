@@ -123,11 +123,11 @@ using namespace paf;
 #define PSMENU_BRIGHTNESS_STEPS		65515
 #define PSMENU_BRIGHTNESS_KEY_STEP	4094
 
-/* PLACEHOLDER names: the parental play time (0x81232FA6, 0x812327F8: the seconds left, -1
-   without a limit) and a function the PS TV's button calls (0x8124A6E2), in the shell's code */
-int Shell_81232FA6(void);
-int Shell_812327F8(void);
-int Shell_8124A6E2(int arg1, int arg2);
+namespace IPMI { class Session; }
+struct ParentalControlMgr;
+ParentalControlMgr *shellParentalControlMgrGetInstance(void);
+int parentalGetRemainingSec(void);
+int shellShutdownRequest(IPMI::Session *session, int flags);
 
 /* (0x81564DC0) */
 ImposePsMenu *g_imposePsMenu;
@@ -508,10 +508,10 @@ void ImposePsMenu::UpdatePlayTime()
 {
 	ui::Widget *text = PSMENU_FIND(m_page, ui::Text, PSMENU_TIME_TEXT);
 
-	if (text == NULL || Shell_81232FA6() == 0)
+	if (text == NULL || shellParentalControlMgrGetInstance() == NULL)
 		return;
 
-	int seconds = Shell_812327F8();
+	int seconds = parentalGetRemainingSec();
 	char buf[32] = { 0 };
 	int minutes = (int)sce_paf_ceilf((float)seconds / 60.0f);
 	int hours = minutes / 60;
@@ -563,7 +563,7 @@ void ImposePsMenu::UpdatePlayTime()
 /* there is no limit, or time is left of it (0x8114C440) */
 static __attribute__((noinline)) bool imposePsMenuHasPlayTime(void)
 {
-	return Shell_81232FA6() == 0 || Shell_812327F8() != -1;
+	return shellParentalControlMgrGetInstance() == NULL || parentalGetRemainingSec() != -1;
 }
 
 static void imposePsMenuOnClose(int32_t type, ui::Handler *self, ui::Event *e, void *data);
@@ -592,7 +592,7 @@ inline void imposePsMenuOnPowerButton(int32_t type, ui::Handler *self, ui::Event
 /* the PS TV's other button (inline, 0x8141A8D0) */
 inline void imposePsMenuOnOtherButton(int32_t type, ui::Handler *self, ui::Event *e, void *data)
 {
-	Shell_8124A6E2(0, 0);
+	shellShutdownRequest(NULL, 0);
 }
 
 /* the touch emulation's check box (inline, 0x8141A8DC) */
@@ -671,7 +671,7 @@ void ImposePsMenu::Open()
 	if (imposePsMenuHasPlayTime()) {
 		m_plugin->TemplateOpen(box, IDParam(PSMENU_TIME_TEMPLATE),
 				       Plugin::TemplateOpenParam());
-		if (Shell_81232FA6() == 0) {
+		if (shellParentalControlMgrGetInstance() == NULL) {
 			ui::Widget *panel = m_page->FindChild(IDParam(PSMENU_TIME_PANEL), 0);
 			math::v4 size = *panel->GetSize(0);
 
@@ -907,7 +907,7 @@ static void imposePsMenuOnInterval(int32_t type, ui::Handler *self, ui::Event *e
 	menu->m_wireless.Update();
 	menu->m_controller.Update();
 	menu->m_bgm.Update();
-	if (Shell_81232FA6() == 0 || Shell_812327F8() != -1)
+	if (shellParentalControlMgrGetInstance() == NULL || parentalGetRemainingSec() != -1)
 		menu->UpdatePlayTime();
 	menu->UpdateAudioButtons();
 }
@@ -1013,7 +1013,7 @@ void ImposePsMenu::ShowTouchEmulationHelp()
 	g_imposeNotification->MakeSpaceIfUsed();
 	m_helpDialog = -1;
 
-	CommonGuiListDialogParam param;
+	CommonGuiListDialogParam param(true);
 
 	param.resourcePlugin = m_plugin;
 	param.priority = 7;
@@ -1133,7 +1133,7 @@ void ImposePsMenu::ShowPrioritizeInfo()
 {
 	m_prioritizeDialog = -1;
 
-	CommonGuiListDialogParam param;
+	CommonGuiListDialogParam param(true);
 
 	param.resourcePlugin = m_plugin;
 	param.priority = 7;

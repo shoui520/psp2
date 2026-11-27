@@ -433,7 +433,7 @@ TopmenuWhatsNewMgr::TopmenuWhatsNewMgr()
 	m_activeJob = job;
 
 	int showOperatorInfo = 0;
-	if (sceRegMgrGetKeyIntForUser("/CONFIG/TEL", "show_operator_info", &showOperatorInfo) == 0 &&
+	if (sceRegMgrGetKeyInt("/CONFIG/TEL", "show_operator_info", &showOperatorInfo) == 0 &&
 	    showOperatorInfo == 0) {
 		m_enabled = false;
 	}
@@ -453,6 +453,20 @@ TopmenuWhatsNewMgr::~TopmenuWhatsNewMgr()
 	paf::GraphMem::FreeOSMemory((paf::GraphMem::DeviceType)memType, m_surfaceMem);
 }
 
+static bool isWidgetAnimRunning(paf::ui::Widget *widget, int32_t animId)
+{
+	while (widget != NULL) {
+		for (paf::map<int32_t, paf::ui::AnimQueue *>::iterator it =
+			     widget->m_anims.begin();
+		     it != widget->m_anims.end(); ++it) {
+			if ((it->first & 0xFFFFFF) == animId && it->second != NULL)
+				return true;
+		}
+		widget = widget->m_parent;
+	}
+	return false;
+}
+
 /* 0x812836B0 */
 void TopmenuWhatsNewMgr::Show()
 {
@@ -460,14 +474,14 @@ void TopmenuWhatsNewMgr::Show()
 		return;
 
 	consoleInfoFileAddInt(21, 1, 0);
-	m_showStartTimeUs = sceKernelGetSystemTimeWideForUser();
+	m_showStartTimeUs = sceKernelGetSystemTimeWide();
 
 	if (m_panelWidget != NULL) {
 		if (!m_panelWidget->m_transition_complete ||
 		    m_panelWidget->m_meta_alpha < 0.95f ||
-		    m_panelWidget->IsAnimRunning(0x10000) ||
-		    m_panelWidget->IsAnimRunning(0x10004) ||
-		    m_panelWidget->IsAnimRunning(0x10002)) {
+		    isWidgetAnimRunning(m_panelWidget, 0x10000) ||
+		    isWidgetAnimRunning(m_panelWidget, 0x10004) ||
+		    isWidgetAnimRunning(m_panelWidget, 0x10002)) {
 			showWidgetWithTimer(m_panelWidget,
 					    createWhatsNewTimer(300.0f, paf::Timer::FUNC_QUAD_OUT));
 			m_panelWidget->SetPos(
@@ -526,7 +540,7 @@ void TopmenuWhatsNewMgr::Hide()
 		createWhatsNewTimer(300.0f, paf::Timer::FUNC_CUBIC_IN),
 		0, 0.0f, 2, NULL, NULL);
 
-	SceUInt64 nowUs = sceKernelGetSystemTimeWideForUser();
+	SceUInt64 nowUs = sceKernelGetSystemTimeWide();
 	consoleInfoFileAddTime(3, nowUs - m_showStartTimeUs);
 	m_showStartTimeUs = 0;
 }

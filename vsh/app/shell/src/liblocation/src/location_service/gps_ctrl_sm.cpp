@@ -7,15 +7,15 @@
 #include <std/string.h>
 
 extern "C" {
-SceUInt64 sceRtcGetAccumulativeTimeForUser(void);
+SceUInt64 sceRtcGetAccumulativeTime(void);
+int _sceGpsOpen(SceUID cbId);
+int _sceGpsClose(void);
+int _sceGpsStart(int mode);
+int _sceGpsStop(void);
+int _sceGpsResumeCallback(void);
+int _sceGpsGetState(int *outStatus);
 }
 
-extern int gpsDrvOpen(SceUID cbId);				/* 0x8144FDA4 */
-extern int gpsDrvClose(void);					/* 0x8144FDAC */
-extern int gpsDrvStart(int mode);				/* 0x8144FDB4 */
-extern int gpsDrvStop(void);					/* 0x8144FDBC */
-extern int gpsDrvAckEvent(void);				/* 0x8144FDE0 */
-extern int gpsDrvGetStatus(int *outStatus);			/* 0x8144FDE8 */
 extern int gpsCtrlCallbackEntry(int notifyId, int notifyCount, int notifyArg, void *common); /* 0x8141F7D4 */
 
 class GpsCtrlStateClosed : public GpsCtrlState {
@@ -151,7 +151,7 @@ int GpsCtrlStateMachine::InitState()
 int GpsCtrlEventOpen::Dispatch(GpsCtrlState *state, GpsCtrlStateMachine *sm)
 {
 	(void)state;
-	int ret = gpsDrvOpen(m_cbId);
+	int ret = _sceGpsOpen(m_cbId);
 	if (ret == 0)
 		sm->ChangeState(GPS_CTRL_STATE_OPENED);
 	return ret;
@@ -161,7 +161,7 @@ int GpsCtrlEventOpen::Dispatch(GpsCtrlState *state, GpsCtrlStateMachine *sm)
 int GpsCtrlEventStart::Dispatch(GpsCtrlState *state, GpsCtrlStateMachine *sm)
 {
 	(void)state;
-	int ret = gpsDrvStart(m_mode);
+	int ret = _sceGpsStart(m_mode);
 	if (ret == 0)
 		sm->ChangeState(GPS_CTRL_STATE_START_REQ);
 	return ret;
@@ -182,7 +182,7 @@ int GpsCtrlEventStartResult::Dispatch(GpsCtrlState *state, GpsCtrlStateMachine *
 int GpsCtrlEventStop::Dispatch(GpsCtrlState *state, GpsCtrlStateMachine *sm)
 {
 	(void)state;
-	int ret = gpsDrvStop();
+	int ret = _sceGpsStop();
 	if (ret == 0)
 		sm->ChangeState(GPS_CTRL_STATE_STOP_REQ);
 	else if (ret == (int)0x80390002 || ret == (int)0x80390004)
@@ -205,7 +205,7 @@ int GpsCtrlEventStopResult::Dispatch(GpsCtrlState *state, GpsCtrlStateMachine *s
 int GpsCtrlEventClose::Dispatch(GpsCtrlState *state, GpsCtrlStateMachine *sm)
 {
 	(void)state;
-	int ret = gpsDrvClose();
+	int ret = _sceGpsClose();
 	if (ret == 0 || ret == (int)0x80390002 || ret == (int)0x80390004)
 		sm->ChangeState(GPS_CTRL_STATE_CLOSED);
 	return ret;
@@ -216,7 +216,7 @@ int GpsCtrlEventCheckStatus::Dispatch(GpsCtrlState *state, GpsCtrlStateMachine *
 {
 	(void)state;
 	int status = 0;
-	int ret = gpsDrvGetStatus(&status);
+	int ret = _sceGpsGetState(&status);
 	if (ret == (int)0x80390002 || status == 1 || status == 2)
 		sm->ChangeState(GPS_CTRL_STATE_CLOSED);
 	return ret;
@@ -240,7 +240,7 @@ int GpsCtrlManager::CheckStatus()
 int GpsCtrlPollTask::OnNotify()
 {
 	if (m_gpsCtrl->m_sm.m_state->GetStateId() == GPS_CTRL_STATE_STARTED)
-		m_gpsCtrl->m_lastStartedTime = sceRtcGetAccumulativeTimeForUser();
+		m_gpsCtrl->m_lastStartedTime = sceRtcGetAccumulativeTime();
 
 	GpsCtrlEventCheckStatus ev;
 	if (sceKernelLockLwMutex(&m_gpsCtrl->m_sm.m_mutex, 1, NULL) == 0) {
@@ -441,6 +441,13 @@ int GpsCtrlManager::HandleGpsEvent(int notifyId, int notifyCount, int notifyArg)
 		if (uret != 0)
 			ret = uret;
 	}
-	gpsDrvAckEvent();
+	_sceGpsResumeCallback();
 	return ret;
+}
+
+/* 0x8141F7D4 */
+int gpsCtrlCallbackEntry(int notifyId, int notifyCount, int notifyArg, void *common)
+{
+	return static_cast<GpsCtrlManager *>(common)->HandleGpsEvent(
+		notifyId, notifyCount, notifyArg);
 }

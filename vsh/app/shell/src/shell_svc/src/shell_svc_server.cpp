@@ -102,9 +102,9 @@ extern int shellSvcDisp_14_Sync(IPMI::Session *, SceUInt32, const IPMI::DataInfo
 extern int shellSvcDisp_14_Async(IPMI::Session *, SceUInt32, SceUInt32, const IPMI::DataInfo *, SceUInt32);
 extern int shellSvcDisp_15_Sync(IPMI::Session *, SceUInt32, const IPMI::DataInfo *, SceUInt32, IPMI::BufferInfo *, SceUInt32);
 extern int shellSvcDisp_15_Async(IPMI::Session *, SceUInt32, SceUInt32, const IPMI::DataInfo *, SceUInt32);
-extern int shellSvcDisp_17_Sync(IPMI::Session *, SceUInt32, const IPMI::DataInfo *, SceUInt32, IPMI::BufferInfo *, SceUInt32);
-extern int shellSvcDisp_17_Async(IPMI::Session *, SceUInt32, SceUInt32, const IPMI::DataInfo *, SceUInt32);
-extern void shellSvcDisp_17_Disconn(IPMI::Session *);
+extern int shellIncomingDialogServerOnSyncMethod(IPMI::Session *, SceUInt32, const IPMI::DataInfo *, SceUInt32, IPMI::BufferInfo *, SceUInt32);
+extern int shellIncomingDialogServerOnAsyncMethod(IPMI::Session *, SceUInt32, SceUInt32, const IPMI::DataInfo *, SceUInt32);
+extern void shellIncomingDialogServerOnSessionClosed(IPMI::Session *);
 extern int shellSvcDisp_18_Sync(IPMI::Session *, SceUInt32, const IPMI::DataInfo *, SceUInt32, IPMI::BufferInfo *, SceUInt32);
 extern int shellSvcDisp_18_Async(IPMI::Session *, SceUInt32, SceUInt32, const IPMI::DataInfo *, SceUInt32);
 extern void shellSvcDisp_18_Disconn(IPMI::Session *);
@@ -138,7 +138,7 @@ static const ShellSvcDispatchEntry s_shellSvcDispatchTable[] = { /* 0x81511DDC *
 	{ 0x00130000, 0x0013FFFF, shellSvcDisp_13_Sync, shellSvcDisp_13_Async, shellSvcDisp_13_Disconn },
 	{ 0x00140000, 0x0014FFFF, shellSvcDisp_14_Sync, shellSvcDisp_14_Async, shellSvcNoopDisconn },
 	{ 0x00150000, 0x0015FFFF, shellSvcDisp_15_Sync, shellSvcDisp_15_Async, NULL },
-	{ 0x00170000, 0x0017FFFF, shellSvcDisp_17_Sync, shellSvcDisp_17_Async, shellSvcDisp_17_Disconn },
+	{ 0x00170000, 0x0017FFFF, shellIncomingDialogServerOnSyncMethod, shellIncomingDialogServerOnAsyncMethod, shellIncomingDialogServerOnSessionClosed },
 	{ 0x00180000, 0x0018FFFF, shellSvcDisp_18_Sync, shellSvcDisp_18_Async, shellSvcDisp_18_Disconn },
 	{ 0x00190000, 0x0019FFFF, shellSvcDisp_19_Sync, shellSvcDisp_19_Async, shellSvcDisp_19_Disconn },
 	{ 0x001A0000, 0x001AFFFF, shellSvcDisp_1A_Sync, shellSvcDisp_1A_Async, shellSvcNoopDisconn },

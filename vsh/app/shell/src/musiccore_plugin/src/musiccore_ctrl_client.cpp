@@ -10,11 +10,17 @@
 
 #include <thread/thread.h>
 
+#include <memory/heap_allocator.h>
+
 extern "C" {
 void *sce_paf_memset(void *dst, int val, size_t size);
 size_t sce_paf_strlen(const char *str);
-void *ScePafStdc_D00387E7(size_t size, void *heap);
 int sceKernelGetSystemTime(SceKernelSysClock *clock);
+}
+
+static inline void *musiccoreAllocFromPafHeap(size_t size, void *heap)
+{
+	return operator new(size, static_cast<paf::memory::HeapAllocator *>(heap));
 }
 
 static const int MUSICCORE_ERR_FAILED = -1879113726; /* 0x8FFF0002 */
@@ -497,7 +503,7 @@ int ctrlGetPlaybackStatus(unsigned char channelId, PlaybackStatusOut *outStatus,
                           void *outPos, void *outPosValid)
 {
     void *heap = getLocalHeap();
-    void *workBuf = ScePafStdc_D00387E7(2088, heap);
+    void *workBuf = musiccoreAllocFromPafHeap(2088, heap);
     if (workBuf == NULL)
         return MUSICCORE_ERR_NO_MEMORY;
 
@@ -601,3 +607,187 @@ int ctrlRefreshDbId(uint32_t param, unsigned char channelId, int unusedArg, uint
 
 } /* namespace MusicCore */
 } /* namespace sce */
+
+int musicCoreCtrlInit(void) { return sce::MusicCore::ctrlInit(); }
+int musicCoreCtrlFini(void) { return sce::MusicCore::ctrlTerm(); }
+
+int musicCoreCtrlOpenChannel(int seqId, SceUInt8 chType, int priority, SceUInt8 *outSlot)
+{
+    return sce::MusicCore::ctrlOpenSimple(static_cast<uint32_t>(seqId), chType, priority, outSlot);
+}
+
+int musicCoreCtrlOpenExChannel(int seqId, SceUInt8 chType, int priority, SceUInt8 *outSlot, void *param)
+{
+    return sce::MusicCore::ctrlOpenWithParams(
+        static_cast<uint32_t>(seqId), chType, priority, outSlot,
+        static_cast<const sce::MusicCore::OpenParams *>(param));
+}
+
+int musicCoreCtrlCloseChannel(int seqId)
+{
+    return sce::MusicCore::ctrlClose(static_cast<uint32_t>(seqId), 0, 0, 0);
+}
+
+int musicCoreCtrlSetActiveSlot(int seqId, SceUInt8 slot)
+{
+    return sce::MusicCore::ctrlReset(static_cast<uint32_t>(seqId), slot, 0, 0);
+}
+
+int musicCoreCtrlSetContent(int seqId)
+{
+    return sce::MusicCore::ctrlSetUriData(static_cast<uint32_t>(seqId), 0, NULL);
+}
+
+int musicCoreCtrlOpenUri(int seqId)
+{
+    return sce::MusicCore::ctrlSetUriString(static_cast<uint32_t>(seqId), 0, NULL);
+}
+
+int musicCoreCtrlResumeAudio(int flags, int mode)
+{
+    return sce::MusicCore::ctrlCancel(static_cast<uint32_t>(flags), static_cast<unsigned char>(mode), 0, 0);
+}
+
+int musicCoreCtrlPlay(int seqId, SceUInt8 slot, int param)
+{
+    (void)param;
+    return sce::MusicCore::ctrlPlay(static_cast<uint32_t>(seqId), slot);
+}
+
+int musicCoreCtrlPause(int seqId, SceUInt8 slot, int mode, int param)
+{
+    (void)mode;
+    (void)param;
+    return sce::MusicCore::ctrlPause(static_cast<uint32_t>(seqId), slot);
+}
+
+int musicCoreCtrlControl(int seqId)
+{
+    return sce::MusicCore::ctrlSeek(static_cast<uint32_t>(seqId), 0, NULL);
+}
+
+int musicCoreCtrlSetRepeat(int seqId)
+{
+    return sce::MusicCore::ctrlStop(static_cast<uint32_t>(seqId), 0);
+}
+
+int musicCoreCtrlSetShuffle(int seqId)
+{
+    return sce::MusicCore::ctrlFlush(static_cast<uint32_t>(seqId), 0, 0);
+}
+
+int musicCoreCtrlSetVolume(int seqId)
+{
+    return sce::MusicCore::ctrlSkipNext(static_cast<uint32_t>(seqId), 0);
+}
+
+int musicCoreCtrlSetEq(int seqId)
+{
+    return sce::MusicCore::ctrlSetEqualizer(static_cast<uint32_t>(seqId), 0, 0, 0, 0, 0);
+}
+
+int musicCoreCtrlSetAvls(int seqId)
+{
+    return sce::MusicCore::ctrlSetAudioNormalizer(static_cast<uint32_t>(seqId), 0);
+}
+
+int musicCoreCtrlSetStatusCb(int mode, void *cb)
+{
+    (void)cb;
+    return sce::MusicCore::ctrlSetIdleCallback(static_cast<uint32_t>(mode), 0, 0, 0);
+}
+
+int musicCoreCtrlSetCapCb(int mode, void *cb)
+{
+    (void)cb;
+    return sce::MusicCore::ctrlNotifySystemState(static_cast<uint32_t>(mode), 0, 0, 0);
+}
+
+int musicCoreCtrlSetMediaCb(int mode, void *cb)
+{
+    (void)cb;
+    return sce::MusicCore::ctrlSetStatusCallback(static_cast<uint32_t>(mode), 0, 0, 0);
+}
+
+int musicCoreCtrlSetNotifyCb(int mode, void *cb)
+{
+    (void)cb;
+    return sce::MusicCore::ctrlSetCapCallback(static_cast<uint32_t>(mode), 0, 0, 0);
+}
+
+int musicCoreCtrlSetTimeCb(int mode, void *cb, int interval)
+{
+    (void)cb;
+    (void)interval;
+    return sce::MusicCore::ctrlSetExtraCallback(static_cast<uint32_t>(mode));
+}
+
+int musicCoreCtrlSetExtraCb(int mode, void *cb)
+{
+    (void)cb;
+    return sce::MusicCore::ctrlSetMetadataCallback(static_cast<uint32_t>(mode), 0, 0, 0);
+}
+
+int musicCoreCtrlDbOpen(int seqId)
+{
+    return sce::MusicCore::ctrlDbOpen(static_cast<uint32_t>(seqId), 0, 0, 0);
+}
+
+int musicCoreCtrlDbSuspend(int seqId, int flag)
+{
+    return sce::MusicCore::ctrlDbSuspend(static_cast<uint32_t>(seqId), flag, 0, 0);
+}
+
+int musicCoreCtrlDbClose(int seqId)
+{
+    return sce::MusicCore::ctrlDbClose(static_cast<uint32_t>(seqId), 0, 0, 0);
+}
+
+int musicCoreCtrlDbQuery(int seqId, const void *buf, int mode, int opt)
+{
+    (void)buf;
+    (void)mode;
+    (void)opt;
+    return sce::MusicCore::ctrlDbQuery(static_cast<uint32_t>(seqId));
+}
+
+int musicCoreCtrlGetMeta(SceUInt8 ch, void *metaDesc)
+{
+    return sce::MusicCore::ctrlGetContentInfo(ch, static_cast<sce::MusicCore::ContentInfoBuffers *>(metaDesc));
+}
+
+int musicCoreCtrlGetSlotStatus(SceUInt8 slot, void *outRaw, int *outTime, SceUInt8 *outValid)
+{
+    return sce::MusicCore::ctrlGetPlaybackStatus(
+        slot, static_cast<sce::MusicCore::PlaybackStatusOut *>(outRaw), outTime, outValid);
+}
+
+int musicCoreCtrlGetSlotUri(SceUInt8 slot, int mode, int *outType, void *outUri, SceUInt8 *outValid)
+{
+    return sce::MusicCore::ctrlGetPlaybackMode(slot, mode, outType, outUri, outValid);
+}
+
+int musicCoreCtrlSetAvrcp(SceUInt8 enable, SceUInt8 *outPrev)
+{
+    return sce::MusicCore::ctrlGetState(enable, outPrev);
+}
+
+int musicCoreCtrlSuspendAudio(int flags, int mode)
+{
+    return sce::MusicCore::ctrlNotifyStatus(static_cast<uint32_t>(flags), static_cast<unsigned char>(mode), 0, 0);
+}
+
+int musicCoreCtrlSeek(void)
+{
+    return sce::MusicCore::ctrlSeekAndPlay(0, 0);
+}
+
+int musicCoreCtrlStop(void)
+{
+    return sce::MusicCore::ctrlResetSpeed(0, 0, 0, 0);
+}
+
+int musicCoreCtrlClearAudio(int flags, int mode)
+{
+    return sce::MusicCore::ctrlRefreshDbId(static_cast<uint32_t>(flags), static_cast<unsigned char>(mode), 0, 0);
+}

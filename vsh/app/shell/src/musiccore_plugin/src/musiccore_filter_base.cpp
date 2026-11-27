@@ -11,9 +11,15 @@
 
 #include "musiccore_pipeline_types.h"
 
+#include <memory/heap_allocator.h>
+
 extern "C" {
 void *ScePafStdc_3CF19248(SceSize size, void *heap);
-void *ScePafStdc_D00387E7(SceSize size, void *heap);
+}
+
+static inline void *musiccoreAllocFromPafHeap(SceSize size, void *heap)
+{
+	return operator new(size, static_cast<paf::memory::HeapAllocator *>(heap));
 }
 
 namespace sce {
@@ -78,7 +84,7 @@ ActiveFilterBase::ActiveFilterBase(int workerKind, const char *threadName)
     syncEventConstruct(&m_wakeEvent, threadName);
     syncMutexConstruct(&m_lock, threadName);
 
-    m_workerSelfArg = (ActiveFilterBase **)ScePafStdc_D00387E7(sizeof(ActiveFilterBase *), getLocalHeap());
+    m_workerSelfArg = (ActiveFilterBase **)musiccoreAllocFromPafHeap(sizeof(ActiveFilterBase *), getLocalHeap());
     if (m_workerSelfArg != NULL) {
         *m_workerSelfArg = this;
         if (workerPoolSpawn(getWorkerThreadPool(), workerKind, (void *)activeFilterThreadEntry,
@@ -721,7 +727,7 @@ PipeInterface *createFixedFramePipe(uint32_t frameBytes, int slotCount,
                                     PipeProducerControl *producer,
                                     PipeConsumerControl *consumer)
 {
-    void *mem = ScePafStdc_D00387E7(sizeof(FixedFramePipe), getLocalHeap());
+    void *mem = musiccoreAllocFromPafHeap(sizeof(FixedFramePipe), getLocalHeap());
     if (mem == NULL)
         return NULL;
     return new (mem) FixedFramePipe(frameBytes, slotCount, producer, consumer);
@@ -732,7 +738,7 @@ PipeInterface *createBufRefPipe(int slotCount,
                                 PipeProducerControl *producer,
                                 PipeConsumerControl *consumer)
 {
-    void *mem = ScePafStdc_D00387E7(44, getLocalHeap());
+    void *mem = musiccoreAllocFromPafHeap(44, getLocalHeap());
     if (mem == NULL)
         return NULL;
     return constructBufRefPipe(mem, slotCount, producer, consumer);
@@ -747,7 +753,7 @@ AudioOutputFilter *createAudioOutputFilter(uint32_t grainBytes, int slotCount,
                                            AudioFlushCallback flushCb,
                                            void *userContext)
 {
-    void *mem = ScePafStdc_D00387E7(sizeof(AudioOutputFilter), getLocalHeap());
+    void *mem = musiccoreAllocFromPafHeap(sizeof(AudioOutputFilter), getLocalHeap());
     if (mem == NULL)
         return NULL;
     return new (mem) AudioOutputFilter(grainBytes, slotCount, producer,
@@ -757,10 +763,23 @@ AudioOutputFilter *createAudioOutputFilter(uint32_t grainBytes, int slotCount,
 /* 0x81207814 */
 void *createDecoderPipeline(int pipelineKind, int codecType, void *factory, void *audioOut)
 {
-    void *mem = ScePafStdc_D00387E7(320, getLocalHeap());
+    void *mem = musiccoreAllocFromPafHeap(320, getLocalHeap());
     if (mem == NULL)
         return NULL;
     return constructDecoderPipeline(mem, pipelineKind, codecType, factory, audioOut);
+}
+
+PipelineEventListener *createDecoderPipeline(ParserFilterBase *parser,
+                                             PipeInterface *pipe,
+                                             DecoderFilterBase *decoder,
+                                             AudioOutputFilter *audioSink)
+{
+    void *mem = musiccoreAllocFromPafHeap(320, getLocalHeap());
+    if (mem == NULL)
+        return NULL;
+    return static_cast<PipelineEventListener *>(constructDecoderPipeline(
+        mem, reinterpret_cast<int>(parser), reinterpret_cast<int>(pipe),
+        decoder, audioSink));
 }
 
 } /* namespace MusicCore */

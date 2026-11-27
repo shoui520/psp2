@@ -7,7 +7,7 @@
 #include <scetypes.h>
 #include <kernel/iofilemgr.h>
 #include <kernel/iofilemgr_dirent.h>
-#include <rtc/rtc.h>
+#include <rtc.h>
 #include <libmd5.h>
 #include <std/list>
 #include <std/stdio.h>

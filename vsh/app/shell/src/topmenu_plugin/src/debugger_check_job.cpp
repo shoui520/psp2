@@ -37,7 +37,7 @@ static paf::string resolveDebugLiveAreaPath(const char *liveAreaPath)
 {
 	int debugUpgradable = 0;
 
-	if (sceRegMgrGetKeyIntForUser("/CONFIG/NP", "debug_upgradable", &debugUpgradable) != 0 ||
+	if (sceRegMgrGetKeyInt("/CONFIG/NP", "debug_upgradable", &debugUpgradable) != 0 ||
 	    debugUpgradable != 3) {
 		return paf::string(liveAreaPath != NULL ? liveAreaPath : "");
 	}

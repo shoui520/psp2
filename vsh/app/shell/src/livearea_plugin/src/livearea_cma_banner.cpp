@@ -15,9 +15,13 @@
 #include "livearea_internal.h"
 
 extern "C" {
-extern int sceRegMgrSrvGetRegionForUser(void);
+extern int sceRegMgrSrvGetRegion(void);
 extern int sceAppMgrLaunchAppByNameForShell(int flags, const char *titleId, const char *param);
 }
+
+typedef void (*LiveAreaShellEventCallback)(int code, const void *payload, SceSize size, void *arg);
+extern int shellAppEventServerAddListener(int event, LiveAreaShellEventCallback callback, void *arg);
+extern int shellAppEventServerRemoveListener(int event, LiveAreaShellEventCallback callback, void *arg);
 
 static float s_cmaBarMaxWidth = 0.0f;				/* 0x81544D94 */
 static SceUInt32 s_cmaBarCurWidth = 0;				/* 0x81544D98 */
@@ -94,10 +98,12 @@ int liveareaCmaSetActive(int active, int pageKey)
 			int hookRes;
 			if (want != 0) {
 				topmenuIf->addPageShowListener(targetKey, (void *)liveareaCmaOnFocusCb, NULL);
-				hookRes = shellAppEventServerAddListener();
+				hookRes = shellAppEventServerAddListener(
+					2, reinterpret_cast<LiveAreaShellEventCallback>(liveareaCmaOnStorageEvent), NULL);
 			} else {
 				topmenuIf->addPageShowListener(targetKey, NULL, NULL);
-				hookRes = shellAppEventServerRemoveListener(2, liveareaCmaOnStorageEvent, NULL);
+				hookRes = shellAppEventServerRemoveListener(
+					2, reinterpret_cast<LiveAreaShellEventCallback>(liveareaCmaOnStorageEvent), NULL);
 			}
 			if (hookRes >= 0) {
 				if (want != 0)
@@ -178,7 +184,7 @@ void liveareaCmaOnGetSize(int result, char showBar, SceInt64 total, SceInt64 fre
 /* 0x811AD6A2 */
 int liveareaCmaRequestSize(char showBar)
 {
-	paf::job::JobQueue *queue = g_activityJobQueue;
+	paf::job::JobQueue *queue = paf::job::JobQueue::default_queue;
 	if (queue == NULL)
 		return -2;
 	LiveAreaCmaGetSizeJob *job = new LiveAreaCmaGetSizeJob(liveareaCmaOnGetSize, showBar);
@@ -218,7 +224,7 @@ void liveareaCmaSetup(paf::Plugin *plugin, paf::ui::Widget *root)
 	root->AddDeleteCB(liveareaCmaResetGlobals, NULL);
 
 	paf::intrusive_ptr<paf::graph::Surface> regionTexture;
-	if (sceRegMgrSrvGetRegionForUser() == 13 && plugin != NULL) {
+	if (sceRegMgrSrvGetRegion() == 13 && plugin != NULL) {
 		paf::IDParam texId = makeHashId(379628764U);
 		regionTexture = plugin->GetTexture(texId);
 	}
@@ -354,7 +360,7 @@ static void liveareaCmaOnTextLayout(SceInt32, paf::ui::Handler *handler,
 	if (lines > (uint32_t)userdata) {
 		paf::wstring str;
 		textObj->GetString(str);
-		textObj->SetStyleAttribute((paf::graph::TextStyleAttribute)1, 0, str.size(), (int32_t)0);
+		textObj->SetStyleAttribute((paf::graph::TextStyleAttribute)1, 0, str.size(), false);
 		paf::math::v3 expandedSize(textObj->m_size.extract_x() + 4.0f,
 					   textObj->m_size.extract_y(),
 					   textObj->m_size.extract_z());

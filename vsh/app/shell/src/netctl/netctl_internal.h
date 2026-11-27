@@ -137,7 +137,7 @@ int SceNetInternal_16222ED6(const void *dnsPair, int flags);
 int SceNetInternal_235DE96C(int ifId, void *ifInfo, int count);
 int SceNetInternal_26EFF46D(int ifId, int errCode, int isSuspend);
 int SceNetInternal_4F5E0E8A(int ifId, int reason, int flags);
-int SceNetInternal_689B9D7D(int *outRandom);
+int SceNetInternal_689B9D7D(unsigned int *outRandom);
 int SceNetInternal_7F63379E(void *outDnsPair, int flags);
 int SceNetInternal_8157DE3E(int *outIfIds, int maxCount, int flags);
 int SceNetInternal_93F2FF08(int sockId, int option);
@@ -153,10 +153,9 @@ int SceNetInternal_EE94BA15(int ifId, void *outStat, int clearAfterRead);
 int vshKernelCheckModelCapability(int cap);
 SceUInt32 vshSblAimgrIsDolce(void);
 int _vshEventLogPut(int category, int eventId, int flags, const void *entry);
-int sceKernelGetRemoteProcessTimeForUser(SceUID processId, SceKernelSysClock *pClock);
-SceUInt64 sceKernelGetSystemTimeWideForUser(void);
-SceUInt64 sceRtcGetAccumulativeTimeForUser(void);
-int scePowerRegisterCallbackForUser(SceUID cbid);
+int sceKernelGetRemoteProcessTime(SceUID processId, SceKernelSysClock *pClock);
+SceUInt64 sceRtcGetAccumulativeTime(void);
+int scePowerRegisterCallback(SceUID cbid);
 int sceWlanSetConfiguration(int enable);
 
 /* Statically linked SceNetConfig / SceNetDhcp / SceNetPppoe / SceNetWlan (0x81378940..0x8137C0D8) */

@@ -85,3 +85,8 @@ paf::math::v4 LiveAreaBgFactory::GetItemSize()
 {
 	return paf::math::v4(840.0f, 512.0f, 0.0f, 0.0f);
 }
+
+paf::ui::filelist::Visualizer *liveareaCreateBgFactory(void)
+{
+	return reinterpret_cast<paf::ui::filelist::Visualizer *>(new LiveAreaBgFactory());
+}

@@ -98,11 +98,15 @@ void applauncherPluginStop(Plugin *plugin)
 	applauncherIconCaptureDestroy();
 }
 
+static void applauncherExitNoop(void)
+{
+}
+
 /* the plugin ended: the caches taken down (0x810A8808) */
 void applauncherPluginExit(Plugin *plugin)
 {
 	applauncherIconCacheDestroy();
 	applauncherDataCacheDestroy();
-	applauncherExitReserved0();
-	applauncherExitReserved1();
+	applauncherExitNoop();
+	applauncherExitNoop();
 }

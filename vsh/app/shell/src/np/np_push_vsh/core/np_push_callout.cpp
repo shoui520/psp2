@@ -17,7 +17,7 @@ int InitCallout(void)
 	if (s_calloutContext != NULL)
 		return SCE_NP_PUSH_ERROR_ALREADY_INITIALIZED;
 
-	void *eventLoop = npCommonGetEventLoop();
+	void *eventLoop = SceNpCommon_659ED07E();
 	NP_PUSH_ASSERT(eventLoop != NULL, "InitCallout",
 		       "core\\np_push_callout.cpp", 46, "eventLoop != NULL");
 

@@ -243,7 +243,7 @@ int npTrophyCoreCreateContext(SceUID pid, IPMI::Session *session, int *outCtxId,
 		return ret;
 
 	TrophyCommId parsedCommId;
-	sceClibMemcpy(parsedCommId.data, commId, sizeof(parsedCommId.data));
+	sceClibMemcpy_safe(parsedCommId.data, commId, sizeof(parsedCommId.data));
 
 	TrophyContextPoolObj *ctxObj = new TrophyContextPoolObj();
 	if (ctxObj == NULL)
@@ -1031,7 +1031,7 @@ int npTrophyCoreGetTrophyIconPath(const NpTrophyCommId *commId, int trophyId, ch
 		return NP_TROPHY_ERR_INVALID_ARGUMENT;
 
 	TrophyCommId localComm;
-	sceClibMemcpy(localComm.data, commId->commId, sizeof(localComm.data));
+	sceClibMemcpy_safe(localComm.data, commId->commId, sizeof(localComm.data));
 
 	char iconName[32];
 	int ret = npTrophyFormatTrophyIconFilename(iconName, trophyId, 0);

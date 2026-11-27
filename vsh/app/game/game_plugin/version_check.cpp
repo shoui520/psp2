@@ -6,7 +6,9 @@
 
 #include <stddef.h>
 #include <scetypes.h>
+extern "C" {
 #include <compat/compat.h>
+}
 #include <regmgr/regmgr.h>
 #include <std/string.h>
 #include <std/stdio.h>

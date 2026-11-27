@@ -15,7 +15,7 @@
 #include <thread/thread.h>
 #include <ipmi/session.h>
 #include <ipmi/client.h>
-#include "telephony_plugin/src/general/tel_general_internal.h"
+#include "../../telephony_plugin/src/general/tel_general_internal.h"
 
 extern int shellSvcNotifyEvent(IPMI::Session *session, int eventIndex);
 
@@ -1072,4 +1072,24 @@ int telClientCheckRoamingDownloadAllowed(int serviceType)
 	sce_paf_memset(header, 0, sizeof(header));
 	IPMI::Client *client = SceShellSvc_B31E7F1C();
 	return telClientInvokeCheckRoamingDownload(client, header, serviceType);
+}
+
+int Bgdl_8126E1AE(char *outUrlBuf)
+{
+	return telClientGetUpdateListUrl(outUrlBuf);
+}
+
+int Bgdl_8126E216(int serviceType)
+{
+	return telClientCheckContentDownloadAllowed(serviceType);
+}
+
+int Bgdl_8126E252(int serviceType, SceUInt64 *outLimit)
+{
+	return telClientGetDownloadSizeLimit(serviceType, reinterpret_cast<SceInt64 *>(outLimit));
+}
+
+int Bgdl_8126E2AE(int serviceType)
+{
+	return telClientCheckRoamingDownloadAllowed(serviceType);
 }

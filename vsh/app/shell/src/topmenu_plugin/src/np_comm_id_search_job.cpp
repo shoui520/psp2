@@ -67,10 +67,10 @@ public:
 	virtual void Finish(int32_t result)
 	{
 		if (result == 0 || m_foundAppInfo.get() != NULL) {
-			topmenuOnNpCommIdFound(&m_foundTitleId, &m_foundAppInfo, m_launchAppId);
+			topmenuOnAppInfoSearchDone(&m_foundTitleId, &m_foundAppInfo, m_launchAppId);
 			return;
 		}
-		topmenuShowAppErrorDialog(result, 0, 0, 0);
+		topmenuShowAppErrorMessageDialog(result, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 		topmenuCancelPendingAppLaunch(m_launchAppId);
 	}
 

@@ -257,7 +257,7 @@ public:
 	paf::common::JobSlots m_slots;		/* the commands' jobs, by command */
 	paf::job::JobQueue *m_queue;		/* SceNewIndicatorJobQueue */
 	int m_lockCount;			/* the button locked, by how many */
-	int m_reserved108;			/* PLACEHOLDER: not read yet */
+	int m_unusedState;			/* not read */
 	paf::math::v4 m_iconScale;		/* (0.75, 0.75, 1) without new events */
 	/* the theme's images shown with new events and without: from the status's first
 	   notice file and its second (so the status's names for them look swapped) */
@@ -314,9 +314,9 @@ struct IndicatorNoticeRequest {
    file it is loaded from (28 bytes, PLACEHOLDER names), and the animation's page opened
    (0x8118014A; indicator_inhale_anim.cpp) */
 struct IndicatorInhaleAnim {
-	int reserved0;
+	int animFlags;
 	paf::ui::AnimCB callback;
-	float reserved8;
+	float animDuration;
 	paf::intrusive_ptr<paf::graph::Surface> texture;
 	paf::string iconPath;
 };
@@ -876,7 +876,7 @@ struct ShellLedParam {
 	int duration;
 };
 
-int shellLedSetMode(int led, int mode, const ShellLedParam *param);
+extern "C" int vshLedSetMode(int led, int mode, const ShellLedParam *param);
 
 /* the indicator page opened and its object made (0x8115E37A), and both destroyed (0x8115E6B2) */
 void indicatorCreate(void);

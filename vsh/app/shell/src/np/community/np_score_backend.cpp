@@ -5,7 +5,9 @@
 #include "np_community_backend.h"
 
 #include <libkernel/libkernel.h>
+extern "C" {
 #include <kernel/openpsid.h>
+}
 #include <libhttp.h>
 #include <vshbridge/vshbridge.h>
 

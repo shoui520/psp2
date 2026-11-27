@@ -11,6 +11,8 @@
 #include <net.h>
 #include "netctl_services.h"
 
+extern "C" int SceThreadmgrCoredumpTime_sceKernelExitThread(int status);
+
 #define NET_STUN_MAX_CONTEXTS		4
 #define NET_STUN_HOST_LEN		64
 #define NET_STUN_HEADER_SIZE		20
@@ -1156,7 +1158,7 @@ static int netStunWorkerThread(SceSize args, void *argp)
 		sceClibMemset(upnpWork, 0, sizeof(upnpWork));
 	}
 
-	sceKernelExitThread(0);
+	SceThreadmgrCoredumpTime_sceKernelExitThread(0);
 	return 0;
 }
 
@@ -1271,7 +1273,7 @@ static int netStunBuildRequest(SceUInt8 *packet, SceSize capacity,
 
 		sceClibMemset(cursor, 0, paddedLen - bodyEndOffset);
 		SceUInt8 digest[NET_STUN_HMAC_SIZE];
-		shellHmacSha1Digest(spec->hmacKey, spec->hmacKeyLen, packet, paddedLen, digest);
+		sceHmacSha1Digest(spec->hmacKey, spec->hmacKeyLen, packet, paddedLen, digest);
 
 		NetStunAttrHeader hmacHdr;
 		sceClibMemset(&hmacHdr, 0, sizeof(hmacHdr));
@@ -1401,7 +1403,7 @@ static int netStunParseResponse(SceUInt8 *packet, SceSize packetLen,
 			sceClibMemcpy_safe(expectedDigest, cursor + NET_STUN_ATTR_HDR_SIZE,
 					   sizeof(expectedDigest));
 			sceClibMemset(cursor, 0, paddedLen - prefixLen);
-			shellHmacSha1Digest(response->hmacKey, response->hmacKeyLen,
+			sceHmacSha1Digest(response->hmacKey, response->hmacKeyLen,
 					    packet, paddedLen, computedDigest);
 			if (sceClibMemcmp(expectedDigest, computedDigest, sizeof(expectedDigest)) != 0)
 				return NET_STUN_ERROR_INTEGRITY_MISMATCH;

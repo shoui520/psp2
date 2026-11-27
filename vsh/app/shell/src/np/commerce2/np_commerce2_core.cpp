@@ -18,7 +18,6 @@ extern int SceNpCommon_F585C86C(void);
 extern int SceNpCommon_187C0A8D(int *envType);
 extern int sceNpCommonGetNpEnviroment(char *env);
 extern int vshSblAimgrGetConsoleId(void *consoleId);
-extern SceUInt64 sceKernelGetSystemTimeWideForUser(void);
 }
 
 #define NP_COMM2_MAX_REQ_PER_CTX	8u
@@ -1575,7 +1574,7 @@ int npComm2SetEnvironmentType(int envType)
 /* 0x812BFD74 */
 int npComm2GetSystemTime(SceUInt64 *outTime)
 {
-	*outTime = sceKernelGetSystemTimeWideForUser();
+	*outTime = sceKernelGetSystemTimeWide();
 	return 0;
 }
 

@@ -142,7 +142,7 @@ static int npSnsFbJsonEscape(const char *src, char *dst, SceSize dstSize, SceSiz
 			if (dstSize - written < stepLen + 1)
 				return NP_SNS_FB_ERR_OUT_OF_MEMORY;
 			if (escaped != NULL)
-				sceClibMemcpy(dst + written, escaped, stepLen);
+				sceClibMemcpy_safe(dst + written, escaped, stepLen);
 			else
 				dst[written] = *cursor;
 			dst[written + stepLen] = '\0';
@@ -766,6 +766,18 @@ int npSnsFbShareRating(SceInt32 reqId, SceInt32 serviceType, const char *titleNa
 	if (ret < 0 && outFbError != NULL)
 		*outFbError = fbError;
 	return ret;
+}
+
+struct TrophySnsFeedItem;
+
+int npSnsFbPostTrophyFeed(int reqId, const char *titleName, const char *iconUrl,
+			  const TrophySnsFeedItem *trophies, int trophyCount,
+			  int *outFbError)
+{
+	return npSnsFbShareTrophy(
+		reqId, titleName, iconUrl,
+		reinterpret_cast<const NpSnsFbTrophyShareItem *>(trophies),
+		static_cast<SceUInt32>(trophyCount), outFbError);
 }
 
 /* 0x8133CC14 */

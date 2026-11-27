@@ -9,10 +9,12 @@
 #include <std/stdlib.h>
 #include <std/string>
 #include <kernel/threadmgr.h>
+extern "C" {
 #include <kernel/openpsid.h>
+#include <libsfmt19937.h>
+}
 #include <libsha1.h>
 #include <libhmac.h>
-#include <libsfmt19937.h>
 #include <ini_file_processor/ini_file_processor.h>
 #include "dbsetup_internal.h"
 

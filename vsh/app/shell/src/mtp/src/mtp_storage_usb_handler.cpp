@@ -6,7 +6,9 @@
 #include <system/system.h>
 #include <thread/thread.h>
 #include <rtc.h>
+extern "C" {
 #include <udcd/udcd_user.h>
+}
 #include <usbstor/usbstor.h>
 #include <modulemgr/module_info.h>
 #include "mtp_server_internal.h"

@@ -146,6 +146,7 @@ public:
     virtual ~Id3v1Reader();
 
     int probe(int *outErr);
+    int *getTagStatePtr() { return &m_tagState; }
 
 private:
     CachedStreamIo *m_io; /* +4 */
@@ -651,7 +652,9 @@ public:
 
     int getProbeState() const { return m_probeState; }
     int getFirstFrameOffset() const { return m_firstFrameOffset; }
+    int *getFirstFrameOffsetPtr() { return &m_firstFrameOffset; }
     const Mp3HeaderHolder *getFirstHeader() const { return &m_firstHeader; }
+    Mp3HeaderHolder *getFirstHeaderMut() { return &m_firstHeader; }
 
 private:
     int m_probeState;            /* +4 */
@@ -1613,6 +1616,334 @@ int Mp3NextFrameLocator::locateNextFrame(const Mp3FrameRecord *curRecord, int fi
     *outOffset = foundOffset;
     *outErr = 0;
     return 1;
+}
+
+/* Bridges for musiccore_mp3_media.cpp and musiccore_wav_at9_media.cpp */
+struct StreamIoInterface;
+struct MediaInfoRecord;
+struct Mp3ParserInterface;
+struct Mp3FrameCursor;
+struct Mp3Id3v1Reader;
+struct Mp3Id3v2Reader;
+struct Mp3FirstFrameInfo;
+struct Mp3NextFrameIter;
+struct Mp3XingReader;
+struct Mp3VbriReader;
+struct Mp3CompositeSeeker;
+struct Mp3PacketReader;
+struct MpegFrameHeader;
+struct Mp3FramePacket;
+
+void mediaInfoBaseInit(MediaInfoBase *self, const char *path, uint32_t fourcc)
+{
+    new (self) MediaInfoBase(path, fourcc);
+}
+
+void mediaInfoBaseDestroy(MediaInfoBase *self)
+{
+    if (self != NULL)
+        self->~MediaInfoBase();
+}
+
+void mediaInfoRecordInit(MediaInfoRecord *self, const char *path, uint32_t fourcc)
+{
+    new (reinterpret_cast<MediaInfoBase *>(self)) MediaInfoBase(path, fourcc);
+}
+
+void mediaInfoRecordDestroy(MediaInfoRecord *self)
+{
+    if (self != NULL)
+        reinterpret_cast<MediaInfoBase *>(self)->~MediaInfoBase();
+}
+
+void mp3ParserInterfaceInit(Mp3ParserInterface *iface) { (void)iface; }
+void mp3ParserInterfaceDestroy(Mp3ParserInterface *iface) { (void)iface; }
+void mp3FrameCursorInit(Mp3FrameCursor *cursor) { (void)cursor; }
+void mp3FrameCursorDestroy(Mp3FrameCursor *cursor) { (void)cursor; }
+
+void mp3Id3v1Init(Mp3Id3v1Reader *reader, StreamIoInterface *io)
+{
+    new (reinterpret_cast<Id3v1Reader *>(reader)) Id3v1Reader(reinterpret_cast<CachedStreamIo *>(io));
+}
+
+void mp3Id3v1Destroy(Mp3Id3v1Reader *reader)
+{
+    if (reader != NULL)
+        reinterpret_cast<Id3v1Reader *>(reader)->~Id3v1Reader();
+}
+
+int mp3Id3v1Parse(Mp3Id3v1Reader *reader, int *outErr)
+{
+    return (reader != NULL) ? reinterpret_cast<Id3v1Reader *>(reader)->probe(outErr) : 0;
+}
+
+int *mp3Id3v1GetState(Mp3Id3v1Reader *reader)
+{
+    return (reader != NULL) ? reinterpret_cast<Id3v1Reader *>(reader)->getTagStatePtr() : NULL;
+}
+
+void mp3Id3v2Init(Mp3Id3v2Reader *reader, StreamIoInterface *io)
+{
+    new (reinterpret_cast<Id3v2Reader *>(reader)) Id3v2Reader(reinterpret_cast<CachedStreamIo *>(io));
+}
+
+void mp3Id3v2Destroy(Mp3Id3v2Reader *reader)
+{
+    if (reader != NULL)
+        reinterpret_cast<Id3v2Reader *>(reader)->~Id3v2Reader();
+}
+
+int mp3Id3v2Parse(Mp3Id3v2Reader *reader, int mode, int *outErr)
+{
+    return (reader != NULL)
+        ? reinterpret_cast<Id3v2Reader *>(reader)->readTag(static_cast<uint8_t>(mode), outErr)
+        : 0;
+}
+
+int *mp3Id3v2GetState(Mp3Id3v2Reader *reader)
+{
+    return (reader != NULL)
+        ? const_cast<int *>(reinterpret_cast<Id3v2Reader *>(reader)->getHeaderPresencePtr())
+        : NULL;
+}
+
+void *mp3Id3v2GetTagHeader(Mp3Id3v2Reader *reader)
+{
+    return (reader != NULL)
+        ? const_cast<Id3v2Header *>(reinterpret_cast<Id3v2Reader *>(reader)->getHeaderPtr())
+        : NULL;
+}
+
+int mp3Id3v2GetPayloadSize(void *tagHeader)
+{
+    return (tagHeader != NULL)
+        ? static_cast<int>(static_cast<const Id3v2Header *>(tagHeader)->getTagBodySize())
+        : 0;
+}
+
+void mp3FrameScannerInit(Mp3FrameScanner *scanner, StreamIoInterface *io)
+{
+    new (scanner) Mp3FrameScanner(reinterpret_cast<CachedStreamIo *>(io));
+}
+
+int mp3FrameScannerFind(Mp3FrameScanner *scanner, int startOffset, int endOffset,
+                        const MpegFrameHeader *refHeader, int minConsecutive, int audioSize,
+                        int *outOffset, MpegFrameHeader *outHeader, int *outEndFlags, int *outErr)
+{
+    return (scanner != NULL)
+        ? scanner->findSyncFrame(startOffset, endOffset,
+                                 reinterpret_cast<const uint32_t *>(refHeader),
+                                 minConsecutive, audioSize, outOffset,
+                                 reinterpret_cast<Mp3HeaderHolder *>(outHeader),
+                                 reinterpret_cast<uint32_t *>(outEndFlags), outErr)
+        : 0;
+}
+
+void mp3FirstFrameInit(Mp3FirstFrameInfo *firstFrame, StreamIoInterface *io,
+                       Mp3Id3v2Reader *id3v2, Mp3FrameScanner *scanner)
+{
+    new (reinterpret_cast<Mp3FirstFrameFinder *>(firstFrame))
+        Mp3FirstFrameFinder(reinterpret_cast<CachedStreamIo *>(io),
+                            reinterpret_cast<Id3v2Reader *>(id3v2), scanner);
+}
+
+void mp3FirstFrameDestroy(Mp3FirstFrameInfo *firstFrame)
+{
+    if (firstFrame != NULL)
+        reinterpret_cast<Mp3FirstFrameFinder *>(firstFrame)->~Mp3FirstFrameFinder();
+}
+
+int mp3FirstFrameEnsure(Mp3FirstFrameInfo *firstFrame)
+{
+    int err = 0;
+    return (firstFrame != NULL)
+        ? reinterpret_cast<Mp3FirstFrameFinder *>(firstFrame)->locateFirstFrame(-1, &err)
+        : 0;
+}
+
+int *mp3FirstFrameGetOffset(Mp3FirstFrameInfo *firstFrame)
+{
+    return (firstFrame != NULL)
+        ? reinterpret_cast<Mp3FirstFrameFinder *>(firstFrame)->getFirstFrameOffsetPtr()
+        : NULL;
+}
+
+MpegFrameHeader *mp3FirstFrameGetHeader(Mp3FirstFrameInfo *firstFrame)
+{
+    return (firstFrame != NULL)
+        ? reinterpret_cast<MpegFrameHeader *>(
+              reinterpret_cast<Mp3FirstFrameFinder *>(firstFrame)->getFirstHeaderMut())
+        : NULL;
+}
+
+void mp3NextFrameInit(Mp3NextFrameIter *iter, Mp3FrameScanner *scanner)
+{
+    new (reinterpret_cast<Mp3NextFrameLocator *>(iter)) Mp3NextFrameLocator(scanner);
+}
+
+void mp3NextFrameDestroy(Mp3NextFrameIter *iter)
+{
+    if (iter != NULL)
+        reinterpret_cast<Mp3NextFrameLocator *>(iter)->~Mp3NextFrameLocator();
+}
+
+int mp3NextFrameAdvance(Mp3NextFrameIter *iter, Mp3FrameCursor *cursor, int audioSize,
+                        int *outOffset, MpegFrameHeader *outHeader, int *outEndFlags, int *outErr)
+{
+    return (iter != NULL)
+        ? reinterpret_cast<Mp3NextFrameLocator *>(iter)->locateNextFrame(
+              reinterpret_cast<const Mp3FrameRecord *>(cursor), audioSize, outOffset,
+              reinterpret_cast<Mp3HeaderHolder *>(outHeader),
+              reinterpret_cast<uint32_t *>(outEndFlags), outErr)
+        : 0;
+}
+
+void mp3CbrSeekerInit(Mp3CbrSeeker *seeker, Mp3FirstFrameInfo *firstFrame, Mp3FrameScanner *scanner)
+{
+    new (seeker) Mp3CbrSeeker(reinterpret_cast<Mp3FirstFrameFinder *>(firstFrame), scanner);
+}
+
+void mp3CbrSeekerDestroy(Mp3CbrSeeker *seeker)
+{
+    if (seeker != NULL)
+        seeker->~Mp3CbrSeeker();
+}
+
+void mp3XingInit(Mp3XingReader *reader, StreamIoInterface *io, Mp3FirstFrameInfo *firstFrame)
+{
+    new (reinterpret_cast<XingTagReader *>(reader))
+        XingTagReader(reinterpret_cast<CachedStreamIo *>(io),
+                      reinterpret_cast<Mp3FirstFrameFinder *>(firstFrame));
+}
+
+void mp3XingDestroy(Mp3XingReader *reader)
+{
+    if (reader != NULL)
+        reinterpret_cast<XingTagReader *>(reader)->~XingTagReader();
+}
+
+int mp3XingEnsure(Mp3XingReader *reader, int audioSize, int *outErr)
+{
+    return (reader != NULL)
+        ? reinterpret_cast<XingTagReader *>(reader)->readHeader(audioSize, outErr)
+        : 0;
+}
+
+const uint8_t *mp3XingGetRawData(Mp3XingReader *reader)
+{
+    return (reader != NULL)
+        ? reinterpret_cast<const uint8_t *>(reader)
+        : NULL;
+}
+
+int mp3XingGetEncoderDelay(Mp3XingReader *reader, int audioSize)
+{
+    return (reader != NULL)
+        ? static_cast<int>(reinterpret_cast<XingTagReader *>(reader)->getEncoderDelay(audioSize))
+        : 0;
+}
+
+int mp3XingGetEncoderPadding(Mp3XingReader *reader, int audioSize)
+{
+    return (reader != NULL)
+        ? static_cast<int>(reinterpret_cast<XingTagReader *>(reader)->getEncoderPadding(audioSize))
+        : 0;
+}
+
+void mp3XingSeekerInit(Mp3XingSeeker *seeker, Mp3FirstFrameInfo *firstFrame,
+                       Mp3XingReader *xing, Mp3FrameScanner *scanner)
+{
+    new (seeker) Mp3XingSeeker(reinterpret_cast<Mp3FirstFrameFinder *>(firstFrame),
+                               reinterpret_cast<XingTagReader *>(xing), scanner);
+}
+
+void mp3XingSeekerDestroy(Mp3XingSeeker *seeker)
+{
+    if (seeker != NULL)
+        seeker->~Mp3XingSeeker();
+}
+
+void mp3VbriInit(Mp3VbriReader *reader, StreamIoInterface *io, Mp3FirstFrameInfo *firstFrame)
+{
+    new (reinterpret_cast<VbriTagReader *>(reader))
+        VbriTagReader(reinterpret_cast<CachedStreamIo *>(io),
+                      reinterpret_cast<Mp3FirstFrameFinder *>(firstFrame));
+}
+
+void mp3VbriDestroy(Mp3VbriReader *reader)
+{
+    if (reader != NULL)
+        reinterpret_cast<VbriTagReader *>(reader)->~VbriTagReader();
+}
+
+int mp3VbriEnsure(Mp3VbriReader *reader, int audioSize, int *outErr)
+{
+    return (reader != NULL)
+        ? reinterpret_cast<VbriTagReader *>(reader)->readHeader(audioSize, outErr)
+        : 0;
+}
+
+const VbriHeaderData *mp3VbriGetData(Mp3VbriReader *reader)
+{
+    return (reader != NULL) ? reinterpret_cast<VbriTagReader *>(reader)->getHeader() : NULL;
+}
+
+void mp3VbriSeekerInit(Mp3VbriSeeker *seeker, Mp3FirstFrameInfo *firstFrame,
+                       Mp3VbriReader *vbri, Mp3FrameScanner *scanner)
+{
+    new (seeker) Mp3VbriSeeker(reinterpret_cast<Mp3FirstFrameFinder *>(firstFrame),
+                               reinterpret_cast<VbriTagReader *>(vbri), scanner);
+}
+
+void mp3VbriSeekerDestroy(Mp3VbriSeeker *seeker)
+{
+    if (seeker != NULL)
+        seeker->~Mp3VbriSeeker();
+}
+
+void mp3CompositeSeekerInit(Mp3CompositeSeeker *seeker, Mp3CbrSeeker *cbr,
+                            Mp3XingSeeker *xing, Mp3VbriSeeker *vbri)
+{
+    new (reinterpret_cast<Mp3SeekRouter *>(seeker)) Mp3SeekRouter(cbr, xing, vbri);
+}
+
+int mp3CompositeSeek(Mp3CompositeSeeker *seeker, unsigned int targetMs, int audioSize,
+                     int *outOffset, MpegFrameHeader *outHeader, uint8_t *outAtEnd, int *outErr)
+{
+    bool atEnd = false;
+    int ret = (seeker != NULL)
+        ? reinterpret_cast<Mp3SeekRouter *>(seeker)->seekToMs(
+              targetMs, audioSize, outOffset, reinterpret_cast<Mp3HeaderHolder *>(outHeader),
+              &atEnd, outErr)
+        : 0;
+    if (outAtEnd != NULL)
+        *outAtEnd = atEnd ? 1u : 0u;
+    return ret;
+}
+
+void mp3PacketReaderInit(Mp3PacketReader *reader, StreamIoInterface *io)
+{
+    new (reinterpret_cast<Mp3FrameReader *>(reader))
+        Mp3FrameReader(reinterpret_cast<CachedStreamIo *>(io));
+}
+
+void mp3PacketReaderDestroy(Mp3PacketReader *reader)
+{
+    if (reader != NULL)
+        reinterpret_cast<Mp3FrameReader *>(reader)->~Mp3FrameReader();
+}
+
+int mp3PacketReaderRead(Mp3PacketReader *reader, int offset, unsigned int frameSize,
+                        int sampleRate, int samplesPerFrame, int emphasis,
+                        int channelMode, Mp3FramePacket *outPacket, int *outErr)
+{
+    return (reader != NULL)
+        ? reinterpret_cast<Mp3FrameReader *>(reader)->readFrameData(
+              offset, frameSize, static_cast<uint16_t>(sampleRate),
+              static_cast<uint16_t>(samplesPerFrame), static_cast<uint8_t>(emphasis),
+              static_cast<uint8_t>(channelMode), reinterpret_cast<Mp3MappedFrame *>(outPacket),
+              outErr)
+        : 0;
 }
 
 } /* namespace MusicCore */

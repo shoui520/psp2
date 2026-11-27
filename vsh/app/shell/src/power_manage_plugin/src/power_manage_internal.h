@@ -317,7 +317,7 @@ public:
 
 	virtual void Unlock(bool skipPasscode);
 
-	static void OnLockoutPluginLoaded(paf::Plugin *plugin);
+	static void OnLockoutPluginLoaded(paf::Plugin *plugin, void *userData);
 	static void OnAuthFinished(int result, void *userData);
 	static void OnLockoutFinished(int result, void *userData);
 
@@ -410,8 +410,8 @@ extern int shellStateWatcherOpenDialog(CommonGuiLayoutDialogParam *param, bool h
 extern int shellStateWatcherCloseDialog(int dialogId);
 extern int shellConsoleInfoRecordSuspendDuration(int eventKind, SceInt64 durationUsec);
 extern int shellNpPushResumeNotify(SceUID processId, int flags);
-extern int shellExclusiveFuncPasscodeLockoutStart(void (*loadedCb)(paf::Plugin *),
-						  void *userData, int flags);
+extern int shellExclusiveFuncPasscodeLockoutStart(void (*loadedCb)(paf::Plugin *, void *),
+						  void (*unloadedCb)(void *), void *userData);
 extern int shellExclusiveFuncPasscodeLockoutStop(void);
 
 #endif /* POWER_MANAGE_INTERNAL_H */

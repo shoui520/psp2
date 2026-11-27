@@ -99,7 +99,7 @@ public:
 	virtual int32_t Run()
 	{
 		int npStatus = 0;
-		if (SceNpManagerSP_7C78A608(&npStatus) != 0 || npStatus != 1)
+		if (SceNpManager_BF8921C8(&npStatus) != 0 || npStatus != 1)
 			return 0;
 
 		paf::thread::RMutex::main_thread_mutex.Lock();
@@ -108,7 +108,7 @@ public:
 
 		if (signInState != 1) {
 			paf::thread::Sleep(500);
-			SceUID cbId = sceKernelCreateCallbackForUser(
+			SceUID cbId = sceKernelCreateCallback(
 				"SceShellUpdaeAddContLicenseCallback", 0,
 				onSignInCallback, &m_signInDone);
 			if (cbId == -1)
@@ -128,7 +128,7 @@ public:
 			SceShell_83D16CA8(0, OnSignInAppEvent, this);
 
 			if (sceAppMgrLaunchAppByName2("NPXS10016", "signin", &opt) != 0) {
-				sceKernelDeleteCallbackForUser(cbId);
+				sceKernelDeleteCallback(cbId);
 				SceShell_E3D3A162(5, OnSignInAppEvent, this);
 				SceShell_E3D3A162(6, OnSignInAppEvent, this);
 				SceShell_E3D3A162(4, OnSignInAppEvent, this);
@@ -142,7 +142,7 @@ public:
 					break;
 				paf::thread::Sleep(16);
 			}
-			sceKernelDeleteCallbackForUser(cbId);
+			sceKernelDeleteCallback(cbId);
 
 			SceAppMgrAppStatus appStatus;
 			while (sceAppMgrGetStatusByName("NPXS10016", &appStatus) == 0)

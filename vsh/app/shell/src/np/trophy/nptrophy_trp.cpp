@@ -126,7 +126,7 @@ int npTrophyVerifyCommSign(const TrophyCommId *commId, const void *commSignBuf)
 		return NP_TROPHY_ERR_INVALID_ARGUMENT;
 
 	TrophySfmSignature sig;
-	sceClibMemcpy(sig.bytes, commSignBuf, sizeof(sig.bytes));
+	sceClibMemcpy_safe(sig.bytes, commSignBuf, sizeof(sig.bytes));
 	sig.length = sizeof(sig.bytes);
 
 	uint32_t magic = 0;
@@ -469,7 +469,7 @@ int TrophyTrpArchive::LoadEntryTable(TrophyHandle *handle)
 			return NP_TROPHY_ERR_TRP_INVALID_HEADER;
 
 		TrophyTrpEntry &entry = m_entries[i];
-		sceClibMemcpy(entry.name, disk.name, sizeof(entry.name));
+		sceClibMemcpy_safe(entry.name, disk.name, sizeof(entry.name));
 		entry.name[sizeof(entry.name) - 1] = '\0';
 		entry.offset = sceNetNtohll(disk.offset);
 		entry.size = sceNetNtohll(disk.size);

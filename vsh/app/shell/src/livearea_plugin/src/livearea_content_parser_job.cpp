@@ -4,17 +4,14 @@
  */
 #include <std/string.h>
 #include "livearea_internal.h"
+#include "../../livespace_db/livearea.h"
 
 extern "C" {
-extern LiParser *SceLsdb_800809E3(void *mem, const char *xmlPath, bool system, bool useDefault);
 extern void SceLsdb_29B275BA(paf::string *titleId, const char *xmlPath);
-extern LiParser *SceLsdb_4B153968(LiParser *parser);
 extern int SceLsdb_60B535FD(int appAttr, int defaultVal);
 extern int SceLsdb_1673AD48(void);
-extern void SceLsdb_43495B68(LiParser *parser, const int *language, const char *country, int age);
 extern int SceLsdb_BE72A404(const char *titleId);
 extern bool SceLsdb_69B32F6C(int appAttr);
-extern int SceLsdb_632ACD0F(LiParser *parser);
 }
 
 class ContentParserErrorDialogHandler : public CommonGuiDialogHandler {
@@ -85,8 +82,7 @@ LiveAreaContentParserJob::LiveAreaContentParserJob(LiveAreaPageInner *inner, con
 	if (isDefault != 0) {
 		m_useLsdb = 0;
 	} else if (m_useLsdb != 0) {
-		void *mem = operator new(sizeof(LiParser));
-		m_lsdbParser = mem ? SceLsdb_800809E3(mem, xmlPath, true, true) : NULL;
+		m_lsdbParser = new LiParser(xmlPath, true, true);
 		SceLsdb_29B275BA(&m_titleId, xmlPath);
 	}
 }
@@ -110,8 +106,8 @@ int liveareaEnqueueContentParserJob(paf::common::SharedPtr<paf::job::JobItem> *o
 LiveAreaContentParserJob::~LiveAreaContentParserJob()
 {
 	if (m_lsdbParser != NULL) {
-		LiParser *parser = SceLsdb_4B153968(m_lsdbParser);
-		operator delete(parser);
+		delete m_lsdbParser;
+		m_lsdbParser = NULL;
 	}
 }
 
@@ -134,7 +130,7 @@ int LiveAreaContentParserJob::Run()
 
 			gameIf->getStorageState(&appInfo, &needWait);
 			if (needWait != 0) {
-				g_shellMutex.Lock();
+				paf::thread::RMutex::main_thread_mutex.Lock();
 				CommonGuiLayoutDialogParam dlgParam;
 				dlgParam.resourcePlugin = g_liveareaPlugin;
 				dlgParam.priority = 40;
@@ -143,15 +139,15 @@ int LiveAreaContentParserJob::Run()
 				int dlgId = SceCommonGuiDialog_CCFCD9A6(&dlgParam);
 				gameIf->setDialogHold(1);
 				topmenuIf->beginGameHold();
-				g_shellMutex.Unlock();
+				paf::thread::RMutex::main_thread_mutex.Unlock();
 
 				int installRes = liveareaIfInstallContent(&appInfo, false, false);
 
-				g_shellMutex.Lock();
+				paf::thread::RMutex::main_thread_mutex.Lock();
 				SceCommonGuiDialog_BC311DC0(dlgId);
 				gameIf->setDialogHold(0);
 				topmenuIf->endGameHold();
-				g_shellMutex.Unlock();
+				paf::thread::RMutex::main_thread_mutex.Unlock();
 
 				if (installRes != 0)
 					return installRes;
@@ -165,18 +161,18 @@ int LiveAreaContentParserJob::Run()
 	paf::string country = SceLsdb_88FDC55C(m_appAttr);
 	if (country.size() != 0) {
 		int userAge = SceLsdb_1673AD48();
-		SceLsdb_43495B68(m_lsdbParser, &language, country.c_str(), userAge);
+		m_lsdbParser->SetFilter(&language, country.c_str(), userAge);
 		if (m_style == 3)
 			m_lsdbParser->m_pokesute = SceLsdb_BE72A404(m_titleId.c_str());
 		if (m_hasKind)
 			m_lsdbParser->m_supportedFormatOnly = true;
 		m_lsdbParser->m_networkTime = SceLsdb_69B32F6C(m_appAttr);
-		return SceLsdb_632ACD0F(m_lsdbParser);
+		return m_lsdbParser->Parse();
 	}
 
 	paf::string welcomeParkTitle("NPXS10015");
 	if (welcomeParkTitle == m_titleId)
-		return SceLsdb_632ACD0F(m_lsdbParser);
+		return m_lsdbParser->Parse();
 	return -5;
 }
 

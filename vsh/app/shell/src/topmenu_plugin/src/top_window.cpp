@@ -9,7 +9,7 @@
 #include <gxm.h>
 #include <kernel/processmgr.h>
 #include <kernel/sysmem.h>
-#include <math.h>
+#include <std/math.h>
 #include <graphics/effects/gate_blur.h>
 #include <graphics/effects/wave_switch_api.h>
 #include <inputdevice/inputdevice.h>
@@ -1624,7 +1624,7 @@ static void computeTabScrollTransform(TopWindow *window, paf::math::v4 *outPos,
 	if (tabIndex == 1 && ratio < 0.0f)
 		ratio = 0.0f;
 
-	float posZ = fabsf(ratio) * -200.0f;
+	float posZ = ((ratio < 0.0f) ? -ratio : ratio) * -200.0f;
 	*outPos = paf::math::v4(0.0f, 0.0f, posZ, 1.0f);
 }
 
@@ -1699,7 +1699,7 @@ static void createTopmenuRenderTarget(SceGxmRenderTarget **outTarget,
 
 	SceUInt32 driverMemSize = 0;
 	sceGxmGetRenderTargetMemSize(&rtParams, &driverMemSize);
-	rtParams.driverMemBlock = sceKernelAllocMemBlockForUser(
+	rtParams.driverMemBlock = sceKernelAllocMemBlock(
 		"SceShellRenderTarget", 0x0C208060u, driverMemSize, NULL);
 	sceGxmCreateRenderTarget(&rtParams, outTarget);
 }
@@ -2221,7 +2221,7 @@ void topmenuSelectHeaderTab(TopTab *tab)
 			topmenuHelpShowHomeHelp();
 	}
 
-	g_topWindow->m_scrollView->SetAutoSnap(false);
+	g_topWindow->m_scrollView->m_is_auto_snap = false;
 	paf::math::v4 targetPos((float)targetIdx * -960.0f, 0.0f, 0.0f, 0.0f);
 	paf::ui::Widget *viewParent = g_topWindow->m_scrollView->GetViewParent();
 	viewParent->SetPos(targetPos, new paf::Timer(350.0f, paf::Timer::FUNC_CUBIC_OUT),
@@ -3010,11 +3010,11 @@ TopWindow::~TopWindow()
 	SceUID memBlockUid = -1;
 	sceGxmRenderTargetGetDriverMemBlock(g_topmenuSmallRenderTarget, &memBlockUid);
 	sceGxmDestroyRenderTarget(g_topmenuSmallRenderTarget);
-	sceKernelFreeMemBlockForUser(memBlockUid);
+	sceKernelFreeMemBlock(memBlockUid);
 
 	sceGxmRenderTargetGetDriverMemBlock(g_topmenuLargeRenderTarget, &memBlockUid);
 	sceGxmDestroyRenderTarget(g_topmenuLargeRenderTarget);
-	sceKernelFreeMemBlockForUser(memBlockUid);
+	sceKernelFreeMemBlock(memBlockUid);
 
 	m_gateEffectScene->DestroyWidget();
 
@@ -3072,7 +3072,7 @@ void topmenuTopWindowExit(void)
 void topmenuTopWindowInitConfig(void)
 {
 	SceInt32 crashFlag = 0;
-	if (sceRegMgrGetKeyIntForUser("/CONFIG/SHELL", "test_crash", &crashFlag) == 0 &&
+	if (sceRegMgrGetKeyInt("/CONFIG/SHELL", "test_crash", &crashFlag) == 0 &&
 	    crashFlag != 0) {
 		g_topmenuTestCrashEnabled = true;
 	}
@@ -3576,7 +3576,7 @@ static void onHdmiPromptDialogButton(SceInt32 dialogId, SceInt32 button,
 									 NULL, NULL, NULL, NULL);
 				} else {
 					SceInt32 regMode = (hdmiRes == 0x8600) ? 2 : 3;
-					sceRegMgrSetKeyIntForUser("/CONFIG/DISPLAY",
+					sceRegMgrSetKeyInt("/CONFIG/DISPLAY",
 								  "hdmi_resolution_mode", regMode);
 					topmenuSwitchToProcess(g_topWindow,
 							       &tab->m_appData->m_process, true);
@@ -3633,7 +3633,7 @@ static void onHdmiCloseAllDialogButton(SceInt32 dialogId, SceInt32 button,
 								 NULL, NULL, NULL, NULL);
 			} else {
 				SceInt32 regMode = (hdmiRes == 0x8600) ? 2 : 3;
-				sceRegMgrSetKeyIntForUser("/CONFIG/DISPLAY",
+				sceRegMgrSetKeyInt("/CONFIG/DISPLAY",
 							  "hdmi_resolution_mode", regMode);
 				topmenuSwitchToProcess(g_topWindow,
 						       &tab->m_appData->m_process, true);
@@ -3744,7 +3744,7 @@ static void onKeypadPromptDialogButton(SceInt32 dialogId, SceInt32 button,
 				topmenuDialogRegister(nextDlgId);
 				topmenuDialogOnPowerHold(nextDlgId);
 			}
-		} else if (sceRegMgrSetKeyIntForUser("/CONFIG/SYSTEM", "key_pad", 1) == 0) {
+		} else if (sceRegMgrSetKeyInt("/CONFIG/SYSTEM", "key_pad", 1) == 0) {
 			paf::ui::Environment *env =
 				paf::Framework::Instance()->GetEnvironmentInstance();
 			ScePafWidget_75FB31F1(env, true);
@@ -3794,7 +3794,7 @@ static void onKeypadCloseAllDialogButton(SceInt32 dialogId, SceInt32 button,
 				tab->m_appData->m_process.SendProcessCommand(5);
 		}
 
-		if (sceRegMgrSetKeyIntForUser("/CONFIG/SYSTEM", "key_pad", 1) == 0) {
+		if (sceRegMgrSetKeyInt("/CONFIG/SYSTEM", "key_pad", 1) == 0) {
 			paf::ui::Environment *env =
 				paf::Framework::Instance()->GetEnvironmentInstance();
 			ScePafWidget_75FB31F1(env, true);
@@ -4319,7 +4319,7 @@ static void showAppNotFoundOrStoreDialog(SceInt32 errorCode, SceInt32 launchAppI
 
 	paf::string titleUtf8(titleNameUtf8);
 	paf::wstring titleWide;
-	paf::common::Utf8ToUtf16(titleUtf8, &titleWide);
+	paf::common::Utf8ToUtf16(titleUtf8.c_str(), &titleWide);
 
 	bool openedStorePrompt = false;
 	char parsedTitleId[136];
@@ -4438,7 +4438,7 @@ static void topmenuDispatchAppLaunch(const paf::string *titleId, const LsdbAppIn
 
 	if (sce_paf_strncmp(titleId->c_str(), "NPXS10090", sce_paf_strlen("NPXS10090")) == 0) {
 		SceInt32 browserRestrict = 0;
-		SceInt32 regRes = sceRegMgrGetKeyIntForUser("/CONFIG/SECURITY/PARENTAL",
+		SceInt32 regRes = sceRegMgrGetKeyInt("/CONFIG/SECURITY/PARENTAL",
 							    "browser_start_control",
 							    &browserRestrict);
 		if (regRes != 0) {
@@ -4464,7 +4464,7 @@ static void topmenuDispatchAppLaunch(const paf::string *titleId, const LsdbAppIn
 
 	if (sce_paf_strncmp(titleId->c_str(), "NPXS10035", sce_paf_strlen("NPXS10035")) == 0) {
 		SceInt32 storeRestrict = 0;
-		if (sceRegMgrGetKeyIntForUser("/CONFIG/SECURITY/PARENTAL",
+		if (sceRegMgrGetKeyInt("/CONFIG/SECURITY/PARENTAL",
 					      "store_start_control", &storeRestrict) == 0 &&
 		    storeRestrict != 0) {
 			if (launchAppId != -1)
@@ -4721,8 +4721,8 @@ static void updateCarouselLayoutAndTilt(TopWindow *window)
 		float worldX = tabWidget->m_world_matrix.w().extract_x();
 		float halfWidth = tab->m_contentRoot->GetSize(0)->extract_x() * 0.5f;
 		float rotY = rot.extract_y();
-		float sinY = sinf(rotY);
-		float cosY = cosf(rotY);
+		float sinY = sce_paf_sinf(rotY);
+		float cosY = sce_paf_cosf(rotY);
 
 		float deltaMs = (paf::Timer::s_tick_unit * paf::Timer::s_tick_interval) * 1000.0f;
 		float progress = tab->m_hoverProgress;
@@ -5459,7 +5459,7 @@ static void refreshAllTabTitles(TopWindow *window)
 			if (stitle != NULL) {
 				paf::string stitleUtf8(stitle);
 				paf::wstring stitleWide;
-				paf::common::Utf8ToUtf16(stitleUtf8, &stitleWide);
+				paf::common::Utf8ToUtf16(stitleUtf8.c_str(), &stitleWide);
 				tab->SetTitleText(stitleWide);
 			}
 		} else if (i == 0) {
@@ -5819,7 +5819,7 @@ static void handleShellEventVoiceAppChanged(TopWindow *window, const TopmenuAppM
 
 	paf::string titleUtf8(title);
 	paf::wstring titleWide;
-	paf::common::Utf8ToUtf16(titleUtf8, &titleWide);
+	paf::common::Utf8ToUtf16(titleUtf8.c_str(), &titleWide);
 
 	const wchar_t *fmt = g_topmenuPlugin->GetString(paf::IDParam(TOP_MSG_VOICE_APP_CHANGED));
 	paf::wstring formatted = shellFormatText(fmt, titleWide.c_str());
@@ -5900,7 +5900,7 @@ static void showInvitationLaunchDialog(const char *titleId, const LsdbAppInfoPtr
 		if (title != NULL) {
 			paf::string titleUtf8(title);
 			paf::wstring titleWide;
-			paf::common::Utf8ToUtf16(titleUtf8, &titleWide);
+			paf::common::Utf8ToUtf16(titleUtf8.c_str(), &titleWide);
 			titleWidget->SetString(titleWide);
 		}
 	}
@@ -6095,7 +6095,7 @@ static SceInt32 resolveCallerReturnPageKey(TopWindow *window, SceInt32 exitedApp
 
 	if ((status.launchMode & 0x40000u) != 0) {
 		SceUID selfPid = sceKernelGetProcessId();
-		if (selfPid != appmgrGetProcessIdByAppIdForShellSyscall(callerAppId)) {
+		if (selfPid != sceAppMgrGetProcessIdByAppIdForShell(callerAppId)) {
 			TopTab *callerTab = findRunningTabByAppId(window, callerAppId);
 			if (callerTab != NULL && callerTab->m_appData != NULL && returnFlag != 0)
 				return callerTab->m_pageKey;
@@ -6266,7 +6266,7 @@ static void updateTopWindowFrame(TopWindow *window)
 			window->m_imposeIf->closeOverlay();
 	}
 
-	int shellEventCount = appmgrReceiveShellEventNumSyscall();
+	int shellEventCount = sceAppMgrReceiveShellEventNum();
 	for (int i = 0; i < shellEventCount; ++i) {
 		TopmenuAppMgrShellEvent ev;
 		sceAppMgrReceiveShellEvent(&ev, sizeof(ev));
@@ -6462,7 +6462,7 @@ static void updateTopWindowFrame(TopWindow *window)
 		mainViewParent->GetPos(0, 0, paf::math::v4(0.0f, 0.0f, 0.0f, 0.0f));
 	float pageCoord = mainScrollPos.extract_x() / 960.0f;
 
-	if (pageCoord != floorf(pageCoord) || window->m_editModeActive ||
+	if (pageCoord != sce_paf_floorf(pageCoord) || window->m_editModeActive ||
 	    window->m_carouselState != 0) {
 		if (window->m_navArrowsEnabled) {
 			window->m_navArrowsEnabled = false;
@@ -6514,7 +6514,8 @@ static void updateTopWindowFrame(TopWindow *window)
 
 	if (window->m_powerSuspendMode == 0) {
 		TopmenuMusicStatus bgmStatus;
-		if (musicCoreBgmGetStatus(&bgmStatus) == 0 && bgmStatus.playMode == 0) {
+		if (musicCoreBgmGetStatus(reinterpret_cast<MusicCorePublicStatus *>(&bgmStatus)) == 0 &&
+		    bgmStatus.playMode == 0) {
 			if (bgmStatus.posLo == 6 && bgmStatus.posHi == 144 &&
 			    bgmStatus.sampleRate == 48000 && bgmStatus.bitrate == 2 &&
 			    bgmStatus.channels == -1) {
@@ -6527,6 +6528,36 @@ static void updateTopWindowFrame(TopWindow *window)
 	}
 }
 
+/* Mirrors paf::Framework layout from vsh/paf/include/framework.h for inline m_shutdown_requested read */
+struct TopmenuFrameworkLayout {
+	uint32_t runLoopCount;
+	paf::vector<paf::Plugin *> pluginList;
+	paf::Plugin *activePlugin;
+	int32_t loadingPluginCount;
+	paf::Plugin *commonResourcePlugin;
+	paf::Framework::LoadCRFinishCallback loadFinishCallback;
+	paf::Framework::UnloadCRFinishCallback unloadFinishCallback;
+	paf::Framework::ShutdownCallback shutdownCallback;
+	void *shutdownCallbackData;
+	bool jobReady;
+	paf::memory::HeapAllocator *decodeHeap;
+	bool decodeHeapCreated;
+	paf::memory::HeapAllocator *pluginHeap;
+	bool pluginHeapCreated;
+	void *surfacePoolAddr;
+	paf::graph::SurfacePool *surfacePool;
+	paf::ui::Environment *env;
+	paf::ui::Screen *scr;
+	int32_t mode;
+	uint32_t option;
+	int32_t locale;
+	paf::thread::Mutex *updateMutex;
+	paf::thread::Cond *updateCond;
+	paf::thread::RWLock *listLock;
+	paf::sound::Output *soundOutput;
+	bool shutdownRequested;
+};
+
 /* 0x8127E7BA */
 static void onTopWindowMainTick(void *userData)
 {
@@ -6534,7 +6565,9 @@ static void onTopWindowMainTick(void *userData)
 	updateTopWindowFrame(g_topWindow);
 	topmenuWhatsNewCheckRefresh();
 
-	if (paf::Framework::Instance()->IsShutdownDone()) {
+	const TopmenuFrameworkLayout *fw =
+		reinterpret_cast<const TopmenuFrameworkLayout *>(paf::Framework::Instance());
+	if (fw->shutdownRequested) {
 		while (g_topWindow->m_tabs.size() > 1) {
 			TopTab *tab = reinterpret_cast<TopTab *>(g_topWindow->m_tabs.back());
 			if (tab != NULL)

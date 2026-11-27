@@ -25,7 +25,7 @@ using namespace paf;
 
 GameFileCopier::GameFileCopier(const GameCopyParam *param)
 	: m_cancel(param->cancel), m_cancelArg(param->cancelArg), m_replace(param->replace),
-	  m_reserved(param->reserved2), m_maxDepth(param->maxDepth), m_depth(0),
+	  m_reserved(param->unusedFlag), m_maxDepth(param->maxDepth), m_depth(0),
 	  m_bufSize(GAME_COPIER_BUF_SIZE), m_progress(param->progress), m_totalSize(0),
 	  m_doneSize(0), m_detail(param->detail), m_heap(param->heap), m_cur(0), m_remain(0),
 	  m_read(0)
@@ -103,94 +103,103 @@ int GameFileCopier::CopyFile(const SceIoStat *stat)
 	if (m_remain < m_chunk[m_cur])
 		m_chunk[m_cur] = m_remain;
 
-	ret = src->Read(m_buf[m_cur], m_chunk[m_cur]);
-	if (ret < 0) {
-		gamePathGetMountedDrive(string(m_srcPath), m_detail);
-		goto close;
-	}
-
-	m_doneSize += m_chunk[m_cur];
-	UpdateProgress();
-
-	{
-		SceOff size = m_chunk[m_cur];
-
-		m_cur ^= 1;
-		m_read += size;
-		m_remain -= size;
-		m_chunk[m_cur] = m_bufSize;
-	}
-
-	while (m_remain > 0) {
-		if (m_remain < m_chunk[m_cur])
-			m_chunk[m_cur] = m_remain;
-
-		int readRet = src->ReadAsync(m_buf[m_cur], m_chunk[m_cur]);
-
-		m_cur ^= 1;
-
-		if (m_cancel != NULL && m_cancel(m_cancelArg) != 0) {
-			ret = GAME_ERROR_ABORTED;
-			goto close;
-		}
-
-		int writeRet = dst->Write(m_buf[m_cur], m_chunk[m_cur]);
-
-		if (writeRet < 0) {
-			ret = writeRet;
-			gamePathGetMountedDrive(string(m_dstPath), m_detail);
-			goto close;
-		}
-
-		if (m_cancel != NULL && m_cancel(m_cancelArg) != 0) {
-			ret = GAME_ERROR_ABORTED;
-			goto close;
+	do {
+		ret = src->Read(m_buf[m_cur], m_chunk[m_cur]);
+		if (ret < 0) {
+			gamePathGetMountedDrive(string(m_srcPath), m_detail);
+			break;
 		}
 
 		m_doneSize += m_chunk[m_cur];
 		UpdateProgress();
 
-		if (readRet != 0) {
-			ret = readRet;
-			gamePathGetMountedDrive(string(m_srcPath), m_detail);
-			goto close;
+		{
+			SceOff size = m_chunk[m_cur];
+
+			m_cur ^= 1;
+			m_read += size;
+			m_remain -= size;
+			m_chunk[m_cur] = m_bufSize;
 		}
 
-		SceInt64 result;
+		bool loopFailed = false;
+		while (m_remain > 0) {
+			if (m_remain < m_chunk[m_cur])
+				m_chunk[m_cur] = m_remain;
 
-		ret = src->WaitAsync(&result);
-		if (ret < 0 || result < 0) {
-			if (result < 0)
-				ret = (int)result;
-			gamePathGetMountedDrive(string(m_srcPath), m_detail);
-			goto close;
+			int readRet = src->ReadAsync(m_buf[m_cur], m_chunk[m_cur]);
+
+			m_cur ^= 1;
+
+			if (m_cancel != NULL && m_cancel(m_cancelArg) != 0) {
+				ret = GAME_ERROR_ABORTED;
+				loopFailed = true;
+				break;
+			}
+
+			int writeRet = dst->Write(m_buf[m_cur], m_chunk[m_cur]);
+
+			if (writeRet < 0) {
+				ret = writeRet;
+				gamePathGetMountedDrive(string(m_dstPath), m_detail);
+				loopFailed = true;
+				break;
+			}
+
+			if (m_cancel != NULL && m_cancel(m_cancelArg) != 0) {
+				ret = GAME_ERROR_ABORTED;
+				loopFailed = true;
+				break;
+			}
+
+			m_doneSize += m_chunk[m_cur];
+			UpdateProgress();
+
+			if (readRet != 0) {
+				ret = readRet;
+				gamePathGetMountedDrive(string(m_srcPath), m_detail);
+				loopFailed = true;
+				break;
+			}
+
+			SceInt64 result;
+
+			ret = src->WaitAsync(&result);
+			if (ret < 0 || result < 0) {
+				if (result < 0)
+					ret = (int)result;
+				gamePathGetMountedDrive(string(m_srcPath), m_detail);
+				loopFailed = true;
+				break;
+			}
+
+			m_doneSize += m_chunk[m_cur ^ 1];
+			UpdateProgress();
+
+			m_read += m_chunk[m_cur ^ 1];
+			m_remain -= m_chunk[m_cur];
+		}
+		if (loopFailed)
+			break;
+
+		m_cur ^= 1;
+
+		ret = dst->Write(m_buf[m_cur], m_chunk[m_cur]);
+		if (ret < 0) {
+			gamePathGetMountedDrive(string(m_dstPath), m_detail);
+			break;
 		}
 
-		m_doneSize += m_chunk[m_cur ^ 1];
-		UpdateProgress();
+		m_doneSize += m_chunk[m_cur];
 
-		m_read += m_chunk[m_cur ^ 1];
-		m_remain -= m_chunk[m_cur];
-	}
+		src->Close();
+		src.reset();
+		dst->Close();
+		dst.reset();
 
-	m_cur ^= 1;
+		return 0;
+	} while (0);
 
-	ret = dst->Write(m_buf[m_cur], m_chunk[m_cur]);
-	if (ret < 0) {
-		gamePathGetMountedDrive(string(m_dstPath), m_detail);
-		goto close;
-	}
-
-	m_doneSize += m_chunk[m_cur];
-
-	src->Close();
-	src.reset();
-	dst->Close();
-	dst.reset();
-
-	return 0;
-
-close:
 	if (src.get() != NULL) {
 		SceInt64 result = 0;
 

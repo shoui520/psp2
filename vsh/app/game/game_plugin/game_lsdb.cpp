@@ -657,22 +657,22 @@ int gameTitleGetSizes(const char *titleId, unsigned int flags, GameCancelFunc ca
 }
 
 /* A file copied, by a copier of its own, with buf as its work memory (0x8101AB80). */
-int gameCopyFile(const char *src, const char *dst, int arg2, int arg3, void *buf,
-		 SceSize bufSize, int arg6, int arg7)
+int gameCopyFile(const char *src, const char *dst, int cancelFunc, int cancelArg, void *buf,
+		 SceSize bufSize, int progressPtr, int detailPtr)
 {
 	GameCopyParam param;
 
-	param.cancel = (GameCancelFunc)arg2;
-	param.reserved2 = false;
+	param.cancel = (GameCancelFunc)cancelFunc;
+	param.unusedFlag = false;
 	param.replace = false;
 	param.reserved = false;
 	param.heap = NULL;
 	param.maxDepth = 128;
-	param.cancelArg = (void *)arg3;
+	param.cancelArg = (void *)cancelArg;
 	param.bufSize = bufSize;
 	param.buf = buf;
-	param.progress = (GameJobProgress *)arg6;
-	param.detail = (string *)arg7;
+	param.progress = (GameJobProgress *)progressPtr;
+	param.detail = (string *)detailPtr;
 
 	GameFileCopier *copier = new GameFileCopier(&param);
 
@@ -691,11 +691,10 @@ int gameCopyFile(const char *src, const char *dst, int arg2, int arg3, void *buf
 }
 
 /*
- * A file copied with work memory from the "GamePromoter" pool (0x8101ACA0). PLACEHOLDER name;
- * the other words are gameCopyFile's.
+ * A file copied with work memory from the "GamePromoter" pool (0x8101ACA0).
  */
-int gameCopyFileWithPool(const char *src, const char *dst, int arg2, int arg3, int arg6,
-			 int arg7)
+int gameCopyFileWithPool(const char *src, const char *dst, int cancelFunc, int cancelArg,
+			 int progressPtr, int detailPtr)
 {
 	common::SharedPtr<memory::PoolAllocator> pool;
 	int ret;
@@ -712,7 +711,7 @@ int gameCopyFileWithPool(const char *src, const char *dst, int arg2, int arg3, i
 		return GAME_ERROR_NO_MEMORY;
 	}
 
-	ret = gameCopyFile(src, dst, arg2, arg3, buf, size, arg6, arg7);
+	ret = gameCopyFile(src, dst, cancelFunc, cancelArg, buf, size, progressPtr, detailPtr);
 	if (ret < 0) {
 		pool->Free(buf);
 		gamePluginReleasePool(&pool);
@@ -736,7 +735,7 @@ int gameMoveTree(const char *src, const char *dst, GameCancelFunc cancel, void *
 	param.cancel = cancel;
 	param.cancelArg = cancelArg;
 	param.maxDepth = 128;
-	param.reserved2 = false;
+	param.unusedFlag = false;
 	param.reserved = false;
 	param.moveFiles = true;
 	param.detail = detail;
@@ -865,10 +864,11 @@ int gameAppDeletePart(const char *titleId, int kind)
 }
 
 /*
- * Save data of an application deleted, for applications only (0x8101B746): arg1 says whose
- * (gameAppDataOperateFiles), arg2 is the user; arg3 and arg4 are passed on and not read.
+ * Save data of an application deleted, for applications only (0x8101B746): what says whose
+ * (gameAppDataOperateFiles), userNo is the user; unusedOption and unusedFlags are passed on.
  */
-int gameAppDataOperate(const char *titleId, int arg1, int arg2, int arg3, int arg4)
+int gameAppDataOperate(const char *titleId, int what, int userNo, int unusedOption,
+		       int unusedFlags)
 {
 	LsdbAppInfoPtr info(new LsdbAppInfo);
 	int ret = gameAppGetInfo(titleId, &info);
@@ -885,7 +885,8 @@ int gameAppDataOperate(const char *titleId, int arg1, int arg2, int arg3, int ar
 	if (kind != 1)
 		return GAME_ERROR_INVALID_ARGUMENT;
 
-	ret = gameAppDataOperateFiles(string(titleId), &info, arg1, arg2, arg3, arg4);
+	ret = gameAppDataOperateFiles(string(titleId), &info, what, userNo, unusedOption,
+				      unusedFlags);
 	if (ret < 0)
 		return ret;
 
@@ -1037,9 +1038,9 @@ int gameLicenseGetStatus(GameLicenseStatus *status)
 		else
 			status->valid = false;
 		if (info.flags & 2)
-			status->flag1 = true;
+			status->hasTimedLicense = true;
 		else
-			status->flag1 = false;
+			status->hasTimedLicense = false;
 	}
 
 	return 0;
@@ -1535,6 +1536,35 @@ int gameNpDrmGetFttName(string *fttName)
 	return ret;
 }
 
+int gameFttLicenseName(string *name)
+{
+	return gameNpDrmGetFttName(name);
+}
+
+/* 0x8137E308 */
+int gameIoGetDeviceSpace(const char *device, SceUInt64 *maxSize, SceUInt64 *freeSize)
+{
+	struct DeviceSpaceInfo {
+		SceUInt64 maxBytes;
+		SceUInt64 freeBytes;
+		SceUInt32 clusterSize;
+		SceUInt32 reserved;
+	};
+	DeviceSpaceInfo devInfo;
+	sce_paf_memset(&devInfo, 0, sizeof(devInfo));
+	int ret = sceIoDevctl(device, 0x3001u, NULL, 0, &devInfo, sizeof(devInfo));
+	if (ret == 0) {
+		*maxSize = devInfo.maxBytes;
+		*freeSize = devInfo.freeBytes;
+	}
+	return ret;
+}
+
+int npTrophyGetDeviceFreeSpace(const char *device, SceUInt64 *outMaxSize, SceUInt64 *outFreeSize)
+{
+	return gameIoGetDeviceSpace(device, outMaxSize, outFreeSize);
+}
+
 /* Whether titleId is a title ID: nine capital letters and digits (0x8101D662). */
 int gameCheckTitleId(const char *titleId)
 {
@@ -1630,4 +1660,44 @@ int gamePathCheckUnder(const char *path, const char *dir)
 		return GAME_ERROR_PATH_OUTSIDE;
 
 	return 0;
+}
+
+/* Retail no-op debug hex dump (0x814098DC) */
+void gameDebugDump(const char *label, const void *buf, SceSize size)
+{
+	(void)label;
+	(void)buf;
+	(void)size;
+}
+
+/* Pack SceDateTime into MS-DOS / FAT 32-bit timestamp (0x8137E2D8) */
+extern "C" SceUInt32 gameFatTimeFromDateTime(const SceDateTime *dt)
+{
+	return (static_cast<SceUInt32>(dt->year - 80) << 25)
+		| (static_cast<SceUInt32>(dt->month) << 21)
+		| (static_cast<SceUInt32>(dt->day) << 16)
+		| (static_cast<SceUInt32>(dt->hour) << 11)
+		| (static_cast<SceUInt32>(dt->minute) << 5)
+		| (static_cast<SceUInt32>(dt->second) >> 1);
+}
+
+extern "C" {
+int sceNpDrmInstallGetPkgInfoFromDir(void *outInfo, const char *dirPath, void *headBuf, SceSize bufSize);
+int sceNpDrmInstallGetInstallInfo(void *outInfo, SceSize outSize, const char *dirPath, void *headBuf, SceSize bufSize);
+int sceNpDrmInstallGetContentInfo(void *outInfo, SceSize outSize, const char *dirPath, void *headBuf, SceSize bufSize);
+}
+
+int gamePackageReadInfo(GamePackageInfo *info, const char *path, void *buf, SceSize bufSize)
+{
+	return sceNpDrmInstallGetPkgInfoFromDir(info, path, buf, bufSize);
+}
+
+int gameNpDrmGetInstallInfo(SceNpDrmInstallInfo *info, SceSize size, const char *path, void *buf, SceSize bufSize)
+{
+	return sceNpDrmInstallGetInstallInfo(info, size, path, buf, bufSize);
+}
+
+int gameNpDrmGetPackageHeader(GamePackageHeadInfo *header, SceSize size, const char *path, void *buf, SceSize bufSize)
+{
+	return sceNpDrmInstallGetContentInfo(header, size, path, buf, bufSize);
 }

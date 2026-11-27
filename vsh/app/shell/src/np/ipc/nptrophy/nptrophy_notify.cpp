@@ -36,9 +36,9 @@ struct NpTrophyUserJidBuf {
 };
 
 extern int npTrophyResolvePidTitleId(SceUID pid, char *outTitleId);		/* 0x812CB034 */
-extern int npTrophyJidInit(NpTrophyUserJidBuf *jidBuf);				/* 0x812EA070 */
-extern int npTrophyJidFetchCurrentUser(NpTrophyUserJidBuf *jidBuf);		/* 0x812EA0E6 */
-extern int npTrophyJidFormatString(NpTrophyUserJidBuf *jidBuf);			/* 0x812EA0F8 */
+extern int npTrophyGetLocalNpId(SceNpId *outNpId);				/* 0x812EA0E6 */
+extern int npTrophyFormatNpIdJid(const SceNpId *npId, char *outBuf,
+				 SceSize outSize, bool stripOpt);		/* 0x812EA0F8 */
 extern int npActivityPostTrophyStandard(const char *titleId, const char *gameTitle,
 					const char *trophyName, int grade,
 					const char *uri);			/* 0x81362108 */
@@ -56,18 +56,20 @@ static int npTrophyBuildOnlineUri(const NpTrophyDetails *trophyDetails,
 				  const NpTrophyCommId *commId,
 				  paf::string *outUri)
 {
-	NpTrophyUserJidBuf jidBuf;
+	SceNpId localNpId;
+	char formattedJid[128];
 	char commIdStr[13];
 
-	npTrophyJidInit(&jidBuf);
+	sce_paf_memset(&localNpId, 0, sizeof(localNpId));
+	sce_paf_memset(formattedJid, 0, sizeof(formattedJid));
 	sce_paf_memset(commIdStr, 0, sizeof(commIdStr));
 	int ret = SceNpCommon_E426FEE8(commId, commIdStr, sizeof(commIdStr));
 	if (ret < 0)
 		return ret;
-	ret = npTrophyJidFetchCurrentUser(&jidBuf);
+	ret = npTrophyGetLocalNpId(&localNpId);
 	if (ret < 0)
 		return ret;
-	ret = npTrophyJidFormatString(&jidBuf);
+	ret = npTrophyFormatNpIdJid(&localNpId, formattedJid, sizeof(formattedJid), true);
 	if (ret < 0)
 		return ret;
 
@@ -80,7 +82,7 @@ static int npTrophyBuildOnlineUri(const NpTrophyDetails *trophyDetails,
 	*outUri += "&trophyid=";
 	*outUri += trophyIdStr;
 	*outUri += "&jid=";
-	*outUri += jidBuf.formattedJid;
+	*outUri += formattedJid;
 
 	size_t atPos = outUri->find("@");
 	if (atPos != paf::string::npos)

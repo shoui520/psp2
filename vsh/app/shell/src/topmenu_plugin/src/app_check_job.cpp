@@ -465,7 +465,7 @@ bool AppCheckJob::HandleFreeTrialResult(SceInt32 errorCode, SceInt32 pageKey)
 				 m_fttInfo.remainingSeconds / 60u);
 		paf::string minutesUtf8(minutesAscii);
 		paf::wstring minutesWide;
-		paf::common::Utf8ToUtf16(minutesUtf8, &minutesWide);
+		paf::common::Utf8ToUtf16(minutesUtf8.c_str(), &minutesWide);
 
 		showFttConfirmDialog(pageKey, m_process, expireText, minutesWide);
 		return true;

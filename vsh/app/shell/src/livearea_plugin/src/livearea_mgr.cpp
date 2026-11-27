@@ -19,6 +19,14 @@ int SceLsdb_C87397C0(paf::string *titleId);
 int SceLsdb_C875C57A(paf::string *titleId, const char *contentPath);
 }
 
+extern void *applauncherPluginGetInterface(const char *name, int id);
+namespace IPMI { class Session; }
+extern int npAccountRegisterCallback(int (*cb)(int eventId, IPMI::Session *session),
+				     IPMI::Session *session);
+extern int npAccountUnregisterCallback(int callbackId);
+extern int npAccountGetChatRestriction(int *isRestricted);
+extern int npAccountGetOnlineId(void *outOnlineId);
+
 /* Interface table callbacks */
 static int liveareaIfCreatePage(int pageKey, const char *titleId, const char *contentDir,
 				const LiveAreaPageInitInfo *info);		/* 0x8119AD92 */
@@ -49,9 +57,9 @@ LiveAreaMgr *g_liveareaMgr;							/* 0x815670A8 */
 /* 0x8119A698 */
 LiveAreaMgr::LiveAreaMgr(paf::Plugin *plugin)
 	: m_plugin(plugin),
-	  m_topmenuIf((LiveAreaTopmenuInterface *)shellPluginGetInterface("topmenu_plugin", 1)),
-	  m_gameIf((LiveAreaGameInterface *)shellPluginGetInterface("game_plugin", 1)),
-	  m_applauncherIf((LiveAreaApplauncherInterface *)shellPluginGetInterface("applauncher_plugin", 1)),
+	  m_topmenuIf((LiveAreaTopmenuInterface *)applauncherPluginGetInterface("topmenu_plugin", 1)),
+	  m_gameIf((LiveAreaGameInterface *)applauncherPluginGetInterface("game_plugin", 1)),
+	  m_applauncherIf((LiveAreaApplauncherInterface *)applauncherPluginGetInterface("applauncher_plugin", 1)),
 	  m_netState(0),
 	  m_signedInState(0),
 	  m_pollTimer(0.0f),
@@ -88,7 +96,7 @@ LiveAreaMgr::LiveAreaMgr(paf::Plugin *plugin)
 	iface->refreshPage = liveareaIfRefreshPage;
 
 	liveareaUpdaterStart(&m_updater);
-	m_netCbId = npManagerRegisterStateCallback(liveareaMgrOnNetEvent, NULL);
+	m_netCbId = npAccountRegisterCallback((int (*)(int, IPMI::Session *))liveareaMgrOnNetEvent, NULL);
 	SceShell_7FE4E732(4, (void *)liveareaMgrOnShellPause, NULL);
 	SceShell_7FE4E732(5, (void *)liveareaMgrOnShellResume, NULL);
 }
@@ -106,7 +114,7 @@ void liveareaMgrDestroy(void)
 	if (mgr != NULL) {
 		SceShell_D4C7D2B7(4, (void *)liveareaMgrOnShellResume, NULL);
 		SceShell_D4C7D2B7(4, (void *)liveareaMgrOnShellPause, NULL);
-		npManagerUnregisterStateCallback(mgr->m_netCbId);
+		npAccountUnregisterCallback(mgr->m_netCbId);
 		liveareaUpdaterStop(&mgr->m_updater);
 		g_liveareaMgr = NULL;
 		liveareaUpdaterDtor(&mgr->m_updater);
@@ -144,7 +152,7 @@ static void liveareaMgrMainThreadTick(void *userdata)
 	if (poll) {
 		mgr->m_pollTimer = 0.0f;
 		int signedIn = 0;
-		if (npManagerGetSignInState(&signedIn) == 0) {
+		if (npAccountGetChatRestriction(&signedIn) == 0) {
 			if (mgr->m_signedInState != signedIn) {
 				changed = true;
 				mgr->m_signedInState = signedIn;
@@ -240,7 +248,7 @@ void liveareaReplaceOnlineId(paf::string &out, const paf::string &in)
 	size_t pos = out.find(s_tag);
 	if (pos != paf::string::npos) {
 		char onlineId[20];
-		if (npManagerGetOnlineId(onlineId) < 0)
+		if (npAccountGetOnlineId(onlineId) < 0)
 			out.erase(pos, s_tag.size());
 		else
 			out.replace(pos, s_tag.size(), onlineId);

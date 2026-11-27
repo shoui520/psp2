@@ -224,10 +224,10 @@ static void applauncherIconInfoSizeItemOnRestart(int code, const void *data, Sce
 
 /* (0x810DC38C) */
 ApplauncherIconInfoSizeItem::ApplauncherIconInfoSizeItem(const string &titleId,
-	ui::Widget *parent, int unknown, int appType, bool hasAppSize, SceUInt64 appSize,
+	ui::Widget *parent, int storage, int appType, bool hasAppSize, SceUInt64 appSize,
 	ui::ListItem::CreateParam *param)
 	: ui::ListItem(parent, param), m_titleId(titleId), m_dots(0), m_reserved(-1), m_label(0),
-	  m_unknown(unknown), m_appType(appType), m_hasAppSize(hasAppSize), m_appSize(appSize)
+	  m_storage(storage), m_appType(appType), m_hasAppSize(hasAppSize), m_appSize(appSize)
 {
 	SceShell_7FE4E732(APPLAUNCHER_INFO_EVENT_STOP, applauncherIconInfoSizeItemOnStop, this);
 	SceShell_7FE4E732(APPLAUNCHER_INFO_EVENT_RESTART, applauncherIconInfoSizeItemOnRestart,
@@ -257,7 +257,7 @@ void ApplauncherIconInfoSizeItem::Update(unsigned int label)
 	ui::Widget *valueText = box->FindChild(IDParam(s_empty_name, APPLAUNCHER_INFO_ITEM_VALUE), 0);
 
 	if (valueText != NULL) {
-		if (m_unknown == 1) {
+		if (m_storage == 1) {
 			valueText->SetString(wstring(applauncherGetString(
 				IDParam(s_empty_name, APPLAUNCHER_INFO_MSG_NONE))));
 		} else if (g_applauncherIconInfoAppSize != 0) {

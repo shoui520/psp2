@@ -763,7 +763,7 @@ extern int SceLibMtp_33B08344(SceUInt32 contextId);
 extern int sceMtpBeginResumeImportObject(int category, int unused,
 					 SceUInt64 offset, SceUInt64 resumeSize,
 					 const void *extra, SceUInt32 *contextId);
-extern int sceMtpEndResumeImportObject(SceUInt32 contextId, SceUInt64 *objectId);
+extern int SceLibMtp_83242E03(SceUInt32 contextId, SceUInt64 *objectId);
 
 extern void *SceLibMtp_DA13726B(SceSize size);
 extern void SceLibMtp_492421F7(void *buf);
@@ -821,7 +821,7 @@ extern int SceLibMtp_0898F989(SceUInt32 index, MtpNetHost *hostOut);
 extern int SceLibMtp_9144D0B4(const MtpNetHost *host);
 extern int SceLibMtp_56FA46BB(const MtpNetHost *host, int *onlineOut);
 extern int SceLibMtp_389F2FE2(const MtpNetHost *host, int *registeredOut);
-extern int netMtpAssignHost(const MtpNetHost *host);
+extern "C" int SceLibMtp_5B4AF4B8(const MtpNetHost *host);
 extern int SceLibMtp_27F8701C(void);
 extern int SceLibMtp_8CD95681(int *assignedOut);
 extern int SceLibMtp_ED13170C(MtpNetHost *hostOut);

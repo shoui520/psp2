@@ -19,6 +19,11 @@
 #include "../../../../shell_cron.h"
 #include "location_internal.h"
 
+extern "C" {
+extern int SceNetCtl_AC326DB7(SceNetCtlCallback func, void *arg, int *cid);
+extern int SceNetCtl_229EAA64(int cid);
+}
+
 using namespace paf;
 
 LocationXtra *g_locationXtra;					/* (0x815496BC) */
@@ -58,7 +63,7 @@ int locationXtraTerm(void)
 			s_xtra->m_powerTask.Cancel();
 			g_locationManager->UnregisterTask(&s_xtra->m_powerTask);
 		}
-		sceNetCtlInetUnregisterCallback(s_xtra->m_netCtlCid);
+		SceNetCtl_229EAA64(s_xtra->m_netCtlCid);
 		s_xtra->m_netCtlCid = -1;
 		SceLsdb_DEF5C3F9(&s_xtra->m_lsdbClient);
 		if (s_xtra != NULL) {
@@ -107,7 +112,7 @@ int LocationXtra::Init()
 					    "[XTRA] registerDailyTimerCallback(cbId:0x%x) ret:0x%x\n",
 					    m_cronHandle, cronRet);
 		}
-		ret = sceNetCtlInetRegisterCallback(NetCtlCB, this, &m_netCtlCid);
+		ret = SceNetCtl_AC326DB7(NetCtlCB, this, &m_netCtlCid);
 		g_locationManager->RegisterTask(&m_powerTask);
 	}
 	return ret;

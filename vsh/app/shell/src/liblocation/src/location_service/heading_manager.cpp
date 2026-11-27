@@ -13,7 +13,7 @@
 #include <system/system.h>
 
 extern "C" {
-SceUInt64 sceRtcGetAccumulativeTimeForUser(void);
+SceUInt64 sceRtcGetAccumulativeTime(void);
 float sce_paf_sinf(float x);
 float sce_paf_cosf(float x);
 float sce_paf_atan2f(float y, float x);
@@ -50,7 +50,7 @@ static LocationQuat slerpHalf(const LocationQuat &lhs, const LocationQuat &rhs)
 	float wa = 0.5f;
 	float wb = 0.5f;
 	if (dot <= 0.9999f) {
-		float s = sqrtf(1.0f - dot * dot);
+		float s = __builtin_sqrtf(1.0f - dot * dot);
 		float theta = sce_paf_atan2f(s, dot);
 		float invSin = 1.0f / s;
 		wa = sce_paf_sinf(theta * 0.5f) * invSin;
@@ -293,7 +293,7 @@ int HeadingManager::PollMotion()
 	if (diagZ > best) { idx = 2; best = diagZ; }
 	if (diagW > best) { idx = 3; best = diagW; }
 
-	float s = (float)(sqrtf(best) * 0.5);
+	float s = (float)(__builtin_sqrtf(best) * 0.5);
 	float inv = 0.25f / s;
 	LocationQuat q;
 	if (idx == 0) {
@@ -473,7 +473,7 @@ int HeadingManager::GetHeading(const SceUInt32 *hmethod, SceLocationHeadingInfo 
 		if (diagY > best) { idx = 1; best = diagY; }
 		if (diagZ > best) { idx = 2; best = diagZ; }
 		if (diagW > best) { idx = 3; best = diagW; }
-		float qs = (float)(sqrtf(best) * 0.5);
+		float qs = (float)(__builtin_sqrtf(best) * 0.5);
 		float inv = 0.25f / qs;
 		LocationQuat rot = { 0.0f, 0.0f, 0.0f, 1.0f };
 		if (idx == 0) { rot.x = qs; rot.y = (s - s) * inv; }
@@ -502,7 +502,7 @@ int HeadingManager::GetHeading(const SceUInt32 *hmethod, SceLocationHeadingInfo 
 
 	float basisVec[4];
 	RotateBasisVector(&q, &effMethod, basisVec);
-	float norm = sqrtf(basisVec[0] * basisVec[0] + basisVec[1] * basisVec[1]);
+	float norm = __builtin_sqrtf(basisVec[0] * basisVec[0] + basisVec[1] * basisVec[1]);
 	float xyVec[2] = { basisVec[0] / norm, basisVec[1] / norm };
 	ComputeHeadingAngle(xyVec, &outInfo->heading, &effMethod, 0.0f);
 
@@ -519,7 +519,7 @@ int HeadingManager::GetHeading(const SceUInt32 *hmethod, SceLocationHeadingInfo 
 int HeadingManager::StartPolling()
 {
 	if (m_pollRefCount == 0) {
-		m_lastPollTime = sceRtcGetAccumulativeTimeForUser();
+		m_lastPollTime = sceRtcGetAccumulativeTime();
 		m_pollTask.Schedule(0);
 	}
 	m_pollRefCount++;
@@ -608,7 +608,7 @@ void HeadingManager::OnResume()
 int HeadingPollTask::OnNotify()
 {
 	int err = m_headingMgr->PollMotion();
-	SceUInt64 now = sceRtcGetAccumulativeTimeForUser();
+	SceUInt64 now = sceRtcGetAccumulativeTime();
 	unsigned int elapsed = (unsigned int)((now - m_headingMgr->m_lastPollTime) / 1000U);
 	m_headingMgr->m_lastPollTime = now;
 	m_headingMgr->m_posMgr->NotifyHeadingUpdate(err, elapsed);

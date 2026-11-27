@@ -95,22 +95,22 @@ static inline bool applauncherIconInfoShowsUpgrade(void)
 /* the license has a period: its end, or a period it was bought for */
 static inline bool applauncherIconInfoHasPeriod(const GameLicenseStatus *license)
 {
-	return license->valid && (license->flag1 || license->expireTime != 0x7FFFFFFFFFFFFFFFull);
+	return license->valid && (license->hasTimedLicense || license->expireTime != 0x7FFFFFFFFFFFFFFFull);
 }
 
 /* (0x810E005C) */
 ApplauncherIconInfoGameFactory::ApplauncherIconInfoGameFactory(Plugin *plugin,
 	ui::Widget *view, const common::SharedPtr<ApplauncherIcon> &icon, LsdbAppInfoPtr *appInfo,
 	GameLicenseStatus *license, GameFttInfo *ftt, bool hasCheck, bool hasFtt)
-	: ApplauncherIconInfoFactory(plugin, icon, appInfo), m_view(view), m_unknown(0),
-	  m_unknown2(0), m_license(license), m_ftt(ftt), m_startTime(0),
+	: ApplauncherIconInfoFactory(plugin, icon, appInfo), m_view(view), m_unusedAppSize(0),
+	  m_unusedStorage(0), m_license(license), m_ftt(ftt), m_startTime(0),
 	  m_expireTime(0x7FFFFFFFFFFFFFFFull)
 {
 	switch (sceLsdbGetType(appInfo)) {
 	case 1:
 		if (hasFtt) {
-			m_startTime = ftt->time1;
-			m_expireTime = ftt->time2;
+			m_startTime = ftt->startTime;
+			m_expireTime = ftt->expireTime;
 		} else if (applauncherIconInfoHasPeriod(m_license)) {
 			m_startTime = license->startTime;
 			m_expireTime = license->expireTime;

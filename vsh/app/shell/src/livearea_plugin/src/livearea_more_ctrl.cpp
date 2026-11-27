@@ -139,6 +139,25 @@ void LiveAreaMoreCtrl::Hide()
 	SetState(0, NULL);
 }
 
+/* 0x811A1CA2 */
+void liveareaMoreCtrlSetCount(LiveAreaMoreCtrl *ctrl, int count)
+{
+	bool hooked = ctrl->m_isScrollHooked;
+	if (count < 3) {
+		if (hooked) {
+			ctrl->m_isScrollHooked = false;
+			ctrl->m_fileList->ScePafWidget_7E9DC5B1(
+				ctrl->m_segmentIndex, paf::math::v2(0.0f, 0.0f));
+		}
+	} else {
+		if (!hooked) {
+			ctrl->m_isScrollHooked = true;
+			ctrl->m_fileList->ScePafWidget_7E9DC5B1(
+				ctrl->m_segmentIndex, paf::math::v2(0.0f, 12.0f));
+		}
+	}
+}
+
 /* 0x811A1D10 */
 void LiveAreaMoreCtrl::OnResult(bool hasError)
 {

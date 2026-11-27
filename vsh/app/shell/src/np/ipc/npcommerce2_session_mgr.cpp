@@ -13,6 +13,8 @@
 #include "../../livespace_db/lsdb_keys.h"
 #include "np_ipc_internal.h"
 
+extern "C" int SceThreadmgrCoredumpTime_sceKernelExitThread(int status);
+
 #define NP_COMM2_MAX_ACTIVE_REQS	16
 #define NP_COMM2_MAX_SESSION_SLOTS	16
 #define NP_COMM2_STATIC_TYPE_COUNT	13
@@ -1526,6 +1528,6 @@ static int npComm2WorkerThread(SceSize args, void *argp)
 			sceNpCommerce2DestroyCtx(s_staticSlots[i].coreCtxId);
 	}
 
-	sceKernelExitThread(0);
+	SceThreadmgrCoredumpTime_sceKernelExitThread(0);
 	return 0;
 }

@@ -169,24 +169,24 @@ void *ScePafStdc_3CF19248(SceSize size, void *heap);
 int sce_paf_atoi(const char *str);
 double sce_paf_atof(const char *str);
 long sce_paf_strtol(const char *str, char **endPtr, int base);
-int sceIoCloseForUser(SceUID fd);
-SceSSize sceIoReadForUser(SceUID fd, void *buf, SceSize size);
-int sceKernelCreateCallbackForUser(const char *name, SceUInt32 attr,
+int sceIoClose(SceUID fd);
+SceSSize sceIoRead(SceUID fd, void *buf, SceSize size);
+int sceKernelCreateCallback(const char *name, SceUInt32 attr,
 				   SceKernelCallbackFunction func, void *arg);
-int sceKernelDeleteCallbackForUser(SceUID cbId);
-int sceKernelNotifyCallbackForUser(SceUID cbId, int arg);
-int sceKernelDeleteEventFlagForUser(SceUID evfId);
-int sceKernelSetEventFlagForUser(SceUID evfId, SceUInt32 bits);
-int sceKernelDeleteMutexForUser(SceUID mutexId);
-int sceKernelUnlockMutexForUser(SceUID mutexId, int count);
-int sceKernelDeleteThreadForUser(SceUID threadId);
-int sceKernelStartTimerForUser(SceUID timerId);
-int sceKernelStopTimerForUser(SceUID timerId);
-int sceKernelDeleteTimerForUser(SceUID timerId);
+int sceKernelDeleteCallback(SceUID cbId);
+int sceKernelNotifyCallback(SceUID cbId, int arg);
+int sceKernelDeleteEventFlag(SceUID evfId);
+int sceKernelSetEventFlag(SceUID evfId, SceUInt32 bits);
+int sceKernelDeleteMutex(SceUID mutexId);
+int sceKernelUnlockMutex(SceUID mutexId, int count);
+int sceKernelDeleteThread(SceUID threadId);
+int sceKernelStartTimer(SceUID timerId);
+int sceKernelStopTimer(SceUID timerId);
+int sceKernelDeleteTimer(SceUID timerId);
 int sceKernelWaitEvent(SceUID eventId, SceUInt32 bitPattern, SceUInt32 *outBits,
 		       SceUInt64 *outUserData, SceUInt32 *timeout);
-int scePowerRegisterCallbackForUser(SceUID cbId);
-int scePowerUnregisterCallbackForUser(SceUID cbId);
+int scePowerRegisterCallback(SceUID cbId);
+int scePowerUnregisterCallback(SceUID cbId);
 }
 
 /* (0x8151FF2C) Operation x State transition error matrix */
@@ -255,9 +255,9 @@ static int gpsEmuUnlockMutex(int mutexKind)
 {
 	if (s_gpsEmuCtx != NULL) {
 		if (mutexKind == GPS_EMU_MUTEX_API)
-			return sceKernelUnlockMutexForUser(s_gpsEmuCtx->apiMutexId, 1);
+			return sceKernelUnlockMutex(s_gpsEmuCtx->apiMutexId, 1);
 		if (mutexKind == GPS_EMU_MUTEX_DATA)
-			return sceKernelUnlockMutexForUser(s_gpsEmuCtx->dataMutexId, 1);
+			return sceKernelUnlockMutex(s_gpsEmuCtx->dataMutexId, 1);
 	}
 	return mutexKind;
 }
@@ -452,7 +452,7 @@ static int gpsEmuDoStart(int mode)
 		return GPS_EMU_ERR_UNINIT;
 	s_gpsEmuCtx->startMode = mode;
 	gpsEmuSetStateLocked(GPS_EMU_STATE_STARTING);
-	sceKernelSetEventFlagForUser(s_gpsEmuCtx->mainEventFlag, GPS_EMU_EVF_START);
+	sceKernelSetEventFlag(s_gpsEmuCtx->mainEventFlag, GPS_EMU_EVF_START);
 	return 0;
 }
 
@@ -462,7 +462,7 @@ static int gpsEmuDoStop(void)
 	if (s_gpsEmuCtx == NULL)
 		return GPS_EMU_ERR_UNINIT;
 	gpsEmuSetStateLocked(GPS_EMU_STATE_STOPPING);
-	sceKernelSetEventFlagForUser(s_gpsEmuCtx->mainEventFlag, GPS_EMU_EVF_STOP);
+	sceKernelSetEventFlag(s_gpsEmuCtx->mainEventFlag, GPS_EMU_EVF_STOP);
 	return 0;
 }
 
@@ -506,7 +506,7 @@ static int gpsEmuPowerCallback(int notifyId, int notifyCount, int powerFlags, vo
 	} else if ((powerFlags & GPS_EMU_POWER_RESUME_BIT) != 0 && s_gpsEmuSuspended == 1) {
 		s_gpsEmuSuspended = 0;
 		if (s_gpsEmuCtx != NULL && s_gpsEmuCtx->suspendEventFlag >= 0)
-			sceKernelSetEventFlagForUser(s_gpsEmuCtx->suspendEventFlag, GPS_EMU_EVF_RESUME);
+			sceKernelSetEventFlag(s_gpsEmuCtx->suspendEventFlag, GPS_EMU_EVF_RESUME);
 	}
 	return 0;
 }
@@ -541,22 +541,22 @@ static int gpsEmuMainThread(SceSize args, void *argp)
 
 		if ((outBits & GPS_EMU_EVF_START) != 0) {
 			if (ctx->clientCallbackId > 0) {
-				sceKernelNotifyCallbackForUser(ctx->clientCallbackId, GPS_EMU_CB_NOTIFY_START);
+				sceKernelNotifyCallback(ctx->clientCallbackId, GPS_EMU_CB_NOTIFY_START);
 				gpsEmuSetStateLocked(GPS_EMU_STATE_RUNNING);
 			}
 		} else if ((outBits & GPS_EMU_EVF_STOP) != 0) {
 			if (ctx->clientCallbackId > 0) {
 				gpsEmuSetStateLocked(GPS_EMU_STATE_OPENED);
-				sceKernelNotifyCallbackForUser(ctx->clientCallbackId, GPS_EMU_CB_NOTIFY_STOP);
+				sceKernelNotifyCallback(ctx->clientCallbackId, GPS_EMU_CB_NOTIFY_STOP);
 			}
 		} else if ((outBits & GPS_EMU_EVF_DATA_READY) != 0) {
 			if (ctx->clientCallbackId > 0 && gpsEmuIsActiveState()) {
 				gpsEmuSetStateLocked(GPS_EMU_STATE_DATA_READY);
-				sceKernelNotifyCallbackForUser(ctx->clientCallbackId, GPS_EMU_CB_NOTIFY_DATA);
+				sceKernelNotifyCallback(ctx->clientCallbackId, GPS_EMU_CB_NOTIFY_DATA);
 			}
 		} else if ((outBits & GPS_EMU_EVF_SAT_READY) != 0) {
 			if (ctx->clientCallbackId > 0 && gpsEmuIsActiveState())
-				sceKernelNotifyCallbackForUser(ctx->clientCallbackId, GPS_EMU_CB_NOTIFY_SAT);
+				sceKernelNotifyCallback(ctx->clientCallbackId, GPS_EMU_CB_NOTIFY_SAT);
 		}
 	}
 }
@@ -583,7 +583,7 @@ static int gpsEmuReadNextNmeaEpoch(GpsEmuNmeaRecord *record, SceUInt8 *outHasMor
 			}
 			if (!skipRead) {
 				sce_paf_memset(s_gpsEmuCtx->readBuffer, 0, GPS_EMU_READ_BUFFER_SIZE);
-				SceSSize readBytes = sceIoReadForUser(
+				SceSSize readBytes = sceIoRead(
 					s_gpsEmuCtx->nmeaFd, s_gpsEmuCtx->readBuffer, readSize);
 				if (readBytes < 0) {
 					status = static_cast<int>(readBytes);
@@ -873,8 +873,8 @@ static int gpsEmuParseThread(SceSize args, void *argp)
 
 		sceKernelSetTimerEvent(ctx->notifyTimerId, 1, &s_gpsEmuTimerInterval, 1);
 		gpsEmuPublishEpoch(&s_gpsEmuCurrentRecord, publishedStepUsec);
-		sceKernelSetEventFlagForUser(ctx->mainEventFlag, GPS_EMU_EVF_SAT_READY);
-		sceKernelSetEventFlagForUser(ctx->mainEventFlag, GPS_EMU_EVF_DATA_READY);
+		sceKernelSetEventFlag(ctx->mainEventFlag, GPS_EMU_EVF_SAT_READY);
+		sceKernelSetEventFlag(ctx->mainEventFlag, GPS_EMU_EVF_DATA_READY);
 
 		bool locked = gpsEmuLockMutex(GPS_EMU_MUTEX_DATA);
 		if (s_gpsEmuSingleEpochMode == 0) {
@@ -892,8 +892,8 @@ static int gpsEmuParseThread(SceSize args, void *argp)
 				readRet = gpsEmuReadNextNmeaEpoch(&s_gpsEmuNextRecord, &hasMoreEpochs);
 			status = readRet;
 			if (readRet != 0) {
-				sceKernelStopTimerForUser(s_gpsEmuCtx->notifyTimerId);
-				sceKernelDeleteTimerForUser(s_gpsEmuCtx->notifyTimerId);
+				sceKernelStopTimer(s_gpsEmuCtx->notifyTimerId);
+				sceKernelDeleteTimer(s_gpsEmuCtx->notifyTimerId);
 				wrappedOrFailed = true;
 				break;
 			}
@@ -919,30 +919,30 @@ static void gpsEmuCleanupInitResources(bool stopTimer, bool stopParseThread, boo
 				       bool delMainEvf, bool unregPowerCb, bool delSuspendEvf)
 {
 	if (stopTimer)
-		sceKernelDeleteTimerForUser(s_gpsEmuStorage.notifyTimerId);
+		sceKernelDeleteTimer(s_gpsEmuStorage.notifyTimerId);
 	if (stopParseThread)
 		sceKernelWaitThreadEnd(s_gpsEmuStorage.parseThreadId, NULL, NULL);
 	if (stopMainThread) {
-		sceKernelSetEventFlagForUser(s_gpsEmuStorage.mainEventFlag, GPS_EMU_EVF_EXIT);
+		sceKernelSetEventFlag(s_gpsEmuStorage.mainEventFlag, GPS_EMU_EVF_EXIT);
 		sceKernelWaitThreadEnd(s_gpsEmuStorage.mainThreadId, NULL, NULL);
 	}
 	if (delParseThread)
-		sceKernelDeleteThreadForUser(s_gpsEmuStorage.parseThreadId);
+		sceKernelDeleteThread(s_gpsEmuStorage.parseThreadId);
 	if (delMainThread)
-		sceKernelDeleteThreadForUser(s_gpsEmuStorage.mainThreadId);
+		sceKernelDeleteThread(s_gpsEmuStorage.mainThreadId);
 	if (delDataMutex)
-		sceKernelDeleteMutexForUser(s_gpsEmuStorage.dataMutexId);
+		sceKernelDeleteMutex(s_gpsEmuStorage.dataMutexId);
 	if (delApiMutex)
-		sceKernelDeleteMutexForUser(s_gpsEmuStorage.apiMutexId);
+		sceKernelDeleteMutex(s_gpsEmuStorage.apiMutexId);
 	if (delMainEvf)
-		sceKernelDeleteEventFlagForUser(s_gpsEmuStorage.mainEventFlag);
+		sceKernelDeleteEventFlag(s_gpsEmuStorage.mainEventFlag);
 	if (delSuspendEvf)
-		sceKernelDeleteEventFlagForUser(s_gpsEmuStorage.suspendEventFlag);
+		sceKernelDeleteEventFlag(s_gpsEmuStorage.suspendEventFlag);
 	if (unregPowerCb) {
-		scePowerUnregisterCallbackForUser(s_gpsEmuStorage.powerCallbackId);
-		sceKernelDeleteCallbackForUser(s_gpsEmuStorage.powerCallbackId);
+		scePowerUnregisterCallback(s_gpsEmuStorage.powerCallbackId);
+		sceKernelDeleteCallback(s_gpsEmuStorage.powerCallbackId);
 	}
-	sceIoCloseForUser(s_gpsEmuStorage.nmeaFd);
+	sceIoClose(s_gpsEmuStorage.nmeaFd);
 	if (s_gpsEmuStorage.readBuffer != NULL) {
 		operator delete(s_gpsEmuStorage.readBuffer);
 		s_gpsEmuStorage.readBuffer = NULL;
@@ -989,7 +989,7 @@ static int gpsEmuStartInternal(const char *nmeaPath)
 	char *readBuf = static_cast<char *>(ScePafStdc_3CF19248(GPS_EMU_READ_BUFFER_SIZE, g_locationHeap));
 	s_gpsEmuStorage.readBuffer = readBuf;
 	if (readBuf == NULL) {
-		sceIoCloseForUser(fd);
+		sceIoClose(fd);
 		return GPS_EMU_LOC_ERR_NO_MEMORY;
 	}
 
@@ -1009,14 +1009,14 @@ static int gpsEmuStartInternal(const char *nmeaPath)
 		return suspendEvf;
 	}
 
-	SceUID powerCb = sceKernelCreateCallbackForUser(
+	SceUID powerCb = sceKernelCreateCallback(
 		"SceLocationGpsEmuSuspendCallback", 0, gpsEmuPowerCallback, NULL);
 	s_gpsEmuStorage.powerCallbackId = powerCb;
 	if (powerCb < 0) {
 		gpsEmuCleanupInitResources(false, false, false, false, false, false, false, false, false, true);
 		return powerCb;
 	}
-	scePowerRegisterCallbackForUser(powerCb);
+	scePowerRegisterCallback(powerCb);
 
 	SceUID mainEvf = sceKernelCreateEventFlag("SceLocationGpsEmulator", 0, 0, NULL);
 	s_gpsEmuStorage.mainEventFlag = mainEvf;
@@ -1075,7 +1075,7 @@ static int gpsEmuStartInternal(const char *nmeaPath)
 		return startParseRet;
 	}
 
-	int startTimerRet = sceKernelStartTimerForUser(timerId);
+	int startTimerRet = sceKernelStartTimer(timerId);
 	if (startTimerRet < 0) {
 		gpsEmuSetStateLocked(GPS_EMU_STATE_UNINIT);
 		gpsEmuCleanupInitResources(true, true, true, true, true, true, true, true, true, true);
@@ -1091,20 +1091,20 @@ static int gpsEmuStopInternal(void)
 	int ret = 0;
 	if (s_gpsEmuCtx != NULL) {
 		gpsEmuSetStateLocked(GPS_EMU_STATE_UNINIT);
-		sceKernelStopTimerForUser(s_gpsEmuCtx->notifyTimerId);
-		sceKernelDeleteTimerForUser(s_gpsEmuCtx->notifyTimerId);
-		sceIoCloseForUser(s_gpsEmuCtx->nmeaFd);
+		sceKernelStopTimer(s_gpsEmuCtx->notifyTimerId);
+		sceKernelDeleteTimer(s_gpsEmuCtx->notifyTimerId);
+		sceIoClose(s_gpsEmuCtx->nmeaFd);
 		sceKernelWaitThreadEnd(s_gpsEmuCtx->parseThreadId, NULL, NULL);
-		sceKernelSetEventFlagForUser(s_gpsEmuCtx->mainEventFlag, GPS_EMU_EVF_EXIT);
+		sceKernelSetEventFlag(s_gpsEmuCtx->mainEventFlag, GPS_EMU_EVF_EXIT);
 		sceKernelWaitThreadEnd(s_gpsEmuCtx->mainThreadId, NULL, NULL);
-		sceKernelDeleteThreadForUser(s_gpsEmuCtx->parseThreadId);
-		sceKernelDeleteThreadForUser(s_gpsEmuCtx->mainThreadId);
-		sceKernelDeleteMutexForUser(s_gpsEmuCtx->dataMutexId);
-		sceKernelDeleteMutexForUser(s_gpsEmuCtx->apiMutexId);
-		sceKernelDeleteEventFlagForUser(s_gpsEmuCtx->mainEventFlag);
-		scePowerUnregisterCallbackForUser(s_gpsEmuStorage.powerCallbackId);
-		sceKernelDeleteCallbackForUser(s_gpsEmuStorage.powerCallbackId);
-		ret = sceKernelDeleteEventFlagForUser(s_gpsEmuCtx->suspendEventFlag);
+		sceKernelDeleteThread(s_gpsEmuCtx->parseThreadId);
+		sceKernelDeleteThread(s_gpsEmuCtx->mainThreadId);
+		sceKernelDeleteMutex(s_gpsEmuCtx->dataMutexId);
+		sceKernelDeleteMutex(s_gpsEmuCtx->apiMutexId);
+		sceKernelDeleteEventFlag(s_gpsEmuCtx->mainEventFlag);
+		scePowerUnregisterCallback(s_gpsEmuStorage.powerCallbackId);
+		sceKernelDeleteCallback(s_gpsEmuStorage.powerCallbackId);
+		ret = sceKernelDeleteEventFlag(s_gpsEmuCtx->suspendEventFlag);
 
 		s_gpsEmuCtx = NULL;
 		s_gpsEmuStorage.clientCallbackId = 0;

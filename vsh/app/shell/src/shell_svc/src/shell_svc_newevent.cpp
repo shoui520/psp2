@@ -256,3 +256,19 @@ int shellSvcNewEventCancelProgressWrap(SceInt64 eventId)
 {
 	return shellSvcNewEventCancelProgress(eventId);
 }
+
+/* indicator_plugin entry points (0x811C3F7C, 0x811C3F8C, 0x811C3F94) */
+int indicatorTaskGetProgress(SceInt64 id, float *progress, paf::string *title, paf::string *status)
+{
+	return shellSvcNewEventGetProgress(id, progress, title, status);
+}
+
+int indicatorTaskRemove(SceInt64 id)
+{
+	return shellSvcNewEventCancelProgress(id);
+}
+
+paf::string indicatorTaskGetName(SceInt64 id)
+{
+	return shellSvcNewEventGetCancelText(id);
+}

@@ -243,6 +243,11 @@ int shellAppEventServerSend(int event, const void *data, SceSize size)
 	return shellAppEventServerSendEvent(event, data, size);
 }
 
+int shellAppSetForeground(int event, const char *titleId, int size)
+{
+	return shellAppEventServerSendEvent(event, titleId, static_cast<SceSize>(size));
+}
+
 /* (0x810E17F6) */
 int shellAppEventServerCreate(void)
 {

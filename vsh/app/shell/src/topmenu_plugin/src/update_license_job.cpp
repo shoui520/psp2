@@ -125,7 +125,7 @@ public:
 
 		if (signInState != 1) {
 			paf::thread::Sleep(500);
-			SceUID cbId = sceKernelCreateCallbackForUser(
+			SceUID cbId = sceKernelCreateCallback(
 				"SceShellUpdaeLicenseCallback", 0,
 				onLicenseSignInCallback, &m_signInDone);
 			if (cbId == -1)
@@ -145,7 +145,7 @@ public:
 			SceShell_83D16CA8(0, OnSignInAppEvent, this);
 
 			if (sceAppMgrLaunchAppByName2("NPXS10016", "signin", &opt) != 0) {
-				sceKernelDeleteCallbackForUser(cbId);
+				sceKernelDeleteCallback(cbId);
 				SceShell_E3D3A162(5, OnSignInAppEvent, this);
 				SceShell_E3D3A162(6, OnSignInAppEvent, this);
 				SceShell_E3D3A162(4, OnSignInAppEvent, this);
@@ -159,7 +159,7 @@ public:
 					break;
 				paf::thread::Sleep(16);
 			}
-			sceKernelDeleteCallbackForUser(cbId);
+			sceKernelDeleteCallback(cbId);
 
 			SceAppMgrAppStatus appStatus;
 			while (sceAppMgrGetStatusByName("NPXS10016", &appStatus) == 0)

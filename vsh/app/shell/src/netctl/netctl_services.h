@@ -35,9 +35,9 @@ int sceErrorHistorySetDefaultFormat(const void *format);
 int vshSblSsDecryptWithPortability(int keyType, const void *iv, const void *inBuf, void *outBuf);
 
 /* Statically linked HMAC-SHA1 and MD5 helpers in SceShell */
-int shellHmacSha1Digest(const void *key, SceSize keyLen, const void *data, SceSize dataLen,
+int sceHmacSha1Digest(const void *key, SceSize keyLen, const void *data, SceSize dataLen,
 			void *outDigest);
-int shellMd5Digest(const void *data, SceSize dataLen, void *outDigest);
+int sceMd5Digest(const void *data, SceSize dataLen, void *outDigest);
 
 /* ---------- SceNetStun (0x812181CC..0x8121A038) ---------- */
 

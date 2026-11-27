@@ -2163,6 +2163,8 @@ int Controller::runMainLoop()
     return 0;
 }
 
+extern "C" int SceThreadmgrCoredumpTime_sceKernelExitThread(int status);
+
 int Controller::threadEntry(SceSize args, void *argp)
 {
     (void)args;
@@ -2171,7 +2173,7 @@ int Controller::threadEntry(SceSize args, void *argp)
         if (ctrl != NULL)
             ctrl->runMainLoop();
     }
-    sceKernelExitThread(1);
+    SceThreadmgrCoredumpTime_sceKernelExitThread(1);
     return 0;
 }
 
@@ -2532,6 +2534,106 @@ int Controller::onShellResumeEvent(int eventType, int eventParam, int eventExtra
         return audioOutputSetPriority(ctrl->m_audioOutArena, -1, 0);
     }
     return active->playerKind;
+}
+
+int controllerSendCommand(void *ctrl, uint64_t cmdHeader, const void *inBuf,
+                          unsigned int inSize, SceUInt *timeout, void *outResult)
+{
+    return static_cast<Controller *>(ctrl)->sendCommand(cmdHeader, inBuf, inSize, timeout, outResult);
+}
+
+int controllerGetContentInfo(void *ctrl, unsigned char channelId, void *infoBuf)
+{
+    return static_cast<Controller *>(ctrl)->getContentInfo(channelId, infoBuf);
+}
+
+int controllerGetStatus(void *ctrl, unsigned char channelId, void *statusBuf,
+                        void *outPos, void *outPosValid, int *outMode,
+                        void *workBuf, unsigned char *outFlag, int queryFlags)
+{
+    return static_cast<Controller *>(ctrl)->getStatus(
+        channelId, static_cast<PlayerStatusSnapshot *>(statusBuf), outPos, outPosValid,
+        outMode, workBuf, outFlag, queryFlags);
+}
+
+int controllerGetState(void *ctrl, unsigned char channelId, void *outState)
+{
+    int state = static_cast<Controller *>(ctrl)->getAudioState(channelId);
+    if (outState != NULL)
+        *static_cast<int *>(outState) = state;
+    return 0;
+}
+
+unsigned int calcControllerSize()
+{
+    return sizeof(Controller) + Controller::calcQueueBytes();
+}
+
+BaseObject *constructController(void *mem, void *factory, int *outErr, unsigned int slotSize)
+{
+    return new (mem) Controller(static_cast<ObjFactory *>(factory), outErr, slotSize);
+}
+
+class WorkBufferObject : public BaseObject {
+public:
+    WorkBufferObject(unsigned int bufSize) : m_bufSize(bufSize), m_payload(NULL) {}
+    virtual ~WorkBufferObject() {}
+    unsigned int m_bufSize;
+    void *m_payload;
+};
+
+BaseObject *constructWorkBuffer(void *mem, unsigned int bufSize, unsigned int slotSize)
+{
+    (void)slotSize;
+    return new (mem) WorkBufferObject(bufSize);
+}
+
+void *workBufAllocRegion(void *workBuf, size_t size)
+{
+    (void)size;
+    if (workBuf == NULL)
+        return NULL;
+    return static_cast<char *>(workBuf) + sizeof(WorkBufferObject);
+}
+
+void workBufSetPayload(void *workBuf, void *payload)
+{
+    if (workBuf != NULL)
+        static_cast<WorkBufferObject *>(workBuf)->m_payload = payload;
+}
+
+void *workBufGetRegion(void *workBuf, int index)
+{
+    (void)index;
+    if (workBuf == NULL)
+        return NULL;
+    WorkBufferObject *obj = static_cast<WorkBufferObject *>(workBuf);
+    return (obj->m_payload != NULL) ? obj->m_payload
+                                    : (static_cast<char *>(workBuf) + sizeof(WorkBufferObject));
+}
+
+void *constructUriData(void *mem, int uriPtr, int listIndex, int trackIndex, int shuffleFlag,
+                       int contentKind, int repeatFlag, int modeFlag, int extraFlag, int cap)
+{
+    (void)uriPtr; (void)listIndex; (void)trackIndex; (void)shuffleFlag;
+    (void)contentKind; (void)repeatFlag; (void)modeFlag; (void)extraFlag; (void)cap;
+    return mem;
+}
+
+void *constructUriString(void *mem, char *str, int flags, int cap, int headerSize)
+{
+    (void)flags; (void)headerSize;
+    if (mem != NULL && str != NULL && cap > 0)
+        sce_paf_memcpy(mem, str, static_cast<size_t>(cap));
+    return mem;
+}
+
+int queryAppFocusState(AppFocusInfo *outInfo, int priority)
+{
+    (void)priority;
+    if (outInfo != NULL)
+        sce_paf_memset(outInfo, 0, sizeof(*outInfo));
+    return 0;
 }
 
 } /* namespace MusicCore */

@@ -104,7 +104,7 @@ class Job_EventWindowTaskCommand : public common::SlotJobItem {
 public:
 	Job_EventWindowTaskCommand(SceUInt32 command)
 		: common::SlotJobItem("Job_EventWindowTaskCommand", NULL), m_command(command),
-		  reserved2(0)
+		  m_unusedFlags(0)
 	{
 	}
 
@@ -116,8 +116,8 @@ public:
 
 	SceUInt32 m_command;
 	string m_param;
-	int reserved;
-	int reserved2;
+	int m_unusedState;
+	int m_unusedFlags;
 };
 
 /* (0x81544A54) */
@@ -126,10 +126,10 @@ static IndicatorNoticeManager *s_noticeManager;
 static void indicatorNoticeManagerOnItemDone(int result, int option);
 static void indicatorNoticeManagerOnButton(SceInt32 type, ui::Handler *self, ui::Event *e,
 					   void *data);
-static void indicatorNoticeManagerOnResized(Timer *t, ui::AnimListener *listener, void *data1,
-					    void *data2, void *data3);
-static void indicatorNoticeManagerOnClosed(Timer *t, ui::AnimListener *listener, void *data1,
-					   void *data2, void *data3);
+static void indicatorNoticeManagerOnResized(Timer *t, ui::AnimListener *listener, void *widgetArg,
+					    void *managerArg, void *extraArg);
+static void indicatorNoticeManagerOnClosed(Timer *t, ui::AnimListener *listener, void *widgetArg,
+					   void *managerArg, void *extraArg);
 static void indicatorNoticeManagerOnGroupEvent(SceInt32 type, ui::Handler *self, ui::Event *e,
 					       void *data);
 static void indicatorNoticeManagerOnMenuClosed(int result, void *arg);
@@ -285,7 +285,7 @@ public:
 				else
 					shape.m_rot = math::v3(0.0f, 0.0f, -1.5707964f);
 				shape.m_changed = true;
-				button->m_focus_parts.push_back(shape);
+				button->m_focus_parts.insert(button->m_focus_parts.end(), shape);
 			}
 			cell = param.m_cell;
 		}
@@ -1137,17 +1137,20 @@ static void indicatorNoticeManagerOnButton(SceInt32 type, ui::Handler *self, ui:
 }
 
 /* (0x811737E2) */
-static void indicatorNoticeManagerOnResized(Timer *t, ui::AnimListener *listener, void *data1,
-					    void *data2, void *data3)
+static void indicatorNoticeManagerOnResized(Timer *t, ui::AnimListener *listener, void *widgetArg,
+					    void *managerArg, void *extraArg)
 {
-	((IndicatorNoticeManager *)data2)->OnFrameResized((ui::Widget *)data1, data2);
+	(void)extraArg;
+	((IndicatorNoticeManager *)managerArg)->OnFrameResized((ui::Widget *)widgetArg, managerArg);
 }
 
 /* the frame shrunk: the page destroyed and closed (0x811737F0) */
-static void indicatorNoticeManagerOnClosed(Timer *t, ui::AnimListener *listener, void *data1,
-					   void *data2, void *data3)
+static void indicatorNoticeManagerOnClosed(Timer *t, ui::AnimListener *listener, void *widgetArg,
+					   void *managerArg, void *extraArg)
 {
-	IndicatorNoticeManager *manager = (IndicatorNoticeManager *)data2;
+	(void)widgetArg;
+	(void)extraArg;
+	IndicatorNoticeManager *manager = (IndicatorNoticeManager *)managerArg;
 
 	if (manager->m_page != NULL)
 		manager->m_page->DestroyWidget();

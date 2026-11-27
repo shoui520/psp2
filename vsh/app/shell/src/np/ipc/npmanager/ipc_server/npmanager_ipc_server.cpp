@@ -18,10 +18,11 @@
 #include "src/np/ipc/np_ipc_internal.h"
 
 extern "C" {
+#include <kernel/openpsid.h>
 extern void *sceNpCommonMallocNpServerName(SceSize size);
 extern void sceNpCommonFreeNpServerName(void *ptr);
 extern int SceNpCommon_BBC13621(void);
-extern int sceRegMgrGetKeyStrForUser(const char *category, const char *name,
+extern int sceRegMgrGetKeyStr(const char *category, const char *name,
 				     char *buf, SceSize size);
 }
 
@@ -1601,6 +1602,218 @@ static void storeBigEndianBlock(SceUInt8 *bytes, SceUInt64 word)
 		bytes[i] = static_cast<SceUInt8>((word >> (56 - i * 8)) & 0xFFU);
 }
 
+/* Bit-sliced DES tables (0x8153DE00 PC-2 bit shifts, 0x8153DE40 packed S-box) */
+static const SceUInt8 s_desPc2Shifts[48] = {
+	0x02, 0x04, 0x0D, 0x01, 0x14, 0x08, 0x1B, 0x16,
+	0x07, 0x0E, 0x10, 0x12, 0x08, 0x19, 0x1A, 0x06,
+	0x04, 0x1C, 0x0C, 0x0B, 0x13, 0x15, 0x17, 0x10,
+	0x0A, 0x14, 0x15, 0x05, 0x06, 0x11, 0x0F, 0x17,
+	0x1C, 0x0C, 0x03, 0x02, 0x05, 0x1B, 0x01, 0x13,
+	0x18, 0x09, 0x0B, 0x03, 0x11, 0x18, 0x0E, 0x0D
+};
+
+static const SceUInt32 s_desSboxTable[64] = {
+	0xD8D8DBBCu, 0xD73559C1u, 0x8306F441u, 0x3DABEAFEu,
+	0x1CEC9542u, 0x8A408EFBu, 0xF079253Fu, 0xCF34D510u,
+	0x721726B5u, 0x4CFEF21Cu, 0x4DEADAA6u, 0xF2471AC9u,
+	0xEDA34BCFu, 0x338FA826u, 0x16D508D1u, 0xE048253Fu,
+	0x8F0A4602u, 0x28BC163Du, 0x7CD56B19u, 0x8240BF20u,
+	0x6223ABC1u, 0x37D7E0A8u, 0xAF9FD4BCu, 0x59BB1BCFu,
+	0xB77C897Eu, 0xE0810592u, 0x00A1344Bu, 0x3F7AE567u,
+	0x091474BCu, 0x4D697B47u, 0xF36ABB62u, 0x949644D0u,
+	0x1647A960u, 0xA5DAC69Au, 0x587B189Eu, 0x83E8BD45u,
+	0xF2A1E679u, 0x4FBF0121u, 0x67986989u, 0x30465AA9u,
+	0x49B899C3u, 0x7241E064u, 0xBF458774u, 0xCD9E619Au,
+	0xBE5E56BCu, 0x982035DBu, 0x81B27643u, 0x7F358E66u,
+	0xA5E4F7DFu, 0xDA2FE8E3u, 0xA79A8421u, 0x7FB513BEu,
+	0x89DE041Eu, 0xC8017B16u, 0x78659B73u, 0xA7F8A65Du,
+	0x8C0F7AA2u, 0x05B21FCDu, 0x72D26B8Cu, 0x84455C30u,
+	0x5221A967u, 0x724E8634u, 0x4D2D549Cu, 0x38DBF9CBu
+};
+
+static inline SceUInt32 desRotr32(SceUInt32 value, unsigned int shift)
+{
+	return (value >> shift) | (value << (32u - shift));
+}
+
+static inline SceUInt32 desBswap32(SceUInt32 value)
+{
+	return ((value & 0x000000FFu) << 24)
+		| ((value & 0x0000FF00u) << 8)
+		| ((value & 0x00FF0000u) >> 8)
+		| ((value & 0xFF000000u) >> 24);
+}
+
+/* 0x8144A354: DES initial permutation */
+static SceUInt64 desInitialPermutation(SceUInt32 lowWord, SceUInt32 highWord)
+{
+	SceUInt32 delta = (lowWord ^ (highWord >> 4)) & 0x0F0F0F0Fu;
+	SceUInt32 left = lowWord ^ delta;
+	SceUInt32 right = highWord ^ (delta << 4);
+
+	SceUInt32 halfSwap = (left ^ (right >> 16)) & 0x0000FFFFu;
+	left ^= halfSwap;
+	right ^= (halfSwap << 16);
+
+	delta = (right ^ (left >> 2)) & 0x33333333u;
+	right ^= delta;
+	left ^= (delta << 2);
+
+	delta = (right ^ (left >> 8)) & 0x00FF00FFu;
+	right ^= delta;
+	left ^= (delta << 8);
+
+	delta = (left ^ (right >> 1)) & 0x55555555u;
+	left ^= delta;
+	right ^= (delta << 1);
+
+	return (static_cast<SceUInt64>(right) << 32) | static_cast<SceUInt64>(left);
+}
+
+/* 0x8144A39C: DES final permutation */
+static SceUInt64 desFinalPermutation(SceUInt32 lowWord, SceUInt32 highWord)
+{
+	SceUInt32 delta = (lowWord ^ (highWord >> 1)) & 0x55555555u;
+	SceUInt32 left = lowWord ^ delta;
+	SceUInt32 right = highWord ^ (delta << 1);
+
+	delta = (right ^ (left >> 8)) & 0x00FF00FFu;
+	right ^= delta;
+	left ^= (delta << 8);
+
+	delta = (right ^ (left >> 2)) & 0x33333333u;
+	right ^= delta;
+	left ^= (delta << 2);
+
+	SceUInt32 halfSwap = (left ^ (right >> 16)) & 0x0000FFFFu;
+	left ^= halfSwap;
+	right ^= (halfSwap << 16);
+
+	delta = (left ^ (right >> 4)) & 0x0F0F0F0Fu;
+	left ^= delta;
+	right ^= (delta << 4);
+
+	return (static_cast<SceUInt64>(right) << 32) | static_cast<SceUInt64>(left);
+}
+
+/* 0x8144A3E4: DES Feistel F-function */
+static SceUInt32 desFeistelRound(SceUInt32 evenHalf, SceUInt32 oddHalf)
+{
+	SceUInt32 sboxEvenMid = s_desSboxTable[(evenHalf >> 18) & 0x3Fu];
+	SceUInt32 sboxOddMid = s_desSboxTable[(oddHalf >> 18) & 0x3Fu];
+	SceUInt32 sboxEvenLow = s_desSboxTable[(evenHalf >> 2) & 0x3Fu];
+	SceUInt32 sboxOddLow = s_desSboxTable[(oddHalf >> 2) & 0x3Fu];
+	SceUInt32 sboxEvenTop = s_desSboxTable[evenHalf >> 26];
+	SceUInt32 sboxOddTop = s_desSboxTable[oddHalf >> 26];
+	SceUInt32 sboxEvenHi = s_desSboxTable[(evenHalf >> 10) & 0x3Fu];
+	SceUInt32 sboxOddHi = s_desSboxTable[(oddHalf >> 10) & 0x3Fu];
+
+	SceUInt32 lowMix =
+		((((sboxOddLow ^ sboxOddMid) & 0x3B362CA9u) ^ sboxOddMid) & 0xD86A7878u) +
+		((((sboxEvenLow ^ sboxEvenMid) & 0x3B362CA9u) ^ sboxEvenMid) & 0x27958787u);
+
+	SceUInt32 highMix =
+		(((sboxEvenTop ^ ((sboxEvenHi ^ sboxEvenTop) & 0x3B362CA9u)) & 0x27958787u) +
+		 ((sboxOddTop ^ ((sboxOddHi ^ sboxOddTop) & 0x3B362CA9u)) & 0xD86A7878u));
+
+	return (lowMix & 0x8E531D65u) + (highMix & 0x71ACE29Au);
+}
+
+/* 0x8144A482: DES key schedule */
+int shellDesSetKey(SceUInt32 *subkeys, SceUInt32 reserved, SceUInt32 keyLo, SceUInt32 keyHi)
+{
+	(void)reserved;
+	SceUInt32 leftKey = 0;
+	SceUInt32 rightKey = 0;
+
+	for (int round = 7; round != 0; --round) {
+		keyHi >>= 1;
+		keyLo >>= 1;
+		leftKey = (leftKey << 8) + (rightKey >> 24);
+		rightKey = (rightKey << 8) +
+			((16909320u * ((keyLo & 0x01010101u) + 16u * (keyHi & 0x01010101u))) >> 24);
+	}
+
+	SceUInt32 cReg = desBswap32((leftKey << 8) + (rightKey >> 28));
+	SceUInt32 dReg = rightKey;
+	SceUInt32 scheduleMask = 0x6AAA5565u;
+	SceUInt32 *outCursor = subkeys;
+
+	do {
+		unsigned int shift = scheduleMask & 3u;
+		cReg = ((cReg & 0x0FFFFFFFu) | ((cReg & 0xFFu) << 28)) >> shift;
+		dReg = ((dReg & 0x0FFFFFFFu) | ((dReg & 0xFFu) << 28)) >> shift;
+
+		SceUInt32 subLo = keyLo;
+		SceUInt32 subHi = keyHi;
+		for (int idx = 46; idx >= 0; idx -= 2) {
+			SceUInt32 bitD = (dReg >> (s_desPc2Shifts[idx] - 1u)) & 1u;
+			SceUInt32 bitC = (cReg >> (s_desPc2Shifts[idx + 1] - 1u)) & 1u;
+			subHi = (subHi << 1) | bitD;
+			subLo = (subLo << 1) | bitC;
+		}
+		keyLo = subLo;
+		keyHi = subHi;
+
+		SceUInt32 evenWord = ((subHi << 8) & 0xFF00000Fu)
+			| (((subHi & 0xFFFu) << 12) & 0x00FF000Fu)
+			| (((subLo >> 12) & 0xFFFu) << 4);
+		SceUInt32 oddWord = ((((subHi & 0xFFFFFC0Fu) | ((subHi & 0x3Fu) << 4)) << 14) & 0xFFFF0303u)
+			| (((subLo >> 12) & 0x3Fu) << 10)
+			| ((subLo & 0x3Fu) << 2);
+
+		outCursor[0] = (evenWord & 0xFFFFFF03u) | (((subLo >> 6) & 0x3Fu) << 2);
+		outCursor[1] = oddWord;
+		outCursor += 2;
+		scheduleMask >>= 2;
+	} while (scheduleMask != 0);
+
+	return 0;
+}
+
+/* 0x8144A2C0: DES block encrypt */
+SceUInt64 shellDesEncryptBlock(const SceUInt32 *subkeys, SceUInt32 reserved,
+			       SceUInt32 blockLo, SceUInt32 blockHi)
+{
+	(void)reserved;
+	SceUInt64 permuted = desInitialPermutation(blockLo, blockHi);
+	SceUInt32 left = static_cast<SceUInt32>(permuted);
+	SceUInt32 right = static_cast<SceUInt32>(permuted >> 32);
+	const SceUInt32 *cursor = subkeys;
+	const SceUInt32 *end = subkeys + 32;
+
+	do {
+		right ^= desFeistelRound(cursor[0] ^ desRotr32(left, 1u),
+					 cursor[1] ^ desRotr32(left, 29u));
+		left ^= desFeistelRound(cursor[2] ^ desRotr32(right, 1u),
+					cursor[3] ^ desRotr32(right, 29u));
+		cursor += 4;
+	} while (cursor != end);
+
+	return desFinalPermutation(right, left);
+}
+
+/* 0x8144A30A: DES block decrypt */
+SceUInt64 shellDesDecryptBlock(const SceUInt32 *subkeys, SceUInt32 reserved,
+			       SceUInt32 blockLo, SceUInt32 blockHi)
+{
+	(void)reserved;
+	SceUInt64 permuted = desInitialPermutation(blockLo, blockHi);
+	SceUInt32 left = static_cast<SceUInt32>(permuted);
+	SceUInt32 right = static_cast<SceUInt32>(permuted >> 32);
+	const SceUInt32 *cursor = subkeys + 32;
+
+	do {
+		right ^= desFeistelRound(cursor[-2] ^ desRotr32(left, 1u),
+					 cursor[-1] ^ desRotr32(left, 29u));
+		cursor -= 4;
+		left ^= desFeistelRound(cursor[0] ^ desRotr32(right, 1u),
+					cursor[1] ^ desRotr32(right, 29u));
+	} while (cursor != subkeys);
+
+	return desFinalPermutation(right, left);
+}
+
 static int desCbcEncryptSingleBlock(const SceUInt32 keyWords[2], const SceUInt8 iv[8],
 				    const SceUInt8 inBlock[8], SceUInt8 outBlock[8])
 {
@@ -1612,7 +1825,7 @@ static int desCbcEncryptSingleBlock(const SceUInt32 keyWords[2], const SceUInt8 
 	if (ret < 0)
 		return ret;
 
-	sceClibMemcpy(workIv, iv, 8);
+	sceClibMemcpy_safe(workIv, iv, 8);
 	for (int i = 0; i < 8; ++i)
 		xoredBlock[i] = inBlock[i] ^ workIv[i];
 
@@ -1635,7 +1848,7 @@ static int desCbcDecryptSingleBlock(const SceUInt32 keyWords[2], const SceUInt8 
 	if (ret < 0)
 		return ret;
 
-	sceClibMemcpy(workIv, iv, 8);
+	sceClibMemcpy_safe(workIv, iv, 8);
 	SceUInt64 packed = loadBigEndianBlock(inBlock);
 	SceUInt64 plain = shellDesDecryptBlock(subkeys, 0,
 					       static_cast<SceUInt32>(packed),
@@ -1665,14 +1878,14 @@ int npGenerateDeviceToken(void *outTokenBuf)
 
 	SceUInt64 unixTimeMs = (tick.tick - UNIX_EPOCH_RTC_TICKS) / TICKS_PER_MILLISECOND;
 	SceUInt64 unixTimeBe = sceNetHtonll(unixTimeMs);
-	sceClibMemcpy(&plaintext[0], &unixTimeBe, 8);
+	sceClibMemcpy_safe(&plaintext[0], &unixTimeBe, 8);
 
 	if (npAccountReadRegistryCredentials(NULL, NULL, &accountId) < 0)
 		accountId = 0;
 	SceUInt64 accountIdBe = sceNetHtonll(accountId);
-	sceClibMemcpy(&plaintext[8], &accountIdBe, 8);
+	sceClibMemcpy_safe(&plaintext[8], &accountIdBe, 8);
 
-	ret = sceKernelGetOpenPsId(openPsId);
+	ret = sceKernelGetOpenPsId(reinterpret_cast<SceKernelOpenPsId *>(openPsId));
 	if (ret >= 0) {
 		for (int i = 0; i < 16; ++i)
 			sceClibSnprintf(&openPsIdHex[i * 2], 3, "%02x", openPsId[i]);
@@ -1687,7 +1900,7 @@ int npGenerateDeviceToken(void *outTokenBuf)
 		plaintext[16 + i] = static_cast<SceUInt8>((hi << 4) | lo);
 	}
 
-	sceClibMemcpy(cbcIv, s_deviceTokenInitialVector, 8);
+	sceClibMemcpy_safe(cbcIv, s_deviceTokenInitialVector, 8);
 	for (SceSize offset = 0; offset < sizeof(plaintext); offset += 8) {
 		SceUInt8 firstCipher[8];
 		SceUInt8 middlePlain[8];
@@ -1700,20 +1913,20 @@ int npGenerateDeviceToken(void *outTokenBuf)
 							 middlePlain, &outBytes[offset]);
 			}
 		}
-		sceClibMemcpy(cbcIv, &outBytes[offset], 8);
+		sceClibMemcpy_safe(cbcIv, &outBytes[offset], 8);
 	}
 
 	return ret;
 }
 
 /* 0x812218A2: compute SHA-256 digest of big-endian 64-bit NP account ID */
-static int npGenerateAccountIdHash(void *outDigest)
+int npGenerateAccountIdHash(void *outDigest)
 {
 	SceUInt64 accountId = 0;
 	if (npAccountReadRegistryCredentials(NULL, NULL, &accountId) < 0)
 		accountId = 0;
 	SceUInt64 accountIdBe = sceNetHtonll(accountId);
-	return shellSha256Digest(&accountIdBe, sizeof(accountIdBe), outDigest);
+	return sceSha256Digest(&accountIdBe, sizeof(accountIdBe), outDigest);
 }
 
 /* 0x812218F8: show formatted NP debug notice via impose_plugin when debug enabled */
@@ -1791,7 +2004,7 @@ static int npCommonHandleGetSettings(IPMI::Session *session, void *outSettings,
 	*outEnvSize = 0;
 	int ret = npCommonServiceGetSettings(outSettings);
 	if (ret >= 0 && envBufSize >= 17) {
-		ret = sceRegMgrGetKeyStrForUser("/CONFIG/NP", "env", outEnv, envBufSize);
+		ret = sceRegMgrGetKeyStr("/CONFIG/NP", "env", outEnv, envBufSize);
 		if (ret >= 0)
 			*outEnvSize = 17;
 	}
@@ -1848,10 +2061,15 @@ int shellSvcDisp_0A_Sync(IPMI::Session *session, SceUInt32 methodId,
 	return npCommonSyncDispatch(session, methodId, inBufs, inCount, outBufs, outCount);
 }
 
+extern int shellIncomingDialogServerAsyncDispatch(IPMI::Session *session, SceUInt32 requestId,
+						  SceUInt32 methodId, const IPMI::DataInfo *inList,
+						  SceUInt32 inCount);
+
 /* 0x81221BE4: ShellSvc 0x0A async dispatcher */
-int shellSvcDisp_0A_Async(void)
+int shellSvcDisp_0A_Async(IPMI::Session *session, SceUInt32 reqId, SceUInt32 methodId,
+			  const IPMI::DataInfo *inBufs, SceUInt32 inCount)
 {
-	return ipmiAsyncNotSupported();
+	return shellIncomingDialogServerAsyncDispatch(session, reqId, methodId, inBufs, inCount);
 }
 
 /* 0x81221BF6: SceNpCommon synchronous method dispatcher */

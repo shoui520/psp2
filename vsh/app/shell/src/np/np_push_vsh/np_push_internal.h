@@ -589,8 +589,7 @@ extern int SceNpCommonPs4_89322005(NpPushJsonParser *parser, void *config,
 extern int SceNpCommonPs4_FE98E2A7(NpPushJsonParser *parser, const void *text, int size);
 
 /* SceNpCommon / SceNpManager / SceHttp */
-extern int SceNpCommon_32E4735D(char *envName);
-extern int SceNpManager_F66A7AAE(void);
+extern int sceNpCommonGetNpEnviroment(char *envName);
 extern int sceNpManagerGetNpId(void *outNpId);
 extern int sceHttpCreateTemplate(const char *userAgent, int httpVer, int autoProxyConf);
 extern int sceHttpDeleteTemplate(int tmplId);
@@ -613,7 +612,7 @@ extern int npIpc2ServerSetEventFlag(IPMI::Session *session, SceUInt32 serviceId,
 extern int npAsmGetServiceBaseUrl(NpPushHandle *handle, NpPushHttpContext *httpContext,
 				  const char *onlineId, const char *serviceName,
 				  NpPushStringHolder *outUrl);
-extern void *npCommonGetEventLoop(void);
+extern "C" void *SceNpCommon_659ED07E(void);
 
 /* SceNpWebSocket Internal C++ API (0x813FA7F8..0x813FABF8) */
 extern int npWebSocketCreate(const NpWebSocketOpenParam *param, void **outHandle);

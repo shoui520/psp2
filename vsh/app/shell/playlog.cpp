@@ -28,9 +28,9 @@ extern int sceRtcGetCurrentDebugNetworkTick(SceRtcTick *tick);
 extern int sceRtcGetCurrentRetainedNetworkTick(SceRtcTick *tick);
 }
 
-extern int shellSvcLiveAreaSyncDefault(IPMI::Session *session, SceUInt32 methodId,
-				       const IPMI::DataInfo *inList, SceUInt32 inCount,
-				       IPMI::BufferInfo *outList, SceUInt32 outCount);
+extern int shellIncomingDialogServerAsyncDispatch(IPMI::Session *session, SceUInt32 requestId,
+						  SceUInt32 methodId, const IPMI::DataInfo *inList,
+						  SceUInt32 inCount);
 
 struct PlaylogStats {
 	SceUInt64 lastPlayedTick;
@@ -855,12 +855,16 @@ int shellSvcDisp_12_Sync(IPMI::Session *session, SceUInt32 methodId,
 int shellSvcDisp_12_Async(IPMI::Session *session, SceUInt32 reqId, SceUInt32 methodId,
 			  const IPMI::DataInfo *inList, SceUInt32 inCount)
 {
-	(void)reqId;
-	return shellSvcLiveAreaSyncDefault(session, methodId, inList, inCount, NULL, 0);
+	return shellIncomingDialogServerAsyncDispatch(session, reqId, methodId, inList, inCount);
 }
 
 /* 0x81233368 */
 int shellPlaylogInit(void)
 {
 	return PlaylogManager::GetInstance()->Init();
+}
+
+int shellNpNotifyStart(void)
+{
+	return shellPlaylogInit();
 }

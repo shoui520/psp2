@@ -10,7 +10,9 @@
 #include <scetypes.h>
 #include <libkernel/libkernel.h>
 #include <kernel/threadmgr.h>
+extern "C" {
 #include <kernel/openpsid.h>
+}
 #include <libaes.h>
 #include <libmt19937.h>
 #include <libhttp.h>

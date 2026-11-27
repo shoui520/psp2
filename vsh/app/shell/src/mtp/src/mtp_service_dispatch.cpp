@@ -884,7 +884,7 @@ static int endResumeExportObject(IPMI::Session *session, SceUInt32 requestId, Sc
 static int endResumeImportObject(IPMI::Session *session, SceUInt32 requestId, SceUInt32 contextId)
 {
 	SceUInt64 objectId = 0;
-	int mtpRes = sceMtpEndResumeImportObject(contextId, &objectId);
+	int mtpRes = SceLibMtp_83242E03(contextId, &objectId);
 	g_mtpServer.sessionMgr().deleteContext(session, requestId);
 	int ret = g_mtpServer.sessionMgr().lockSession(session);
 	if (ret >= 0) {
@@ -2125,7 +2125,7 @@ int mtpServiceDispatchSync(IPMI::Session *session, SceUInt32 methodId,
 		break;
 
 	case MTP_METHOD_ASSIGN_HOST:
-		res = netMtpAssignHost((const MtpNetHost *)inList[0].pData);
+		res = SceLibMtp_5B4AF4B8((const MtpNetHost *)inList[0].pData);
 		break;
 
 	case MTP_METHOD_UNASSIGN_HOST:

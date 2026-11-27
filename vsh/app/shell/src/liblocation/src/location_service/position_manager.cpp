@@ -1418,7 +1418,10 @@ double PositionManager::CalcDistance(const SceLocationLocationInfo *fromPos,
 {
 	double dlon = fromPos->longitude - toPos->longitude;
 
-	if (fabsf((float)dlon) > 180.0f) {
+	float absDlon = (float)dlon;
+	if (absDlon < 0.0f)
+		absDlon = -absDlon;
+	if (absDlon > 180.0f) {
 		if (fromPos->longitude > toPos->longitude)
 			dlon = fromPos->longitude - (toPos->longitude + 360.0);
 		else
@@ -1432,13 +1435,13 @@ double PositionManager::CalcDistance(const SceLocationLocationInfo *fromPos,
 	dlon = dlon * pi / 180.0;
 
 	double sinLat = sce_paf_sinf((float)avgLat);
-	double w = sqrtf((float)(1.0 - 0.006694380022900788 * sinLat * sinLat));
+	double w = __builtin_sqrtf((float)(1.0 - 0.006694380022900788 * sinLat * sinLat));
 	double m = 6335439.32708387 / (w * w * w);
 	double n = 6378137.0 / w;
 	double dx = n * dlon * sce_paf_cosf((float)avgLat);
 	double dy = m * dlat;
 
-	return sqrtf((float)(dx * dx + dy * dy));
+	return __builtin_sqrtf((float)(dx * dx + dy * dy));
 }
 
 /* (0x8118DC8A) */

@@ -425,6 +425,19 @@ void Live2CellSource::SetCountCallback(CountCallback callback, int arg)
 	m_countCallbackArg = arg;
 }
 
+} /* namespace filelist */
+
+class ActivityFeedCellSource;
+
+void activityUiCellSourceSetCountCallback(ActivityFeedCellSource *cellSource,
+					  void (*callback)(int, int), int pageKey)
+{
+	reinterpret_cast<filelist::Live2CellSource *>(cellSource)->SetCountCallback(
+		callback, pageKey);
+}
+
+namespace filelist {
+
 /* 0x8134BF0A */
 void Live2CellSource::OnCountChanged()
 {

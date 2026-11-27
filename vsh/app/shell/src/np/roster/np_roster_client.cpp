@@ -85,9 +85,9 @@ static void releaseContextResources(NpRosterContext *ctx)
 	if (ctx->httpTemplateId != 0)
 		sceHttpDeleteTemplate(ctx->httpTemplateId);
 	if (ctx->authReqId != -1)
-		npAuthCoreDestroyRequest(ctx->authReqId);
+		npAccountDestroyRequest(ctx->authReqId);
 	if (ctx->serviceStatusReqId != -1)
-		npServiceStatusDestroyRequest(ctx->serviceStatusReqId);
+		npProfileDestroyRequest(ctx->serviceStatusReqId);
 	resetContextFields(ctx);
 }
 
@@ -178,7 +178,7 @@ static int ensureServiceStatusLoaded(const NpAuthAccountCache *accountCache, NpR
 	sceKernelUnlockLwMutex(&s_contextMutex, 1);
 
 	if (needFetch) {
-		int statusReqId = npServiceStatusCreateRequest(accountCache, 34, NULL);
+		int statusReqId = npProfileCreateRequest(accountCache, 34, NULL);
 		ret = statusReqId;
 		if (statusReqId >= 0) {
 			if (sceKernelLockLwMutex(&s_contextMutex, 1, NULL) >= 0) {
@@ -195,7 +195,7 @@ static int ensureServiceStatusLoaded(const NpAuthAccountCache *accountCache, NpR
 
 			if (ret >= 0) {
 				NpServiceStatusNode *statusList = NULL;
-				ret = npServiceStatusQuery(statusReqId, &statusList);
+				ret = npTusBackendGetServerList(statusReqId, reinterpret_cast<NpCommunityServerNode **>(&statusList));
 				if (sceKernelLockLwMutex(&s_contextMutex, 1, NULL) >= 0) {
 					ctx->serviceStatusReqId = -1;
 					sceKernelUnlockLwMutex(&s_contextMutex, 1);
@@ -224,7 +224,7 @@ static int ensureServiceStatusLoaded(const NpAuthAccountCache *accountCache, NpR
 				}
 			}
 
-			npServiceStatusDestroyRequest(statusReqId);
+			npProfileDestroyRequest(statusReqId);
 		}
 	}
 
@@ -285,7 +285,7 @@ static int sendRosterPostRequest(SceUInt32 reqId, const char *endpointPath,
 	int ret = lockTransactionWithAbort(ctx);
 	if (ret >= 0) {
 		if (s_accountCacheLoaded == 0) {
-			int authReqId = npAuthCoreCreateRequest();
+			int authReqId = npAccountCreateRequest();
 			ret = authReqId;
 			if (authReqId >= 0) {
 				if (sceKernelLockLwMutex(&s_contextMutex, 1, NULL) >= 0) {
@@ -301,7 +301,7 @@ static int sendRosterPostRequest(SceUInt32 reqId, const char *endpointPath,
 				}
 
 				if (ret >= 0) {
-					ret = npAuthCoreGetAccountCache(authReqId,
+					ret = npAccountGetProfileAndMeta(authReqId,
 									&s_accountCache, NULL);
 					if (sceKernelLockLwMutex(&s_contextMutex, 1, NULL) >= 0) {
 						ctx->authReqId = -1;
@@ -310,7 +310,7 @@ static int sendRosterPostRequest(SceUInt32 reqId, const char *endpointPath,
 					if (ret >= 0)
 						s_accountCacheLoaded = 1;
 				}
-				npAuthCoreDestroyRequest(authReqId);
+				npAccountDestroyRequest(authReqId);
 			}
 		}
 		sceKernelUnlockLwMutex(&s_transactionMutex, 1);
@@ -471,7 +471,7 @@ static int fetchRawTicket(SceUInt32 reqId, void *dstBuf, SceSize dstCapacity, Sc
 		SceSize ticketSize = dstCapacity;
 		ret = lockTransactionWithAbort(ctx);
 		if (ret >= 0) {
-			int authReqId = npAuthCoreCreateRequest();
+			int authReqId = npAccountCreateRequest();
 			ret = authReqId;
 			if (authReqId >= 0) {
 				if (sceKernelLockLwMutex(&s_contextMutex, 1, NULL) >= 0) {
@@ -487,7 +487,7 @@ static int fetchRawTicket(SceUInt32 reqId, void *dstBuf, SceSize dstCapacity, Sc
 				}
 
 				if (ret >= 0) {
-					ret = npAuthCoreGetTicket(authReqId, dstBuf, &ticketSize);
+					ret = npAccountGetTicket(authReqId, dstBuf, &ticketSize);
 					if (sceKernelLockLwMutex(&s_contextMutex, 1, NULL) >= 0) {
 						ctx->authReqId = -1;
 						sceKernelUnlockLwMutex(&s_contextMutex, 1);
@@ -495,7 +495,7 @@ static int fetchRawTicket(SceUInt32 reqId, void *dstBuf, SceSize dstCapacity, Sc
 					if (ret >= 0)
 						*outSize = ticketSize;
 				}
-				npAuthCoreDestroyRequest(authReqId);
+				npAccountDestroyRequest(authReqId);
 			}
 			sceKernelUnlockLwMutex(&s_transactionMutex, 1);
 		}
@@ -748,10 +748,10 @@ int npRosterAbortRequest(int reqId)
 		if (ctx->httpRequestId != 0) {
 			ret = sceHttpAbortRequest(ctx->httpRequestId);
 		} else if (ctx->authReqId != -1) {
-			ret = npAuthCoreAbortRequest(ctx->authReqId);
+			ret = npAccountAbortRequest(ctx->authReqId);
 			ctx->authReqId = -1;
 		} else if (ctx->serviceStatusReqId != -1) {
-			ret = npServiceStatusAbortRequest(ctx->serviceStatusReqId);
+			ret = npProfileAbortRequest(ctx->serviceStatusReqId);
 			ctx->serviceStatusReqId = -1;
 		} else {
 			ret = 0;

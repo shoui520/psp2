@@ -4,15 +4,17 @@
  */
 
 #include <kernel.h>
+#include <std/new>
 #include <stddef.h>
 #include <stdint.h>
 
 extern "C" {
 void *sce_paf_memset(void *dst, int val, size_t size);
 void *sce_paf_memcpy(void *dst, const void *src, size_t size);
-int sceKernelDeleteSemaForUser(SceUID semaId);
-int sceKernelDeleteThreadForUser(SceUID threadId);
-int sceKernelSignalSemaForUser(SceUID semaId, int signalCount);
+int sceKernelDeleteSema(SceUID semaId);
+int sceKernelDeleteThread(SceUID threadId);
+int SceThreadmgrCoredumpTime_sceKernelExitThread(int status);
+int sceKernelSignalSema(SceUID semaId, int signalCount);
 }
 
 static const int MUSICCORE_ERR_FAILED = -1879113726;        /* 0x8FFF0002 */
@@ -330,7 +332,7 @@ StateManager::~StateManager()
 {
     stop();
     if (m_initSema >= 0)
-        sceKernelDeleteSemaForUser(m_initSema);
+        sceKernelDeleteSema(m_initSema);
     decoderMgrDestruct(m_decoderMgrStorage);
     stateMachineTerm(&m_stateMachine);
 }
@@ -354,7 +356,7 @@ int StateManager::stop()
         enqueueCmd(stopHdr, &req);
 
         if (sceKernelWaitThreadEnd(m_threadId, NULL, NULL) >= 0)
-            sceKernelDeleteThreadForUser(m_threadId);
+            sceKernelDeleteThread(m_threadId);
         m_threadId = -1;
     }
 
@@ -733,7 +735,7 @@ int StateManager::checkAndDeferNode(StateQueueNode *node, unsigned char *outDefe
 
 int StateManager::runThreadLoop()
 {
-    int sigErr = sceKernelSignalSemaForUser(m_initSema, 1);
+    int sigErr = sceKernelSignalSema(m_initSema, 1);
     if (sigErr < 0)
         return sigErr;
 
@@ -840,7 +842,7 @@ int StateManager::threadEntry(SceSize args, void *argp)
     (void)args;
     StateManager *self = *(StateManager **)argp;
     int ret = (self != NULL) ? self->runThreadLoop() : 0;
-    sceKernelExitThread(1);
+    SceThreadmgrCoredumpTime_sceKernelExitThread(1);
     return ret;
 }
 
@@ -987,6 +989,40 @@ int StateManager::thunkBufferReady(StateManager *self)
 int StateManager::thunkAudioError(StateManager *self, int errCode)
 {
     return self->onAudioErrorCallback(errCode);
+}
+
+struct DecoderCallbacks;
+
+void initDecoderManager(void *mgr)
+{
+    new (mgr) StateManager();
+}
+
+void stopDecoderManager(void *mgr)
+{
+    if (mgr != NULL)
+        static_cast<StateManager *>(mgr)->stop();
+}
+
+void termDecoderManager(void *mgr)
+{
+    if (mgr != NULL)
+        static_cast<StateManager *>(mgr)->~StateManager();
+}
+
+int startDecoderManager(void *mgr, const DecoderCallbacks *cbs, void *audioOut)
+{
+    return (mgr != NULL)
+        ? static_cast<StateManager *>(mgr)->start(
+              reinterpret_cast<const StateManagerCallbacks *>(cbs),
+              static_cast<const int *>(audioOut))
+        : -1;
+}
+
+void notifyDecoderAudioEvent(void *mgr, int eventType, int eventVal)
+{
+    if (mgr != NULL)
+        static_cast<StateManager *>(mgr)->onAudioPortEvent(eventType, eventVal, 0, 0, 1);
 }
 
 } /* namespace MusicCore */

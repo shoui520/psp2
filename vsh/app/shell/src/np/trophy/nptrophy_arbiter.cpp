@@ -769,7 +769,7 @@ int TrophySyncController::UploadDirtyTitles(TrophyHandle *handle, uint32_t *outU
 		cursor = foundIndex + 1;
 
 		TrophyCommId commId;
-		sceClibMemcpy(commId.data, titleInfoBuf, sizeof(commId.data));
+		sceClibMemcpy_safe(commId.data, titleInfoBuf, sizeof(commId.data));
 
 		TrophyTitleRecord record;
 		ret = indexStorage->GetTitle(handle, &commId, &record);

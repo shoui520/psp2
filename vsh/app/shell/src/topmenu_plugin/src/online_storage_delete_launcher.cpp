@@ -41,7 +41,7 @@ static void appendFormattedErrorCode(paf::wstring *text, SceInt32 errorCode)
 	sceErrorGetExternalString(codeBuf, errorCode);
 	paf::string codeUtf8(codeBuf);
 	paf::wstring codeWide;
-	paf::common::Utf8ToUtf16(codeUtf8, &codeWide);
+	paf::common::Utf8ToUtf16(codeUtf8.c_str(), &codeWide);
 	*text += codeWide.c_str();
 	*text += L")";
 }
@@ -292,7 +292,7 @@ int topmenuShowOnlineStorageDeletePrompt(const LsdbAppInfoPtr *appInfo, SceInt32
 				if (appTitle != NULL) {
 					paf::string titleUtf8(appTitle);
 					paf::wstring titleWide;
-					paf::common::Utf8ToUtf16(titleUtf8, &titleWide);
+					paf::common::Utf8ToUtf16(titleUtf8.c_str(), &titleWide);
 					titleWidget->SetString(titleWide);
 				}
 			}
@@ -322,7 +322,7 @@ int topmenuShowOnlineStorageDeletePrompt(const LsdbAppInfoPtr *appInfo, SceInt32
 				paf::string dateUtf8;
 				paf::common::Utf16ToUtf8(dateWide, &dateUtf8);
 				paf::wstring dateNormalized;
-				paf::common::Utf8ToUtf16(dateUtf8, &dateNormalized);
+				paf::common::Utf8ToUtf16(dateUtf8.c_str(), &dateNormalized);
 
 				paf::wstring sizeText;
 				shellSizeText(&sizeText, static_cast<SceUInt64>(saveStat->st_size));

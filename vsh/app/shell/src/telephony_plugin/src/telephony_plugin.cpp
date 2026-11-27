@@ -89,7 +89,7 @@ static int telPluginInitInternal(paf::Plugin *plugin)
 		paf::string newDbPath("ur0:shell/telephony/telephony_sms.db");
 		TelephonyResult migRes = telMigrateSmsDatabase(oldDbPath, newDbPath);
 		s_useLegacyDbPath = migRes.GetCode();
-		sceKernelProcessPowerUnlockForUser(SCE_KERNEL_POWER_TICK_DEFAULT);
+		sceKernelPowerUnlock(SCE_KERNEL_POWER_TICK_DEFAULT);
 	}
 
 	return 0;

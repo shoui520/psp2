@@ -28,16 +28,55 @@ extern int sceRegMgrStopCallback(SceUID cbId);
 extern int sceRegMgrUnregisterCallback(SceUID cbId);
 }
 
-extern int shellRegisterPowerCb(void (*cb)(void *));		/* 0x8131F3E8 */
-extern void shellUnregisterPowerCb(void);			/* 0x8131F422 */
-extern int shellActivityIsEnabled(void);			/* 0x81326D30 */
-extern int shellRegisterNetCb(void (*cb)(SceUInt32, void *), void *arg); /* 0x8132773E */
-extern void shellUnregisterNetCb(int id);			/* 0x813277B8 */
-extern int shellNpGetSignInState(int *outState);		/* 0x81329E20 */
-extern void shellMailCronRegister(const char *id);		/* 0x812A4C6C */
-extern void shellMailCronIsEnabled(const char *id, bool *out);	/* 0x812A4FC8 */
-extern void shellMailCronSetCb(const char *id, void (*cb)(int, void *), void *arg); /* 0x812A5032 */
-extern int shellMailHandleCustomCmd(const void *data, int flag); /* 0x813607BE */
+typedef void (*NpImpsNotifOnlineCallback)(int stateCode);
+extern int npImpsNotifRegisterOnlineCallback(NpImpsNotifOnlineCallback callback);
+extern int npImpsNotifUnregisterOnlineCallback(void);
+extern int npAccountRegisterNetCallback(void (*callback)(int, void *), void *userArg);
+extern int npAccountUnregisterNetCallback(int callbackId);
+extern int npCommonServiceIsSignedIn(int *outSignedIn);
+extern int shellTriggerMgrRegisterService(const char *serviceId);
+extern int shellTriggerMgrIsServiceEnabled(const char *serviceId, bool *outEnabled);
+extern int shellTriggerMgrSetServiceCallback(const char *serviceId,
+					     void (*callback)(bool, void *), void *userData);
+extern int DbCheckSetCorruptByPath(const char *path, int writeMagic);
+
+static inline int shellRegisterPowerCb(void (*cb)(void *))
+{
+	return npImpsNotifRegisterOnlineCallback(reinterpret_cast<NpImpsNotifOnlineCallback>(cb));
+}
+static inline void shellUnregisterPowerCb(void)
+{
+	npImpsNotifUnregisterOnlineCallback();
+}
+extern bool shellActivityIsEnabled(void);			/* 0x81326D30 */
+static inline int shellRegisterNetCb(void (*cb)(SceUInt32, void *), void *arg)
+{
+	return npAccountRegisterNetCallback(reinterpret_cast<void (*)(int, void *)>(cb), arg);
+}
+static inline void shellUnregisterNetCb(int id)
+{
+	npAccountUnregisterNetCallback(id);
+}
+static inline int shellNpGetSignInState(int *outState)
+{
+	return npCommonServiceIsSignedIn(outState);
+}
+static inline void shellMailCronRegister(const char *id)
+{
+	shellTriggerMgrRegisterService(id);
+}
+static inline void shellMailCronIsEnabled(const char *id, bool *out)
+{
+	shellTriggerMgrIsServiceEnabled(id, out);
+}
+static inline void shellMailCronSetCb(const char *id, void (*cb)(int, void *), void *arg)
+{
+	shellTriggerMgrSetServiceCallback(id, reinterpret_cast<void (*)(bool, void *)>(cb), arg);
+}
+static inline int shellMailHandleCustomCmd(const void *data, int flag)
+{
+	return DbCheckSetCorruptByPath(static_cast<const char *>(data), flag);
+}
 extern int shellNpPushRegisterService(const char *servicePrefix, int matchMode,
 	void *callback, void *userArg, int *outHandle);		/* 0x813AEFFC */
 extern int shellNpPushRegisterTitle(const char *servicePrefix, int matchMode,

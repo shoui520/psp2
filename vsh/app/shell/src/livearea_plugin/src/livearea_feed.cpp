@@ -13,9 +13,6 @@
 
 extern "C" {
 int sceAppMgrLaunchAppByName(unsigned int flags, const char *name, const char *param);
-void SceActivityDb_B83F0A77(void *ctx);
-void SceActivityDb_A16326B1(void *ctx, ActivityDbQueryCondition *condition, void *callbackPair);
-void SceActivityDb_937D49BA(void *ctx);
 int sce_paf_rand(void);
 }
 
@@ -274,7 +271,7 @@ void LiveAreaFeed::EnqueueSetLastReadTime()
 	bool isFriendsFeed = (sce_paf_strcmp(title, "NPXS10006") == 0);
 	paf::job::JobItem *job = new SetLastReadTimeJob(title, *m_lastReadTime.get(), isFriendsFeed);
 	paf::common::SharedPtr<paf::job::JobItem> jobRef(job);
-	m_jobSlots.Enqueue(1, g_activityJobQueue, jobRef);
+	m_jobSlots.Enqueue(1, paf::job::JobQueue::default_queue, jobRef);
 }
 
 /* 0x8119D9AC */
@@ -475,7 +472,7 @@ void LiveAreaFeed::EnqueueGetActivityNews()
 		paf::job::JobItem *job = new GetActivityNewsJob(title, *m_lastReadTime.get(),
 								isFriendsFeed);
 		paf::common::SharedPtr<paf::job::JobItem> jobRef(job);
-		m_jobSlots.Enqueue(0, g_activityJobQueue, jobRef);
+		m_jobSlots.Enqueue(0, paf::job::JobQueue::default_queue, jobRef);
 	}
 }
 
@@ -632,13 +629,11 @@ void LiveAreaFeed::FetchMoreActivities()
 	if (sce_paf_strcmp(condition.titleId.c_str(), "NPXS10006") == 0)
 		condition.type = ACTIVITY_DB_QUERY_ALL;
 
-	unsigned char activityHandle[4];
-	SceActivityDb_B83F0A77(activityHandle);
-	void *callbackPair[2];
-	callbackPair[0] = (void *)liveareaFeedOnMoreResultCb;
-	callbackPair[1] = (void *)m_page->m_pageKey;
-	SceActivityDb_A16326B1(activityHandle, &condition, callbackPair);
-	SceActivityDb_937D49BA(activityHandle);
+	ActivityDbSyncHandle activityHandle;
+	ActivityDbNetCallback callbackPair;
+	callbackPair.func = reinterpret_cast<void (*)(int, bool, void *)>(liveareaFeedOnMoreResultCb);
+	callbackPair.arg = reinterpret_cast<void *>(static_cast<intptr_t>(m_page->m_pageKey));
+	activityHandle.GetAvatarInfo(&condition, &callbackPair);
 }
 
 /* 0x8119F4C0 */
@@ -662,36 +657,36 @@ static void liveareaFeedOnRefreshBtnCb(int eventId, paf::ui::Handler *handler,
 /* 0x8119F4E8 */
 static void liveareaFeedOnUpdateManualCb(int err, int subErr, int pageKey)
 {
-	g_shellMutex.Lock();
+	paf::thread::RMutex::main_thread_mutex.Lock();
 	LiveAreaPage *page = liveareaPageFindByAppId(pageKey);
 	if (page != NULL && page->m_feed != NULL) {
 		page->m_feed->StopSpinAnim();
 		page->m_feed->OnUpdateResult(err, subErr, 1, true);
 	}
-	g_shellMutex.Unlock();
+	paf::thread::RMutex::main_thread_mutex.Unlock();
 }
 
 /* 0x8119F540 */
 static void liveareaFeedOnUpdateSilentCb(int err, int subErr, int pageKey)
 {
-	g_shellMutex.Lock();
+	paf::thread::RMutex::main_thread_mutex.Lock();
 	LiveAreaPage *page = liveareaPageFindByAppId(pageKey);
 	if (page != NULL && page->m_feed != NULL)
 		page->m_feed->OnUpdateResult(err, subErr, 0, false);
-	g_shellMutex.Unlock();
+	paf::thread::RMutex::main_thread_mutex.Unlock();
 }
 
 /* 0x8119F590 */
 static void liveareaFeedOnUpdateAutoCb(int err, int subErr, int pageKey)
 {
-	g_shellMutex.Lock();
+	paf::thread::RMutex::main_thread_mutex.Lock();
 	LiveAreaPage *page = liveareaPageFindByAppId(pageKey);
 	if (page != NULL) {
 		page->m_inner.StopReloadSpin(0);
 		if (page->m_feed != NULL)
 			page->m_feed->OnUpdateResult(err, subErr, 1, false);
 	}
-	g_shellMutex.Unlock();
+	paf::thread::RMutex::main_thread_mutex.Unlock();
 }
 
 /* 0x8119F5EA */
@@ -714,11 +709,11 @@ static void liveareaFeedOnMoreClickCb(void *userdata)
 static void liveareaFeedOnMoreResultCb(int err, int subErr, int pageKey)
 {
 	(void)subErr;
-	g_shellMutex.Lock();
+	paf::thread::RMutex::main_thread_mutex.Lock();
 	LiveAreaPage *page = liveareaPageFindByAppId(pageKey);
 	if (page != NULL && page->m_feed != NULL)
 		page->m_feed->m_moreCtrl.OnResult(err != 0);
-	g_shellMutex.Unlock();
+	paf::thread::RMutex::main_thread_mutex.Unlock();
 }
 
 /* 0x8119F64E */

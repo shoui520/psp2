@@ -37,8 +37,8 @@ extern int SceLsdb_EFD528B1(void *ctx, paf::string *titleId, paf::common::Shared
 	const char *path, bool flagBit0, int *outFlag, paf::string *outDir, SceUID pid);
 }
 
-extern int shellAppMgrConvertPath(SceUID pid, int mode, const char *inPath,
-	char *outPath, SceSize outSize);			/* 0x8144DA0C */
+extern "C" int sceFiosKernelOverlayResolveSync(SceUID pid, int resolveFlag, const char *inPath,
+					       char *outPath, SceSize maxPath);
 
 /* 0x811B918C */
 int shellSvcResolveAppPath(SceUID pid, const char *inPath, paf::string *outResolved, SceUInt8 allowAny)
@@ -47,7 +47,7 @@ int shellSvcResolveAppPath(SceUID pid, const char *inPath, paf::string *outResol
 	if (!buf.get())
 		return (int)0x80101002;
 
-	int r = shellAppMgrConvertPath(pid, 1, inPath, (char *)buf->GetAddr(), buf->GetSize());
+	int r = sceFiosKernelOverlayResolveSync(pid, 1, inPath, (char *)buf->GetAddr(), buf->GetSize());
 	if (r != 0)
 		return (int)0x80104003;
 

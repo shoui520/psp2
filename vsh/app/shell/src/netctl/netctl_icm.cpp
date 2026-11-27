@@ -12,6 +12,8 @@
 #include <net.h>
 #include "netctl_internal.h"
 
+extern "C" int SceThreadmgrCoredumpTime_sceKernelExitThread(int status);
+
 #define NETCTL_POWER_CB_SUSPENDING		0x00020000u
 #define NETCTL_POWER_CB_RESUME_COMPLETE		0x00040000u
 #define NETCTL_POWER_CB_RESUMING		0x00400000u
@@ -225,7 +227,7 @@ int netCtlIcmThreadEntry(SceSize args, void *argp)
 		SceUID cbid = sceKernelCreateCallback("SceNetCtl", 0, netCtlPowerCallback, ch);
 
 		if (cbid >= 0) {
-			if (scePowerRegisterCallbackForUser(cbid) >= 0) {
+			if (scePowerRegisterCallback(cbid) >= 0) {
 				s_stateHandlers[ch->state](ch, 0, &nextState, &nextEvent);
 				while (!(ch->state == NETCTL_RAW_STATE_IDLE &&
 					 (ch->flags & NETCTL_FLAG_EXIT) != 0)) {
@@ -262,7 +264,7 @@ int netCtlIcmThreadEntry(SceSize args, void *argp)
 	SceNetInternal_EDAA3453(-1, 0);
 	SceNetInternal_EDAA3453(NETCTL_IF_ETHERNET, 0);
 	SceNetInternal_EDAA3453(NETCTL_IF_WLAN, 0);
-	sceKernelExitThread(0);
+	SceThreadmgrCoredumpTime_sceKernelExitThread(0);
 	return 0;
 }
 
@@ -389,7 +391,7 @@ static int netCtlStateIdle(NetCtlChannel *ch, int prevState, int *outNextState, 
 					failed = 1;
 				} else {
 					SceKernelSysClock clock;
-					int procRet = sceKernelGetRemoteProcessTimeForUser(
+					int procRet = sceKernelGetRemoteProcessTime(
 						ch->exclusiveResult.clientPid, &clock);
 
 					if (procRet < 0) {
@@ -650,7 +652,7 @@ static int netCtlStateAutoSelect(NetCtlChannel *ch, int prevState, int *outNextS
 	}
 
 	if (netCtlCoreIsDevkit() == 1 && ch->isInet == 1) {
-		SceUInt64 now = sceKernelGetSystemTimeWideForUser();
+		SceUInt64 now = sceKernelGetSystemTimeWide();
 
 		if (g_netCtlAdhocLeaveTime != 0 &&
 		    (now - g_netCtlAdhocLeaveTime) <= NETCTL_ADHOC_COOLDOWN_USEC) {
@@ -1176,7 +1178,7 @@ static int netCtlStateConnected(NetCtlChannel *ch, int prevState, int *outNextSt
 				failed = 1;
 			} else {
 				SceKernelSysClock clock;
-				int procRet = sceKernelGetRemoteProcessTimeForUser(
+				int procRet = sceKernelGetRemoteProcessTime(
 					ch->exclusiveResult.clientPid, &clock);
 
 				if (procRet < 0) {
@@ -1462,9 +1464,9 @@ static int netCtlPerformWlanScan(NetCtlChannel *ch, const char **ssids, SceUInt3
 					     outBuf, outBufSize, outList, outCount);
 			if (ret >= 0) {
 				if (outSysTime != NULL)
-					*outSysTime = sceKernelGetSystemTimeWideForUser();
+					*outSysTime = sceKernelGetSystemTimeWide();
 				if (outRtcTime != NULL)
-					*outRtcTime = sceRtcGetAccumulativeTimeForUser();
+					*outRtcTime = sceRtcGetAccumulativeTime();
 			} else {
 				*outCount = 0;
 			}
@@ -2245,7 +2247,7 @@ static int netCtlAdhocStartOrMerge(int ifId, const char *ssid, SceSize ssidLen,
 		SceUInt32 jitter = 0;
 
 		if (elapsed < 1000000u) {
-			int randVal = 0;
+			unsigned int randVal = 0;
 
 			SceNetInternal_689B9D7D(&randVal);
 			SceUInt32 divisor = (0xFFFFFFFFu / remainWindow) + 1u;
@@ -2511,7 +2513,7 @@ static int netCtlLinkDisconnect(NetCtlChannel *ch)
 		if (ch->isInet == 1) {
 			sceNetWlanDisconnect(ch->ifId);
 		} else {
-			g_netCtlAdhocLeaveTime = sceKernelGetSystemTimeWideForUser();
+			g_netCtlAdhocLeaveTime = sceKernelGetSystemTimeWide();
 			sceNetWlanAdhocLeave(ch->ifId);
 		}
 	}

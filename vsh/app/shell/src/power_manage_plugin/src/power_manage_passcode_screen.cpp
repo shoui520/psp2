@@ -40,7 +40,7 @@ PasscodeLockScreen::PasscodeLockScreen(paf::Plugin *plugin) : m_plugin(plugin)
 	KeyLockBlankPage::Close();
 	if (authServiceStart(AUTH_STORE_SCREEN_LOCK_SCREEN, AUTH_ACTION_VERIFY,
 			     OnAuthFinished, NULL, NULL) == AUTH_ERROR_LOCKED_OUT) {
-		shellExclusiveFuncPasscodeLockoutStart(OnLockoutPluginLoaded, NULL, 0);
+		shellExclusiveFuncPasscodeLockoutStart(OnLockoutPluginLoaded, NULL, NULL);
 	}
 
 	powerManagePushKeyHandler(passcodeKeyNoop, NULL);
@@ -88,8 +88,9 @@ void PasscodeLockScreen::Unlock(bool skipPasscode)
 	}
 }
 
-void PasscodeLockScreen::OnLockoutPluginLoaded(paf::Plugin *plugin)
+void PasscodeLockScreen::OnLockoutPluginLoaded(paf::Plugin *plugin, void *userData)
 {
+	(void)userData;
 	typedef void (*LockoutStartFunc)(void (*finishedCb)(int, void *), void *userData);
 	LockoutStartFunc *lockoutIface = (LockoutStartFunc *)plugin->GetInterface(1);
 	if (lockoutIface != NULL && lockoutIface[0] != NULL)

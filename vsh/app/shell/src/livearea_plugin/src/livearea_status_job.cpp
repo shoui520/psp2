@@ -9,13 +9,6 @@
 extern "C" {
 int sceAppMgrLaunchAppByName(unsigned int flags, const char *name, const char *param);
 long long sce_paf_strtoll(const char *nptr, char **endptr, int base);
-void SceActivityDb_6C98B745(void *ctx);
-int SceActivityDb_F65C0C21(void *ctx, const ActivityDbQueryCondition *condition);
-int SceActivityDb_74F96707(void *ctx, const paf::vector<SceInt64> *uids,
-			   paf::vector<ActivityDbStatus> *outItems);
-int SceActivityDb_7ED9033C(void *ctx, SceUInt64 *outStartTime, SceUInt64 *outLastReadTime,
-			   SceUInt64 *outLastUpdateTime, SceUInt64 *outLatestTime);
-void SceActivityDb_6E198FFA(void *ctx);
 }
 
 static bool s_statusJobActive;					/* 0x81567130 */
@@ -76,19 +69,16 @@ GetStatusInfoJob::~GetStatusInfoJob()
 /* 0x8119FD20 */
 int GetStatusInfoJob::Run()
 {
-	unsigned char activityHandle[4];
-	SceActivityDb_6C98B745(activityHandle);
+	ActivityDbQueryHandle activityHandle;
 
 	ActivityDbQueryCondition condition;
 	condition.type = ACTIVITY_DB_QUERY_TITLE;
 	condition.titleId = m_titleId;
 	condition.limit = 0;
 
-	int ret = SceActivityDb_F65C0C21(activityHandle, &condition);
-	if (ret != 0) {
-		SceActivityDb_6E198FFA(activityHandle);
+	int ret = activityHandle.Create(&condition);
+	if (ret != 0)
 		return ret;
-	}
 
 	paf::vector<SceInt64> uids;
 	paf::string paramStr(m_statusParam);
@@ -103,19 +93,16 @@ int GetStatusInfoJob::Run()
 		uids.push_back(uid);
 	}
 
-	ret = SceActivityDb_74F96707(activityHandle, &uids, &m_items);
-	if (ret != 0) {
-		SceActivityDb_6E198FFA(activityHandle);
+	ret = activityHandle.GetStatuses(&uids, &m_items);
+	if (ret != 0)
 		return ret;
-	}
 
-	SceUInt64 startTime = 0;
-	SceUInt64 lastUpdateTime = 0;
-	SceUInt64 latestTime = 0;
-	ret = SceActivityDb_7ED9033C(activityHandle, &startTime, &m_lastReadTime,
-				     &lastUpdateTime, &latestTime);
-	SceActivityDb_6E198FFA(activityHandle);
-	return ret;
+	int infoCount = 0;
+	SceInt64 lastUpdateTime = 0;
+	SceInt64 latestTime = 0;
+	return activityHandle.GetCountAndSyncTimes(
+		&infoCount, reinterpret_cast<SceInt64 *>(&m_lastReadTime),
+		&lastUpdateTime, &latestTime);
 }
 
 /* 0x8119FF8E */

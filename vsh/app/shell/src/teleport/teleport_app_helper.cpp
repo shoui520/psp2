@@ -30,7 +30,7 @@ const char *sceLsdbGetStitle(const LsdbAppInfoPtr *appInfo);
 const char *sceLsdbGetAppVer(const LsdbAppInfoPtr *appInfo);
 int sceAppMgrGetStatusByName(const char *appName, void *appStatus);
 int sceAppMgrDestroyAppByAppId(int appId);
-SceUInt32 sceKernelGetSystemTimeLow(void);
+SceUInt32 SceThreadmgr_47F6DE49(void);
 void *sceClibMemset(void *dst, int c, SceSize len);
 }
 
@@ -264,7 +264,7 @@ SceInt32 TeleportAppInfoHelper::GenerateAuthSalt(char *outSaltHex, const char *m
 		'8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
 	};
 
-	SceUInt32 seed = ParseMacSeed(macStr) ^ sceKernelGetSystemTimeLow();
+	SceUInt32 seed = ParseMacSeed(macStr) ^ SceThreadmgr_47F6DE49();
 	SceMt19937Context mtCtx;
 	sceMt19937Init(&mtCtx, seed);
 	sceMt19937UInt(&mtCtx);

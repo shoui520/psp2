@@ -7,7 +7,7 @@
 #include <scetypes.h>
 #include <thread/thread.h>
 
-extern "C" int sceRegMgrIsBlueScreenForUser(int error);
+extern "C" int sceRegMgrIsBlueScreen(int error);
 extern "C" int SceShellUtil_BB54D049(int mode, int error, int option);
 
 #define SHELL_UTIL_NOTIFY_BLUE_SCREEN	4
@@ -24,7 +24,7 @@ static int shellRegMgrLogErrorSyncCallback(void *userContext)
 	ShellRegMgrErrorRequest *req = static_cast<ShellRegMgrErrorRequest *>(userContext);
 	int notifyMode;
 
-	if (sceRegMgrIsBlueScreenForUser(req->errorCode) == 1) {
+	if (sceRegMgrIsBlueScreen(req->errorCode) == 1) {
 		notifyMode = SHELL_UTIL_NOTIFY_BLUE_SCREEN;
 	} else {
 		if (req->showErrorDialog != 1)
@@ -52,7 +52,7 @@ void shellRegMgrLogError(int errorCode, int showErrorDialog)
 	}
 
 	int notifyMode;
-	if (sceRegMgrIsBlueScreenForUser(req->errorCode) == 1) {
+	if (sceRegMgrIsBlueScreen(req->errorCode) == 1) {
 		notifyMode = SHELL_UTIL_NOTIFY_BLUE_SCREEN;
 	} else {
 		if (req->showErrorDialog != 1)

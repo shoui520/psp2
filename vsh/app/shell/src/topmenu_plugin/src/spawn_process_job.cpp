@@ -331,7 +331,7 @@ static SceInt32 launchAppWithLsdbInfo(SceInt32 *outAppId, const LsdbAppInfoPtr *
 				      SceInt32 pendingAppId, bool isBgLaunch, SceInt32 checkFlags,
 				      const TopmenuAppAttrFlags *attrFlags)
 {
-	(void)sceKernelGetSystemTimeLow();
+	(void)SceThreadmgr_47F6DE49();
 
 	const char *selfPath = sceLsdbGetSelfPath(appInfo);
 	const char *titleName = sceLsdbGetName(appInfo);
@@ -573,7 +573,7 @@ static SceInt32 launchAppWithLsdbInfo(SceInt32 *outAppId, const LsdbAppInfoPtr *
 							     processAttr, &launchOpt);
 	}
 
-	(void)sceKernelGetSystemTimeLow();
+	(void)SceThreadmgr_47F6DE49();
 	*outAppId = outStatus.appId;
 	return launchRet;
 }
@@ -643,7 +643,7 @@ public:
 			sceAppMgrDestroyAppByName("NPXS10084");
 
 		if (SceLsdb_849E8DC6(&m_appInfo) != 0)
-			m_bootTimeStartUs = sceKernelGetSystemTimeLow();
+			m_bootTimeStartUs = SceThreadmgr_47F6DE49();
 
 		SceInt32 ret = launchAppWithLsdbInfo(&m_spawnedAppId, &m_appInfo, m_launchAppId,
 						     m_isBgLaunch, m_checkFlags, &m_attrFlags);
@@ -708,7 +708,7 @@ public:
 			if (m_process != NULL)
 				m_process->m_enabled = false;
 			if (IsCanceled()) {
-				appmgrDestroyAppByAppIdSyscall(m_spawnedAppId);
+				sceAppMgrDestroyAppByAppId(m_spawnedAppId);
 				if (m_process != NULL)
 					topmenuProcessCommand(m_process, 5);
 				if (m_launchAppId != -1) {
@@ -800,7 +800,7 @@ public:
 					sceErrorGetExternalString(codeBuf, result);
 					paf::string codeUtf8(codeBuf);
 					paf::wstring codeWide;
-					paf::common::Utf8ToUtf16(codeUtf8, &codeWide);
+					paf::common::Utf8ToUtf16(codeUtf8.c_str(), &codeWide);
 					text += codeWide.c_str();
 					text += L")";
 					SpawnConfirmTelemetryHandler *handler =
@@ -869,7 +869,7 @@ public:
 				topmenuReturnToHomeIfActive(m_process->m_owner);
 			}
 			if (m_spawnedAppId != -1)
-				appmgrDestroyAppByAppIdSyscall(m_spawnedAppId);
+				sceAppMgrDestroyAppByAppId(m_spawnedAppId);
 			topmenuProcessCommand(m_process, 5);
 			if (appData != NULL)
 				topmenuUpdateIduAfterAppFailure(g_topWindow, appData->m_ownerTab);

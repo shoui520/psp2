@@ -12,15 +12,14 @@
 extern "C" {
 int sceRtcGetCurrentRetainedNetworkTick(SceRtcTick *tick);
 int sceRtcGetCurrentGpsTick(SceRtcTick *tick);
+int _sceGpsOpen(SceUID cbId);
+int _sceGpsClose(void);
+int _sceGpsStart(int mode);
+int _sceGpsStop(void);
+int _sceGpsIoctl(int cmd, void *arg, SceSize size);
+int _sceGpsResumeCallback(void);
+int _sceGpsGetState(int *outStatus);
 }
-
-extern int gpsDrvOpen(SceUID cbId);				/* 0x8144FDA4 */
-extern int gpsDrvClose(void);					/* 0x8144FDAC */
-extern int gpsDrvStart(int mode);				/* 0x8144FDB4 */
-extern int gpsDrvStop(void);					/* 0x8144FDBC */
-extern int gpsDrvIoctl(int cmd, void *arg, SceSize size);	/* 0x8144FDC4 */
-extern int gpsDrvAckEvent(void);				/* 0x8144FDE0 */
-extern int gpsDrvGetStatus(int *outStatus);			/* 0x8144FDE8 */
 
 static QualCommAdapter *s_qualcomm;				/* 0x81544CEC */
 static int s_xtraResetPending;					/* 0x81544D58 */
@@ -250,7 +249,7 @@ SceInt64 QualCommAdapter::DateTimeToMsec(SceDateTime dt)
 int QualCommAdapter::InjectTime()
 {
 	sce_paf_memset(&m_timeInfo, 0, sizeof(m_timeInfo));
-	gpsDrvIoctl((int)0xAB001001, &m_timeInfo, sizeof(m_timeInfo));
+	_sceGpsIoctl((int)0xAB001001, &m_timeInfo, sizeof(m_timeInfo));
 
 	SceRtcTick tick;
 	SceDateTime dt;
@@ -278,7 +277,7 @@ int QualCommAdapter::InjectTime()
 	argSet.timeBase = 1;
 	argSet.forceAcceptance = 0;
 
-	ret = gpsDrvIoctl(0x5B001001, &argSet, sizeof(argSet));
+	ret = _sceGpsIoctl(0x5B001001, &argSet, sizeof(argSet));
 	if (g_locationLogger != NULL) {
 		g_locationLogger->Log(2, "[COM] sceGpsIoctl(TimeSet)=0x%08x\n", ret);
 		g_locationLogger->Log(
@@ -325,7 +324,7 @@ int QualCommAdapter::SendNextXtraPart(int mode)
 		sce_paf_memcpy(m_xtraSetArg.data, src, rem);
 	}
 
-	int ret = gpsDrvIoctl(0x5B001000, &m_xtraSetArg, sizeof(m_xtraSetArg));
+	int ret = _sceGpsIoctl(0x5B001000, &m_xtraSetArg, sizeof(m_xtraSetArg));
 	if (g_locationLogger != NULL)
 		g_locationLogger->Log(2, "[COM] sceGpsIoctl(SET_XTRA) = 0x%08x\n", ret);
 	if (ret != 0) {
@@ -470,7 +469,7 @@ int QualCommAdapter::DownloadAndInjectXtra()
 		m_xtraBuf = NULL;
 	}
 
-	int ret = gpsDrvIoctl((int)0xAB001000, &m_xtraInfo, sizeof(m_xtraInfo));
+	int ret = _sceGpsIoctl((int)0xAB001000, &m_xtraInfo, sizeof(m_xtraInfo));
 	if (ret == 0) {
 		m_xtraBuf = g_locationHeap->sce_paf_malloc(m_xtraInfo.maxSize);
 		if (m_xtraBuf == NULL) {
@@ -592,7 +591,7 @@ int QualCommAdapter::XtraGpsCallback(int notifyId, int notifyCount, int notifyAr
 	(void)common;
 	int state = 9;
 	unsigned int hi = (unsigned int)notifyArg & 0xFFFF0000U;
-	gpsDrvGetStatus(&state);
+	_sceGpsGetState(&state);
 	switch (hi) {
 	case 0x12000000U:
 		if (g_locationLogger != NULL)
@@ -625,7 +624,7 @@ int QualCommAdapter::XtraGpsCallback(int notifyId, int notifyCount, int notifyAr
 			g_locationLogger->Log(2, "[COM] Notify %#08x. GpsState(%d)\n", hi, state);
 		break;
 	}
-	gpsDrvAckEvent();
+	_sceGpsResumeCallback();
 	return 0;
 }
 
@@ -633,11 +632,11 @@ int QualCommAdapter::XtraGpsCallback(int notifyId, int notifyCount, int notifyAr
 int QualCommAdapter::XtraResetGps(void)
 {
 	int state = 0;
-	gpsDrvGetStatus(&state);
+	_sceGpsGetState(&state);
 	if (state == 3) {
 		GpsResetMasks resetArg = { 0x1FFF, 1023 };
 		s_qualcomm->m_injectState = 0;
-		int ret = gpsDrvIoctl(0x5B001003, &resetArg, sizeof(resetArg));
+		int ret = _sceGpsIoctl(0x5B001003, &resetArg, sizeof(resetArg));
 		if (g_locationLogger != NULL)
 			g_locationLogger->SetXtraState(1);
 		s_qualcomm->m_xtraStatus = 1;
@@ -651,13 +650,13 @@ int QualCommAdapter::XtraResetGps(void)
 	if (s_qualcomm->m_xtraCbId < 0)
 		return s_qualcomm->m_xtraCbId;
 
-	int ret = gpsDrvOpen(s_qualcomm->m_xtraCbId);
+	int ret = _sceGpsOpen(s_qualcomm->m_xtraCbId);
 	if (g_locationLogger != NULL)
 		g_locationLogger->Log(2, "[COM] sceGpsOpen()=0x%08x\n", ret);
 	if (ret == 0) {
 		GpsResetMasks resetArg = { 0x1FFF, 1023 };
 		s_qualcomm->m_injectState = 0;
-		int iret = gpsDrvIoctl(0x5B001003, &resetArg, sizeof(resetArg));
+		int iret = _sceGpsIoctl(0x5B001003, &resetArg, sizeof(resetArg));
 		if (g_locationLogger != NULL)
 			g_locationLogger->SetXtraState(1);
 		s_qualcomm->m_xtraStatus = 1;
@@ -684,7 +683,7 @@ int QualCommAdapter::XtraThreadEntry(SceSize args, void *argp)
 			s_xtraResetPending = 1;
 		}
 		if ((outBits & 0x200000U) != 0) {
-			int cret = gpsDrvClose();
+			int cret = _sceGpsClose();
 			if (g_locationLogger != NULL)
 				g_locationLogger->Log(2, "[COM] sceGpsClose()=0x%08x\n", cret);
 			sceKernelDeleteCallback(s_qualcomm->m_xtraCbId);
@@ -692,7 +691,7 @@ int QualCommAdapter::XtraThreadEntry(SceSize args, void *argp)
 			return 0;
 		}
 		if ((outBits & 0x800000U) != 0) {
-			int sret = gpsDrvStop();
+			int sret = _sceGpsStop();
 			if (g_locationLogger != NULL)
 				g_locationLogger->Log(2, "[COM] sceGpsStop()=0x%08x\n", sret);
 		}
@@ -701,7 +700,7 @@ int QualCommAdapter::XtraThreadEntry(SceSize args, void *argp)
 				s_xtraResetPending = 0;
 				if (g_locationLogger == NULL ||
 				    g_locationLogger->GetXtraLocalFileOnly() != 1) {
-					int cret = gpsDrvClose();
+					int cret = _sceGpsClose();
 					if (g_locationLogger != NULL)
 						g_locationLogger->Log(
 							2, "[COM] sceGpsClose()=0x%08x\n", cret);
@@ -709,7 +708,7 @@ int QualCommAdapter::XtraThreadEntry(SceSize args, void *argp)
 					s_qualcomm->m_xtraCbId = -1;
 					return 0;
 				}
-				int sret = gpsDrvStart(16);
+				int sret = _sceGpsStart(16);
 				if (g_locationLogger != NULL)
 					g_locationLogger->Log(2, "[COM] sceGpsStart()=0x%08x\n",
 							      sret);
@@ -723,17 +722,17 @@ int QualCommAdapter::XtraThreadEntry(SceSize args, void *argp)
 			sceKernelSetEventFlag(s_qualcomm->m_agpsEvf, 0x10U);
 		if ((int)outBits < 0) {
 			int state = 0;
-			gpsDrvGetStatus(&state);
+			_sceGpsGetState(&state);
 			if (g_locationLogger != NULL)
 				g_locationLogger->Log(2, "[COM] Xtra TERMINATE : state(%d)\n",
 						      state);
 			if (state == 5 || state == 6 || state == 7) {
-				int sret = gpsDrvStop();
+				int sret = _sceGpsStop();
 				if (g_locationLogger != NULL)
 					g_locationLogger->Log(2, "[COM] sceGpsStop()=0x%08x\n",
 							      sret);
 			} else if (state == 3) {
-				int cret = gpsDrvClose();
+				int cret = _sceGpsClose();
 				if (g_locationLogger != NULL)
 					g_locationLogger->Log(2, "[COM] sceGpsClose()=0x%08x\n",
 							      cret);

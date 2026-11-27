@@ -156,6 +156,43 @@ BasicVisualizer::~BasicVisualizer()
 {
 }
 
+} /* namespace filelist */
+
+class ShellListItemBase;
+
+paf::ui::Widget *shellListItemCreateWidget(ShellListItemBase *self, paf::ui::Widget *parent,
+					   const paf::IDParam *templateId,
+					   const paf::IDParam *itemId)
+{
+	return reinterpret_cast<filelist::BasicVisualizer *>(self)->CreateListItemWidget(
+		parent, *templateId, *itemId);
+}
+
+void shellListItemAttachWidget(ShellListItemBase *self)
+{
+	filelist::BasicVisualizer *vis = reinterpret_cast<filelist::BasicVisualizer *>(self);
+	vis->AttachListItemEvents(vis->m_listItem);
+}
+
+void shellListItemBaseCtor(ShellListItemBase *self, int itemType, paf::Plugin *plugin,
+			   const paf::IDParam *templateId, const paf::IDParam *itemId)
+{
+	(void)itemType;
+	filelist::BasicVisualizer *vis = reinterpret_cast<filelist::BasicVisualizer *>(self);
+	vis->m_listItem = NULL;
+	vis->m_plugin = plugin;
+	vis->m_surfacePool = (plugin != NULL) ? plugin->m_surface_pool : NULL;
+	paf::ui::ListItem *item = vis->CreateListItemWidget(NULL, *templateId, *itemId);
+	vis->AttachListItemEvents(item);
+}
+
+paf::ui::Widget *shellListItemGetWidget(ShellListItemBase *self)
+{
+	return reinterpret_cast<filelist::BasicVisualizer *>(self)->GetListItem();
+}
+
+namespace filelist {
+
 /* 0x8134B8F2 */
 void BasicVisualizer::DestroyShadowCallback(paf::Timer *timer, paf::ui::AnimListener *listener,
 					    void *widgetArg, void *userdataArg, void *extraArg)

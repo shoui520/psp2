@@ -460,7 +460,7 @@ int ApplauncherIcon::Launch()
    opens, an unavailable icon shows an error, and the others start (0x810D076C) */
 void ApplauncherIcon::OnPressed()
 {
-	if (g_applauncherHome->m_flags0[0] == 0.0f || !applauncherLaunchEffectIsNotRising())
+	if (g_applauncherHome->m_homeFlags[0] == 0.0f || !applauncherLaunchEffectIsNotRising())
 		return;
 	if (g_applauncherModeManager->m_currentMode != APPLAUNCHER_MODE_LAUNCHER) {
 		if (IsFolder())

@@ -6,6 +6,7 @@
 
 #include <kernel/threadmgr.h>
 #include <libnetctl.h>
+#include <memory/heap_allocator.h>
 #include <std/ctype.h>
 #include <std/stdio.h>
 #include <std/stdlib.h>
@@ -13,6 +14,7 @@
 
 extern "C" {
 char *sce_paf_private_strtok(const char *haystack, const char *needle);
+void *sce_paf_calloc(SceSize nitems, SceSize size);
 }
 
 /* 0x813A0FB4 */
@@ -202,7 +204,7 @@ void TeleportHttpServerThread::EntryFunction()
 		} else {
 			if (m_epollEvents == NULL) {
 				m_epollEvents = static_cast<SceNetEpollEvent *>(
-					ScePafStdc_C9532982(TELEPORT_MAX_EPOLL_EVENTS,
+					sce_paf_calloc(TELEPORT_MAX_EPOLL_EVENTS,
 						       sizeof(SceNetEpollEvent)));
 				m_epollId = sceNetEpollCreate("SceTeleportHttpEpoll", 0);
 				if (m_epollId < 0)

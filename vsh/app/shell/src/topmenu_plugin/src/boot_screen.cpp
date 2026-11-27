@@ -203,7 +203,7 @@ TopmenuBootScreen::TopmenuBootScreen()
 	m_splashPlane->SetSize(screenSize, NULL, 0x10004, 0, 0.0f, NULL, NULL);
 	m_splashPlane->SetColor(colorClear, NULL, 0x10001, 0, 0.0f, NULL, NULL);
 
-	m_frameBufCbId = sceKernelCreateCallbackForUser("SceShellRegFrameBufCB", 0,
+	m_frameBufCbId = sceKernelCreateCallback("SceShellRegFrameBufCB", 0,
 							onFrameBufRegistered, NULL);
 	vshDisplayRegisterFrameBufCallback(m_frameBufCbId);
 }

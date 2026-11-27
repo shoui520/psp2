@@ -85,7 +85,7 @@ void npDrmStatComputeCmac(SceUInt8 *outMac, const SceUInt8 *input, SceSize lengt
 	sceAesScheduleKey(&aesCtx, 128U, 128U, derivedKey);
 
 	sceClibMemset(subkey, 0, sizeof(subkey));
-	sceAesEncrypt1(&aesCtx, subkey, subkey);
+	sceAesEncrypt(&aesCtx, subkey, subkey);
 	cmacDoubleSubkey(subkey);
 
 	remainder = length & 15U;
@@ -112,11 +112,11 @@ void npDrmStatComputeCmac(SceUInt8 *outMac, const SceUInt8 *input, SceSize lengt
 	sceClibMemset(outMac, 0, 16U);
 	for (SceSize blockIdx = 0; blockIdx < fullBlocks; ++blockIdx) {
 		xorBlock16(outMac, &input[blockIdx * 16U]);
-		sceAesEncrypt1(&aesCtx, outMac, outMac);
+		sceAesEncrypt(&aesCtx, outMac, outMac);
 	}
 	xorBlock16(outMac, lastBlock);
 	xorBlock16(outMac, subkey);
-	sceAesEncrypt1(&aesCtx, outMac, outMac);
+	sceAesEncrypt(&aesCtx, outMac, outMac);
 }
 
 void npDrmStatEncryptCbc(SceUInt8 *buffer, SceSize length, SceUInt32 keySlotId)
@@ -138,7 +138,7 @@ void npDrmStatEncryptCbc(SceUInt8 *buffer, SceSize length, SceUInt32 keySlotId)
 		SceUInt8 *blockPtr = &buffer[blockIdx * 16U];
 
 		xorBlock16(blockPtr, chainBlock);
-		sceAesEncrypt1(&aesCtx, blockPtr, blockPtr);
+		sceAesEncrypt(&aesCtx, blockPtr, blockPtr);
 		chainBlock = blockPtr;
 	}
 }
@@ -161,13 +161,13 @@ void npDrmStatDecryptCbc(SceUInt8 *buffer, SceSize length, SceUInt32 keySlotId)
 		return;
 	}
 	curBlock = &buffer[(blockCount - 1U) * 16U];
-	sceAesDecrypt1(&aesCtx, curBlock, curBlock);
+	sceAesDecrypt(&aesCtx, curBlock, curBlock);
 	for (SceSize step = blockCount - 1U; step > 0; --step) {
 		SceUInt8 *prevBlock = curBlock - 16;
 
 		xorBlock16(curBlock, prevBlock);
 		curBlock = prevBlock;
-		sceAesDecrypt1(&aesCtx, curBlock, curBlock);
+		sceAesDecrypt(&aesCtx, curBlock, curBlock);
 	}
 	xorBlock16(curBlock, initVector);
 }

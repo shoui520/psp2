@@ -75,18 +75,6 @@ public:
 	{
 	}
 
-	static paf::intrusive_ptr<paf::graph::Surface>
-	AllocKeyLockSurface(paf::graph::SurfacePool *pool,
-			    const paf::common::SharedPtr<paf::image::Image> &image,
-			    int32_t numPage, int32_t numLevel, void *userData)
-	{
-		(void)userData;
-		return paf::intrusive_ptr<paf::graph::Surface>(
-			new paf::graph::Surface(pool, image->GetExtent().w, image->GetExtent().h,
-						image->GetMode(), image->GetOrder(), numPage, 0, 0,
-						numLevel, true));
-	}
-
 	bool LoadSurfaceFromFile(const char *path)
 	{
 		int32_t openError = 0;
@@ -98,7 +86,7 @@ public:
 		paf::graph::Surface::LoadOption loadOption;
 		loadOption.decode_heap = paf::Framework::Instance()->GetDecodeHeap();
 		loadOption.direct_load = true;
-		loadOption.alloc_surface = AllocKeyLockSurface;
+		loadOption.reserved5 = true;
 
 		unsigned int retries = 0;
 		for (;;) {

@@ -55,8 +55,8 @@ public:
 
 	int m_kind;			/* the column of the query's table, -1: not set up */
 	int m_type;			/* downloadType's, 0-6 */
-	paf::string m_reserved0;	/* PLACEHOLDER: only cleared */
-	paf::string m_reserved1;
+	paf::string m_unusedHeader;
+	paf::string m_unusedDetail;
 	paf::string m_extra;		/* added to the query as it is */
 	SceUInt32 m_downloadId;
 	int m_hasDigest;
@@ -475,31 +475,54 @@ int Bgdl_8126E252(int kind, SceUInt64 *size);
    Bgdl_8126E252's) through SceShellSvc B31E7F1C */
 int Bgdl_8126E2AE(int kind);
 
-/* another file's (0x8136D6A2, PLACEHOLDER name): a package opened to be unpacked into
-   path; param 0x800 bytes */
-int Bgdl_8136D6A2(const char *path, int flags, int mode, void *param);
+extern "C" {
+int sceNpDrmInstallOpen(const char *dirPath, SceUInt32 flags, SceMode mode, void *workCtx);
+int sceNpDrmInstallClose(int handle);
+int sceNpDrmInstallResume(int handle, void *headBuf, SceSize bufSize);
+int sceNpDrmInstallWrite(int handle, const void *buf, SceSize size);
+SceOff sceNpDrmInstallLseek(int handle, SceOff offset, int whence);
+int sceNpDrmInstallGetPkgInfo(void *outInfo, const void *buf, SceSize size);
+int sceNpDrmInstallSetThreadMode(int handle, void *workMem, SceSize workSize,
+	void *chunkHeap, SceSize heapSize, SceSize chunkSize, SceUInt32 numJobs, SceUInt32 flags);
+}
 
-/* another file's (0x8136D828, PLACEHOLDER name): the handle closed */
-int Bgdl_8136D828(int handle);
+/* SceNpDrmInstall C API wrappers (0x8136D6A2..0x8136DBE8) */
+static inline int Bgdl_8136D6A2(const char *path, int flags, int mode, void *param)
+{
+	return sceNpDrmInstallOpen(path, (SceUInt32)flags, (SceMode)mode, param);
+}
 
-/* another file's (0x8136D898, PLACEHOLDER name): the package's first bytes, already there,
-   given again when a download resumes */
-int Bgdl_8136D898(int handle, const void *buf, SceSize size);
+static inline int Bgdl_8136D828(int handle)
+{
+	return sceNpDrmInstallClose(handle);
+}
 
-/* another file's (0x8136D8F4, PLACEHOLDER name): size bytes of the package unpacked; the
-   bytes taken, or < 0 */
-int Bgdl_8136D8F4(int handle, const void *buf, SceSize size);
+static inline int Bgdl_8136D898(int handle, const void *buf, SceSize size)
+{
+	return sceNpDrmInstallResume(handle, (void *)buf, size);
+}
 
-/* another file's (0x8136D952, PLACEHOLDER name): the package's position */
-SceUInt64 Bgdl_8136D952(int handle, SceInt64 offset, int whence);
+static inline int Bgdl_8136D8F4(int handle, const void *buf, SceSize size)
+{
+	return sceNpDrmInstallWrite(handle, buf, size);
+}
 
-/* another file's (0x8136D9B8, PLACEHOLDER name): a package's header in buf read into data
-   (cleared on an error) */
-int Bgdl_8136D9B8(struct BgdlServerData *data, const void *buf, SceSize size);
+static inline SceUInt64 Bgdl_8136D952(int handle, SceInt64 offset, int whence)
+{
+	return (SceUInt64)sceNpDrmInstallLseek(handle, (SceOff)offset, whence);
+}
 
-/* another file's (0x8136DBE8, PLACEHOLDER name): the unpack's work memory set */
-int Bgdl_8136DBE8(int handle, void *work, SceSize workSize, void *heap, SceSize heapSize,
-		  SceSize bufSize, int a6, int a7);
+static inline int Bgdl_8136D9B8(struct BgdlServerData *data, const void *buf, SceSize size)
+{
+	return sceNpDrmInstallGetPkgInfo(data, buf, size);
+}
+
+static inline int Bgdl_8136DBE8(int handle, void *work, SceSize workSize, void *heap,
+				SceSize heapSize, SceSize bufSize, int numJobs, int flags)
+{
+	return sceNpDrmInstallSetThreadMode(handle, work, workSize, heap, heapSize,
+					    bufSize, (SceUInt32)numJobs, (SceUInt32)flags);
+}
 
 /* a title's folder under ux0:app/ (or the folder given) made for a downloaded package
    (PLACEHOLDER names) */
@@ -719,15 +742,15 @@ struct BgdlHttpCancel {
 
 /* what the content server's answer gives of a package (PLACEHOLDER names) */
 struct BgdlServerData {
-	int reserved0;
+	int headPad;
 	int category;			/* 6, 7, 14-16: a game's (key 114 1); 24, 29, 31 */
 	SceUInt32 attribute;		/* 0x10, bit 31: no patch looked for */
-	char reserved1[28];
+	char midPad[28];
 	char contentId[48];		/* the package's key 217 */
 	char titleId[32];		/* key 220, the folder it goes to */
 };
 
-/* what the content server answered (PLACEHOLDER names) */
+/* what the content server answered */
 struct BgdlServerInfo {
 	BgdlServerInfo()
 	{
@@ -739,7 +762,7 @@ struct BgdlServerInfo {
 	bool flag;
 	int status;
 	int httpStatus;
-	int reserved0;
+	int statusPad;
 	SceUInt64 size;
 	paf::string fileName;		/* the response's */
 	paf::string mimeType;
@@ -751,7 +774,7 @@ struct BgdlServerInfo {
 	SceUInt64 storageNeeded;	/* 6 clusters, and what the content takes */
 	SceUInt64 value4;
 	int kind;
-	int reserved1;
+	int kindPad;
 	BgdlServerData data;
 };
 
@@ -768,9 +791,9 @@ int GetHeaderInfo(int mode, int flags, const char *device, const char *url, cons
 /*
  * (0x8111FEF8) url's file got (GET) into folder, as name or the server's file name, its
  * headers in server and its path in path; with no folder only the headers. The device's
- * space is put in server too. flags and reserved0 are not read (PLACEHOLDER names).
+ * space is put in server too. flags and unusedOption are not read.
  */
-int Bgdl_8111FEF8(const char *device, const char *url, int flags, int reserved0, MtpBgCopyHost *host,
+int Bgdl_8111FEF8(const char *device, const char *url, int flags, int unusedOption, MtpBgCopyHost *host,
 		  BgdlServerParam *param, const char *folder, const char *name, int *status,
 		  BgdlServerInfo *server, paf::string *path);
 

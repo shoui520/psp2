@@ -45,10 +45,8 @@ int SceShell_548A3111(int event, void (*callback)(int event, int *data), void *a
 int SceShell_F197032C(int event, void (*callback)(int event, int *data), void *arg);
 }
 
-/* PLACEHOLDER: the shell's dialogs, opened and closed (0x8124D61C, 0x8124D69A, in the shell's
-   own code) */
-int Shell_8124D61C(CommonGuiLayoutDialogParam *param, bool wait, int arg);
-int Shell_8124D69A(int id);
+int shellStateWatcherOpenDialog(CommonGuiLayoutDialogParam *param, bool playSound, int level);
+int shellStateWatcherCloseDialog(int dialogId);
 
 /* (0x81564E94) */
 static ImposeShellEvent *s_shellEvent;
@@ -119,7 +117,7 @@ void ImposeShellEvent::OpenDialog(SceInt32 *id, SceInt32 dimmer, CommonGuiDialog
 
 		if (handler != NULL) {
 			param.handler = handler;
-			*id = Shell_8124D61C(&param, true, 0);
+			*id = shellStateWatcherOpenDialog(&param, true, 0);
 		}
 	}
 }
@@ -139,7 +137,7 @@ void ImposeShellEvent::QuitApp(const char *name)
 static inline void imposeShellEventCloseDialog(SceInt32 *id)
 {
 	if (*id >= 0) {
-		Shell_8124D69A(*id);
+		shellStateWatcherCloseDialog(*id);
 		*id = -1;
 	}
 }

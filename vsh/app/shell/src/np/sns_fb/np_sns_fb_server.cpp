@@ -661,7 +661,7 @@ public:
 		  m_langIndex(langIndex),
 		  m_permList(permList)
 	{
-		sceClibMemcpy(&m_tokenBuf, tokenBuf, sizeof(m_tokenBuf));
+		sceClibMemcpy_safe(&m_tokenBuf, tokenBuf, sizeof(m_tokenBuf));
 		sceClibMemset(&m_reply, 0, sizeof(m_reply));
 	}
 
@@ -699,7 +699,7 @@ public:
 		  m_padBeforeToken(0),
 		  m_permList(permList)
 	{
-		sceClibMemcpy(&m_tokenBuf, tokenBuf, sizeof(m_tokenBuf));
+		sceClibMemcpy_safe(&m_tokenBuf, tokenBuf, sizeof(m_tokenBuf));
 		sceClibMemset(&m_reply, 0, sizeof(m_reply));
 	}
 

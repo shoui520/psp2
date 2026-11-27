@@ -16,6 +16,8 @@
 #include <image/image.h>
 #include <framework.h>
 #include <plugin.h>
+#include <widget/w_plane.h>
+#include <common_gui_dialog/common_gui_dialog.h>
 #include <appmgr/appmgr.h>
 
 #include "../../esecron/include/esebase.hpp"
@@ -40,10 +42,100 @@ static BgdlJobQueue *s_jobQueue;			/* (0x81544888) */
 static LogJobManager *s_manager;			/* (0x8154488C) */
 
 void Bgdl_8112661E(BgdlEvent *event, void *arg);	/* (0x8112661E) */
+int Fgdl_811281F0(void);				/* (0x811281F0) */
+int Fgdl_811282AC(void);				/* (0x811282AC) */
 /* (0x81372196) the application a game's title runs as, into name (PLACEHOLDER) */
 int Game_81372196(const char *titleId, char *name);
-/* (0x81416908) the download plugin's error dialog of the kind (PLACEHOLDER) */
-void Bgdl_81416908(int kind);
+/* (0x81416908) the download plugin's error/notice dialog of the given kind */
+class BgdlNoticeDialogHandler : public CommonGuiDialogHandler {
+public:
+	BgdlNoticeDialogHandler()
+		: m_callback(NULL), m_userArg(NULL), m_dialogId(-1), m_unused(0)
+	{
+		Fgdl_811282AC();
+		Fgdl_811281F0();
+	}
+
+	virtual ~BgdlNoticeDialogHandler()
+	{
+	}
+
+	virtual void operator()(SceInt32 dialogId, SceInt32 button)
+	{
+		SceCommonGuiDialog_BC311DC0(dialogId);
+		if (m_callback != NULL)
+			m_callback(dialogId, button, m_userArg);
+	}
+
+	CommonGuiDialogFunction m_callback;
+	void *m_userArg;
+	SceInt32 m_dialogId;
+	SceInt32 m_unused;
+};
+
+void Bgdl_81416908(int kind)
+{
+	static const CommonGuiDialogPage kKindFourPage = {
+		{ 982617132U, 1133277829U, 388800696U }
+	};
+
+	CommonGuiLayoutDialogParam param;
+	param.resourcePlugin = downloadPluginGet();
+	param.priority = 34;
+	param.notifyClose = false;
+	param.wait = false;
+
+	BgdlNoticeDialogHandler *handler = new BgdlNoticeDialogHandler();
+	param.handler = handler;
+
+	Plugin *plugin = downloadPluginGet();
+	SceUInt32 msgId;
+	switch (kind) {
+	case 1:
+		msgId = 0xBD7DC3C6U;
+		break;
+	case 2:
+		msgId = 0x6FC5A06AU;
+		break;
+	case 3:
+		msgId = 0x1E313077U;
+		break;
+	case 4:
+		msgId = 0x07EC06ADU;
+		param.layout.page = &kKindFourPage;
+		param.layout.parts = SceCommonGuiDialog_7D8FE85E.parts;
+		param.layout.buttons = SceCommonGuiDialog_7D8FE85E.buttons;
+		break;
+	default:
+		msgId = 0x351A62C7U;
+		break;
+	}
+
+	const wchar_t *msgText = plugin->GetString(IDParam("", msgId));
+	if (msgText != NULL)
+		param.text = msgText;
+
+	thread::RMutex::main_thread_mutex.Lock();
+	SceInt32 dialogId = SceCommonGuiDialog_CCFCD9A6(&param);
+	if (handler != NULL)
+		handler->m_dialogId = dialogId;
+
+	if (kind == 4) {
+		ui::Widget *container = SceCommonGuiDialog_8947FC23(dialogId, 4);
+		if (container != NULL) {
+			intrusive_ptr<graph::Surface> iconTex;
+			Plugin *indPlugin = Plugin::Find("indicator_plugin");
+			if (indPlugin != NULL)
+				iconTex = indPlugin->GetTexture(IDParam("", 0xE1E246DBU));
+			if (iconTex.get() != NULL) {
+				ui::Widget *child = container->FindChild(IDParam("", 0xD713BE25U), 0);
+				if (child != NULL && child->IsInherit(ui::Plane::TypeName()))
+					child->SetTexture(iconTex, 0, 0);
+			}
+		}
+	}
+	thread::RMutex::main_thread_mutex.Unlock();
+}
 
 /* the title's row read from the app info database */
 __attribute__((noinline)) int Bgdl_81123BC0(const char *titleId, LsdbAppInfoPtr *info)
@@ -422,9 +514,9 @@ int LogJobManager::Bgdl_81124DE2(BgdlEvent *task, bool insert)
 	LsdbNewEvent event;
 
 	get_time_internal();
-	if ((task->type != 3 && task->type != 4) || task->param.key110)
-		goto out;
-	{
+	do {
+		if ((task->type != 3 && task->type != 4) || task->param.key110)
+			break;
 		SceInt64 msgType = 3;
 		int fields = 0;
 		bool changed = false;
@@ -437,9 +529,9 @@ int LogJobManager::Bgdl_81124DE2(BgdlEvent *task, bool insert)
 		if (insert == false) {
 			ret = SceLsdb_07ADA030(m_accessor, &event);
 			if (ret != 0)
-				goto out;
+				break;
 			if (event.msgType == 80 || event.msgType == 81)
-				goto out;
+				break;
 		}
 
 		string title("");
@@ -758,7 +850,7 @@ int LogJobManager::Bgdl_81124DE2(BgdlEvent *task, bool insert)
 			}
 		}
 		if (fields == 0)
-			goto out;
+			break;
 
 		int r;
 
@@ -774,10 +866,9 @@ int LogJobManager::Bgdl_81124DE2(BgdlEvent *task, bool insert)
 			r = SceLsdb_B3252544(&ptr, 1, fields);
 		}
 		if (r != 0)
-			goto out;
+			break;
 		ret = 0;
-	}
-out:
+	} while (0);
 	get_time_internal();
 	return ret;
 }

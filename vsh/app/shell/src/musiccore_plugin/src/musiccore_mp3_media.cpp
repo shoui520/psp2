@@ -1014,5 +1014,175 @@ public:
     }
 };
 
+void *mp3MediaInfoConstruct(void *mem, const char *path, int ioPriority)
+{
+    return new (mem) Mp3MediaInfo(path, ioPriority);
+}
+
+int mp3StreamOpen(Mp3StreamParser *stream)
+{
+    return (stream != NULL) ? stream->openStream() : -1;
+}
+
+const char *mp3StreamGetPath(Mp3StreamParser *stream)
+{
+    return (stream != NULL && stream->ioStream != NULL)
+        ? reinterpret_cast<const char *>(stream->getStreamPosition())
+        : NULL;
+}
+
+int mp3StreamSetReadDirection(Mp3StreamParser *stream, int direction)
+{
+    return (stream != NULL) ? stream->setIoHint(direction) : -1;
+}
+
+int mp3StreamGetDurationMs(Mp3StreamParser *stream, int *outDurationMs, int *outErr)
+{
+    unsigned int duration = 0;
+    int ret = (stream != NULL) ? stream->getDurationMs(&duration, outErr) : -1;
+    if (outDurationMs != NULL)
+        *outDurationMs = static_cast<int>(duration);
+    return ret;
+}
+
+int mp3StreamGetSampleRate(Mp3StreamParser *stream, uint32_t *outSampleRate, int *outErr)
+{
+    int rate = 0;
+    int ret = (stream != NULL) ? stream->getSampleRate(&rate, outErr) : -1;
+    if (outSampleRate != NULL)
+        *outSampleRate = static_cast<uint32_t>(rate);
+    return ret;
+}
+
+int mp3StreamGetSamplesPerFrame(Mp3StreamParser *stream, uint16_t *outSamples, int *outErr)
+{
+    return (stream != NULL) ? stream->getSamplesPerFrame(outSamples, outErr) : -1;
+}
+
+int mp3StreamQueryTag(Mp3StreamParser *stream, void *tagOut, void *extraOut)
+{
+    (void)stream;
+    (void)tagOut;
+    (void)extraOut;
+    return 0;
+}
+
+Mp3ParserInterface::~Mp3ParserInterface() {}
+Mp3FrameCursor::~Mp3FrameCursor() {}
+
+uint32_t bitMaskLow(int bits)
+{
+    return makeBitMask(static_cast<uint8_t>(bits));
+}
+
+uint32_t readBigEndian32(const void *ptr)
+{
+    return readBigEndian32(static_cast<const uint8_t *>(ptr));
+}
+
+uint32_t readBigEndian24(const void *ptr)
+{
+    return readBigEndian24(static_cast<const uint8_t *>(ptr));
+}
+
+uint16_t readBigEndian16(const void *ptr)
+{
+    return readBigEndian16(static_cast<const uint8_t *>(ptr));
+}
+
+int mp3HeaderValidate(uint32_t headerBits, int *outError)
+{
+    return validateMpegLayer3Header(headerBits, outError);
+}
+
+int mp3HeaderSamplesPerFrame(uint32_t headerBits)
+{
+    return getMpegLayer3SamplesPerFrame(headerBits);
+}
+
+int mp3HeaderFrameSize(uint32_t headerBits)
+{
+    return getMpegLayer3FrameSize(headerBits);
+}
+
+int mp3HeaderMatchesRef(uint32_t candidateBits, uint32_t refBits)
+{
+    return hasSameMpegSampleRate(candidateBits, refBits);
+}
+
+uint32_t mp3HeaderBitRate(const void *headerHolder)
+{
+    return (headerHolder != NULL)
+        ? static_cast<uint32_t>(static_cast<const MpegFrameHeader *>(headerHolder)->getBitrate())
+        : 0u;
+}
+
+uint32_t mp3HeaderSampleRate(const void *headerHolder)
+{
+    return (headerHolder != NULL)
+        ? static_cast<uint32_t>(static_cast<const MpegFrameHeader *>(headerHolder)->getSampleRate())
+        : 0u;
+}
+
+struct Mp3HeaderHolder {
+    uint32_t headerBits;
+    uint8_t isValid;
+    uint8_t padValid[3];
+};
+
+void mp3HeaderHolderInit(Mp3HeaderHolder *holder)
+{
+    if (holder != NULL) {
+        holder->headerBits = 0;
+        holder->isValid = 0;
+    }
+}
+
+int mp3HeaderHolderParse(Mp3HeaderHolder *holder, uint32_t headerBits)
+{
+    if (holder == NULL)
+        return 0;
+    int err = 0;
+    int valid = validateMpegLayer3Header(headerBits, &err);
+    holder->headerBits = headerBits;
+    holder->isValid = static_cast<uint8_t>(valid != 0);
+    return valid;
+}
+
+int vbriHeaderParse(VbriHeaderData *hdr, const void *src)
+{
+    return (hdr != NULL) ? hdr->parse(src) : 0;
+}
+
+uint32_t vbriHeaderGetFrameCount(const VbriHeaderData *hdr)
+{
+    return (hdr != NULL) ? readBigEndian32(hdr->rawBytes + 14) : 0u;
+}
+
+uint16_t vbriHeaderGetTocEntries(const VbriHeaderData *hdr)
+{
+    return (hdr != NULL) ? readBigEndian16(hdr->rawBytes + 18) : 0u;
+}
+
+uint16_t vbriHeaderGetTocScale(const VbriHeaderData *hdr)
+{
+    return (hdr != NULL) ? readBigEndian16(hdr->rawBytes + 20) : 0u;
+}
+
+uint16_t vbriHeaderGetTocEntrySize(const VbriHeaderData *hdr)
+{
+    return (hdr != NULL) ? readBigEndian16(hdr->rawBytes + 22) : 0u;
+}
+
+uint16_t vbriHeaderGetTocFramesPerEntry(const VbriHeaderData *hdr)
+{
+    return (hdr != NULL) ? readBigEndian16(hdr->rawBytes + 24) : 0u;
+}
+
+int xingHeaderParse(XingHeaderData *hdr, const void *src)
+{
+    return (hdr != NULL) ? hdr->parse(src) : 0;
+}
+
 } // namespace MusicCore
 } // namespace sce

@@ -36,13 +36,19 @@ extern int SceLsdb_D239031A(void *ctx, const paf::string *titleId,
 extern int SceLsdb_F4325AD0(paf::common::SharedPtr<paf::map<SceUInt32, LsdbAttrVal> > *row);
 extern const char *sceLsdbGetStitle(paf::common::SharedPtr<paf::map<SceUInt32, LsdbAttrVal> > *row);
 extern const char *sceLsdbGetTitle(paf::common::SharedPtr<paf::map<SceUInt32, LsdbAttrVal> > *row);
-extern void *SceActivityDb_7B68F69D(void);
-extern int SceActivityDb_06420B18(void *db, const ShellSvcActivityRecord *rec, int priority, int flags);
 extern int sceHttpUriEscape(char *out, SceSize *require, SceSize prepare, const char *in);
 extern SceSize sce_paf_wcsnlen(const wchar_t *s, SceSize maxlen);
 }
 
-extern int shellActivityIsEnabled(void);			/* 0x81326D30 */
+#include <activity_db/activity_db_internal.h>
+
+static inline int shellSvcJobPostActivityStatus(void *db, const ShellSvcActivityRecord *rec)
+{
+	return static_cast<ActivityDbNetDaemon *>(db)->PostStatus(
+		reinterpret_cast<const ActivityDbStatus *>(rec), 0x7FFFFFFFFFFFFFFFLL);
+}
+
+extern int npAccountIsSignedIn(void);			/* 0x81326D30 */
 
 /* 0x811BD998 */
 int shellSvcActivityBuildUri(ShellSvcActivityRecord *rec, SceUInt32 reqVer, const paf::string *param)
@@ -124,7 +130,7 @@ int PostGameStatusJob::Run()
 		}
 	}
 
-	r = SceActivityDb_06420B18(SceActivityDb_7B68F69D(), &m_rec, -1, 0x7FFFFFFF);
+	r = shellSvcJobPostActivityStatus(SceActivityDb_7B68F69D(), &m_rec);
 	SceLsdb_E2101B03(ctx);
 	return r;
 }
@@ -134,7 +140,7 @@ int ShellSvcActivityJobBase::Run()
 {
 	int r = Prepare();
 	if (r >= 0)
-		return SceActivityDb_06420B18(SceActivityDb_7B68F69D(), &m_rec, -1, 0x7FFFFFFF);
+		return shellSvcJobPostActivityStatus(SceActivityDb_7B68F69D(), &m_rec);
 	return r;
 }
 
@@ -247,7 +253,7 @@ int PostSystemSoftwareStatusJob::Prepare()
 		return r;
 
 	paf::wstring titleW;
-	paf::common::Utf8ToUtf16(titleClean, &titleW);
+	paf::common::Utf8ToUtf16(titleClean.c_str(), &titleW);
 	paf::wstring bodyW = shellFormatText(fmt.c_str(), titleW.c_str());
 	if (sce_paf_wcsnlen(bodyW.c_str(), 257) > 256) {
 		bodyW = bodyW.substr(0, 253);
@@ -339,7 +345,7 @@ int PostTrophyStatusJob::Prepare()
 
 	shellSvcActivityStripNewlines(m_gameName);
 	paf::wstring gameW;
-	paf::common::Utf8ToUtf16(m_gameName, &gameW);
+	paf::common::Utf8ToUtf16(m_gameName.c_str(), &gameW);
 	paf::wstring bodyW;
 	paf::wstring trophyW;
 	paf::wstring gradeW;
@@ -347,7 +353,7 @@ int PostTrophyStatusJob::Prepare()
 	if (m_kind == 1) {
 		bodyW = shellFormatText(fmt.c_str(), gameW.c_str());
 		shellSvcActivityStripNewlines(m_trophyName);
-		paf::common::Utf8ToUtf16(m_trophyName, &trophyW);
+		paf::common::Utf8ToUtf16(m_trophyName.c_str(), &trophyW);
 		r = shellSvcActivityGetTrophyGradeText(m_kind, m_grade, gradeW);
 		if (r < 0)
 			return r;
@@ -362,7 +368,7 @@ int PostTrophyStatusJob::Prepare()
 		bodyW = shellFormatText(fmt.c_str(), gameW.c_str());
 		if (m_trophyName.size() != 0) {
 			shellSvcActivityStripNewlines(m_trophyName);
-			paf::common::Utf8ToUtf16(m_trophyName, &trophyW);
+			paf::common::Utf8ToUtf16(m_trophyName.c_str(), &trophyW);
 			r = shellSvcActivityGetTrophyGradeText(m_kind, m_grade, gradeW);
 			if (r < 0)
 				return r;
@@ -399,7 +405,7 @@ int PostStoreStatusJob::Prepare()
 
 	paf::string itemCopy = m_itemName;
 	paf::wstring itemW;
-	paf::common::Utf8ToUtf16(itemCopy, &itemW);
+	paf::common::Utf8ToUtf16(itemCopy.c_str(), &itemW);
 
 	SceUInt32 msgHash = 0;
 	if (m_kind == 4) {
@@ -436,7 +442,7 @@ int PostStoreStatusJob::Prepare()
 			if ((SceUInt32)m_count <= 5u) {
 				sce_paf_snprintf(numBuf, sizeof(numBuf), "%d", m_count);
 				paf::string numStr(numBuf);
-				paf::common::Utf8ToUtf16(numStr, &numW);
+				paf::common::Utf8ToUtf16(numStr.c_str(), &numW);
 			}
 			bodyW = shellFormatText(fmt.c_str(), itemW.c_str(), numW.c_str());
 		}
@@ -457,7 +463,7 @@ int PostStoreStatusJob::Prepare()
 /* 0x811C00DA */
 int shellSvcActivityCheckEnabled(void)
 {
-	int r = shellActivityIsEnabled();
+	int r = npAccountIsSignedIn();
 	if (r == 1)
 		return 0;
 	if (r == 0)

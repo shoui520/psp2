@@ -8,7 +8,7 @@
 #include <std/string.h>
 
 extern "C" {
-SceUInt64 sceRtcGetAccumulativeTimeForUser(void);
+SceUInt64 sceRtcGetAccumulativeTime(void);
 int SceShell_6B8772A2(int pid);
 int SceShell_794BF5BE(int handle);
 }
@@ -361,11 +361,11 @@ int ClientManager::StartGetLocation(SceLocationHandle handle, SceUInt32 timeout,
 			slot->stateFlags |= 0x40;
 			if (queryTs != NULL)
 				slot->location.queryTimestamp = *queryTs;
-			slot->location.queryStartTime = sceRtcGetAccumulativeTimeForUser();
+			slot->location.queryStartTime = sceRtcGetAccumulativeTime();
 			slot->location.queryTimeout = timeout;
 		} else {
 			slot->stateFlags |= 4;
-			slot->location.getStartTime = sceRtcGetAccumulativeTimeForUser();
+			slot->location.getStartTime = sceRtcGetAccumulativeTime();
 			slot->location.getTimeout = timeout;
 			m_activeGetCount++;
 		}
@@ -545,7 +545,7 @@ int ClientManager::CheckPositionCondition(ClientSlot *slot, const SceLocationLoc
 		return 0;
 	}
 
-	SceUInt64 now = sceRtcGetAccumulativeTimeForUser();
+	SceUInt64 now = sceRtcGetAccumulativeTime();
 	if ((slot->mode & 0xFF) == 0 && result == SCE_LOCATION_INFO_UNDETERMINED_LOCATION) {
 		if (slot->location.lastFailTime != 0) {
 			(void)((now - slot->location.lastFailTime) / 1000U);
@@ -629,7 +629,7 @@ int ClientManager::NotifyIfPositionConditionMet(const SceLocationLocationInfo *i
 	if (ret != 0)
 		return ret;
 
-	SceUInt64 now = sceRtcGetAccumulativeTimeForUser();
+	SceUInt64 now = sceRtcGetAccumulativeTime();
 	LocationPrivacySettings *permMgr = m_posMgr->GetPermMgr();
 	int errOut = 0;
 	unsigned char seen = 0;

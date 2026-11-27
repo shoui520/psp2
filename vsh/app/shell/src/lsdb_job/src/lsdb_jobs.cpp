@@ -20,7 +20,7 @@ struct LsdbJobClientHolder {
 	void *client;
 };
 
-extern LsdbJobClientHolder *g_lsdbJobClientHolder;		/* 0x8156B860 */
+extern LsdbJobClientHolder *g_shellLsdbClient;		/* 0x8156B860 */
 
 struct LsdbPageLayoutItem {
 	void *begin;
@@ -104,7 +104,9 @@ extern int SceLsdb_1AD44F35(void *client, void *appMap, void *iconSp, int flags,
 extern int SceLsdb_E786531F(void *client, int pageId, void *iconSp, void *folderIconSp, void *buf, int size);
 }
 
-extern void *shellBuildFolderThumbnail(void *surfaces, int *outSize); /* 0x813C3A72 */
+struct ApplauncherFolderSurface;
+extern void *applauncherIconCaptureFolder(const paf::vector<ApplauncherFolderSurface> *surfaces,
+					  int *outSize); /* 0x813C3A72 */
 
 typedef void (*LsdbJobCallback)(void *job, void *userData);
 
@@ -174,7 +176,7 @@ GetPageLayoutJob::~GetPageLayoutJob()
 /* 0x811C4F2C */
 int GetPageLayoutJob::Run()
 {
-	int r = SceLsdb_D74AC354(g_lsdbJobClientHolder->client, m_pageId, m_count, &m_pages);
+	int r = SceLsdb_D74AC354(g_shellLsdbClient->client, m_pageId, m_count, &m_pages);
 	m_done = 1;
 	return r;
 }
@@ -202,7 +204,7 @@ public:
 /* 0x811C4FEA */
 int GetIconNumJob::Run()
 {
-	int r = SceLsdb_CF4B3684(g_lsdbJobClientHolder->client, m_pageId, 1);
+	int r = SceLsdb_CF4B3684(g_shellLsdbClient->client, m_pageId, 1);
 	m_done = 1;
 	if (r >= 0)
 		m_iconNum = r;
@@ -248,7 +250,7 @@ GetPageThemeJob::~GetPageThemeJob()
 /* 0x811C5252 */
 int GetPageThemeJob::Run()
 {
-	int r = SceLsdb_8FAD093B(g_lsdbJobClientHolder->client, m_pageId, m_count, &m_themes);
+	int r = SceLsdb_8FAD093B(g_shellLsdbClient->client, m_pageId, m_count, &m_themes);
 	m_done = 1;
 	return r;
 }
@@ -284,7 +286,7 @@ SetPageThemeJob::~SetPageThemeJob()
 /* 0x811C53B6 */
 int SetPageThemeJob::Run()
 {
-	int r = SceLsdb_6769DBC4(g_lsdbJobClientHolder->client, &m_pageIds, &m_themes);
+	int r = SceLsdb_6769DBC4(g_shellLsdbClient->client, &m_pageIds, &m_themes);
 	m_done = 1;
 	return r;
 }
@@ -340,7 +342,7 @@ int SetPageLayoutJob::Run()
 				item->capacity = NULL;
 			}
 			tmp.push_back(paf::common::SharedPtr<LsdbPageLayoutItem>(item));
-			int r = SceLsdb_D74AC354(g_lsdbJobClientHolder->client, pageId, 1, &tmp);
+			int r = SceLsdb_D74AC354(g_shellLsdbClient->client, pageId, 1, &tmp);
 			if (r != 0) {
 				m_done = 1;
 				return r;
@@ -369,7 +371,7 @@ int SetPageLayoutJob::Run()
 			}
 		}
 	}
-	int r = SceLsdb_BF7AFB42(g_lsdbJobClientHolder->client, &m_srcPages, &m_srcPositions, &m_dstPages, &m_dstPositions);
+	int r = SceLsdb_BF7AFB42(g_shellLsdbClient->client, &m_srcPages, &m_srcPositions, &m_dstPages, &m_dstPositions);
 	m_done = 1;
 	if (m_postCb != NULL)
 		m_postCb(this);
@@ -418,7 +420,7 @@ CreateNewPageJob::~CreateNewPageJob()
 /* 0x811C5960 */
 int CreateNewPageJob::Run()
 {
-	int r = SceLsdb_3387B5A3(g_lsdbJobClientHolder->client, m_pageIdx, &m_icons, &m_theme);
+	int r = SceLsdb_3387B5A3(g_shellLsdbClient->client, m_pageIdx, &m_icons, &m_theme);
 	m_done = 1;
 	return r;
 }
@@ -448,7 +450,7 @@ public:
 /* 0x811C5A1C */
 int DeletePageJob::Run()
 {
-	int r = SceLsdb_76C05B2E(g_lsdbJobClientHolder->client, m_pageId);
+	int r = SceLsdb_76C05B2E(g_shellLsdbClient->client, m_pageId);
 	m_done = 1;
 	return r;
 }
@@ -475,7 +477,7 @@ public:
 /* 0x811C5ACC */
 int GetTotalPageJob::Run()
 {
-	int r = SceLsdb_94128795(g_lsdbJobClientHolder->client);
+	int r = SceLsdb_94128795(g_shellLsdbClient->client);
 	if (r >= 0)
 		m_totalPage = r;
 	m_done = 1;
@@ -517,7 +519,7 @@ GetAppInfoJob::~GetAppInfoJob()
 /* 0x811C5CB2 */
 int GetAppInfoJob::Run()
 {
-	int r = SceLsdb_87EE0526(g_lsdbJobClientHolder->client, &m_titleId, &m_appInfo);
+	int r = SceLsdb_87EE0526(g_shellLsdbClient->client, &m_titleId, &m_appInfo);
 	m_done = 1;
 	return r;
 }
@@ -556,7 +558,7 @@ GetIconInfoJob::~GetIconInfoJob()
 /* 0x811C5E9E */
 int GetIconInfoJob::Run()
 {
-	int r = SceLsdb_DE0DA538(g_lsdbJobClientHolder->client, &m_titleId, &m_icon, 0, 0);
+	int r = SceLsdb_DE0DA538(g_shellLsdbClient->client, &m_titleId, &m_icon, 0, 0);
 	m_done = 1;
 	return r;
 }
@@ -598,7 +600,7 @@ SetIconInfoJob::~SetIconInfoJob()
 /* 0x811C6042 */
 int SetIconInfoJob::Run()
 {
-	int r = SceLsdb_C1A82AC8(g_lsdbJobClientHolder->client, m_pageId, &m_icon, m_flags, 0, 0);
+	int r = SceLsdb_C1A82AC8(g_shellLsdbClient->client, m_pageId, &m_icon, m_flags, 0, 0);
 	m_done = 1;
 	return r;
 }
@@ -648,7 +650,7 @@ InsertAppInfoJob::~InsertAppInfoJob()
 /* 0x811C627A */
 int InsertAppInfoJob::Run()
 {
-	int r = SceLsdb_84D3F674(g_lsdbJobClientHolder->client, &m_appInfo, m_pageId, &m_icon, &m_icons);
+	int r = SceLsdb_84D3F674(g_shellLsdbClient->client, &m_appInfo, m_pageId, &m_icon, &m_icons);
 	m_done = 1;
 	return r;
 }
@@ -700,7 +702,7 @@ UpdateAppInfoJob::~UpdateAppInfoJob()
 /* 0x811C64A2 */
 int UpdateAppInfoJob::Run()
 {
-	int r = SceLsdb_DEA13663(g_lsdbJobClientHolder->client, &m_appInfo, &m_icon, &m_icons);
+	int r = SceLsdb_DEA13663(g_shellLsdbClient->client, &m_appInfo, &m_icon, &m_icons);
 	m_done = 1;
 	return r;
 }
@@ -753,7 +755,7 @@ UpdateAppInfoDiffJob::~UpdateAppInfoDiffJob()
 /* 0x811C66D2 */
 int UpdateAppInfoDiffJob::Run()
 {
-	int r = SceLsdb_1AD44F35(g_lsdbJobClientHolder->client, &m_appInfo, &m_icon, m_flags, &m_icons);
+	int r = SceLsdb_1AD44F35(g_shellLsdbClient->client, &m_appInfo, &m_icon, m_flags, &m_icons);
 	m_done = 1;
 	return r;
 }
@@ -810,14 +812,14 @@ CreateNewPageAndInsertAppJob::~CreateNewPageAndInsertAppJob()
 int CreateNewPageAndInsertAppJob::Run()
 {
 	paf::vector<paf::common::SharedPtr<LsdbIconInfo> > emptyIcons;
-	int r = SceLsdb_3387B5A3(g_lsdbJobClientHolder->client, m_pageIdx, &emptyIcons, &m_theme);
+	int r = SceLsdb_3387B5A3(g_shellLsdbClient->client, m_pageIdx, &emptyIcons, &m_theme);
 	if (r != 0) {
 		m_done = 1;
 		return r;
 	}
-	r = SceLsdb_84D3F674(g_lsdbJobClientHolder->client, &m_appInfo, m_pageIdx, &m_icon, &m_icons);
+	r = SceLsdb_84D3F674(g_shellLsdbClient->client, &m_appInfo, m_pageIdx, &m_icon, &m_icons);
 	if (r != 0) {
-		SceLsdb_76C05B2E(g_lsdbJobClientHolder->client, m_pageIdx);
+		SceLsdb_76C05B2E(g_shellLsdbClient->client, m_pageIdx);
 		m_done = 1;
 		return r;
 	}
@@ -880,8 +882,10 @@ int CreateNewFolderJob::Run()
 	void *buf = NULL;
 	int bufSize = 0;
 	if (m_surfaces.size() != 0)
-		buf = shellBuildFolderThumbnail(&m_surfaces, &bufSize);
-	int r = SceLsdb_E786531F(g_lsdbJobClientHolder->client, m_pageId, &m_icon, &m_folderCopy, buf, bufSize);
+		buf = applauncherIconCaptureFolder(
+			reinterpret_cast<const paf::vector<ApplauncherFolderSurface> *>(&m_surfaces),
+			&bufSize);
+	int r = SceLsdb_E786531F(g_shellLsdbClient->client, m_pageId, &m_icon, &m_folderCopy, buf, bufSize);
 	if (buf != NULL)
 		sce_paf_free(buf);
 	m_done = 1;
@@ -899,4 +903,216 @@ int lsdbEnqueueCreateNewFolderJob(paf::common::SharedPtr<paf::job::JobItem> *out
 	*out = paf::common::SharedPtr<paf::job::JobItem>(
 		new CreateNewFolderJob(pageId, icon, folderIcon, surfaces, cb, userData));
 	return queue->Enqueue(*out);
+}
+
+/*
+ * Typed entry points used by applauncher_plugin (matching applauncher_home.h).
+ * Each forwards directly to the corresponding lsdbEnqueue*Job helper above.
+ */
+struct LsdbIcon;
+struct LsdbPage;
+struct LsdbValue;
+struct ApplauncherFolderSurface;
+struct ApplauncherRemovedIcon;
+class ApplauncherLsdbJob;
+
+typedef paf::common::SharedPtr<LsdbIcon> ApplauncherLsdbIconPtr;
+typedef paf::common::SharedPtr<paf::map<unsigned int, LsdbValue> > ApplauncherLsdbAppInfoPtr;
+typedef paf::vector<paf::common::SharedPtr<LsdbPage> > ApplauncherLsdbPageList;
+typedef void (*ApplauncherLsdbDoneFn)(ApplauncherLsdbJob *, void *);
+
+paf::common::SharedPtr<paf::job::JobItem> applauncherGetPageLayoutJobStart(
+	paf::job::JobQueue *queue, int page, int count,
+	ApplauncherLsdbDoneFn callback, void *userData)
+{
+	paf::common::SharedPtr<paf::job::JobItem> job;
+	lsdbEnqueueGetPageLayoutJob(&job, queue, page, (SceUInt32)count,
+				    reinterpret_cast<LsdbJobCallback>(callback), userData);
+	return job;
+}
+
+paf::common::SharedPtr<paf::job::JobItem> applauncherGetIconNumJobStart(
+	paf::job::JobQueue *queue, int page,
+	ApplauncherLsdbDoneFn callback, void *userData)
+{
+	paf::common::SharedPtr<paf::job::JobItem> job;
+	lsdbEnqueueGetIconNumJob(&job, queue, page,
+				 reinterpret_cast<LsdbJobCallback>(callback), userData);
+	return job;
+}
+
+paf::common::SharedPtr<paf::job::JobItem> applauncherGetPageThemeJobStart(
+	paf::job::JobQueue *queue, int page, int count,
+	ApplauncherLsdbDoneFn callback, void *userData)
+{
+	paf::common::SharedPtr<paf::job::JobItem> job;
+	lsdbEnqueueGetPageThemeJob(&job, queue, page, (SceUInt32)count,
+				   reinterpret_cast<LsdbJobCallback>(callback), userData);
+	return job;
+}
+
+paf::common::SharedPtr<paf::job::JobItem> applauncherSetPageThemeJobStart(
+	paf::job::JobQueue *queue, const paf::vector<int> &pages,
+	const ApplauncherLsdbPageList &themes,
+	ApplauncherLsdbDoneFn callback, void *userData)
+{
+	paf::common::SharedPtr<paf::job::JobItem> job;
+	lsdbEnqueueSetPageThemeJob(
+		&job, queue, pages,
+		*reinterpret_cast<const paf::vector<paf::common::SharedPtr<LsdbPageThemeItem> > *>(&themes),
+		reinterpret_cast<LsdbJobCallback>(callback), userData);
+	return job;
+}
+
+paf::common::SharedPtr<paf::job::JobItem> applauncherSetPageLayoutJobStart(
+	paf::job::JobQueue *queue,
+	const paf::vector<int> &fromPages, const paf::vector<int> &fromPositions,
+	const paf::vector<int> &toPages, const paf::vector<int> &toPositions,
+	const paf::vector<ApplauncherRemovedIcon> &removed,
+	ApplauncherLsdbDoneFn onRun, ApplauncherLsdbDoneFn callback, void *userData)
+{
+	paf::common::SharedPtr<paf::job::JobItem> job;
+	lsdbEnqueueSetPageLayoutJob(
+		&job, queue, fromPages, fromPositions, toPages, toPositions,
+		*reinterpret_cast<const paf::vector<void *> *>(&removed),
+		reinterpret_cast<void (*)(void *)>(onRun),
+		reinterpret_cast<LsdbJobCallback>(callback), userData);
+	return job;
+}
+
+paf::common::SharedPtr<paf::job::JobItem> applauncherCreateNewPageJobStart(
+	paf::job::JobQueue *queue, int page,
+	const paf::vector<ApplauncherLsdbAppInfoPtr> &icons,
+	const LsdbPage &theme, void *callback, void *userData)
+{
+	paf::common::SharedPtr<paf::job::JobItem> job;
+	lsdbEnqueueCreateNewPageJob(
+		&job, queue, page,
+		*reinterpret_cast<const paf::vector<paf::common::SharedPtr<LsdbIconInfo> > *>(&icons),
+		*reinterpret_cast<const LsdbPageThemeItem *>(&theme),
+		reinterpret_cast<LsdbJobCallback>(callback), userData);
+	return job;
+}
+
+paf::common::SharedPtr<paf::job::JobItem> applauncherDeletePageJobStart(
+	paf::job::JobQueue *queue, int page, void *callback, void *userData)
+{
+	paf::common::SharedPtr<paf::job::JobItem> job;
+	lsdbEnqueueDeletePageJob(&job, queue, page,
+				 reinterpret_cast<LsdbJobCallback>(callback), userData);
+	return job;
+}
+
+paf::common::SharedPtr<paf::job::JobItem> applauncherGetTotalPageJobStart(
+	paf::job::JobQueue *queue, ApplauncherLsdbDoneFn callback, void *userData)
+{
+	paf::common::SharedPtr<paf::job::JobItem> job;
+	lsdbEnqueueGetTotalPageJob(&job, queue,
+				   reinterpret_cast<LsdbJobCallback>(callback), userData);
+	return job;
+}
+
+paf::common::SharedPtr<paf::job::JobItem> applauncherGetIconInfoJobStart(
+	paf::job::JobQueue *queue, const paf::string &titleId,
+	ApplauncherLsdbDoneFn callback, void *userData)
+{
+	paf::common::SharedPtr<paf::job::JobItem> job;
+	lsdbEnqueueGetIconInfoJob(&job, queue, titleId,
+				  reinterpret_cast<LsdbJobCallback>(callback), userData);
+	return job;
+}
+
+paf::common::SharedPtr<paf::job::JobItem> applauncherSetIconInfoJobStart(
+	paf::job::JobQueue *queue, int page, const ApplauncherLsdbIconPtr &icon,
+	int flags, ApplauncherLsdbDoneFn callback, void *userData)
+{
+	paf::common::SharedPtr<paf::job::JobItem> job;
+	lsdbEnqueueSetIconInfoJob(
+		&job, queue, page,
+		*reinterpret_cast<const paf::common::SharedPtr<LsdbIconInfo> *>(&icon),
+		flags, reinterpret_cast<LsdbJobCallback>(callback), userData);
+	return job;
+}
+
+paf::common::SharedPtr<paf::job::JobItem> applauncherInsertAppInfoJobStart(
+	paf::job::JobQueue *queue, const ApplauncherLsdbAppInfoPtr &appInfo,
+	const paf::vector<ApplauncherLsdbAppInfoPtr> &icons,
+	int page, const ApplauncherLsdbIconPtr &icon,
+	ApplauncherLsdbDoneFn callback, void *userData)
+{
+	paf::common::SharedPtr<paf::job::JobItem> job;
+	lsdbEnqueueInsertAppInfoJob(
+		&job, queue,
+		*reinterpret_cast<const paf::common::SharedPtr<paf::map<SceUInt32, LsdbAttrMapVal> > *>(&appInfo),
+		*reinterpret_cast<const paf::vector<paf::common::SharedPtr<LsdbIconInfo> > *>(&icons),
+		page,
+		*reinterpret_cast<const paf::common::SharedPtr<LsdbIconInfo> *>(&icon),
+		reinterpret_cast<LsdbJobCallback>(callback), userData);
+	return job;
+}
+
+paf::common::SharedPtr<paf::job::JobItem> applauncherUpdateAppInfoJobStart(
+	paf::job::JobQueue *queue, const ApplauncherLsdbAppInfoPtr &appInfo,
+	const paf::vector<ApplauncherLsdbAppInfoPtr> &icons,
+	const ApplauncherLsdbIconPtr &icon,
+	ApplauncherLsdbDoneFn callback, void *userData)
+{
+	paf::common::SharedPtr<paf::job::JobItem> job;
+	lsdbEnqueueUpdateAppInfoJob(
+		&job, queue,
+		*reinterpret_cast<const paf::common::SharedPtr<paf::map<SceUInt32, LsdbAttrMapVal> > *>(&appInfo),
+		*reinterpret_cast<const paf::vector<paf::common::SharedPtr<LsdbIconInfo> > *>(&icons),
+		*reinterpret_cast<const paf::common::SharedPtr<LsdbIconInfo> *>(&icon),
+		reinterpret_cast<LsdbJobCallback>(callback), userData);
+	return job;
+}
+
+paf::common::SharedPtr<paf::job::JobItem> applauncherUpdateAppInfoDiffJobStart(
+	paf::job::JobQueue *queue, const ApplauncherLsdbAppInfoPtr &appInfo,
+	const paf::vector<ApplauncherLsdbAppInfoPtr> &icons,
+	const ApplauncherLsdbIconPtr &icon, int diffFlags,
+	ApplauncherLsdbDoneFn callback, void *userData)
+{
+	paf::common::SharedPtr<paf::job::JobItem> job;
+	lsdbEnqueueUpdateAppInfoDiffJob(
+		&job, queue,
+		*reinterpret_cast<const paf::common::SharedPtr<paf::map<SceUInt32, LsdbAttrMapVal> > *>(&appInfo),
+		*reinterpret_cast<const paf::vector<paf::common::SharedPtr<LsdbIconInfo> > *>(&icons),
+		*reinterpret_cast<const paf::common::SharedPtr<LsdbIconInfo> *>(&icon),
+		diffFlags, reinterpret_cast<LsdbJobCallback>(callback), userData);
+	return job;
+}
+
+paf::common::SharedPtr<paf::job::JobItem> applauncherCreateNewPageAndInsertAppJobStart(
+	paf::job::JobQueue *queue, int page, const LsdbPage &theme,
+	const ApplauncherLsdbAppInfoPtr &appInfo,
+	const paf::vector<ApplauncherLsdbAppInfoPtr> &icons,
+	const ApplauncherLsdbIconPtr &icon,
+	ApplauncherLsdbDoneFn callback, void *userData)
+{
+	paf::common::SharedPtr<paf::job::JobItem> job;
+	lsdbEnqueueCreateNewPageAndInsertAppJob(
+		&job, queue, page,
+		*reinterpret_cast<const LsdbPageThemeItem *>(&theme),
+		*reinterpret_cast<const paf::common::SharedPtr<paf::map<SceUInt32, LsdbAttrMapVal> > *>(&appInfo),
+		*reinterpret_cast<const paf::vector<paf::common::SharedPtr<LsdbIconInfo> > *>(&icons),
+		*reinterpret_cast<const paf::common::SharedPtr<LsdbIconInfo> *>(&icon),
+		reinterpret_cast<LsdbJobCallback>(callback), userData);
+	return job;
+}
+
+paf::common::SharedPtr<paf::job::JobItem> applauncherCreateNewFolderJobStart(
+	paf::job::JobQueue *queue, int page,
+	const ApplauncherLsdbIconPtr &icon, const ApplauncherLsdbIconPtr &folder,
+	const paf::vector<ApplauncherFolderSurface> &surfaces,
+	ApplauncherLsdbDoneFn callback, void *userData)
+{
+	paf::common::SharedPtr<paf::job::JobItem> job;
+	lsdbEnqueueCreateNewFolderJob(
+		&job, queue, page,
+		*reinterpret_cast<const paf::common::SharedPtr<LsdbIconInfo> *>(&icon),
+		*reinterpret_cast<const paf::common::SharedPtr<LsdbIconInfo> *>(&folder),
+		*reinterpret_cast<const paf::vector<LsdbFolderSurfacePair> *>(&surfaces),
+		reinterpret_cast<LsdbJobCallback>(callback), userData);
+	return job;
 }

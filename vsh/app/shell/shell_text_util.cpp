@@ -235,6 +235,11 @@ paf::wstring shellRemainTimeText(const paf::rtc::Tick *expireTick)
 	return formatRelativeCommonString(SHELL_COMMON_STR_DAYS_REMAINING, buf);
 }
 
+paf::wstring gameLicenseTimeToText(const SceUInt64 *time)
+{
+	return shellRemainTimeText(time);
+}
+
 /* Locale decimal and thousands separator table (0x815468C8..0x81547520, 79 entries) */
 struct ShellCountryNumberFormat {
 	paf::string countryCode;

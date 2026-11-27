@@ -43,8 +43,12 @@ static int downloadPluginBgdl_811239D4(const FgdlCaller *caller, int reserved, S
 static int downloadPluginBgdl_811239DC(void *reserved, const SceUInt32 *taskId);
 static int downloadPluginBgdl_811239E4(const FgdlTitleRequest *request, int reserved);
 static int downloadPluginTerminate(void);
+
 static int downloadPluginBgdl_81123ACA(SceUInt32 taskId);
-int downloadPluginReserved(void);			/* (0x81409E2C) */
+int downloadPluginReserved(void)			/* (0x81409E2C) */
+{
+	return 0;
+}
 
 static DownloadPluginInterface s_interface = {		/* (0x81544864) */
 	downloadPluginNotify,

@@ -51,40 +51,123 @@ int sceAppMgrWorkDirMount(int id, char *mountPoint);
 int sceAppMgrUmount(const char *mountPoint);
 int sceRtcFormatRFC3339(char *outBuf, const SceRtcTick *utcTick, int tzOffsetMinutes);
 
-/* SceActivityDb query handle methods (imported by NID in SceShell) */
-void *SceActivityDb_6C98B745(void *handle);
-int SceActivityDb_F65C0C21(void *handle, const ActivityDbQueryCondition *condition);
-void *SceActivityDb_6E198FFA(void *handle);
-int SceActivityDb_402A5F72(void *handle);
-int SceActivityDb_E6601703(void *handle);
-int SceActivityDb_6C29F640(void *handle, int *outCount);
-int SceActivityDb_8F2E07A1(void *handle, int offset, int count, paf::vector<SceInt64> *outRowids);
-int SceActivityDb_74F96707(void *handle, paf::vector<SceInt64> *rowids,
-			   paf::vector<ActivityDbStatus> *outStatuses);
-int SceActivityDb_572A6463(void *handle, const SceInt64 *parentRowid, int offset, int count,
-			   paf::vector<SceInt64> *outRowids);
-int SceActivityDb_D512F568(void *handle, paf::vector<SceInt64> *rowids,
-			   paf::vector<ActivityDbComment> *outComments);
-int SceActivityDb_7ED9033C(void *handle, int *outCount, SceUInt64 *outLastReadTime,
-			   SceUInt64 *outLastUpdateTime, SceUInt64 *outLatestActivityTime);
+/* SceActivityDb plain C export (imported by NID in SceShell) */
 int SceActivityDb_738D4B49(void);
-int SceActivityDb_8D4B7F73(void *handle, const SceInt64 *statusRowid,
-			   ActivityDbGoodJob *outGoodJob);
+}
 
-/* SceActivityDb sync handle methods (imported by NID in SceShell) */
-void *SceActivityDb_B83F0A77(void *syncHandle);
-void *SceActivityDb_937D49BA(void *syncHandle);
-int SceActivityDb_5B44F019(void *syncHandle);
-int SceActivityDb_FEB3A02F(void *syncHandle, const SceInt64 *statusRowid,
-			   const paf::string *titleId, const void *netCallback);
-int SceActivityDb_2929CAD1(void *syncHandle, const SceInt64 *statusRowid);
-int SceActivityDb_DF874DD2(void *syncHandle, const SceInt64 *statusRowid);
-int SceActivityDb_C715B8BC(ActivityDbComment *outComment, const paf::string *message);
-int SceActivityDb_3F501885(void *syncHandle, const SceInt64 *statusRowid,
-			   const ActivityDbComment *comment);
-int SceActivityDb_5FC8EE9A(void *syncHandle, const SceInt64 *statusRowid);
-int SceActivityDb_2A7ABB45(void *syncHandle, const SceInt64 *statusRowid,
-			   const SceInt64 *commentRowid);
+/* SceActivityDb C++ query/sync handle method forwarders */
+static inline void *SceActivityDb_6C98B745(void *handle)
+{
+	return new (handle) ActivityDbQueryHandle();
+}
+static inline int SceActivityDb_F65C0C21(void *handle, const ActivityDbQueryCondition *condition)
+{
+	return static_cast<ActivityDbQueryHandle *>(handle)->Create(condition);
+}
+static inline void *SceActivityDb_6E198FFA(void *handle)
+{
+	static_cast<ActivityDbQueryHandle *>(handle)->~ActivityDbQueryHandle();
+	return handle;
+}
+static inline int SceActivityDb_402A5F72(void *handle)
+{
+	return static_cast<ActivityDbQueryHandle *>(handle)->IsChanged() ? 1 : 0;
+}
+static inline int SceActivityDb_E6601703(void *handle)
+{
+	return static_cast<ActivityDbQueryHandle *>(handle)->ClearChanged();
+}
+static inline int SceActivityDb_6C29F640(void *handle, int *outCount)
+{
+	return static_cast<ActivityDbQueryHandle *>(handle)->GetInfoCount(outCount);
+}
+static inline int SceActivityDb_8F2E07A1(void *handle, int offset, int count,
+					 paf::vector<SceInt64> *outRowids)
+{
+	return static_cast<ActivityDbQueryHandle *>(handle)->GetRowids(offset, count, outRowids);
+}
+static inline int SceActivityDb_74F96707(void *handle, paf::vector<SceInt64> *rowids,
+					 paf::vector<ActivityDbStatus> *outStatuses)
+{
+	return static_cast<ActivityDbQueryHandle *>(handle)->GetStatuses(rowids, outStatuses);
+}
+static inline int SceActivityDb_572A6463(void *handle, const SceInt64 *parentRowid, int offset,
+					 int count, paf::vector<SceInt64> *outRowids)
+{
+	return static_cast<ActivityDbQueryHandle *>(handle)->GetCommentRowids(
+		parentRowid, offset, count, outRowids);
+}
+extern "C" int _ZN21ActivityDbQueryHandle11GetCommentsEPN3paf6vectorIxNS0_9allocatorIxEEEEPNS1_I17ActivityDbCommentNS2_IS6_EEEE(
+	void *handle, paf::vector<SceInt64> *rowids,
+	paf::vector<ActivityDbComment> *outComments);
+
+static inline int SceActivityDb_D512F568(void *handle, paf::vector<SceInt64> *rowids,
+					 paf::vector<ActivityDbComment> *outComments)
+{
+	return _ZN21ActivityDbQueryHandle11GetCommentsEPN3paf6vectorIxNS0_9allocatorIxEEEEPNS1_I17ActivityDbCommentNS2_IS6_EEEE(
+		handle, rowids, outComments);
+}
+static inline int SceActivityDb_7ED9033C(void *handle, int *outCount, SceUInt64 *outLastReadTime,
+					 SceUInt64 *outLastUpdateTime,
+					 SceUInt64 *outLatestActivityTime)
+{
+	return static_cast<ActivityDbQueryHandle *>(handle)->GetCountAndSyncTimes(
+		outCount, reinterpret_cast<SceInt64 *>(outLastReadTime),
+		reinterpret_cast<SceInt64 *>(outLastUpdateTime),
+		reinterpret_cast<SceInt64 *>(outLatestActivityTime));
+}
+static inline int SceActivityDb_8D4B7F73(void *handle, const SceInt64 *statusRowid,
+					 ActivityDbGoodJob *outGoodJob)
+{
+	return static_cast<ActivityDbQueryHandle *>(handle)->GetGoodJob(statusRowid, outGoodJob);
+}
+static inline void *SceActivityDb_B83F0A77(void *syncHandle)
+{
+	return new (syncHandle) ActivityDbSyncHandle();
+}
+static inline void *SceActivityDb_937D49BA(void *syncHandle)
+{
+	static_cast<ActivityDbSyncHandle *>(syncHandle)->~ActivityDbSyncHandle();
+	return syncHandle;
+}
+static inline int SceActivityDb_5B44F019(void *syncHandle)
+{
+	return static_cast<ActivityDbSyncHandle *>(syncHandle)->Cancel();
+}
+static inline int SceActivityDb_FEB3A02F(void *syncHandle, const SceInt64 *statusRowid,
+					 const paf::string *titleId, const void *netCallback)
+{
+	return static_cast<ActivityDbSyncHandle *>(syncHandle)->SyncDetail(
+		statusRowid, titleId,
+		static_cast<const ActivityDbNetCallback *>(netCallback));
+}
+static inline int SceActivityDb_2929CAD1(void *syncHandle, const SceInt64 *statusRowid)
+{
+	return static_cast<ActivityDbSyncHandle *>(syncHandle)->VoteGoodJob(statusRowid);
+}
+static inline int SceActivityDb_DF874DD2(void *syncHandle, const SceInt64 *statusRowid)
+{
+	return static_cast<ActivityDbSyncHandle *>(syncHandle)->CancelGoodJob(statusRowid);
+}
+static inline int SceActivityDb_C715B8BC(ActivityDbComment *outComment, const paf::string *message)
+{
+	ActivityDbSyncHandle::MakeComment(outComment, *message);
+	return 0;
+}
+static inline int SceActivityDb_3F501885(void *syncHandle, const SceInt64 *statusRowid,
+					 const ActivityDbComment *comment)
+{
+	return static_cast<ActivityDbSyncHandle *>(syncHandle)->PostComment(statusRowid, comment);
+}
+static inline int SceActivityDb_5FC8EE9A(void *syncHandle, const SceInt64 *statusRowid)
+{
+	return static_cast<ActivityDbSyncHandle *>(syncHandle)->DeleteStatus(statusRowid);
+}
+static inline int SceActivityDb_2A7ABB45(void *syncHandle, const SceInt64 *statusRowid,
+					 const SceInt64 *commentRowid)
+{
+	(void)statusRowid;
+	return static_cast<ActivityDbSyncHandle *>(syncHandle)->DeleteComment(commentRowid);
 }
 
 #include "../activity_drawobj/activity_drawobj.h"

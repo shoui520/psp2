@@ -70,3 +70,20 @@ void mailResidentStop(void)
 void mailResidentOnExit(void)
 {
 }
+
+void mailResidentPluginInit(paf::Plugin *plugin)
+{
+	mailResidentSetPlugin(plugin);
+}
+
+void mailResidentPluginStart(paf::Plugin *plugin)
+{
+	(void)plugin;
+	mailResidentStart();
+}
+
+void mailResidentPluginStop(paf::Plugin *plugin)
+{
+	(void)plugin;
+	mailResidentStop();
+}

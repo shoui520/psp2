@@ -44,9 +44,9 @@ struct ShellExclusiveFuncMtp {
 struct ShellMtpServerParam {
 	int threadPriority;
 	int sessionThreadPriority;
-	int reserved0;
+	int devThreadCpuAffinityMask;
 	int eventThreadPriority;
-	int reserved1;
+	int xferThreadCpuAffinityMask;
 	ShellExclusiveFuncMtp *exclusiveFunc;
 };
 
@@ -66,6 +66,14 @@ static void shellMtpOnAppEvent(int code, const void *data, SceSize size, void *a
 static void shellMtpOnShellEvent(int code, const void *data, SceSize size, void *arg);
 static int shellMtpOnRegistryChange(int notifyId, int notifyCount, int notifyArg, void *common);
 
+struct BgdlMtpContent;
+struct BgdlMtpRequest;
+int shellMtpHostCheckContent(const BgdlMtpContent *content);
+int shellMtpHostAddTask(const BgdlMtpRequest *request, SceUInt32 *id);
+int shellMtpHostRemoveTask(SceUInt32 id);
+int shellMtpHostReloadTask(SceUInt32 id);
+int shellMtpHostListTasks(void);
+
 void shellMtpStart(void)
 {
 	ShellMtpServerParam param;
@@ -74,19 +82,19 @@ void shellMtpStart(void)
 
 	param.threadPriority = SHELL_MTP_THREAD_PRIORITY;
 	param.sessionThreadPriority = SHELL_MTP_SESSION_THREAD_PRIORITY;
-	param.reserved1 = 0;
-	param.reserved0 = 0;
+	param.xferThreadCpuAffinityMask = 0;
+	param.devThreadCpuAffinityMask = 0;
 	param.eventThreadPriority = SHELL_MTP_EVENT_THREAD_PRIORITY;
 	param.exclusiveFunc = &s_exclusiveFuncMtp;
 	if (shellMtpServerStart(&param) < 0)
 		return;
 
-	funcs.func[0] = shellMtpHostFunc0;
-	funcs.func[1] = shellMtpHostFunc1;
-	funcs.func[2] = shellMtpHostFunc2;
-	funcs.func[3] = shellMtpHostFunc3;
-	funcs.func[4] = shellMtpHostFunc4;
-	funcs.func[5] = (int (*)(int))shellMtpHostFunc5;
+	funcs.func[0] = (int (*)(int))(int (*)(const BgdlMtpContent *))shellMtpHostCheckContent;
+	funcs.func[1] = (int (*)(int))(int (*)(const BgdlMtpRequest *, SceUInt32 *))shellMtpHostAddTask;
+	funcs.func[2] = (int (*)(int))(int (*)(SceUInt32))shellMtpHostRemoveTask;
+	funcs.func[3] = (int (*)(int))(int (*)(SceUInt32))shellMtpHostReloadTask;
+	funcs.func[4] = (int (*)(int))(int (*)(void))shellMtpHostListTasks;
+	funcs.func[5] = (int (*)(int))shellMtpHostGetTaskFolder;
 	SceLibMtp_67DB4C13(&funcs);
 
 	int ret;
@@ -122,6 +130,7 @@ void shellMtpStart(void)
 			sceKernelDeleteCallback(s_mtpRegCallback);
 			s_mtpRegCallback = -1;
 		} else {
+			bool addedAll = true;
 			keys[0] = "/CONFIG/NET/wifi_flag";
 			keys[1] = "/CONFIG/SYSTEM/flight_mode";
 			for (unsigned int i = 0; i < SHELL_MTP_REG_KEY_COUNT; i++) {
@@ -132,21 +141,22 @@ void shellMtpStart(void)
 					sceKernelDeleteCallback(s_mtpRegCallback);
 					s_mtpRegCallback = -1;
 					ret = err;
-					goto done;
+					addedAll = false;
+					break;
 				}
 			}
-			ret = sceRegMgrStartCallback(s_mtpRegCallback);
-			if (ret >= 0)
-				goto started;
-			sceRegMgrUnregisterCallback(s_mtpRegCallback);
-			sceKernelDeleteCallback(s_mtpRegCallback);
-			s_mtpRegCallback = -1;
+			if (addedAll) {
+				ret = sceRegMgrStartCallback(s_mtpRegCallback);
+				if (ret < 0) {
+					sceRegMgrUnregisterCallback(s_mtpRegCallback);
+					sceKernelDeleteCallback(s_mtpRegCallback);
+					s_mtpRegCallback = -1;
+				}
+			}
 		}
-done:
 		if (ret < 0)
 			sce_paf_printf_dummy();
 	}
-started:
 	shellMtpWiFiCreate();
 	s_mtpStarted = true;
 }

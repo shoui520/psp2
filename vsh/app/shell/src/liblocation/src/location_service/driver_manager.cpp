@@ -19,21 +19,26 @@ int sceBbmcClearEvent(int featureId, int eventMask);
 int sceBbmcResumeSubscriberCallback(int handle);
 int sceBbmcGpsCellGetLocationInfoStart(int handle);
 int sceBbmcGpsCellGetLocationInfoDone(int handle, void *outInfo);
+int _sceGpsResumeCallback(void);
+int _sceGpsGetDeviceInfo(void *outInfo);
+int _sceGpsIsDevice(void);
 }
 
+struct GpsEmuDeviceInfo;
 extern int gpsEmuInit(const char *path);			/* 0x81373368 */
 extern int gpsEmuTerm(void);					/* 0x81373370 */
-extern int gpsEmuOpen(void);					/* 0x81373378 */
+extern int gpsEmuOpen(SceUID callbackId);			/* 0x81373378 */
 extern int gpsEmuStart(int mode);				/* 0x813733A4 */
 extern int gpsEmuStop(void);					/* 0x813733D0 */
 extern int gpsEmuClose(void);					/* 0x813733F8 */
 extern int gpsEmuGetSatellites(int *outStatus);			/* 0x81373420 */
 extern int gpsEmuGetData(GpsLocation *data, GpsSatellites *satellites); /* 0x8137344E */
-extern int gpsEmuSetParam(int param);				/* 0x813735CC */
-extern int gpsEmuGetStatus(void);				/* 0x81413CB0 */
-extern int gpsDrvAckEvent(void);				/* 0x8144FDE0 */
-extern int gpsDrvSetParam(int param);				/* 0x8144FDF8 */
-extern int gpsDrvGetStatusRaw(void);				/* 0x8144FE00 */
+extern int gpsEmuSetParam(GpsEmuDeviceInfo *outInfo);		/* 0x813735CC */
+/* 0x81413CB0 */
+static int gpsEmuGetStatus(void)
+{
+	return 1;
+}
 
 static DriverManager *s_driverManager;				/* 0x81544CE8 */
 static char s_emuFilePath[256];					/* 0x81566DA8 */
@@ -230,7 +235,7 @@ int DriverManager::GpsOpen(SceUID xpsCbId)
 	m_xpsCbId = xpsCbId;
 	int ret;
 	if (m_emuPower == 1) {
-		ret = gpsEmuOpen();
+		ret = gpsEmuOpen(cbId);
 		if (g_locationLogger != NULL)
 			g_locationLogger->Log(2, "[GPS] sceGpsEmuOpen()=0x%08x\n", ret);
 	} else {
@@ -276,7 +281,7 @@ int DriverManager::GpsStop()
 		g_locationLogger->SetDopInfo(zeros);
 	}
 	gpsAssistAck();
-	gpsDrvAckEvent();
+	_sceGpsResumeCallback();
 	return ret;
 }
 
@@ -346,15 +351,15 @@ int DriverManager::GpsGetStatus()
 {
 	if (m_emuPower == 1)
 		return gpsEmuGetStatus();
-	return gpsDrvGetStatusRaw();
+	return _sceGpsIsDevice();
 }
 
 /* 0x81193A10 */
 int DriverManager::GpsSetParam(int param)
 {
 	if (m_emuPower == 1)
-		return gpsEmuSetParam(param);
-	return gpsDrvSetParam(param);
+		return gpsEmuSetParam((GpsEmuDeviceInfo *)param);
+	return _sceGpsGetDeviceInfo((void *)param);
 }
 
 /* 0x81193A28 */

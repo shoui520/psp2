@@ -714,5 +714,41 @@ void *WavFactory::createMediaInfo(const char *path)
     return wavMediaInfoConstruct(mem, path);
 }
 
+struct CodecFactory;
+struct MediaInfoBase;
+struct DecoderInstance;
+
+WavFactory gWavFactory;
+
+DecoderInstance *createWavDecoder(CodecFactory *factory, void *outCtx,
+                                  void *startFn, void *enqueueFn, void *stopFn, void *flushFn)
+{
+    WavFactory *wavFactory = (factory != NULL) ? reinterpret_cast<WavFactory *>(factory) : &gWavFactory;
+    return reinterpret_cast<DecoderInstance *>(wavFactory->createPipeline(
+        reinterpret_cast<AudioOpenCallback>(startFn),
+        reinterpret_cast<AudioCloseCallback>(stopFn),
+        reinterpret_cast<AudioWriteCallback>(enqueueFn),
+        reinterpret_cast<AudioFlushCallback>(flushFn), outCtx));
+}
+
+int destroyWavDecoder(CodecFactory *factory, DecoderInstance *decoder)
+{
+    WavFactory *wavFactory = (factory != NULL) ? reinterpret_cast<WavFactory *>(factory) : &gWavFactory;
+    return wavFactory->destroyPipeline(reinterpret_cast<PipelineEventListener *>(decoder));
+}
+
+int getWavStackSizes(unsigned int *parserStack, unsigned int *decoderStack, unsigned int *mgrStack)
+{
+    return gWavFactory.getBufferSizes(parserStack, decoderStack, mgrStack);
+}
+
+MediaInfoBase *allocWavMediaInfo(CodecFactory *factory, const char *path)
+{
+    WavFactory *wavFactory = reinterpret_cast<WavFactory *>(factory);
+    return (wavFactory != NULL)
+        ? reinterpret_cast<MediaInfoBase *>(wavFactory->createMediaInfo(path))
+        : NULL;
+}
+
 } /* namespace MusicCore */
 } /* namespace sce */

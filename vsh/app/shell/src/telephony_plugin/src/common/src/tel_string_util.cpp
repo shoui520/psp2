@@ -17,9 +17,9 @@
 #include "../tel_common.h"
 
 extern "C" {
-extern paf::memory::HeapAllocator *GetGlobalHeapAllocator(void);
 extern SceUInt32 sceRtcGetTickResolution(void);
 extern int sceRtcConvertUtcToLocalTime(const SceRtcTick *utc, SceRtcTick *localTime);
+extern paf::memory::HeapAllocator *GetGlobalHeapAllocator(void);
 }
 
 namespace telephony {

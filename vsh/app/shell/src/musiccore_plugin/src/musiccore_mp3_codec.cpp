@@ -981,5 +981,56 @@ int Mp3Factory::destroyMediaInfo(void **ioMediaInfo)
     return 0;
 }
 
+struct CodecFactory;
+struct MediaInfoBase;
+struct DecoderInstance;
+
+static Mp3Factory s_mp3FactoryInstance;
+
+DecoderInstance *createMp3Decoder(CodecFactory *factory, int mode, void *outCtx,
+                                  void *startFn, void *enqueueFn, void *stopFn, void *flushFn)
+{
+    Mp3Factory *mp3Factory = (factory != NULL) ? reinterpret_cast<Mp3Factory *>(factory) : &s_mp3FactoryInstance;
+    return reinterpret_cast<DecoderInstance *>(mp3Factory->createPipeline(
+        mode, reinterpret_cast<AudioOpenCallback>(startFn),
+        reinterpret_cast<AudioCloseCallback>(stopFn),
+        reinterpret_cast<AudioWriteCallback>(enqueueFn),
+        reinterpret_cast<AudioFlushCallback>(flushFn), outCtx));
+}
+
+int destroyCodecDecoder(CodecFactory *factory, DecoderInstance *decoder)
+{
+    Mp3Factory *mp3Factory = (factory != NULL) ? reinterpret_cast<Mp3Factory *>(factory) : &s_mp3FactoryInstance;
+    return mp3Factory->destroyPipeline(reinterpret_cast<PipelineEventListener *>(decoder));
+}
+
+int getMp3StackSizes(unsigned int *parserStack, unsigned int *decoderStack, unsigned int *mgrStack)
+{
+    return s_mp3FactoryInstance.getBufferSizes(parserStack, decoderStack, mgrStack);
+}
+
+MediaInfoBase *allocMp3MediaInfo(CodecFactory *factory, const char *path)
+{
+    Mp3Factory *mp3Factory = reinterpret_cast<Mp3Factory *>(factory);
+    return (mp3Factory != NULL)
+        ? reinterpret_cast<MediaInfoBase *>(mp3Factory->createMediaInfo(path, 16))
+        : NULL;
+}
+
+void releaseFactoryMediaInfo(CodecFactory *factory, MediaInfoBase **mediaInfo)
+{
+    Mp3Factory *mp3Factory = (factory != NULL) ? reinterpret_cast<Mp3Factory *>(factory) : &s_mp3FactoryInstance;
+    if (mediaInfo == NULL || *mediaInfo == NULL)
+        return;
+    void *ptr = *mediaInfo;
+    mp3Factory->destroyMediaInfo(&ptr);
+    *mediaInfo = NULL;
+}
+
+int mapMp3ParserError(int errCode)
+{
+    return errCode;
+}
+
 } /* namespace MusicCore */
 } /* namespace sce */

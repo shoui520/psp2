@@ -504,14 +504,14 @@ static int npOAuthRequestNpssoToken(NpOAuthRequest *request, const char *console
 							contentLength, &npssoResp);
 						if (ret >= 0) {
 							sceKernelLockLwMutex(ctx->mutex, 1, NULL);
-							sceClibMemcpy(ctx->npssoToken,
+							sceClibMemcpy_safe(ctx->npssoToken,
 								      npssoResp.npssoToken,
 								      sizeof(ctx->npssoToken));
 							ctx->hasNpssoToken = 1;
 							sceKernelUnlockLwMutex(ctx->mutex, 1);
 
 							sceKernelLockLwMutex(ctx->mutex, 1, NULL);
-							sceClibMemcpy(&ctx->issuerId,
+							sceClibMemcpy_safe(&ctx->issuerId,
 								      &npssoResp.issuerId,
 								      sizeof(ctx->issuerId));
 							sceKernelUnlockLwMutex(ctx->mutex, 1);
@@ -584,11 +584,11 @@ static int npOAuthRequestAuthCode(NpOAuthRequest *request, const char *consoleTo
 
 	char npssoCopy[NP_OAUTH_NPSSO_TOKEN_SIZE];
 	sceKernelLockLwMutex(ctx->mutex, 1, NULL);
-	sceClibMemcpy(npssoCopy, ctx->npssoToken, sizeof(npssoCopy));
+	sceClibMemcpy_safe(npssoCopy, ctx->npssoToken, sizeof(npssoCopy));
 	sceKernelUnlockLwMutex(ctx->mutex, 1);
 
 	char cookieHeader[NP_OAUTH_NPSSO_TOKEN_SIZE];
-	sceClibMemcpy(cookieHeader, npssoCopy, sizeof(cookieHeader));
+	sceClibMemcpy_safe(cookieHeader, npssoCopy, sizeof(cookieHeader));
 
 	NpOAuthRequest *acquired = NULL;
 	int httpReqId = 0;
@@ -781,7 +781,7 @@ static bool npOAuthCopyValidCachedTokenLocked(void *outToken)
 	if (expireTick != 0 && expireTick >= nowTick.tick &&
 	    (expireTick - nowTick.tick) >= NP_OAUTH_ACCESS_TOKEN_MIN_REMAINING_US) {
 		if (outToken != NULL)
-			sceClibMemcpy(outToken, &ctx->cachedAccessToken,
+			sceClibMemcpy_safe(outToken, &ctx->cachedAccessToken,
 				      sizeof(ctx->cachedAccessToken));
 	} else {
 		needRefresh = true;
@@ -836,12 +836,12 @@ static int npOAuthExchangeCodeForAccessToken(NpOAuthRequest *request, const char
 							contentLength, &tokenResp);
 						if (ret >= 0) {
 							sceKernelLockLwMutex(ctx->mutex, 1, NULL);
-							sceClibMemcpy(&ctx->cachedAccessToken,
+							sceClibMemcpy_safe(&ctx->cachedAccessToken,
 								      &tokenResp.token,
 								      sizeof(ctx->cachedAccessToken));
 							sceKernelUnlockLwMutex(ctx->mutex, 1);
 
-							sceClibMemcpy(outToken, &tokenResp.token,
+							sceClibMemcpy_safe(outToken, &tokenResp.token,
 								      sizeof(tokenResp.token));
 						}
 					}

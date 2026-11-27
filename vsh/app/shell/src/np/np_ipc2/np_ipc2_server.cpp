@@ -30,12 +30,7 @@ static int NoOpSessionCallback(IPMI::Session *session)
 static int AsmAsyncAdapter(IPMI::Session *session, SceUInt32 requestId, SceUInt32 methodId,
 			   const IPMI::DataInfo *inList, SceUInt32 inCount)
 {
-	(void)session;
-	(void)requestId;
-	(void)methodId;
-	(void)inList;
-	(void)inCount;
-	return npAsmVshIpcOnAsyncMethod();
+	return npAsmVshIpcOnAsyncMethod(session, requestId, methodId, inList, inCount);
 }
 
 /* 0x815490B8: SceNpService registered services table */

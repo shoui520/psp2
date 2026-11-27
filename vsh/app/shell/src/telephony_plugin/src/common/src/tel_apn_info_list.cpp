@@ -17,11 +17,11 @@
 
 extern "C" {
 extern int vshSblUtMgrHasComTestFlag(void);
-extern int sceRegMgrGetKeyStrForUser(const char *category, const char *name, char *buf,
+extern int sceRegMgrGetKeyStr(const char *category, const char *name, char *buf,
 				     SceSize size);
 extern char *sceClibStrncpy(char *dst, const char *src, SceSize count);
-extern int shellAesInitDecrypt(void *aesCtx, SceSize blockBits, SceSize keyBits, const void *key);
-extern void shellAesDecryptBlock(const void *aesCtx, const void *inBlock, void *outBlock);
+extern "C" int sceAesScheduleKey(void *aesCtx, SceSize blockBits, SceSize keyBits, const void *key);
+extern "C" int sceAesDecrypt(const void *aesCtx, const void *inBlock, void *outBlock);
 }
 
 namespace telephony {
@@ -55,7 +55,7 @@ static int decryptApnListAesCbc(const SceUInt8 *iv, SceUInt8 *payload, SceSize l
 
 	ApnAesContext aesCtx;
 	sce_paf_memset(&aesCtx, 0, sizeof(aesCtx));
-	int ret = shellAesInitDecrypt(&aesCtx, 128, 128, key);
+	int ret = sceAesScheduleKey(&aesCtx, 128, 128, key);
 	if (ret < 0)
 		return ret;
 
@@ -67,7 +67,7 @@ static int decryptApnListAesCbc(const SceUInt8 *iv, SceUInt8 *payload, SceSize l
 
 	SceUInt8 decryptedBlock[16];
 	for (SceSize offset = 0; offset < length; offset += 16) {
-		shellAesDecryptBlock(&aesCtx, &payload[offset], decryptedBlock);
+		sceAesDecrypt(&aesCtx, &payload[offset], decryptedBlock);
 		for (SceUInt32 byteIdx = 0; byteIdx < blockBytes; ++byteIdx) {
 			SceUInt8 nextChain = payload[offset + byteIdx];
 			payload[offset + byteIdx] = chainBlock[byteIdx] ^ decryptedBlock[byteIdx];
@@ -97,11 +97,11 @@ static int downloadAndInstallApnLists(void)
 
 	char npEnv[17];
 	sce_paf_memset(npEnv, 0, sizeof(npEnv));
-	sce_paf_strcpy(npEnv, "np");
+	sce_paf_strlcpy(npEnv, "np", sizeof(npEnv));
 	if (vshSblUtMgrHasComTestFlag() != 0)
 		sceClibStrncpy(npEnv, "prod-qa", 16);
 	else
-		sceRegMgrGetKeyStrForUser("/CONFIG/NP", "env", npEnv, sizeof(npEnv));
+		sceRegMgrGetKeyStr("/CONFIG/NP", "env", npEnv, sizeof(npEnv));
 
 	paf::string url = telFormatString(
 		"https://a0.ww.%s.dl.playstation.net/tss/%s/NPWR02951_00/NPWR02951_00-%d.tss",

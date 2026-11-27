@@ -6,6 +6,7 @@
  */
 
 #include <kernel.h>
+#include <std/new>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -256,20 +257,17 @@ struct StateMachineContext {
     void *m_activateToken;                 /* +4596 */
 };
 
-extern int stateMachineTransition(StateMachineContext *ctx, int targetStateId);
+extern int stateMachineTransition(void *ctx, int targetStateId);
 extern void stateMachineClearTrackFlag();
-extern void stateMachinePopulateMetadata(StateMachineContext *ctx, const TrackInfoData *info,
-                                         void *metaBufs);
-extern int stateMachineSeekActive(StateMachineContext *ctx, const uint32_t *seekParams,
-                                  MediaListAccess *media, uint8_t isNewMedia);
-extern int stateMachineSeekPending(StateMachineContext *ctx, const uint32_t *seekParams,
-                                   MediaListAccess *media, uint8_t *outHasPending,
-                                   uint8_t isNewMedia);
-extern int stateMachineSwapMedia(StateMachineContext *ctx, MediaListAccess *newMedia,
-                                 uint8_t hasUriFlag, uint8_t seekInitial, uint8_t hasNewMedia);
-extern int stateMachineSetPendingMedia(StateMachineContext *ctx, MediaListAccess *newMedia);
+extern void stateMachinePopulateMetadata(void *ctx, const void *info, void *metaBufs);
+extern int stateMachineSeekActive(void *ctx, const uint32_t *seekParams, void *media, uint8_t isNewMedia);
+extern int stateMachineSeekPending(void *ctx, const uint32_t *seekParams, void *media,
+                                   uint8_t *outHasPending, uint8_t isNewMedia);
+extern int stateMachineSwapMedia(void *ctx, void *newMedia, uint8_t hasUriFlag,
+                                 uint8_t seekInitial, uint8_t hasNewMedia);
+extern int stateMachineSetPendingMedia(void *ctx, void *newMedia);
 
-extern int audioOutConfigure(void *audioOut, int balance, const AudioEqParams *eq, int normalizer);
+extern int audioOutConfigure(void *audioOut, int balance, const void *eq, int normalizer);
 extern int audioOutShutdown(void *audioOut);
 extern int audioOutSetFade(void *audioOut, int targetState, int fadeMs, uint8_t *outPending);
 extern int audioOutSetVolumeRamp(void *audioOut, int targetState, int fadeMs, uint8_t *outPending);
@@ -278,15 +276,15 @@ extern int audioOutSetEqType(void *audioOut, int eqType);
 extern int decoderMgrOpenPipeline(void *decMgr, int pipelineKind, int ioMode, int loopCount);
 extern int decoderMgrClosePipeline(void *decMgr);
 extern int decoderMgrIsSameFormat(void *decMgr, void *mediaInfo);
-extern int decoderMgrStart(void *decMgr);
+extern int decoderMgrStart(void *decMgr, void *mediaInfo, int startMs, int endMs, int playSpeed, void *userCtx);
 extern int decoderMgrStop(void *decMgr);
 extern int decoderMgrSetReverseDir(void *decMgr, int isReverse);
 
 extern void computePlaybackRange(int seekMode, int speedMode, int step, int durationMs,
                                  int volumeMode, int *outPrev, int *outNext, int *outCur);
-extern int trackInfoReleaseResources(TrackInfoData *info, int closeFlag);
-extern int trackInfoMoveTo(TrackInfoData *src, TrackInfoData *dst, int moveFlag);
-extern void trackInfoResetCounters(TrackInfoData *info);
+extern int trackInfoReleaseResources(void *info, int closeFlag);
+extern int trackInfoMoveTo(void *src, void *dst, int moveFlag);
+extern void trackInfoResetCounters(void *info);
 
 /* ===== PlaybackStateBase (0x811FCF14 - 0x811FCFBB) ===== */
 
@@ -574,7 +572,8 @@ int StateStarting::onEnter()
         m_owner->m_activeTrackInfo.mediaInfoShared = 1;
     }
 
-    int startRet = decoderMgrStart(m_owner->m_decoderMgr);
+    int startRet = decoderMgrStart(m_owner->m_decoderMgr, m_owner->m_activeTrackInfo.mediaInfo,
+                                   startPos, endPos, m_owner->m_volumeMode, m_owner->m_decoderStartCfg);
     if (startRet != 0) {
         return startRet;
     }
@@ -1754,6 +1753,110 @@ void StatePlaying::setCachedPosMs(int posMs)
     if (m_owner != NULL) {
         m_owner->m_cachedPosMs = posMs;
     }
+}
+
+void stateBaseConstruct(void *state, void *owner, int stateId, void *sharedTable)
+{
+    (void)sharedTable;
+    int err = 0;
+    new (state) PlaybackStateBase(static_cast<StateMachineContext *>(owner), stateId, &err);
+}
+
+void stateBaseDestruct(void *state)
+{
+    if (state != NULL)
+        static_cast<PlaybackStateBase *>(state)->~PlaybackStateBase();
+}
+
+void stateIdleConstruct(void *state, void *owner, void *sharedTable)
+{
+    (void)sharedTable;
+    int err = 0;
+    new (state) StateIdle(static_cast<StateMachineContext *>(owner), &err);
+}
+
+void stateIdleDestruct(void *state)
+{
+    if (state != NULL)
+        static_cast<StateIdle *>(state)->~StateIdle();
+}
+
+void stateInitConstruct(void *state, void *owner, void *sharedTable)
+{
+    (void)sharedTable;
+    int err = 0;
+    new (state) StateActivating(static_cast<StateMachineContext *>(owner), &err);
+}
+
+void stateInitDestruct(void *state)
+{
+    if (state != NULL)
+        static_cast<StateActivating *>(state)->~StateActivating();
+}
+
+void stateReadyConstruct(void *state, void *owner, void *sharedTable)
+{
+    (void)sharedTable;
+    int err = 0;
+    new (state) StateReady(static_cast<StateMachineContext *>(owner), &err);
+}
+
+void stateReadyDestruct(void *state)
+{
+    if (state != NULL)
+        static_cast<StateReady *>(state)->~StateReady();
+}
+
+void stateStartingConstruct(void *state, void *owner, void *sharedTable)
+{
+    (void)sharedTable;
+    int err = 0;
+    new (state) StateStarting(static_cast<StateMachineContext *>(owner), &err);
+}
+
+void stateStartingDestruct(void *state)
+{
+    if (state != NULL)
+        static_cast<StateStarting *>(state)->~StateStarting();
+}
+
+void statePlayingConstruct(void *state, void *owner, void *sharedTable)
+{
+    (void)sharedTable;
+    int err = 0;
+    new (state) StatePlaying(static_cast<StateMachineContext *>(owner), &err);
+}
+
+void statePlayingDestruct(void *state)
+{
+    if (state != NULL)
+        static_cast<StatePlaying *>(state)->~StatePlaying();
+}
+
+void statePausedConstruct(void *state, void *owner, void *sharedTable)
+{
+    (void)sharedTable;
+    int err = 0;
+    new (state) StateStopping(static_cast<StateMachineContext *>(owner), &err);
+}
+
+void statePausedDestruct(void *state)
+{
+    if (state != NULL)
+        static_cast<StateStopping *>(state)->~StateStopping();
+}
+
+void stateStoppingConstruct(void *state, void *owner, void *sharedTable)
+{
+    (void)sharedTable;
+    int err = 0;
+    new (state) StateDeactivating(static_cast<StateMachineContext *>(owner), &err);
+}
+
+void stateStoppingDestruct(void *state)
+{
+    if (state != NULL)
+        static_cast<StateDeactivating *>(state)->~StateDeactivating();
 }
 
 } /* namespace MusicCore */

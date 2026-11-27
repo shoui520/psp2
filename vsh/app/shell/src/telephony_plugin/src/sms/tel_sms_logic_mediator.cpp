@@ -496,7 +496,7 @@ void TelSmsLogicAction::ExecuteReceive()
 	TelephonyResult res = m_receiver->ReceiveNextSms(&queueEmpty,
 							 &messageCompleted,
 							 &retryNeeded);
-	sceKernelProcessPowerUnlockForUser(SCE_KERNEL_POWER_TICK_DEFAULT);
+	sceKernelPowerUnlock(SCE_KERNEL_POWER_TICK_DEFAULT);
 
 	if (messageCompleted) {
 		TelEventInfo storedEv(TEL_SMS_EVENT_NEW_MESSAGE_STORED, -1, -1);

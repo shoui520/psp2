@@ -171,8 +171,8 @@ void indicatorNewEventOnImageFailed(SceInt32 type, ui::Handler *self, ui::Event 
 void indicatorNewEventOnBlink(SceInt32 type, ui::Handler *self, ui::Event *e, void *data);
 void indicatorNewEventOnNoticeDone(int result, SceInt64 rowid, void *arg);
 void indicatorNewEventOnPopupDone(int result, SceInt64 rowid, void *arg);
-void indicatorNewEventOnPopped(Timer *timer, ui::AnimListener *listener, void *arg1, void *arg2,
-			       void *arg3);
+void indicatorNewEventOnPopped(Timer *timer, ui::AnimListener *listener, void *widgetArg,
+			       void *userArg, void *extraArg);
 void indicatorNewEventOnMainThread(void *data);
 void indicatorNewEventOnAppActivated(int code, const void *data, SceSize size, void *arg);
 void indicatorNewEventOnAppEvent(int code, const void *data, SceSize size, void *arg);
@@ -705,7 +705,7 @@ void indicatorNewEventBlinkLed(void)
 
 		param.pattern = 8;
 		param.duration = 33;
-		shellLedSetMode(INDICATOR_NEW_EVENT_LED, INDICATOR_NEW_EVENT_LED_MODE, &param);
+		vshLedSetMode(INDICATOR_NEW_EVENT_LED, INDICATOR_NEW_EVENT_LED_MODE, &param);
 	}
 }
 
@@ -903,23 +903,23 @@ int Job_NewEventTaskCommand::Run()
 			if (indicatorNoticeManager()->IsOpen()) {
 				ret = db->ClearPopups();
 			} else {
-				if ((event.actType == 3 && s_shellState != INDICATOR_SHELL_STATE_APP) ||
-				    shellStartupGetIduMode() == 1)
-					goto clear;
-				m_popup = LsdbNewEventPtr(new LsdbNewEvent(event));
+				bool shouldClear =
+					(event.actType == 3 && s_shellState != INDICATOR_SHELL_STATE_APP) ||
+					shellStartupGetIduMode() == 1;
+				if (!shouldClear) {
+					m_popup = LsdbNewEventPtr(new LsdbNewEvent(event));
 
-				int on;
+					int on;
 
-				indicatorGetNotification(&on);
-				if (((event.notifyFlags & 0x10) != 0 || on == 1) &&
-				    s_shellState != INDICATOR_SHELL_STATE_HOME)
-					goto done;
-clear:
-				ret = db->ClearPopup(&event.rowid);
-				if (ret >= 0)
-					ret = 1;
-done:
-				;
+					indicatorGetNotification(&on);
+					shouldClear = !(((event.notifyFlags & 0x10) != 0 || on == 1) &&
+							s_shellState != INDICATOR_SHELL_STATE_HOME);
+				}
+				if (shouldClear) {
+					ret = db->ClearPopup(&event.rowid);
+					if (ret >= 0)
+						ret = 1;
+				}
 			}
 		} else {
 			ret = 0;
@@ -988,7 +988,7 @@ indicatorNewEventPopupLed(const LsdbNewEventPtr &event)
 
 		param.pattern = 8;
 		param.duration = 33;
-		shellLedSetMode(INDICATOR_NEW_EVENT_LED, INDICATOR_NEW_EVENT_LED_MODE, &param);
+		vshLedSetMode(INDICATOR_NEW_EVENT_LED, INDICATOR_NEW_EVENT_LED_MODE, &param);
 	}
 }
 
@@ -1077,8 +1077,8 @@ void indicatorNewEventOnPopupDone(int result, SceInt64 rowid, void *arg)
 }
 
 /* the button popped for a new event: its count's back blinks (0x81166D50) */
-void indicatorNewEventOnPopped(Timer *timer, ui::AnimListener *listener, void *arg1, void *arg2,
-			       void *arg3)
+void indicatorNewEventOnPopped(Timer *timer, ui::AnimListener *listener, void *widgetArg,
+			       void *userArg, void *extraArg)
 {
 	g_indicatorNewEvent->StartBlink();
 }
@@ -1228,7 +1228,7 @@ void indicatorNewEventOnAppEvent(int code, const void *data, SceSize size, void 
 	if (code == 0 && sce_paf_strncmp("NPXS10020", titleId, 10) == 0 && item != NULL)
 		indicatorNewEventStart(item, INDICATOR_NEW_EVENT_CMD_CLEAR_NEW);
 	if (code == 2 && sce_paf_strncmp("NPXS19999", titleId, 10) != 0)
-		shellLedSetMode(INDICATOR_NEW_EVENT_LED, 0, NULL);
+		vshLedSetMode(INDICATOR_NEW_EVENT_LED, 0, NULL);
 }
 
 /* the shell's events: its start, and the states it goes through (0x8116788A) */
@@ -1246,7 +1246,7 @@ void indicatorNewEventOnShellEvent(int code, const void *data, SceSize size, voi
 		break;
 	case 3:
 		s_shellState = s_savedShellState;
-		shellLedSetMode(INDICATOR_NEW_EVENT_LED, 0, NULL);
+		vshLedSetMode(INDICATOR_NEW_EVENT_LED, 0, NULL);
 		Framework::Instance()->GetEnvironmentInstance()->ShowSceneEntry(
 			INDICATOR_NEW_EVENT_SCENE_ENTRY);
 		break;

@@ -15,7 +15,9 @@
 #include <av_config/av_config.h>
 #include <ctrl/ctrl.h>
 #include <power/power.h>
+extern "C" {
 #include <usbd/usbd.h>
+}
 #include <vshbridge/vshbridge.h>
 #include <common_gui_dialog/common_gui_dialog.h>
 #include <framework.h>
@@ -50,6 +52,8 @@ extern int vshCtrlUnregisterNotifyCallBack(SceUID cbid);
 extern int vshCtrlGetActiveControllerPort(void);
 extern int vshCtrlIsBdRemoconConnected(void);
 }
+
+extern int consoleInfoFileWriteInt64(int index, SceUInt64 value, int mode);
 
 namespace power_manage {
 
@@ -1070,7 +1074,7 @@ void PowerManage::SetSuspendedState(bool suspended)
 	if (suspended) {
 		if (!m_isSuspended) {
 			SceUInt64 now = sceKernelGetProcessTimeWide();
-			shellConsoleInfoRecordSuspendDuration(1, (SceInt64)(now - m_lastResumeTime));
+			::consoleInfoFileWriteInt64(1, (SceUInt64)(now - m_lastResumeTime), 0);
 			m_isSuspended = true;
 			++paf::graph::s_wait_vblank_count;
 		}

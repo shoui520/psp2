@@ -1271,10 +1271,17 @@ TelephonyResult TelGeneralLogicMediator::GetModemFirmwareVersion(paf::string *ou
 	TelephonyResult res = m_bbmcAdapter->GetFirmwareRevision(outVersion);
 	if (res.IsSuccess()) {
 		const char *delim = "] - ";
+		SceSize delimLen = sce_paf_strlen(delim);
 		const char *rawStr = outVersion->c_str();
-		const char *found = sce_paf_strstr(rawStr, delim);
+		const char *found = NULL;
+		for (const char *scan = rawStr; *scan != '\0'; ++scan) {
+			if (*scan == *delim && sce_paf_strncmp(scan, delim, delimLen) == 0) {
+				found = scan;
+				break;
+			}
+		}
 		if (found != NULL)
-			*outVersion = paf::string(found + sce_paf_strlen(delim));
+			*outVersion = paf::string(found + delimLen);
 	}
 	return res;
 }

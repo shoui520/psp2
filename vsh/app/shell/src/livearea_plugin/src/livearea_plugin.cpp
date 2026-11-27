@@ -10,6 +10,11 @@
 #include <widget/w_file_list.h>
 #include "livearea_internal.h"
 
+extern int netCtlApiIncActiveRef(void);
+extern int netCtlApiDecActiveRef(void);
+extern "C" int netCtlApiResetExclusivePrompt(void);
+extern void *applauncherPluginGetInterface(const char *name, int id);
+
 /* 0x81199B68 */
 void liveareaSetParam(paf::Plugin::InitParam2 *outParam)
 {
@@ -33,7 +38,9 @@ void liveareaOnLoad(paf::Plugin *plugin)
 
 	activityUiInit();
 	activityUiSetDialogPriority(33);
-	activityUiSetNetCallbacks(netCtlIntAcquire, netCtlIntRelease, netCtlIntRequestConnect);
+	activityUiSetNetCallbacks(reinterpret_cast<void (*)(void)>(netCtlApiIncActiveRef),
+				  reinterpret_cast<void (*)(void)>(netCtlApiDecActiveRef),
+				  reinterpret_cast<void (*)(void)>(netCtlApiResetExclusivePrompt));
 	if (sceSysmoduleLoadModule(SCE_SYSMODULE_LIVEAREA) != 0)
 		__builtin_trap();
 	liveareaMgrCreate(plugin);
@@ -43,7 +50,7 @@ void liveareaOnLoad(paf::Plugin *plugin)
 void liveareaOnStart(void)
 {
 	LiveAreaTopmenuInterface *topmenu =
-		(LiveAreaTopmenuInterface *)shellPluginGetInterface("topmenu_plugin", 1);
+		(LiveAreaTopmenuInterface *)applauncherPluginGetInterface("topmenu_plugin", 1);
 	if (topmenu != NULL)
 		topmenu->setLiveAreaInterface(g_liveareaInterface);
 	arlGraphicsInit(0);
@@ -54,7 +61,7 @@ void liveareaOnStart(void)
 void liveareaOnStop(void)
 {
 	LiveAreaTopmenuInterface *topmenu =
-		(LiveAreaTopmenuInterface *)shellPluginGetInterface("topmenu_plugin", 1);
+		(LiveAreaTopmenuInterface *)applauncherPluginGetInterface("topmenu_plugin", 1);
 	if (topmenu != NULL)
 		topmenu->setLiveAreaInterface(NULL);
 	liveareaMgrStop();
@@ -70,3 +77,9 @@ void liveareaOnUnload(void)
 	paf::ui::filelist::Manager::Finalize();
 	liveareaMgrDestroy();
 }
+
+void liveareaPluginSetParam(paf::Plugin::InitParam2 *param) { liveareaSetParam(param); }
+void liveareaPluginInit(paf::Plugin *plugin) { liveareaOnLoad(plugin); }
+void liveareaPluginStart(paf::Plugin *plugin) { (void)plugin; liveareaOnStart(); }
+void liveareaPluginStop(paf::Plugin *plugin) { (void)plugin; liveareaOnStop(); }
+void liveareaPluginExit(paf::Plugin *plugin) { (void)plugin; liveareaOnUnload(); }

@@ -4,6 +4,7 @@
  * (0x8129666C-0x81298D23).
  */
 #include "topmenu_internal.h"
+#include <graphics/surface/surface_display.h>
 #include <inputdevice/inputdevice.h>
 #include <inputdevice/pad/pad.h>
 #include <common/string_util.h>
@@ -209,8 +210,6 @@ static void onContentAlphaRestored(paf::Timer *timer, paf::ui::AnimListener *lis
 
 } /* namespace */
 
-SceGxmRenderTarget *g_topmenuSmallRenderTarget;
-SceGxmRenderTarget *g_topmenuLargeRenderTarget;
 SceInt32 g_topmenuDisabledPageTurnCount;
 
 /* ------------------------------------------------------------------ */
@@ -515,9 +514,7 @@ void TopTabAppData::Update()
 							paf::graph::SCREEN_COPY_ON;
 					}
 				}
-				paf::intrusive_ptr<paf::graph::Surface> defaultSnap(
-					&g_topmenuDefaultSnapshotSurface);
-				SetSnapshotSurface(defaultSnap);
+				SetSnapshotSurface(paf::graph::DisplaySurface::s_offscreen);
 			}
 		}
 	}
@@ -531,7 +528,7 @@ void TopTabAppData::Update()
 		}
 	}
 
-	if (sceKernelCheckDipswForUser(185) != 0 &&
+	if (sceKernelCheckDipsw(185) != 0 &&
 	    m_process.m_bootTimeStartUs != 0 &&
 	    topmenuAppProcessIsRunning(&m_process) &&
 	    m_process.m_appId != -1) {
@@ -539,7 +536,7 @@ void TopTabAppData::Update()
 		if (sceSharedFbGetRenderingInfo(pid) == 0) {
 			SceUInt32 startUs = m_process.m_bootTimeStartUs;
 			m_process.m_bootTimeStartUs = 0;
-			SceUInt32 elapsedUs = sceKernelGetSystemTimeLow() - startUs;
+			SceUInt32 elapsedUs = SceThreadmgr_47F6DE49() - startUs;
 			if (g_topWindow->m_imposeIf != NULL) {
 				ImposeNotice notice;
 				wchar_t textBuf[2048];
@@ -825,7 +822,7 @@ void TopTabAppData::SetupContent()
 		if (stitle != NULL) {
 			paf::string utf8Title(stitle);
 			paf::wstring utf16Title;
-			paf::common::Utf8ToUtf16(utf8Title, &utf16Title);
+			paf::common::Utf8ToUtf16(utf8Title.c_str(), &utf16Title);
 			m_ownerTab->SetTitleText(utf16Title);
 		}
 		if (m_ownerTab->m_iconCache.get() == NULL) {

@@ -50,11 +50,15 @@ int Bgdl_8113D6F8(const char *path, void *buf, SceSize size);
 int Bgdl_8113D8C2(const char *path, const void *buf, SceSize size, SceUInt32 flags, SceUInt32 mode);
 
 /* Shell event callback (0x81004634 -> 0x81372EE0) */
-extern int shellRemoteDownloadOnEvent(void);
+int remoteDownloadEnqueueCheck(void);
+int shellRemoteDownloadOnEvent(void)
+{
+	return remoteDownloadEnqueueCheck();
+}
 
 extern "C" {
 int sceAppMgrLaunchAppByName(SceUInt32 flags, const char *name, const char *param);
-int sceIoCloseForUser(SceUID fd);
+int sceIoClose(SceUID fd);
 int SceNpManager_27112D01(void);
 int SceNpManager_E41932D4(int *outReqId, int threadPriority);
 int SceNpManager_D1D191FB(int reqId);
@@ -149,7 +153,7 @@ static void remoteDownloadLoadOrResetStatus(bool resetFile)
 
 	if (lockFd >= 0) {
 		vshIoFlock(lockFd, REMOTEDOWNLOAD_FLOCK_UNLOCK);
-		sceIoCloseForUser(lockFd);
+		sceIoClose(lockFd);
 	}
 
 	if (state->disk.intervalSeconds == 0)
@@ -274,4 +278,14 @@ int remoteDownloadEnqueueInitAndCheck(void)
 	}
 
 	return 0;
+}
+
+extern "C" int SceShell_7FE4E732(int eventId, void *callback, void *userData);
+
+/* 0x81004610 */
+int shellRemoteDownloadStart(void)
+{
+	remoteDownloadEnqueueInitAndCheck();
+	SceShell_7FE4E732(13, reinterpret_cast<void *>(shellRemoteDownloadOnEvent), NULL);
+	return SceShell_7FE4E732(14, reinterpret_cast<void *>(shellRemoteDownloadOnEvent), NULL);
 }

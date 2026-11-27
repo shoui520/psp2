@@ -895,5 +895,36 @@ void *At9Factory::createMediaInfo(const char *path, int loopMode)
     return at9MediaInfoConstruct(mem, path, loopMode);
 }
 
+struct CodecFactory;
+struct MediaInfoBase;
+struct DecoderInstance;
+
+DecoderInstance *createAt9Decoder(CodecFactory *factory, int mode, void *outCtx,
+                                  void *startFn, void *enqueueFn, void *stopFn, void *flushFn,
+                                  int extraParam)
+{
+    At9Factory *at9Factory = (factory != NULL) ? reinterpret_cast<At9Factory *>(factory) : getAt9Factory();
+    return (at9Factory != NULL)
+        ? reinterpret_cast<DecoderInstance *>(at9Factory->createPipeline(
+              mode, reinterpret_cast<AudioOpenCallback>(startFn),
+              reinterpret_cast<AudioCloseCallback>(stopFn),
+              reinterpret_cast<AudioWriteCallback>(enqueueFn),
+              reinterpret_cast<AudioFlushCallback>(flushFn), outCtx, extraParam))
+        : NULL;
+}
+
+int getAt9StackSizes(unsigned int *parserStack, unsigned int *decoderStack, unsigned int *mgrStack)
+{
+    return getAt9Factory()->getBufferSizes(parserStack, decoderStack, mgrStack);
+}
+
+MediaInfoBase *allocAt9MediaInfo(CodecFactory *factory, const char *path)
+{
+    At9Factory *at9Factory = reinterpret_cast<At9Factory *>(factory);
+    return (at9Factory != NULL)
+        ? reinterpret_cast<MediaInfoBase *>(at9Factory->createMediaInfo(path, 0))
+        : NULL;
+}
+
 } /* namespace MusicCore */
 } /* namespace sce */

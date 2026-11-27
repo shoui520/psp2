@@ -221,7 +221,6 @@ extern int SceShell_6B8772A2(SceUID pid);
 extern int SceShell_794BF5BE(unsigned int token);
 extern int sceAppMgrAppParamGetString(SceUID pid, int param, char *buf, SceSize size);
 extern int sceAppMgrGetStatusById(SceUID pid, void *statusBuf);
-extern int sceKernelGetOpenPsId(void *openPsId);
 extern int vshKernelGetCompiledSdkVersionByPid(SceUID pid, SceUInt32 *outVersion);
 extern int SceNpCommon_A0C5C10E(const char *src, SceSize size);
 extern void SceNpCommonPs4_F50BD96A(int printed);
@@ -532,7 +531,7 @@ extern int npOAuthGetAuthorizationCodeWithRedirect(int reqHandle,
 						   SceNpAuthorizationCode *outCode, int *outIssuerId);	/* 0x813A96E6 */
 
 /* Crypto helpers for device token & account hash (0x81417F9C, 0x8144A2C0..0x8144A482) */
-extern int shellSha256Digest(const void *input, SceSize inputSize, void *outDigest);			/* 0x81417F9C */
+extern "C" int sceSha256Digest(const void *input, SceSize inputSize, void *outDigest);			/* 0x81417F9C */
 extern int shellDesSetKey(SceUInt32 *subkeys, SceUInt32 reserved, SceUInt32 keyLo, SceUInt32 keyHi);	/* 0x8144A482 */
 extern SceUInt64 shellDesEncryptBlock(const SceUInt32 *subkeys, SceUInt32 reserved,
 				      SceUInt32 blockLo, SceUInt32 blockHi);				/* 0x8144A2C0 */

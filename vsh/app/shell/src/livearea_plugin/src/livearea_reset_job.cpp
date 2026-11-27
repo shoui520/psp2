@@ -35,6 +35,6 @@ paf::common::SharedPtr<paf::job::JobItem> liveareaEnqueueContentResetJob(LiveAre
 {
 	paf::job::JobItem *job = new ContentResetJob(inner->m_page, resetMask);
 	paf::common::SharedPtr<paf::job::JobItem> jobRef(job);
-	g_activityJobQueue->Enqueue(jobRef);
+	paf::job::JobQueue::default_queue->Enqueue(jobRef);
 	return jobRef;
 }

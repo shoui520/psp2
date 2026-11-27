@@ -16,6 +16,8 @@
 #include <std/string.h>
 #include "np_imps_core.h"
 
+extern "C" int SceThreadmgrCoredumpTime_sceKernelExitThread(int status);
+
 /* Msgpipe sizes and timeouts */
 static const SceSize NP_IMPS_SESSION_PIPE_BUF_SIZE	= 0x4000u;
 static const SceUInt32 NP_IMPS_PIPE_SEND_TIMEOUT_USEC	= 10000000u;
@@ -1731,7 +1733,7 @@ static int npImpsCoreMainThreadEntry(SceSize args, void *argp)
 	SceUID threadId = sceKernelGetThreadId();
 	if (SceNetInternal_9DBD2F60(threadId, 1, 0) >= 0)
 		npImpsSessionMainLoop(session);
-	sceKernelExitThread(0);
+	SceThreadmgrCoredumpTime_sceKernelExitThread(0);
 	return 0;
 }
 

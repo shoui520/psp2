@@ -29,6 +29,8 @@
 #include <common/shared_ptr.h>
 #include <thread/thread.h>
 #include <framework.h>
+#include <dir/dir.h>
+#include <file/localfile.h>
 #include <common_gui_dialog/common_gui_dialog.h>
 #include "../../../boot.h"
 #include "../../../shell.h"
@@ -103,8 +105,19 @@ using namespace paf;
 
 ApplauncherHome *g_applauncherHome;
 
+const float g_applauncherFolderMoveTime = 250.0f;	/* 0x8150746C */
+const float g_applauncherEditDepth = -200.0f;		/* 0x81507474 */
+const float g_applauncherEditMoveTime = 750.0f;		/* 0x81507478 */
+const float g_applauncherIconAsideTime = 375.0f;	/* 0x8150781C */
+const float g_applauncherIconMoveTime = 275.0f;		/* 0x81507820 */
+const float g_applauncherIconRestoreTime = 325.0f;	/* 0x81507824 */
+
+void ApplauncherPage::OnIconAdded()
+{
+}
+
 /* held while an application is installed onto the home (one at a time) */
-/* PLACEHOLDER: set when func0 rewrites an application's whole row, given to livearea_plugin
+/* PLACEHOLDER: set when entry #0 rewrites an application's whole row, given to livearea_plugin
    once */
 static bool s_newAppAdded = false;
 /* the theme read last, kept until applauncherHomeApplyTheme takes it */
@@ -119,12 +132,50 @@ void applauncherHomeOnMainThread(void *data);
 void applauncherHomeOnOverlayEvent(int32_t type, ui::Handler *self, ui::Event *e, void *data);
 void applauncherHomeOnOverlayTouch(int32_t type, ui::Handler *self, ui::Event *e, void *data);
 void applauncherHomeOnEditBarEvent(int32_t type, ui::Handler *self, ui::Event *e, void *data);
-void applauncherHomeOnLayerEnter(void *data);
+void applauncherHomeOnLayerEnter(void *data)
+{
+	(void)data;
+}
+
+/* (0x810C1BF4) records the wallpaper source/destination mapping in ux0:shell/bgimage.bgd */
+int applauncherWriteBgImage(const char *srcPath, const char *dstPath)
+{
+	if (!Dir::IsDirectory("ux0:shell"))
+		Dir::CreateRecursive("ux0:shell", 6);
+
+	int err = 0;
+	common::SharedPtr<File> file = LocalFile::Open("ux0:shell/bgimage.bgd", 0x302u, 6u, &err);
+	if (err != 0)
+		return err;
+
+	string name(srcPath != NULL ? srcPath : "");
+	size_t slashPos = name.rfind('/');
+	if (slashPos != string::npos)
+		name.erase(0, slashPos);
+	size_t colonPos = name.rfind(':');
+	if (colonPos != string::npos)
+		name.erase(0, colonPos);
+
+	err = file->Write(name.c_str(), name.size());
+	if (err < 0)
+		return err;
+	err = file->Write(",", 1);
+	if (err < 0)
+		return err;
+	err = file->Write(dstPath, sce_paf_strlen(dstPath));
+	if (err < 0)
+		return err;
+	err = file->Write("\n", 1);
+	if (err < 0)
+		return err;
+	file->Close();
+	return 0;
+}
+
 void applauncherHomeOnLayerLeave(void *data);
 void applauncherHomeOnShellEvent(int code, const void *data, SceSize size, void *arg);
 void applauncherHomeOnAppInfoEvent(int event, void *info, void *arg);
 int applauncherInterfaceInstallApp(const ApplauncherInstallRequest *req, bool *async);
-void applauncherInterfaceFunc20(void);
 
 /*
  * The pages put one under the other from the top, a spacing apart. Mode 1 moves only the pages
@@ -230,9 +281,9 @@ ApplauncherHome::ApplauncherHome(Plugin *plugin)
 	m_texScale[1] = 1.0f;
 	m_fade[0] = 1.0f;
 	m_fade[1] = 1.0f;
-	m_flags0[0] = false;
-	m_flags0[1] = false;
-	m_flags0[2] = false;
+	m_homeFlags[0] = false;
+	m_homeFlags[1] = false;
+	m_homeFlags[2] = false;
 	g_applauncherHome = this;
 
 	m_layer = ((int (*)(int, const intrusive_ptr<graph::Surface> &))
@@ -321,7 +372,7 @@ ApplauncherHome::ApplauncherHome(Plugin *plugin)
 	g_applauncherInterface->func[24] = (void (*)(void))applauncherInterfaceReloadTheme;
 	g_applauncherInterface->func[25] = (void (*)(void))applauncherThemeRefresh;
 	g_applauncherInterface->func[26] = (void (*)(void))applauncherInterfaceSetRequest;
-	g_applauncherInterface->func[20] = applauncherInterfaceFunc20;
+	g_applauncherInterface->func[20] = (void (*)(void))applauncherWriteBgImage;
 	g_applauncherInterface->func[27] = (void (*)(void))applauncherWaveGetColors;
 
 	m_ready = true;
@@ -607,7 +658,7 @@ void ApplauncherHome::EnterEditMode()
 	if (g_applauncherHome->m_appPage != NULL)
 		g_applauncherHome->m_appPage->BeginEdit();
 	g_applauncherHome->m_topmenu->func[TOPMENU_PLUGIN_FUNC_EDIT_MODE_ENTERED]();
-	if (g_applauncherHome->m_flags0[1]) {
+	if (g_applauncherHome->m_homeFlags[1]) {
 		wstring text(g_applauncherPlugin->GetString(IDParam(APPLAUNCHER_HOME_WAIT_TEXT)));
 
 		g_applauncherHome->m_waitDialog = SceCommonGuiDialog_6CE14F66(g_applauncherPlugin,
@@ -727,36 +778,34 @@ void ApplauncherHome::UpdateEditButtons(ui::Widget *parent)
 		m_plugin->TemplateOpen(parent, IDParam(APPLAUNCHER_EDIT_TEMPLATE),
 				       Plugin::TemplateOpenParam());
 		button = parent->FindChild(IDParam(APPLAUNCHER_EDIT_BUTTON), 0);
-		if (button == NULL)
-			goto decide;
+		if (button != NULL) {
+			ui::Widget *icon = button->FindChild(IDParam(APPLAUNCHER_EDIT_ICON), 0);
 
-		ui::Widget *icon = button->FindChild(IDParam(APPLAUNCHER_EDIT_ICON), 0);
+			button->m_name = s_editOpen;
+			if (icon != NULL) {
+				if (ScePafMisc_9CB5D72E())
+					icon->SetTexture(m_plugin->GetTexture(
+						IDParam(APPLAUNCHER_EDIT_ICON_CROSS)));
+				else
+					icon->SetTexture(m_plugin->GetTexture(
+						IDParam(APPLAUNCHER_EDIT_ICON_CIRCLE)));
+			}
 
-		button->m_name = s_editOpen;
-		if (icon != NULL) {
-			if (ScePafMisc_9CB5D72E())
-				icon->SetTexture(m_plugin->GetTexture(
-					IDParam(APPLAUNCHER_EDIT_ICON_CROSS)));
-			else
-				icon->SetTexture(m_plugin->GetTexture(
-					IDParam(APPLAUNCHER_EDIT_ICON_CIRCLE)));
+			ui::Widget *label = button->FindChild(IDParam(APPLAUNCHER_EDIT_LABEL), 0);
+
+			if (label != NULL)
+				label->SetString(wstring(m_plugin->GetString(
+					IDParam(APPLAUNCHER_EDIT_OPEN_TEXT))));
+			static_cast<ui::Box *>(button)->m_auto_show = false;
+			button->m_transition_complete = false;
+			button->m_transition = 0xff;
+			button->DoTransitionReverse_core(0.0f, true);
+			ScePafWidget_4588699E(button, NULL, 2, 0.0f, NULL);
 		}
-
-		ui::Widget *label = button->FindChild(IDParam(APPLAUNCHER_EDIT_LABEL), 0);
-
-		if (label != NULL)
-			label->SetString(wstring(m_plugin->GetString(
-				IDParam(APPLAUNCHER_EDIT_OPEN_TEXT))));
-		static_cast<ui::Box *>(button)->m_auto_show = false;
-		button->m_transition_complete = false;
-		button->m_transition = 0xff;
-		button->DoTransitionReverse_core(0.0f, true);
-		ScePafWidget_4588699E(button, NULL, 2, 0.0f, NULL);
 	}
 	if (button != NULL)
 		button->SetParent(button->m_parent, NULL, 6);
 
-decide:
 	button = parent->FindChild(s_editDecide, 0);
 	if (button != NULL) {
 		if (m_editState != 4 && m_editState != 5)
@@ -816,36 +865,34 @@ void ApplauncherHome::UpdateBackButtons(ui::Widget *parent)
 		m_plugin->TemplateOpen(parent, IDParam(APPLAUNCHER_EDIT_TEMPLATE),
 				       Plugin::TemplateOpenParam());
 		button = parent->FindChild(IDParam(APPLAUNCHER_EDIT_BUTTON), 0);
-		if (button == NULL)
-			goto cancel;
+		if (button != NULL) {
+			ui::Widget *icon = button->FindChild(IDParam(APPLAUNCHER_EDIT_ICON), 0);
 
-		ui::Widget *icon = button->FindChild(IDParam(APPLAUNCHER_EDIT_ICON), 0);
+			button->m_name = s_editBack;
+			if (icon != NULL) {
+				if (ScePafMisc_9CB5D72E())
+					icon->SetTexture(m_plugin->GetTexture(
+						IDParam(APPLAUNCHER_EDIT_ICON_CIRCLE)));
+				else
+					icon->SetTexture(m_plugin->GetTexture(
+						IDParam(APPLAUNCHER_EDIT_ICON_CROSS)));
+			}
 
-		button->m_name = s_editBack;
-		if (icon != NULL) {
-			if (ScePafMisc_9CB5D72E())
-				icon->SetTexture(m_plugin->GetTexture(
-					IDParam(APPLAUNCHER_EDIT_ICON_CIRCLE)));
-			else
-				icon->SetTexture(m_plugin->GetTexture(
-					IDParam(APPLAUNCHER_EDIT_ICON_CROSS)));
+			ui::Widget *label = button->FindChild(IDParam(APPLAUNCHER_EDIT_LABEL), 0);
+
+			if (label != NULL)
+				label->SetString(wstring(m_plugin->GetString(
+					IDParam(APPLAUNCHER_EDIT_BACK_TEXT))));
+			static_cast<ui::Box *>(button)->m_auto_show = false;
+			button->m_transition_complete = false;
+			button->m_transition = 0xff;
+			button->DoTransitionReverse_core(0.0f, true);
+			ScePafWidget_4588699E(button, NULL, 2, 0.0f, NULL);
 		}
-
-		ui::Widget *label = button->FindChild(IDParam(APPLAUNCHER_EDIT_LABEL), 0);
-
-		if (label != NULL)
-			label->SetString(wstring(m_plugin->GetString(
-				IDParam(APPLAUNCHER_EDIT_BACK_TEXT))));
-		static_cast<ui::Box *>(button)->m_auto_show = false;
-		button->m_transition_complete = false;
-		button->m_transition = 0xff;
-		button->DoTransitionReverse_core(0.0f, true);
-		ScePafWidget_4588699E(button, NULL, 2, 0.0f, NULL);
 	}
 	if (button != NULL)
 		button->SetParent(button->m_parent, NULL, 6);
 
-cancel:
 	button = parent->FindChild(s_editCancel, 0);
 	if (button != NULL) {
 		if (m_editState != 4)
@@ -958,30 +1005,28 @@ void ApplauncherHome::SetEditState(int state)
 		m_plugin->TemplateOpen(buttons, IDParam(APPLAUNCHER_EDIT_TEMPLATE),
 				       Plugin::TemplateOpenParam());
 		button = buttons->FindChild(IDParam(APPLAUNCHER_EDIT_BUTTON), 0);
-		if (button == NULL)
-			goto mode;
+		if (button != NULL) {
+			ui::Widget *icon = button->FindChild(IDParam(APPLAUNCHER_EDIT_ICON), 0);
 
-		ui::Widget *icon = button->FindChild(IDParam(APPLAUNCHER_EDIT_ICON), 0);
+			button->m_name = s_editMenu;
+			if (icon != NULL)
+				icon->SetTexture(m_plugin->GetTexture(IDParam(APPLAUNCHER_EDIT_MENU_ICON)));
 
-		button->m_name = s_editMenu;
-		if (icon != NULL)
-			icon->SetTexture(m_plugin->GetTexture(IDParam(APPLAUNCHER_EDIT_MENU_ICON)));
+			ui::Widget *label = button->FindChild(IDParam(APPLAUNCHER_EDIT_LABEL), 0);
 
-		ui::Widget *label = button->FindChild(IDParam(APPLAUNCHER_EDIT_LABEL), 0);
-
-		if (label != NULL)
-			label->SetString(wstring(m_plugin->GetString(
-				IDParam(APPLAUNCHER_EDIT_MENU_TEXT))));
-		static_cast<ui::Box *>(button)->m_auto_show = false;
-		button->m_transition_complete = false;
-		button->m_transition = 0xff;
-		button->DoTransitionReverse_core(0.0f, true);
-		ScePafWidget_4588699E(button, NULL, 2, 0.0f, NULL);
+			if (label != NULL)
+				label->SetString(wstring(m_plugin->GetString(
+					IDParam(APPLAUNCHER_EDIT_MENU_TEXT))));
+			static_cast<ui::Box *>(button)->m_auto_show = false;
+			button->m_transition_complete = false;
+			button->m_transition = 0xff;
+			button->DoTransitionReverse_core(0.0f, true);
+			ScePafWidget_4588699E(button, NULL, 2, 0.0f, NULL);
+		}
 	}
 	if (button != NULL)
 		button->SetParent(button->m_parent, NULL, 6);
 
-mode:
 	button = buttons->FindChild(s_editModeMode, 0);
 	if (button != NULL) {
 		if (m_editState != 1 && m_editState != 2)
@@ -990,30 +1035,28 @@ mode:
 		m_plugin->TemplateOpen(buttons, IDParam(APPLAUNCHER_EDIT_TEMPLATE),
 				       Plugin::TemplateOpenParam());
 		button = buttons->FindChild(IDParam(APPLAUNCHER_EDIT_BUTTON), 0);
-		if (button == NULL)
-			goto kakutei;
+		if (button != NULL) {
+			ui::Widget *icon = button->FindChild(IDParam(APPLAUNCHER_EDIT_ICON), 0);
 
-		ui::Widget *icon = button->FindChild(IDParam(APPLAUNCHER_EDIT_ICON), 0);
+			button->m_name = s_editModeMode;
+			if (icon != NULL)
+				icon->SetTexture(m_plugin->GetTexture(IDParam(APPLAUNCHER_EDIT_MODE_ICON)));
 
-		button->m_name = s_editModeMode;
-		if (icon != NULL)
-			icon->SetTexture(m_plugin->GetTexture(IDParam(APPLAUNCHER_EDIT_MODE_ICON)));
+			ui::Widget *label = button->FindChild(IDParam(APPLAUNCHER_EDIT_LABEL), 0);
 
-		ui::Widget *label = button->FindChild(IDParam(APPLAUNCHER_EDIT_LABEL), 0);
-
-		if (label != NULL)
-			label->SetString(wstring(m_plugin->GetString(
-				IDParam(APPLAUNCHER_EDIT_MODE_TEXT))));
-		static_cast<ui::Box *>(button)->m_auto_show = false;
-		button->m_transition_complete = false;
-		button->m_transition = 0xff;
-		button->DoTransitionReverse_core(0.0f, true);
-		ScePafWidget_4588699E(button, NULL, 2, 0.0f, NULL);
+			if (label != NULL)
+				label->SetString(wstring(m_plugin->GetString(
+					IDParam(APPLAUNCHER_EDIT_MODE_TEXT))));
+			static_cast<ui::Box *>(button)->m_auto_show = false;
+			button->m_transition_complete = false;
+			button->m_transition = 0xff;
+			button->DoTransitionReverse_core(0.0f, true);
+			ScePafWidget_4588699E(button, NULL, 2, 0.0f, NULL);
+		}
 	}
 	if (button != NULL)
 		button->SetParent(button->m_parent, NULL, 6);
 
-kakutei:
 	button = buttons->FindChild(s_editKakutei, 0);
 	if (button != NULL) {
 		if (m_editState != 3)
@@ -1200,15 +1243,17 @@ void ApplauncherHome::UpdateSnaps()
 			ui::ScrollView *view = g_applauncherHome->m_scroller.m_scrollView;
 			ApplauncherPage *page = static_cast<ApplauncherPage *>(*it);
 
+			bool hasVisible = false;
+
 			for (SceUInt32 i = 0; i < 10; i++) {
 				if (page->m_slots[i].get() != NULL && !page->m_slots[i]->m_hidden) {
 					view->AddSnapChild(page->GetWidget());
-					goto next;
+					hasVisible = true;
+					break;
 				}
 			}
-			view->DelSnapChild(page->GetWidget());
-next:
-			;
+			if (!hasVisible)
+				view->DelSnapChild(page->GetWidget());
 		}
 	} else if (shellStartupGetIduMode() == 2) {
 		for (ShellSnapList::iterator it = g_applauncherHome->m_scroller.m_items.begin();
@@ -1275,7 +1320,7 @@ void applauncherHomeJumpTo(ApplauncherPage *page)
 	g_applauncherHome->m_topmenu->func[TOPMENU_PLUGIN_FUNC_GET_JOB_QUEUE])()
 
 /*
- * PLACEHOLDER name: the interface's func0. The application's row written to the database by a
+ * PLACEHOLDER name: the interface's entry #0. The application's row written to the database by a
  * job, waited for. An application whose _eboot_attr has bit 0 or whose LAREA_TYPE is 3 is
  * written only. Otherwise a rewrite (mode 1 or 2) writes the icon's copy; for mode 1 of an
  * application with a LiveArea of type 0, livearea_plugin is waited for (ten seconds at most)
@@ -1475,7 +1520,7 @@ static int applauncherHomeInstallApp(const ApplauncherInstallRequest *req, bool 
 	}
 
 	*async = false;
-	g_applauncherHome->m_flags0[1] = true;
+	g_applauncherHome->m_homeFlags[1] = true;
 	thread::RMutex::main_thread_mutex.Unlock();
 	s_appInstallSemaphore.Acquire();
 	ret = static_cast<ApplauncherLsdbJob *>(job.get())->m_ret;
@@ -1505,7 +1550,7 @@ static int applauncherHomeInstallApp(const ApplauncherInstallRequest *req, bool 
 			widget->DoTransition_core(0.0f, true);
 			ScePafWidget_4588699E(widget, NULL, 2, 0.0f, NULL);
 		}
-		g_applauncherHome->m_flags0[1] = false;
+		g_applauncherHome->m_homeFlags[1] = false;
 		if (g_applauncherHome->m_waitDialog >= 0) {
 			SceCommonGuiDialog_BC311DC0(g_applauncherHome->m_waitDialog);
 			g_applauncherHome->m_waitDialog = -1;
@@ -1964,7 +2009,7 @@ common::SharedPtr<ApplauncherIcon> ApplauncherHome::FindIcon(SceUInt64 appId)
 	return common::SharedPtr<ApplauncherIcon>();
 }
 
-/* PLACEHOLDER name: the interface's func0, the application put on the home (0x810AFF78) */
+/* PLACEHOLDER name: the interface's entry #0, the application put on the home (0x810AFF78) */
 int applauncherInterfaceInstallApp(const ApplauncherInstallRequest *req, bool *async)
 {
 	return applauncherHomeInstallApp(req, async);
@@ -1977,9 +2022,9 @@ int applauncherInterfaceRemoveApp(const string &titleId)
 }
 
 /*
- * PLACEHOLDER name: the interface's func2. Without an icon (or a folder) of the title in
+ * PLACEHOLDER name: the interface's entry #2. Without an icon (or a folder) of the title in
  * focus, nothing; else livearea_plugin waited for (ten seconds at most) and its LiveArea
- * opened, told whether func0 just added the application. The title's icon is then faded in,
+ * opened, told whether entry #0 just added the application. The title's icon is then faded in,
  * once its image is ready when it is still all but transparent, and topmenu told of the
  * title (0x810AFF96).
  */
@@ -2131,13 +2176,13 @@ void ApplauncherHome::FocusApp(const string &titleId, bool select)
 	thread::RMutex::main_thread_mutex.Unlock();
 }
 
-/* the interface's func4: the title's icon given the focus (0x810B071E) */
+/* the interface's entry #4: the title's icon given the focus (0x810B071E) */
 void applauncherInterfaceFocusApp(const string &titleId, bool select)
 {
 	g_applauncherHome->FocusApp(titleId, select);
 }
 
-/* the interface's func5: the selected mark of the title's icon cleared (0x810B0736) */
+/* the interface's entry #5: the selected mark of the title's icon cleared (0x810B0736) */
 void applauncherInterfaceUnselectApp(const string &titleId)
 {
 	thread::RMutex::main_thread_mutex.Lock();
@@ -2151,7 +2196,7 @@ void applauncherInterfaceUnselectApp(const string &titleId)
 	thread::RMutex::main_thread_mutex.Unlock();
 }
 
-/* the home's layer left (also the interface's func6): the selected marks of the focused page's
+/* the home's layer left (also the interface's entry #6): the selected marks of the focused page's
    icons cleared (0x810B07DC) */
 void applauncherHomeOnLayerLeave(void *data)
 {
@@ -2162,19 +2207,19 @@ void applauncherHomeOnLayerLeave(void *data)
 		page->UnselectAll();
 }
 
-/* the interface's func7: the icon effect of the title ended (0x810B07FC) */
+/* the interface's entry #7: the icon effect of the title ended (0x810B07FC) */
 void applauncherInterfaceEndIconEffect(const string &titleId)
 {
 	applauncherIconEffectEnd(titleId);
 }
 
-/* the interface's func8: any icon effect ended (0x810B0804) */
+/* the interface's entry #8: any icon effect ended (0x810B0804) */
 void applauncherInterfaceEndIconEffects(void)
 {
 	applauncherIconEffectEndAll();
 }
 
-/* the interface's func9: the view scrolled to the notice page (0x810B080C) */
+/* the interface's entry #9: the view scrolled to the notice page (0x810B080C) */
 void applauncherInterfaceScrollToNotice(void)
 {
 	thread::RMutex::main_thread_mutex.Lock();
@@ -2185,7 +2230,7 @@ void applauncherInterfaceScrollToNotice(void)
 	thread::RMutex::main_thread_mutex.Unlock();
 }
 
-/* the interface's func10: the view scrolled to the first page (0x810B0844) */
+/* the interface's entry #10: the view scrolled to the first page (0x810B0844) */
 void applauncherInterfaceScrollToFirst(void)
 {
 	thread::RMutex::main_thread_mutex.Lock();
@@ -2199,14 +2244,14 @@ void applauncherInterfaceScrollToFirst(void)
 	thread::RMutex::main_thread_mutex.Unlock();
 }
 
-/* the interface's func11: the icon image of the application's folder loaded (0x810B088E) */
+/* the interface's entry #11: the icon image of the application's folder loaded (0x810B088E) */
 void applauncherInterfaceLoadIconImage(const char *dir,
 				       intrusive_ptr<cache::CacheImageInterface> *image)
 {
 	applauncherIconLoadImage(dir, image);
 }
 
-/* the interface's func3: the image of the title's icon given; without an icon, the image
+/* the interface's entry #3: the image of the title's icon given; without an icon, the image
    asked of the pages when a request is given; false without either (0x810B0896) */
 bool applauncherInterfaceGetIconImage(intrusive_ptr<cache::CacheImageInterface> *image,
 				      const string &titleId, void *param, void *data)
@@ -2318,12 +2363,12 @@ bool ApplauncherHome::LoadBackground(ApplauncherPage *page)
 		m_texScale[0] = du;
 		if (texHeight != 0) {
 			float margin = ((float)height - fitHeight) * 0.5f;
-			float v1 = (fitHeight + margin) / (float)texHeight;
-			float v0 = margin / (float)texHeight;
+			float texBottom = (fitHeight + margin) / (float)texHeight;
+			float texTop = margin / (float)texHeight;
 
-			v0 = v0 + (v1 - v0) * (1.0f / 17.0f);
-			m_texV = v0;
-			m_texScale[1] = v1 - v0;
+			texTop = texTop + (texBottom - texTop) * (1.0f / 17.0f);
+			m_texV = texTop;
+			m_texScale[1] = texBottom - texTop;
 		} else {
 			m_texV = 0.0f;
 			m_texScale[1] = 0.0f;
@@ -2332,7 +2377,7 @@ bool ApplauncherHome::LoadBackground(ApplauncherPage *page)
 
 	string path(m_imagePath);
 
-	m_flags0[2] = true;
+	m_homeFlags[2] = true;
 	applauncherDataCacheLoad(path, &m_task, NULL, NULL, false);
 	return true;
 }
@@ -2353,7 +2398,7 @@ void applauncherHomeReloadBackground(void)
 		static_cast<ApplauncherPage *>(g_applauncherHome->m_scroller.GetFocused()));
 }
 
-/* the interface's func12: the title's icon marked for an update (0x810B0DB2) */
+/* the interface's entry #12: the title's icon marked for an update (0x810B0DB2) */
 int applauncherInterfaceMarkAppUpdate(const char *titleId)
 {
 	thread::RMutex::main_thread_mutex.Lock();
@@ -2368,7 +2413,7 @@ int applauncherInterfaceMarkAppUpdate(const char *titleId)
 	return 1;
 }
 
-/* the interface's func13: the title's data asked for again, by its icon or, without one, of
+/* the interface's entry #13: the title's data asked for again, by its icon or, without one, of
    the pages (0x810B0EA2) */
 int applauncherInterfaceRequestAppData(const char *titleId)
 {
@@ -2386,7 +2431,7 @@ int applauncherInterfaceRequestAppData(const char *titleId)
 	return 1;
 }
 
-/* the interface's func14: every page's icon images reloaded (0x810B0FD4) */
+/* the interface's entry #14: every page's icon images reloaded (0x810B0FD4) */
 void applauncherInterfaceReloadIcons(void)
 {
 	thread::RMutex::main_thread_mutex.Lock();
@@ -2401,14 +2446,14 @@ void applauncherInterfaceReloadIcons(void)
 	thread::RMutex::main_thread_mutex.Unlock();
 }
 
-/* the interface's func15: the kept request's state cleared (0x810B1026) */
+/* the interface's entry #15: the kept request's state cleared (0x810B1026) */
 void applauncherInterfaceClearRequest(void)
 {
 	if (g_applauncherModeManager->m_currentMode != -1)
 		g_applauncherModeManager->m_nextMode = 0;
 }
 
-/* the interface's func17: the wave hidden, the view shown again and, but on a PS TV, the icons'
+/* the interface's entry #17: the wave hidden, the view shown again and, but on a PS TV, the icons'
    effects of the page in view resumed (0x810B103E) */
 void applauncherHomeHideWave(void)
 {
@@ -2433,7 +2478,7 @@ void applauncherHomeHideWave(void)
 	}
 }
 
-/* the interface's func18: the index of the page in focus, -1 without one (0x810B10E2) */
+/* the interface's entry #18: the index of the page in focus, -1 without one (0x810B10E2) */
 int applauncherInterfaceGetFocusedPage(void)
 {
 	if (g_applauncherHome == NULL)
@@ -2447,14 +2492,14 @@ int applauncherInterfaceGetFocusedPage(void)
 	return page->m_index;
 }
 
-/* the interface's func19: the application's page closed (0x810B1110) */
+/* the interface's entry #19: the application's page closed (0x810B1110) */
 void applauncherInterfaceCloseAppPage(void)
 {
 	if (g_applauncherHome != NULL)
 		applauncherHomeCloseAppPage(false);
 }
 
-/* the interface's func21: whether the title is on the home, as an icon or in a folder
+/* the interface's entry #21: whether the title is on the home, as an icon or in a folder
    (0x810B1126) */
 bool applauncherInterfaceHasApp(const string &titleId)
 {
@@ -2470,14 +2515,14 @@ bool applauncherInterfaceHasApp(const string &titleId)
 	return false;
 }
 
-/* the interface's func22: the title's change log opened (0x810B12B4) */
+/* the interface's entry #22: the title's change log opened (0x810B12B4) */
 int applauncherInterfaceOpenChangeLog(const paf::string *titleId, void *loadArg,
 				      ApplauncherChangeLogCallback callback, int value, void *arg)
 {
 	return applauncherChangeLogOpen(titleId, loadArg, callback, value, arg);
 }
 
-/* the interface's func23: the theme reloaded and, once it has data, its UI refreshed on the
+/* the interface's entry #23: the theme reloaded and, once it has data, its UI refreshed on the
    main thread (0x810B12C6) */
 int applauncherInterfaceRefreshTheme(void)
 {
@@ -2489,7 +2534,7 @@ int applauncherInterfaceRefreshTheme(void)
 	return 0;
 }
 
-/* the interface's func24: the theme reloaded (0x810B12FA) */
+/* the interface's entry #24: the theme reloaded (0x810B12FA) */
 int applauncherInterfaceReloadTheme(void)
 {
 	return applauncherThemeReload();
@@ -2586,7 +2631,7 @@ int applauncherThemeRefresh(void)
 	return 0;
 }
 
-/* the interface's func26: the kept request marked (0x810B17D8) */
+/* the interface's entry #26: the kept request marked (0x810B17D8) */
 int applauncherInterfaceSetRequest(void)
 {
 	if (g_applauncherModeManager->m_currentMode != -1)
@@ -2818,27 +2863,28 @@ void ApplauncherHome::Update()
 		if (m_imagePath == current->m_param.themeFile) {
 			ui::Widget *view = g_applauncherHome->m_scrollView;
 
+			bool retryLoad = false;
 			if (m_task->GetImage().get() != NULL) {
 				view->SetTexture(m_task->GetImage());
+			} else if (m_homeFlags[2]) {
+				m_homeFlags[2] = false;
+				applauncherDataCacheLoad(m_imagePath, &m_task, NULL, NULL, true);
+				retryLoad = true;
 			} else {
-				if (m_flags0[2]) {
-					m_flags0[2] = false;
-					applauncherDataCacheLoad(m_imagePath, &m_task, NULL, NULL, true);
-					goto fade;
-				}
 				view->SetTexture(g_applauncherPlugin->GetTexture(
 					IDParam(APPLAUNCHER_HOME_NO_IMAGE_TEXTURE)));
 			}
-			static_cast<graph::PlaneObj *>(view->GetDrawObj(0))->SetTexRegion(
-				math::v4(m_texU, m_texV, m_texScale[0], m_texScale[1]));
-			ShowBackground();
+			if (!retryLoad) {
+				static_cast<graph::PlaneObj *>(view->GetDrawObj(0))->SetTexRegion(
+					math::v4(m_texU, m_texV, m_texScale[0], m_texScale[1]));
+				ShowBackground();
+			}
 		} else {
 			ClearBackground();
 			LoadBackground(current);
 		}
 	}
 
-fade:
 	m_fadeTime += Timer::s_tick_unit * Timer::s_tick_interval;
 	switch (m_mode) {
 	case 0: {
@@ -2866,7 +2912,7 @@ fade:
 		faded->UpdateFade();
 	}
 
-	if (!m_flags0[0] && shellBootArePluginsLoaded() &&
+	if (!m_homeFlags[0] && shellBootArePluginsLoaded() &&
 	    ((job::JobQueue *(*)(void))g_applauncherHome->m_topmenu->func[
 		    TOPMENU_PLUGIN_FUNC_GET_JOB_QUEUE])()->NumItems() == 0 &&
 	    g_applauncherIconCache->m_manager->GetQueuedJobCount() == 0 &&
@@ -2922,7 +2968,7 @@ fade:
 		}
 		((void (*)(void))m_topmenu->func[TOPMENU_PLUGIN_FUNC_HOME_READY])();
 		UpdateSnaps();
-		m_flags0[0] = true;
+		m_homeFlags[0] = true;
 	}
 
 	ApplauncherIcon *item = g_applauncherDragItem.get();

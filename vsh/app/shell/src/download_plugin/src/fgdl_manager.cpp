@@ -72,13 +72,7 @@ using namespace paf;
 
 extern "C" int sceAppMgrGetMediaTypeFromDriveByPid(SceUID pid, const char *drive, int *mediaType);
 extern "C" int vshKernelGetCompiledSdkVersionByPid(SceUID pid, SceUInt32 *version);
-
-/* (0x81417D94) the SDK the process was built with (PLACEHOLDER name) */
-int Fgdl_81417D94(SceUID pid, SceUInt32 *version);
-
-/* (0x812A9954) another file's: the title's time stamp 3 cleared (state 1) or set to the network
-   time (PLACEHOLDER name) */
-int Shell_812A9954(const char *titleId, int state);
+extern int sceGameUpdateRecordCacheStatus(const char *titleId, SceInt32 status);
 
 class FgdlManager;
 
@@ -428,7 +422,7 @@ int Fgdl_811285CC(const string *titleId, const vector<string> *apps, vector<stri
 	if (status.appName[0] == '\0' || sce_paf_strlen(status.appName) == 0)
 		return FGDL_ERROR_FAILED;
 	if (sdkVersion != NULL)
-		Fgdl_81417D94(status.processId, sdkVersion);
+		vshKernelGetCompiledSdkVersionByPid(status.processId, sdkVersion);
 	if (onAddcont != NULL) {
 		char drive[16] = "addcont0:";
 		int type;
@@ -910,156 +904,158 @@ int Fgdl_8112A7CC(SceUInt32 taskId, FgdlInstallArgs args)
 	if (downloadPluginGet() != NULL)
 		downloadPluginGet()->SetLocale((Locale)args.locale);
 	Framework::Instance()->SetCommonResourceLocale((Locale)args.locale);
-	ret = bgdlGetTaskTitle(taskId, &titleId);
-	if (ret != 0 || titleId.length() == 0)
-		goto end;
-	apps.clear();
+	do {
+		ret = bgdlGetTaskTitle(taskId, &titleId);
+		if (ret != 0 || titleId.length() == 0)
+			break;
+		apps.clear();
 
-	{
-		Plugin *game = Plugin::Find("game_plugin");
+		{
+			Plugin *game = Plugin::Find("game_plugin");
 
-		if (game != NULL) {
-			GamePluginInterface *iface = (GamePluginInterface *)game->GetInterface(1);
+			if (game != NULL) {
+				GamePluginInterface *iface = (GamePluginInterface *)game->GetInterface(1);
 
-			ret = BGDL_ERROR_NO_MEMORY;
-			if (iface != NULL)
-				ret = ((int (*)(vector<string> *))iface->func[FGDL_GAME_FUNC_GET_APPS])(&apps);
-		} else {
-			ret = BGDL_ERROR_NO_MEMORY;
+				ret = BGDL_ERROR_NO_MEMORY;
+				if (iface != NULL)
+					ret = ((int (*)(vector<string> *))iface->func[FGDL_GAME_FUNC_GET_APPS])(&apps);
+			} else {
+				ret = BGDL_ERROR_NO_MEMORY;
+			}
 		}
-	}
-	if (ret != 0)
-		goto end;
-	ret = Fgdl_811284DA(&titleId, &apps, &names);
-	if (ret != 0)
-		goto end;
-	if (names.size() == 0) {
-		ret = BGDL_ERROR_NO_TITLE_ID;
-		goto end;
-	}
-	ret = Fgdl_811285CC(&titleId, &apps, &running, &outOfPeriod, &sdkVersion, &onAddcont);
-	if (ret != 0)
-		goto end;
-	if (outOfPeriod == true) {
-		FgdlConfirmDialog confirm = { &context, false, -1, 5 };
-		string name(running[0]);
-
-		Fgdl_8112A15C(&confirm, true, &name, &accepted);
-		if (accepted != true) {
-			ret = FGDL_ERROR_DECLINED;
-			goto end;
+		if (ret != 0)
+			break;
+		ret = Fgdl_811284DA(&titleId, &apps, &names);
+		if (ret != 0)
+			break;
+		if (names.size() == 0) {
+			ret = BGDL_ERROR_NO_TITLE_ID;
+			break;
 		}
-	}
-	if (bgdlManagerGet() != NULL)
-		bgdlManagerGet()->AddListener(Fgdl_8112BF7C, &context);
-	ret = bgdlReloadTask(taskId);
-	listening = true;
-	if (ret != 0)
-		goto end;
+		ret = Fgdl_811285CC(&titleId, &apps, &running, &outOfPeriod, &sdkVersion, &onAddcont);
+		if (ret != 0)
+			break;
+		if (outOfPeriod == true) {
+			FgdlConfirmDialog confirm = { &context, false, -1, 5 };
+			string name(running[0]);
 
-	{
-		FgdlProgressDialog progress = { &context, false, -1, false, false, -1 };
-
-		ret = Fgdl_81129DF6(&progress);
+			Fgdl_8112A15C(&confirm, true, &name, &accepted);
+			if (accepted != true) {
+				ret = FGDL_ERROR_DECLINED;
+				break;
+			}
+		}
+		if (bgdlManagerGet() != NULL)
+			bgdlManagerGet()->AddListener(Fgdl_8112BF7C, &context);
+		ret = bgdlReloadTask(taskId);
 		listening = true;
 		if (ret != 0)
-			goto end;
-	}
+			break;
 
-	{
-		FgdlDialog dialog = { 0, &context, false, -1, 0 };
+		{
+			FgdlProgressDialog progress = { &context, false, -1, false, false, -1 };
 
-		if (bgdlTaskIsWaiting(taskId) != true) {
-			ret = FGDL_ERROR_FAILED;
-		} else {
-			if (outOfPeriod == true) {
-				Fgdl_81129C58(&dialog);
+			ret = Fgdl_81129DF6(&progress);
+			listening = true;
+			if (ret != 0)
+				break;
+		}
 
-				const char *name = running[0].c_str();
+		{
+			FgdlDialog dialog = { 0, &context, false, -1, 0 };
 
-				if (name != NULL) {
-					Plugin *topmenu = Plugin::Find("topmenu_plugin");
+			if (bgdlTaskIsWaiting(taskId) != true) {
+				ret = FGDL_ERROR_FAILED;
+			} else {
+				bool closedOk = true;
+				if (outOfPeriod == true) {
+					Fgdl_81129C58(&dialog);
 
-					if (topmenu != NULL) {
-						ShellPluginInterface *iface =
-							(ShellPluginInterface *)topmenu->GetInterface(1);
+					const char *name = running[0].c_str();
 
-						if (iface != NULL)
-							((void (*)(const char *))iface->func[FGDL_TOPMENU_FUNC_CLOSE_APP])(name);
-					}
-				}
+					if (name != NULL) {
+						Plugin *topmenu = Plugin::Find("topmenu_plugin");
 
-				int i;
+						if (topmenu != NULL) {
+							ShellPluginInterface *iface =
+								(ShellPluginInterface *)topmenu->GetInterface(1);
 
-				ret = FGDL_ERROR_APP_RUNNING;
-				for (i = 0; i <= 30; i++) {
-					SceAppMgrAppStatus status;
-
-					sce_paf_memset(&status, 0, sizeof(status));
-					if (sceAppMgrGetStatusByName(running[0].c_str(), &status) != 0) {
-						ret = 0;
-						break;
-					}
-					thread::Sleep(500);
-				}
-				thread::RMutex::main_thread_mutex.Lock();
-				if (dialog.opened == true) {
-					thread::RMutex::main_thread_mutex.Lock();
-					SceCommonGuiDialog_BC311DC0(dialog.dialog);
-					dialog.dialog = -1;
-					dialog.opened = false;
-					thread::RMutex::main_thread_mutex.Unlock();
-				}
-				thread::RMutex::main_thread_mutex.Unlock();
-				if (ret != 0) {
-					fgdlCloseAppDone(running[0].c_str());
-					Fgdl_8112957E(&dialog, ret);
-					goto done;
-				}
-			}
-
-			BgdlTaskInfo info;
-
-			ret = shellBgdlGetTaskInfo(taskId, &info);
-			if (ret == 0) {
-				info.noOtherFlag = false;
-				info.imported = outOfPeriod == true;
-				info.progress = 0;
-				info.path = names[0].c_str();
-
-				int id = Fgdl_8112A5FE(&info);
-
-				if (id >= 0) {
-					ret = shellBgdlInstallTask2(&info);
-
-					Plugin *game = Plugin::Find("game_plugin");
-
-					if (game != NULL) {
-						GamePluginInterface *iface =
-							(GamePluginInterface *)game->GetInterface(1);
-
-						if (iface != NULL) {
-							thread::RMutex::main_thread_mutex.Lock();
-							((void (*)(int))iface->func[GAME_PLUGIN_FUNC_DIALOG_CLOSE])(id);
-							thread::RMutex::main_thread_mutex.Unlock();
+							if (iface != NULL)
+								((void (*)(const char *))iface->func[FGDL_TOPMENU_FUNC_CLOSE_APP])(name);
 						}
 					}
+
+					int i;
+
+					ret = FGDL_ERROR_APP_RUNNING;
+					for (i = 0; i <= 30; i++) {
+						SceAppMgrAppStatus status;
+
+						sce_paf_memset(&status, 0, sizeof(status));
+						if (sceAppMgrGetStatusByName(running[0].c_str(), &status) != 0) {
+							ret = 0;
+							break;
+						}
+						thread::Sleep(500);
+					}
+					thread::RMutex::main_thread_mutex.Lock();
+					if (dialog.opened == true) {
+						thread::RMutex::main_thread_mutex.Lock();
+						SceCommonGuiDialog_BC311DC0(dialog.dialog);
+						dialog.dialog = -1;
+						dialog.opened = false;
+						thread::RMutex::main_thread_mutex.Unlock();
+					}
+					thread::RMutex::main_thread_mutex.Unlock();
+					if (ret != 0) {
+						fgdlCloseAppDone(running[0].c_str());
+						Fgdl_8112957E(&dialog, ret);
+						closedOk = false;
+					}
+				}
+
+				if (closedOk) {
+					BgdlTaskInfo info;
+
+					ret = shellBgdlGetTaskInfo(taskId, &info);
+					if (ret == 0) {
+						info.noOtherFlag = false;
+						info.imported = outOfPeriod == true;
+						info.progress = 0;
+						info.path = names[0].c_str();
+
+						int id = Fgdl_8112A5FE(&info);
+
+						if (id >= 0) {
+							ret = shellBgdlInstallTask2(&info);
+
+							Plugin *game = Plugin::Find("game_plugin");
+
+							if (game != NULL) {
+								GamePluginInterface *iface =
+									(GamePluginInterface *)game->GetInterface(1);
+
+								if (iface != NULL) {
+									thread::RMutex::main_thread_mutex.Lock();
+									((void (*)(int))iface->func[GAME_PLUGIN_FUNC_DIALOG_CLOSE])(id);
+									thread::RMutex::main_thread_mutex.Unlock();
+								}
+							}
+						}
+					}
+					if (outOfPeriod == true)
+						fgdlCloseAppDone(running[0].c_str());
+					if (ret != 0) {
+						if (Bgdl_81112284("grw0:") != true)
+							ret = FGDL_ERROR_NO_GRW0;
+						if (outOfPeriod == true && args.type == 2)
+							Fgdl_81128F0C(&dialog, ret, &info);
+					}
 				}
 			}
-			if (outOfPeriod == true)
-				fgdlCloseAppDone(running[0].c_str());
-			if (ret != 0) {
-				if (Bgdl_81112284("grw0:") != true)
-					ret = FGDL_ERROR_NO_GRW0;
-				if (outOfPeriod == true && args.type == 2)
-					Fgdl_81128F0C(&dialog, ret, &info);
-			}
 		}
-done:
-		;
-	}
-	listening = true;
-end:
+		listening = true;
+	} while (0);
 	bgdlRemoveTask(taskId);
 	bgdlUnmountGrw0();
 	if (listening == true) {
@@ -1082,15 +1078,15 @@ int Fgdl_8112ADBE(SceUInt32 taskId, FgdlTitleRequest *request, FgdlTitleResult *
 	int ret;
 	FgdlContext context(taskId);
 
-	if (request == NULL) {
-		ret = BGDL_ERROR_NULL_FOLDER;
-		goto end;
-	}
-	if (request->titleId[0] == '\0') {
-		ret = BGDL_ERROR_NO_TITLE_ID;
-		goto end;
-	}
-	{
+	do {
+		if (request == NULL) {
+			ret = BGDL_ERROR_NULL_FOLDER;
+			break;
+		}
+		if (request->titleId[0] == '\0') {
+			ret = BGDL_ERROR_NO_TITLE_ID;
+			break;
+		}
 		string titleId(request->titleId);
 
 		{
@@ -1098,17 +1094,17 @@ int Fgdl_8112ADBE(SceUInt32 taskId, FgdlTitleRequest *request, FgdlTitleResult *
 
 			ret = Fgdl_8112A090(titleId.c_str(), &info);
 			if (ret != 0)
-				goto end;
+				break;
 		}
 
 		vector<BgdlTaskInfo> infos;
 
 		ret = shellBgdlGetTitleTaskInfos(titleId.c_str(), &infos, (request->flags & 1) != 0 ? 5 : 1, 0);
 		if (ret != 0)
-			goto end;
+			break;
 		if (infos.size() == 0) {
 			ret = BGDL_ERROR_NOT_WAITING;
-			goto end;
+			break;
 		}
 
 		int locale = request->locale;
@@ -1173,8 +1169,7 @@ int Fgdl_8112ADBE(SceUInt32 taskId, FgdlTitleRequest *request, FgdlTitleResult *
 			plugin->SetLocale((Locale)pluginLocale);
 		Framework::Instance()->SetCommonResourceLocale((Locale)commonLocale);
 		ret = 0;
-	}
-end:
+	} while (0);
 	return ret;
 }
 
@@ -1283,150 +1278,149 @@ int Fgdl_8112B58A(SceUInt32 taskId)
 	FgdlContext context(taskId);
 	bool accepted = false;
 
-	ret = bgdlGetTaskTitle(taskId, &titleId);
-	if (ret != 0)
-		goto end;
+	do {
+		ret = bgdlGetTaskTitle(taskId, &titleId);
+		if (ret != 0)
+			break;
 
-	bool running;
+		bool running = false;
+		{
+			SceAppMgrAppStatus status;
 
-	running = false;
-	{
-		SceAppMgrAppStatus status;
+			if (sceAppMgrGetStatusByAppId(-3, &status) == 0 && status.appName[0] != '\0' &&
+			    sce_paf_strlen(status.appName) != 0 &&
+			    sce_paf_strncmp(titleId.c_str(), status.appName, 31) == 0) {
+				FgdlConfirmDialog confirm = { &context, false, -1, 5 };
 
-		if (sceAppMgrGetStatusByAppId(-3, &status) == 0 && status.appName[0] != '\0' &&
-		    sce_paf_strlen(status.appName) != 0 &&
-		    sce_paf_strncmp(titleId.c_str(), status.appName, 31) == 0) {
-			FgdlConfirmDialog confirm = { &context, false, -1, 5 };
+				running = true;
 
-			running = true;
+				string name(titleId);
 
-			string name(titleId);
-
-			Fgdl_8112A15C(&confirm, false, &name, &accepted);
-			if (accepted != true) {
-				ret = FGDL_ERROR_DECLINED;
-				goto end;
-			}
-		}
-	}
-	listening = true;
-	if (bgdlManagerGet() != NULL)
-		bgdlManagerGet()->AddListener(Fgdl_8112BF7C, &context);
-	ret = bgdlReloadTask(taskId);
-	if (ret != 0)
-		goto end;
-
-	{
-		FgdlProgressDialog progress = { &context, false, -1, false, false, -1 };
-
-		ret = Fgdl_8112B2F4(&progress);
-		if (ret != 0) {
-			Fgdl_8112B108(&progress, ret);
-			goto end;
-		}
-	}
-	if (bgdlTaskIsWaiting(taskId) != true) {
-		ret = FGDL_ERROR_FAILED;
-		goto end;
-	}
-
-	{
-		FgdlDialog dialog = { 1, &context, false, -1, 0 };
-		const char *name = titleId.c_str();
-
-		if (name != NULL) {
-			Plugin *topmenu = Plugin::Find("topmenu_plugin");
-
-			if (topmenu != NULL) {
-				ShellPluginInterface *iface = (ShellPluginInterface *)topmenu->GetInterface(1);
-
-				if (iface != NULL)
-					((void (*)(const char *))iface->func[FGDL_TOPMENU_FUNC_CLOSE_APP])(name);
-			}
-		}
-		if (running == true) {
-			Fgdl_81129C58(&dialog);
-
-			int i;
-
-			ret = FGDL_ERROR_APP_RUNNING;
-			for (i = 0; i <= 30; i++) {
-				SceAppMgrAppStatus status;
-
-				sce_paf_memset(&status, 0, sizeof(status));
-				if (sceAppMgrGetStatusByName(titleId.c_str(), &status) != 0) {
-					ret = 0;
+				Fgdl_8112A15C(&confirm, false, &name, &accepted);
+				if (accepted != true) {
+					ret = FGDL_ERROR_DECLINED;
 					break;
 				}
-				thread::Sleep(500);
 			}
-			thread::RMutex::main_thread_mutex.Lock();
-			if (dialog.opened == true) {
-				thread::RMutex::main_thread_mutex.Lock();
-				SceCommonGuiDialog_BC311DC0(dialog.dialog);
-				dialog.opened = false;
-				dialog.dialog = -1;
-				thread::RMutex::main_thread_mutex.Unlock();
-			}
-			thread::RMutex::main_thread_mutex.Unlock();
+		}
+		listening = true;
+		if (bgdlManagerGet() != NULL)
+			bgdlManagerGet()->AddListener(Fgdl_8112BF7C, &context);
+		ret = bgdlReloadTask(taskId);
+		if (ret != 0)
+			break;
+
+		{
+			FgdlProgressDialog progress = { &context, false, -1, false, false, -1 };
+
+			ret = Fgdl_8112B2F4(&progress);
 			if (ret != 0) {
-				fgdlCloseAppDone(titleId.c_str());
-				Fgdl_8112957E(&dialog, ret);
-				goto end;
+				Fgdl_8112B108(&progress, ret);
+				break;
 			}
 		}
-
-		BgdlTaskInfo info;
-
-		ret = shellBgdlGetTaskInfo(taskId, &info);
-		if (ret == 0) {
-			info.noOtherFlag = false;
-			info.imported = true;
-			info.progress = 0;
-			info.path = titleId.c_str();
-
-			int id = Fgdl_8112A5FE(&info);
-
-			if (id >= 0) {
-				ret = shellBgdlInstallTask2(&info);
-
-				Plugin *game = Plugin::Find("game_plugin");
-
-				if (game != NULL) {
-					GamePluginInterface *iface = (GamePluginInterface *)game->GetInterface(1);
-
-					if (iface != NULL) {
-						thread::RMutex::main_thread_mutex.Lock();
-						((void (*)(int))iface->func[GAME_PLUGIN_FUNC_DIALOG_CLOSE])(id);
-						thread::RMutex::main_thread_mutex.Unlock();
-					}
-				}
-			}
+		if (bgdlTaskIsWaiting(taskId) != true) {
+			ret = FGDL_ERROR_FAILED;
+			break;
 		}
-		if (ret != 0) {
-			fgdlCloseAppDone(titleId.c_str());
-		} else if (titleId.c_str() != NULL) {
-			Shell_812A9954(titleId.c_str(), 1);
 
-			const char *done = titleId.c_str();
+		{
+			FgdlDialog dialog = { 1, &context, false, -1, 0 };
+			const char *name = titleId.c_str();
 
-			if (done != NULL) {
+			if (name != NULL) {
 				Plugin *topmenu = Plugin::Find("topmenu_plugin");
 
 				if (topmenu != NULL) {
-					ShellPluginInterface *iface =
-						(ShellPluginInterface *)topmenu->GetInterface(1);
+					ShellPluginInterface *iface = (ShellPluginInterface *)topmenu->GetInterface(1);
 
 					if (iface != NULL)
-						((void (*)(const char *, int))iface->func[FGDL_TOPMENU_FUNC_CLOSE_APP_DONE])(
-							done, 1);
+						((void (*)(const char *))iface->func[FGDL_TOPMENU_FUNC_CLOSE_APP])(name);
 				}
 			}
+			if (running == true) {
+				Fgdl_81129C58(&dialog);
+
+				int i;
+
+				ret = FGDL_ERROR_APP_RUNNING;
+				for (i = 0; i <= 30; i++) {
+					SceAppMgrAppStatus status;
+
+					sce_paf_memset(&status, 0, sizeof(status));
+					if (sceAppMgrGetStatusByName(titleId.c_str(), &status) != 0) {
+						ret = 0;
+						break;
+					}
+					thread::Sleep(500);
+				}
+				thread::RMutex::main_thread_mutex.Lock();
+				if (dialog.opened == true) {
+					thread::RMutex::main_thread_mutex.Lock();
+					SceCommonGuiDialog_BC311DC0(dialog.dialog);
+					dialog.opened = false;
+					dialog.dialog = -1;
+					thread::RMutex::main_thread_mutex.Unlock();
+				}
+				thread::RMutex::main_thread_mutex.Unlock();
+				if (ret != 0) {
+					fgdlCloseAppDone(titleId.c_str());
+					Fgdl_8112957E(&dialog, ret);
+					break;
+				}
+			}
+
+			BgdlTaskInfo info;
+
+			ret = shellBgdlGetTaskInfo(taskId, &info);
+			if (ret == 0) {
+				info.noOtherFlag = false;
+				info.imported = true;
+				info.progress = 0;
+				info.path = titleId.c_str();
+
+				int id = Fgdl_8112A5FE(&info);
+
+				if (id >= 0) {
+					ret = shellBgdlInstallTask2(&info);
+
+					Plugin *game = Plugin::Find("game_plugin");
+
+					if (game != NULL) {
+						GamePluginInterface *iface = (GamePluginInterface *)game->GetInterface(1);
+
+						if (iface != NULL) {
+							thread::RMutex::main_thread_mutex.Lock();
+							((void (*)(int))iface->func[GAME_PLUGIN_FUNC_DIALOG_CLOSE])(id);
+							thread::RMutex::main_thread_mutex.Unlock();
+						}
+					}
+				}
+			}
+			if (ret != 0) {
+				fgdlCloseAppDone(titleId.c_str());
+			} else if (titleId.c_str() != NULL) {
+				sceGameUpdateRecordCacheStatus(titleId.c_str(), 1);
+
+				const char *done = titleId.c_str();
+
+				if (done != NULL) {
+					Plugin *topmenu = Plugin::Find("topmenu_plugin");
+
+					if (topmenu != NULL) {
+						ShellPluginInterface *iface =
+							(ShellPluginInterface *)topmenu->GetInterface(1);
+
+						if (iface != NULL)
+							((void (*)(const char *, int))iface->func[FGDL_TOPMENU_FUNC_CLOSE_APP_DONE])(
+								done, 1);
+					}
+				}
+			}
+			if (ret != 0)
+				Fgdl_81128F0C(&dialog, ret, &info);
 		}
-		if (ret != 0)
-			Fgdl_81128F0C(&dialog, ret, &info);
-	}
-end:
+	} while (0);
 	bgdlRemoveTask(taskId);
 	bgdlUnmountGrw0();
 	if (listening == true) {

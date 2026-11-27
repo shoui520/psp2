@@ -139,10 +139,12 @@ void LiveAreaFeedItem::OnClick()
 		page->m_feed->SetDialogId(dlg->m_dialogId);
 }
 
+extern int activityUiGetItemCategoryForItem(ActivityFeedItemBase *self);
+
 /* 0x811A2196 */
 int LiveAreaFeedItem::SetupIcon(paf::ui::Widget *widget)
 {
-	if (activityUiGetCurrentCategory() != 2)
+	if (activityUiGetItemCategoryForItem(this) != 2)
 		return 0;
 	if (!m_forceGameIcon) {
 		ActivityRecord *record = m_record;

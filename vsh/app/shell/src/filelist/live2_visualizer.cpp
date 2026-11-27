@@ -97,6 +97,21 @@ paf::common::SharedPtr<Live2AccessorProxy> Live2Visualizer::GetAccessorProxy()
 	return m_iterator->GetAccessorProxy();
 }
 
+} /* namespace filelist */
+
+class ActivityFeedItemBase;
+
+void activityUiGetItemContext(paf::common::SharedPtr<int> *outContext,
+			      ActivityFeedItemBase *self)
+{
+	paf::common::SharedPtr<filelist::Live2AccessorProxy> proxy =
+		reinterpret_cast<filelist::Live2Visualizer *>(self)->GetAccessorProxy();
+	if (outContext != NULL)
+		*outContext = *reinterpret_cast<paf::common::SharedPtr<int> *>(&proxy);
+}
+
+namespace filelist {
+
 /* 0x8134D86A */
 void Live2Visualizer::Stop()
 {

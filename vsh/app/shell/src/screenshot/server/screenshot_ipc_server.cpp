@@ -474,7 +474,7 @@ int ScreenShotManager::CaptureOverlayAndComposite(SceInt32 appId,
 	displayDesc.width = static_cast<SceUInt32>(rootSurface->GetWidth());
 	displayDesc.height = static_cast<SceUInt32>(rootSurface->GetHeight());
 	displayDesc.pixels = displayPixels;
-	displayDesc.pitchBytes = static_cast<SceUInt32>(rootSurface->GetStride(0));
+	displayDesc.pitchBytes = static_cast<SceUInt32>(rootSurface->GetStride());
 	displayDesc.pixelPitch = static_cast<SceUInt32>(rootSurface->GetWidth());
 
 	SurfaceDesc captureDesc;
@@ -1200,6 +1200,11 @@ int shellScreenshotStart(void)
 	param.cpuAffinityMask = 0;
 	param.jobQueue = screenshot::s_jobQueue;
 	return screenshot::createManager(&param);
+}
+
+int shellNpServicesStart(void)
+{
+	return shellScreenshotStart();
 }
 
 /* 0x81244B62 */

@@ -385,6 +385,30 @@ int BaseActivityVisualizer::GetCategory() const
 	return m_category;
 }
 
+} /* namespace filelist */
+
+class ActivityRecord;
+class ActivityFeedItemBase;
+
+int activityUiGetItemCategory(ActivityRecord **record)
+{
+	paf::intrusive_ptr<filelist::Live2Record> recRef(
+		record != NULL ? reinterpret_cast<filelist::Live2Record *>(*record) : NULL);
+	return filelist::BaseActivityVisualizer::ClassifyUriCategory(recRef);
+}
+
+int activityUiGetItemCategoryForItem(ActivityFeedItemBase *self)
+{
+	return reinterpret_cast<const filelist::BaseActivityVisualizer *>(self)->GetCategory();
+}
+
+int activityUiGetItemDisplayMode(ActivityFeedItemBase *self)
+{
+	return reinterpret_cast<const filelist::BaseActivityVisualizer *>(self)->GetDisplayMode();
+}
+
+namespace filelist {
+
 /* 0x81349C36 */
 void BaseActivityVisualizer::SetDisplayMode(int displayMode)
 {

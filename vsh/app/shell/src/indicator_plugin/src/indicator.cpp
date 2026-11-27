@@ -348,8 +348,8 @@ void Indicator::UpdateCounters(ui::Widget *root, int on)
 	m_countersOn = on;
 }
 
-static void indicatorOnFlightModeSlid(Timer *t, ui::AnimListener *listener, void *data1, void *data2,
-				  void *data3);
+static void indicatorOnFlightModeSlid(Timer *t, ui::AnimListener *listener, void *widgetArg,
+				      void *userArg, void *extraArg);
 
 /* the flight mode's icon slid in or out: in, the first counter's icons slid past it and the icon
    moved down, faded in; out, both moved back (0x8115C906) */
@@ -539,6 +539,120 @@ void indicatorCreate(void)
 	if (g_indicator != NULL)
 		g_indicator->Hide(false);
 	indicatorTelephonyListen();
+}
+
+int indicatorShow(IndicatorMode mode, bool animate);
+int indicatorHide(bool animate);
+int indicatorGetModeType(int *type);
+bool indicatorIsVisible(void);
+int indicatorSetValue4(int value);
+int indicatorSetValue8(int value);
+int indicatorSetFlightMode(int on);
+int indicatorSetValue6(int value);
+int indicatorSetBluetooth(int on);
+int indicatorUnsupported(void);
+int indicatorSetNotification(int on);
+void indicatorUpdateTheme(void);
+static void indicatorOnRegInfo(const list<IndicatorRegKey> &keys, void *data);
+static void indicatorOnBtConfig(int result, int config, void *data);
+
+/* (0x8115D882) */
+Indicator::Indicator(ui::Widget *page)
+	: m_reserved(-1), m_flightModeIconOn(-1), m_countersOn(-1)
+{
+	(void)page;
+	m_mode.type = 0;
+	m_mode.style = 0;
+	m_mode.dimmed = 0;
+
+	m_status.visible = false;
+	m_status.value4 = 0;
+	m_status.bluetooth = 0;
+	m_status.flightMode = 0;
+	m_status.value8 = 0;
+	m_status.initLeftReady = 1;
+	m_status.initRightReady = 1;
+	m_status.notification = 1;
+	m_status.value6 = 1;
+	m_status.barColor = math::v4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_status.iconColor = math::v4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_status.textColor = math::v4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_status.noNoticeFile = string("");
+	m_status.newNoticeFile = string("");
+	m_status.noticeFontColor = math::v4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_status.noticeGlowColor = math::v4(56.0f / 255.0f, 182.0f / 255.0f, 1.0f, 1.0f);
+
+	ui::Widget *root = indicatorFindWidget(IDParam(s_empty_name, INDICATOR_PAGE),
+					       IDParam(s_empty_name, INDICATOR_ROOT));
+	if (root != NULL) {
+		ScePafWidget_A1193AAB(root, 1, 0);
+
+		ui::Widget *child = root->FindChild(IDParam(s_empty_name, 0x5BA2D306u), 0);
+		if (child != NULL) {
+			IndicatorNewEvent *item = new IndicatorNewEvent(g_indicatorPlugin, child);
+			if (item != NULL)
+				m_items.push_back(item);
+		}
+
+		child = root->FindChild(IDParam(s_empty_name, INDICATOR_COUNTER_A), 0);
+		if (child != NULL) {
+			IndicatorLeftGroup *item = new IndicatorLeftGroup(g_indicatorPlugin, child);
+			if (item != NULL)
+				m_items.push_back(item);
+		}
+
+		child = root->FindChild(IDParam(s_empty_name, INDICATOR_FLIGHT_MODE_ICON), 0);
+		if (child != NULL) {
+			IndicatorFlightModeIcon *item =
+				new IndicatorFlightModeIcon(g_indicatorPlugin, child);
+			if (item != NULL)
+				m_items.push_back(item);
+		}
+
+		child = root->FindChild(IDParam(s_empty_name, INDICATOR_COUNTER_B), 0);
+		if (child != NULL) {
+			IndicatorLabel *item = new IndicatorLabel(g_indicatorPlugin, child);
+			if (item != NULL)
+				m_items.push_back(item);
+		}
+
+		child = root->FindChild(IDParam(s_empty_name, 0x89588B73u), 0);
+		if (child != NULL) {
+			IndicatorPageDots *item = new IndicatorPageDots(g_indicatorPlugin, child);
+			if (item != NULL)
+				m_items.push_back(item);
+		}
+
+		child = root->FindChild(IDParam(s_empty_name, 0xD62FA2E9u), 0);
+		if (child != NULL) {
+			IndicatorRightGroup *item =
+				new IndicatorRightGroup(g_indicatorPlugin, child);
+			if (item != NULL)
+				m_items.push_back(item);
+		}
+
+		list<IndicatorRegKey> keys;
+		keys.push_back(IndicatorRegKey(string("/CONFIG/SYSTEM"), string("flight_mode")));
+		keys.push_back(IndicatorRegKey(string("/CONFIG/SHELL"), string("notification")));
+
+		m_regInfoJob = indicatorRegInfoJobStart(keys, indicatorOnRegInfo, this);
+		m_btConfigJob = indicatorBtConfigJobStart(indicatorOnBtConfig, this);
+		SetMode(m_mode, false);
+	}
+
+	g_indicatorInterface->Show = indicatorShow;
+	g_indicatorInterface->Hide = indicatorHide;
+	g_indicatorInterface->GetModeType = indicatorGetModeType;
+	g_indicatorInterface->IsVisible = indicatorIsVisible;
+	g_indicatorInterface->SetValue4 = indicatorSetValue4;
+	g_indicatorInterface->SetValue8 = indicatorSetValue8;
+	g_indicatorInterface->SetFlightMode = indicatorSetFlightMode;
+	g_indicatorInterface->SetValue6 = indicatorSetValue6;
+	g_indicatorInterface->SetBluetooth = indicatorSetBluetooth;
+	g_indicatorInterface->Unsupported9 = indicatorUnsupported;
+	g_indicatorInterface->Unsupported10 = indicatorUnsupported;
+	g_indicatorInterface->SetNotification = indicatorSetNotification;
+	g_indicatorInterface->UpdateTheme = indicatorUpdateTheme;
 }
 
 /* the jobs cancelled, the bar hidden and its items deleted (0x8115E45E) */
@@ -774,10 +888,12 @@ bool indicatorIsShownNormal(void)
 }
 
 /* the flight mode's icon slid in: the first counter's icons moved back by it, shown (0x8115F0D8) */
-static void indicatorOnFlightModeSlid(Timer *t, ui::AnimListener *listener, void *data1, void *data2,
-				  void *data3)
+static void indicatorOnFlightModeSlid(Timer *t, ui::AnimListener *listener, void *widgetArg,
+				      void *userArg, void *extraArg)
 {
-	ui::Widget *icons = (ui::Widget *)data1;
+	(void)userArg;
+	(void)extraArg;
+	ui::Widget *icons = (ui::Widget *)widgetArg;
 
 	if (icons == NULL)
 		return;

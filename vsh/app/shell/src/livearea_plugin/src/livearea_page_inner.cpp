@@ -8,6 +8,10 @@
 #include <appmgr.h>
 #include "livearea_internal.h"
 
+namespace filelist {
+paf::ui::filelist::SegmentSource *createBasicSegmentSource();
+}
+
 extern "C" {
 int sceAppMgrLaunchAppByNameForShell(unsigned int flags, const char *name, const char *param);
 int sce_paf_rand(void);
@@ -241,7 +245,7 @@ LiveAreaPageInner::~LiveAreaPageInner()
 void LiveAreaPageInner::Init()
 {
 	paf::ui::FileList *fileList = m_page->m_fileList;
-	paf::ui::filelist::SegmentSource *segSrc = new paf::ui::filelist::SegmentSource();
+	paf::ui::filelist::SegmentSource *segSrc = filelist::createBasicSegmentSource();
 	segSrc->AddRef();
 	paf::common::SharedPtr<paf::ui::filelist::Visualizer> bgVis(liveareaCreateBgFactory());
 	paf::common::RefObj *cellSrc = activityUiCreateSingleCellSource();
@@ -770,15 +774,287 @@ static void liveareaOnFocusTimer(int eventId, paf::ui::Handler *handler,
 
 /* 0x811AC906 */
 static void liveareaOnBgClearTimer(int eventId, paf::ui::Handler *handler,
-				   paf::ui::Event *event, LiveAreaPageInner *self)
+				   paf::ui::Event *event, void *userdata)
 {
 	(void)eventId; (void)event;
+	LiveAreaPageInner *self = (LiveAreaPageInner *)userdata;
 	if (self->m_initPhase > 0) {
 		--self->m_initPhase;
 		if (self->m_initPhase == 0)
 			self->BuildLayout(-1);
 	}
 	handler->KillTimer(16777508);
+}
+
+extern void liveareaCmaCleanup(paf::ui::Widget *root);
+extern void liveareaParentalCleanup(paf::ui::Widget *root);
+extern void liveareaMusicCleanup(paf::ui::Widget *root);
+
+/* 0x811ACB34 */
+static void liveareaOnDestroyWidgetTimer(int eventId, paf::ui::Handler *handler,
+					 paf::ui::Event *event, void *userdata)
+{
+	(void)eventId;
+	(void)event;
+	(void)userdata;
+	paf::ui::Widget *widget = (paf::ui::Widget *)handler;
+	if (widget == NULL)
+		return;
+	paf::intrusive_ptr<paf::ui::TextureSource> emptySource;
+	paf::intrusive_ptr<paf::graph::Surface> emptySurf;
+	widget->SetDrawObjMaskBit(&emptySource, 0, 0);
+	widget->SetTexture(emptySurf);
+	widget->m_name = s_destroyContentZoneId;
+	widget->DestroyWidget();
+}
+
+/* 0x811A9CE4 */
+void LiveAreaPageInner::OnParseFail()
+{
+	if (!m_introDone) {
+		m_introDone = true;
+		g_liveareaMgr->m_topmenuIf->notifyIntroComplete(m_page->m_pageKey);
+	}
+}
+
+/* 0x811A9D0C */
+void LiveAreaPageInner::OnParseComplete(paf::common::SharedPtr<LiTemplate> *parsed, int reloadMask,
+					paf::string *contentDir)
+{
+	if (contentDir != NULL && !contentDir->empty())
+		m_baseDir = *contentDir;
+
+	m_xmlJob.reset();
+
+	bool delayedReset = false;
+	if (m_contentZone != NULL) {
+		if (reloadMask == -1) {
+			g_liveareaMgr->m_topmenuIf->onContentReset(m_page->m_pageKey);
+			paf::ui::EventCBListener *bgListener = new paf::ui::EventCBListener(
+				liveareaOnBgClearTimer, this);
+			m_contentZone->SetTimerListener(16777508, 0.0f, bgListener);
+			delayedReset = true;
+		}
+
+		for (paf::list<paf::ui::Widget *>::iterator it = m_contentZone->m_children.begin();
+		     it != m_contentZone->m_children.end(); ++it) {
+			paf::ui::Widget *child = *it;
+			SceUInt32 childHash = child->m_name.GetIDHash();
+
+			if (childHash == 1728383896U) {
+				if (reloadMask == -1) {
+					for (paf::list<paf::ui::Widget *>::iterator btnIt =
+						     child->m_children.begin();
+					     btnIt != child->m_children.end(); ++btnIt) {
+						paf::ui::Widget *btn = *btnIt;
+						btn->m_name = s_destroyContentZoneId;
+						paf::ui::EventCBListener *destroyListener =
+							new paf::ui::EventCBListener(
+								liveareaOnDestroyWidgetTimer,
+								NULL);
+						btn->SetTimerListener(16777510, 0.0f, destroyListener);
+					}
+					m_helpUri.clear();
+				}
+			} else if (childHash == s_gateId.GetIDHash()) {
+				if (reloadMask == -1) {
+					child->m_name = s_destroyContentZoneId;
+					paf::ui::EventCBListener *destroyListener =
+						new paf::ui::EventCBListener(
+							liveareaOnDestroyWidgetTimer,
+							NULL);
+					child->SetTimerListener(16777510, 0.0f, destroyListener);
+					ScePafWidget_A96A0B4A(child, 1);
+					m_gateBtn = NULL;
+				}
+			} else if (childHash != s_destroyContentZoneId.GetIDHash()) {
+				int frameIndex = -1;
+				for (int idx = 0; idx < 10; ++idx) {
+					if (s_frameIds[idx].GetIDHash() == childHash) {
+						frameIndex = idx;
+						break;
+					}
+				}
+				if (frameIndex >= 0 && ((1 << frameIndex) & reloadMask) != 0) {
+					for (paf::list<LiveAreaFrameState *>::iterator fIt =
+						     m_frames.begin();
+					     fIt != m_frames.end(); ++fIt) {
+						if ((*fIt)->frameWidget == child) {
+							LiveAreaFrameState *st = *fIt;
+							m_frames.erase(fIt);
+							delete st;
+							break;
+						}
+					}
+					if (reloadMask == -1) {
+						ScePafWidget_A96A0B4A(child, 1);
+						child->m_name = s_destroyContentZoneId;
+						paf::ui::EventCBListener *destroyListener =
+							new paf::ui::EventCBListener(
+								liveareaOnDestroyWidgetTimer,
+								NULL);
+						child->SetTimerListener(16777510, 0.0f, destroyListener);
+					}
+				}
+			}
+		}
+	}
+
+	if ((reloadMask & 0x80000) != 0) {
+		paf::ui::Widget *pageRoot =
+			g_liveareaMgr->m_topmenuIf->getPageRootWidget(m_page->m_pageKey);
+		if (pageRoot != NULL) {
+			paf::IDParam bgWidgetId((SceUInt32)-661515378);
+			paf::ui::Widget *bgWidget = pageRoot->FindChild(bgWidgetId, 0);
+			if (bgWidget != NULL) {
+				bgWidget->m_name = s_destroyContentZoneId;
+				paf::ui::EventCBListener *destroyListener =
+					new paf::ui::EventCBListener(
+						liveareaOnDestroyWidgetTimer,
+						NULL);
+				bgWidget->SetTimerListener(16777510, 0.0f, destroyListener);
+				if (reloadMask != -1) {
+					paf::Timer *fadeTimer = new paf::Timer();
+					fadeTimer->InitTimer(21.0f, 0, -1, 0, NULL);
+					bgWidget->SetMetaAlpha(0.0f, fadeTimer, 65539, 2, 0.0f, NULL, NULL);
+				}
+			}
+		}
+		const wchar_t *pageTitle =
+			g_liveareaMgr->m_topmenuIf->getPageTitle(m_page->m_pageKey);
+		m_title = (pageTitle != NULL) ? pageTitle : L"";
+	}
+
+	if (m_dirty) {
+		LiTemplate *oldDoc = m_xmlDoc.get();
+		LiTemplate *newDoc = (parsed != NULL) ? parsed->get() : NULL;
+		if (oldDoc != NULL && newDoc != NULL) {
+			for (paf::list<LiPart *>::iterator it = oldDoc->m_parts.begin();
+			     it != oldDoc->m_parts.end(); ++it) {
+				LiPart *oldPart = *it;
+				unsigned int mask = oldPart->GetMask();
+				if ((mask & (unsigned int)reloadMask) != 0 && oldPart->m_type == 4) {
+					LiFrame *oldFrame = (LiFrame *)oldPart;
+					if (oldFrame->m_isDefault) {
+						bool foundInNew = false;
+						for (paf::list<LiPart *>::iterator nIt =
+							     newDoc->m_parts.begin();
+						     nIt != newDoc->m_parts.end(); ++nIt) {
+							if ((*nIt)->GetMask() == mask) {
+								foundInNew = true;
+								break;
+							}
+						}
+						if (!foundInNew) {
+							LiFrame *cloned = new LiFrame();
+							cloned->m_id = oldFrame->m_id;
+							newDoc->m_parts.push_back(cloned);
+						}
+					}
+				}
+			}
+		}
+		m_dirty = false;
+	}
+
+	LiTemplate *curDoc = m_xmlDoc.get();
+	if (curDoc != NULL) {
+		paf::list<LiPart *>::iterator it = curDoc->m_parts.begin();
+		while (it != curDoc->m_parts.end()) {
+			LiPart *part = *it;
+			if ((part->GetMask() & (unsigned int)reloadMask) != 0) {
+				paf::list<LiPart *>::iterator nextIt = it;
+				++nextIt;
+				delete part;
+				curDoc->m_parts.erase(it);
+				it = nextIt;
+			} else {
+				++it;
+			}
+		}
+	}
+
+	if ((reloadMask & 0x100000) != 0) {
+		if (m_rcoRefCount > 0) {
+			LiTemplate *doc = m_xmlDoc.get();
+			if (doc != NULL) {
+				if (doc->m_style == s_appMusic)
+					liveareaMusicCleanup(m_contentZone);
+				else if (doc->m_style == s_appKids)
+					liveareaParentalCleanup(m_contentZone);
+				else if (doc->m_style == s_appContentManager)
+					liveareaCmaCleanup(m_contentZone);
+			}
+			if (m_rcoRefCount > 0) {
+				paf::string tmplName(m_page->m_templateName);
+				liveareaUnloadRco(&tmplName);
+				--m_rcoRefCount;
+			}
+		}
+
+		m_templateOpened = false;
+		m_xmlDoc.reset();
+		m_pendingInitialLoads = 0;
+		m_shown = false;
+		m_initPhase = delayedReset ? 3 : 2;
+
+		paf::string tmplName(m_page->m_templateName);
+		LiTemplate *nextDoc = (parsed != NULL) ? parsed->get() : NULL;
+		if (liveareaLoadRco(&nextDoc->m_style, &tmplName, m_page->m_pageKey) == 0) {
+			if (!m_introDone) {
+				m_introDone = true;
+				g_liveareaMgr->m_topmenuIf->notifyIntroComplete(m_page->m_pageKey);
+			}
+			return;
+		}
+		++m_rcoRefCount;
+	}
+
+	if (m_initPhase <= 0) {
+		LiTemplate *newDoc = (parsed != NULL) ? parsed->get() : NULL;
+		if (newDoc == NULL)
+			return;
+		LiTemplate *oldDoc = m_xmlDoc.get();
+		if (oldDoc == NULL) {
+			m_xmlDoc = *parsed;
+			BuildLayout(-1);
+			return;
+		}
+
+		paf::list<LiPart *>::iterator oldIt = oldDoc->m_parts.begin();
+		while (oldIt != oldDoc->m_parts.end()) {
+			LiPart *oldPart = *oldIt;
+			unsigned int oldMask = oldPart->GetMask();
+			bool replaced = false;
+			for (paf::list<LiPart *>::iterator newIt = newDoc->m_parts.begin();
+			     newIt != newDoc->m_parts.end(); ++newIt) {
+				if ((*newIt)->GetMask() == oldMask) {
+					delete *newIt;
+					*newIt = oldPart;
+					replaced = true;
+					break;
+				}
+			}
+			if (replaced) {
+				paf::list<LiPart *>::iterator nextIt = oldIt;
+				++nextIt;
+				oldDoc->m_parts.erase(oldIt);
+				oldIt = nextIt;
+			} else {
+				++oldIt;
+			}
+		}
+
+		m_xmlDoc = *parsed;
+		BuildLayout(reloadMask);
+	} else {
+		m_xmlDoc = *parsed;
+		if (m_initPhase > 0) {
+			--m_initPhase;
+			if (m_initPhase == 0)
+				BuildLayout(-1);
+		}
+	}
 }
 
 /* 0x811ACBAE */

@@ -137,14 +137,14 @@ struct GameInstallParam {
 	char path[128];			/* the package's path */
 	char titleId[12];
 	int kind;			/* 2 for a license update's package */
-	bool flag1;
-	bool flag2;
+	bool skipOtherFlag;
+	bool skipTopmenuNotify;
 	SceUInt8 reserved[2];
 	void (*progressFunc)(void *arg, float percent);	/* the install's progress, when set */
 	void *progressArg;
 	char errorTitleId[16];
 	bool noLicense;			/* a license's package without its license (kind 2) */
-	SceUInt8 reserved2[3];
+	SceUInt8 tailPad[3];
 };
 
 typedef char GameInstallParamSize[sizeof(GameInstallParam) == 176 ? 1 : -1];
@@ -469,8 +469,8 @@ int gamePathAppend(char *path, SceSize pathSize, const char *name, SceSize nameS
  * A file copied, by a job of its own, with buf as its work memory (0x8101AB80). PLACEHOLDER:
  * the meaning of the other words is not known; this file passes 0 for each.
  */
-int gameCopyFile(const char *src, const char *dst, int arg2, int arg3, void *buf,
-		 SceSize bufSize, int arg6, int arg7);
+int gameCopyFile(const char *src, const char *dst, int cancelFunc, int cancelArg, void *buf,
+		 SceSize bufSize, int progressPtr, int detailPtr);
 
 /* a split package's information read from its head.bin at path, with buf as work memory */
 int gamePackageReadInfo(GamePackageInfo *info, const char *path, void *buf, SceSize bufSize);

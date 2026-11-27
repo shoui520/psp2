@@ -14,3 +14,8 @@ void *applauncherPluginGetInterface(const char *name, int id)
 		return NULL;
 	return plugin->GetInterface(id);
 }
+
+void *topmenuFindPluginInterface(const char *name, int id)
+{
+	return applauncherPluginGetInterface(name, id);
+}

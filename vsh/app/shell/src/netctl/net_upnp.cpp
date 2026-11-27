@@ -11,6 +11,8 @@
 #include <libnetctl.h>
 #include "netctl_services.h"
 
+extern "C" int SceThreadmgrCoredumpTime_sceKernelExitThread(int status);
+
 #define NET_UPNP_MAX_CALLBACKS		3
 #define NET_UPNP_STUN_PORT		3478
 #define NET_UPNP_LOCAL_BIND_PORT	9308
@@ -454,7 +456,7 @@ static int netUpnpWorkerThread(SceSize args, void *argp)
 		SceShell_B4D888D5(ctx->netCtlCallbackId);
 		ctx->netCtlCallbackId = -1;
 	}
-	sceKernelExitThread(0);
+	SceThreadmgrCoredumpTime_sceKernelExitThread(0);
 	return 0;
 }
 

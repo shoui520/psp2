@@ -16,7 +16,9 @@
 #include <dir/dir.h>
 #include <rtc/rtc.h>
 #include <kernel/iofilemgr.h>
+extern "C" {
 #include <kernel/openpsid.h>
+}
 #include <ss_mgr/ss_mgr.h>
 #include <update_mgr/update_mgr.h>
 #include <vshbridge/vshbridge.h>
@@ -25,7 +27,6 @@
 using namespace paf;
 
 extern "C" int SceNpManager_CFAEB050(void *accountId);
-extern "C" int sceKernelGetOpenPsId(SceKernelOpenPsId *openPsId);
 
 /* the package whose version the header gives (PLACEHOLDER name) */
 #define CONSOLE_INFO_SPKG_TYPE_SYSTEM	1

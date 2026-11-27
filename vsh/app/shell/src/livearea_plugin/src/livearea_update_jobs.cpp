@@ -28,15 +28,12 @@ struct LiveAreaPatchCheckParam {
 };
 
 extern "C" {
-extern int sceRegMgrGetKeyStrForUser(const char *category, const char *name, char *buf, SceSize size);
-extern int sceCompatGetPspSystemSoftwareVersion(int mode);
+extern int sceRegMgrGetKeyStr(const char *category, const char *name, char *buf, SceSize size);
+extern int sceCompatGetPspSystemSoftwareVersion(void);
 extern int vshSblSsIsDevelopmentMode(void);
 extern int vshSblUtMgrHasComTestFlag(void);
 extern const char *SceActivityDb_575DA6A6(const char *titleId);
 extern const char *SceActivityDb_E6C23731(void);
-extern void SceActivityDb_B83F0A77(void *ctx);
-extern int SceActivityDb_41E31BEF(void *ctx, const ActivityDbSyncParam *param);
-extern int SceActivityDb_5B44F019(void *ctx);
 extern void SceLsdb_C2B7D81B(paf::string *outEnv);
 extern int SceLsdb_D22CFA8C(void *ctx, paf::string *titleId, SceRtcTick *outUtc);
 extern int SceLsdb_87EE0526(AppInfoSClient *client, paf::string *titleId, LsdbAppInfoPtr *row);
@@ -50,15 +47,46 @@ extern int SceLsdb_76EC65E3(AppInfoSClient *client, paf::string *titleId);
 extern int SceLiveAreaUtil_B0571F88(const char *srcDir, const char *titleId, SceRtcTick *utc);
 }
 
-extern int liveareaPkgOpen(const char *dir, int flags, int mode, void *option); /* 0x8136D6A2 */
-extern int liveareaPkgWrite(int handle, const void *buf, SceSize size); /* 0x8136D8F4 */
-extern int liveareaPkgClose(int handle);			/* 0x8136D828 */
-extern int liveareaHmacSha256(const void *key, SceSize keyLen, const void *msg,
-			      SceSize msgLen, void *outDigest); /* 0x8137E058 */
-extern int liveareaPatchCheckInit(void *ctx, int mode, const LiveAreaPatchCheckParam *param); /* 0x812A99AE */
-extern int liveareaPatchCheckRun(void *ctx, SceUInt32 *statusBuf, SceUInt8 *outBuf); /* 0x812A9BB0 */
-extern void liveareaPatchCheckTerm(void *ctx);			/* 0x812A9708 */
-extern int liveareaCleanCacheEntry(void);			/* 0x810A36EE */
+extern "C" {
+int sceNpDrmInstallOpen(const char *dirPath, SceUInt32 flags, SceMode mode, void *workCtx);
+int sceNpDrmInstallWrite(int handle, const void *buf, SceSize size);
+int sceNpDrmInstallClose(int handle);
+}
+
+static inline int liveareaPkgOpen(const char *dir, int flags, int mode, void *option)
+{
+	return sceNpDrmInstallOpen(dir, static_cast<SceUInt32>(flags), static_cast<SceMode>(mode), option);
+}
+static inline int liveareaPkgWrite(int handle, const void *buf, SceSize size)
+{
+	return sceNpDrmInstallWrite(handle, buf, size);
+}
+static inline int liveareaPkgClose(int handle)
+{
+	return sceNpDrmInstallClose(handle);
+}
+extern "C" SceInt32 sceHmacSha256Digest(const void *secretkey, SceUInt32 keylen,
+					const void *plain, SceUInt32 plainlen, void *digest);
+
+/* 0x8137E058 */
+int liveareaHmacSha256(const void *key, SceSize keyLen, const void *msg,
+		       SceSize msgLen, void *outDigest)
+{
+	return sceHmacSha256Digest(key, (SceUInt32)keyLen, msg, (SceUInt32)msgLen, outDigest);
+}
+struct SceGameUpdateContext;
+struct SceGameUpdateInitParam;
+struct SceGameUpdateResult;
+struct SceGameUpdateInfo;
+extern int sceGameUpdateInit(SceGameUpdateContext *context, int option, const SceGameUpdateInitParam *param); /* 0x812A99AE */
+extern int sceGameUpdateRun(SceGameUpdateContext *context, SceGameUpdateResult *result, SceGameUpdateInfo *info); /* 0x812A9BB0 */
+extern int sceGameUpdateTerm(SceGameUpdateContext *context); /* 0x812A9708 */
+extern int gameWhiteListDownload(void);				/* 0x810A36EE */
+
+static inline int liveareaCleanCacheEntry(void)
+{
+	return gameWhiteListDownload();
+}
 
 static const SceUInt8 s_liveareaHmacKeyObf[32] = {		/* 0x81544DE4 */
 	0xA7, 0xA4, 0x92, 0x09, 0x11, 0xD4, 0xB2, 0x17,
@@ -297,7 +325,7 @@ static int buildLiveAreaPkgUrl(const paf::string *titleId, paf::string *outUrl)
 	}
 
 	char countryBuf[4];
-	int ret = sceRegMgrGetKeyStrForUser("/CONFIG/NP", "country", countryBuf, 3);
+	int ret = sceRegMgrGetKeyStr("/CONFIG/NP", "country", countryBuf, 3);
 	if (ret != 0)
 		return ret;
 
@@ -548,7 +576,7 @@ int LiveAreaPatchCheckTask::Run()
 
 	sce_paf_strncpy(param.titleId, m_titleId.c_str(), 12);
 	if (param.mode == 1)
-		param.pspSysVer = sceCompatGetPspSystemSoftwareVersion(1);
+		param.pspSysVer = sceCompatGetPspSystemSoftwareVersion();
 
 	LsdbAppInfoPtr appInfo(new LsdbAppInfo());
 	AppInfoSClient lsdbClient;
@@ -584,10 +612,10 @@ int LiveAreaPatchCheckTask::Run()
 		sce_paf_memset(checkerCtx, 0, sizeof(checkerCtx));
 		statusBuf[0] = 16;
 
-		res = liveareaPatchCheckInit(checkerCtx, 0, &param);
+		res = sceGameUpdateInit((SceGameUpdateContext *)checkerCtx, 0, (const SceGameUpdateInitParam *)&param);
 		if (res == 0) {
-			res = liveareaPatchCheckRun(checkerCtx, statusBuf, patchBuf);
-			liveareaPatchCheckTerm(checkerCtx);
+			res = sceGameUpdateRun((SceGameUpdateContext *)checkerCtx, (SceGameUpdateResult *)statusBuf, (SceGameUpdateInfo *)patchBuf);
+			sceGameUpdateTerm((SceGameUpdateContext *)checkerCtx);
 			if (res == 0) {
 				if (statusBuf[1] == 1)
 					return 2;
@@ -642,7 +670,7 @@ LiveAreaActivityUpdateTask::LiveAreaActivityUpdateTask(const char *titleId, int 
 	  m_lastSyncTime(0),
 	  m_sem("SceLiveAreaUpdateActivity", 0, 2, NULL)
 {
-	SceActivityDb_B83F0A77(&m_activityHandle);
+	new (&m_activityHandle) ActivityDbSyncHandle();
 }
 
 /* 0x811B5816 */
@@ -665,7 +693,7 @@ int LiveAreaActivityUpdateTask::FetchActivity(ActivityDbSyncSummary *outSummary)
 	param.arg = &waitCtx;
 	param.reload = false;
 
-	int ret = SceActivityDb_41E31BEF(&m_activityHandle, &param);
+	int ret = reinterpret_cast<ActivityDbSyncHandle *>(&m_activityHandle)->SyncActivity(&param);
 	if (ret == 0) {
 		m_sem.Acquire();
 		ret = waitCtx.result;
@@ -794,7 +822,7 @@ void LiveAreaActivityUpdateTask::OnFinish(int result)
 /* 0x811B64E8 */
 void LiveAreaActivityUpdateTask::Cancel()
 {
-	SceActivityDb_5B44F019(&m_activityHandle);
+	reinterpret_cast<ActivityDbSyncHandle *>(&m_activityHandle)->Cancel();
 	LiveAreaUpdateTaskBase::Cancel();
 }
 

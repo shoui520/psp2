@@ -274,13 +274,13 @@ extern void sceNpCommonFreeNpServerName(void *ptr);
 
 extern int sceHttpSetAcceptEncodingGZIPEnabled(SceInt32 id, SceBool enable);
 
-extern int sceRegMgrGetKeyStrForUser(const char *category, const char *name, char *buf,
+extern int sceRegMgrGetKeyStr(const char *category, const char *name, char *buf,
 				     SceSize size);
-extern int sceRegMgrSetKeyStrForUser(const char *category, const char *name, const char *buf,
+extern int sceRegMgrSetKeyStr(const char *category, const char *name, const char *buf,
 				     SceSize size);
-extern int sceRegMgrGetKeyIntForUser(const char *category, const char *name, SceInt32 *outVal);
-extern int sceRegMgrSetKeyIntForUser(const char *category, const char *name, SceInt32 val);
-extern int sceRegMgrResetRegistryLvForUser(const char *path, SceInt32 level);
+extern int sceRegMgrGetKeyInt(const char *category, const char *name, SceInt32 *outVal);
+extern int sceRegMgrSetKeyInt(const char *category, const char *name, SceInt32 val);
+extern int sceRegMgrResetRegistryLv(const char *path, SceInt32 level);
 }
 
 /* External NP Manager / Community bridges */

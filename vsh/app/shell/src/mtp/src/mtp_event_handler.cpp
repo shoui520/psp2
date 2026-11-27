@@ -21,7 +21,11 @@ extern int sceClibPrintf(const char *fmt, ...);
 extern int SceLibMtp_4C1B7DBB(void);
 }
 
-extern int shellIsBooting(void);				/* 0x81000000 */
+extern bool shellBootIsLaunchRestricted(void);			/* 0x81000000 */
+static inline int shellIsBooting(void)
+{
+	return shellBootIsLaunchRestricted() ? 1 : 0;
+}
 extern void mtpCloseUsbErrorDialogs(void);			/* 0x811CA094 */
 extern int mtpShowUsbError1Dialog(void);			/* 0x811CA30E */
 extern void mtpCloseBusyDialog(void);				/* 0x811CA37C */
@@ -95,6 +99,11 @@ void mtpEventHandlerCreate(void)
 		if (s_mtpEventHandler != NULL)
 			mtpRegisterHandler(s_mtpEventHandler);
 	}
+}
+
+void shellMtpWiFiCreate(void)
+{
+	mtpEventHandlerCreate();
 }
 
 /* 0x811C9A18 */

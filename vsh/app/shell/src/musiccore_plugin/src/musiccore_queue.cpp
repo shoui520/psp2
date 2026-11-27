@@ -980,5 +980,150 @@ int CmdQueue::flushRequeued(int maxCount)
     return 0;
 }
 
+SceSize cmdQueueCalcSize(SceSize inCap, SceSize outCap, int count)
+{
+    return CmdQueue::calcRequiredSize(inCap, outCap, static_cast<unsigned int>(count));
+}
+
+void *cmdQueueCreate(void *mem, const char *name, SceSize inCap, SceSize outCap,
+                     int count, int *outErr, SceSize bufSize)
+{
+    return new (mem) CmdQueue(name, inCap, outCap, static_cast<unsigned int>(count),
+                              outErr, bufSize);
+}
+
+int cmdQueueEnqueue(void *queue, uint64_t cmdHdr, const void *inBuf, SceSize inSize, int mode)
+{
+    (void)mode;
+    CmdQueue *cmdQueue = static_cast<CmdQueue *>(queue);
+    if (cmdQueue == NULL)
+        return MUSICCORE_ERR_INVALID_ARG;
+    CmdNode *node = NULL;
+    int ret = cmdQueue->allocNode(&node, NULL);
+    if (ret != 0 || node == NULL)
+        return ret;
+    node->m_param = static_cast<uint32_t>(cmdHdr & 0xFFFFFFFFULL);
+    node->m_flagsAndTarget = static_cast<uint16_t>((cmdHdr >> 32) & 0xFFFFu);
+    node->m_cmdCode = static_cast<uint16_t>(cmdHdr >> 48);
+    if (inBuf != NULL && inSize != 0 && node->m_inBuf != NULL) {
+        SceSize copyBytes = (inSize <= node->m_inCap) ? inSize : node->m_inCap;
+        sce_paf_memcpy(node->m_inBuf, inBuf, copyBytes);
+        node->m_inSize = static_cast<unsigned int>(copyBytes);
+    }
+    return cmdQueue->enqueue(node, NULL, NULL);
+}
+
+int cmdQueueDequeue(void *queue, void **outNode, SceUInt *timeout)
+{
+    CmdQueue *cmdQueue = static_cast<CmdQueue *>(queue);
+    if (cmdQueue == NULL || outNode == NULL)
+        return MUSICCORE_ERR_INVALID_ARG;
+    CmdNode *node = NULL;
+    int ret = cmdQueue->dequeue(&node, timeout);
+    *outNode = node;
+    return ret;
+}
+
+int cmdQueueRelease(void *queue, void *node)
+{
+    CmdQueue *cmdQueue = static_cast<CmdQueue *>(queue);
+    if (cmdQueue == NULL || node == NULL)
+        return MUSICCORE_ERR_INVALID_ARG;
+    return cmdQueue->freeNode(static_cast<CmdNode *>(node), NULL);
+}
+
+int cmdQueueFreeNode(void *queue, void *node)
+{
+    return cmdQueueRelease(queue, node);
+}
+
+int cmdQueuePeekAt(void *queue, void **outNode, int index)
+{
+    CmdQueue *cmdQueue = static_cast<CmdQueue *>(queue);
+    if (cmdQueue == NULL || outNode == NULL)
+        return MUSICCORE_ERR_INVALID_ARG;
+    CmdNode *node = NULL;
+    int ret = cmdQueue->peekAt(&node, index);
+    *outNode = node;
+    return ret;
+}
+
+int cmdQueuePopFront(void *queue)
+{
+    CmdQueue *cmdQueue = static_cast<CmdQueue *>(queue);
+    return (cmdQueue != NULL) ? cmdQueue->flushRequeued(1) : MUSICCORE_ERR_INVALID_ARG;
+}
+
+int cmdQueuePushBack(void *queue, void *node, int deferSignal)
+{
+    CmdQueue *cmdQueue = static_cast<CmdQueue *>(queue);
+    return (cmdQueue != NULL)
+        ? cmdQueue->requeue(static_cast<CmdNode *>(node), static_cast<unsigned char>(deferSignal))
+        : MUSICCORE_ERR_INVALID_ARG;
+}
+
+int cmdQueueRemoveNode(void *queue, void *node, int index)
+{
+    CmdQueue *cmdQueue = static_cast<CmdQueue *>(queue);
+    return (cmdQueue != NULL)
+        ? cmdQueue->moveToFront(static_cast<CmdNode *>(node), static_cast<unsigned int>(index))
+        : MUSICCORE_ERR_INVALID_ARG;
+}
+
 } /* namespace MusicCore */
 } /* namespace sce */
+
+SceSize musicCoreQueueGetSize(SceSize itemSz, int count, int mode)
+{
+    return sce::MusicCore::CmdQueue::calcRequiredSize(
+        static_cast<unsigned int>(itemSz), static_cast<unsigned int>(count),
+        static_cast<unsigned int>(mode));
+}
+
+void *musicCoreQueueCreate(void *mem, const char *name, SceSize itemSz,
+                           int count, int mode, int *outErr, SceSize bufSize)
+{
+    return new (mem) sce::MusicCore::CmdQueue(
+        name, static_cast<unsigned int>(itemSz), static_cast<unsigned int>(count),
+        static_cast<unsigned int>(mode), outErr, static_cast<unsigned int>(bufSize));
+}
+
+int musicCoreQueueSend(void *queue, int seqId, SceUInt32 cmd,
+                       const void *payload, SceSize payloadSize)
+{
+    sce::MusicCore::CmdQueue *cmdQueue = static_cast<sce::MusicCore::CmdQueue *>(queue);
+    if (cmdQueue == NULL)
+        return MUSICCORE_ERR_INVALID_ARG;
+    sce::MusicCore::CmdNode *node = NULL;
+    int ret = cmdQueue->allocNode(&node, NULL);
+    if (ret != 0 || node == NULL)
+        return ret;
+    node->m_param = static_cast<uint32_t>(seqId);
+    node->m_flagsAndTarget = static_cast<uint16_t>(cmd & 0xFFFFu);
+    node->m_cmdCode = static_cast<uint16_t>(cmd >> 16);
+    if (payload != NULL && payloadSize != 0 && node->m_inBuf != NULL) {
+        SceSize copyBytes = (payloadSize <= node->m_inCap) ? payloadSize : node->m_inCap;
+        sce_paf_memcpy(node->m_inBuf, payload, copyBytes);
+        node->m_inSize = static_cast<unsigned int>(copyBytes);
+    }
+    return cmdQueue->enqueue(node, NULL, NULL);
+}
+
+int musicCoreQueueRecv(void *queue, void **outMsg, SceUInt *timeout)
+{
+    sce::MusicCore::CmdQueue *cmdQueue = static_cast<sce::MusicCore::CmdQueue *>(queue);
+    if (cmdQueue == NULL || outMsg == NULL)
+        return MUSICCORE_ERR_INVALID_ARG;
+    sce::MusicCore::CmdNode *node = NULL;
+    int ret = cmdQueue->dequeue(&node, timeout);
+    *outMsg = node;
+    return ret;
+}
+
+int musicCoreQueueRelease(void *queue, void *msg)
+{
+    sce::MusicCore::CmdQueue *cmdQueue = static_cast<sce::MusicCore::CmdQueue *>(queue);
+    if (cmdQueue == NULL || msg == NULL)
+        return MUSICCORE_ERR_INVALID_ARG;
+    return cmdQueue->freeNode(static_cast<sce::MusicCore::CmdNode *>(msg), NULL);
+}

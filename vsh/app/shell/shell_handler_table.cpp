@@ -27,8 +27,8 @@
 using namespace paf;
 
 extern "C" {
-extern SceUID appmgrGetProcessIdByAppIdForShellSyscall(int appId);
-extern int appmgrDestroyOtherAppByPidForShellSyscall(SceUID keepPid);
+extern SceUID sceAppMgrGetProcessIdByAppIdForShell(int appId);
+extern int sceAppMgrDestroyOtherAppByPidForShell(SceUID keepPid);
 extern int sceAppMgrGetPidListForShell(SceUID *pidList, int maxCount);
 }
 
@@ -38,7 +38,8 @@ extern int shellParentalControlResume(void);
 extern int mediaDetectMaskEvent(int eventBit);
 extern int mediaDetectUnmaskEvent(int eventBit);
 extern int musicCorePlayerControl(SceUInt8 command, int param);
-extern int musicCoreGetImposeInfo(void *outInfo);
+struct MusicCoreImposeInfo;
+extern int musicCoreGetImposeInfo(MusicCoreImposeInfo *outInfo);
 extern int shellSvcNotifyEvent(IPMI::Session *session, int eventIndex);
 extern int shellTriggerMgrSuspend(void (*callback)(void *), void *userData);
 extern int shellTriggerMgrResume(void (*callback)(void *), void *userData);
@@ -329,7 +330,7 @@ static int lockStorageExclusiveHandler(SceUID clientPid)
 			iface->func[TOPMENU_PLUGIN_FUNC_BUSY_BEGIN]();
 	}
 
-	if (appmgrDestroyOtherAppByPidForShellSyscall(clientPid) == 0) {
+	if (sceAppMgrDestroyOtherAppByPidForShell(clientPid) == 0) {
 		common::MainThreadCallList::Register(pollOtherAppsExited,
 			(void *)(intptr_t)clientPid);
 		pendingSteps = 1;
@@ -399,7 +400,7 @@ static void pollOtherAppsExited(void *keepPidArg)
 	SceUID keepPid = (SceUID)(intptr_t)keepPidArg;
 	SceUID pidList[SHELL_MAX_PID_LIST];
 	int count = sceAppMgrGetPidListForShell(pidList, SHELL_MAX_PID_LIST);
-	SceUID shellPid = appmgrGetProcessIdByAppIdForShellSyscall(-2);
+	SceUID shellPid = sceAppMgrGetProcessIdByAppIdForShell(-2);
 
 	for (int i = 0; i < count; ++i) {
 		if (pidList[i] != keepPid && pidList[i] != shellPid)
@@ -421,7 +422,8 @@ static void pollMusicStoppedForUmount(void *userData)
 		return;
 
 	sce_paf_memset(imposeInfo, 0, sizeof(*imposeInfo));
-	if (musicCoreGetImposeInfo(imposeInfo) == 0 && imposeInfo->isStopped != 0) {
+	if (musicCoreGetImposeInfo(reinterpret_cast<MusicCoreImposeInfo *>(imposeInfo)) == 0 &&
+	    imposeInfo->isStopped != 0) {
 		shellStartAppDataUmount();
 		common::MainThreadCallList::Unregister(pollMusicStoppedForUmount, userData);
 		thread::SyncCall::main_thread_synccall.Call(notifyAsyncLockStepDone, NULL);
@@ -518,8 +520,8 @@ int ShellLockManager::Lock(SceUInt32 lockMask, IPMI::Session *session, int reque
 			bool permitted = true;
 			if (!hasTransitionalSlot && session != NULL) {
 				SceUID clientPid = session->getProcessId();
-				SceUID shellPid = appmgrGetProcessIdByAppIdForShellSyscall(-2);
-				SceUID frontPid = appmgrGetProcessIdByAppIdForShellSyscall(-4);
+				SceUID shellPid = sceAppMgrGetProcessIdByAppIdForShell(-2);
+				SceUID frontPid = sceAppMgrGetProcessIdByAppIdForShell(-4);
 				if (clientPid != shellPid && clientPid != frontPid) {
 					result = SHELL_UTIL_ERR_PERMISSION_DENIED;
 					permitted = false;

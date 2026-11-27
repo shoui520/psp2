@@ -16,8 +16,8 @@ extern "C" {
 void *sce_paf_memset(void *dst, int val, SceSize size);
 void *sce_paf_memcpy(void *dst, const void *src, SceSize size);
 void *sce_paf_memmove(void *dst, const void *src, SceSize size);
-int sceKernelDeleteMutexForUser(SceUID mutexId);
-int sceKernelUnlockMutexForUser(SceUID mutexId, int unlockCount);
+int sceKernelDeleteMutex(SceUID mutexId);
+int sceKernelUnlockMutex(SceUID mutexId, int unlockCount);
 void *ScePafStdc_3CF19248(SceSize size, void *heap);
 int SceAudiocodec_E2AF3A54(void *ctrl, int codecType);
 int SceAudiocodec_1F9A3722(void *ctrl, int codecType);
@@ -852,7 +852,7 @@ AudioOutputFilter::~AudioOutputFilter()
         m_silenceBuf = NULL;
     }
     if (m_mutexId != -1) {
-        sceKernelDeleteMutexForUser(m_mutexId);
+        sceKernelDeleteMutex(m_mutexId);
         m_mutexId = -1;
     }
 }
@@ -921,7 +921,7 @@ void AudioOutputFilter::reset()
     m_readIndex = -1;
     m_writeIndex = 0;
     m_playPositionMs = -1;
-    sceKernelUnlockMutexForUser(m_mutexId, 1);
+    sceKernelUnlockMutex(m_mutexId, 1);
 
     if (m_flushCb == NULL) {
         sce_paf_printf_dummy();
@@ -932,7 +932,7 @@ void AudioOutputFilter::reset()
     sceKernelLockMutex(m_mutexId, 1, NULL);
     m_inflightAudioCount = 0;
     m_inflightSilenceCount = 0;
-    sceKernelUnlockMutexForUser(m_mutexId, 1);
+    sceKernelUnlockMutex(m_mutexId, 1);
 }
 
 /* 0x81208FA4 */
@@ -958,18 +958,18 @@ int AudioOutputFilter::acquireWriteSlot(MediaFrameBuffer **outBuf)
 
     sceKernelLockMutex(m_mutexId, 1, NULL);
     if (m_writeIndex < 0 || (m_inflightSilenceCount + m_inflightAudioCount) >= MAX_INFLIGHT_AUDIO_BUFS) {
-        sceKernelUnlockMutexForUser(m_mutexId, 1);
+        sceKernelUnlockMutex(m_mutexId, 1);
         *outBuf = NULL;
         return PIPE_ERR_FULL;
     }
     if (m_writeIndex >= m_slotCount) {
-        sceKernelUnlockMutexForUser(m_mutexId, 1);
+        sceKernelUnlockMutex(m_mutexId, 1);
         *outBuf = NULL;
         return -1;
     }
 
     *outBuf = &m_slots[m_writeIndex];
-    sceKernelUnlockMutexForUser(m_mutexId, 1);
+    sceKernelUnlockMutex(m_mutexId, 1);
     return 0;
 }
 
@@ -996,7 +996,7 @@ int AudioOutputFilter::commitWriteSlot(MediaFrameBuffer *buf)
 
     sceKernelLockMutex(m_mutexId, 1, NULL);
     if (slotIdx != m_writeIndex) {
-        sceKernelUnlockMutexForUser(m_mutexId, 1);
+        sceKernelUnlockMutex(m_mutexId, 1);
         return PIPE_ERR_OUT_OF_ORDER;
     }
 
@@ -1011,7 +1011,7 @@ int AudioOutputFilter::commitWriteSlot(MediaFrameBuffer *buf)
             shouldPrimeSilence = (buf->payloadSize <= 0x2000);
         }
     }
-    sceKernelUnlockMutexForUser(m_mutexId, 1);
+    sceKernelUnlockMutex(m_mutexId, 1);
 
     int sampleRate = buf->sampleRate;
     int payloadBytes = buf->payloadSize;
@@ -1026,7 +1026,7 @@ int AudioOutputFilter::commitWriteSlot(MediaFrameBuffer *buf)
         if (primeRet == 0) {
             sceKernelLockMutex(m_mutexId, 1, NULL);
             ++m_inflightSilenceCount;
-            sceKernelUnlockMutexForUser(m_mutexId, 1);
+            sceKernelUnlockMutex(m_mutexId, 1);
         } else if (primeRet != MC_ERR_AUDIO_DROPPED) {
             return -1;
         }
@@ -1040,7 +1040,7 @@ int AudioOutputFilter::commitWriteSlot(MediaFrameBuffer *buf)
     if (writeRet == 0) {
         sceKernelLockMutex(m_mutexId, 1, NULL);
         ++m_inflightAudioCount;
-        sceKernelUnlockMutexForUser(m_mutexId, 1);
+        sceKernelUnlockMutex(m_mutexId, 1);
     } else if (writeRet != MC_ERR_AUDIO_DROPPED) {
         return -1;
     }
@@ -1064,19 +1064,19 @@ int AudioOutputFilter::acquireReadSlot(MediaFrameBuffer **outBuf)
 
     sceKernelLockMutex(m_mutexId, 1, NULL);
     if (m_readIndex < 0) {
-        sceKernelUnlockMutexForUser(m_mutexId, 1);
+        sceKernelUnlockMutex(m_mutexId, 1);
         *outBuf = NULL;
         return PIPE_ERR_EMPTY;
     }
     if (m_readIndex >= m_slotCount) {
-        sceKernelUnlockMutexForUser(m_mutexId, 1);
+        sceKernelUnlockMutex(m_mutexId, 1);
         *outBuf = NULL;
         m_producer->onPipeUnderflow();
         return -1;
     }
 
     *outBuf = &m_slots[m_readIndex];
-    sceKernelUnlockMutexForUser(m_mutexId, 1);
+    sceKernelUnlockMutex(m_mutexId, 1);
     return 0;
 }
 
@@ -1097,7 +1097,7 @@ int AudioOutputFilter::releaseReadSlot(MediaFrameBuffer *buf)
 
     sceKernelLockMutex(m_mutexId, 1, NULL);
     if (slotIdx != m_readIndex) {
-        sceKernelUnlockMutexForUser(m_mutexId, 1);
+        sceKernelUnlockMutex(m_mutexId, 1);
         return PIPE_ERR_OUT_OF_ORDER;
     }
 
@@ -1116,7 +1116,7 @@ int AudioOutputFilter::releaseReadSlot(MediaFrameBuffer *buf)
         m_eventListener->onFilterEvent(3, static_cast<FilterBase *>(this), 0);
 
     int frameFlags = buf->frameFlags;
-    sceKernelUnlockMutexForUser(m_mutexId, 1);
+    sceKernelUnlockMutex(m_mutexId, 1);
 
     m_producer->onPipeConsumed(frameFlags);
     return 0;
@@ -1128,22 +1128,22 @@ int AudioOutputFilter::handleBufferConsumed(void *pcmBuffer)
     sceKernelLockMutex(m_mutexId, 1, NULL);
     if (m_silenceBuf == pcmBuffer) {
         --m_inflightSilenceCount;
-        sceKernelUnlockMutexForUser(m_mutexId, 1);
+        sceKernelUnlockMutex(m_mutexId, 1);
         m_producer->onPipeConsumed(0);
         return 0;
     }
     if (m_readIndex < 0) {
-        sceKernelUnlockMutexForUser(m_mutexId, 1);
+        sceKernelUnlockMutex(m_mutexId, 1);
         return 0;
     }
 
     int readIdx = m_readIndex;
     if (m_slots[readIdx].frameData != pcmBuffer) {
-        sceKernelUnlockMutexForUser(m_mutexId, 1);
+        sceKernelUnlockMutex(m_mutexId, 1);
         return MC_ERR_INTERNAL;
     }
 
-    sceKernelUnlockMutexForUser(m_mutexId, 1);
+    sceKernelUnlockMutex(m_mutexId, 1);
     return (releaseReadSlot(&m_slots[readIdx]) != 0) ? MC_ERR_INTERNAL : 0;
 }
 
@@ -1405,6 +1405,21 @@ AudioDecoderBase *constructMp4Decoder(void *mem, const char *threadName)
 AudioDecoderBase *constructAt9Decoder(void *mem, const char *threadName)
 {
     return new (mem) At9Decoder(threadName);
+}
+
+AudioDecoderBase *mp3DecoderConstruct(void *mem, const char *threadName)
+{
+    return constructMp3Decoder(mem, threadName);
+}
+
+AudioDecoderBase *mp4DecoderConstruct(void *mem, const char *threadName)
+{
+    return constructMp4Decoder(mem, threadName);
+}
+
+AudioDecoderBase *at9DecoderConstruct(void *mem, const char *threadName)
+{
+    return constructAt9Decoder(mem, threadName);
 }
 
 } /* namespace MusicCore */

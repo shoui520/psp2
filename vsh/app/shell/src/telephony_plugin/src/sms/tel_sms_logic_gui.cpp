@@ -185,7 +185,7 @@ TelephonyResult TelSmsLogicGui::PostSmsNotification(const paf::wstring &messageT
 		ShellPluginInterface *iface =
 			static_cast<ShellPluginInterface *>(powerPlugin->GetInterface(1));
 		if (iface != NULL) {
-			sceKernelPowerTickForUser(SCE_KERNEL_POWER_TICK_DEFAULT);
+			sceKernelPowerTick(SCE_KERNEL_POWER_TICK_DEFAULT);
 			/* Interface slot 13 (+0x34): wake display on incoming notification */
 			iface->func[13]();
 		}

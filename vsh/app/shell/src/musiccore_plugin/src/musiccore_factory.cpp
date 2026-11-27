@@ -349,6 +349,14 @@ int ObjFactory::createWorkBuf(void **outBuf)
     return 0;
 }
 
+int factoryDestroyWorkBuf(void *factory, void *workBuf)
+{
+    ObjFactory *objFactory = static_cast<ObjFactory *>(factory);
+    return (objFactory != NULL)
+        ? objFactory->destroyWorkBuf(static_cast<BaseObject *>(workBuf))
+        : MUSICCORE_ERR_INVALID_ARG;
+}
+
 int ObjFactory::destroyWorkBuf(BaseObject *buf)
 {
     if (buf == NULL)

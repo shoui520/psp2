@@ -100,7 +100,8 @@ struct LiveAreaTopmenuInterface {
 	void (*onOnlineStorageIconClick)(int pageKey);				/* +0x44 */
 	void (*addPageEventListener)(int pageKey, void *callback, void *userdata);	/* +0x48 */
 	void (*removePageEventListener)(int pageKey, void *callback, void *userdata);	/* +0x4C */
-	void *listenerGapEntries[5];
+	void *listenerGapEntries[4];
+	void (*onContentReset)(int pageKey);					/* +0x60 */
 	void (*addPageShowListener)(int pageKey, void *callback, void *userdata);	/* +0x64 */
 	void (*addPageHideListener)(int pageKey, void *callback, void *userdata);	/* +0x68 */
 	void *holdGapEntries[4];
@@ -119,7 +120,7 @@ struct LiveAreaTopmenuInterface {
 	void (*notifyContentUpdated)(const char **args);			/* +0xB4 */
 	void *musicGapEntry;
 	void (*setPageMusicPlaying)(int pageKey, int playing);			/* +0xBC */
-	void *foregroundGapEntry;
+	const wchar_t *(*getPageTitle)(int pageKey);				/* +0xC0 */
 	int (*isTopmenuForeground)(void);					/* +0xC4 */
 	void *planeGapEntry;
 	paf::ui::Widget *(*createPlane)(int layer);				/* +0xCC */

@@ -99,27 +99,26 @@ using namespace paf;
 struct ShellMusicInfo {
 	int volume;
 	SceUInt8 state;			/* BGM_STATE_* */
-	SceUInt8 reserved5;		/* not read by the menu */
-	int reserved8;			/* not read by the menu */
+	SceUInt8 bgmReason;
+	int bgmPriority;
 	char title[0x800];
 	char artist[0x800];
 	char album[0x800];
-	SceUInt8 hasError;		/* 1: Shell_811CC17C has an error */
-	int reserved1[2];		/* not read by the menu */
+	SceUInt8 hasError;		/* 1: musicCoreGetLastError has an error */
+	int durationLo;
+	int durationHi;
 	SceUInt32 position;
 	int volumeStep;			/* 1 to 16 */
 };
 
-/* PLACEHOLDER: the shell's music player (0x811CBCD6-0x811CCD36, in the shell's own code): its
-   volume set, a command and a seek given, its state read, its error read, and its updates
-   started and stopped */
-int Shell_811CBCD6(int volumeStep);
-int Shell_811CBD5E(int arg, int start, int end);
-int Shell_811CBDE6(int type, int arg);
-int Shell_811CBF10(ShellMusicInfo *info);
-int Shell_811CC17C(int *error);
-int Shell_811CCC40(int arg);
-int Shell_811CCD36(int arg);
+struct MusicCoreImposeInfo;
+int musicCoreSetVolumeStep(int step);
+int musicPlayerSeek(int mode, int offset, int flags);
+int musicCorePlayerControl(SceUInt8 cmd, int param);
+int musicCoreGetImposeInfo(MusicCoreImposeInfo *outInfo);
+int musicCoreGetLastError(int *outErr);
+int musicCoreSetMute1(SceUInt8 mute);
+int musicCoreSetMute2(SceUInt8 mute);
 
 /* (0x81564FC8) */
 static ShellMusicInfo s_musicInfo;
@@ -245,7 +244,7 @@ void ImposePsMenuBgm::Open(ui::Widget *box)
 	m_state = BGM_STATE_UNKNOWN;
 	m_seekCount = 0;
 	m_trackTitle.clear();
-	Shell_811CCC40(1);
+	musicCoreSetMute1(1);
 	m_plugin->TemplateOpen(m_box, IDParam(BGM_TEMPLATE), Plugin::TemplateOpenParam());
 	m_box->FindChild(IDParam(BGM_CONTROLS), 0)->Show(0xff, NULL, NULL, 0.0f);
 	m_box->FindChild(IDParam(BGM_APP_ICON), 0)->Hide(0xff, NULL, NULL, 0.0f);
@@ -256,7 +255,7 @@ void ImposePsMenuBgm::Open(ui::Widget *box)
 		m_volume->AddEventCallback(ui::SlideBar::CB_SLIDEBAR_CHANGED, OnVolume, this);
 		m_volume->SetColor(math::v4(1.0f, 1.0f, 1.0f, 1.0f));
 		m_volume->SetMaxValue(BGM_VOLUME_MAX);
-		Shell_811CBF10(&s_musicInfo);
+		musicCoreGetImposeInfo((MusicCoreImposeInfo *)&s_musicInfo);
 		m_volume->SetValue(s_musicInfo.volumeStep > 0 ? s_musicInfo.volumeStep - 1 : 0,
 				   false);
 	}
@@ -296,7 +295,7 @@ void ImposePsMenuBgm::Open(ui::Widget *box)
 /* (0x8115756C) */
 void ImposePsMenuBgm::Close()
 {
-	Shell_811CCD36(1);
+	musicCoreSetMute2(1);
 	m_trackTitle.clear();
 	m_seekCount = 0;
 	m_box = NULL;
@@ -361,14 +360,14 @@ void ImposePsMenuBgm::Update()
 		Disable(false);
 		return;
 	}
-	if (Shell_811CBF10(&s_musicInfo) < 0) {
+	if (musicCoreGetImposeInfo((MusicCoreImposeInfo *)&s_musicInfo) < 0) {
 		Disable(false);
 		return;
 	}
 	if (s_musicInfo.hasError == 1) {
 		int error;
 
-		Shell_811CC17C(&error);
+		musicCoreGetLastError(&error);
 		if (error == BGM_ERROR_UNSUPPORTED_1 || error == BGM_ERROR_UNSUPPORTED_2) {
 			ui::Text *text = PSMENU_FIND(m_box, ui::Text, BGM_ERROR_TEXT);
 
@@ -459,7 +458,7 @@ void ImposePsMenuBgm::SetActive(bool active)
 /* the volume bar moved: the player's volume set (0x81158596) */
 void ImposePsMenuBgm::OnVolume(int32_t type, ui::Handler *self, ui::Event *e, void *data)
 {
-	Shell_811CBCD6(((ImposePsMenuBgm *)data)->m_volume->m_value + 1);
+	musicCoreSetVolumeStep(((ImposePsMenuBgm *)data)->m_volume->m_value + 1);
 }
 
 /* the play button: played, or paused while it plays (0x811585A6) */
@@ -468,14 +467,14 @@ __attribute__((noinline)) void ImposePsMenuBgm::OnPlay(int32_t type, ui::Handler
 {
 	switch (m_state) {
 	case BGM_STATE_PAUSED:
-		Shell_811CBDE6(BGM_COMMAND_PLAY, 0);
+		musicCorePlayerControl(BGM_COMMAND_PLAY, 0);
 		break;
 	case BGM_STATE_PLAYING:
 	case BGM_STATE_SEEKING:
-		Shell_811CBDE6(BGM_COMMAND_PAUSE, 0);
+		musicCorePlayerControl(BGM_COMMAND_PAUSE, 0);
 		break;
 	case BGM_STATE_STOPPED:
-		Shell_811CBDE6(BGM_COMMAND_PAUSE, 0);
+		musicCorePlayerControl(BGM_COMMAND_PAUSE, 0);
 		break;
 	}
 }
@@ -485,18 +484,18 @@ __attribute__((noinline)) void ImposePsMenuBgm::OnPlay(int32_t type, ui::Handler
 inline void ImposePsMenuBgm::OnPrevDecide(int32_t type, ui::Handler *self, ui::Event *e,
 					  void *data)
 {
-	Shell_811CBF10(&s_musicInfo);
+	musicCoreGetImposeInfo((MusicCoreImposeInfo *)&s_musicInfo);
 	if (s_musicInfo.position < BGM_RESTART_TIME)
-		Shell_811CBDE6(BGM_COMMAND_PREV, 0);
+		musicCorePlayerControl(BGM_COMMAND_PREV, 0);
 	else
-		Shell_811CBD5E(0, -1, -1);
+		musicPlayerSeek(0, -1, -1);
 }
 
 /* (0x8141B610) */
 inline void ImposePsMenuBgm::OnNextDecide(int32_t type, ui::Handler *self, ui::Event *e,
 					  void *data)
 {
-	Shell_811CBDE6(BGM_COMMAND_NEXT, 0);
+	musicCorePlayerControl(BGM_COMMAND_NEXT, 0);
 }
 
 /* the previous button held: rewound (0x8141B61C) */
@@ -506,7 +505,7 @@ inline void ImposePsMenuBgm::OnPrevRepeat(int32_t type, ui::Handler *self, ui::E
 	ImposePsMenuBgm *bgm = (ImposePsMenuBgm *)data;
 
 	if (bgm->m_seekCount == 0)
-		Shell_811CBDE6(BGM_COMMAND_REWIND, 0);
+		musicCorePlayerControl(BGM_COMMAND_REWIND, 0);
 	bgm->m_seekCount++;
 }
 
@@ -517,7 +516,7 @@ inline void ImposePsMenuBgm::OnNextRepeat(int32_t type, ui::Handler *self, ui::E
 	ImposePsMenuBgm *bgm = (ImposePsMenuBgm *)data;
 
 	if (bgm->m_seekCount == 0)
-		Shell_811CBDE6(BGM_COMMAND_FORWARD, 0);
+		musicCorePlayerControl(BGM_COMMAND_FORWARD, 0);
 	bgm->m_seekCount++;
 }
 
@@ -529,7 +528,7 @@ inline void ImposePsMenuBgm::OnSeekEnd(int32_t type, ui::Handler *self, ui::Even
 
 	if (bgm->m_seekCount != 0) {
 		bgm->m_seekCount = 0;
-		Shell_811CBDE6(BGM_COMMAND_SEEK_END, 0);
+		musicCorePlayerControl(BGM_COMMAND_SEEK_END, 0);
 		if (self != NULL)
 			((ui::ButtonBase *)self)->SetGlowAnim(ui::ButtonBase::GLOW_OFF, true);
 	}

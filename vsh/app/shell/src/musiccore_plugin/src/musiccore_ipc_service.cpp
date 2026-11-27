@@ -11,10 +11,8 @@
 #include <plugin.h>
 #include <ipmi/session.h>
 
-extern "C" {
-extern int shellSvcLiveAreaSyncDefault(IPMI::Session *session, SceUInt32 reqId,
+extern int shellIncomingDialogServerAsyncDispatch(IPMI::Session *session, SceUInt32 reqId,
 	SceUInt32 methodId, const IPMI::DataInfo *inBufs, SceUInt32 inCount); /* 0x8115B554 */
-}
 
 namespace {
 
@@ -1788,7 +1786,7 @@ int shellSvcDisp_0D_Sync(IPMI::Session *session, SceUInt32 methodId,
 int shellSvcDisp_0D_Async(IPMI::Session *session, SceUInt32 reqId, SceUInt32 methodId,
 	const IPMI::DataInfo *inBufs, SceUInt32 inCount)
 {
-	return shellSvcLiveAreaSyncDefault(session, reqId, methodId, inBufs, inCount);
+	return shellIncomingDialogServerAsyncDispatch(session, reqId, methodId, inBufs, inCount);
 }
 
 /* 0x8120AD7A */
@@ -1829,7 +1827,7 @@ int shellSvcDisp_03_Sync(IPMI::Session *session, SceUInt32 methodId,
 int shellSvcDisp_03_Async(IPMI::Session *session, SceUInt32 reqId, SceUInt32 methodId,
 	const IPMI::DataInfo *inBufs, SceUInt32 inCount)
 {
-	return shellSvcLiveAreaSyncDefault(session, reqId, methodId, inBufs, inCount);
+	return shellIncomingDialogServerAsyncDispatch(session, reqId, methodId, inBufs, inCount);
 }
 
 /* 0x8120CA88 */

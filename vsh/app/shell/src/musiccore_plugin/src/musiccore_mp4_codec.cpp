@@ -1163,5 +1163,43 @@ Mp4Factory *getMp4FactoryInstance()
     return &g_mp4Factory;
 }
 
+struct CodecFactory;
+struct MediaInfoBase;
+struct DecoderInstance;
+
+DecoderInstance *createMp4Decoder(CodecFactory *factory, int mode, void *outCtx,
+                                  void *startFn, void *enqueueFn, void *stopFn, void *flushFn)
+{
+    Mp4Factory *mp4Factory = (factory != NULL) ? reinterpret_cast<Mp4Factory *>(factory) : &g_mp4Factory;
+    return reinterpret_cast<DecoderInstance *>(mp4Factory->createPipeline(
+        mode, reinterpret_cast<AudioOpenCallback>(startFn),
+        reinterpret_cast<AudioCloseCallback>(stopFn),
+        reinterpret_cast<AudioWriteCallback>(enqueueFn),
+        reinterpret_cast<AudioFlushCallback>(flushFn), outCtx));
+}
+
+CodecFactory *getMp4Factory()
+{
+    return reinterpret_cast<CodecFactory *>(&g_mp4Factory);
+}
+
+int getMp4StackSizes(unsigned int *parserStack, unsigned int *decoderStack, unsigned int *mgrStack)
+{
+    return g_mp4Factory.getHeapSizes(parserStack, decoderStack, mgrStack);
+}
+
+MediaInfoBase *allocMp4MediaInfo(CodecFactory *factory, const char *path)
+{
+    Mp4Factory *mp4Factory = reinterpret_cast<Mp4Factory *>(factory);
+    return (mp4Factory != NULL)
+        ? reinterpret_cast<MediaInfoBase *>(mp4Factory->createMediaInfo(path, 16))
+        : NULL;
+}
+
+int mapMp4ParserError(int errCode)
+{
+    return mapMp4ParserError(static_cast<uint32_t>(errCode));
+}
+
 } /* namespace MusicCore */
 } /* namespace sce */

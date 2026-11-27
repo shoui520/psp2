@@ -20,7 +20,8 @@
 
 using namespace paf;
 
-extern paf::memory::HeapAllocator *GetGlobalHeapAllocator(void);
+extern "C" paf::memory::HeapAllocator *GetGlobalHeapAllocator(void);
+
 
 #define CHANGEINFO_MAX_DOWNLOAD_SIZE	0x10000
 #define CHANGEINFO_ERROR_EMPTY_FILE	(-2135994334)	/* 0x80AF5022 */

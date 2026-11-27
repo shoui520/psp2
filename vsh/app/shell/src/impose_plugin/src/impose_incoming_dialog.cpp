@@ -95,19 +95,18 @@ struct ShellSoundOption {
 	SceInt32 reserved[3];
 };
 
-int Shell_811CC2F8(const ShellSoundCommand *command);
-int Shell_811CC420(void);
-int Shell_811CC51A(const char *path, const ShellSoundOption *option);
-int Shell_811CC5FC(int kind, int arg);
-int Shell_811CC754(ShellSoundStatus *status);
-int Shell_811CCABC(int arg);
+struct MusicCorePublicStatus;
+int musicCoreExOpen(const int *openParam);
+int musicCoreExClose(void);
+int musicCoreExLoadUri(const char *uri, const void *opt);
+int musicCoreExControl(SceUInt8 cmd, int param);
+int musicCoreExGetStatus(MusicCorePublicStatus *outStatus);
+int musicCoreExSetRepeat(SceUInt8 mode);
 
-/* PLACEHOLDER: the shell's state the dialog waits on (0x812327F8, in the shell's own code) */
-int Shell_812327F8(void);
+int parentalGetRemainingSec(void);
 
-/* PLACEHOLDER: the shell's dialogs, opened and closed (impose_shell_event.cpp) */
-int Shell_8124D61C(CommonGuiLayoutDialogParam *param, bool wait, int arg);
-int Shell_8124D69A(int id);
+int shellStateWatcherOpenDialog(CommonGuiLayoutDialogParam *param, bool playSound, int level);
+int shellStateWatcherCloseDialog(int dialogId);
 
 /* what indicator_plugin shows (PLACEHOLDER names) */
 struct IncomingIndicatorParam {
@@ -259,7 +258,7 @@ public:
 		command.arg[1] = 0;
 		command.arg[2] = 0;
 		command.arg[3] = 0;
-		INCOMING_ASSERT(Shell_811CC2F8(&command));
+		INCOMING_ASSERT(musicCoreExOpen((const int *)&command));
 		sce_paf_memset(resolved, 0, sizeof(resolved));
 		sce_paf_memset(&option, 0, sizeof(option));
 		if (sce_paf_strncmp(m_path, "app0:", 5) == 0)
@@ -268,9 +267,9 @@ public:
 			sce_paf_strlcpy(path, m_path, 255);
 		sce_paf_strncpy(resolved, path, sizeof(resolved));
 		option.loop = -1;
-		INCOMING_ASSERT(Shell_811CC51A(resolved, &option));
-		INCOMING_ASSERT(Shell_811CCABC(0));
-		INCOMING_ASSERT(Shell_811CC5FC(0, 0));
+		INCOMING_ASSERT(musicCoreExLoadUri(resolved, &option));
+		INCOMING_ASSERT(musicCoreExSetRepeat(0));
+		INCOMING_ASSERT(musicCoreExControl(0, 0));
 		return 0;
 	}
 
@@ -301,14 +300,14 @@ public:
 	{
 		ShellSoundStatus status;
 
-		INCOMING_ASSERT(Shell_811CC5FC(2, 0));
+		INCOMING_ASSERT(musicCoreExControl(2, 0));
 		for (;;) {
-			Shell_811CC754(&status);
+			musicCoreExGetStatus((MusicCorePublicStatus *)&status);
 			if (status.ready != 0)
 				break;
 			thread::Sleep(300);
 		}
-		INCOMING_ASSERT(Shell_811CC420());
+		INCOMING_ASSERT(musicCoreExClose());
 
 		Plugin *plugin = Plugin::Find("game_plugin");
 		int ret;
@@ -426,7 +425,7 @@ inline void IncomingDialogMgr::HideIndicator()
 inline void IncomingDialogMgr::CloseDialog()
 {
 	if (m_dialog != -1) {
-		Shell_8124D69A(m_dialog);
+		shellStateWatcherCloseDialog(m_dialog);
 		m_dialog = -1;
 
 		Plugin *plugin = Plugin::Find("power_manage_plugin");
@@ -505,7 +504,7 @@ int IncomingDialogMgr::OpenDialog()
 	param.handler = handler;
 	param.text = m_request->dialogText;
 	param.notifyClose = true;
-	m_dialog = Shell_8124D61C(&param, false, 1);
+	m_dialog = shellStateWatcherOpenDialog(&param, false, 1);
 	if (m_dialog != -1) {
 		if (oneButton) {
 			SceCommonGuiDialog_8947FC23(m_dialog, INCOMING_PART_BUTTON)->SetString(
@@ -590,7 +589,7 @@ void IncomingDialogMgr::Update()
 
 	if (m_topmenu != NULL)
 		canOpen = ((int (*)(void))m_topmenu->func[INCOMING_TOPMENU_FUNC_BUSY])() == 0;
-	if (Shell_812327F8() == 0)
+	if (parentalGetRemainingSec() == 0)
 		canOpen = false;
 	if (!m_inApp || m_onStartScreen) {
 		if (m_state == STATE_INDICATOR && canOpen) {
@@ -651,7 +650,7 @@ void IncomingDialogMgr::Tick()
 
 		bool canOpen = ((int (*)(void))m_topmenu->func[INCOMING_TOPMENU_FUNC_BUSY])() == 0;
 
-		if (Shell_812327F8() == 0)
+		if (parentalGetRemainingSec() == 0)
 			canOpen = false;
 		PlaySound();
 		m_request->startTime = sceKernelGetProcessTimeWide();

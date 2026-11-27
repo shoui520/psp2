@@ -13,9 +13,8 @@ extern "C" {
 extern int sceClibPrintf(const char *fmt, ...);
 }
 
-extern int strongDialogOpenMessageDialog(const CommonGuiLayoutDialogParam *param,
-	SceUInt32 mode, int flags);				/* 0x8124D61C */
-extern void strongDialogClose(int dlgId);			/* 0x8124D69A */
+extern int shellStateWatcherOpenDialog(CommonGuiLayoutDialogParam *param, bool playSound, int level); /* 0x8124D61C */
+extern int shellStateWatcherCloseDialog(int dialogId);		/* 0x8124D69A */
 
 static int s_usbError1DlgId = -1;				/* 0x81544E20 */
 static int s_usbError2DlgId = -1;				/* 0x81544E24 */
@@ -28,7 +27,7 @@ public:
 	virtual void operator()(SceInt32 dialogId, SceInt32 button)
 	{
 		(void)button;
-		strongDialogClose(dialogId);
+		shellStateWatcherCloseDialog(dialogId);
 		if (s_usbError1DlgId == dialogId)
 			s_usbError1DlgId = -1;
 	}
@@ -38,15 +37,15 @@ public:
 void mtpCloseUsbErrorDialogs(void)
 {
 	if (s_usbError1DlgId != -1) {
-		strongDialogClose(s_usbError1DlgId);
+		shellStateWatcherCloseDialog(s_usbError1DlgId);
 		s_usbError1DlgId = -1;
 	}
 	if (s_usbError2DlgId != -1) {
-		strongDialogClose(s_usbError2DlgId);
+		shellStateWatcherCloseDialog(s_usbError2DlgId);
 		s_usbError2DlgId = -1;
 	}
 	if (s_usbError3DlgId != -1) {
-		strongDialogClose(s_usbError3DlgId);
+		shellStateWatcherCloseDialog(s_usbError3DlgId);
 		s_usbError3DlgId = -1;
 	}
 }
@@ -69,7 +68,7 @@ int openUsbError1Dialog(void)
 	param.notifyClose = true;
 	param.handler = new MtpUsbErrorDialogListener();
 
-	int dlgId = strongDialogOpenMessageDialog(&param, 1, 1);
+	int dlgId = shellStateWatcherOpenDialog(&param, true, 1);
 	s_usbError1DlgId = dlgId;
 	if (dlgId < 0) {
 		sceClibPrintf(
@@ -91,7 +90,7 @@ int mtpShowUsbError1Dialog(void)
 void mtpCloseBusyDialog(void)
 {
 	if (s_mtpBusyDlgId != -1) {
-		strongDialogClose(s_mtpBusyDlgId);
+		shellStateWatcherCloseDialog(s_mtpBusyDlgId);
 		s_mtpBusyDlgId = -1;
 	}
 }
@@ -113,7 +112,7 @@ void mtpOpenBusyDialog(void)
 	if (msg != NULL)
 		param.text = msg;
 
-	int dlgId = strongDialogOpenMessageDialog(&param, 1, 1);
+	int dlgId = shellStateWatcherOpenDialog(&param, true, 1);
 	s_mtpBusyDlgId = dlgId;
 	if (dlgId < 0) {
 		sceClibPrintf(

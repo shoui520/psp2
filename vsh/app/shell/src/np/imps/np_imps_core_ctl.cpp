@@ -20,6 +20,8 @@
 #include "shell_cron.h"
 #include "src/trigger_mgr/trigger_mgr.h"
 
+extern "C" int SceThreadmgrCoredumpTime_sceKernelExitThread(int status);
+
 /* Shell account event service imports (0x8131B8E0, 0x8131ED4A, 0x8131E840) */
 typedef void (*NpImpsShellAccountCallback)(int eventId, int stateGroup, int stateCode,
 					   int detailA, int detailB, void *userArg);
@@ -2101,7 +2103,7 @@ static int npImpsCtlThreadEntry(SceSize args, void *argp)
 	SceUID tid = sceKernelGetThreadId();
 	if (SceNetInternal_9DBD2F60(tid, 1, 0) >= 0)
 		npImpsCtlMainLoop(ctx);
-	sceKernelExitThread(0);
+	SceThreadmgrCoredumpTime_sceKernelExitThread(0);
 	return 0;
 }
 
@@ -3110,6 +3112,13 @@ int npImpsCoreConnectProcess(SceUID processId, NpImpsCoreConnectCallback callbac
 	if (ctx != NULL)
 		npImpsCtxReleaseInternal(ctx, false);
 	return (ret >= 0) ? 0 : ret;
+}
+
+/* 0x8131B526 bridge for power_manage_plugin */
+int shellNpPushResumeNotify(SceUID processId, int flags)
+{
+	(void)flags;
+	return npImpsCoreConnectProcess(processId, NULL);
 }
 
 /* 0x8131B5B4 */

@@ -25,8 +25,8 @@ SceSize sce_paf_strlen(const char *str);
 int sce_paf_strncmp(const char *lhs, const char *rhs, SceSize len);
 int sce_paf_strncasecmp(const char *lhs, const char *rhs, SceSize len);
 int sce_paf_snprintf(char *dst, SceSize size, const char *fmt, ...);
-int sceKernelDeleteSemaForUser(SceUID semaid);
-int sceKernelSignalSemaForUser(SceUID semaid, int signalCount);
+int sceKernelDeleteSema(SceUID semaid);
+int sceKernelSignalSema(SceUID semaid, int signalCount);
 }
 
 namespace sce {
@@ -687,7 +687,7 @@ OrderListFactory::OrderListFactory(int maxItems, int slotCount, int elemBytes,
 OrderListFactory::~OrderListFactory()
 {
     if (m_slotSema != -1) {
-        sceKernelDeleteSemaForUser(m_slotSema);
+        sceKernelDeleteSema(m_slotSema);
         m_slotSema = -1;
     }
 }
@@ -1329,7 +1329,7 @@ void OrderListFactory::releaseOrderList(void *bufferPtr, uint8_t clearOwner)
     m_lock.Unlock();
 
     if (wasInUse) {
-        sceKernelSignalSemaForUser(m_slotSema, 1);
+        sceKernelSignalSema(m_slotSema, 1);
     }
 }
 
@@ -2758,6 +2758,126 @@ int DbMediaList::checkChangedFlag(uint8_t *outChanged, uint8_t queryLive)
     }
 
     m_listLock.Unlock();
+    return 0;
+}
+
+size_t orderListFactoryCalcSize(void *heap, int maxLists, int listSlots, int entrySize)
+{
+    (void)heap;
+    return OrderListFactory::calcTotalSize(maxLists, listSlots, entrySize, 56);
+}
+
+void *orderListFactoryConstruct(void *mem, void *heap, int maxLists, int listSlots,
+                                unsigned int entrySize, int arenaSize)
+{
+    (void)heap;
+    return new (mem) OrderListFactory(maxLists, listSlots, static_cast<int>(entrySize),
+                                      static_cast<unsigned int>(arenaSize), 56);
+}
+
+int reportDbFileError(int sqliteErr, const char *dbPath, unsigned int flags)
+{
+    (void)dbPath; (void)flags;
+    return sqliteErr;
+}
+
+int checkTrackListValid(const void *req, int trackCount, int trackOpt)
+{
+    (void)trackOpt;
+    return (req != NULL && trackCount > 0) ? 0 : -1;
+}
+
+void invalidateAllMediaCaches()
+{
+}
+
+void *mediaListGetEntry(void *listObj, int index)
+{
+    (void)listObj; (void)index;
+    return NULL;
+}
+
+int64_t queryTrackIdByPath(const char *path)
+{
+    (void)path;
+    return -1;
+}
+
+void mediaListUpdateTrackId(void *media, int index, int64_t trackId)
+{
+    if (media != NULL)
+        static_cast<UriMediaList *>(media)->setEntryTrackId(index, trackId);
+}
+
+int mediaListFillTrackInfo(void *trackInfo, int trackIdx, void *media)
+{
+    return (trackInfo != NULL)
+        ? static_cast<MediaItem *>(trackInfo)->acquireFromList(trackIdx, static_cast<MediaListBase *>(media))
+        : MC_ERR_INVALID_ARG;
+}
+
+int trackInfoReleaseResources(void *trackInfo, int flag)
+{
+    return (trackInfo != NULL)
+        ? static_cast<MediaItem *>(trackInfo)->releaseToList(static_cast<uint8_t>(flag))
+        : 0;
+}
+
+int trackInfoOpenDecoder(void *trackInfo, int decoderArg, int checkFlag)
+{
+    return (trackInfo != NULL)
+        ? static_cast<MediaItem *>(trackInfo)->probe(decoderArg, static_cast<uint8_t>(checkFlag))
+        : MC_ERR_INVALID_ARG;
+}
+
+int trackInfoMoveTo(void *srcTrackInfo, void *dstTrackInfo, int moveFlag)
+{
+    return (srcTrackInfo != NULL)
+        ? static_cast<MediaItem *>(srcTrackInfo)->transferTo(
+              static_cast<MediaItem *>(dstTrackInfo), static_cast<uint8_t>(moveFlag))
+        : MC_ERR_INVALID_ARG;
+}
+
+int trackInfoPopulateMetadata(const void *trackInfo, void *metaBufs)
+{
+    return (trackInfo != NULL)
+        ? const_cast<MediaItem *>(static_cast<const MediaItem *>(trackInfo))->readMetadata(
+              static_cast<MetadataOutputRequest *>(metaBufs))
+        : MC_ERR_INVALID_ARG;
+}
+
+void trackInfoResetCounters(void *trackInfo)
+{
+    if (trackInfo != NULL)
+        static_cast<MediaItem *>(trackInfo)->commitToList();
+}
+
+int isTrackIdRemoved(int64_t trackId, void *listHandle)
+{
+    return isIdRejected(trackId, static_cast<unsigned int>(reinterpret_cast<uintptr_t>(listHandle)));
+}
+
+void stateMachineClearTrackFlag()
+{
+    clearRejectedIdList();
+}
+
+void *createUriMediaList(void *slotMem)
+{
+    return new (slotMem) UriMediaList(NULL, 0, NULL);
+}
+
+void *createDbMediaList(void *slotMem, void *workBuf, void *dbConn, int shuffleSeed,
+                        void *orderFactory, unsigned int flags, unsigned int reserved)
+{
+    (void)workBuf; (void)shuffleSeed; (void)flags; (void)reserved;
+    return new (slotMem) DbMediaList(NULL, static_cast<DbConnectionProvider *>(dbConn),
+                                     static_cast<OrderListFactory *>(orderFactory));
+}
+
+int setPowerSaveMode(int mode, int val, int flags)
+{
+    (void)mode; (void)val; (void)flags;
     return 0;
 }
 

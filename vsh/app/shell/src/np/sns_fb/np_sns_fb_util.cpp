@@ -284,6 +284,21 @@ int npSnsFbUtilDestroyRequest(SceInt32 reqId)
 	return npSnsFbReqDestroy(reqId);
 }
 
+int npSnsFbCreateContext(void)
+{
+	return npSnsFbUtilCreateRequest();
+}
+
+int npSnsFbDestroyContext(int reqId)
+{
+	return npSnsFbUtilDestroyRequest(reqId);
+}
+
+int npSnsFbIsEnabled(int *outEnabled)
+{
+	return npSnsFbUtilIsShareTrophyEnabled(outEnabled);
+}
+
 /* 0x81338C44 */
 int npSnsFbUtilAbortRequest(SceInt32 reqId)
 {
@@ -1245,7 +1260,7 @@ static int npSnsFbRegGetAccount(char *outAccount)
 {
 	if (outAccount == NULL)
 		return NP_SNS_FB_ERR_INVALID_ARGUMENT;
-	int ret = sceRegMgrGetKeyStrForUser(NP_SNS_FB_REG_CATEGORY, "account", outAccount,
+	int ret = sceRegMgrGetKeyStr(NP_SNS_FB_REG_CATEGORY, "account", outAccount,
 					    NP_SNS_FB_ACCOUNT_MAX);
 	return (ret >= 0) ? 0 : ret;
 }
@@ -1255,7 +1270,7 @@ static int npSnsFbRegSetAccount(const char *account)
 {
 	if (account == NULL)
 		return NP_SNS_FB_ERR_INVALID_ARGUMENT;
-	int ret = sceRegMgrSetKeyStrForUser(NP_SNS_FB_REG_CATEGORY, "account", account,
+	int ret = sceRegMgrSetKeyStr(NP_SNS_FB_REG_CATEGORY, "account", account,
 					    NP_SNS_FB_ACCOUNT_MAX);
 	return (ret >= 0) ? 0 : ret;
 }
@@ -1266,15 +1281,15 @@ static int npSnsFbRegGetSession(char *outSessionKey, char *outSessionSecret, cha
 	if (outSessionKey == NULL || outSessionSecret == NULL || outUid == NULL)
 		return NP_SNS_FB_ERR_INVALID_ARGUMENT;
 
-	int ret = sceRegMgrGetKeyStrForUser(NP_SNS_FB_REG_CATEGORY, "session_key", outSessionKey,
+	int ret = sceRegMgrGetKeyStr(NP_SNS_FB_REG_CATEGORY, "session_key", outSessionKey,
 					    NP_SNS_FB_SESSION_KEY_MAX);
 	if (ret < 0)
 		return ret;
-	ret = sceRegMgrGetKeyStrForUser(NP_SNS_FB_REG_CATEGORY, "session_secret", outSessionSecret,
+	ret = sceRegMgrGetKeyStr(NP_SNS_FB_REG_CATEGORY, "session_secret", outSessionSecret,
 					NP_SNS_FB_SESSION_SECRET_MAX);
 	if (ret < 0)
 		return ret;
-	ret = sceRegMgrGetKeyStrForUser(NP_SNS_FB_REG_CATEGORY, "uid", outUid, NP_SNS_FB_UID_MAX);
+	ret = sceRegMgrGetKeyStr(NP_SNS_FB_REG_CATEGORY, "uid", outUid, NP_SNS_FB_UID_MAX);
 	return (ret >= 0) ? 0 : ret;
 }
 
@@ -1284,15 +1299,15 @@ static int npSnsFbRegSetSession(const char *sessionKey, const char *sessionSecre
 	if (sessionKey == NULL || sessionSecret == NULL || uid == NULL)
 		return NP_SNS_FB_ERR_INVALID_ARGUMENT;
 
-	int ret = sceRegMgrSetKeyStrForUser(NP_SNS_FB_REG_CATEGORY, "session_key", sessionKey,
+	int ret = sceRegMgrSetKeyStr(NP_SNS_FB_REG_CATEGORY, "session_key", sessionKey,
 					    NP_SNS_FB_SESSION_KEY_MAX);
 	if (ret < 0)
 		return ret;
-	ret = sceRegMgrSetKeyStrForUser(NP_SNS_FB_REG_CATEGORY, "session_secret", sessionSecret,
+	ret = sceRegMgrSetKeyStr(NP_SNS_FB_REG_CATEGORY, "session_secret", sessionSecret,
 					NP_SNS_FB_SESSION_SECRET_MAX);
 	if (ret < 0)
 		return ret;
-	ret = sceRegMgrSetKeyStrForUser(NP_SNS_FB_REG_CATEGORY, "uid", uid, NP_SNS_FB_UID_MAX);
+	ret = sceRegMgrSetKeyStr(NP_SNS_FB_REG_CATEGORY, "uid", uid, NP_SNS_FB_UID_MAX);
 	return (ret >= 0) ? 0 : ret;
 }
 
@@ -1307,28 +1322,28 @@ static int npSnsFbRegGetShareFlags(SceInt32 *outShareTrophy, SceInt32 *outShareP
 
 	SceInt32 regVal = 0;
 	if (outShareTrophy != NULL) {
-		int ret = sceRegMgrGetKeyIntForUser(NP_SNS_FB_REG_CATEGORY, "share_trophy",
+		int ret = sceRegMgrGetKeyInt(NP_SNS_FB_REG_CATEGORY, "share_trophy",
 						    &regVal);
 		if (ret < 0)
 			return ret;
 		*outShareTrophy = (regVal != 0) ? 1 : 0;
 	}
 	if (outSharePurchase != NULL) {
-		int ret = sceRegMgrGetKeyIntForUser(NP_SNS_FB_REG_CATEGORY, "share_purchase",
+		int ret = sceRegMgrGetKeyInt(NP_SNS_FB_REG_CATEGORY, "share_purchase",
 						    &regVal);
 		if (ret < 0)
 			return ret;
 		*outSharePurchase = (regVal != 0) ? 1 : 0;
 	}
 	if (outShareRating != NULL) {
-		int ret = sceRegMgrGetKeyIntForUser(NP_SNS_FB_REG_CATEGORY, "share_rating",
+		int ret = sceRegMgrGetKeyInt(NP_SNS_FB_REG_CATEGORY, "share_rating",
 						    &regVal);
 		if (ret < 0)
 			return ret;
 		*outShareRating = (regVal != 0) ? 1 : 0;
 	}
 	if (outGameIntegrations != NULL) {
-		int ret = sceRegMgrGetKeyIntForUser(NP_SNS_FB_REG_CATEGORY, "game_integrations",
+		int ret = sceRegMgrGetKeyInt(NP_SNS_FB_REG_CATEGORY, "game_integrations",
 						    &regVal);
 		if (ret < 0)
 			return ret;
@@ -1343,25 +1358,25 @@ static int npSnsFbRegSetShareFlags(const SceInt32 *shareTrophy, const SceInt32 *
 				   const SceInt32 *gameIntegrations)
 {
 	if (shareTrophy != NULL) {
-		int ret = sceRegMgrSetKeyIntForUser(NP_SNS_FB_REG_CATEGORY, "share_trophy",
+		int ret = sceRegMgrSetKeyInt(NP_SNS_FB_REG_CATEGORY, "share_trophy",
 						    *shareTrophy);
 		if (ret < 0)
 			return ret;
 	}
 	if (sharePurchase != NULL) {
-		int ret = sceRegMgrSetKeyIntForUser(NP_SNS_FB_REG_CATEGORY, "share_purchase",
+		int ret = sceRegMgrSetKeyInt(NP_SNS_FB_REG_CATEGORY, "share_purchase",
 						    *sharePurchase);
 		if (ret < 0)
 			return ret;
 	}
 	if (shareRating != NULL) {
-		int ret = sceRegMgrSetKeyIntForUser(NP_SNS_FB_REG_CATEGORY, "share_rating",
+		int ret = sceRegMgrSetKeyInt(NP_SNS_FB_REG_CATEGORY, "share_rating",
 						    *shareRating);
 		if (ret < 0)
 			return ret;
 	}
 	if (gameIntegrations != NULL) {
-		int ret = sceRegMgrSetKeyIntForUser(NP_SNS_FB_REG_CATEGORY, "game_integrations",
+		int ret = sceRegMgrSetKeyInt(NP_SNS_FB_REG_CATEGORY, "game_integrations",
 						    *gameIntegrations);
 		if (ret < 0)
 			return ret;
@@ -1374,7 +1389,7 @@ static int npSnsFbRegResetKey(const char *keyName)
 	char fullPath[256];
 	sceClibMemset(fullPath, 0, sizeof(fullPath));
 	sceClibSnprintf(fullPath, sizeof(fullPath), "%s/%s", NP_SNS_FB_REG_CATEGORY, keyName);
-	int ret = sceRegMgrResetRegistryLvForUser(fullPath, 32);
+	int ret = sceRegMgrResetRegistryLv(fullPath, 32);
 	return (ret >= 0) ? 0 : ret;
 }
 

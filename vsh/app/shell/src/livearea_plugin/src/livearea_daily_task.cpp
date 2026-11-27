@@ -16,14 +16,10 @@ int SceLsdb_44CD0D07(LsdbAppInfoPtr *appInfo);
 int SceLsdb_F4325AD0(LsdbAppInfoPtr *appInfo);
 }
 
-extern int shellAutoSyncOpen(const char *id);			/* 0x812A4C6C */
-extern int shellAutoSyncClose(const char *id);			/* 0x812A4CCE */
-extern int shellAutoSyncIsEnabled(const char *id, bool *out);	/* 0x812A4FC8 */
-extern int shellAutoSyncRegCb(const char *id, int (*callback)(char, void *), void *arg); /* 0x812A5032 */
-extern int shellAutoSyncUnregCb(const char *id);		/* 0x812A509E */
+#include "src/trigger_mgr/trigger_mgr.h"
 
 static void liveareaDailyTaskRun(void *userdata);		/* 0x811A2D9A */
-static int liveareaDailyTaskOnToggle(char enabled, void *userdata); /* 0x811A3390 */
+static void liveareaDailyTaskOnToggle(bool enabled, void *userdata); /* 0x811A3390 */
 
 /* 0x811A2CBC */
 LiveAreaTaskMgr *liveareaDailyTaskCtor(void *mem, int option)
@@ -37,30 +33,30 @@ int liveareaDailyTaskStop(LiveAreaTaskMgr *taskMgr)
 {
 	(void)taskMgr;
 	liveareaCronUnregister(liveareaDailyTaskRun);
-	shellAutoSyncUnregCb("SHELL0005");
-	return shellAutoSyncClose("SHELL0005");
+	shellTriggerMgrClearServiceCallback("SHELL0005");
+	return shellTriggerMgrUnregisterService("SHELL0005");
 }
 
 /* 0x811A2CEC */
 LiveAreaTaskMgr *liveareaDailyTaskDtor(LiveAreaTaskMgr *taskMgr)
 {
 	liveareaCronUnregister(liveareaDailyTaskRun);
-	shellAutoSyncUnregCb("SHELL0005");
-	shellAutoSyncClose("SHELL0005");
+	shellTriggerMgrClearServiceCallback("SHELL0005");
+	shellTriggerMgrUnregisterService("SHELL0005");
 	return liveareaTaskMgrDtor(taskMgr);
 }
 
 /* 0x811A2D1C */
 int liveareaDailyTaskStart(LiveAreaTaskMgr *taskMgr)
 {
-	int ret = shellAutoSyncOpen("SHELL0005");
+	int ret = shellTriggerMgrRegisterService("SHELL0005");
 	if (ret != 0)
 		return ret;
-	ret = shellAutoSyncRegCb("SHELL0005", liveareaDailyTaskOnToggle, taskMgr);
+	ret = shellTriggerMgrSetServiceCallback("SHELL0005", liveareaDailyTaskOnToggle, taskMgr);
 	if (ret != 0)
 		return ret;
 	bool enabled = false;
-	ret = shellAutoSyncIsEnabled("SHELL0005", &enabled);
+	ret = shellTriggerMgrIsServiceEnabled("SHELL0005", &enabled);
 	if (ret != 0)
 		return ret;
 	if (enabled)
@@ -141,11 +137,10 @@ static void liveareaDailyTaskRun(void *userdata)
 }
 
 /* 0x811A3390 */
-static int liveareaDailyTaskOnToggle(char enabled, void *userdata)
+static void liveareaDailyTaskOnToggle(bool enabled, void *userdata)
 {
-	if (enabled != 0)
+	if (enabled)
 		liveareaCronRegister(liveareaDailyTaskRun, userdata);
 	else
 		liveareaCronUnregister(liveareaDailyTaskRun);
-	return 0;
 }

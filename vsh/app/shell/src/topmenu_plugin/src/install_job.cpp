@@ -327,7 +327,7 @@ int32_t InstallJob::Run()
 				topmenuInstallErrorFill(installResult, &failedTask, &m_errorInfo);
 			} else if (sce_paf_strncmp(m_installTitleId.c_str(), "PCSI00011",
 						   m_installTitleId.length()) == 0) {
-				installResult = shellBgdlInstallTitleTasksType2(
+				installResult = shellBgdlInstallTitleTasksPsm(
 					m_titleId.c_str(), &failedTask);
 				if (installResult != 0)
 					topmenuInstallErrorFill(installResult, &failedTask,
@@ -350,7 +350,7 @@ int32_t InstallJob::Run()
 		if (m_bgdlTaskCount != 0) {
 			const char *target = m_installTitleId.empty() ?
 				NULL : m_installTitleId.c_str();
-			installResult = shellBgdlInstallTitleTasksType1(target, &failedTask);
+			installResult = shellBgdlInstallTitleTasksPsp(target, &failedTask);
 			if (installResult != 0)
 				topmenuInstallErrorFill(installResult, &failedTask, &m_errorInfo);
 		}
@@ -511,7 +511,7 @@ static int checkAccountTrophyOwnership(const LsdbAppInfoPtr *appInfo,
 	}
 
 	SceUInt8 rawAccountId[8];
-	int regRet = sceRegMgrGetKeyBinForUser("/CONFIG/NP", "account_id", rawAccountId, 8);
+	int regRet = sceRegMgrGetKeyBin("/CONFIG/NP", "account_id", rawAccountId, 8);
 	if (regRet < 0)
 		return regRet;
 
@@ -781,7 +781,7 @@ void topmenuExecCheckInit(void)
 void topmenuExecCheckTerm(void)
 {
 	if (g_execCheckCtx != NULL) {
-		sceKernelDeleteSemaForUser(g_execCheckCtx->waitDialogSema);
+		sceKernelDeleteSema(g_execCheckCtx->waitDialogSema);
 		delete g_execCheckCtx->jobQueue;
 		delete g_execCheckCtx;
 		g_execCheckCtx = NULL;

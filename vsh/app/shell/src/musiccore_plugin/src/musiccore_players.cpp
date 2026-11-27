@@ -21,7 +21,7 @@ void *sce_paf_memcpy(void *dst, const void *src, SceSize len);
 char *sce_paf_strncpy(char *dst, const char *src, SceSize len);
 SceSize sce_paf_strlen(const char *str);
 int sce_paf_strncmp(const char *lhs, const char *rhs, SceSize len);
-int sceKernelPowerTickForUser(int type);
+int sceKernelPowerTick(int type);
 }
 
 namespace sce {
@@ -177,31 +177,31 @@ extern void *orderListFactoryConstruct(void *mem, void *heap, int maxLists, int 
 class PlayerBaseView {
 public:
     virtual ~PlayerBaseView() {}
-    virtual void onConstructHook() = 0;
-    virtual int attach(unsigned char channelId, const void *callbacks, void *dbMgr, void *audioOut) = 0;
-    virtual int detach() = 0;
-    virtual void setAudioFocus(int granted) = 0;
-    virtual int getAudioFocus() = 0;
-    virtual int getPriority() = 0;
-    virtual int getSubPriority() = 0;
-    virtual int open(const void *param, unsigned char *flags) = 0;
-    virtual int close(unsigned char *flags) = 0;
-    virtual int isOpen() = 0;
-    virtual int isBusy() = 0;
-    virtual void onDbSuspend(unsigned char *flags) = 0;
-    virtual void onDbResume(unsigned char *flags) = 0;
-    virtual void onPauseForDb(unsigned char *flags) = 0;
-    virtual int getPrioritySummary() = 0;
-    virtual int isPlaybackRunning() = 0;
-    virtual int isActive() = 0;
-    virtual void onPriorityHook() = 0;
-    virtual int wantsAudio() = 0;
-    virtual void onAudioHook() = 0;
-    virtual int isLocked() = 0;
-    virtual int getContentInfo(TrackMetadataBuffers *outMeta) = 0;
-    virtual paf::system::Model *getModel() = 0;
-    virtual void onIdlePlaylist() = 0;
-    virtual int isAutoSuspendPending() = 0;
+    virtual void onConstructHook() {}
+    virtual int attach(unsigned char channelId, const void *callbacks, void *dbMgr, void *audioOut) { (void)channelId; (void)callbacks; (void)dbMgr; (void)audioOut; return 0; }
+    virtual int detach() { return 0; }
+    virtual void setAudioFocus(int granted) { (void)granted; }
+    virtual int getAudioFocus() { return 0; }
+    virtual int getPriority() { return 0; }
+    virtual int getSubPriority() { return 0; }
+    virtual int open(const void *param, unsigned char *flags) { (void)param; (void)flags; return 0; }
+    virtual int close(unsigned char *flags) { (void)flags; return 0; }
+    virtual int isOpen() { return 0; }
+    virtual int isBusy() { return 0; }
+    virtual void onDbSuspend(unsigned char *flags) { (void)flags; }
+    virtual void onDbResume(unsigned char *flags) { (void)flags; }
+    virtual void onPauseForDb(unsigned char *flags) { (void)flags; }
+    virtual int getPrioritySummary() { return 0; }
+    virtual int isPlaybackRunning() { return 0; }
+    virtual int isActive() { return 0; }
+    virtual void onPriorityHook() {}
+    virtual int wantsAudio() { return 0; }
+    virtual void onAudioHook() {}
+    virtual int isLocked() { return 0; }
+    virtual int getContentInfo(TrackMetadataBuffers *outMeta) { (void)outMeta; return 0; }
+    virtual paf::system::Model *getModel() { return NULL; }
+    virtual void onIdlePlaylist() {}
+    virtual int isAutoSuspendPending() { return 0; }
 
     uint32_t m_playerType;                  /* +4 */
     uint32_t m_callbackAndFactory[6];       /* +8..+31 */
@@ -348,7 +348,7 @@ public:
     int tickPlaybackPowerHold();
     int tickAutoSuspendTimer();
 
-    virtual int executePlayStart() = 0; /* +0xE4 (228) */
+    virtual int executePlayStart() { return handleStartOrResume(); } /* +0xE4 (228) */
 
 private:
     void clearAutoSuspendCountdown();
@@ -692,7 +692,7 @@ int MusicAppPlayer::handleTrackEventNotify(const PlayerCommandPacket *cmd)
             if (nowUs != 0) {
                 m_autoSuspendLastTickUs = nowUs;
                 m_autoSuspendActive = 1;
-                sceKernelPowerTickForUser(POWER_TICK_DISABLE_AUTO_SUSPEND);
+                sceKernelPowerTick(POWER_TICK_DISABLE_AUTO_SUSPEND);
             }
         }
     }
@@ -710,7 +710,7 @@ int MusicAppPlayer::handleStartOrResume()
         SceUInt64 nowUs = sceKernelGetProcessTimeWide();
         m_playPowerTickUs = nowUs;
         if (nowUs != 0) {
-            sceKernelPowerTickForUser(POWER_TICK_DISABLE_AUTO_SUSPEND);
+            sceKernelPowerTick(POWER_TICK_DISABLE_AUTO_SUSPEND);
         }
         paf::Plugin *powerPlugin = paf::Plugin::Find("power_manage_plugin");
         if (powerPlugin != NULL) {
@@ -786,7 +786,7 @@ int MusicAppPlayer::tickPlaybackPowerHold()
 
     SceUInt64 nowUs = sceKernelGetProcessTimeWide();
     if (nowUs != 0 && nowUs >= m_playPowerTickUs + 2000000ULL) {
-        int ret = sceKernelPowerTickForUser(SCE_KERNEL_POWER_TICK_DISABLE_AUTO_SUSPEND);
+        int ret = sceKernelPowerTick(SCE_KERNEL_POWER_TICK_DISABLE_AUTO_SUSPEND);
         m_playPowerTickUs = nowUs;
         return ret;
     }
@@ -827,7 +827,7 @@ int MusicAppPlayer::tickAutoSuspendTimer()
     }
 
     if (nowUs >= m_autoSuspendLastTickUs + 1000000ULL) {
-        int ret = sceKernelPowerTickForUser(SCE_KERNEL_POWER_TICK_DISABLE_AUTO_SUSPEND);
+        int ret = sceKernelPowerTick(SCE_KERNEL_POWER_TICK_DISABLE_AUTO_SUSPEND);
         m_autoSuspendLastTickUs = nowUs;
         return ret;
     }
@@ -994,6 +994,36 @@ int convertMusicPath(const char *srcPath, char *dstBuf, SceSize dstCapacity, int
 int convertToMusicDevicePath(const char *srcPath, char *dstBuf, SceSize dstCapacity)
 {
     return convertMusicPath(srcPath, dstBuf, dstCapacity, 2);
+}
+
+struct BaseObject;
+
+unsigned int calcPlaylistPlayerSize(int maxItems)
+{
+    (void)maxItems;
+    return static_cast<unsigned int>(MusicAppPlayer::calcRequiredSize(NULL));
+}
+
+unsigned int calcStreamPlayerSize(int maxStreams)
+{
+    (void)maxStreams;
+    return static_cast<unsigned int>(ExclusiveMusicPlayer::calcRequiredSize(NULL));
+}
+
+BaseObject *constructPlaylistPlayer(void *mem, void *factory, int maxItems,
+                                    int *outErr, unsigned int slotSize, unsigned int hdrSize)
+{
+    (void)maxItems;
+    return reinterpret_cast<BaseObject *>(
+        new (mem) MusicAppPlayer(factory, NULL, outErr, slotSize, hdrSize));
+}
+
+BaseObject *constructStreamPlayer(void *mem, void *factory, int maxStreams,
+                                  int *outErr, unsigned int slotSize, unsigned int hdrSize)
+{
+    (void)maxStreams;
+    return reinterpret_cast<BaseObject *>(
+        new (mem) ExclusiveMusicPlayer(factory, NULL, outErr, slotSize, hdrSize));
 }
 
 } /* namespace MusicCore */

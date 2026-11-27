@@ -154,7 +154,7 @@ public:
 	__attribute__((noinline)) SceUInt64 GetSpeed(void);	/* (0x810FD1F2) bytes a second */
 	SceUInt64 GetRemaining(void);			/* (0x810FD2F0) seconds */
 
-	SceUInt64 m_total;		/* the transfer's size; 0 or -1: unknown */
+	SceUInt64 m_total;		/* the transfer's size; 0 or -1: unspecified */
 	SceUInt64 m_current;		/* the bytes done so far */
 	SceUInt64 m_base;		/* the bytes done when it (re)started */
 	SceUInt64 m_done;		/* the bytes done since then */
@@ -162,8 +162,8 @@ public:
 	SceUInt64 m_lastTime;		/* the last update */
 	SceUInt64 m_reportTime;		/* the last update Update() reported */
 	SceUInt64 m_interval;		/* the time between two reports */
-	int m_reserved0;		/* PLACEHOLDER: only cleared */
-	int m_reserved1;
+	int m_unusedStart;		/* only cleared */
+	int m_unusedEnd;
 };
 
 /* a growable array of T, its buffer m_begin to m_end, sized in bytes */

@@ -2198,6 +2198,14 @@ int npImpsUtilGetProcessServiceState(NpImpsUtilServerContext *ctx, SceUID proces
 	return state;
 }
 
+/* 0x812F10E0 */
+int npImpsUtilNotifyProcessEvent(int eventType, SceUID processId, int appId)
+{
+	if (s_serverCtx == NULL)
+		return NP_IMPS_UTIL_ERROR_NOT_INITIALIZED;
+	return npImpsUtilOnProcessEvent(s_serverCtx, eventType, processId, appId, 0);
+}
+
 /* 0x812F1108 */
 int npImpsUtilIsInitialized(void)
 {

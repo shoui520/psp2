@@ -11,15 +11,17 @@
 #include <np_common/np_common.h>
 #include <vshbridge/vshbridge.h>
 
+extern "C" int SceThreadmgrCoredumpTime_sceKernelExitThread(int status);
+
 extern "C" {
 extern SceUInt32 SceLibKernel_9F793F84(void);
 extern int SceNetInternal_9DBD2F60(SceUID threadId, int enable, int reserved);
 extern int SceNpCommon_14BC2B99(char *dst, SceSize dstSize, const char *src,
 				SceSize srcLength, SceSize *outLength);
 extern void sceNpCommonGetSystemSwVersion(char *outVersion);
-extern int sceRegMgrGetKeyStrForUser(const char *category, const char *name,
+extern int sceRegMgrGetKeyStr(const char *category, const char *name,
 				     char *buf, SceSize size);
-extern int sceRegMgrGetKeyBinForUser(const char *category, const char *name,
+extern int sceRegMgrGetKeyBin(const char *category, const char *name,
 				     void *buf, SceSize size);
 extern int sceHttpsEnableOptionPrivate(int tmplId, SceUInt32 sslFlags);
 extern int sceHttpsDisableOptionPrivate(int tmplId, SceUInt32 sslFlags);
@@ -463,9 +465,9 @@ static int npAuthCreateAsyncRequestCommon(const NpAuthInternalParam *param, bool
 		char loginId[68];
 		char password[36];
 
-		ret = sceRegMgrGetKeyStrForUser("/CONFIG/NP", "login_id", loginId, 65);
+		ret = sceRegMgrGetKeyStr("/CONFIG/NP", "login_id", loginId, 65);
 		if (ret >= 0)
-			ret = sceRegMgrGetKeyStrForUser("/CONFIG/NP", "password", password, 33);
+			ret = sceRegMgrGetKeyStr("/CONFIG/NP", "password", password, 33);
 		if (ret >= 0)
 			ret = npAuthCoreSetCredentials(reqId, loginId, password);
 
@@ -574,7 +576,7 @@ static int npAuthWorkerThreadEntry(SceSize args, void *argp)
 	if (autoDestroy == 1)
 		sceKernelExitDeleteThread(0);
 	else
-		sceKernelExitThread(0);
+		SceThreadmgrCoredumpTime_sceKernelExitThread(0);
 	return 0;
 }
 
@@ -1202,7 +1204,7 @@ static int npAuthPerformHttpRequest(NpAuthRequest *req)
 
 					if (ret >= 0 && req->isClockAccount == 0) {
 						SceUInt64 accountId = 0;
-						ret = sceRegMgrGetKeyBinForUser("/CONFIG/NP",
+						ret = sceRegMgrGetKeyBin("/CONFIG/NP",
 										"account_id",
 										&accountId,
 										sizeof(accountId));

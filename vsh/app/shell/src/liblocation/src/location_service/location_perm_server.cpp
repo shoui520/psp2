@@ -3,11 +3,16 @@
  * "SceLocationPermissionServer"; 0x8119951C-0x81199B68).
  * The file and class names are ours (PLACEHOLDER).
  */
+#define SceThreadmgrCoredumpTime_sceKernelExitThread np_utility_unused_exit_thread
 #include "location_internal.h"
+#undef SceThreadmgrCoredumpTime_sceKernelExitThread
 #include <std/string.h>
 #include <std/new>
 
-extern int ipmiAsyncNotSupported(void);			/* 0x8115B554 */
+extern "C" int SceThreadmgrCoredumpTime_sceKernelExitThread(int status);
+extern int shellIncomingDialogServerAsyncDispatch(IPMI::Session *session, SceUInt32 requestId,
+						  SceUInt32 methodId, const IPMI::DataInfo *inList,
+						  SceUInt32 inCount); /* 0x8115B554 */
 
 struct PermSessionSlot {
 	IPMI::Session *session;
@@ -200,7 +205,7 @@ void LocationPermissionServer::onAsyncMethodDispatch(IPMI::Session *pSession, Sc
 		}
 	}
 	sceKernelUnlockLwMutex(&m_mutex.work, 1);
-	ipmiAsyncNotSupported();
+	shellIncomingDialogServerAsyncDispatch(pSession, requestId, methodId, pInList, inCount);
 }
 
 /* 0x811998AC */
@@ -287,7 +292,7 @@ int LocationPermissionServer::ThreadEntry(SceSize args, void *argp)
 	(void)args;
 	LocationPermissionServer *self = *(LocationPermissionServer **)argp;
 	int ret = self->m_server->runDispatcher(self->m_workBuffer, self->m_workBufferSize);
-	sceKernelExitThread(ret);
+	SceThreadmgrCoredumpTime_sceKernelExitThread(ret);
 	return 0;
 }
 

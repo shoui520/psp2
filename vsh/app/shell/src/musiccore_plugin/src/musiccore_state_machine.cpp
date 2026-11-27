@@ -4,6 +4,7 @@
  */
 
 #include <kernel.h>
+#include <std/new>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -1546,6 +1547,116 @@ int StateStopped::onSetMediaPlaying(MediaListInterface *media, int shuffleSeed)
         m_owner->m_needDecoderRestart = 1;
     }
     return m_owner->transitionTo(3);
+}
+
+int decoderGetCurrentPos(void *decoderState)
+{
+    return (decoderState != NULL) ? static_cast<StateMachine *>(decoderState)->getCurrentPosMs() : 0;
+}
+
+int64_t decoderGetCurrentTrackId(void *decoderState)
+{
+    return (decoderState != NULL) ? static_cast<StateMachine *>(decoderState)->getCurrentTrackId() : -1;
+}
+
+int dbSeekNormalTarget(int seekCmd, void *media, unsigned char isNew, int seekStep,
+                       int repeatMode, int *ioShuffleSeed, int *outStep, int decMgr,
+                       char *outChanged, void *outTrackInfo, int *outExtraErr, int allowReshuffle)
+{
+    return dbSeekNormalTarget(static_cast<unsigned int>(seekCmd),
+                              static_cast<MediaListInterface *>(media), isNew, seekStep,
+                              repeatMode, ioShuffleSeed, outStep, reinterpret_cast<void *>(decMgr),
+                              reinterpret_cast<unsigned char *>(outChanged),
+                              static_cast<TrackInfoData *>(outTrackInfo), outExtraErr,
+                              static_cast<unsigned char>(allowReshuffle));
+}
+
+int dbSeekSpecialTarget(void *media, int64_t playlistId, int targetIndex, int seekStep,
+                        int *ioShuffleSeed, int *outStep, int decMgr, void *outTrackInfo,
+                        unsigned char *outHasTrack)
+{
+    return dbSeekSpecialTarget(static_cast<MediaListInterface *>(media), playlistId, targetIndex,
+                               seekStep, ioShuffleSeed, outStep, reinterpret_cast<void *>(decMgr),
+                               0, 0, static_cast<TrackInfoData *>(outTrackInfo), outHasTrack);
+}
+
+void stateMachineInit(void *mem, void *param)
+{
+    new (mem) StateMachine(param);
+}
+
+void stateMachineTerm(void *sm)
+{
+    if (sm != NULL)
+        static_cast<StateMachine *>(sm)->~StateMachine();
+}
+
+int stateMachineAttach(void *sm, void *audioOut, void *decMgr, void *cb)
+{
+    return (sm != NULL)
+        ? static_cast<StateMachine *>(sm)->attach(audioOut, decMgr, cb)
+        : -1;
+}
+
+int stateMachineDispatch(void *sm, unsigned short cmdCode, const void *req,
+                         void *outSnap, void *outErr, unsigned char *outFlag)
+{
+    return (sm != NULL)
+        ? static_cast<StateMachine *>(sm)->dispatchCmd(
+              cmdCode, static_cast<const StateDispatchReq *>(req),
+              static_cast<StateSnapshotOut *>(outSnap), static_cast<int *>(outErr), outFlag)
+        : -1;
+}
+
+int stateMachineShouldDeferCmd(void *sm, unsigned short cmdCode, unsigned short *outMapped)
+{
+    return (sm != NULL) ? static_cast<StateMachine *>(sm)->shouldDeferCmd(cmdCode, outMapped) : 0;
+}
+
+int stateMachineTransition(void *ctx, int targetStateId)
+{
+    return (ctx != NULL) ? static_cast<StateMachine *>(ctx)->transitionTo(targetStateId) : -1;
+}
+
+void stateMachinePopulateMetadata(void *ctx, const void *info, void *metaBufs)
+{
+    if (ctx != NULL)
+        static_cast<StateMachine *>(ctx)->populateMetadataSafe(
+            static_cast<const TrackInfoData *>(info),
+            static_cast<TrackMetadataBuffers *>(metaBufs));
+}
+
+int stateMachineSeekActive(void *ctx, const uint32_t *seekParams, void *media, uint8_t isNewMedia)
+{
+    return (ctx != NULL)
+        ? static_cast<StateMachine *>(ctx)->seekActiveMedia(
+              seekParams, static_cast<MediaListInterface *>(media), isNewMedia)
+        : -1;
+}
+
+int stateMachineSeekPending(void *ctx, const uint32_t *seekParams, void *media,
+                            uint8_t *outHasPending, uint8_t isNewMedia)
+{
+    return (ctx != NULL)
+        ? static_cast<StateMachine *>(ctx)->seekPendingMedia(
+              seekParams, static_cast<MediaListInterface *>(media), outHasPending, isNewMedia)
+        : -1;
+}
+
+int stateMachineSwapMedia(void *ctx, void *newMedia, uint8_t hasUriFlag,
+                          uint8_t seekInitial, uint8_t hasNewMedia)
+{
+    return (ctx != NULL)
+        ? static_cast<StateMachine *>(ctx)->swapActiveMedia(
+              static_cast<MediaListInterface *>(newMedia), hasUriFlag, seekInitial, hasNewMedia)
+        : -1;
+}
+
+int stateMachineSetPendingMedia(void *ctx, void *newMedia)
+{
+    return (ctx != NULL)
+        ? static_cast<StateMachine *>(ctx)->setPendingMedia(static_cast<MediaListInterface *>(newMedia))
+        : -1;
 }
 
 } /* namespace MusicCore */

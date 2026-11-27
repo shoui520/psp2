@@ -357,8 +357,6 @@ typedef struct NpDrmTransformState {
 
 /* External kernel/SDK imports used by SceNpDrmPackage */
 void *sceClibMemcpy_safe(void *dst, const void *src, SceSize len);
-void sceAesEncrypt1(const SceAesContext *ctx, const void *src, void *dst);
-void sceAesDecrypt1(const SceAesContext *ctx, const void *src, void *dst);
 int vshSysconIsIduMode(void);
 int sceNpDrmPackageIsGameExist(void);
 

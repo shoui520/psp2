@@ -6,8 +6,10 @@
 #include "location_internal.h"
 #include <std/string.h>
 
-extern int gpsDrvGetStatus(int *outStatus);			/* 0x8144FDE8 */
-extern int gpsDrvGetData(GpsLocation *data, GpsSatellites *satellites); /* 0x8144FDF0 */
+extern "C" {
+int _sceGpsGetState(int *outStatus);
+int _sceGpsGetData(GpsLocation *data, GpsSatellites *satellites);
+}
 
 enum ProviderGpsStateId {
 	PROVIDER_GPS_STATE_NO_DEVICE = 0,
@@ -484,7 +486,7 @@ int ProviderGpsEventStatusWaitStart::Dispatch(ProviderGpsState *state, ProviderG
 {
 	(void)state;
 	(void)sm;
-	int ret = gpsDrvGetStatus(m_out);
+	int ret = _sceGpsGetState(m_out);
 	if (ret == 0)
 		*m_out = 2;
 	return ret;
@@ -495,7 +497,7 @@ int ProviderGpsEventStatusReqStart::Dispatch(ProviderGpsState *state, ProviderGp
 {
 	(void)state;
 	(void)sm;
-	int ret = gpsDrvGetStatus(m_out);
+	int ret = _sceGpsGetState(m_out);
 	if (ret == 0)
 		*m_out = 3;
 	return ret;
@@ -506,7 +508,7 @@ int ProviderGpsEventStatusStarted::Dispatch(ProviderGpsState *state, ProviderGps
 {
 	(void)state;
 	(void)sm;
-	int ret = gpsDrvGetStatus(m_out);
+	int ret = _sceGpsGetState(m_out);
 	if (ret == 0)
 		*m_out = 4;
 	return ret;
@@ -517,7 +519,7 @@ int ProviderGpsEventStatusRaw::Dispatch(ProviderGpsState *state, ProviderGpsStat
 {
 	(void)state;
 	(void)sm;
-	return gpsDrvGetStatus(m_out);
+	return _sceGpsGetState(m_out);
 }
 
 /* 0x81197112 */
@@ -625,7 +627,7 @@ int ProviderGpsController::Close()
 /* 0x8119739A */
 int ProviderGpsController::GetData(GpsLocation *data, GpsSatellites *satellites)
 {
-	int ret = gpsDrvGetData(data, satellites);
+	int ret = _sceGpsGetData(data, satellites);
 	if (ret == 0) {
 		ret = sceKernelLockLwMutex(&m_sm.m_mutex, 1, NULL);
 		if (ret == 0) {

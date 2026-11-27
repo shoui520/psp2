@@ -16,10 +16,16 @@
 
 extern void *g_pafFramework;					/* 0x81488474 */
 
+#include <activity_db/activity_db_internal.h>
+
 extern "C" {
 extern int sceAppMgrGetStatusByAppId(SceUID appId, void *statusBuf);
-extern void *SceActivityDb_7B68F69D(void);
-extern int SceActivityDb_06420B18(void *db, const ShellSvcActivityRecord *rec, int priority, int flags);
+}
+
+static inline int shellSvcPostActivityStatus(void *db, const ShellSvcActivityRecord *rec)
+{
+	return static_cast<ActivityDbNetDaemon *>(db)->PostStatus(
+		reinterpret_cast<const ActivityDbStatus *>(rec), 0x7FFFFFFFFFFFFFFFLL);
 }
 
 extern int shellSvcLiveAreaSyncDefault(IPMI::Session *, SceUInt32, const IPMI::DataInfo *, SceUInt32, IPMI::BufferInfo *, SceUInt32); /* 0x8115B554 */
@@ -188,7 +194,7 @@ int shellSvcActivityPostGameStatus(IPMI::Session *session, int actType, int useA
 		if (sce_paf_strncmp(rec.m_titleId.c_str(), "NPXS10999", 0x20) == 0 ||
 		    sce_paf_strncmp(rec.m_titleId.c_str(), "NPXS10998", 0x20) == 0) {
 			rec.m_contentId = "";
-			return SceActivityDb_06420B18(SceActivityDb_7B68F69D(), &rec, -1, 0x7FFFFFFF);
+			return shellSvcPostActivityStatus(SceActivityDb_7B68F69D(), &rec);
 		}
 
 		r = shellSvcActivityCheckEnabled();
@@ -203,7 +209,7 @@ int shellSvcActivityPostGameStatus(IPMI::Session *session, int actType, int useA
 
 	rec.m_titleId = titleId ? titleId : "";
 	rec.m_contentId = contentId ? contentId : "";
-	return SceActivityDb_06420B18(SceActivityDb_7B68F69D(), &rec, -1, 0x7FFFFFFF);
+	return shellSvcPostActivityStatus(SceActivityDb_7B68F69D(), &rec);
 }
 
 /* 0x811BC434 */
@@ -230,7 +236,7 @@ int shellSvcActivityPostGameStatusWithUri(IPMI::Session *session, int actType,
 		r = shellSvcActivityBuildUri(&rec, reqVer, &paramStr);
 		if (r < 0)
 			return r;
-		return SceActivityDb_06420B18(SceActivityDb_7B68F69D(), &rec, -1, 0x7FFFFFFF);
+		return shellSvcPostActivityStatus(SceActivityDb_7B68F69D(), &rec);
 	}
 
 	r = shellSvcActivityCheckEnabled();

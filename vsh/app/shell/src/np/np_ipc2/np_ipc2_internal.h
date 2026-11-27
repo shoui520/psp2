@@ -618,6 +618,8 @@ extern int npGamePresenceIpcAbortRequest(IPMI::Session *session, int requestId);
 extern int npAsmVshIpcOnSyncMethod(IPMI::Session *session, SceUInt32 methodId,
 				   const IPMI::DataInfo *inList, SceUInt32 inCount,
 				   IPMI::BufferInfo *outList, SceUInt32 outCount);
-extern int npAsmVshIpcOnAsyncMethod(void);
+extern int npAsmVshIpcOnAsyncMethod(IPMI::Session *session, SceUInt32 requestId,
+				    SceUInt32 methodId, const IPMI::DataInfo *inList,
+				    SceUInt32 inCount);
 
 #endif /* NP_IPC2_INTERNAL_H */

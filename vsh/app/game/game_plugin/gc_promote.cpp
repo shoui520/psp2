@@ -106,20 +106,32 @@ struct GameGcPromoteEntry {
 	string title;				/* its name, the list's parameter 105 */
 	SceInt32 location;			/* 0..3, from the title's bits 23..25 */
 	SceInt32 type;				/* 8 or 16, from its content kind */
-	bool reserved1;
-	bool reserved2;
-	SceInt32 reserved3;
+	bool noOtherFlag;
+	bool imported;
+	SceInt32 progress;
 	void (*progressFunc)(void *arg, float progress);	/* told the promote's progress */
 	void *progressArg;
-	bool reserved4;
+	bool unusedFlag;
 };
 
-/*
- * The shell's list of the card's titles to promote, and a promote of one, stopped when cancel
- * says so (0x810FCB60, 0x810FCB68). PLACEHOLDER names: defined in another file of the shell.
- */
-int gameGcGetPromoteEntries(vector<GameGcPromoteEntry> *entries);
-int gameGcPromoteEntry(GameGcPromoteEntry *entry, bool (*cancel)(void *arg), void *arg);
+#include "../../shell/bgdl_api.h"
+
+static inline int gameGcGetPromoteCount(void)
+{
+	return shellBgdlCountTasks();
+}
+
+static inline int gameGcGetPromoteEntries(vector<GameGcPromoteEntry> *entries)
+{
+	return shellBgdlGetContentTaskInfos(reinterpret_cast<vector<BgdlTaskInfo> *>(entries));
+}
+
+static inline int gameGcPromoteEntry(GameGcPromoteEntry *entry, bool (*cancel)(void *arg), void *arg)
+{
+	(void)cancel;
+	(void)arg;
+	return shellBgdlInstallTask(reinterpret_cast<BgdlTaskInfo *>(entry));
+}
 
 /* how many titles a card lists; a title not promoted yet is GAME_ERROR_NOT_INSTALLED */
 #define GAME_GC_TITLES_MAX		1
@@ -171,9 +183,7 @@ enum {
 	GAME_GC_EVENT_REMOVED	= 10,	/* the game card was taken out */
 };
 
-/* PLACEHOLDER names, defined in other files of the shell */
-int gameGcGetPromoteCount(void);		/* 0x810FCB30 */
-int shellGetGcTitleSet(void);			/* 0x81004D70: which of the system's own card titles it has */
+extern int shellStartupGetIduMode(void);
 static void gameGcPromoteOnPowerEvent(void *arg);
 extern "C" int SceShell_548A3111(int event, ShellEventCallback callback, void *arg);
 extern "C" int SceShell_F197032C(int event, ShellEventCallback callback, void *arg);
@@ -569,10 +579,12 @@ static bool s_gcInserted;
 static void gameGcPromoteOnGcEvent(int code, const void *data, SceSize size, void *arg);
 static bool gameGcPromoteIsCanceled(void *arg);
 static void gameGcPromoteOnProgress(void *arg, float progress);
-static void gameGcPromoteOnErrorDialog(SceInt32 dialogId, SceInt32 button, void *arg1, void *arg2);
+static void gameGcPromoteOnErrorDialog(SceInt32 dialogId, SceInt32 button, void *promoteArg,
+				       void *errorArg);
 static void gameGcPromoteOnSysupchkPower(void *arg);
 static void gameGcPromoteOnSysupchk(int result, void *arg);
-static void gameGcPromoteOnInstallDialog(SceInt32 dialogId, SceInt32 button, void *arg1, void *arg2);
+static void gameGcPromoteOnInstallDialog(SceInt32 dialogId, SceInt32 button, void *promoteArg,
+					 void *extraArg);
 static void gameGcPromoteOnAppEvent(int code, const void *data, SceSize size, void *arg);
 static void gameGcPromoteOnEvent6(int code, const void *data, SceSize size, void *arg);
 static void gameGcPromoteOnAppStateEvent(int code, const void *data, SceSize size, void *arg);
@@ -719,16 +731,17 @@ int GameGcPromote::StartPromote(bool inserted, bool resume)
 	TopmenuLock();
 
 	if (m_job.get() == NULL) {
+		bool canRun = true;
 		if (inserted == true && resume == false) {
 			m_job = common::SharedPtr<job::JobItem>(new GameGcPromoteJob("Promotes", this,
 					gameGcPromoteRunPromotes, gameGcPromoteFinish));
+		} else if (gameGcGetPromoteCount() == 0) {
+			canRun = false;
 		} else {
-			if (gameGcGetPromoteCount() == 0)
-				goto undo;
 			m_job = common::SharedPtr<job::JobItem>(new GameGcPromoteJob("StartPromote", this,
 					gameGcPromoteRunStart, gameGcPromoteFinish));
 		}
-		if (m_job.get() != NULL) {
+		if (canRun && m_job.get() != NULL) {
 			int ret = m_jobQueue->Enqueue(m_job);
 
 			if (ret >= 0)
@@ -736,7 +749,6 @@ int GameGcPromote::StartPromote(bool inserted, bool resume)
 		}
 	}
 
-undo:
 	if (m_topmenuLock != 0)
 		TopmenuUnlock();
 	if (m_powerLock != 0)
@@ -810,7 +822,7 @@ job::JobQueue *gameGcPromoteGetJobQueue(void)
  * A promote dialog's icon (with topmenu's frame over it when frame is set), title and text set,
  * each shown again, or only hidden when show is not set (0x81020B42).
  */
-static __attribute__((noinline)) void gameGcPromoteDialogSet(int dialogId, const string &title,
+__attribute__((noinline)) void gameGcPromoteDialogSet(int dialogId, const string &title,
 				   const intrusive_ptr<graph::Surface> &icon, const wstring &text,
 				   bool frame, bool show)
 {
@@ -879,7 +891,7 @@ static __attribute__((noinline)) void gameGcPromoteDialogSet(int dialogId, const
  * A promote dialog opened over applauncher: with a progress bar kept at *progress when progress
  * is not NULL (in its second look when second is set). Its ID, or a negative error (0x810214CC).
  */
-static __attribute__((noinline)) int gameGcPromoteDialogOpen(const string &title, intrusive_ptr<graph::Surface> icon,
+__attribute__((noinline)) int gameGcPromoteDialogOpen(const string &title, intrusive_ptr<graph::Surface> icon,
 				   const wstring &text, bool frame, const float *progress,
 				   bool second)
 {
@@ -959,7 +971,7 @@ static __attribute__((noinline)) int gameGcPromoteDialogOpenInstall(const string
 }
 
 /* A promote dialog let go (0x810218A6). */
-static __attribute__((noinline)) void gameGcPromoteDialogClose(int dialogId)
+__attribute__((noinline)) void gameGcPromoteDialogClose(int dialogId)
 {
 	if (dialogId != -1)
 		SceCommonGuiDialog_BC311DC0(dialogId);
@@ -972,8 +984,8 @@ static __attribute__((noinline)) void gameGcPromoteDialogClose(int dialogId)
  */
 static __attribute__((noinline)) void gameGcPromoteNoticeSet(int dialogId, intrusive_ptr<graph::Surface> icon,
 				   const wstring &title, const wstring &text, bool showText,
-				   bool frame, const intrusive_ptr<graph::Surface> *icon2,
-				   bool frame2, const wstring &text2)
+				   bool frame, const intrusive_ptr<graph::Surface> *conflictIcon,
+				   bool conflictFrame, const wstring &conflictText)
 {
 	if (Plugin::Find("applauncher_plugin") == NULL)
 		return;
@@ -1023,14 +1035,14 @@ static __attribute__((noinline)) void gameGcPromoteNoticeSet(int dialogId, intru
 		}
 	}
 
-	if (icon2 != NULL) {
-		ui::Plane *plane2 = GAME_GC_PROMOTE_FIND(contents, ui::Plane,
-							 GAME_GC_PROMOTE_PART_PARTS27);
+	if (conflictIcon != NULL) {
+		ui::Plane *conflictPlane = GAME_GC_PROMOTE_FIND(contents, ui::Plane,
+								GAME_GC_PROMOTE_PART_PARTS27);
 
-		if (plane2 != NULL) {
-			HideWidget(plane2, NULL);
-			((ui::Widget *)plane2)->SetTexture(*icon2);
-			if (frame2) {
+		if (conflictPlane != NULL) {
+			HideWidget(conflictPlane, NULL);
+			((ui::Widget *)conflictPlane)->SetTexture(*conflictIcon);
+			if (conflictFrame) {
 				Plugin *topmenu = Plugin::Find("topmenu_plugin");
 
 				if (topmenu != NULL) {
@@ -1038,31 +1050,31 @@ static __attribute__((noinline)) void gameGcPromoteNoticeSet(int dialogId, intru
 						(ShellPluginInterface *)topmenu->GetInterface(1);
 
 					if (iface != NULL)
-						((ui::Widget *)plane2)->SetTexture(
+						((ui::Widget *)conflictPlane)->SetTexture(
 							*((const intrusive_ptr<graph::Surface> *(*)(void))
 							  iface->func[8])(), 0, 1);
 				}
 			}
-			ShowWidget(plane2, new Timer(0.0f));
+			ShowWidget(conflictPlane, new Timer(0.0f));
 		}
 	} else {
-		ui::Plane *plane2 = GAME_GC_PROMOTE_FIND(contents, ui::Plane,
-							 GAME_GC_PROMOTE_PART_PARTS27);
+		ui::Plane *conflictPlane = GAME_GC_PROMOTE_FIND(contents, ui::Plane,
+								GAME_GC_PROMOTE_PART_PARTS27);
 
-		if (plane2 != NULL) {
-			HideWidget(plane2, NULL);
-			plane2->SetSize(math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+		if (conflictPlane != NULL) {
+			HideWidget(conflictPlane, NULL);
+			conflictPlane->SetSize(math::v4(0.0f, 0.0f, 0.0f, 0.0f));
 		}
 	}
 
-	if (text2.length() != 0) {
-		ui::Text *message2 = GAME_GC_PROMOTE_FIND(contents, ui::Text,
-							  GAME_GC_PROMOTE_PART_PARTS28);
+	if (conflictText.length() != 0) {
+		ui::Text *conflictMessage = GAME_GC_PROMOTE_FIND(contents, ui::Text,
+								 GAME_GC_PROMOTE_PART_PARTS28);
 
-		if (message2 != NULL) {
-			HideWidget(message2, NULL);
-			message2->SetString(text2);
-			ShowWidget(message2, new Timer(0.0f));
+		if (conflictMessage != NULL) {
+			HideWidget(conflictMessage, NULL);
+			conflictMessage->SetString(conflictText);
+			ShowWidget(conflictMessage, new Timer(0.0f));
 		}
 	}
 }
@@ -1072,11 +1084,11 @@ static __attribute__((noinline)) void gameGcPromoteNoticeSet(int dialogId, intru
  * there is one, under the parts gameGcPromoteNoticeSet sets. 0, or a negative error
  * (0x8102265A).
  */
-static __attribute__((noinline)) int gameGcPromoteNoticeOpen(int *dialogId, GameDialogFuncHandler::Func func, void *arg1,
-				   void *arg2, intrusive_ptr<graph::Surface> icon,
+__attribute__((noinline)) int gameGcPromoteNoticeOpen(int *dialogId, GameDialogFuncHandler::Func func, void *firstArg,
+				   void *secondArg, intrusive_ptr<graph::Surface> icon,
 				   const wstring &title, const wstring &text, const wstring &message,
-				   bool frame, const intrusive_ptr<graph::Surface> *icon2, bool frame2,
-				   const wstring &text2)
+				   bool frame, const intrusive_ptr<graph::Surface> *conflictIcon,
+				   bool conflictFrame, const wstring &conflictText)
 {
 	if (*dialogId != -1) {
 		SceCommonGuiDialog_BC311DC0(*dialogId);
@@ -1102,7 +1114,7 @@ static __attribute__((noinline)) int gameGcPromoteNoticeOpen(int *dialogId, Game
 		param.dimmerColor[3] = 0.3f;
 		param.notifyClose = true;
 		param.pageOption = 6;
-		param.handler = new GameDialogFuncHandler(func, arg1, arg2);
+		param.handler = new GameDialogFuncHandler(func, firstArg, secondArg);
 
 		int ret = SceCommonGuiDialog_CCFCD9A6(&param);
 
@@ -1114,7 +1126,7 @@ static __attribute__((noinline)) int gameGcPromoteNoticeOpen(int *dialogId, Game
 		CommonGuiLayoutDialogParam param;
 
 		param.resourcePlugin = applauncher;
-		if (icon2 != NULL || text2.length() != 0) {
+		if (conflictIcon != NULL || conflictText.length() != 0) {
 			param.layout.page = &s_noticePages[1];
 			param.layout.parts = s_noticeParts2;
 		} else {
@@ -1128,7 +1140,7 @@ static __attribute__((noinline)) int gameGcPromoteNoticeOpen(int *dialogId, Game
 		param.dimmerColor[3] = 0.3f;
 		param.notifyClose = true;
 		param.pageOption = 6;
-		param.handler = new GameDialogFuncHandler(func, arg1, arg2);
+		param.handler = new GameDialogFuncHandler(func, firstArg, secondArg);
 		param.text = message;
 
 		int ret = SceCommonGuiDialog_CCFCD9A6(&param);
@@ -1139,7 +1151,8 @@ static __attribute__((noinline)) int gameGcPromoteNoticeOpen(int *dialogId, Game
 		*dialogId = ret;
 	}
 
-	gameGcPromoteNoticeSet(*dialogId, icon, title, text, true, frame, icon2, frame2, text2);
+	gameGcPromoteNoticeSet(*dialogId, icon, title, text, true, frame, conflictIcon,
+			       conflictFrame, conflictText);
 
 	return 0;
 }
@@ -1244,7 +1257,7 @@ static void gameGcPromoteOnInstallerUnload(void *arg)
    (0x81022D90). */
 bool GameGcPromote::IsPromotable(const string &titleId)
 {
-	switch (shellGetGcTitleSet()) {
+	switch (shellStartupGetIduMode()) {
 	case 1:
 		if (titleId == "PCSI90015")
 			return false;
@@ -1598,22 +1611,22 @@ int GameGcPromote::PromoteTitles(job::JobItem *job)
 	}
 
 	bool again = false;
+	bool done = false;
 	Plugin *applauncher = Plugin::Find("applauncher_plugin");
 
-	for (;;) {
+	while (!done) {
 		vector<GameGcPromoteEntry> entries;
 
 		ret = gameGcGetPromoteEntries(&entries);
 		if (ret < 0) {
-			if (ret != GAME_ERROR_NO_PROMOTE)
-				goto out;
-			ret = 0;
-			goto out;
+			if (ret == GAME_ERROR_NO_PROMOTE)
+				ret = 0;
+			break;
 		}
 
 		if (entries.size() == 0) {
 			ret = 0;
-			goto out;
+			break;
 		}
 
 		for (SceSize i = 0; i < entries.size(); i++) {
@@ -1623,8 +1636,10 @@ int GameGcPromote::PromoteTitles(job::JobItem *job)
 			m_title = "-";
 
 			ret = GetEntryInfo(entry, &m_title, &m_icon);
-			if (ret < 0)
-				goto out;
+			if (ret < 0) {
+				done = true;
+				break;
+			}
 
 			m_progress = 0;
 
@@ -1636,7 +1651,8 @@ int GameGcPromote::PromoteTitles(job::JobItem *job)
 					false, &m_progress, false);
 				if (ret < 0) {
 					thread::RMutex::main_thread_mutex.Unlock();
-					goto out;
+					done = true;
+					break;
 				}
 				m_dialogId = ret;
 				thread::RMutex::main_thread_mutex.Unlock();
@@ -1656,7 +1672,8 @@ int GameGcPromote::PromoteTitles(job::JobItem *job)
 			if (ret < 0) {
 				if (entries[i].type == GAME_GC_PROMOTE_TYPE_STOP)
 					m_state = 3;
-				goto out;
+				done = true;
+				break;
 			}
 
 			if (applauncher != NULL) {
@@ -1665,7 +1682,8 @@ int GameGcPromote::PromoteTitles(job::JobItem *job)
 
 				if (iface == NULL) {
 					ret = GAME_ERROR_NOT_READY;
-					goto out;
+					done = true;
+					break;
 				}
 				((void (*)(const string *, int))iface->func[4])(&entry.titleId, 1);
 			}
@@ -1683,7 +1701,6 @@ int GameGcPromote::PromoteTitles(job::JobItem *job)
 		again = true;
 	}
 
-out:
 	if (m_dialogId != -1) {
 		thread::RMutex::main_thread_mutex.Lock();
 		if (m_dialogId != -1)
@@ -1845,11 +1862,12 @@ int GameGcPromote::InstallTitles(job::JobItem *job, bool noProgress, const strin
 
 	Plugin *applauncher = Plugin::Find("applauncher_plugin");
 	GameGcPromoteTitles::iterator end = titles.end();
+	ret = 0;
 
 	for (GameGcPromoteTitles::iterator it = titles.begin(); it != end; ++it) {
 		if (job != NULL && job->IsCanceled()) {
 			ret = GAME_ERROR_CANCELED;
-			goto out;
+			break;
 		}
 
 		if (it->second == 0)
@@ -1857,14 +1875,14 @@ int GameGcPromote::InstallTitles(job::JobItem *job, bool noProgress, const strin
 
 		if (!IsPromotable(it->first)) {
 			ret = GAME_ERROR_CANCELED;
-			goto out;
+			break;
 		}
 
 		path = dir + string("/") + it->first;
 
 		if (m_icon.get() == NULL) {
 			ret = GAME_ERROR_NOT_READY;
-			goto out;
+			break;
 		}
 
 		m_progress = 0;
@@ -1909,7 +1927,7 @@ int GameGcPromote::InstallTitles(job::JobItem *job, bool noProgress, const strin
 				m_contentId = it->first;
 				s_mutex.Unlock();
 			}
-			goto out;
+			break;
 		}
 
 		s_mutex.Lock();
@@ -1925,11 +1943,9 @@ int GameGcPromote::InstallTitles(job::JobItem *job, bool noProgress, const strin
 		gameGcPromoteDialogSet(m_dialogId, m_title, m_icon,
 			wstring(applauncher->GetString(IDParam(s_empty_name, text))), false, false);
 		thread::RMutex::main_thread_mutex.Unlock();
+		ret = 0;
 	}
 
-	ret = 0;
-
-out:
 	if (m_dialogId != -1) {
 		thread::RMutex::main_thread_mutex.Lock();
 		if (m_dialogId != -1)
@@ -2127,9 +2143,10 @@ int gameGcPromoteRunPromotes(GameGcPromoteJob *job, void *arg)
  * The error dialog's button: the icon let go and, on its OK (2), the dialog closed, applauncher's
  * icons refreshed after an error that needs it and the card's state shown again (0x81025388).
  */
-static void gameGcPromoteOnErrorDialog(SceInt32 dialogId, SceInt32 button, void *arg1, void *arg2)
+static void gameGcPromoteOnErrorDialog(SceInt32 dialogId, SceInt32 button, void *promoteArg,
+				       void *errorArg)
 {
-	GameGcPromote *promote = (GameGcPromote *)arg1;
+	GameGcPromote *promote = (GameGcPromote *)promoteArg;
 
 	promote->m_icon.clear();
 
@@ -2142,7 +2159,7 @@ static void gameGcPromoteOnErrorDialog(SceInt32 dialogId, SceInt32 button, void 
 		promote->m_progressDialogId = -1;
 	}
 
-	if ((int)arg2 == GAME_ERROR_TOO_MANY_ICONS) {
+	if ((int)errorArg == GAME_ERROR_TOO_MANY_ICONS) {
 		Plugin *applauncher = Plugin::Find("applauncher_plugin");
 
 		if (applauncher != NULL) {
@@ -2160,7 +2177,8 @@ static void gameGcPromoteOnErrorDialog(SceInt32 dialogId, SceInt32 button, void 
 /* An error dialog over applauncher with text, func told of its button: 0, or a negative error
    (0x810253FC). */
 static __attribute__((noinline)) int gameGcPromoteErrorOpen(int *dialogId,
-		GameDialogFuncHandler::Func func, void *arg1, void *arg2, const wstring &text)
+		GameDialogFuncHandler::Func func, void *firstArg, void *secondArg,
+		const wstring &text)
 {
 	Plugin *applauncher = Plugin::Find("applauncher_plugin");
 
@@ -2177,7 +2195,7 @@ static __attribute__((noinline)) int gameGcPromoteErrorOpen(int *dialogId,
 	param.dimmerColor[3] = 0.3f;
 	param.notifyClose = true;
 	param.pageOption = 6;
-	param.handler = new GameDialogFuncHandler(func, arg1, arg2);
+	param.handler = new GameDialogFuncHandler(func, firstArg, secondArg);
 	param.text = text;
 
 	int ret = SceCommonGuiDialog_CCFCD9A6(&param);
@@ -2252,22 +2270,22 @@ void GameGcPromote::ShowError(int *dialogId, int error, bool frame)
 		}
 	}
 
-	bool hasIcon2 = false;
+	bool hasConflictIcon = false;
 	wstring title;
 
 	common::Utf8ToUtf16(m_title, &title, 0);
 
-	wstring text2(L"");
-	intrusive_ptr<graph::Surface> icon2;
+	wstring conflictText(L"");
+	intrusive_ptr<graph::Surface> conflictIcon;
 
 	if (error == GAME_ERROR_GC_CONFLICT) {
 		title = applauncher->GetString(IDParam(s_empty_name, GAME_GC_PROMOTE_MSG_CONFLICT));
-		common::Utf8ToUtf16(s_conflictTitleName, &text2, 0);
+		common::Utf8ToUtf16(s_conflictTitleName, &conflictText, 0);
 
 		string iconPath = string("ur0:appmeta/") + s_conflictTitleId + string("/icon0.dds");
 
-		LoadIcon(iconPath, false, &icon2);
-		hasIcon2 = true;
+		LoadIcon(iconPath, false, &conflictIcon);
+		hasConflictIcon = true;
 		s_conflictTitleName = s_empty_name;
 		s_conflictTitleId = s_empty_name;
 	}
@@ -2282,7 +2300,8 @@ void GameGcPromote::ShowError(int *dialogId, int error, bool frame)
 			(void *)error, m_icon, title,
 			wstring(applauncher->GetString(IDParam(s_empty_name,
 				GAME_GC_PROMOTE_MSG_NOTICE))),
-			message, frame, icon2.get() != NULL ? &icon2 : NULL, hasIcon2, text2);
+			message, frame, conflictIcon.get() != NULL ? &conflictIcon : NULL,
+			hasConflictIcon, conflictText);
 
 	if (ret >= 0)
 		gamePowerManageAddCallback(gameGcPromoteOnPowerEvent, this);
@@ -2345,39 +2364,36 @@ void GameGcPromote::LoadInstaller()
 	bool acinst = gameDirHasSubDirs(string(GAME_GC_ACINST_DIR));
 
 	if (appinst | acinst) {
+		bool canLoadInstaller = true;
 		if (gameDirHasSubDirs(string(GAME_GC_APP_DIR))) {
 			string titleId = gameCardGetTitleId();
+			LsdbAppInfoPtr info(titleId.length() != 0 ? new LsdbAppInfo : NULL);
 
-			if (titleId.length() == 0)
-				goto fail;
+			if (info.get() == NULL || gameAppGetInfo(titleId.c_str(), &info) < 0) {
+				canLoadInstaller = false;
+			} else {
+				LsdbAppInfo::iterator it = info->find(LSDB_KEY_APPCONF);
 
-			LsdbAppInfoPtr info(new LsdbAppInfo);
-
-			if (info.get() == NULL)
-				goto fail;
-
-			if (gameAppGetInfo(titleId.c_str(), &info) < 0)
-				goto fail;
-
-			LsdbAppInfo::iterator it = info->find(LSDB_KEY_APPCONF);
-
-			if (it != info->end() && (gameLsdbValueInteger(it->second) & 0x800) != 0)
-				goto fail;
+				if (it != info->end() && (gameLsdbValueInteger(it->second) & 0x800) != 0)
+					canLoadInstaller = false;
+			}
 		}
 
-		param.name = "gamecard_installer_plugin";
-		param.resource_file = "vs0:vsh/game/gamecard_installer_plugin.rco";
-		param.caller_name = "__main__";
-		param.module_file = "vs0:vsh/game/gamecard_installer_plugin.suprx";
-		param.module_interface_version = 1;
-		param.module_option = 1;
-		param.unload_callback = gameGcPromoteOnInstallerUnload;
-		param.param = this;
-		s_installerAc = acinst != 0;
-		param.arguments[string("execute_mode")] = Plugin::Argument(s_installerAc);
+		if (canLoadInstaller) {
+			param.name = "gamecard_installer_plugin";
+			param.resource_file = "vs0:vsh/game/gamecard_installer_plugin.rco";
+			param.caller_name = "__main__";
+			param.module_file = "vs0:vsh/game/gamecard_installer_plugin.suprx";
+			param.module_interface_version = 1;
+			param.module_option = 1;
+			param.unload_callback = gameGcPromoteOnInstallerUnload;
+			param.param = this;
+			s_installerAc = acinst != 0;
+			param.arguments[string("execute_mode")] = Plugin::Argument(s_installerAc);
 
-		Plugin::LoadAsync(param, gameGcPromoteOnInstallerLoad, 0);
-		return;
+			Plugin::LoadAsync(param, gameGcPromoteOnInstallerLoad, 0);
+			return;
+		}
 	}
 
 fail:
@@ -2662,9 +2678,11 @@ int GameGcPromote::LoadTitleInfo(const string &appPath, string *stitle,
  * migrated on the job queue (Migration), else the installer loaded again for what the card has
  * left to install, or the card's drives unmounted (0x81027270).
  */
-static void gameGcPromoteOnInstallDialog(SceInt32 dialogId, SceInt32 button, void *arg1, void *arg2)
+static void gameGcPromoteOnInstallDialog(SceInt32 dialogId, SceInt32 button, void *promoteArg,
+					 void *extraArg)
 {
-	GameGcPromote *promote = (GameGcPromote *)arg1;
+	(void)extraArg;
+	GameGcPromote *promote = (GameGcPromote *)promoteArg;
 
 	if (dialogId != -1) {
 		gamePowerManageRemoveCallback(gameGcPromoteOnPowerEvent, promote);

@@ -31,6 +31,13 @@
 
 using namespace paf;
 
+extern int npGenerateAccountIdHash(void *outDigest);
+
+SceUInt32 BgdlHttpRequest::Bgdl_8118FD0C(void)
+{
+	return m_downloadId;
+}
+
 /* (0x8150A6C4) which kinds of request carry each parameter of the query */
 static const bool s_queryParams[BGDL_QUERY_PARAM_COUNT][BGDL_REQUEST_KIND_COUNT] = {
 	{ 1, 1, 1, 1, 1, 0 },
@@ -48,8 +55,8 @@ static const bool s_queryParams[BGDL_QUERY_PARAM_COUNT][BGDL_REQUEST_KIND_COUNT]
 BgdlHttpRequest::BgdlHttpRequest()
 	: m_kind(-1), m_type(-1), m_downloadId(0), m_start(true), m_push(false)
 {
-	m_reserved0.clear();
-	m_reserved1.clear();
+	m_unusedHeader.clear();
+	m_unusedDetail.clear();
 	m_extra.clear();
 	m_serverIpAddr.clear();
 	m_hasDigest = 0;
@@ -139,7 +146,7 @@ int BgdlHttpRequest::SetDigest(const char *digest)
 	sce_paf_memset(dst, 0, BGDL_DIGEST_SIZE);
 	m_hasDigest = 0;
 	if (digest == NULL) {
-		ret = Bgdl_812218A2(dst);
+		ret = npGenerateAccountIdHash(dst);
 		set = ret == 0;
 	} else {
 		for (int i = 0; i < BGDL_DIGEST_SIZE; i++)
@@ -529,23 +536,23 @@ int BgdlHttpDownload::Complete(void)
 	paf::string folder;
 	paf::string unused("");		/* PLACEHOLDER: made and never read */
 
-	{
+	do {
 		BgdlTaskPath path;
 		SceUInt64 exportId = 0;
 		int key111 = 7;
 
 		ret = m_task->GetFolder(&path, true);
 		if (ret != 0)
-			goto end;
+			break;
 		{
 			EseParam param(m_task->id);
 
 			ret = param.open();
 			if (ret != 0)
-				goto end;
+				break;
 			ret = param.read(107, &type, sizeof(type));
 			if (ret != 0)
-				goto end;
+				break;
 			param.read(230, &key230);
 			param.read(111, &key111, sizeof(key111));
 			if (type != 12 && type != 8 && type != 7 && type != 6) {
@@ -553,7 +560,7 @@ int BgdlHttpDownload::Complete(void)
 					param.read(222, &key222);
 				ret = param.read(203, &file);
 				if (ret != 0)
-					goto end;
+					break;
 			} else {
 				if (type == 8) {
 					int count = 0;
@@ -566,12 +573,12 @@ int BgdlHttpDownload::Complete(void)
 					param.read(501, &index, sizeof(index));
 					if (index + 1 < count) {
 						ret = 0;
-						goto end;
+						break;
 					}
 				}
 				ret = param.read(220, &titleId);
 				if (ret != 0)
-					goto end;
+					break;
 				if (param.read(232, &data, sizeof(data)) != 0) {
 					*m_runStatus = 0;
 					return BGDL_ERROR_NO_TITLE_ID;
@@ -579,30 +586,30 @@ int BgdlHttpDownload::Complete(void)
 				param.read(217, &contentId);
 				if (titleId.m_end == titleId.m_begin) {
 					ret = BGDL_ERROR_NO_TITLE_ID;
-					goto end;
+					break;
 				}
 
 				BgdlAppFolder app(this);
 
 				ret = app.Prepare(false, "p", data.category, path.m_begin);
 				if (ret != 0)
-					goto end;
+					break;
 
 				paf::string from;
 
 				from = app.GetPath();
 				ret = app.Prepare(false, titleId.m_begin, data.category, path.m_begin);
 				if (ret != 0)
-					goto end;
+					break;
 				folder = app.GetPath();
 				if (paf::Dir::IsExist(folder.c_str()) == true) {
 					ret = paf::Dir::RemoveRecursive(folder.c_str());
 					if (ret != 0)
-						goto end;
+						break;
 				}
 				ret = paf::LocalFile::RenameFile(from.c_str(), folder.c_str());
 				if (ret != 0)
-					goto end;
+					break;
 			}
 		}
 		if (type != 12 && type != 8 && type != 7 && type != 6) {
@@ -610,10 +617,10 @@ int BgdlHttpDownload::Complete(void)
 
 			ret = m_task->getFilePath(&target, true);
 			if (ret != 0)
-				goto end;
+				break;
 			if (target.m_end == target.m_begin) {
 				ret = BGDL_ERROR_NO_CONTENT;
-				goto end;
+				break;
 			}
 			{
 				paf::string info(path.m_begin);
@@ -723,8 +730,10 @@ int BgdlHttpDownload::Complete(void)
 				break;
 			default:
 				ret = BGDL_ERROR_BAD_STORAGE;
-				goto end;
+				break;
 			}
+			if (ret != 0)
+				break;
 			{
 				EseParam param(m_task->id);
 
@@ -760,8 +769,7 @@ int BgdlHttpDownload::Complete(void)
 			}
 			*m_runStatus = 0;
 		}
-	}
-end:
+	} while (0);
 	if (ret != 0)
 		*m_runStatus = 0;
 	return ret;
@@ -1839,16 +1847,22 @@ static __attribute__((noinline)) int bgdlGetContentType(int mode, int *type, con
 	table = s_contentTypes;
 	if (mode == 1)
 		table = s_mediaTypes;
+	bool found = false;
+
 	for (i = 0; table[i].type != 0; i++) {
 		const char **e;
 
 		for (e = table[i].extensions; *e != NULL; e++) {
-			if (sce_paf_strcasecmp(ext, *e) == 0)
-				goto found;
+			if (sce_paf_strcasecmp(ext, *e) == 0) {
+				found = true;
+				break;
+			}
 		}
+		if (found)
+			break;
 	}
-	return BGDL_ERROR_BAD_KIND;
-found:
+	if (!found)
+		return BGDL_ERROR_BAD_KIND;
 	if (mode == 1) {
 		const char **t;
 
@@ -1889,12 +1903,12 @@ int GetHeaderInfo(int mode, int flags, const char *device, const char *url, cons
 
 	info->Clear();
 	if (url == NULL || info == NULL || url[0] == '\0') {
-		ret = BGDL_ERROR_NULL_TITLE;
-		goto end;
+		info->status = BGDL_ERROR_NULL_TITLE;
+		return BGDL_ERROR_NULL_TITLE;
 	}
 	if (sce_paf_private_strtok(url, "file://") != NULL)
 		return 0;
-	{
+	do {
 		info->storageSize = 0;
 		info->storageUsed = 0;
 		info->storageNeeded = 0;
@@ -1916,7 +1930,7 @@ int GetHeaderInfo(int mode, int flags, const char *device, const char *url, cons
 		if (sce_paf_private_strtok(url, "http://") == NULL &&
 		    sce_paf_private_strtok(url, "https://") == NULL) {
 			ret = BGDL_ERROR_NOT_HTTP;
-			goto end;
+			break;
 		}
 
 		http::Client::Param clientParam(string(""));
@@ -1940,22 +1954,22 @@ int GetHeaderInfo(int mode, int flags, const char *device, const char *url, cons
 
 		ret = ScePafMisc_A86A5D0E(&trans, url, "HEAD", (StateCheck *)host);
 		if (ret != 0)
-			goto end;
+			break;
 		if (mode == 1)
 			trans.m_ssl_error_mask = 2;
 		ret = bgdlSetRequestHeaders(&trans);
 		if (ret != 0)
-			goto end;
+			break;
 		ret = trans.SendRequest(NULL, 0);
 		if (ret != 0)
-			goto end;
+			break;
 		info->httpStatus = 0;
 		trans.GetStatusCode(info->httpStatus);
 		if (info->httpStatus != 200) {
 			ret = BGDL_ERROR_SERVER;
 			if (info->httpStatus == 401)
 				trans.GetRealm(info->realm);
-			goto end;
+			break;
 		}
 		trans.GetFileName(info->fileName);
 		trans.GetMimeType(info->mimeType);
@@ -1963,7 +1977,7 @@ int GetHeaderInfo(int mode, int flags, const char *device, const char *url, cons
 		trans.GetContentLength(info->size);
 		if (info->size <= 0) {
 			ret = BGDL_ERROR_NO_SIZE;
-			goto end;
+			break;
 		}
 		info->flag = false;
 		ret = bgdlGetContentType(mode, &info->kind, &info->fileName, &info->mimeType);
@@ -1998,21 +2012,21 @@ int GetHeaderInfo(int mode, int flags, const char *device, const char *url, cons
 			}
 			ret = bgdlSetRequestHeaders(&get);
 			if (ret != 0)
-				goto end;
+				break;
 			ret = get.SendRequest(NULL, 0);
 			if (ret != 0)
-				goto end;
+				break;
 
 			int status = 0;
 
 			get.GetStatusCode(status);
 			if (status != 200) {
 				ret = BGDL_ERROR_SERVER;
-				goto end;
+				break;
 			}
 			ret = bgdlReceivePackageHeader(&get, &info->data);
 			if (ret != 0)
-				goto end;
+				break;
 			switch (info->data.category) {
 			case 6:
 			case 7:
@@ -2044,7 +2058,7 @@ int GetHeaderInfo(int mode, int flags, const char *device, const char *url, cons
 			}
 		}
 		if (ret != 0)
-			goto end;
+			break;
 		if (info->storageNeeded != 0) {
 			switch (info->kind) {
 			case 9:
@@ -2068,16 +2082,15 @@ int GetHeaderInfo(int mode, int flags, const char *device, const char *url, cons
 		case 7:
 		case 6:
 			if (contentId != NULL &&
-			    sce_paf_strncmp(contentId, info->data.contentId, sizeof(info->data.contentId)) != 0) {
+			    sce_paf_strncmp(contentId, info->data.contentId, sizeof(info->data.contentId)) != 0)
 				ret = BGDL_ERROR_CONTENT_ID;
-				goto end;
-			}
 			break;
 		}
+		if (ret != 0)
+			break;
 		info->flag = true;
 		ret = 0;
-	}
-end:
+	} while (0);
 	info->status = ret;
 	return ret;
 }
@@ -2183,21 +2196,22 @@ int BgdlHttpDownload::Prepare(void)
 	}
 
 	const char *base = NULL;
+	bool removeExisting = true;
 
 	if (folder.m_begin != NULL)
 		base = folder.m_begin;
 	if (info.kind == 4) {
-		if (base == NULL || sce_paf_strlen(base) == 0)
-			goto write;
+		if (base == NULL || sce_paf_strlen(base) == 0) {
+			removeExisting = false;
+		} else {
+			string baseName(base);
 
-		string baseName(base);
-
-		if (Bgdl_81111B96(&name, &baseName, &folderName) != 0)
-			goto write;
+			if (Bgdl_81111B96(&name, &baseName, &folderName) != 0)
+				removeExisting = false;
+		}
 	}
-	if (path.length() != 0 && LocalFile::Exists(path.c_str()) == true)
+	if (removeExisting && path.length() != 0 && LocalFile::Exists(path.c_str()) == true)
 		LocalFile::RemoveFile(path.c_str());
-write:
 	{
 		EseParam param(m_task->id);
 		SceUInt64 start;
@@ -2394,71 +2408,72 @@ int BgdlAppFolder::UnpackFile(bool remove, const char *file, const char *titleId
 
 	sce_paf_memset(&data, 0, sizeof(data));
 	done = 0;
-	if (file == NULL || titleId == NULL)
-		goto end;
-	size = LocalFile::GetFileSize(file);
-	if (size <= 0)
-		goto end;
-	ret = bgdlReadPackageHeader(file, &data);
-	if (ret != 0)
-		goto end;
-	{
-		EseTask *task = m_download->m_task;
-
-		task->status.id = task->id;
-		task->status.current = 0;
-		task->status.total = size;
-		task->transfer.Start(size, 0, 0, 512000);
-		bgdlManagerGet()->SetStatus(&task->status);
-	}
-	fp = LocalFile::Open(file, SCE_O_RDONLY | 0x10000, 6, &ret);
-	if (ret != 0)
-		goto end;
-	{
-		BgdlFileCloser closer(fp);
-
-		ret = doPrepare(remove, "p", base);
-		ret = doOpen(0, false, false);
+	do {
+		if (file == NULL || titleId == NULL)
+			break;
+		size = LocalFile::GetFileSize(file);
+		if (size <= 0)
+			break;
+		ret = bgdlReadPackageHeader(file, &data);
 		if (ret != 0)
-			goto end;
+			break;
+		{
+			EseTask *task = m_download->m_task;
 
-		common::SharedPtr<MallocBuffer> buf = MallocBuffer::Allocate(0x8000);
-
-		if (buf.get() == NULL || buf->GetSize() == 0) {
-			ret = BGDL_ERROR_NO_MEMORY;
-			goto end;
+			task->status.id = task->id;
+			task->status.current = 0;
+			task->status.total = size;
+			task->transfer.Start(size, 0, 0, 512000);
+			bgdlManagerGet()->SetStatus(&task->status);
 		}
-		while (done < size) {
-			int n;
-			int r;
+		fp = LocalFile::Open(file, SCE_O_RDONLY | 0x10000, 6, &ret);
+		if (ret != 0)
+			break;
+		{
+			BgdlFileCloser closer(fp);
 
-			bgdlManagerGet()->IsCancelled();
-			if (bgdlManagerGet()->IsCancelled() == true) {
-				ret = BGDL_ERROR_INTERRUPTED;
+			ret = doPrepare(remove, "p", base);
+			ret = doOpen(0, false, false);
+			if (ret != 0)
+				break;
+
+			common::SharedPtr<MallocBuffer> buf = MallocBuffer::Allocate(0x8000);
+
+			if (buf.get() == NULL || buf->GetSize() == 0) {
+				ret = BGDL_ERROR_NO_MEMORY;
 				break;
 			}
-			n = fp->Read(buf->GetAddr(), buf->GetSize());
-			if (n <= 0) {
-				ret = 0;
-				if (n < 0)
-					ret = n;
-				break;
+			while (done < size) {
+				int n;
+				int r;
+
+				bgdlManagerGet()->IsCancelled();
+				if (bgdlManagerGet()->IsCancelled() == true) {
+					ret = BGDL_ERROR_INTERRUPTED;
+					break;
+				}
+				n = fp->Read(buf->GetAddr(), buf->GetSize());
+				if (n <= 0) {
+					ret = 0;
+					if (n < 0)
+						ret = n;
+					break;
+				}
+				r = doUnpack(buf->GetAddr(), n);
+				if (r <= 0) {
+					ret = r;
+					break;
+				}
+				done += r;
+				m_download->m_task->doUpdateProgress(true, done);
 			}
-			r = doUnpack(buf->GetAddr(), n);
-			if (r <= 0) {
-				ret = r;
-				break;
+			if (ret == 0) {
+				ret = -1;
+				if (done >= size)
+					ret = 0;
 			}
-			done += r;
-			m_download->m_task->doUpdateProgress(true, done);
 		}
-		if (ret == 0) {
-			ret = -1;
-			if (done >= size)
-				ret = 0;
-		}
-	}
-end:
+	} while (0);
 	if (ret != 0 && done != 0) {
 		string path = m_path;
 
@@ -2511,179 +2526,180 @@ bool BgdlHttpDownload::InstallLocal(int *ret)
 		return false;
 	}
 	path = local + sce_paf_strlen("file://");
-	if (sce_paf_private_strtok(url.m_begin, "host0:") == NULL) {
-		const char *colon = sce_paf_strrchr(path.c_str(), ':');
+	do {
+		if (sce_paf_private_strtok(url.m_begin, "host0:") == NULL) {
+			const char *colon = sce_paf_strrchr(path.c_str(), ':');
 
-		if (colon != NULL)
-			name = colon + 1;
-		if (name.length() == 0) {
+			if (colon != NULL)
+				name = colon + 1;
+			if (name.length() == 0) {
+				*m_runStatus = 0;
+				*ret = BGDL_ERROR_NO_URL;
+				break;
+			}
+		} else if (Bgdl_81111C2C(&path, &name) != true || name.length() == 0) {
 			*m_runStatus = 0;
 			*ret = BGDL_ERROR_NO_URL;
-			goto done;
+			break;
 		}
-	} else if (Bgdl_81111C2C(&path, &name) != true || name.length() == 0) {
-		*m_runStatus = 0;
-		*ret = BGDL_ERROR_NO_URL;
-		goto done;
-	}
-	*ret = m_task->setState(1, &state, false);
-	if (*ret != 0)
-		goto done;
-	install = true;
-	if (state == 1) {
-		*ret = bgdlGetContentType(0, &type, &path, &mimeType);
-		if (*ret != 0) {
-			*m_runStatus = 0;
-			goto done;
-		}
-		if (type != 6) {
-			*ret = BGDL_ERROR_NOT_PACKAGE;
-			*m_runStatus = 0;
-			goto done;
-		}
-		*ret = bgdlReadPackageHeader(path.c_str(), &data);
+		*ret = m_task->setState(1, &state, false);
 		if (*ret != 0)
-			goto done;
-		if (data.category == 22) {
-			type = 7;
-			install = false;
-			key205 = false;
-		} else {
-			install = true;
-			if ((data.attribute & 0x10) != 0) {
+			break;
+		install = true;
+		if (state == 1) {
+			*ret = bgdlGetContentType(0, &type, &path, &mimeType);
+			if (*ret != 0) {
+				*m_runStatus = 0;
+				break;
+			}
+			if (type != 6) {
+				*ret = BGDL_ERROR_NOT_PACKAGE;
+				*m_runStatus = 0;
+				break;
+			}
+			*ret = bgdlReadPackageHeader(path.c_str(), &data);
+			if (*ret != 0)
+				break;
+			if (data.category == 22) {
+				type = 7;
 				install = false;
 				key205 = false;
-			}
-		}
-		{
-			EseParam param(m_task->id);
-
-			*ret = param.openWrite();
-			if (*ret != 0)
-				goto done;
-			*ret = param.write(203, name.c_str(), name.length() + 1);
-			if (*ret != 0)
-				goto done;
-			m_task->status.id = m_task->id;
-			m_task->status.current = 0;
-			m_task->status.total = 0;
-			m_task->transfer.Start(0, 0, 0, 512000);
-			bgdlManagerGet()->SetStatus(&m_task->status);
-			*ret = param.write(107, &type, sizeof(type));
-			if (*ret != 0)
-				goto done;
-			*ret = param.write(205, &key205, sizeof(key205));
-			if (*ret != 0)
-				goto done;
-			if (key205 == true) {
-				bool key102 = true;
-
-				*ret = param.write(102, &key102, sizeof(key102));
-				if (*ret != 0)
-					goto done;
-				m_task->m_ParamCache.key102 = key102;
-			}
-			if (data.titleId[0] != '\0') {
-				*ret = param.write(220, data.titleId, sce_paf_strlen(data.titleId) + 1);
-				if (*ret != 0)
-					goto done;
-
-				BgdlTaskPackage package;
-
-				package.key220 = data.titleId;
-				package.reserved2 = data.category;
-				package.reserved3 = data.attribute;
-				m_task->doSetPackage(&package);
-			}
-			*ret = param.write(232, &data, sizeof(data));
-			if (*ret != 0)
-				goto done;
-			*ret = param.commit();
-			if (*ret != 0)
-				goto done;
-		}
-		{
-			BgdlTaskPath titleId;
-
-			Bgdl_81122700(m_task->id, 220, &titleId);
-		}
-		*ret = m_task->setState(2, &state, false);
-		if (*ret != 0)
-			goto done;
-	}
-	{
-		string from;
-		string to;
-
-		if (state == 2) {
-			BgdlAppFolder folder(this);
-			BgdlTaskPath base;
-
-			*ret = m_task->GetFolder(&base, true);
-			if (*ret != 0)
-				goto done;
-			*ret = folder.UnpackFile(install, path.c_str(), data.titleId, base.m_begin);
-			if (*ret != 0)
-				goto done;
-			{
-				string unpacked = folder.m_path;
-
-				from = unpacked;
-			}
-			*ret = folder.doPrepare(false, data.titleId, base.m_begin);
-			if (*ret != 0)
-				goto done;
-			{
-				string title = folder.m_path;
-
-				to = title;
-			}
-			if (Dir::IsExist(to.c_str()) == true) {
-				*ret = Dir::RemoveRecursive(to.c_str());
-				if (*ret != 0)
-					goto done;
-			}
-			*ret = LocalFile::RenameFile(from.c_str(), to.c_str());
-			if (*ret != 0)
-				goto done;
-			*ret = m_task->setState(3, &state, false);
-			if (*ret != 0)
-				goto done;
-		}
-		if (state == 3) {
-			if (key205 == true) {
-				if (to.length() != 0) {
-					BgdlGamePluginLoader loader(this);
-					const char *folderPath = to.c_str();
-					GamePluginInterface *game;
-					int result;
-
-					s_gamePluginLoader = &loader;
-					game = loader.Load();
-					result = BGDL_ERROR_NO_GAME_PLUGIN;
-					if (game != NULL) {
-						GameInstallExParam param;
-
-						sce_paf_memset(&param, 0, sizeof(param));
-						param.storage = 0;
-						param.noOtherFlag = false;
-						param.imported = false;
-						sce_paf_snprintf(param.path, sizeof(param.path) - 1, "%s", folderPath);
-						result = ((int (*)(GameInstallExParam *))
-							  game->func[GAME_PLUGIN_FUNC_INSTALL_EX])(&param);
-					}
-					*ret = result;
-					s_gamePluginLoader = NULL;
-				}
 			} else {
-				bool key113 = true;
+				install = true;
+				if ((data.attribute & 0x10) != 0) {
+					install = false;
+					key205 = false;
+				}
+			}
+			{
+				EseParam param(m_task->id);
 
-				m_task->m_ParamCache.key113 = true;
-				*ret = Bgdl_811233A4(m_task->id, 113, &key113, sizeof(key113));
+				*ret = param.openWrite();
+				if (*ret != 0)
+					break;
+				*ret = param.write(203, name.c_str(), name.length() + 1);
+				if (*ret != 0)
+					break;
+				m_task->status.id = m_task->id;
+				m_task->status.current = 0;
+				m_task->status.total = 0;
+				m_task->transfer.Start(0, 0, 0, 512000);
+				bgdlManagerGet()->SetStatus(&m_task->status);
+				*ret = param.write(107, &type, sizeof(type));
+				if (*ret != 0)
+					break;
+				*ret = param.write(205, &key205, sizeof(key205));
+				if (*ret != 0)
+					break;
+				if (key205 == true) {
+					bool key102 = true;
+
+					*ret = param.write(102, &key102, sizeof(key102));
+					if (*ret != 0)
+						break;
+					m_task->m_ParamCache.key102 = key102;
+				}
+				if (data.titleId[0] != '\0') {
+					*ret = param.write(220, data.titleId, sce_paf_strlen(data.titleId) + 1);
+					if (*ret != 0)
+						break;
+
+					BgdlTaskPackage package;
+
+					package.key220 = data.titleId;
+					package.serverCategory = data.category;
+					package.serverAttribute = data.attribute;
+					m_task->doSetPackage(&package);
+				}
+				*ret = param.write(232, &data, sizeof(data));
+				if (*ret != 0)
+					break;
+				*ret = param.commit();
+				if (*ret != 0)
+					break;
+			}
+			{
+				BgdlTaskPath titleId;
+
+				Bgdl_81122700(m_task->id, 220, &titleId);
+			}
+			*ret = m_task->setState(2, &state, false);
+			if (*ret != 0)
+				break;
+		}
+		{
+			string from;
+			string to;
+
+			if (state == 2) {
+				BgdlAppFolder folder(this);
+				BgdlTaskPath base;
+
+				*ret = m_task->GetFolder(&base, true);
+				if (*ret != 0)
+					break;
+				*ret = folder.UnpackFile(install, path.c_str(), data.titleId, base.m_begin);
+				if (*ret != 0)
+					break;
+				{
+					string unpacked = folder.m_path;
+
+					from = unpacked;
+				}
+				*ret = folder.doPrepare(false, data.titleId, base.m_begin);
+				if (*ret != 0)
+					break;
+				{
+					string title = folder.m_path;
+
+					to = title;
+				}
+				if (Dir::IsExist(to.c_str()) == true) {
+					*ret = Dir::RemoveRecursive(to.c_str());
+					if (*ret != 0)
+						break;
+				}
+				*ret = LocalFile::RenameFile(from.c_str(), to.c_str());
+				if (*ret != 0)
+					break;
+				*ret = m_task->setState(3, &state, false);
+				if (*ret != 0)
+					break;
+			}
+			if (state == 3) {
+				if (key205 == true) {
+					if (to.length() != 0) {
+						BgdlGamePluginLoader loader(this);
+						const char *folderPath = to.c_str();
+						GamePluginInterface *game;
+						int result;
+
+						s_gamePluginLoader = &loader;
+						game = loader.Load();
+						result = BGDL_ERROR_NO_GAME_PLUGIN;
+						if (game != NULL) {
+							GameInstallExParam param;
+
+							sce_paf_memset(&param, 0, sizeof(param));
+							param.storage = 0;
+							param.noOtherFlag = false;
+							param.imported = false;
+							sce_paf_snprintf(param.path, sizeof(param.path) - 1, "%s", folderPath);
+							result = ((int (*)(GameInstallExParam *))
+								  game->func[GAME_PLUGIN_FUNC_INSTALL_EX])(&param);
+						}
+						*ret = result;
+						s_gamePluginLoader = NULL;
+					}
+				} else {
+					bool key113 = true;
+
+					m_task->m_ParamCache.key113 = true;
+					*ret = Bgdl_811233A4(m_task->id, 113, &key113, sizeof(key113));
+				}
 			}
 		}
-	}
-done:
+	} while (0);
 	*m_runStatus = 0;
 	return true;
 }
@@ -2764,138 +2780,139 @@ int EseTask::execute(int *runStatus)
 }
 
 /* (0x8111FEF8) */
-int Bgdl_8111FEF8(const char *device, const char *url, int flags, int reserved0, MtpBgCopyHost *host,
+int Bgdl_8111FEF8(const char *device, const char *url, int flags, int unusedOption, MtpBgCopyHost *host,
 		  BgdlServerParam *param, const char *folder, const char *name, int *status,
 		  BgdlServerInfo *server, string *path)
 {
 	int ret;
 
-	if (url == NULL || url[0] == '\0' || server == NULL) {
-		ret = BGDL_ERROR_NULL_TITLE;
-		goto end;
-	}
-	ret = 0;
-	if (sce_paf_private_strtok(url, "http://") == NULL &&
-	    sce_paf_private_strtok(url, "https://") == NULL) {
-		ret = BGDL_ERROR_NOT_HTTP;
-		goto end;
-	}
-	server->Clear();
-	{
-		BgdlStorageInfo storage;
-
-		if (device != NULL) {
-			ret = Bgdl_8111234C(device, &storage);
-			if (ret != 0) {
-				server->status = ret;
-			} else {
-				server->storageSize = storage.max;
-				server->storageFree = storage.free;
-				server->storageUsed = storage.max - storage.free;
-				server->storageNeeded = storage.clusterSize * 6;
-			}
-		}
-
-		http::Client::Param clientParam(string(""));
-
-		if (param != NULL) {
-			clientParam.m_resolve_timeout = param->value[0];
-			clientParam.m_resolve_retry = param->value[1];
-			clientParam.m_connect_timeout = param->value[2];
-			clientParam.m_send_timeout = param->value[3];
-			clientParam.m_recv_timeout = param->value[4];
-		}
-
-		http::Client client(clientParam);
-		http::Transaction trans(client);
-
-		ret = ScePafMisc_A86A5D0E(&trans, url, "GET", (StateCheck *)host);
-		ret = bgdlSetRequestHeaders(&trans);
-		if (ret != 0)
-			goto end;
-		ret = trans.SendRequest(NULL, 0);
-		if (ret != 0)
-			goto end;
-
-		int code = 0;
-
-		trans.GetStatusCode(code);
-		if (status != NULL)
-			*status = code;
-		if (code != 200) {
-			ret = BGDL_ERROR_SERVER;
-			goto end;
-		}
-		trans.GetFileName(server->fileName);
-		trans.GetMimeType(server->mimeType);
-		trans.GetResponseHeader("Last-Modified", server->lastModified);
-		trans.GetContentLength(server->size);
-		if (server->size == 0) {
-			ret = BGDL_ERROR_NO_SIZE;
-			goto end;
-		}
-		if (folder == NULL) {
-			ret = 0;
-			goto end;
-		}
-		if (server->fileName.length() == 0) {
-			ret = BGDL_ERROR_NO_FILE;
-			goto end;
-		}
-
-		string target;
-		common::SharedPtr<MallocBuffer> buf = MallocBuffer::Allocate(0x8000);
-
-		if (buf.get() == NULL || buf->GetSize() == 0) {
-			ret = BGDL_ERROR_NO_MEMORY;
-			goto end;
-		}
-		target = folder;
-		target += "/";
-		if (name != NULL)
-			target += name;
-		else
-			target.append(server->fileName);
-		if (path != NULL)
-			*path = target;
-
-		common::SharedPtr<File> file = LocalFile::Open(target.c_str(),
-							       SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC |
-							       0x10000, 6, &ret);
-
-		if (ret != 0)
-			goto end;
-
-		BgdlFileCloser closer(file);
-		SceUInt64 done = 0;
-		SceUInt32 size = 0;
-		SceUInt64 total = server->size;
-		BgdlPowerTicker ticker(1);
-
-		Bgdl_81113890(1);
-		if (total != 0) {
-			for (;;) {
-				ticker.doTick();
-				ret = trans.ReceiveResponse((common::SharedPtr<Buffer> &)buf, &size);
-				if (ret != 0) {
-					host->isRequested();
-					break;
-				}
-				if (size == 0)
-					break;
-				if (buf->GetSize() > size && done + size < total)
-					break;
-				if (file->Write(buf->GetAddr(), size) != (int)size)
-					break;
-				done += size;
-				thread::Sleep(1);
-				if (total <= done)
-					break;
-			}
+	do {
+		if (url == NULL || url[0] == '\0' || server == NULL) {
+			ret = BGDL_ERROR_NULL_TITLE;
+			break;
 		}
 		ret = 0;
-	}
-end:
+		if (sce_paf_private_strtok(url, "http://") == NULL &&
+		    sce_paf_private_strtok(url, "https://") == NULL) {
+			ret = BGDL_ERROR_NOT_HTTP;
+			break;
+		}
+		server->Clear();
+		{
+			BgdlStorageInfo storage;
+
+			if (device != NULL) {
+				ret = Bgdl_8111234C(device, &storage);
+				if (ret != 0) {
+					server->status = ret;
+				} else {
+					server->storageSize = storage.max;
+					server->storageFree = storage.free;
+					server->storageUsed = storage.max - storage.free;
+					server->storageNeeded = storage.clusterSize * 6;
+				}
+			}
+
+			http::Client::Param clientParam(string(""));
+
+			if (param != NULL) {
+				clientParam.m_resolve_timeout = param->value[0];
+				clientParam.m_resolve_retry = param->value[1];
+				clientParam.m_connect_timeout = param->value[2];
+				clientParam.m_send_timeout = param->value[3];
+				clientParam.m_recv_timeout = param->value[4];
+			}
+
+			http::Client client(clientParam);
+			http::Transaction trans(client);
+
+			ret = ScePafMisc_A86A5D0E(&trans, url, "GET", (StateCheck *)host);
+			ret = bgdlSetRequestHeaders(&trans);
+			if (ret != 0)
+				break;
+			ret = trans.SendRequest(NULL, 0);
+			if (ret != 0)
+				break;
+
+			int code = 0;
+
+			trans.GetStatusCode(code);
+			if (status != NULL)
+				*status = code;
+			if (code != 200) {
+				ret = BGDL_ERROR_SERVER;
+				break;
+			}
+			trans.GetFileName(server->fileName);
+			trans.GetMimeType(server->mimeType);
+			trans.GetResponseHeader("Last-Modified", server->lastModified);
+			trans.GetContentLength(server->size);
+			if (server->size == 0) {
+				ret = BGDL_ERROR_NO_SIZE;
+				break;
+			}
+			if (folder == NULL) {
+				ret = 0;
+				break;
+			}
+			if (server->fileName.length() == 0) {
+				ret = BGDL_ERROR_NO_FILE;
+				break;
+			}
+
+			string target;
+			common::SharedPtr<MallocBuffer> buf = MallocBuffer::Allocate(0x8000);
+
+			if (buf.get() == NULL || buf->GetSize() == 0) {
+				ret = BGDL_ERROR_NO_MEMORY;
+				break;
+			}
+			target = folder;
+			target += "/";
+			if (name != NULL)
+				target += name;
+			else
+				target.append(server->fileName);
+			if (path != NULL)
+				*path = target;
+
+			common::SharedPtr<File> file = LocalFile::Open(target.c_str(),
+								       SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC |
+								       0x10000, 6, &ret);
+
+			if (ret != 0)
+				break;
+
+			BgdlFileCloser closer(file);
+			SceUInt64 done = 0;
+			SceUInt32 size = 0;
+			SceUInt64 total = server->size;
+			BgdlPowerTicker ticker(1);
+
+			Bgdl_81113890(1);
+			if (total != 0) {
+				for (;;) {
+					ticker.doTick();
+					ret = trans.ReceiveResponse((common::SharedPtr<Buffer> &)buf, &size);
+					if (ret != 0) {
+						host->isRequested();
+						break;
+					}
+					if (size == 0)
+						break;
+					if (buf->GetSize() > size && done + size < total)
+						break;
+					if (file->Write(buf->GetAddr(), size) != (int)size)
+						break;
+					done += size;
+					thread::Sleep(1);
+					if (total <= done)
+						break;
+				}
+			}
+			ret = 0;
+		}
+	} while (0);
 	server->status = ret;
 	return ret;
 }
@@ -3049,8 +3066,8 @@ int BgdlGamePluginLoader::InstallLicense(const char *path, int kind, BgdlTaskInf
 	sce_paf_snprintf(param.path, sizeof(param.path) - 1, "%s", path);
 	sce_paf_snprintf(param.titleId, sizeof(param.titleId) - 1, "%s", info->url.c_str());
 	param.kind = kind;
-	param.flag1 = info->noOtherFlag;
-	param.flag2 = info->imported;
+	param.skipOtherFlag = info->noOtherFlag;
+	param.skipTopmenuNotify = info->imported;
 	info->progress = 0;
 	param.progressFunc = bgdlInstallProgress;
 	param.progressArg = info;
