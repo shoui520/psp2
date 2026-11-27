@@ -366,6 +366,7 @@ int32_t ProgressBarTouch::HandleTouchEvent(Event *e)
 	return Widget::HandleTouchEvent(e);
 }
 
+#ifndef PAF_BUILD_2014
 int32_t ProgressBarTouch::HandleKeycodeEvent(Event *e)
 {
 	int32_t key = (uint8_t)e->m_detail;
@@ -472,6 +473,7 @@ void ProgressBarTouch::EnableFocusEvent(bool on_off)
 	}
 	Widget::EnableFocusEvent(on_off);
 }
+#endif
 
 Widget *ProgressBarTouch::GetPartsWidget(int32_t obj, int32_t *child_obj)
 {

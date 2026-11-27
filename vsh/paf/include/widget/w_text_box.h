@@ -146,7 +146,9 @@ public:
 	virtual int32_t SetCaretIndex(uint32_t index);
 	virtual int32_t SetSelectionRange(uint32_t index, uint32_t len);
 	virtual int32_t SetCaretVisible(bool visible);
+#ifndef PAF_BUILD_2014
 	virtual int32_t HandleKeycodeEvent(Event *e);
+#endif
 	virtual int32_t HandleTouchPress(Event *e);
 	virtual int32_t HandleTouchRelease();
 	/* a tap: the glow shown and the text box edited where it is no edit text yet */

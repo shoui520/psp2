@@ -4063,12 +4063,16 @@ void ScePafWidget_B4A4660B(Environment *env, bool enable, int32_t port, bool rel
 
 	if (enable) {
 		inputdevice::AddInputListener(pad);
+#ifndef PAF_BUILD_2014
 		if (!env->m_analog_scroll && env->m_reserved_flag_b == true)
 			pad->SetMode(0, 0);
+#endif
 		inputdevice::AddInputListener(keyboard);
 	} else {
 		inputdevice::DelInputListener(pad);
+#ifndef PAF_BUILD_2014
 		pad->SetMode(1, 0);
+#endif
 		inputdevice::DelInputListener(keyboard);
 	}
 	if (port >= 2)

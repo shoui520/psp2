@@ -1342,6 +1342,7 @@ bool DirectBar::FindEnableBtn(int32_t *index, uint32_t key)
 	return found;
 }
 
+#ifndef PAF_BUILD_2014
 int32_t DirectBar::HandleKeycodeEvent(Event *e)
 {
 	uint32_t key = (uint8_t)e->m_detail;
@@ -1438,6 +1439,7 @@ int32_t DirectBar::HandleFocusEvent(Event *e)
 	}
 	return Handler::HandleFocusEvent(e);
 }
+#endif
 
 void DirectBar::UpdateDBarLayout()
 {

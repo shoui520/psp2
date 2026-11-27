@@ -4075,6 +4075,7 @@ static void PassTextAutoScroll(ListView *view, Event *e, ListItem *item)
 	ScePafWidget_8A5AE1CD(target_text, origin);
 }
 
+#ifndef PAF_BUILD_2014
 /* a move of a front touch whose button or text auto scrolls by a long press: the scroll handed
    to the item the touch is on, and on to the cell next to it where the touch has left it */
 int32_t ListView::HandleTouchEvent(Event *e)
@@ -4102,14 +4103,9 @@ int32_t ListView::HandleTouchEvent(Event *e)
 
 		bool on;
 
-#ifdef PAF_BUILD_2014
-		if (!(text != NULL && (on = false, ScePafWidget_222D55C7(text, &on), on) &&
-		      text->m_touch_held))
-#else
 		if (!((button != NULL && button->IsTextAutoScrollLocked()) ||
 		      (text != NULL && (on = false, ScePafWidget_222D55C7(text, &on), on) &&
 		       text->m_touch_held)))
-#endif
 			goto base;
 
 		ListItem *item = ListItem::GetListItem(captured);
@@ -4163,15 +4159,42 @@ int32_t ListView::HandleTouchEvent(Event *e)
 base:
 	return ScrollViewBase::HandleTouchEvent(e);
 }
+#endif
 
 int32_t ListView::HandleKeycodeEvent(Event *e)
 {
-#ifndef PAF_BUILD_2014
+#ifdef PAF_BUILD_2014
+	if (e == NULL || ((uint8_t)e->m_detail != 0 && (uint8_t)e->m_detail <= 4))
+		return ScrollViewBase::HandleKeycodeEvent(e);
+	if (!m_focused || e->m_target != NULL)
+		return ScrollViewBase::HandleKeycodeEvent(e);
+
+	listview::Cell *cell = m_cell_map->Find(m_focus_list_pos.m_segment, m_focus_list_pos.m_cell);
+
+	if (cell == NULL)
+		return ScrollViewBase::HandleKeycodeEvent(e);
+
+	Event ev(*e);
+
+	ev.m_type = (ev.m_type & 0xFF0FFFFF) | 0x100000;
+	ev.m_target = cell->m_item;
+	m_env->m_ev_queue.PushBack(ev);
+	e->Consume();
+	return 0;
+#else
 	if (ScePafWidget_5EEE4313(e))
 		return 0;
-#endif
 	return ScrollViewBase::HandleKeycodeEvent(e);
+#endif
 }
+
+#ifdef PAF_BUILD_2014
+void ListView::UpdateAfterChildren()
+{
+	ScrollViewBase::UpdateAfterChildren();
+	Sync();
+}
+#endif
 
 void ListView::OnPartsLayoutUpdated(bool is_dirty)
 {
@@ -4199,10 +4222,12 @@ ListView::~ListView()
 	m_cell_map = (listview::CellMap *)-1;
 }
 
+#ifndef PAF_BUILD_2014
 void ListView::UpdateMovableDirection()
 {
 	ScrollViewBase::UpdateMovableDirection();
 }
+#endif
 
 namespace listview {
 

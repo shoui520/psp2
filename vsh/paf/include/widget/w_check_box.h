@@ -20,8 +20,10 @@ public:
 
 	virtual bool IsInherit(const char *type) const;
 	virtual char *GetTypeName() const;
+#ifndef PAF_BUILD_2014
 	/* ButtonBase's, and the focus cursor moved to the image's side */
 	virtual void UpdateSize();
+#endif
 	virtual void OnButtonDecide();
 };
 

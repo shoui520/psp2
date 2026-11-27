@@ -994,9 +994,9 @@ int32_t TextBox::ScePafWidget_695200BA(Event *e)
 	return ret;
 }
 
+#ifndef PAF_BUILD_2014
 int32_t TextBox::HandleKeycodeEvent(Event *e)
 {
-#ifndef PAF_BUILD_2014
 	if (m_env != NULL && ScePafWidget_A6B659BB(m_env, 0) && (uint8_t)e->m_detail == 27 &&
 	    (uint16_t)e->m_type == 17) {
 		if (m_glow != NULL) {
@@ -1012,9 +1012,9 @@ int32_t TextBox::HandleKeycodeEvent(Event *e)
 		BeginEdit();
 		e->m_type = (e->m_type & 0xf0ffffff) | 0x1000000;
 	}
-#endif
 	return Text::HandleKeycodeEvent(e);
 }
+#endif
 
 int32_t TextBox::UpdateTouch(const math::v2 &pos)
 {

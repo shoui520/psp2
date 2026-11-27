@@ -351,12 +351,19 @@ public:
 	virtual ~ListView();
 
 	virtual bool IsInherit(const char *type) const;
+#ifndef PAF_BUILD_2014
 	virtual int32_t HandleTouchEvent(Event *e);
+#endif
 	virtual char *GetTypeName() const;
 	virtual void DestroyWidget();
 	virtual void UpdateSize();
+#ifdef PAF_BUILD_2014
+	virtual void UpdateAfterChildren();
+#endif
 	virtual void OnPartsLayoutUpdated(bool is_dirty);
+#ifndef PAF_BUILD_2014
 	virtual void UpdateMovableDirection();
+#endif
 	virtual int32_t HandleKeycodeEvent(Event *e);
 #ifndef PAF_BUILD_2014
 	virtual void ScePafWidget_22EF63CE();
@@ -412,11 +419,11 @@ public:
 	virtual void OnCellMoved(int32_t segment, int32_t from, int32_t to);
 	virtual void OnCellDragStart(int32_t segment, int32_t cell);
 	virtual void OnCellDragStop(int32_t segment, int32_t cell);
+#ifndef PAF_BUILD_2014
 	virtual void EnableFocusEvent(bool on_off)
 	{
 		if (!on_off && !(m_focus_pos == math::v2(-1.0f, -1.0f))) {
 			m_focus_pos = math::v2(-1.0f, -1.0f);
-#ifndef PAF_BUILD_2014
 			m_focus_start = math::v2(0.0f, 0.0f);
 			m_focus_target = math::v2(0.0f, 0.0f);
 			Environment *env = m_env;
@@ -426,10 +433,10 @@ public:
 				env->m_focus_cursor_rear.m_touch_move = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
 				env->m_focus_cursor_rear.m_moving_only = true;
 			}
-#endif
 		}
 		Widget::EnableFocusEvent(on_off);
 	}
+#endif
 
 	/* the range of the view along its axis (name ours) */
 	math::v2 GetVisibleRange(int32_t opt);

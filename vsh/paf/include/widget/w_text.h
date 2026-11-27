@@ -174,6 +174,7 @@ public:
 	}
 #endif
 
+#ifndef PAF_BUILD_2014
 	/* the focus event on or off; on, its links sorted and the first one focused */
 	virtual void EnableFocusEvent(bool on_off)
 	{
@@ -184,6 +185,7 @@ public:
 			UpdateSize();
 		}
 	}
+#endif
 
 	/* sets the touch modes from its touch modes and its focused link (0x8123aa94, name
 	   ours) */
@@ -232,11 +234,9 @@ public:
 #ifndef PAF_BUILD_2014
 	/* the focus put on a link of its own where the search is among them */
 	virtual Widget *SetFocusOption(const void *param, int32_t option);
-#endif
 	/* a key moves the focus among its links, the focus event puts it on one */
 	virtual int32_t HandleKeycodeEvent(Event *e);
 	virtual int32_t HandleFocusEvent(Event *e);
-#ifndef PAF_BUILD_2014
 	/* kept only while it is smaller than its scene */
 	virtual void SetFitToScene(bool on_off);
 #endif

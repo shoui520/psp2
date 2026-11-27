@@ -51,8 +51,10 @@ public:
 	{
 	}
 
+#ifndef PAF_BUILD_2014
 	/* keys are not handled (-1) */
 	virtual int32_t HandleKeycodeEvent(Event *e);
+#endif
 	/* a touch opens the drum where it is opened by a click */
 	virtual int32_t HandleGestureEvent(Event *e);
 	virtual bool IsInherit(const char *type) const;
@@ -159,12 +161,16 @@ public:
 	{
 	}
 
+#ifndef PAF_BUILD_2014
 	/* up and down turn it; the turn ends at the next value where the key is let go */
 	virtual int32_t HandleKeycodeEvent(Event *e);
+#endif
 	/* touch, drag, flick and release */
 	virtual int32_t HandleGestureEvent(Event *e);
+#ifndef PAF_BUILD_2014
 	/* the turn ends at the next value where the focus leaves */
 	virtual int32_t HandleFocusEvent(Event *e);
+#endif
 	virtual bool IsInherit(const char *type) const;
 	virtual char *GetTypeName() const;
 	/* the turn moved on, its end taken */

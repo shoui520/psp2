@@ -662,6 +662,7 @@ const char *ButtonParam::ParamName()
 	return m_param_name;
 }
 
+#ifndef PAF_BUILD_2014
 int32_t ButtonParam::Create(int32_t mode)
 {
 	int32_t ret = ButtonBaseParam::Create(mode);
@@ -688,7 +689,6 @@ int32_t ButtonParam::Set()
 
 	Button *button = (Button *)m_widget;
 
-#ifndef PAF_BUILD_2014
 	if (m_enable_long_press_text_auto_scroll != button->IsLongPressTextAutoScrollEnabled() &&
 	    m_enable_long_press_text_auto_scroll) {
 		if (m_long_press_text_auto_scroll_begin_msec == -1)
@@ -696,9 +696,6 @@ int32_t ButtonParam::Set()
 		else
 			button->EnableLongPressTextAutoScroll(m_long_press_text_auto_scroll_begin_msec);
 	}
-#else
-	(void)button;
-#endif
 	return 0;
 }
 
@@ -708,12 +705,11 @@ int32_t ButtonParam::Get()
 
 	if (ret < 0)
 		return ret;
-#ifndef PAF_BUILD_2014
 	m_enable_long_press_text_auto_scroll =
 		((Button *)m_widget)->IsLongPressTextAutoScrollEnabled();
-#endif
 	return 0;
 }
+#endif
 
 const char ButtonStyleParam::m_param_name[] = "style_button";
 

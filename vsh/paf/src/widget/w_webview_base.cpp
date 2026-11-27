@@ -501,7 +501,7 @@ void WebViewBase::UpdateScrollOffset()
 		m_observer->OnScrollOffsetChanged(top_offset);
 }
 
-void WebViewBase::OnViewLayoutUpdated(bool is_dirty)
+void WebViewBase::OnPartsLayoutUpdated(bool is_dirty)
 {
 	if (is_dirty && GetInternalWidget() != NULL) {
 		UpdateScrollOffset();
@@ -510,14 +510,16 @@ void WebViewBase::OnViewLayoutUpdated(bool is_dirty)
 		if (doc != NULL)
 			doc->SyncScrollPosition(m_velocity);
 	}
-	ScrollView::OnViewLayoutUpdated(is_dirty);
+	ScrollViewBase::OnPartsLayoutUpdated(is_dirty);
 }
 
-void WebViewBase::UpdatePost()
+int32_t WebViewBase::OnDraw(graph::DrawInfo &info)
 {
-	if ((m_edit_state & 4U) != 0 && m_web_edit_listener != NULL)
+	if (m_web_edit_listener != NULL && (m_edit_state & 2U) != 0) {
+		m_edit_state = (m_edit_state & ~0xFU) | 4U;
 		m_web_edit_listener->Update(this);
-	Widget::UpdatePost();
+	}
+	return Widget::OnDraw(info);
 }
 
 void WebViewBase::OnImeAreaActivated()
@@ -692,15 +694,15 @@ void WebViewBase::RequestHitTest(const math::v2 *pos, int32_t hit_type)
 				     (int32_t)doc_pts[0].extract_y(), hit_type);
 }
 
-int32_t WebViewBase::HandleKeycodeEvent(Event *e)
+int32_t WebViewBase::HandleTouchEvent(Event *e)
 {
-	uint32_t key_action = (e->m_type >> 20) & 0xFU;
+	uint32_t touch_action = (e->m_type >> 20) & 0xFU;
 
-	if (key_action == 0)
+	if (touch_action == 0)
 		m_edit_state = (m_edit_state & ~0xF00U) | 0x100U;
-	else if (key_action == 1)
+	else if (touch_action == 1)
 		m_edit_state |= 0xF00U;
-	return ScrollView::HandleKeycodeEvent(e);
+	return ScrollViewBase::HandleTouchEvent(e);
 }
 
 int32_t WebViewBase::HandleGestureEvent(Event *e)

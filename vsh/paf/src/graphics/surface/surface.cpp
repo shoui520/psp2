@@ -1339,12 +1339,10 @@ int32_t Surface::GetPageIndex(FrameBufferType type, int32_t *page)
 	return 0;
 }
 
-#ifndef PAF_BUILD_2014
 int32_t Surface::GenTexture()
 {
 	return SCE_PAF_ERROR_GRAPHICS_INVALID_SURFACE;
 }
-#endif
 
 void Surface::operator delete(void *ptr)
 {

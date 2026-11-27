@@ -117,9 +117,11 @@ public:
 
 	ButtonParam();
 	virtual const char *GetParamName() const;
+#ifndef PAF_BUILD_2014
 	virtual int32_t Set();
 	virtual int32_t Get();
 	virtual int32_t Create(int32_t mode);
+#endif
 
 	bool m_enable_long_press_text_auto_scroll;
 	/* -1: 500 */

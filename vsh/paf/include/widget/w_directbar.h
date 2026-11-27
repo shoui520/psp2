@@ -70,9 +70,13 @@ public:
 	static const char m_widget_type[];
 	static const char *TypeName();
 
+#ifndef PAF_BUILD_2014
 	virtual int32_t HandleKeycodeEvent(Event *e);
+#endif
 	virtual int32_t HandleTouchEvent(Event *e);
+#ifndef PAF_BUILD_2014
 	virtual int32_t HandleFocusEvent(Event *e);
+#endif
 	virtual void DestroyWidget();
 	virtual uint32_t CheckState();
 	virtual void UpdateSize();

@@ -87,9 +87,11 @@ public:
 	virtual int32_t HandleKeycodeEvent(Event *e);
 	virtual int32_t HandlePointEvent(Event *e);
 	virtual int32_t HandleTouchEvent(Event *e);
+#ifndef PAF_BUILD_2014
 	/* the slider takes the focus given to the bar; a key drag ends when the bar loses it */
 	virtual int32_t HandleFocusEvent(Event *e);
 	virtual void EnableFocusEvent(bool on_off);
+#endif
 	virtual bool IsInherit(const char *type) const;
 	virtual char *GetTypeName() const;
 	virtual uint32_t CheckState();

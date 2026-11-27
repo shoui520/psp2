@@ -291,10 +291,12 @@ public:
 	/* the page's memory for the CPU, and back */
 	virtual void *Lock(int32_t page);
 	virtual void Unlock();
+#ifdef PAF_BUILD_2014
+	int32_t Resize(int32_t width, int32_t height);
+#else
 	virtual int32_t Resize(int32_t width, int32_t height);
-#ifndef PAF_BUILD_2014
-	virtual int32_t GenTexture();
 #endif
+	virtual int32_t GenTexture();
 
 	static void *operator new(size_t size);
 	static void operator delete(void *ptr);

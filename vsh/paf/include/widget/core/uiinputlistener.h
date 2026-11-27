@@ -300,6 +300,7 @@ public:
 
 	virtual void OnUpdate(const inputdevice::Data *data);
 
+#ifndef PAF_BUILD_2014
 	/* the stick moves the cursor keys (0) or not (1) */
 	virtual void SetMode(int32_t mode, int32_t option)
 	{
@@ -308,6 +309,7 @@ public:
 		else if (mode == 1)
 			m_analog_to_dpad = false;
 	}
+#endif
 
 	virtual int32_t SetInputMask(uint32_t port, uint32_t mask)
 	{
@@ -317,12 +319,18 @@ public:
 
 	/* the key event of the type (17 down, 18 up, 19 repeat, 20 held) for the key, queued
 	   (0x8114aa2a); -1 without an environment or a key code */
+#ifdef PAF_BUILD_2014
+	int32_t PostPadEvent(uint32_t type, uint32_t port, uint32_t key, bool flag, int32_t mode);
+	void UpdatePad(uint32_t *prev, uint32_t *curr, int32_t *port, int32_t *mode,
+		       const inputdevice::Data *data);
+#else
 	virtual int32_t PostPadEvent(uint32_t type, uint32_t port, uint32_t key, bool flag,
 				     int32_t mode);
 	/* the keys of the update made into the masks the events come from: opposite directions
 	   cancelled, the stick and a keyboard's keys added (0x8114aace) */
 	virtual void UpdatePad(uint32_t *prev, uint32_t *curr, int32_t *port, int32_t *mode,
 			       const inputdevice::Data *data);
+#endif
 
 	/* the time to the first repeat and between repeats, in milliseconds, and the repeats so
 	   far */
@@ -348,9 +356,13 @@ public:
 	}
 
 	virtual void OnUpdate(const inputdevice::Data *data);
+#ifdef PAF_BUILD_2014
+	int32_t PostPadEvent(uint32_t type, uint32_t port, uint32_t key, bool flag, int32_t mode);
+#else
 	/* the events of every key in the mask (0xdc5e436a) */
 	virtual int32_t PostPadEvent(uint32_t type, uint32_t port, uint32_t key, bool flag,
 				     int32_t mode);
+#endif
 };
 
 /* the listener of the Bluetooth remote: its keys turned into events of the widget it is given or

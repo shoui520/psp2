@@ -50,11 +50,11 @@ const char *CheckBox::TypeName()
 	return m_widget_type;
 }
 
+#ifndef PAF_BUILD_2014
 void CheckBox::UpdateSize()
 {
 	ButtonBase::UpdateSize();
 
-#ifndef PAF_BUILD_2014
 	FocusShape *shape = m_focus_shape;
 	graph::PlaneObj *image = NULL;
 
@@ -80,8 +80,8 @@ void CheckBox::UpdateSize()
 	else if (align_y == graph::PlaneObj::ALIGN_PLUS)
 		offs_y = (size - shape->m_size).extract_y() * 0.5f;
 	shape->m_offset = math::v3(offs_x, offs_y, 0.0f);
-#endif
 }
+#endif
 
 /* toggled with its sound, the image's whole animation played (a negative time) */
 void CheckBox::OnButtonDecide()

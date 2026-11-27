@@ -185,11 +185,7 @@ DisplaySurface::DisplaySurface(int32_t width, int32_t height, ImageMode format, 
 
 			s_offscreen = offscreen;
 			((ScreenSurface *)s_offscreen.get())->InitColorSurface();
-#ifdef PAF_BUILD_2014
-			offscreen->GenTexture();
-#else
 			s_offscreen->GenTexture();
-#endif
 			break;
 		}
 		case gutil::FrameBuffer_Shared_Share:

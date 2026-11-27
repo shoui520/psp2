@@ -98,12 +98,10 @@ public:
 	virtual void *Lock(int32_t page);
 	virtual void Unlock();
 
-#ifndef PAF_BUILD_2014
 	virtual int32_t GenTexture()
 	{
 		return SCE_PAF_ERROR_GRAPHICS_INVALID_SURFACE;
 	}
-#endif
 
 	virtual int32_t Begin(uint32_t flags);
 	/* a frame begun and ended: the surface's own steps, under the surface list's lock (names

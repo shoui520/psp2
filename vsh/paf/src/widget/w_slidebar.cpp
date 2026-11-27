@@ -579,6 +579,7 @@ int32_t SlideBar::HandleKeycodeEvent(Event *e)
 	return Widget::HandleKeycodeEvent(e);
 }
 
+#ifndef PAF_BUILD_2014
 int32_t SlideBar::HandleFocusEvent(Event *e)
 {
 	switch (e->GetType()) {
@@ -618,6 +619,7 @@ void SlideBar::EnableFocusEvent(bool on_off)
 	}
 	Widget::EnableFocusEvent(on_off);
 }
+#endif
 
 void SlideBar::Enable()
 {

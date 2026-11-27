@@ -364,12 +364,16 @@ public:
 	ProgressBarTouch(Widget *parent, CreateParam *param);
 	virtual ~ProgressBarTouch();
 
+#ifndef PAF_BUILD_2014
 	/* the left and right keys move the value by the key step, as a drag of the slider */
 	virtual int32_t HandleKeycodeEvent(Event *e);
+#endif
 	virtual int32_t HandlePointEvent(Event *e);
 	virtual int32_t HandleTouchEvent(Event *e);
+#ifndef PAF_BUILD_2014
 	virtual int32_t HandleFocusEvent(Event *e);
 	virtual void EnableFocusEvent(bool on_off);
+#endif
 	virtual bool IsInherit(const char *type) const;
 	virtual char *GetTypeName() const;
 	virtual WidgetSoundParam::Sound *GetSound(int32_t id);

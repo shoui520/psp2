@@ -587,10 +587,12 @@ int32_t SpinBase::HandleGestureEvent(Event *e)
 	return Widget::HandleGestureEvent(e);
 }
 
+#ifndef PAF_BUILD_2014
 int32_t SpinBase::HandleKeycodeEvent(Event *e)
 {
 	return -1;
 }
+#endif
 
 int32_t SpinBase::InitSpin(int32_t min, int32_t max, int32_t value, bool loop)
 {
@@ -878,6 +880,7 @@ int32_t SpinDrum::HandleGestureEvent(Event *e)
 	return Widget::HandleGestureEvent(e);
 }
 
+#ifndef PAF_BUILD_2014
 int32_t SpinDrum::HandleKeycodeEvent(Event *e)
 {
 	uint32_t state = (uint8_t)e->m_detail;
@@ -919,6 +922,7 @@ int32_t SpinDrum::HandleFocusEvent(Event *e)
 	}
 	return Handler::HandleFocusEvent(e);
 }
+#endif
 
 /* a frame of the snap, or of the flick slowing down (sped up while a key holds it, to 2000);
    ends where it reaches the end of the range that does not loop */

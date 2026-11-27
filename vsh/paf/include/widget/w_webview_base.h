@@ -192,14 +192,14 @@ public:
 	virtual ~WebViewBase();
 
 	/* Widget / ScrollViewBase overrides. */
-	virtual int32_t HandleKeycodeEvent(Event *e);
+	virtual int32_t HandleTouchEvent(Event *e);
 	virtual int32_t HandleGestureEvent(Event *e);
 	virtual bool IsInherit(const char *type) const;
 	virtual char *GetTypeName() const;
 	virtual void DestroyWidget();
 	virtual void Update();
-	virtual void UpdatePost();
-	virtual void OnViewLayoutUpdated(bool is_dirty);
+	virtual int32_t OnDraw(graph::DrawInfo &info);
+	virtual void OnPartsLayoutUpdated(bool is_dirty);
 
 	/* WebController virtual overrides. */
 	virtual int32_t Wakeup();
