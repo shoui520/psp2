@@ -1,6 +1,6 @@
 TARGET := loadexec_01g
 SRCS   := kl4e.c loadexec.c
-EXTRA_CFLAGS := -I$(O)
+EXTRA_CFLAGS = -I$(O)
 
 include ../../build.mak
 

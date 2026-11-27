@@ -1,10 +1,10 @@
 #define POPS_NO_GP_REG
 #include "pops_internal.h"
 
-/* External/runtime PS1 BIOS image and patch buffers (populated at runtime,
- * not embedded as proprietary ROM machine-code blobs in source). */
-u8 g_psxBiosRom[0x80000];
-const u8 g_psxBiosPatch[0x16120] = { 0 };
+/* PS1 System ROM (512 KB, 0xBFC00000) and PAL shell overlay (0x16120 bytes),
+ * compiled from clean MIPS R3000 C sources under bios/ at build time. */
+#include "psx_bios_rom.h"
+#include "psx_bios_patch.h"
 
 const s8 g_jitDefaultRegMap[32] = {
     0, 27, 18, 19, 20, 21, 22, 30, 16, 17, -20, -21, -22, -1, 26, -1,

@@ -683,9 +683,9 @@ s32 popsLoadGameQuirks(const char *titleId, u32 pkgVersion, u32 minVersion, cons
         return 0;
     }
 
-    /* Apply PAL BIOS patch for European ('P' in 3rd char, e.g. SCES/SLES) titles */
+    /* Apply PAL shell overlay (0xBFC18000, 0x16120 bytes) for European titles */
     if (titleId[2] == 'P') {
-        sceKernelMemcpy(&g_psxBiosRom[0x65E00], g_psxBiosPatch, sizeof(g_psxBiosPatch));
+        sceKernelMemcpy(&g_psxBiosRom[0x18000], g_psxBiosPatch, sizeof(g_psxBiosPatch));
     }
 
     titleHash = (((u32)(u8)titleId[0] << 24) + ((u32)(u8)titleId[1] << 16) +
