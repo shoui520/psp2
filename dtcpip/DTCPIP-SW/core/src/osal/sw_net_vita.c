@@ -255,8 +255,8 @@ int swNetSetIpTtl(int sock, int ttl)
 	return sceNetSetsockopt(sock, SW_NET_IPPROTO_IP, SW_NET_IP_TTL, &optval, 4u);
 }
 
-int swNetResolveHost(const char *hostname, uint16_t port, unsigned char family,
-		     SceNetSockaddrIn *outAddr)
+int SwMwNetResolveName(const char *hostname, uint16_t port, unsigned char family,
+		       SceNetSockaddrIn *outAddr)
 {
 	int rid;
 	int ret;
@@ -278,12 +278,12 @@ int swNetResolveHost(const char *hostname, uint16_t port, unsigned char family,
 	return 0;
 }
 
-int swNetInetPton(int family, const char *src, void *dst)
+int SwMwNetParseAddress(int family, const char *src, void *dst)
 {
 	return (sceNetInetPton(family, src, dst) <= 0) ? SW_NET_EINVAL : 0;
 }
 
-int swNetInetNtop(int family, const void *src, char *dst, unsigned int size)
+int SwMwNetFormatAddress(int family, const void *src, char *dst, unsigned int size)
 {
 	if (sceNetInetNtop(family, src, dst, size) != NULL)
 		return 0;
