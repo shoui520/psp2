@@ -206,7 +206,9 @@ typedef struct PvfOutlinePoint {
 
 /* the rasterizer (pvf_rasterizer.c), libpvf's layer over libSceFt2's FreeType */
 /* a FreeType error as libpvf's */
+#ifndef SCE_PVF_2014
 ScePvf_t_error PvfRasterizerError(FT_Error error);
+#endif
 void PvfRasterizerSetLibCHook(void);
 void PvfRasterizerDoneLibCHook(void);
 PvfRasterizer *PvfRasterizerNew(ScePvf_t_s32 maxFaces, void *userData, void *memUserData,

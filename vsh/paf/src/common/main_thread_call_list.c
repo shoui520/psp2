@@ -144,7 +144,11 @@ void CallListListenerOnFinish(TimerListener *base, void *data1, void *data2)
 
 int CallListListenerInitialize(void)
 {
+#ifdef PAF_BUILD_2014
+	_ZN3paf6thread5MutexC1EPKci(&s_giant_lock, "ScePafCallListListenerMutex", 0);
+#else
 	_ZN3paf6thread5MutexC1EPKci(&s_giant_lock, "ScePafCallListListener", 0);
+#endif
 	return __aeabi_atexit(&s_giant_lock,
 		(void (*)(void *))_ZN3paf6thread5MutexD1Ev, &__dso_handle);
 }

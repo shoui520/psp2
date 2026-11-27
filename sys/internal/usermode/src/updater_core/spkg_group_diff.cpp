@@ -922,6 +922,9 @@ int SpkgGroupDiff::mountTargetPartition(void)
 }
 #endif
 
+#ifdef UPDATER_CORE_2014
+__attribute__((noinline))
+#endif
 int SpkgGroupDiff::allocateTarBuffer(void)
 {
 	int count = (int)m_spkgList.GetCount();
@@ -1099,6 +1102,7 @@ int SpkgGroupDiff::extractManifest(SceUID pupFd)
 }
 
 #ifdef UPDATER_CORE_2014
+__attribute__((noinline))
 int SpkgGroupDiff::decodeSerialDateTime(SceDateTime *dateTime)
 {
 	SceUInt32 serial = m_serialNumber;

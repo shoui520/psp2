@@ -2022,7 +2022,11 @@ ScePvf_t_error scePvfGetVertCharImageRect(ScePvf_t_fontId fontID, ScePvf_t_charC
 #endif
 
 /* draws the handle's loaded glyph into imageBuffer, within the clip rectangle */
+#ifdef SCE_PVF_2014
+static __attribute__((noinline)) ScePvf_t_error pvfDrawGlyph(PvfFontHandle *handle,
+#else
 static inline ScePvf_t_error pvfDrawGlyph(PvfFontHandle *handle,
+#endif
 	const ScePvf_t_userImageBufferRec *imageBuffer, ScePvf_t_s32 clipX, ScePvf_t_s32 clipY,
 	ScePvf_t_u32 clipWidth, ScePvf_t_u32 clipHeight)
 {

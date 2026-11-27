@@ -25,6 +25,15 @@ void exit(int status)
 	sceKernelExitProcess(status);
 }
 
+#ifdef PAF_BUILD_2014
+extern int CallListListenerInitialize(void);
+
+int (*const g_pafStaticInit[])(void) __attribute__((section(".init_array"), used)) = {
+	PafCrtManagerInitialize,
+	GlobalHeapInitialize,
+	CallListListenerInitialize,
+};
+#else
 /*
  * Static initializers in .init_array order matching Sony's 0.996 link:
  * PafCrtManager must initialize its LwMutexes before GlobalHeapInitialize calls __aeabi_atexit.
@@ -33,3 +42,4 @@ static int (*const s_pafStaticInit[])(void) __attribute__((section(".init_array"
 	PafCrtManagerInitialize,
 	GlobalHeapInitialize,
 };
+#endif

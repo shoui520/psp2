@@ -304,29 +304,12 @@ public:
 	{
 	}
 
-	virtual void OnJsDialogResult(int32_t result)
-	{
-	}
-
-	virtual void OnNavigationWarningResult(int32_t result)
-	{
-	}
-
-	virtual void OnConfirmPluginResult(int32_t result)
-	{
-	}
-
-	virtual void OnBadCertificateResult(int32_t result, int32_t show_detail)
-	{
-	}
-
-	virtual void OnBasicAuthResult(int32_t result)
-	{
-	}
-
-	virtual void OnNormalDialogResult(int32_t result)
-	{
-	}
+	virtual void OnJsDialogResult(int32_t result) = 0;
+	virtual void OnNavigationWarningResult(int32_t result) = 0;
+	virtual void OnConfirmPluginResult(int32_t result) = 0;
+	virtual void OnBadCertificateResult(int32_t result, int32_t show_detail) = 0;
+	virtual void OnBasicAuthResult(int32_t result) = 0;
+	virtual void OnNormalDialogResult(int32_t result) = 0;
 };
 
 /* Base 2 (+8): WebCore page client callback interface (35 slots). */

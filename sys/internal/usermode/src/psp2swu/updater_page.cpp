@@ -22,6 +22,7 @@
 #define STRING_ID_FACTORY_TITLE			0xD5AD2BBAU
 #define STRING_ID_FACTORY_MESSAGE		0x6DACBDA5U
 
+__attribute__((noinline))
 ProgressPage::ProgressPage(paf::Plugin *plugin, const paf::IDParam &pageId,
 			   const paf::Plugin::PageOpenParam &openParam)
 	: WizardPage(plugin, pageId, openParam)
@@ -47,6 +48,7 @@ void ProgressPage::OnInit(int32_t eventCode, paf::ui::Handler *handler, paf::ui:
 	}
 }
 
+__attribute__((noinline))
 UpdaterMessagePage::UpdaterMessagePage(paf::Plugin *plugin, const paf::IDParam &pageId,
 				       const paf::Plugin::PageOpenParam &openParam)
 	: WizardPage(plugin, pageId, openParam)

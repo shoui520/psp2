@@ -38,7 +38,11 @@
 #define PVF_FILE_CACHE_USER	0x8000
 
 /* a FreeType error as libpvf's */
+#ifdef SCE_PVF_2014
+static inline ScePvf_t_error PvfRasterizerError(FT_Error error)
+#else
 __attribute__((noinline)) ScePvf_t_error PvfRasterizerError(FT_Error error)
+#endif
 {
 	switch (error) {
 	case 0x00:			/* FT_Err_Ok */
