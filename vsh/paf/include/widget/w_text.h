@@ -414,9 +414,11 @@ public:
 		struct {
 			/* "selection_mode" */
 			bool m_selection_mode : 1;
+#ifndef PAF_BUILD_2014
 			/* "long_press_text_auto_scroll_mode": a long press scrolls it, its origin
 			   following the touch (ScePafWidget_222D55C7 reads it; name ours) */
 			bool m_touch_auto_scroll : 1;
+#endif
 			/* a text box's paste enabled and edit mode (names ours) */
 			bool m_paste_enabled : 1;
 			bool m_edit_mode : 1;

@@ -69,8 +69,10 @@ int32_t TextBoxEditMenu::ZoomIn()
 				 new Timer(200.0f, Timer::FUNC_EXPONENT), Widget::ANIM_SCALE, 2);
 		m_text_box->SetHitBox(2, s_zoom, s_zoom_offset);
 		ScePafWidget_42C5A4D4(m_text_box, 0, 0);
+#ifndef PAF_BUILD_2014
 		m_text_box->SendRectEvent(TextBox::CB_TEXT_BOX_ZOOM_IN,
 					  math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+#endif
 	}
 	return 0;
 }
@@ -113,8 +115,10 @@ int32_t TextBoxEditMenu::ZoomOut()
 		}
 		m_camera_pos = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
 		m_camera_scale = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+#ifndef PAF_BUILD_2014
 		m_text_box->SendRectEvent(TextBox::CB_TEXT_BOX_ZOOM_OUT,
 					  math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+#endif
 	}
 	return 0;
 }

@@ -65,7 +65,10 @@ static inline __attribute__((always_inline)) void HideBar(ScrollBar *bar)
 TextBox::TextBox(Widget *parent, CreateParam *param)
 	: Text(parent, param), m_glow(NULL), m_hscroll_bar(NULL), m_vscroll_bar(NULL),
 	  m_max_length(1024), m_edit_listener(wutil::GetEditListener()), m_edit_auto_transition(false),
-	  m_ellipsis_saved(false), m_text_filter(NULL), m_scroll_max(0.0f, 0.0f),
+#ifndef PAF_BUILD_2014
+	  m_ellipsis_saved(false),
+#endif
+	  m_text_filter(NULL), m_scroll_max(0.0f, 0.0f),
 #ifndef PAF_BUILD_2014
 	  m_caret_scroll_to(0.0f, 0.0f),
 #endif
@@ -80,7 +83,9 @@ TextBox::TextBox(Widget *parent, CreateParam *param)
 	m_hit_detect_b_mode = 0;
 	m_hit_check = 1;
 	m_sound_mask |= 2;
+#ifndef PAF_BUILD_2014
 	TextBox::UpdateTouchMode();
+#endif
 }
 
 TextBox::~TextBox()
@@ -126,11 +131,15 @@ int32_t TextBox::EndEdit()
 			ret = m_edit_listener->EndEdit(this);
 			if (ret == 0) {
 				m_touch_state2 = false;
+#ifdef PAF_BUILD_2014
+				RestoreAutoScrollClip();
+#else
 				if (m_ellipsis_saved) {
 					m_ellipsis_saved = false;
 					SetLayoutAttribute(graph::TextLayoutAttribute_Ellipsis, true);
 					SetVisiblePos(math::v2(0.0f, 0.0f));
 				}
+#endif
 				SetCaretVisible(false);
 				SetVisiblePos(math::v2(0.0f, 0.0f));
 
@@ -781,6 +790,12 @@ int32_t TextBox::SetEditMode(bool mode)
 {
 	int32_t ret = 0;
 
+#ifdef PAF_BUILD_2014
+	if (mode != m_edit_mode) {
+		EndEdit();
+		m_edit_mode = mode;
+	}
+#else
 	if (mode != ((m_touch_modes & 8) != 0)) {
 		EndEdit();
 		if (mode)
@@ -789,6 +804,7 @@ int32_t TextBox::SetEditMode(bool mode)
 			m_touch_modes &= ~8;
 		UpdateTouchMode();
 	}
+#endif
 	return ret;
 }
 
@@ -860,14 +876,18 @@ int32_t TextBox::BeginEdit()
 		if (m_edit_mode && !m_touch_state2 && m_edit_listener != NULL) {
 			ret = m_edit_listener->BeginEdit(this);
 			if (ret == 0) {
+				m_touch_state2 = true;
+#ifdef PAF_BUILD_2014
+				SaveAutoScrollClip();
+#else
 				bool ellipsis;
 
-				m_touch_state2 = true;
 				m_text->GetLayoutAttribute(graph::TextLayoutAttribute_Ellipsis, ellipsis);
 				if (ellipsis) {
 					m_ellipsis_saved = true;
 					SetLayoutAttribute(graph::TextLayoutAttribute_Ellipsis, false);
 				}
+#endif
 				SetCaretVisible(true);
 
 				uint32_t len;
@@ -883,7 +903,9 @@ int32_t TextBox::BeginEdit()
 			ret = SCE_PAF_ERROR_NO_ENTRY;
 		}
 	}
+#ifndef PAF_BUILD_2014
 	UpdateTouchMode();
+#endif
 	return ret;
 }
 
@@ -949,6 +971,31 @@ namespace ui {
 
 int32_t TextBox::HandleTouchPress(Event *e)
 {
+#ifdef PAF_BUILD_2014
+	int32_t ret = SCE_PAF_ERROR_BUSY;
+	HitInfo *hit = &m_env->m_touch_hit[0][0];
+
+	if (hit != NULL && hit->m_widget == this) {
+		math::v2 pos;
+
+		ret = GetTouchTextPos(pos);
+		if (ret == 0) {
+			ScePafWidget_55EC0090(this, pos);
+
+			int32_t mode = 4;
+
+			if (m_focus_link != NULL || m_touch_modes == 0 || (m_edit_mode && !m_touch_state2))
+				mode = 1;
+			ApplyTouchGesture(hit->m_port, hit->m_touch_id, mode, NULL);
+			if (m_touch_state2) {
+				SetCaretPos(pos);
+			} else if (m_glow != NULL) {
+				m_glow->SetColor(math::v4(1.0f, 1.0f, 1.0f, 1.0f));
+			}
+		}
+	}
+	return ret;
+#else
 	uint32_t port = (e->m_detail >> 20) & 0xf;
 	uint32_t id = (uint8_t)e->m_detail;
 	int32_t ret = SCE_PAF_ERROR_BUSY;
@@ -959,11 +1006,7 @@ int32_t TextBox::HandleTouchPress(Event *e)
 		if (hit != NULL && hit->m_widget == this) {
 			math::v2 pos;
 
-#ifdef PAF_BUILD_2014
-			ret = GetTouchTextPos(pos);
-#else
 			ret = GetTouchTextPos(port, id, pos);
-#endif
 			if (ret == 0) {
 				ScePafWidget_55EC0090(this, pos);
 				if (m_touch_state2) {
@@ -975,6 +1018,7 @@ int32_t TextBox::HandleTouchPress(Event *e)
 		}
 	}
 	return ret;
+#endif
 }
 
 int32_t TextBox::HandleTouchRelease()
@@ -1383,10 +1427,15 @@ int32_t TextBoxParam::Get()
 		m_max_length = text_box->m_max_length;
 		text_box->GetPasswordMode(m_password_mode);
 
+#ifdef PAF_BUILD_2014
+		m_paste_mode = text_box->m_paste_enabled;
+		m_edit_mode = text_box->m_edit_mode;
+#else
 		int8_t flags = text_box->m_touch_modes;
 
 		m_paste_mode = (flags & 4) != 0;
 		m_edit_mode = (flags & 8) != 0;
+#endif
 		m_edit_auto_transition_mode = text_box->m_edit_auto_transition;
 		text_box->GetImeParam(m_ime);
 	}

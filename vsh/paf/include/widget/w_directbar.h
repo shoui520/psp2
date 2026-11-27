@@ -162,10 +162,12 @@ public:
 
 	/* where the balloon sits by the index-th entry (name ours) */
 	math::v4 GetBalloonPos(int32_t index);
+#ifndef PAF_BUILD_2014
 	/* whether the index-th entry can be chosen: its color not the disabled one (name ours) */
 	bool IsBtnEnable(int32_t index);
 	/* from the index, the nearest entry that can be chosen in the key's direction (name ours) */
 	bool FindEnableBtn(int32_t *index, uint32_t key);
+#endif
 	/* the focus frame laid on the launch button, or on the bar (name ours) */
 	void UpdateFocusShape();
 	/* the touch down of a closed bar (name ours) */
@@ -191,12 +193,15 @@ public:
 	/* the entry chosen, the first entry shown and the first empty entry, -1 none */
 	int32_t m_select;
 	int32_t m_top;
+#ifndef PAF_BUILD_2014
 	int32_t m_blank;
+#endif
 	/* its entries, a line each */
 	wstring m_label;
 	/* the label's lines laid out over the bar once */
 	bool m_layout_done;
 	float m_launchbtn_y;
+#ifndef PAF_BUILD_2014
 	/* the hit box while it is closed: its center offset, and its size */
 	float m_closed_hit_x;
 	float m_closed_hit_y;
@@ -208,6 +213,7 @@ public:
 	int32_t m_repeat_count;
 	/* the balloon held at the end of the bar */
 	bool m_balloon_clamped;
+#endif
 	/* its entries */
 	vector<wstring> m_btn_strings;
 };
@@ -259,7 +265,11 @@ extern "C" {
 void ScePafWidget_0926399C(paf::ui::DirectBar *bar, uint32_t type);
 /* the index-th entry chosen: the balloon moved to it over the time, from a direct key (key)
    (no name found) */
+#ifdef PAF_BUILD_2014
+void ScePafWidget_A0CEFD28(paf::ui::DirectBar *bar, int32_t index);
+#else
 void ScePafWidget_A0CEFD28(paf::ui::DirectBar *bar, int32_t index, bool key, float time);
+#endif
 /* the selection let go: the balloon faded out (no name found) */
 void ScePafWidget_0E46CEE0(paf::ui::DirectBar *bar);
 /* the balloon's text set to one line, the bar left idle (no name found) */

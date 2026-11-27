@@ -162,7 +162,31 @@ float sce_paf_cosf(float x)
 	return number.value;
 }
 
-#ifndef PAF_BUILD_2014
+#ifdef PAF_BUILD_2014
+float sce_paf_tanf(float x)
+{
+	const float halfPi = 1.5707963705062866f;
+	float quotientFloat = x / halfPi + (x >= 0.0f ? 0.5f : -0.5f);
+	int32_t quadrant = (int32_t)quotientFloat;
+	float reduced = x - (float)quadrant * halfPi;
+	float square = reduced * reduced;
+	float tangent = reduced /
+		(1.0f - square / (3.0f - square / (5.0f - square / (7.0f - square / 9.0f))));
+
+	if (quadrant % 2 == 0)
+		return tangent;
+	if (tangent == 0.0f) {
+		union {
+			float value;
+			uint32_t bits;
+		} limit;
+
+		limit.bits = 0x7f7fffffU;
+		return limit.value;
+	}
+	return -1.0f / tangent;
+}
+#else
 float sce_paf_tanf(float x)
 {
 	float sine = sce_paf_sinf(x);

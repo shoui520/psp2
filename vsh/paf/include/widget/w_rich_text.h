@@ -48,6 +48,7 @@ public:
 	public:
 		enum {
 			TYPE_TEXT = 0,
+#ifndef PAF_BUILD_2014
 			TYPE_LINK_TEXT = 1,
 			TYPE_BR = 2,
 			TYPE_IMG = 3,
@@ -55,6 +56,14 @@ public:
 			TYPE_TABLE_END = 5,
 			TYPE_CELL = 6,
 			TYPE_CELL_END = 7
+#else
+			TYPE_BR = 1,
+			TYPE_IMG = 2,
+			TYPE_TABLE = 3,
+			TYPE_TABLE_END = 4,
+			TYPE_CELL = 5,
+			TYPE_CELL_END = 6
+#endif
 		};
 
 		Element(int32_t type) : m_type(type)
@@ -98,6 +107,7 @@ public:
 		bool m_center : 1;
 	};
 
+#ifndef PAF_BUILD_2014
 	class LinkTextElement : public TextElement {
 	public:
 		LinkTextElement() : TextElement(TYPE_LINK_TEXT)
@@ -107,6 +117,7 @@ public:
 		/* the index of its link in the links, -1 for none */
 		int32_t m_link;
 	};
+#endif
 
 	class BrElement : public Element {
 	public:
@@ -516,9 +527,13 @@ public:
 		float m_height;
 		vector<LineBuilder> m_builders;
 		list<LineGroup> m_groups;
+#ifndef PAF_BUILD_2014
 		uint32_t m_flags;
+#endif
 		int32_t m_builder_count;
+#ifndef PAF_BUILD_2014
 		float m_line_height;
+#endif
 		float m_line_spacing;
 		float m_width;
 		float m_top;
@@ -582,8 +597,10 @@ public:
 	int32_t GetImageUrl(int32_t index, string &url) const;
 	/* the font size of the size (0 the base, 1 to 7 font size= and h7 to h1) */
 	int32_t ScePafWidget_6A60296B(uint32_t size, float value);
+#ifndef PAF_BUILD_2014
 	/* the index-th link */
 	int32_t ScePafWidget_C7BE2076(int32_t index, string &url) const;
+#endif
 	/* the items' widgets made or destroyed as the top moved down or up */
 	void scroll_down(float top);
 	void scroll_up(float top);
@@ -614,7 +631,9 @@ public:
 	vector<Item *> m_items_bottom;
 	vector<Item *>::iterator m_next_bottom;
 	vector<Item *>::iterator m_next_top;
+#ifndef PAF_BUILD_2014
 	vector<string> m_links;
+#endif
 	/* the text is plain, not marked up */
 	int32_t m_plain;
 	math::v4 m_color;
@@ -624,13 +643,17 @@ public:
 	bool m_no_image_size;
 	bool m_no_link;
 	bool m_no_list_type;
+#ifndef PAF_BUILD_2014
 	uint32_t m_flags;
+#endif
 	float m_content_height;
 	float m_visible_top;
 	bool m_layout_done;
 	Layouter m_layouter;
+#ifndef PAF_BUILD_2014
 	/* how the focus moves: 1 as the view's, 3 to the links or by a step */
 	int32_t m_scroll_mode;
+#endif
 	vector<ImageInfo> m_images;
 	int32_t m_builder_count;
 	float m_line_spacing;

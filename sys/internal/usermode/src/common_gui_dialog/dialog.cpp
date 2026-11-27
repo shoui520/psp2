@@ -510,8 +510,13 @@ void CommonGuiDialog::Close()
 		float time;
 
 		ScePafWidget_DB993F51(&m_waitVblank);
+#ifdef COMMON_GUI_DIALOG_2014
+		time = ScePafCommon_B48C9BDC(0.0f, m_dialog, common::transition::Type_FadeinFast, false,
+					     false);
+#else
 		time = ScePafCommon_B48C9BDC(0.0f, m_dialog, common::transition::Type_Popup1, false,
 					     false);
+#endif
 		contents = m_dialog->FindChild(IDParam((uint32_t)DIALOG_CONTENTS), 0);
 		if (contents != NULL)
 			contents->SetMetaAlpha(0.0f, new Timer(time * 0.7f, Timer::FUNC_SLOWDOWN),
@@ -915,7 +920,11 @@ void CommonGuiDialog::Hide()
 	if (!m_open)
 		return;
 #endif
+#ifdef COMMON_GUI_DIALOG_2014
+	time = ScePafCommon_B48C9BDC(0.0f, m_dialog, common::transition::Type_FadeinFast, false, false);
+#else
 	time = ScePafCommon_B48C9BDC(0.0f, m_dialog, common::transition::Type_Popup1, false, false);
+#endif
 	m_dialog->m_name.m_idhash = 0;
 	ScePafWidget_5A9793B0(m_dialog, time + 50.0f);
 	m_open = false;

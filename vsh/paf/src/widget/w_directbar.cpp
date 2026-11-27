@@ -188,9 +188,15 @@ void DirectBar::AnimDBarState(int32_t state, float time)
 		break;
 	case ST_DBAR_CLOSED: {
 		ReleaseDBar();
+#ifdef PAF_BUILD_2014
+		SetWidgetHitBox(this, 3,
+				math::v4(64.0f, 64.0f, 0.0f, 0.0f),
+				math::v4(0.0f, m_launchbtn_y, 0.0f, 0.0f));
+#else
 		SetWidgetHitBox(this, 3,
 				math::v4(m_closed_hit_width, m_closed_hit_height, 0.0f, 0.0f),
 				math::v4(m_closed_hit_x, m_launchbtn_y + m_closed_hit_y, 0.0f, 0.0f));
+#endif
 
 		float fade = time * 1.2f;
 
@@ -399,10 +405,14 @@ namespace ui {
 
 DirectBar::DirectBar(Widget *parent, CreateParam *param)
 	: Widget(parent, param), m_state(ST_DBAR_NONE), m_touch_id(-1),
-	  m_hit_margin(30.0f), m_btnNum(1), m_select(-1), m_top(-1), m_blank(-1),
-	  m_layout_done(false), m_launchbtn_y(0.0f), m_closed_hit_x(0.0f), m_closed_hit_y(0.0f),
-	  m_closed_hit_height(64.0f), m_closed_hit_width(64.0f),
+	  m_hit_margin(30.0f), m_btnNum(1), m_select(-1), m_top(-1),
+#ifdef PAF_BUILD_2014
+	  m_layout_done(false), m_launchbtn_y(0.0f)
+#else
+	  m_blank(-1), m_layout_done(false), m_launchbtn_y(0.0f), m_closed_hit_x(0.0f),
+	  m_closed_hit_y(0.0f), m_closed_hit_height(64.0f), m_closed_hit_width(64.0f),
 	  m_disable_color(1.0f, 1.0f, 1.0f, 0.3f), m_repeat_count(0), m_balloon_clamped(false)
+#endif
 {
 	m_hit_check = 1;
 	m_hit_detect_b_mode = 0;
@@ -576,7 +586,9 @@ int32_t DirectBar::SetString(const wstring &str, int32_t obj)
 	wstring marks;
 
 	m_btnNum = 0;
+#ifndef PAF_BUILD_2014
 	m_blank = -1;
+#endif
 	m_label.clear();
 	m_btn_strings.clear();
 
@@ -588,8 +600,10 @@ int32_t DirectBar::SetString(const wstring &str, int32_t obj)
 		if (found == (uint32_t)-1)
 			break;
 		if (found == pos) {
+#ifndef PAF_BUILD_2014
 			if (m_blank < 0)
 				m_blank = m_btnNum;
+#endif
 			marks.append(L"\xfffd" L"E\n");
 		} else {
 			wstring btn = str.substr(pos, found - pos);
@@ -687,10 +701,16 @@ uint32_t DirectBar::CheckState()
 				graph::TextObj *mark = (graph::TextObj *)GetDrawObj(OBJ_BLANK_MARK);
 
 				if (mark != NULL) {
+#ifdef PAF_BUILD_2014
+					mark->SetPos(math::v3(pos.extract_x(),
+							      pitch * 0.5f + -26.0f,
+							      pos.extract_z()));
+#else
 					mark->SetPos(math::v3(pos.extract_x(),
 							      pitch * 0.5f + -26.0f -
 								      (float)m_blank * pitch,
 							      pos.extract_z()));
+#endif
 					mark->SetLayoutAttribute(graph::TextLayoutAttribute_LineSpace,
 								 space);
 				}
@@ -825,6 +845,88 @@ math::v4 DirectBar::GetBalloonPos(int32_t index)
 }
 }
 
+#ifdef PAF_BUILD_2014
+void ScePafWidget_A0CEFD28(DirectBar *bar, int32_t index)
+{
+	float width = bar->m_size.extract_x();
+	math::v4 balloon_pos = bar->GetBalloonPos(index);
+	math::v4 size = bar->m_size;
+	float top = (size.extract_y() - 88.0f) * 0.5f;
+	float bottom = -top - 10.0f;
+	float y;
+
+	if (balloon_pos.extract_y() < bottom)
+		y = bottom;
+	else if (top < balloon_pos.extract_y())
+		y = top;
+	else
+		y = balloon_pos.extract_y();
+
+	float balloon_x = (bar->m_type & 1) ? -width - 20.0f : width + 20.0f;
+	graph::DrawObj *balloon = bar->GetDrawObj(DirectBar::OBJ_BALLOON);
+
+	if (balloon != NULL) {
+		bar->KillAnim(0x20303);
+
+		math::v4 color = balloon->GetColor();
+
+		color.set_w(1.0f);
+		bar->SetAnimListener(0x20303,
+				     new AnimListenerObj(new Timer(60.0f), bar, balloon,
+							 math::v4(0.0f, 0.0f, 0.0f, 0.0f), color,
+							 &AnimListenerObj::s_prop_obj_color, NULL, NULL),
+				     2);
+	}
+	if (bar->m_type & 2) {
+		if (bar->GetDrawObj(DirectBar::OBJ_LABEL) != NULL &&
+		    bar->GetDrawObj(DirectBar::OBJ_LABEL)->IsInherit(graph::TextObj::DrawObjType())) {
+			graph::TextObj *text = (graph::TextObj *)bar->GetDrawObj(DirectBar::OBJ_LABEL);
+
+			if (text != NULL) {
+				text->SetSelectionColor(math::v4(0.5f, 0.8f, 1.0f, 0.8f));
+
+				uint32_t pos = 0;
+
+				for (int32_t i = 0; i < index; i++)
+					pos = bar->m_label.find(L"\n", pos) + 1;
+				text->SetSelectionRange(pos, bar->m_btn_strings.at(index).size());
+			}
+		}
+	} else if (balloon != NULL) {
+		bar->KillAnim(0x20103);
+		balloon->SetPos(math::v3(0.0f, y, 0.0f));
+		bar->SetAnimListener(0x20103,
+				     new AnimListenerObj(new Timer(100.0f, Timer::FUNC_EXPO_OUT_29),
+							 bar, balloon,
+							 math::v4(balloon->m_pos, 0.0f),
+							 math::v4(balloon_x, y, 0.0f, 0.0f),
+							 &AnimListenerObj::s_prop_obj_move, NULL, NULL),
+				     2);
+	}
+
+	graph::DrawObj *label = bar->GetDrawObj(DirectBar::OBJ_BALLOON_LABEL);
+
+	if (label != NULL) {
+		bar->KillAnim(0x20104);
+		bar->KillAnim(0x20304);
+		bar->SetString(bar->m_btn_strings.at(index), DirectBar::OBJ_BALLOON_LABEL);
+		label->SetPos(math::v3(balloon_x, y + 4.0f, 0.0f));
+
+		math::v4 color = label->GetColor();
+		math::v4 hidden = color;
+
+		hidden.set_w(0.0f);
+		label->SetColor(hidden);
+		color.set_w(1.0f);
+		bar->SetAnimListener(0x20304,
+				     new AnimListenerObj(new Timer(60.0f), bar, label,
+							 hidden, color, &AnimListenerObj::s_prop_obj_color,
+							 NULL, NULL),
+				     2);
+	}
+	bar->m_select = index;
+}
+#else
 void ScePafWidget_A0CEFD28(DirectBar *bar, int32_t index, bool key, float time)
 {
 	float width = bar->m_size.extract_x();
@@ -922,13 +1024,11 @@ void ScePafWidget_A0CEFD28(DirectBar *bar, int32_t index, bool key, float time)
 				&AnimListenerObj::s_prop_obj_move, NULL, &bar->m_balloon_clamped);
 
 			bar->SetAnimListener(0x20103, move, 2);
-#ifndef PAF_BUILD_2014
 			move->m_cb_anim = DirectBar::OnBalloonMove;
 			if (bar->m_focus_shape != NULL) {
 				bar->m_focus_shape->m_shape = 3;
 				ScePafWidget_13B246E0(bar, bar->m_focus_shape);
 			}
-#endif
 		} else {
 			AnimListenerObj *move = new AnimListenerObj(
 				key ? (time == 240.0f ? new Timer(bar->m_repeat_count < 5 ? 140.0f :
@@ -941,9 +1041,7 @@ void ScePafWidget_A0CEFD28(DirectBar *bar, int32_t index, bool key, float time)
 				NULL, &bar->m_balloon_clamped);
 
 			bar->SetAnimListener(0x20103, move, 2);
-#ifndef PAF_BUILD_2014
 			move->m_cb_anim = DirectBar::OnBalloonMove;
-#endif
 		}
 	}
 
@@ -1006,15 +1104,13 @@ void ScePafWidget_A0CEFD28(DirectBar *bar, int32_t index, bool key, float time)
 	}
 	bar->m_select = index;
 }
+#endif
 
 namespace paf {
 namespace ui {
 
-#ifdef PAF_BUILD_2014
-inline __attribute__((always_inline)) bool DirectBar::IsBtnEnable(int32_t index)
-#else
+#ifndef PAF_BUILD_2014
 bool DirectBar::IsBtnEnable(int32_t index)
-#endif
 {
 	if (GetDrawObj(OBJ_LABEL) == NULL ||
 	    !GetDrawObj(OBJ_LABEL)->IsInherit(graph::TextObj::DrawObjType()))
@@ -1032,6 +1128,7 @@ bool DirectBar::IsBtnEnable(int32_t index)
 	text->GetStyleAttribute(graph::TextStyleAttribute_Color, index * 2, color);
 	return ColorRGBA8(m_disable_color) != ColorRGBA8(color);
 }
+#endif
 
 __attribute__((noinline)) int32_t DirectBar::GetHitNumber(HitInfo *info)
 {
@@ -1064,8 +1161,12 @@ void DirectBar::OrientClosedState(Event *e)
 	m_touch_pos = hit->m_touch_pos;
 	m_hit_pos = hit->m_hit_pos;
 	m_select = GetHitNumber(hit);
+#ifdef PAF_BUILD_2014
+	ScePafWidget_A0CEFD28(this, m_select);
+#else
 	if (IsBtnEnable(m_select))
 		ScePafWidget_A0CEFD28(this, m_select, false, 60.0f);
+#endif
 	e->Consume();
 }
 
@@ -1200,6 +1301,10 @@ void DirectBar::OrientDragOutState(Event *e)
 		break;
 	case 0x43:
 		if (in && index != m_select) {
+#ifdef PAF_BUILD_2014
+			ScePafWidget_A0CEFD28(this, index);
+			SendDBarEvent(CB_DIRECT_BAR_DRAG_OUT, index);
+#else
 			if (IsBtnEnable(index)) {
 				ScePafWidget_A0CEFD28(this, index, false, 60.0f);
 				SendDBarEvent(CB_DIRECT_BAR_DRAG_OUT, index);
@@ -1211,6 +1316,7 @@ void DirectBar::OrientDragOutState(Event *e)
 					SendDBarEvent(CB_DIRECT_BAR_DRAG_OUT, m_select);
 				}
 			}
+#endif
 		}
 		e->Consume();
 		break;
@@ -1257,6 +1363,10 @@ void DirectBar::OrientDragState(Event *e)
 		else if (index == m_btnNum + m_top && index < m_btnNum - 1)
 			index++;
 		if (index != m_select) {
+#ifdef PAF_BUILD_2014
+			ScePafWidget_A0CEFD28(this, index);
+			SendDBarEvent(CB_DIRECT_BAR_DRAG_OUT, index);
+#else
 			if (IsBtnEnable(index)) {
 				ScePafWidget_A0CEFD28(this, index, false, 60.0f);
 				SendDBarEvent(CB_DIRECT_BAR_DRAG_OUT, index);
@@ -1268,6 +1378,7 @@ void DirectBar::OrientDragState(Event *e)
 					SendDBarEvent(CB_DIRECT_BAR_DRAG_OUT, m_select);
 				}
 			}
+#endif
 		}
 		e->Consume();
 		break;
@@ -1298,7 +1409,11 @@ void DirectBar::OrientNormalState(Event *e)
 	SetDBarState(ST_DBAR_HOLD);
 	m_touch_pos = hit->m_touch_pos;
 	m_hit_pos = hit->m_hit_pos;
+#ifdef PAF_BUILD_2014
+	ScePafWidget_A0CEFD28(this, GetHitNumber(hit));
+#else
 	ScePafWidget_A0CEFD28(this, GetHitNumber(hit), false, 0.0f);
+#endif
 	e->Consume();
 }
 
@@ -1331,6 +1446,7 @@ int32_t DirectBar::HandleTouchEvent(Event *e)
 	return Widget::HandleTouchEvent(e);
 }
 
+#ifndef PAF_BUILD_2014
 bool DirectBar::FindEnableBtn(int32_t *index, uint32_t key)
 {
 	bool found = true;
@@ -1352,7 +1468,6 @@ bool DirectBar::FindEnableBtn(int32_t *index, uint32_t key)
 	return found;
 }
 
-#ifndef PAF_BUILD_2014
 int32_t DirectBar::HandleKeycodeEvent(Event *e)
 {
 	uint32_t key = (uint8_t)e->m_detail;

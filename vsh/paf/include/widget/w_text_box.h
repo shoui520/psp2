@@ -40,6 +40,21 @@ public:
 	   with its values moved to this firmware's; the others ours); the edit listener's sends
 	   it as the editing begins and ends, and about the IME (0x10000009 to 0x1000000B) */
 	enum {
+#ifdef PAF_BUILD_2014
+		CB_TEXT_BOX_TAPPED = 0x10000004,
+		CB_TEXT_BOX_EDIT_BEGIN = 0x10000005,
+		CB_TEXT_BOX_EDIT_END = 0x10000006,
+		CB_TEXT_BOX_IME_OPEN = 0x10000007,
+		CB_TEXT_BOX_IME_CHANGE_SIZE = 0x10000008,
+		CB_TEXT_BOX_ENTER_PRESSED = 0x10000009,
+		CB_TEXT_BOX_STRING_CHANGED = 0x1000000A,
+		CB_TEXT_BOX_STRING_REPLACED = 0x1000000B,
+		CB_TEXT_BOX_CARET_UP = 0x1000000C,
+		CB_TEXT_BOX_CARET_DOWN = 0x1000000D,
+		CB_TEXT_BOX_CARET_LEFT = 0x1000000E,
+		CB_TEXT_BOX_CARET_RIGHT = 0x1000000F,
+		CB_TEXT_BOX_CARET_POS_CHANGED = 0x10000010
+#else
 		CB_TEXT_BOX_ZOOM_IN = 0x10000004,
 		CB_TEXT_BOX_ZOOM_OUT = 0x10000005,
 		CB_TEXT_BOX_TAPPED = 0x10000006,
@@ -55,6 +70,7 @@ public:
 		CB_TEXT_BOX_CARET_LEFT = 0x10000010,
 		CB_TEXT_BOX_CARET_RIGHT = 0x10000011,
 		CB_TEXT_BOX_CARET_POS_CHANGED = 0x10000012
+#endif
 	};
 
 	/* the draw object of the glow (names ours) */
@@ -211,8 +227,10 @@ public:
 	ImeParam m_ime_param;
 	TextBoxEditListener *m_edit_listener;
 	bool m_edit_auto_transition;
+#ifndef PAF_BUILD_2014
 	/* the layout's ellipsis was on and is off while the text box is edited */
 	bool m_ellipsis_saved;
+#endif
 	/* makes the string shown from its own (name ours) */
 	wstring (*m_text_filter)(const wstring &in);
 	/* how far the text scrolls, and the caret scroll's target and start (names ours) */

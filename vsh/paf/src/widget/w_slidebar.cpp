@@ -70,8 +70,13 @@ static inline void EnableFocus(Widget *widget)
 /* the base on the bar itself, the slider a widget of its own; no labels yet */
 SlideBar::SlideBar(Widget *parent, CreateParam *param)
 	: Widget(parent, param), m_touch_mode(TOUCH_MODE_BAR), m_max_value(100), m_value(0),
-	  m_slider_anim_time(150.0f), m_slider_anim_func(0), m_value_rate(0.0f), m_touch_id(-1),
-	  m_key(-1), m_key_step(1), m_enabled(true), m_enable_color(NULL), m_disable_color(NULL)
+	  m_slider_anim_time(150.0f), m_slider_anim_func(0), m_value_rate(0.0f),
+#ifdef PAF_BUILD_2014
+	  m_touch_id(-1)
+#else
+	  m_touch_id(-1), m_key(-1), m_key_step(1), m_enabled(true), m_enable_color(NULL),
+	  m_disable_color(NULL)
+#endif
 {
 	for (int32_t i = 0; i < 3; i++) {
 		m_label_mode[i] = LABEL_MODE_VALUE;
@@ -193,12 +198,14 @@ const char *SlideBar::TypeName()
 
 SlideBar::~SlideBar()
 {
+#ifndef PAF_BUILD_2014
 	if (m_enable_color != NULL)
 		delete m_enable_color;
 	m_enable_color = (math::v4 *)-1;
 	if (m_disable_color != NULL)
 		delete m_disable_color;
 	m_disable_color = (math::v4 *)-1;
+#endif
 }
 
 graph::DrawObj *SlideBar::GetDrawObj(int32_t obj)
@@ -506,16 +513,20 @@ void SlideBar::UpdateSize()
 
 int32_t SlideBar::HandlePointEvent(Event *e)
 {
+#ifndef PAF_BUILD_2014
 	if (!m_enabled)
 		return -1;
+#endif
 	OnTouch(e);
 	return Handler::HandlePointEvent(e);
 }
 
 int32_t SlideBar::HandleTouchEvent(Event *e)
 {
+#ifndef PAF_BUILD_2014
 	if (!m_enabled)
 		return -1;
+#endif
 	OnTouch(e);
 	return Widget::HandleTouchEvent(e);
 }
@@ -523,6 +534,43 @@ int32_t SlideBar::HandleTouchEvent(Event *e)
 /* the left and right keys move the value by the key step, as a drag of the slider */
 int32_t SlideBar::HandleKeycodeEvent(Event *e)
 {
+#ifdef PAF_BUILD_2014
+	int32_t key = (uint8_t)e->m_detail;
+	int32_t next = -1;
+
+	if (key == 3) {
+		switch (e->GetType()) {
+		case 0x11:
+			if (m_value > 0)
+				next = m_value - 1;
+			break;
+		case 0x13:
+			if (m_value == 0)
+				next = 0;
+			if (m_value > 0)
+				next = m_value - 1;
+			break;
+		}
+	} else if (key == 4) {
+		switch (e->GetType()) {
+		case 0x11:
+			if (m_value < m_max_value)
+				next = m_value + 1;
+			break;
+		case 0x13:
+			if (m_value == m_max_value)
+				next = m_max_value;
+			if (m_value < m_max_value)
+				next = m_value + 1;
+			break;
+		}
+	}
+	if (next >= 0) {
+		SetValue(next, true);
+		e->Consume();
+	}
+	return Widget::HandleKeycodeEvent(e);
+#else
 	int32_t key = (uint8_t)e->m_detail;
 
 	if (key != 3 && key != 4)
@@ -582,6 +630,7 @@ int32_t SlideBar::HandleKeycodeEvent(Event *e)
 		break;
 	}
 	return Widget::HandleKeycodeEvent(e);
+#endif
 }
 
 #ifndef PAF_BUILD_2014
@@ -624,7 +673,6 @@ void SlideBar::EnableFocusEvent(bool on_off)
 	}
 	Widget::EnableFocusEvent(on_off);
 }
-#endif
 
 void SlideBar::Enable()
 {
@@ -658,6 +706,7 @@ void SlideBar::Disable()
 	m_hit_detect_mode = 3;
 	m_hit_find_mode = 1;
 }
+#endif
 
 Widget *SlideBar::GetPartsWidget(int32_t obj, int32_t *child_obj)
 {

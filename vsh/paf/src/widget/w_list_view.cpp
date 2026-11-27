@@ -1587,12 +1587,17 @@ void ListView::Sync()
 {
 	if (m_hold_count > 0)
 		return;
+#ifdef PAF_BUILD_2014
+	if (m_sync_block != 0)
+		return;
+#else
 	if (m_sync_block != 0) {
 		m_sync_pending = true;
 		return;
 	}
 	m_sync_pending = false;
 	m_sync_block++;
+#endif
 
 	listview::SyncAnchor anchor;
 
@@ -1639,6 +1644,9 @@ void ListView::Sync()
 	}
 	if (m_cell_size_set != NULL)
 		m_cell_size_set->clear();
+#ifdef PAF_BUILD_2014
+	ReleaseTouchOutOfRange();
+#else
 	m_sync_block--;
 	if (!m_sync_running) {
 		m_sync_running = true;
@@ -1647,6 +1655,7 @@ void ListView::Sync()
 		ReleaseTouchOutOfRange();
 		m_sync_running = false;
 	}
+#endif
 }
 
 /* the padding at the head and the tail along the axis, the view laid out again and synced where
@@ -1723,8 +1732,12 @@ ListView::ListView(Widget *parent, CreateParam *param)
 	  m_effector_enabled(true), m_scroll_range(0.0f, 0.0f), m_scroll_range_set(false),
 	  m_snap_mode(SNAP_MODE_NONE), m_release_time(0), m_release_pos(MakeListPos(-1, -1)),
 	  m_focus_pending(false),
+#ifdef PAF_BUILD_2014
+	  m_focus_list_pos(MakeListPos(-1, -1))
+#else
 	  m_focus_list_pos(MakeListPos(-1, -1)), m_grab_cell(NULL), m_sync_pending(false),
 	  m_sync_running(false), m_focus_pos(-1.0f, -1.0f), m_sync_enabled(true)
+#endif
 {
 	m_key_step = 2.2f;
 	EnableOverScroll(false);
@@ -1847,11 +1860,9 @@ Cell::~Cell()
 #ifndef PAF_BUILD_2014
 	ListItem *item = m_item;
 	Widget *target = list_view->m_env->m_focus_cursor.m_target;
-#endif
 
 	if (list_view->m_grab_cell == this)
 		list_view->m_grab_cell = NULL;
-#ifndef PAF_BUILD_2014
 	if (item != NULL && item->FindChild(GetRootFocus(list_view), 0) != NULL &&
 	    list_view->FindChild(target, 0) != NULL) {
 		Widget::SetFocusInfo info;
@@ -1959,8 +1970,8 @@ void ListView::ScePafWidget_A838831E()
 			if (focused->m_item->ScePafWidget_C98D1926(dir)) {
 				m_focus_start = m_focus_target;
 				m_focus_target = math::v2(0.0f, 0.0f);
-#endif
 				m_grab_cell = focused;
+#endif
 #ifndef PAF_BUILD_2014
 				if (!(m_focus_pos == math::v2(-1.0f, -1.0f))) {
 					m_focus_pos = math::v2(

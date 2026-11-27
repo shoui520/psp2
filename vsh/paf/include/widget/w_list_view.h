@@ -623,12 +623,14 @@ public:
 	bool m_focus_pending;
 	/* the cell (or, at -1, the header) the focus is on (name ours) */
 	listview::ListPos m_focus_list_pos;
+#ifndef PAF_BUILD_2014
 	listview::Cell *m_grab_cell;
 	/* a sync is due, and the syncs left for later are being run */
 	bool m_sync_pending;
 	bool m_sync_running;
 	math::v2 m_focus_pos;
 	bool m_sync_enabled;
+#endif
 };
 
 namespace listview {

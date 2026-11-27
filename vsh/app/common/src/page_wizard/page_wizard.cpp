@@ -19,9 +19,15 @@
 
 using namespace paf;
 
+#ifdef PAF_BUILD_2014
+#define PAGE_WIZARD_ERROR_INVALID_ARGUMENT	((int)0x80104101)
+#define PAGE_WIZARD_ERROR_ALREADY_EXISTS	((int)0x80104103)
+#define PAGE_WIZARD_ERROR_BUSY			((int)0x80104105)
+#else
 #define PAGE_WIZARD_ERROR_INVALID_ARGUMENT	((int)0x80104001)
 #define PAGE_WIZARD_ERROR_ALREADY_EXISTS	((int)0x80104003)
 #define PAGE_WIZARD_ERROR_BUSY			((int)0x80104005)
+#endif
 
 #define PAGE_WIZARD_DEFAULT_FG_PRIORITY		140
 #define PAGE_WIZARD_DEFAULT_BG_PRIORITY		150
@@ -36,6 +42,15 @@ struct PageTransitionPreset {
 	math::quaternion incomingRotation;
 	math::quaternion outgoingRotation;
 };
+
+#ifdef PAF_BUILD_2014
+static const PageTransitionPreset s_fadePreset = {
+	math::v4(0.0f, 0.0f, 0.0f, 0.0f),
+	math::v4(0.0f, 0.0f, 0.0f, 0.0f),
+	math::quaternion::FromEulerAnglesYXZ(math::v3(0.0f, 0.0f, 0.0f)),
+	math::quaternion::FromEulerAnglesYXZ(math::v3(0.0f, 0.0f, 0.0f))
+};
+#endif
 
 static const PageTransitionPreset s_turnForwardPreset = {
 	math::v4(440.0f, 0.0f, 200.0f, 0.0f),
@@ -79,12 +94,14 @@ static const PageTransitionPreset s_zoomOutPreset = {
 	math::quaternion::FromEulerAnglesYXZ(math::v3(0.0f, 0.0f, 0.0f))
 };
 
+#ifndef PAF_BUILD_2014
 static const PageTransitionPreset s_fadePreset = {
 	math::v4(0.0f, 0.0f, 0.0f, 0.0f),
 	math::v4(0.0f, 0.0f, 0.0f, 0.0f),
 	math::quaternion::FromEulerAnglesYXZ(math::v3(0.0f, 0.0f, 0.0f)),
 	math::quaternion::FromEulerAnglesYXZ(math::v3(0.0f, 0.0f, 0.0f))
 };
+#endif
 
 PageWizard *PageWizard::s_instance = NULL;
 

@@ -114,10 +114,16 @@ RichText::Layouter::Layouter()
 RichText::RichText(Widget *parent, CreateParam *param)
 	: ScrollViewBase(parent, param), m_str(NULL), m_next_bottom(NULL), m_next_top(NULL),
 	  m_plain(0), m_color(1.0f, 1.0f, 1.0f, 1.0f), m_scale(1.0f), m_no_image_size(false),
-	  m_no_link(true), m_no_list_type(false), m_flags(0), m_content_height(0.0f),
-	  m_visible_top(0.0f), m_layout_done(false), m_scroll_mode(1), m_builder_count(3),
-	  m_line_spacing(1.0f), m_margin_x(0.0f), m_margin_y(0.0f), m_margin_width(0.0f),
-	  m_reserved_byte0(false), m_reserved_byte1(true)
+	  m_no_link(true), m_no_list_type(false),
+#ifndef PAF_BUILD_2014
+	  m_flags(0),
+#endif
+	  m_content_height(0.0f), m_visible_top(0.0f), m_layout_done(false),
+#ifndef PAF_BUILD_2014
+	  m_scroll_mode(1),
+#endif
+	  m_builder_count(3), m_line_spacing(1.0f), m_margin_x(0.0f), m_margin_y(0.0f),
+	  m_margin_width(0.0f), m_reserved_byte0(false), m_reserved_byte1(true)
 {
 	m_alloc = Alloc;
 	m_free = Free;
@@ -400,7 +406,11 @@ void RichText::Layouter::Start(ElementQueue *queue, list<Item *> *out)
 			it->m_text_widget->DeleteEventCallback(0x100004, NULL, NULL);
 			it->m_text_widget->SetString(wstring(L""));
 		}
+#ifdef PAF_BUILD_2014
+		it->m_line_height = m_owner->m_font_size[3] * m_owner->m_scale;
+#else
 		it->m_line_height = m_line_height;
+#endif
 		it->m_line_spacing = m_line_spacing;
 	}
 	Reset();
@@ -415,11 +425,15 @@ __attribute__((noinline)) int32_t RichText::StartLayout()
 {
 	DeleteItems(m_lines);
 
+#ifndef PAF_BUILD_2014
 	float line_height = m_font_size[3] * m_scale;
 
 	m_layouter.m_flags |= m_flags;
+#endif
 	m_layouter.m_builder_count = m_builder_count;
+#ifndef PAF_BUILD_2014
 	m_layouter.m_line_height = line_height;
+#endif
 	m_layouter.m_line_spacing = m_line_spacing;
 	m_layouter.m_width = GetSize(0)->extract_x() - m_margin_width;
 	m_layouter.m_top = m_margin_x;
@@ -1326,7 +1340,11 @@ int32_t RichText::Parse()
 		parser.m_no_image_size = m_no_image_size;
 		parser.m_no_link = m_no_link;
 		parser.m_no_list_type = m_no_list_type;
+#ifndef PAF_BUILD_2014
 		parser.m_flags = m_flags;
+#else
+		parser.m_flags = 0;
+#endif
 		parser.Parse();
 
 		list<ImageEntry> images;
@@ -1351,8 +1369,10 @@ int32_t RichText::Parse()
 			e.m_data[0] = j;
 			DoEvent(CB_RICH_TEXT_REQ_IMG_SIZE, &e);
 		}
+#ifndef PAF_BUILD_2014
 		m_links.resize(links.size(), string());
 		copy(links.begin(), links.end(), m_links.begin());
+#endif
 	}
 	m_free(m_str);
 	m_str = NULL;
@@ -1497,6 +1517,7 @@ int32_t RichText::ScePafWidget_6A60296B(uint32_t size, float value)
 	return 0;
 }
 
+#ifndef PAF_BUILD_2014
 int32_t RichText::ScePafWidget_C7BE2076(int32_t index, string &url) const
 {
 	if (index < 0 || index >= (int32_t)m_links.size())
@@ -1504,6 +1525,7 @@ int32_t RichText::ScePafWidget_C7BE2076(int32_t index, string &url) const
 	url = m_links[index];
 	return 0;
 }
+#endif
 
 /* an item lower in the text than another, by its top and by its bottom */
 class ByTop {
@@ -1600,8 +1622,10 @@ void RichText::Layouter::ParseTable()
 			cell.m_colspan = cell_e->m_colspan;
 			cell.m_begin = m_it;
 			cell.m_avail = m_width;
+#ifndef PAF_BUILD_2014
 			if ((m_flags & 2) != 0 && cell_e->m_width != 0.0f)
 				cell.m_avail = cell_e->m_width;
+#endif
 			if (cell_e->m_col + cell_e->m_colspan >= table.m_cols)
 				cell.m_state = Cell::STATE_LAST;
 			in_cell = true;
@@ -1788,7 +1812,10 @@ void RichText::LineBuilder::Run()
 
 		switch (e->m_type) {
 		case Element::TYPE_TEXT:
-		case Element::TYPE_LINK_TEXT: {
+#ifndef PAF_BUILD_2014
+		case Element::TYPE_LINK_TEXT:
+#endif
+		{
 			TextElement *text = (TextElement *)e;
 
 			if (m_text.size() == 0) {
@@ -2719,10 +2746,12 @@ void RichText::LineBuilder::CBMeasure(int32_t type, Handler *self, Event *e, voi
 		return;
 
 	TextElement *text = (TextElement *)*builder->m_it;
+#ifndef PAF_BUILD_2014
 	int32_t link = -1;
 
 	if (text->m_type == Element::TYPE_LINK_TEXT)
 		link = ((LinkTextElement *)text)->m_link;
+#endif
 
 	graph::TextLayoutLineInfo info;
 

@@ -8,14 +8,7 @@ extern "C" {
 
 float sce_paf_sinf(float x);
 float sce_paf_cosf(float x);
-#ifdef PAF_BUILD_2014
-static inline float sce_paf_tanf(float x)
-{
-	return sce_paf_sinf(x) / sce_paf_cosf(x);
-}
-#else
 float sce_paf_tanf(float x);
-#endif
 float sce_paf_atanf(float x);
 float sce_paf_atan2f(float x, float y);
 float sce_paf_asinf(float x);

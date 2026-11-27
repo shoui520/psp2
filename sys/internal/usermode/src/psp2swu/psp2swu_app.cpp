@@ -118,7 +118,7 @@ SceInt32 SwuApplication::Finalize()
 	bool shutdown = false;
 
 	if (m_firstError != 0) {
-		SceUInt8 mode = 0;
+		SceUInt8 mode;
 		SceInt32 modeRet = sceUpdaterGetUpdateMode(&mode);
 
 		if (modeRet != 0) {
@@ -197,15 +197,17 @@ SceInt32 SwuApplication::WriteIndexSwInfoEntry(const SwInfoIndexMapping *mapping
 	switch (mapping->valueKind) {
 	case SWU_SWINFO_KIND_INT: {
 		SceUInt32 numValue = static_cast<SceUInt32>(sce_paf_atoi(value));
-		SceSize keyLen = sce_paf_strlen(mapping->swInfoKey);
+		const char *key = mapping->swInfoKey;
+		SceSize keyLen = sce_paf_strlen(key);
 
-		return CuiSetSwInfoInt(mapping->swInfoKey, keyLen, numValue);
+		return CuiSetSwInfoInt(key, keyLen, numValue);
 	}
 	case SWU_SWINFO_KIND_STR: {
-		SceSize keyLen = sce_paf_strlen(mapping->swInfoKey);
+		const char *key = mapping->swInfoKey;
+		SceSize keyLen = sce_paf_strlen(key);
 		SceSize valLen = sce_paf_strlen(value);
 
-		return CuiSetSwInfoStr(mapping->swInfoKey, keyLen, value, valLen);
+		return CuiSetSwInfoStr(key, keyLen, value, valLen);
 	}
 	default:
 		return mapping->valueKind;
@@ -270,7 +272,7 @@ SceInt32 SwuApplication::Initialize()
 		return ret;
 	}
 
-	SceUInt8 mode = 0;
+	SceUInt8 mode;
 	bool useGui = false;
 	SceInt32 modeRet = sceUpdaterGetUpdateMode(&mode);
 
@@ -307,7 +309,7 @@ const char *SwuApplication::GetPupPath()
 
 SceInt32 SwuApplication::VerifyData(const char *pupPath)
 {
-	SceUInt8 mode = 0;
+	SceUInt8 mode;
 
 	m_clearUpdateMode = 1;
 
@@ -466,7 +468,7 @@ SceInt32 SwuApplication::UpdateModeFlag()
 				m_clearUpdateMode = 0;
 		}
 	} else {
-		SceUInt8 mode = 0;
+		SceUInt8 mode;
 
 		ret = sceUpdaterGetUpdateMode(&mode);
 		if (ret != 0) {
@@ -520,7 +522,7 @@ SceInt32 SwuApplication::UpdateModeFlag()
 
 bool SwuApplication::IsFactoryMode()
 {
-	SceUInt8 mode = 0;
+	SceUInt8 mode;
 
 	if (sceUpdaterGetUpdateMode(&mode) != 0)
 		return false;

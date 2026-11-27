@@ -152,10 +152,12 @@ public:
 	int32_t GetLabelMode(LabelMode &mode, LabelId id);
 	int32_t GetLabelPosMode(LabelPosMode &mode, LabelId id);
 	int32_t GetLabelMargin(float &margin, LabelId id);
+#ifndef PAF_BUILD_2014
 	/* the bar in its color again, taking touches and keys */
 	void Enable();
 	/* the bar grayed out (m_disable_color, else a light gray), not taking touches or keys */
 	void Disable();
+#endif
 
 	void GetSliderAnim(float *time, int32_t *func)
 	{
@@ -180,6 +182,7 @@ public:
 	float m_value_rate;
 	/* the touch that drags the slider, and the key that moves it: -1 for none */
 	int32_t m_touch_id;
+#ifndef PAF_BUILD_2014
 	int32_t m_key;
 	/* how far a key press moves the value; 0 is 1 */
 	int32_t m_key_step;
@@ -187,6 +190,7 @@ public:
 	/* its color while enabled, kept by Disable; the color it is grayed out with */
 	math::v4 *m_enable_color;
 	math::v4 *m_disable_color;
+#endif
 	/* the sounds added to it, by index */
 	list<WidgetSoundParam::Sound> m_sound_list;
 };

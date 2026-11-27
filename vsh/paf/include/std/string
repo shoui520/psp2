@@ -84,7 +84,11 @@ public:
 		count = 0;
 	}
 
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) basic_string(const _Elem *src, const _Ax &al = _Ax())
+#else
 	basic_string(const _Elem *src, const _Ax &al = _Ax())
+#endif
 	{
 		ptr = &empty_string;
 		count = 0;
@@ -131,10 +135,32 @@ public:
 
 	_Myt &assign(const _Elem *src, size_type len);
 
+#ifdef PAF_BUILD_2014
+	__attribute__((noinline)) _Myt &assign(const _Elem *src)
+	{
+		size_type len = src != NULL ? _Traits::length(src) : 0;
+
+		if (ptr != src) {
+			if (ptr != &empty_string)
+				alloc.deallocate(ptr, count + 1);
+			if (len != 0 && src != NULL && *src != 0) {
+				ptr = alloc.allocate(len + 1);
+				count = len;
+				_Traits::copy(ptr, src, len);
+				ptr[len] = 0;
+			} else {
+				count = 0;
+				ptr = &empty_string;
+			}
+		}
+		return *this;
+	}
+#else
 	_Myt &assign(const _Elem *src)
 	{
 		return assign(src, src != NULL ? _Traits::length(src) : 0);
 	}
+#endif
 
 	_Myt &assign(const _Myt &src);
 	_Myt &assign(const _Myt &src, size_type pos, size_type len);
