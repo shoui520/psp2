@@ -646,6 +646,7 @@ public:
 
 	virtual bool IsInherit(const char *type) const;
 	virtual const char *GetTypeName() const;
+	virtual void OnRecordCleared();
 
 	virtual void LaunchAuthorProfile();
 	virtual bool IsUnread();
@@ -772,9 +773,8 @@ public:
 
 	virtual paf::graph::TextObj *GetBodyTextObj(paf::ui::Widget *panel);
 	virtual paf::graph::TextObj *GetTimeTextObj(paf::ui::Widget *panel);
-	virtual paf::graph::DrawObj *GetNewlineMarkObj(paf::ui::Widget *panel);
-	virtual paf::graph::TextObj *GetVoteCountTextObj(paf::ui::Widget *panel);
-	virtual paf::graph::TextObj *GetCommentCountTextObj(paf::ui::Widget *panel);
+	virtual paf::ui::Widget *GetSubWidget(int kind);
+	virtual paf::ui::Widget *GetCardRootWidget();
 	virtual void OnActionIconDecide(int eventId, paf::ui::Handler *handler,
 					paf::ui::Event *event);
 	virtual void OnPanelDecide(int eventId, paf::ui::Handler *handler,
@@ -784,7 +784,10 @@ public:
 	virtual bool HasNewComment();
 	virtual bool ShouldShowTitleName();
 	virtual void UpdateBadges();
-	virtual paf::ui::Widget *GetSubWidget(int kind);
+
+	paf::graph::DrawObj *GetNewlineMarkObj(paf::ui::Widget *panel);
+	paf::graph::TextObj *GetVoteCountTextObj(paf::ui::Widget *panel);
+	paf::graph::TextObj *GetCommentCountTextObj(paf::ui::Widget *panel);
 
 	void ShowBusy();
 	void HideBusy();
@@ -938,12 +941,12 @@ public:
 
 	virtual paf::graph::TextObj *GetBodyTextObj(paf::ui::Widget *panel);
 	virtual paf::graph::TextObj *GetTimeTextObj(paf::ui::Widget *panel);
+	virtual paf::ui::Widget *GetSubWidget(int kind);
 	virtual void OnDeleteOptionDecide(int eventId, paf::ui::Handler *handler,
 					  paf::ui::Event *event);
 	virtual void OnDeleteOrReportOptionDecide(int eventId, paf::ui::Handler *handler,
 						  paf::ui::Event *event);
 	virtual void UpdateUnreadBadge();
-	virtual paf::ui::Widget *GetSubWidget(int kind);
 
 	void StartCommentBusyOnButton(paf::ui::Widget *optionButton);
 	void ShowCommentBusy();

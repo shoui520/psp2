@@ -1601,11 +1601,7 @@ PafVec4 Lv1StatusActivityVisualizer::GetPreferredSize()
 
 bool Lv1StatusActivityVisualizer::HasNewComment()
 {
-	paf::intrusive_ptr<Live2Record> rec = m_record;
-	if (rec.get() == NULL || rec->GetRecordKind() != LIVE2_RECORD_STATUS)
-		return false;
-	Live2StatusRecord *statusRec = static_cast<Live2StatusRecord *>(rec.get());
-	return (statusRec->m_status.numOfNewComments > 0);
+	return false;
 }
 
 bool Lv1StatusActivityVisualizer::ShouldShowTitleName()
@@ -1640,6 +1636,17 @@ paf::ui::Widget *Lv1StatusActivityVisualizer::GetSubWidget(int kind)
 		return m_listItem->FindChild(paf::IDParam(WIDGET_STATUS_AVATAR_BTN), 0);
 	if (kind == 2)
 		return m_listItem->FindChild(paf::IDParam(WIDGET_STATUS_ACTION_BTN), 0);
+	return NULL;
+}
+
+/* 0x81350506 */
+paf::ui::Widget *Lv1StatusActivityVisualizer::GetCardRootWidget()
+{
+	int displayMode = GetDisplayMode();
+	if (displayMode == ACTIVITY_DB_OWNER_TITLE)
+		return m_listItem->FindChild(paf::IDParam(WIDGET_STATUS_TITLE_CARD_ROOT), 0);
+	if (displayMode == ACTIVITY_DB_OWNER_USER || displayMode == 0)
+		return m_listItem->FindChild(paf::IDParam(WIDGET_STATUS_USER_CARD_ROOT), 0);
 	return NULL;
 }
 

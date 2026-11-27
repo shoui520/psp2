@@ -199,6 +199,12 @@ BaseActivityVisualizer::~BaseActivityVisualizer()
 {
 }
 
+/* 0x8135CCA8 */
+void BaseActivityVisualizer::OnRecordCleared()
+{
+	RequestRecordUpdate();
+}
+
 /* 0x8134903E */
 int BaseActivityVisualizer::CreateActivityImageCache(
 	const paf::string &url,
