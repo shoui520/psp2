@@ -479,7 +479,7 @@ static __attribute__((noinline)) int rtcUtilResolveTimeZoneRule(int regTimeZone,
 }
 
 /* Apply date/time/timezone/DST configuration to AppMgr and VshRtc */
-static void rtcUtilApplySystemConf(int dateFormat, int timeFormat,
+static inline __attribute__((always_inline)) void rtcUtilApplySystemConf(int dateFormat, int timeFormat,
 				   int regTimeZone, int summerTime)
 {
 	if (sceRegMgrSetKeyInt("/CONFIG/DATE", "summer_time", summerTime) != 0)
