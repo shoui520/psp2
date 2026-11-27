@@ -14,6 +14,8 @@
 #include <file/localfile.h>
 #include <thread/thread.h>
 
+#include "musiccore_player_base.h"
+
 extern "C" {
 void *sce_paf_memset(void *dst, int val, size_t size);
 void *sce_paf_memcpy(void *dst, const void *src, size_t size);
@@ -64,11 +66,6 @@ extern int cmdQueueEnqueue(void *queue, uint64_t cmdHdr, const void *inBuf, SceS
 extern int cmdQueueDequeue(void *queue, void **outNode, SceUInt *timeout);
 extern int cmdQueueRelease(void *queue, void *node);
 
-extern unsigned int basePlayerCalcExtraSize(int capacity);
-extern void basePlayerConstruct(void *self, char kind, void *factory, int capacity,
-                                int *outErr, unsigned int totalBytes, unsigned int headerBytes);
-extern void basePlayerDestruct(void *self);
-
 extern int reportDbFileError(int sqliteErr, const char *dbPath, unsigned int flags);
 extern int checkTrackListValid(const void *req, int trackCount, int trackOpt);
 extern void invalidateAllMediaCaches();
@@ -92,31 +89,31 @@ extern int setPowerSaveMode(int mode, int val, int flags);
  * MusicPlayer (0x811DFD10 - 0x811DFDF0)
  * ========================================================================= */
 
-class MusicPlayer {
+class MusicPlayer : public BasePlayer {
 public:
     static unsigned int calcTotalSize(int capacity);
     MusicPlayer(void *factory, int capacity, int *outErr, unsigned int totalBytes,
                 unsigned int headerBytes);
     virtual ~MusicPlayer();
-    virtual void onSessionConstructed() {}
-    virtual bool canHandleCommand(int channel, uint32_t cmdPacked, int param, int extra, int flags);
-
-private:
-    unsigned char m_playerBaseMembers[472];
+    virtual unsigned int calcAllocSize()
+    {
+        return ((calcMediaQueueSize(m_capacity, 2, 2, 56) - 1) & ~7u) + 480;
+    }
+    virtual int isActiveForInfo(PlayerPriorityInfo info);
+    virtual int wantsAudioForInfo(PlayerPriorityInfo info);
 };
 
 unsigned int MusicPlayer::calcTotalSize(int capacity)
 {
-    return basePlayerCalcExtraSize(capacity) + 472;
+    return BasePlayer::calcBaseExtraSize(capacity) + 472;
 }
 
 MusicPlayer::MusicPlayer(void *factory, int capacity, int *outErr,
                          unsigned int totalBytes, unsigned int headerBytes)
+    : BasePlayer(0, factory, capacity, outErr, totalBytes, headerBytes)
 {
-    basePlayerConstruct(this, 0, factory, capacity, outErr, totalBytes, headerBytes);
-    if (totalBytes >= basePlayerCalcExtraSize(capacity) + 472) {
-        int *baseWords = (int *)this;
-        baseWords[15] = -1;
+    if (totalBytes >= BasePlayer::calcBaseExtraSize(capacity) + 472) {
+        m_subPriority = -1;
     } else {
         *outErr = MUSICCORE_ERR_NO_MEMORY;
     }
@@ -124,16 +121,20 @@ MusicPlayer::MusicPlayer(void *factory, int capacity, int *outErr,
 
 MusicPlayer::~MusicPlayer()
 {
-    basePlayerDestruct(this);
 }
 
-bool MusicPlayer::canHandleCommand(int channel, uint32_t cmdPacked, int param, int extra, int flags)
+int MusicPlayer::isActiveForInfo(PlayerPriorityInfo info)
 {
-    typedef int (*CheckFn)(MusicPlayer *, int, uint32_t, int, int, int);
-    CheckFn *vtable = *(CheckFn **)this;
-    if (vtable[17](this, channel, cmdPacked, param, extra, flags) == 1)
-        return ((cmdPacked >> 24) & 0xFFu) == 1u;
-    return false;
+    if (info.isEnabled == 1 && info.isDbAllowed == 1 && info.isOpen == 1)
+        return (info.wantsPlay == 1) ? 1 : 0;
+    return 0;
+}
+
+int MusicPlayer::wantsAudioForInfo(PlayerPriorityInfo info)
+{
+    if (isActiveForInfo(info) == 1)
+        return (info.isBusy == 1) ? 1 : 0;
+    return 0;
 }
 
 /* =========================================================================

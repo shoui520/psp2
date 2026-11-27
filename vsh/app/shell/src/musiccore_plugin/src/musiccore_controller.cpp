@@ -11,6 +11,8 @@
 
 #include <thread/thread.h>
 
+#include "musiccore_player_base.h"
+
 extern "C" {
 void *sce_paf_memset(void *dst, int val, size_t size);
 void *sce_paf_memcpy(void *dst, const void *src, size_t size);
@@ -43,25 +45,6 @@ struct CmdAckWaiter {
     int signalCount;
 };
 
-struct CmdNode {
-    void *vtable;
-    unsigned int padAlign;
-    uint32_t param;
-    uint8_t targetChannel;
-    uint8_t flagsByte;
-    uint16_t cmdCode;
-    void *inBuf;
-    unsigned int inSize;
-    unsigned int inCap;
-    void *outBuf;
-    unsigned int outSize;
-    unsigned int outCap;
-    int state;
-    CmdAckWaiter *waiter;
-    CmdNode *next;
-    CmdNode *prev;
-};
-
 class CmdQueue {
 public:
     static unsigned int calcRequiredSize(unsigned int inSize, unsigned int outSize, unsigned int count);
@@ -86,64 +69,6 @@ class ObjFactory {
 public:
     int createWorkBuf(void **outBuf);
     int getPlayerPool(char playerKind, PlayerPool **outPool);
-};
-
-struct PlayerPriorityInfo {
-    char bgmStatus;
-    char bgmReason;
-    unsigned char activePlayback;
-    unsigned char isPlayable;
-    unsigned char isOpen;
-    unsigned char isEnabled;
-    unsigned char isDbAllowed;
-    unsigned char isBusy;
-    int priority;
-    int subPriority;
-    unsigned char wantsPlay;
-    unsigned char hasMedia;
-    unsigned char hasPending;
-    unsigned char padTail;
-};
-
-struct PlayerStatusSnapshot {
-    unsigned char channelId;
-    unsigned char playerKind;
-    char bgmStatus;
-    char bgmReason;
-    int bgmPriority;
-    unsigned char playableFlag;
-    unsigned char padPlayable[3];
-    int seqNum;
-    int16_t flags;
-    int16_t padFlags;
-    int cmdParam;
-    int errCode;
-    int playState;
-    int contentType;
-    int padContent;
-    int64_t trackId;
-    int64_t trackItemId;
-    int64_t playlistId;
-    int trackIndex;
-    int totalTracks;
-    int currentTrackNum;
-    int durationMs;
-    int sampleRate;
-    int bitRate;
-    int channels;
-    int codecType;
-    int sourceType;
-    int repeatMode;
-    int shuffleMode;
-    int volumeMode;
-    int audioBalance;
-    int eqType;
-    int eqBandLow;
-    int eqBandMid;
-    int eqBandHigh;
-    int audioNormalizer;
-    int extraErr;
-    int padTail;
 };
 
 struct SystemStateReport {
@@ -189,55 +114,6 @@ struct DbCallbacks {
     int (*onEvent)(const void *ev, void *ctrl);
     int (*onMessage)(const void *msg, void *ctrl);
     void *userData;
-};
-
-struct PlayerCallbacks {
-    int (*onStatus)(const PlayerStatusSnapshot *snap, void *ctrl, unsigned char force);
-    int (*onExtra)(const unsigned char *data, void *ctrl);
-    int (*onMetadata)(int type, const void *meta, PlayerStatusSnapshot *snap, void *ctrl);
-    int (*onCap)(const unsigned char *data, void *ctrl);
-    void *userData;
-};
-
-struct BasePlayer {
-    virtual ~BasePlayer() {}
-    virtual unsigned int calcAllocSize() = 0;
-    virtual int attach(unsigned char channelId, const PlayerCallbacks *cbs, void *dbMgr, void *audioOut) = 0;
-    virtual int detach() = 0;
-    virtual void setAudioFocus(int granted) = 0;
-    virtual int getAudioFocus() = 0;
-    virtual int getPriority() = 0;
-    virtual int getSubPriority() = 0;
-    virtual int open(const void *param, void *flags) = 0;
-    virtual int close(void *flags) = 0;
-    virtual int isOpen() = 0;
-    virtual int isBusy() = 0;
-    virtual void onDbResume(void *flags) = 0;
-    virtual void onPauseForDb(void *flags) = 0;
-    virtual PlayerPriorityInfo getPriorityInfo() = 0;
-    virtual int isActive() = 0;
-    virtual int isActiveForInfo(PlayerPriorityInfo info) = 0;
-    virtual int wantsAudio() = 0;
-    virtual int wantsAudioForInfo(PlayerPriorityInfo info) = 0;
-    virtual int isLocked() = 0;
-    virtual int getContentInfo(void *infoBuf) = 0;
-    virtual void onIdleActive() = 0;
-    virtual void onIdlePlaylist() = 0;
-    virtual int getSystemSuspended() = 0;
-    virtual void setSystemSuspended(int suspended) = 0;
-    virtual int isPlayable() = 0;
-    virtual int hasNoPendingSeek() = 0;
-
-    char playerKind;
-    unsigned char channelId;
-    unsigned char baseMembersHead[58];
-    int pendingUriCount;
-    unsigned char baseMembersTail[404];
-};
-
-struct SoundOutExclusiveParam {
-    int version;
-    int configWords[5];
 };
 
 struct ExclusivePlayer : public BasePlayer {
@@ -294,19 +170,6 @@ extern int audioOutputGetState(void *audioOut, unsigned char channelId);
 
 extern int queryAppFocusState(AppFocusInfo *outInfo, int priority);
 extern int getGlobalTrackTag();
-
-extern int playerDispatchCmd(BasePlayer *player, CmdNode *node, unsigned char *flags);
-extern void playerNotifyStatus(BasePlayer *player, int unused, uint32_t param, uint32_t cmdHi,
-                               int errCode, unsigned char *flags);
-extern int playerActivateDecoder(BasePlayer *player, int fadeMs, void *decoderMgr);
-extern int playerDeactivateDecoder(BasePlayer *player, int fadeMs, uint32_t param, uint32_t cmdHi,
-                                   unsigned char syncFlag);
-extern int playerFlushStatus(BasePlayer *player);
-extern int playerGetStatus(BasePlayer *player, void *statusBuf, void *outPos, void *outPosValid);
-extern int playerGetExtraStatus(BasePlayer *player, int *outMode, int flag, void *workBuf,
-                                unsigned char *outFlag);
-extern void playerTick(BasePlayer *player);
-extern int playerSetSuspended(BasePlayer *player, int suspended);
 
 extern void *workBufAllocRegion(void *workBuf, size_t size);
 extern void workBufSetPayload(void *workBuf, void *payload);
@@ -772,7 +635,7 @@ BasePlayer *Controller::findPlayerByChannel(unsigned char channelId, unsigned ch
 {
     unsigned char effectiveId = channelId;
     if (channelId == 0xEF) {
-        effectiveId = (m_activePlayer != NULL) ? m_activePlayer->channelId : 0xFF;
+        effectiveId = (m_activePlayer != NULL) ? m_activePlayer->m_channelId : 0xFF;
     }
 
     int kind = getChannelType((char)effectiveId);
@@ -802,7 +665,7 @@ int Controller::getContentInfo(unsigned char channelId, void *infoBuf)
     BasePlayer *player = findPlayerByChannel(channelId, 1);
     if (player == NULL)
         return MUSICCORE_ERR_INVALID_ARG;
-    return player->getContentInfo(infoBuf);
+    return player->getContentInfo(static_cast<MetadataBuffers *>(infoBuf));
 }
 
 char Controller::computeBgmStatus(unsigned char channelId, char *outReason, int *outPriority)
@@ -858,20 +721,20 @@ char Controller::computeBgmStatus(unsigned char channelId, char *outReason, int 
         if (otherInfo.isOpen == 1 && otherInfo.hasMedia == 1 && otherInfo.wantsPlay == 1 &&
             targetInfo.priority <= otherInfo.priority) {
             if (targetInfo.priority < otherInfo.priority) {
-                if (other->playerKind == 2)
+                if (other->m_playerKind == 2)
                     *outReason = 1;
                 return 0;
             }
             if (targetInfo.subPriority == -1 || otherInfo.subPriority == -1 ||
                 targetInfo.subPriority == otherInfo.subPriority) {
-                if (target->playerKind == 0)
+                if (target->m_playerKind == 0)
                     return 0;
-                if (target->playerKind == 1) {
-                    if (other->playerKind == 2) {
+                if (target->m_playerKind == 1) {
+                    if (other->m_playerKind == 2) {
                         *outReason = 1;
                         return 0;
                     }
-                } else if (target->playerKind < 0 || target->playerKind > 2) {
+                } else if (target->m_playerKind < 0 || target->m_playerKind > 2) {
                     return -1;
                 }
             } else if (targetInfo.subPriority < otherInfo.subPriority) {
@@ -897,7 +760,7 @@ char Controller::computeBgmStatus(unsigned char channelId, char *outReason, int 
     AppFocusInfo focusInfo;
     if (queryAppFocusState(&focusInfo, targetInfo.priority) != 0)
         return -1;
-    if (focusInfo.state == 2 && target->playerKind != 2)
+    if (focusInfo.state == 2 && target->m_playerKind != 2)
         return 0;
 
     if (targetInfo.isOpen != 1)
@@ -919,7 +782,8 @@ int Controller::getStatus(unsigned char channelId, PlayerStatusSnapshot *outStat
         return MUSICCORE_ERR_INVALID_ARG;
     }
 
-    int ret = playerGetStatus(player, outStatus, outPos, outPosValid);
+    int ret = player->getStatus(outStatus, static_cast<int *>(outPos),
+                                static_cast<unsigned char *>(outPosValid));
     if (ret != 0) {
         m_ctrlMutex.Unlock();
         return ret;
@@ -939,7 +803,8 @@ int Controller::getStatus(unsigned char channelId, PlayerStatusSnapshot *outStat
         return 0;
     }
 
-    int extraRet = playerGetExtraStatus(player, outMode, queryFlags, workBuf, outFlag);
+    int extraRet = player->getExtraStatus(outMode, static_cast<char>(queryFlags),
+                                          static_cast<char *>(workBuf), outFlag);
     if (extraRet != 0) {
         *outMode = 4;
         m_ctrlMutex.Unlock();
@@ -1024,11 +889,11 @@ int Controller::handleOpenChannel(CmdNode *node, void *outResult, unsigned char 
 
     int ret = player->open(node->inBuf, flags);
     if (ret == 0) {
-        unsigned char chId = player->channelId;
+        unsigned char chId = player->m_channelId;
         ((unsigned char *)outResult)[4] = chId;
-        if (player->playerKind == 1)
+        if (player->m_playerKind == 1)
             m_playlistChannelId = chId;
-        else if (player->playerKind == 2)
+        else if (player->m_playerKind == 2)
             m_streamChannelId = chId;
     }
     return ret;
@@ -1135,8 +1000,8 @@ void Controller::notifySystemState(unsigned char force)
 
     int bgmPriority = 0;
     if (m_activePlayer != NULL) {
-        report.activeChannel = m_activePlayer->channelId;
-        report.activeKind = (unsigned char)m_activePlayer->playerKind;
+        report.activeChannel = m_activePlayer->m_channelId;
+        report.activeKind = (unsigned char)m_activePlayer->m_playerKind;
     } else {
         report.activeChannel = 0xFF;
         report.activeKind = 0x0F;
@@ -1564,7 +1429,7 @@ int Controller::syncActivePlayer(unsigned char *flags, uint32_t param, uint32_t 
     if (streamPlayer != NULL)
         (void)streamPlayer->wantsAudio();
 
-    unsigned char activeId = (m_activePlayer != NULL) ? m_activePlayer->channelId : 0xFF;
+    unsigned char activeId = (m_activePlayer != NULL) ? m_activePlayer->m_channelId : 0xFF;
     if (m_deactivatingActive == 1)
         return 0;
 
@@ -1582,22 +1447,22 @@ int Controller::syncActivePlayer(unsigned char *flags, uint32_t param, uint32_t 
 
     unsigned char desiredId = 0xFF;
     if (desired != NULL) {
-        desiredId = desired->channelId;
+        desiredId = desired->m_channelId;
         if (activeId == desiredId || desiredId == 0xEF)
             return 0;
     }
 
     if (m_activePlayer != NULL) {
         int fadeMs = 0;
-        if (m_activePlayer->playerKind == 0) {
+        if (m_activePlayer->m_playerKind == 0) {
             BasePlayer *top = selectHighestPriorityPlayer(-1);
             fadeMs = (top != NULL && top->wantsAudio() == 0) ? 0 : 400;
         }
-        int ret = playerDeactivateDecoder(m_activePlayer, fadeMs, param, cmdHi, syncFlag);
+        int ret = m_activePlayer->deactivateDecoder(fadeMs, param, cmdHi, syncFlag);
         if (ret == 0) {
             *flags &= ~0x10u;
             m_deactivatingActive = 1;
-            m_pendingChannelId = m_activePlayer->channelId;
+            m_pendingChannelId = m_activePlayer->m_channelId;
             m_drainStoredQueue = 0;
         }
         return ret;
@@ -1606,11 +1471,12 @@ int Controller::syncActivePlayer(unsigned char *flags, uint32_t param, uint32_t 
     BasePlayer *nextActive = findPlayerByChannel(desiredId, 1);
     m_activePlayer = nextActive;
     if (nextActive != NULL) {
-        int fadeMs = (nextActive->playerKind == 0) ? 100 : 0;
-        int ret = playerActivateDecoder(nextActive, fadeMs, m_decoderMgrArena);
+        int fadeMs = (nextActive->m_playerKind == 0) ? 100 : 0;
+        int ret = nextActive->activateDecoder(fadeMs,
+                                              reinterpret_cast<DecoderSession *>(m_decoderMgrArena));
         if (ret == 0) {
             *flags &= ~0x10u;
-            m_pendingChannelId = m_activePlayer->channelId;
+            m_pendingChannelId = m_activePlayer->m_channelId;
             m_drainStoredQueue = 0;
         }
         return ret;
@@ -1786,7 +1652,7 @@ int Controller::prepareUriWorkBuf(CmdNode *node)
 
         BasePlayer *p = findPlayerByChannel(node->targetChannel, 1);
         if (p != NULL)
-            p->pendingUriCount = (p->pendingUriCount == -1) ? 1 : (p->pendingUriCount + 1);
+            p->m_pendingUriCount = (p->m_pendingUriCount == -1) ? 1 : (p->m_pendingUriCount + 1);
         return ret;
     }
 
@@ -1817,7 +1683,7 @@ int Controller::prepareUriWorkBuf(CmdNode *node)
 
         BasePlayer *p = findPlayerByChannel(node->targetChannel, 1);
         if (p != NULL)
-            p->pendingUriCount = (p->pendingUriCount == -1) ? 1 : (p->pendingUriCount + 1);
+            p->m_pendingUriCount = (p->m_pendingUriCount == -1) ? 1 : (p->m_pendingUriCount + 1);
         return ret;
     }
 
@@ -1860,15 +1726,15 @@ int Controller::onIdleTick()
     BasePlayer *playlist = findPlayerByChannel(m_playlistChannelId, 1);
 
     if (stream != NULL)
-        playerTick(stream);
+        stream->tickStatus();
     if (music != NULL)
-        playerTick(music);
+        music->tickStatus();
     if (playlist != NULL) {
-        playerTick(playlist);
+        playlist->tickStatus();
         checkIdleTrackerTimeout(sceKernelGetProcessTimeWide());
     }
     if (active != NULL) {
-        int ret = playerFlushStatus(active);
+        int ret = active->flushTimeCallback();
         if (ret != 0)
             return ret;
         active->onIdleActive();
@@ -2057,7 +1923,7 @@ int Controller::runMainLoop()
         } else {
             targetPlayer = findPlayerByChannel(node->targetChannel, 0);
             if (targetPlayer != NULL)
-                cmdRet = playerDispatchCmd(targetPlayer, node, ctrlFlags);
+                cmdRet = targetPlayer->dispatchCmd(node, ctrlFlags);
             else
                 cmdRet = MUSICCORE_ERR_FAILED;
         }
@@ -2066,7 +1932,7 @@ int Controller::runMainLoop()
             uint16_t subCode = ((const DecoderEventHeader *)node->inBuf)->subCode;
             if (subCode == 0x1205) {
                 m_drainStoredQueue = 1;
-                if (m_activePlayer != NULL && m_activePlayer->channelId == node->targetChannel) {
+                if (m_activePlayer != NULL && m_activePlayer->m_channelId == node->targetChannel) {
                     m_activePlayer = NULL;
                     m_deactivatingActive = 0;
                 }
@@ -2088,8 +1954,8 @@ int Controller::runMainLoop()
 
         if ((ctrlFlags[0] & 0x10) != 0 && targetPlayer != NULL) {
             if (cmdRet == 0)
-                playerNotifyStatus(targetPlayer, 0, savedParam, savedCmdHi, 0, ctrlFlags);
-            playerFlushStatus(targetPlayer);
+                targetPlayer->notifyStatus(0, savedParam, savedCmdHi, 0, ctrlFlags);
+            targetPlayer->flushTimeCallback();
         }
 
         if ((ctrlFlags[0] & 0x20) != 0) {
@@ -2097,15 +1963,15 @@ int Controller::runMainLoop()
             for (int i = 0; i < 8; ++i) {
                 BasePlayer *p = findPlayerByKindSlot(0, (unsigned char)i, 1);
                 if (p != NULL)
-                    playerSetSuspended(p, suspendVal);
+                    p->setSuspended(static_cast<char>(suspendVal));
             }
             BasePlayer *pl = findPlayerByKindSlot(1, 0, 1);
             if (pl != NULL)
-                playerSetSuspended(pl, suspendVal);
+                pl->setSuspended(static_cast<char>(suspendVal));
             for (int i = 0; i < 2; ++i) {
                 BasePlayer *p = findPlayerByKindSlot(2, (unsigned char)i, 1);
                 if (p != NULL)
-                    playerSetSuspended(p, suspendVal);
+                    p->setSuspended(static_cast<char>(suspendVal));
             }
             if (!isAnyPlayerLocked())
                 ctrlFlags[0] |= 0x40u;
@@ -2199,7 +2065,7 @@ int Controller::onDecoderMessage(const int *msg, void *ctrlPtr, SceUInt *timeout
 
     Controller *ctrl = (Controller *)ctrlPtr;
     const InternalMsgHeader *hdr = (const InternalMsgHeader *)msg;
-    unsigned char chId = (ctrl->m_activePlayer != NULL) ? ctrl->m_activePlayer->channelId : 0xFF;
+    unsigned char chId = (ctrl->m_activePlayer != NULL) ? ctrl->m_activePlayer->m_channelId : 0xFF;
     uint16_t cmdCode = hdr->cmdCode;
     uint32_t hi = ((uint32_t)cmdCode << 16) | 0x8000u | chId;
 
@@ -2399,8 +2265,8 @@ int Controller::onPlayerStatus(const PlayerStatusSnapshot *snapIn, void *ctrlPtr
     snap.playableFlag = (player != NULL) ? (unsigned char)player->isPlayable() : 1;
 
     if (ctrl->m_statusCb == NULL) {
-        if (player != NULL && player->pendingUriCount == 0)
-            player->pendingUriCount = -1;
+        if (player != NULL && player->m_pendingUriCount == 0)
+            player->m_pendingUriCount = -1;
         return 0;
     }
 
@@ -2432,9 +2298,9 @@ int Controller::onPlayerStatus(const PlayerStatusSnapshot *snapIn, void *ctrlPtr
             ret = ctrl->m_statusCb(snap);
         }
         if (trackChanged == 1 && player != NULL)
-            ret = playerFlushStatus(player);
-        if (player != NULL && player->pendingUriCount == 0)
-            player->pendingUriCount = -1;
+            ret = player->flushTimeCallback();
+        if (player != NULL && player->m_pendingUriCount == 0)
+            player->m_pendingUriCount = -1;
     }
     return ret;
 }
@@ -2507,9 +2373,9 @@ int Controller::onShellSuspendEvent(int eventType, int eventParam, int eventExtr
 
     ctrl->m_shellSuspended = 1;
     BasePlayer *active = ctrl->findPlayerByChannel(0xEF, 1);
-    if (active == NULL || active->playerKind != 2)
+    if (active == NULL || active->m_playerKind != 2)
         return audioOutputSetPriority(ctrl->m_audioOutArena, 128, 0);
-    return active->playerKind;
+    return active->m_playerKind;
 }
 
 int Controller::onShellResumeEvent(int eventType, int eventParam, int eventExtra, void *ctrlPtr)
@@ -2526,13 +2392,13 @@ int Controller::onShellResumeEvent(int eventType, int eventParam, int eventExtra
 
     ctrl->m_shellSuspended = 0;
     BasePlayer *active = ctrl->findPlayerByChannel(0xEF, 1);
-    if (active == NULL || (active->playerKind != 2 && active->playerKind != 1)) {
+    if (active == NULL || (active->m_playerKind != 2 && active->m_playerKind != 1)) {
         BasePlayer *playlist = ctrl->findPlayerByChannel(ctrl->m_playlistChannelId, 1);
         if (playlist != NULL)
             playlist->setAudioFocus(0);
         return audioOutputSetPriority(ctrl->m_audioOutArena, -1, 0);
     }
-    return active->playerKind;
+    return active->m_playerKind;
 }
 
 int controllerSendCommand(void *ctrl, uint64_t cmdHeader, const void *inBuf,

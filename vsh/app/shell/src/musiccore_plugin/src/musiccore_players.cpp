@@ -15,6 +15,8 @@
 #include <system/system.h>
 #include <thread/thread.h>
 
+#include "musiccore_player_base.h"
+
 extern "C" {
 void *sce_paf_memset(void *dst, int ch, SceSize len);
 void *sce_paf_memcpy(void *dst, const void *src, SceSize len);
@@ -41,19 +43,6 @@ static const uint16_t CMD_PLAY_MUSIC_APP = 0x3118u;   /* 12568 */
 static const uint16_t CMD_CLEAR_PLAYLIST = 0x311Au;   /* 12570 */
 static const uint16_t NOTIFY_PLAYBACK_STOP = 0x1201u; /* 4609 */
 
-struct SoundOutExclusiveParam {
-    int version;
-    int configWords[5];
-};
-
-struct PlayerCommandPacket {
-    uint32_t header;
-    uint32_t sequenceId;
-    uint32_t origParam;
-    uint32_t origCmdHi;
-    void *payload;
-};
-
 struct ExclusiveOpenRequest {
     uint32_t headerWords[3];
     SoundOutExclusiveParam exclusiveParam;
@@ -62,15 +51,6 @@ struct ExclusiveOpenRequest {
 struct MusicAppOpenRequest {
     uint32_t headerWords[2];
     int requestedPriority;
-};
-
-struct MusicAppPlayCommand {
-    uint32_t headerWords[2];
-    uint32_t origParam;
-    uint32_t origCmdHi;
-    uint16_t flagsLow;
-    uint16_t commandType;
-    void *payload;
 };
 
 struct TrackNotifyPayload {
@@ -83,24 +63,6 @@ struct TrackNotifyPayload {
     int playCountTrigger;
     uint8_t tailPadding[24];
     int dbSyncRequired;
-};
-
-struct MetadataQueryBuffer {
-    char *titleOut;
-    SceSize titleCapacity;
-    char *artistOut;
-    SceSize artistCapacity;
-    char *albumOut;
-    SceSize albumCapacity;
-};
-
-struct TrackMetadataBuffers {
-    char *titlePtr;
-    SceSize titleCapacity;
-    char *artistPtr;
-    SceSize artistCapacity;
-    char *albumPtr;
-    SceSize albumCapacity;
 };
 
 struct PowerManagePluginInterface {
@@ -138,24 +100,6 @@ struct PlaybackDbCommandTarget {
     int handleId;
 };
 
-extern size_t getPlayerBasePoolSize(void *heap);
-extern void playerBaseConstruct(void *self, int playerType, void *controller,
-                                void *dbManager, int *outErr, unsigned int bufSize,
-                                int poolOffset);
-extern void playerBaseDestroy(void *self);
-extern int playerBaseStopAndReset(void *self);
-extern int playerBaseClearActiveList(void *self);
-extern void playerBaseResetMetadataStrings(void *self, TrackMetadataBuffers *meta);
-extern int playerBaseHandleSeek(void *self, const PlayerCommandPacket *cmd);
-extern int playerBaseHandleSkipNext(void *self, const PlayerCommandPacket *cmd);
-extern int playerBaseHandleSkipPrev(void *self, const PlayerCommandPacket *cmd);
-extern int playerBaseHandleSetRepeat(void *self, const PlayerCommandPacket *cmd);
-extern int playerBaseHandleSetShuffle(void *self, const PlayerCommandPacket *cmd);
-extern int playerBaseOnTrackEvent(void *self, const PlayerCommandPacket *cmd);
-extern int playerBaseResumeOrStart(void *self);
-extern int playerBasePause(void *self);
-extern int playerBaseHandleNotify(void *self, const PlayerCommandPacket *cmd, int extra);
-
 extern int dbManagerOpenSession(void *dbMgr);
 extern int dbManagerReleaseList(void *dbMgr, void *mediaList, uint32_t origParam,
                                 uint32_t origCmdHi, int commitFlag);
@@ -173,106 +117,44 @@ extern size_t orderListFactoryCalcSize(void *heap, int maxLists, int listSlots, 
 extern void *orderListFactoryConstruct(void *mem, void *heap, int maxLists, int listSlots,
                                        size_t allocSize, int entrySize);
 
-/* PlayerBase layout (472 bytes, offsets matching BasePlayer in musiccore_player_base.cpp) */
-class PlayerBaseView {
+static uint32_t packCmdNodeHi(const CmdNode *node)
+{
+    return static_cast<uint32_t>(node->targetChannel) |
+           (static_cast<uint32_t>(node->flagsByte) << 8) |
+           (static_cast<uint32_t>(node->cmdCode) << 16);
+}
+
+class ExclusiveMusicPlayer : public BasePlayer {
 public:
-    virtual ~PlayerBaseView() {}
-    virtual void onConstructHook() {}
-    virtual int attach(unsigned char channelId, const void *callbacks, void *dbMgr, void *audioOut) { (void)channelId; (void)callbacks; (void)dbMgr; (void)audioOut; return 0; }
-    virtual int detach() { return 0; }
-    virtual void setAudioFocus(int granted) { (void)granted; }
-    virtual int getAudioFocus() { return 0; }
-    virtual int getPriority() { return 0; }
-    virtual int getSubPriority() { return 0; }
-    virtual int open(const void *param, unsigned char *flags) { (void)param; (void)flags; return 0; }
-    virtual int close(unsigned char *flags) { (void)flags; return 0; }
-    virtual int isOpen() { return 0; }
-    virtual int isBusy() { return 0; }
-    virtual void onDbSuspend(unsigned char *flags) { (void)flags; }
-    virtual void onDbResume(unsigned char *flags) { (void)flags; }
-    virtual void onPauseForDb(unsigned char *flags) { (void)flags; }
-    virtual int getPrioritySummary() { return 0; }
-    virtual int isPlaybackRunning() { return 0; }
-    virtual int isActive() { return 0; }
-    virtual void onPriorityHook() {}
-    virtual int wantsAudio() { return 0; }
-    virtual void onAudioHook() {}
-    virtual int isLocked() { return 0; }
-    virtual int getContentInfo(TrackMetadataBuffers *outMeta) { (void)outMeta; return 0; }
-    virtual paf::system::Model *getModel() { return NULL; }
-    virtual void onIdlePlaylist() {}
-    virtual int isAutoSuspendPending() { return 0; }
+    static size_t calcRequiredSize(int capacity);
 
-    uint32_t m_playerType;                  /* +4 */
-    uint32_t m_callbackAndFactory[6];       /* +8..+31 */
-    DbManagerRuntime *m_dbManager;          /* +32 */
-    int m_pendingDbOps;                     /* +36 */
-    int m_playbackState;                    /* +40 */
-    void *m_audioOut;                       /* +44 */
-    uint8_t m_isOpened;                     /* +48 */
-    uint8_t m_playerStateFlags[7];          /* +49..+55 */
-    int m_activePriority;                   /* +56 */
-    int m_defaultPriority;                  /* +60 */
-    int m_pendingUriCount;                  /* +64 */
-    int m_padStateAlign;                    /* +68 */
-    int m_currentListIndex;                 /* +72 */
-    int m_currentListCount;                 /* +76 */
-    int64_t m_currentRowId;                 /* +80 */
-    int64_t m_currentMediaId;               /* +88 */
-    int64_t m_currentListId;                /* +96 */
-    int m_currentDurationMs;                /* +104 */
-    int m_currentPositionMs;                /* +108 */
-    int m_currentCodec;                     /* +112 */
-    int m_currentSampleRate;                /* +116 */
-    int m_currentChannels;                  /* +120 */
-    int m_currentBitRate;                   /* +124 */
-    uint32_t m_mediaStreamProps[4];         /* +128..+143 */
-    void *m_activeMediaList;                /* +144 */
-    uint32_t m_offlineListMeta[2];          /* +148..+155 */
-    int m_repeatMode;                       /* +156 */
-    int m_shuffleMode;                      /* +160 */
-    int m_playDirection;                    /* +164 */
-    uint32_t m_audioEffectSettings[7];      /* +168..+195 */
-    int m_errorDomain;                      /* +196 */
-    int m_errorDetail;                      /* +200 */
-    int m_errorSubCode;                     /* +204 */
-    uint32_t m_activeStateBlock[48];        /* +208..+399 */
-    TrackMetadataBuffers m_metaBuffers;     /* +400..+423 */
-    paf::thread::Mutex *m_metaMutex;        /* +424 */
-    void *m_heap;                           /* +428 */
-    void *m_orderListFactory;               /* +432 */
-    uint32_t m_pendingSeekState[7];         /* +436..+463 */
-    uint8_t m_systemSuspended;              /* +464 */
-    uint8_t m_autoSuspendActive;            /* +465 */
-    uint8_t m_padFlagTail[2];               /* +466..+467 */
-    int m_completedPlayCount;               /* +468 */
-};
-
-class ExclusiveMusicPlayer : public PlayerBaseView {
-public:
-    static size_t calcRequiredSize(void *heap);
-
-    ExclusiveMusicPlayer(void *controller, void *dbManager, int *outErr,
+    ExclusiveMusicPlayer(void *controller, int capacity, int *outErr,
                          unsigned int bufSize, int poolOffset);
     virtual ~ExclusiveMusicPlayer();
 
-    int openSession(const ExclusiveOpenRequest *req, uint8_t *outChangeFlags);
+    virtual unsigned int calcAllocSize()
+    {
+        return BasePlayer::calcBaseExtraSize(m_capacity) + 496u;
+    }
+    virtual int open(const void *param, unsigned char *flags);
+    virtual int isActiveForInfo(PlayerPriorityInfo info);
+    virtual int wantsAudioForInfo(PlayerPriorityInfo info);
 
 private:
     SoundOutExclusiveParam m_exclusiveParam; /* +472..+495 */
 };
 
 /* 0x811F51FC */
-size_t ExclusiveMusicPlayer::calcRequiredSize(void *heap)
+size_t ExclusiveMusicPlayer::calcRequiredSize(int capacity)
 {
-    return getPlayerBasePoolSize(heap) + 496u;
+    return BasePlayer::calcBaseExtraSize(capacity) + 496u;
 }
 
 /* 0x811F5208 */
-ExclusiveMusicPlayer::ExclusiveMusicPlayer(void *controller, void *dbManager, int *outErr,
+ExclusiveMusicPlayer::ExclusiveMusicPlayer(void *controller, int capacity, int *outErr,
                                            unsigned int bufSize, int poolOffset)
+    : BasePlayer(2, controller, capacity, outErr, bufSize, static_cast<unsigned int>(poolOffset))
 {
-    playerBaseConstruct(this, 2, controller, dbManager, outErr, bufSize, poolOffset);
     m_exclusiveParam.version = 5;
     m_exclusiveParam.configWords[0] = 0;
     m_exclusiveParam.configWords[1] = 0;
@@ -280,8 +162,8 @@ ExclusiveMusicPlayer::ExclusiveMusicPlayer(void *controller, void *dbManager, in
     m_exclusiveParam.configWords[3] = 0;
     m_exclusiveParam.configWords[4] = 0;
 
-    if (bufSize >= getPlayerBasePoolSize(dbManager) + 496u) {
-        m_defaultPriority = EXCLUSIVE_PLAYER_PRIORITY;
+    if (bufSize >= BasePlayer::calcBaseExtraSize(capacity) + 496u) {
+        m_subPriority = EXCLUSIVE_PLAYER_PRIORITY;
         m_exclusiveParam.version = 5;
         m_exclusiveParam.configWords[0] = 0;
         m_exclusiveParam.configWords[1] = 0;
@@ -296,59 +178,75 @@ ExclusiveMusicPlayer::ExclusiveMusicPlayer(void *controller, void *dbManager, in
 /* 0x811F5296 / 0x811F52B2 */
 ExclusiveMusicPlayer::~ExclusiveMusicPlayer()
 {
-    playerBaseDestroy(this);
 }
 
 /* 0x811F52D2 */
-int ExclusiveMusicPlayer::openSession(const ExclusiveOpenRequest *req, uint8_t *outChangeFlags)
+int ExclusiveMusicPlayer::open(const void *param, unsigned char *flags)
 {
+    const ExclusiveOpenRequest *req = static_cast<const ExclusiveOpenRequest *>(param);
     if (req == NULL) {
         return MC_ERR_INVALID_ARG;
     }
 
-    m_activePriority = m_defaultPriority;
+    m_priority = m_subPriority;
     m_exclusiveParam = req->exclusiveParam;
 
-    int prevActive = isActive();
-    m_isOpened = 1;
-    int curActive = isActive();
+    int prevWant = wantsAudio();
+    m_isOpen = 1;
+    int curWant = wantsAudio();
 
-    uint8_t changeFlags = *outChangeFlags;
-    if (prevActive != curActive) {
+    unsigned char changeFlags = *flags;
+    if (prevWant != curWant) {
         changeFlags |= 0x04u;
     }
-    *outChangeFlags = (uint8_t)(changeFlags | 0x10u);
+    *flags = static_cast<unsigned char>(changeFlags | 0x10u);
     return 0;
 }
 
-class MusicAppPlayer : public PlayerBaseView {
-public:
-    static size_t calcRequiredSize(void *heap);
+int ExclusiveMusicPlayer::isActiveForInfo(PlayerPriorityInfo info)
+{
+    if (info.isEnabled == 1 && info.isDbAllowed == 1 && info.isOpen == 1)
+        return (info.wantsPlay == 1) ? 1 : 0;
+    return 0;
+}
 
-    MusicAppPlayer(void *controller, void *dbManager, int *outErr,
+int ExclusiveMusicPlayer::wantsAudioForInfo(PlayerPriorityInfo info)
+{
+    if (isActiveForInfo(info) == 1)
+        return (info.isBusy == 1) ? 1 : 0;
+    return 0;
+}
+
+class MusicAppPlayer : public BasePlayer {
+public:
+    static size_t calcRequiredSize(int capacity);
+
+    MusicAppPlayer(void *controller, int capacity, int *outErr,
                    unsigned int bufSize, int poolOffset);
     virtual ~MusicAppPlayer();
 
-    int closeSession();
-    bool isSupportedFormatFlags(uint32_t formatFlags, uint8_t extraFlag);
-    void onSessionIdle();
-    int openSession(const MusicAppOpenRequest *req, uint8_t *outChangeFlags);
-    int handlePlayCommand(const MusicAppPlayCommand *cmd, uint8_t *outChangeFlags);
-    int handleClearPlaylist(const MusicAppPlayCommand *cmd);
-    int handleSeekCommand(const PlayerCommandPacket *cmd);
-    int handleSkipNextCommand(const PlayerCommandPacket *cmd);
-    int handleSkipPrevCommand(const PlayerCommandPacket *cmd);
-    int handleSetRepeatCommand(const PlayerCommandPacket *cmd);
-    int handleSetShuffleCommand(const PlayerCommandPacket *cmd);
-    int handleTrackEventNotify(const PlayerCommandPacket *cmd);
-    int handleStartOrResume();
-    int handlePause();
-    int handlePlaybackNotify(const PlayerCommandPacket *cmd, int extra);
-    int copyCurrentMetadata(MetadataQueryBuffer *outMeta);
-    int tickPlaybackPowerHold();
-    int tickAutoSuspendTimer();
-
-    virtual int executePlayStart() { return handleStartOrResume(); } /* +0xE4 (228) */
+    virtual unsigned int calcAllocSize()
+    {
+        return BasePlayer::calcBaseExtraSize(m_capacity) + 6648u;
+    }
+    virtual int detach();
+    virtual int open(const void *param, unsigned char *flags);
+    virtual int isActiveForInfo(PlayerPriorityInfo info);
+    virtual int wantsAudioForInfo(PlayerPriorityInfo info);
+    virtual int getContentInfo(MetadataBuffers *outMeta);
+    virtual void onIdleActive();
+    virtual void onIdlePlaylist();
+    virtual int cmdSetRepeat(CmdNode *node, unsigned char *flags);
+    virtual int cmdSetShuffle(CmdNode *node, unsigned char *flags);
+    virtual int cmdClearPlaylist(CmdNode *node, unsigned char *flags);
+    virtual int cmdSetAudioBalance(CmdNode *node, unsigned char *flags);
+    virtual int cmdSetEqualizer(CmdNode *node, unsigned char *flags);
+    virtual int cmdSetAudioNormalizer(CmdNode *node, unsigned char *flags);
+    virtual int cmdNotifyStatus(CmdNode *node, unsigned char *flags);
+    virtual int onDecoderEvent(CmdNode *node, unsigned char *flags);
+    virtual int onDecoderTrackInfo(CmdNode *node);
+    virtual int onDecoderAudioError(CmdNode *node, unsigned char *flags);
+    virtual int onDecoderStreamEnd(CmdNode *node, unsigned char *flags);
 
 private:
     void clearAutoSuspendCountdown();
@@ -364,48 +262,48 @@ private:
 };
 
 /* 0x811F5338 */
-size_t MusicAppPlayer::calcRequiredSize(void *heap)
+size_t MusicAppPlayer::calcRequiredSize(int capacity)
 {
-    return getPlayerBasePoolSize(heap) + 6648u;
+    return BasePlayer::calcBaseExtraSize(capacity) + 6648u;
 }
 
 /* 0x811F5346 */
-MusicAppPlayer::MusicAppPlayer(void *controller, void *dbManager, int *outErr,
+MusicAppPlayer::MusicAppPlayer(void *controller, int capacity, int *outErr,
                                unsigned int bufSize, int poolOffset)
+    : BasePlayer(1, controller, capacity, outErr, bufSize, static_cast<unsigned int>(poolOffset)),
+      m_playPowerTickUs(0),
+      m_autoSuspendTimeoutSec(0),
+      m_padAutoSuspend(0),
+      m_autoSuspendStartUs(0),
+      m_autoSuspendLastTickUs(0)
 {
-    playerBaseConstruct(this, 1, controller, dbManager, outErr, bufSize, poolOffset);
-    m_playPowerTickUs = 0;
-    m_autoSuspendTimeoutSec = 0;
-    m_autoSuspendStartUs = 0;
-    m_autoSuspendLastTickUs = 0;
-
-    if (bufSize < getPlayerBasePoolSize(dbManager) + 6648u) {
+    if (bufSize < BasePlayer::calcBaseExtraSize(capacity) + 6648u) {
         *outErr = MC_ERR_NO_MEMORY;
         return;
     }
 
-    m_defaultPriority = MUSIC_APP_PLAYER_PRIORITY;
-    if (m_metaMutex != NULL) {
-        m_metaMutex->Lock();
+    m_subPriority = MUSIC_APP_PLAYER_PRIORITY;
+    if (m_metaMutexPtr != NULL) {
+        m_metaMutexPtr->Lock();
     }
 
     sce_paf_memset(m_titleStorage, 0, sizeof(m_titleStorage));
-    m_metaBuffers.titlePtr = m_titleStorage;
-    m_metaBuffers.titleCapacity = sizeof(m_titleStorage);
+    m_metaBufs.titleBuf = m_titleStorage;
+    m_metaBufs.titleLen = sizeof(m_titleStorage);
 
     sce_paf_memset(m_artistStorage, 0, sizeof(m_artistStorage));
-    m_metaBuffers.artistPtr = m_artistStorage;
-    m_metaBuffers.artistCapacity = sizeof(m_artistStorage);
+    m_metaBufs.artistBuf = m_artistStorage;
+    m_metaBufs.artistLen = sizeof(m_artistStorage);
 
     sce_paf_memset(m_albumStorage, 0, sizeof(m_albumStorage));
-    m_metaBuffers.albumPtr = m_albumStorage;
-    m_metaBuffers.albumCapacity = sizeof(m_albumStorage);
+    m_metaBufs.albumBuf = m_albumStorage;
+    m_metaBufs.albumLen = sizeof(m_albumStorage);
 
-    if (m_metaMutex != NULL) {
-        m_metaMutex->Unlock();
+    if (m_metaMutexPtr != NULL) {
+        m_metaMutexPtr->Unlock();
     }
 
-    if (bufSize < getPlayerBasePoolSize(m_heap) + 6648u) {
+    if (bufSize < BasePlayer::calcBaseExtraSize(m_capacity) + 6648u) {
         *outErr = MC_ERR_NO_MEMORY;
         return;
     }
@@ -416,7 +314,8 @@ MusicAppPlayer::MusicAppPlayer(void *controller, void *dbManager, int *outErr,
         return;
     }
 
-    size_t factorySize = orderListFactoryCalcSize(m_heap, 2, 2, 56);
+    void *capacityArg = reinterpret_cast<void *>(static_cast<uintptr_t>(m_capacity));
+    size_t factorySize = orderListFactoryCalcSize(capacityArg, 2, 2, 56);
     if (factorySize + alignedOffset > bufSize) {
         *outErr = MC_ERR_NO_MEMORY;
         return;
@@ -424,264 +323,267 @@ MusicAppPlayer::MusicAppPlayer(void *controller, void *dbManager, int *outErr,
 
     uint8_t *selfBytes = reinterpret_cast<uint8_t *>(this);
     void *factoryMem = selfBytes + alignedOffset;
-    m_orderListFactory = orderListFactoryConstruct(factoryMem, m_heap, 2, 2, factorySize, 56);
+    m_mediaQueue = orderListFactoryConstruct(factoryMem, capacityArg, 2, 2, factorySize, 56);
 }
 
 /* 0x811F549E / 0x811F54BA */
 MusicAppPlayer::~MusicAppPlayer()
 {
-    playerBaseDestroy(this);
 }
 
 /* 0x811F54DA */
-int MusicAppPlayer::closeSession()
+int MusicAppPlayer::detach()
 {
-    int ret = playerBaseStopAndReset(this);
-    if (m_metaMutex != NULL) {
-        m_metaMutex->Lock();
+    int ret = BasePlayer::detach();
+    if (m_metaMutexPtr != NULL) {
+        m_metaMutexPtr->Lock();
     }
     sce_paf_memset(m_titleStorage, 0, sizeof(m_titleStorage));
     sce_paf_memset(m_artistStorage, 0, sizeof(m_artistStorage));
     sce_paf_memset(m_albumStorage, 0, sizeof(m_albumStorage));
-    if (m_metaMutex != NULL) {
-        m_metaMutex->Unlock();
+    if (m_metaMutexPtr != NULL) {
+        m_metaMutexPtr->Unlock();
     }
     return ret;
 }
 
 /* 0x811F5528 */
-bool MusicAppPlayer::isSupportedFormatFlags(uint32_t formatFlags, uint8_t extraFlag)
+int MusicAppPlayer::isActiveForInfo(PlayerPriorityInfo info)
 {
-    uint8_t byteLow = (uint8_t)(formatFlags & 0xFFu);
-    uint8_t byteMid = (uint8_t)((formatFlags >> 8) & 0xFFu);
-    uint8_t byteHigh = (uint8_t)((formatFlags >> 16) & 0xFFu);
-    if (byteMid == 1u && byteHigh == 1u && byteLow == 1u) {
-        return extraFlag == 1u;
-    }
-    return false;
+    if (info.isEnabled == 1 && info.isDbAllowed == 1 && info.isOpen == 1)
+        return (info.wantsPlay == 1) ? 1 : 0;
+    return 0;
 }
 
-/* 0x811F555A */
-void MusicAppPlayer::onSessionIdle()
+int MusicAppPlayer::wantsAudioForInfo(PlayerPriorityInfo info)
 {
+    if (isActiveForInfo(info) == 1)
+        return (info.isBusy == 1) ? 1 : 0;
+    return 0;
 }
 
 /* 0x811F555C */
-int MusicAppPlayer::openSession(const MusicAppOpenRequest *req, uint8_t *outChangeFlags)
+int MusicAppPlayer::open(const void *param, unsigned char *flags)
 {
-    if (m_dbManager == NULL) {
+    if (m_dbMgr == NULL) {
         return MC_ERR_INTERNAL;
     }
+    const MusicAppOpenRequest *req = static_cast<const MusicAppOpenRequest *>(param);
     if (req == NULL) {
         return MC_ERR_INVALID_ARG;
     }
 
     int priority = req->requestedPriority;
     if (priority == -1) {
-        priority = m_defaultPriority;
+        priority = m_subPriority;
     }
-    m_activePriority = priority;
+    m_priority = priority;
 
-    int ret = dbManagerOpenSession(m_dbManager);
+    int ret = dbManagerOpenSession(m_dbMgr);
     if (ret == 0) {
-        int prevActive = isActive();
-        m_isOpened = 1;
-        int curActive = isActive();
-        uint8_t changeFlags = *outChangeFlags;
-        if (prevActive != curActive) {
+        int prevWant = wantsAudio();
+        m_isOpen = 1;
+        int curWant = wantsAudio();
+        unsigned char changeFlags = *flags;
+        if (prevWant != curWant) {
             changeFlags |= 0x04u;
         }
-        *outChangeFlags = (uint8_t)(changeFlags | 0x10u);
+        *flags = static_cast<unsigned char>(changeFlags | 0x10u);
     }
     return ret;
 }
 
 /* 0x811F5602 */
-int MusicAppPlayer::handlePlayCommand(const MusicAppPlayCommand *cmd, uint8_t *outChangeFlags)
+int MusicAppPlayer::cmdNotifyStatus(CmdNode *node, unsigned char *flags)
 {
-    if (cmd->commandType != CMD_PLAY_MUSIC_APP || cmd->payload == NULL) {
+    if (node->cmdCode != CMD_PLAY_MUSIC_APP || node->inBuf == NULL) {
         return MC_ERR_INVALID_ARG;
     }
 
-    int prevActive = isActive();
-    int ret = executePlayStart();
-    if (prevActive != isActive()) {
-        *outChangeFlags |= 0x04u;
+    int prevWant = wantsAudio();
+    int ret = cmdResetSpeed(node->param, packCmdNodeHi(node), flags);
+    if (prevWant != wantsAudio()) {
+        *flags |= 0x04u;
     }
     return ret;
 }
 
 /* 0x811F5684 */
-int MusicAppPlayer::handleClearPlaylist(const MusicAppPlayCommand *cmd)
+int MusicAppPlayer::cmdClearPlaylist(CmdNode *node, unsigned char *flags)
 {
-    if (cmd->commandType != CMD_CLEAR_PLAYLIST || cmd->payload == NULL) {
+    (void)flags;
+    if (node->cmdCode != CMD_CLEAR_PLAYLIST || node->inBuf == NULL) {
         return MC_ERR_INVALID_ARG;
     }
-    if (m_playbackState != 0) {
+    if (m_decoder != NULL) {
         return MC_ERR_INVALID_STATE;
     }
-    if (m_dbManager == NULL) {
+    if (m_dbMgr == NULL) {
         return MC_ERR_INTERNAL;
     }
 
     int ret = 0;
-    if (m_activeMediaList != NULL) {
-        playerBaseClearActiveList(this);
-        void *prevList = m_activeMediaList;
-        m_activeMediaList = NULL;
-        ret = dbManagerReleaseList(m_dbManager, prevList, cmd->origParam, cmd->origCmdHi, 1);
+    if (m_offlineState.mediaHandle != NULL) {
+        clearPendingUriIfMatches(static_cast<MediaItemHandle *>(m_offlineState.mediaHandle));
+        void *prevList = m_offlineState.mediaHandle;
+        m_offlineState.mediaHandle = NULL;
+        ret = dbManagerReleaseList(m_dbMgr, prevList, node->param, packCmdNodeHi(node), 1);
 
-        m_currentListIndex = 0;
-        m_currentListCount = 0;
-        m_currentPositionMs = 0;
-        m_currentRowId = -1;
-        m_currentMediaId = -1;
-        m_currentListId = -1;
-        m_currentDurationMs = -2;
-        m_currentCodec = -1;
-        m_currentSampleRate = -1;
-        m_currentChannels = -1;
-        m_currentBitRate = 0;
-        m_activeMediaList = NULL;
-        m_repeatMode = -1;
-        m_shuffleMode = -1;
-        m_playDirection = 1;
-        m_errorDomain = 0;
-        m_errorDetail = 0;
-        m_errorSubCode = 0;
-        playerBaseResetMetadataStrings(this, &m_metaBuffers);
+        m_offlineState.stateId = 0;
+        m_offlineState.playState = 0;
+        m_offlineState.trackIndex = 0;
+        m_offlineState.playlistId = -1;
+        m_offlineState.trackId = -1;
+        m_offlineState.trackItemId = -1;
+        m_offlineState.trackOrderIndex = -2;
+        m_offlineState.positionMs = -1;
+        m_offlineState.currentTrackNum = -1;
+        m_offlineState.totalTracks = -1;
+        m_offlineState.durationMs = 0;
+        m_offlineState.mediaHandle = NULL;
+        m_offlineState.seekMode = -1;
+        m_offlineState.speedMode = -1;
+        m_offlineState.volumeMode = 1;
+        m_offlineState.lastErrorType = 0;
+        m_offlineState.hasPendingError = 0;
+        m_offlineState.extraErr = 0;
+        BasePlayer::getContentInfo(&m_metaBufs);
     }
     return ret;
 }
 
 /* 0x811F579A */
-int MusicAppPlayer::handleSeekCommand(const PlayerCommandPacket *cmd)
+int MusicAppPlayer::cmdSetRepeat(CmdNode *node, unsigned char *flags)
 {
-    int ret = playerBaseHandleSeek(this, cmd);
+    int ret = BasePlayer::cmdSetRepeat(node, flags);
     if (ret != 0) {
         return ret;
     }
-    const PlaybackDbCommandTarget *target = (const PlaybackDbCommandTarget *)cmd->payload;
+    const PlaybackDbCommandTarget *target =
+        static_cast<const PlaybackDbCommandTarget *>(node->inBuf);
     if (target == NULL) {
         return MC_ERR_INVALID_ARG;
     }
-    if (m_dbManager == NULL) {
+    if (m_dbMgr == NULL) {
         return MC_ERR_INTERNAL;
     }
-    return dbManagerNotifySeek(m_dbManager, target->handleId, cmd->origParam, cmd->origCmdHi, 1);
+    return dbManagerNotifySeek(m_dbMgr, target->handleId, node->param, packCmdNodeHi(node), 1);
 }
 
 /* 0x811F57F8 */
-int MusicAppPlayer::handleSkipNextCommand(const PlayerCommandPacket *cmd)
+int MusicAppPlayer::cmdSetShuffle(CmdNode *node, unsigned char *flags)
 {
-    int ret = playerBaseHandleSkipNext(this, cmd);
+    int ret = BasePlayer::cmdSetShuffle(node, flags);
     if (ret != 0) {
         return ret;
     }
-    const PlaybackDbCommandTarget *target = (const PlaybackDbCommandTarget *)cmd->payload;
+    const PlaybackDbCommandTarget *target =
+        static_cast<const PlaybackDbCommandTarget *>(node->inBuf);
     if (target == NULL) {
         return MC_ERR_INVALID_ARG;
     }
-    if (m_dbManager == NULL) {
+    if (m_dbMgr == NULL) {
         return MC_ERR_INTERNAL;
     }
-    return dbManagerNotifyNext(m_dbManager, target->handleId, cmd->origParam, cmd->origCmdHi, 1);
+    return dbManagerNotifyNext(m_dbMgr, target->handleId, node->param, packCmdNodeHi(node), 1);
 }
 
 /* 0x811F5856 */
-int MusicAppPlayer::handleSkipPrevCommand(const PlayerCommandPacket *cmd)
+int MusicAppPlayer::cmdSetAudioBalance(CmdNode *node, unsigned char *flags)
 {
-    int ret = playerBaseHandleSkipPrev(this, cmd);
+    int ret = BasePlayer::cmdSetAudioBalance(node, flags);
     if (ret != 0) {
         return ret;
     }
-    const PlaybackDbCommandTarget *target = (const PlaybackDbCommandTarget *)cmd->payload;
+    const PlaybackDbCommandTarget *target =
+        static_cast<const PlaybackDbCommandTarget *>(node->inBuf);
     if (target == NULL) {
         return MC_ERR_INVALID_ARG;
     }
-    if (m_dbManager == NULL) {
+    if (m_dbMgr == NULL) {
         return MC_ERR_INTERNAL;
     }
-    return dbManagerNotifyPrev(m_dbManager, target->handleId, 1);
+    return dbManagerNotifyPrev(m_dbMgr, target->handleId, 1);
 }
 
 /* 0x811F5896 */
-int MusicAppPlayer::handleSetRepeatCommand(const PlayerCommandPacket *cmd)
+int MusicAppPlayer::cmdSetEqualizer(CmdNode *node, unsigned char *flags)
 {
-    int ret = playerBaseHandleSetRepeat(this, cmd);
+    int ret = BasePlayer::cmdSetEqualizer(node, flags);
     if (ret != 0) {
         return ret;
     }
-    if (cmd->payload == NULL) {
+    if (node->inBuf == NULL) {
         return MC_ERR_INVALID_ARG;
     }
-    if (m_dbManager == NULL) {
+    if (m_dbMgr == NULL) {
         return MC_ERR_INTERNAL;
     }
-    return dbManagerNotifyRepeat(m_dbManager);
+    return dbManagerNotifyRepeat(m_dbMgr);
 }
 
 /* 0x811F590A */
-int MusicAppPlayer::handleSetShuffleCommand(const PlayerCommandPacket *cmd)
+int MusicAppPlayer::cmdSetAudioNormalizer(CmdNode *node, unsigned char *flags)
 {
-    int ret = playerBaseHandleSetShuffle(this, cmd);
+    int ret = BasePlayer::cmdSetAudioNormalizer(node, flags);
     if (ret != 0) {
         return ret;
     }
-    const PlaybackDbCommandTarget *target = (const PlaybackDbCommandTarget *)cmd->payload;
+    const PlaybackDbCommandTarget *target =
+        static_cast<const PlaybackDbCommandTarget *>(node->inBuf);
     if (target == NULL) {
         return MC_ERR_INVALID_ARG;
     }
-    if (m_dbManager == NULL) {
+    if (m_dbMgr == NULL) {
         return MC_ERR_INTERNAL;
     }
-    return dbManagerNotifyShuffle(m_dbManager, target->handleId, cmd->origParam, cmd->origCmdHi, 1);
+    return dbManagerNotifyShuffle(m_dbMgr, target->handleId, node->param, packCmdNodeHi(node), 1);
 }
 
 void MusicAppPlayer::clearAutoSuspendCountdown()
 {
     m_autoSuspendStartUs = 0;
     m_autoSuspendLastTickUs = 0;
-    m_autoSuspendActive = 0;
+    m_playable = 0;
 }
 
 /* 0x811F5968 */
-int MusicAppPlayer::handleTrackEventNotify(const PlayerCommandPacket *cmd)
+int MusicAppPlayer::onDecoderEvent(CmdNode *node, unsigned char *flags)
 {
-    const TrackNotifyPayload *payload = (const TrackNotifyPayload *)cmd->payload;
+    const TrackNotifyPayload *payload = static_cast<const TrackNotifyPayload *>(node->inBuf);
     if (payload == NULL) {
         return MC_ERR_INVALID_ARG;
     }
 
     if (payload->eventKind == 3 && payload->playCountTrigger == 1) {
-        m_completedPlayCount++;
+        m_seqNum++;
     }
 
-    int ret = playerBaseOnTrackEvent(this, cmd);
+    int ret = BasePlayer::onDecoderEvent(node, flags);
     if (ret == 0
         && payload->notifyCode == NOTIFY_PLAYBACK_STOP
-        && isActive() == 0
+        && wantsAudio() == 0
         && m_playPowerTickUs != 0) {
         paf::Plugin *powerPlugin = paf::Plugin::Find("power_manage_plugin");
         if (powerPlugin != NULL) {
             PowerManagePluginInterface *powerIf =
-                (PowerManagePluginInterface *)powerPlugin->GetInterface(1);
+                static_cast<PowerManagePluginInterface *>(powerPlugin->GetInterface(1));
             if (powerIf != NULL && powerIf->releaseAutoSuspendHold != NULL) {
                 powerIf->releaseAutoSuspendHold();
             }
         }
 
         m_playPowerTickUs = 0;
-        paf::system::Model *model = getModel();
-        if (model != NULL) {
-            if (m_dbManager == NULL) {
+        if (getSystemSuspended() != 0) {
+            DbManagerRuntime *dbMgr = static_cast<DbManagerRuntime *>(m_dbMgr);
+            if (dbMgr == NULL) {
                 return MC_ERR_INTERNAL;
             }
-            if (model->GetType() == 1) {
+            if (paf::system::Model::GetType() == 1) {
                 m_autoSuspendTimeoutSec = 600;
                 ret = 0;
             } else {
-                ret = m_dbManager->settingProvider->getAutoSuspendTimeoutSec(&m_autoSuspendTimeoutSec);
+                ret = dbMgr->settingProvider->getAutoSuspendTimeoutSec(&m_autoSuspendTimeoutSec);
                 if (ret != 0) {
                     return ret;
                 }
@@ -691,7 +593,7 @@ int MusicAppPlayer::handleTrackEventNotify(const PlayerCommandPacket *cmd)
             m_autoSuspendStartUs = nowUs;
             if (nowUs != 0) {
                 m_autoSuspendLastTickUs = nowUs;
-                m_autoSuspendActive = 1;
+                m_playable = 1;
                 sceKernelPowerTick(POWER_TICK_DISABLE_AUTO_SUSPEND);
             }
         }
@@ -700,11 +602,11 @@ int MusicAppPlayer::handleTrackEventNotify(const PlayerCommandPacket *cmd)
 }
 
 /* 0x811F5A8A */
-int MusicAppPlayer::handleStartOrResume()
+int MusicAppPlayer::onDecoderTrackInfo(CmdNode *node)
 {
-    int ret = playerBaseResumeOrStart(this);
-    if (ret == 0 && m_playbackState != 0 && m_playPowerTickUs == 0) {
-        if (isAutoSuspendPending() != 0) {
+    int ret = BasePlayer::onDecoderTrackInfo(node);
+    if (ret == 0 && m_decoder != NULL && m_playPowerTickUs == 0) {
+        if (isPlayable() != 0) {
             clearAutoSuspendCountdown();
         }
         SceUInt64 nowUs = sceKernelGetProcessTimeWide();
@@ -715,7 +617,7 @@ int MusicAppPlayer::handleStartOrResume()
         paf::Plugin *powerPlugin = paf::Plugin::Find("power_manage_plugin");
         if (powerPlugin != NULL) {
             PowerManagePluginInterface *powerIf =
-                (PowerManagePluginInterface *)powerPlugin->GetInterface(1);
+                static_cast<PowerManagePluginInterface *>(powerPlugin->GetInterface(1));
             if (powerIf != NULL && powerIf->acquireAutoSuspendHold != NULL) {
                 powerIf->acquireAutoSuspendHold();
             }
@@ -725,89 +627,87 @@ int MusicAppPlayer::handleStartOrResume()
 }
 
 /* 0x811F5B16 */
-int MusicAppPlayer::handlePause()
+int MusicAppPlayer::onDecoderAudioError(CmdNode *node, unsigned char *flags)
 {
-    return playerBasePause(this);
+    return BasePlayer::onDecoderAudioError(node, flags);
 }
 
 /* 0x811F5B1E */
-int MusicAppPlayer::handlePlaybackNotify(const PlayerCommandPacket *cmd, int extra)
+int MusicAppPlayer::onDecoderStreamEnd(CmdNode *node, unsigned char *flags)
 {
-    const TrackNotifyPayload *payload = (const TrackNotifyPayload *)cmd->payload;
+    const TrackNotifyPayload *payload = static_cast<const TrackNotifyPayload *>(node->inBuf);
     if (payload != NULL && payload->dbSyncRequired != 0) {
-        dbManagerFlushRecord(m_dbManager);
+        dbManagerFlushRecord(m_dbMgr);
     }
-    return playerBaseHandleNotify(this, cmd, extra);
+    return BasePlayer::onDecoderStreamEnd(node, flags);
 }
 
 /* 0x811F5B78 */
-int MusicAppPlayer::copyCurrentMetadata(MetadataQueryBuffer *outMeta)
+int MusicAppPlayer::getContentInfo(MetadataBuffers *outMeta)
 {
     int ret = 0;
-    if (m_metaMutex != NULL) {
-        m_metaMutex->Lock();
+    if (m_metaMutexPtr != NULL) {
+        m_metaMutexPtr->Lock();
     }
 
     if (outMeta == NULL
-        || outMeta->titleCapacity > 2048u
-        || outMeta->artistCapacity > 2048u
-        || outMeta->albumCapacity > 2048u) {
+        || outMeta->titleLen > 2048u
+        || outMeta->artistLen > 2048u
+        || outMeta->albumLen > 2048u) {
         ret = MC_ERR_INVALID_ARG;
     } else {
-        if (outMeta->titleOut != NULL) {
-            sce_paf_strncpy(outMeta->titleOut, m_metaBuffers.titlePtr, outMeta->titleCapacity);
-            SceSize termIdx = (outMeta->titleCapacity != 0u) ? (outMeta->titleCapacity - 1u) : 0u;
-            outMeta->titleOut[termIdx] = '\0';
+        if (outMeta->titleBuf != NULL) {
+            sce_paf_strncpy(outMeta->titleBuf, m_metaBufs.titleBuf, outMeta->titleLen);
+            SceSize termIdx = (outMeta->titleLen != 0u) ? (outMeta->titleLen - 1u) : 0u;
+            outMeta->titleBuf[termIdx] = '\0';
         }
-        if (outMeta->artistOut != NULL) {
-            sce_paf_strncpy(outMeta->artistOut, m_metaBuffers.artistPtr, outMeta->artistCapacity);
-            SceSize termIdx = (outMeta->artistCapacity != 0u) ? (outMeta->artistCapacity - 1u) : 0u;
-            outMeta->artistOut[termIdx] = '\0';
+        if (outMeta->artistBuf != NULL) {
+            sce_paf_strncpy(outMeta->artistBuf, m_metaBufs.artistBuf, outMeta->artistLen);
+            SceSize termIdx = (outMeta->artistLen != 0u) ? (outMeta->artistLen - 1u) : 0u;
+            outMeta->artistBuf[termIdx] = '\0';
         }
-        if (outMeta->albumOut != NULL) {
-            sce_paf_strncpy(outMeta->albumOut, m_metaBuffers.albumPtr, outMeta->albumCapacity);
-            SceSize termIdx = (outMeta->albumCapacity != 0u) ? (outMeta->albumCapacity - 1u) : 0u;
-            outMeta->albumOut[termIdx] = '\0';
+        if (outMeta->albumBuf != NULL) {
+            sce_paf_strncpy(outMeta->albumBuf, m_metaBufs.albumBuf, outMeta->albumLen);
+            SceSize termIdx = (outMeta->albumLen != 0u) ? (outMeta->albumLen - 1u) : 0u;
+            outMeta->albumBuf[termIdx] = '\0';
         }
     }
 
-    if (m_metaMutex != NULL) {
-        m_metaMutex->Unlock();
+    if (m_metaMutexPtr != NULL) {
+        m_metaMutexPtr->Unlock();
     }
     return ret;
 }
 
 /* 0x811F5C32 */
-int MusicAppPlayer::tickPlaybackPowerHold()
+void MusicAppPlayer::onIdleActive()
 {
     if (m_playPowerTickUs == 0) {
-        return 0;
+        return;
     }
 
     SceUInt64 nowUs = sceKernelGetProcessTimeWide();
     if (nowUs != 0 && nowUs >= m_playPowerTickUs + 2000000ULL) {
-        int ret = sceKernelPowerTick(SCE_KERNEL_POWER_TICK_DISABLE_AUTO_SUSPEND);
+        sceKernelPowerTick(SCE_KERNEL_POWER_TICK_DISABLE_AUTO_SUSPEND);
         m_playPowerTickUs = nowUs;
-        return ret;
     }
-    return 0;
 }
 
 /* 0x811F5C90 */
-int MusicAppPlayer::tickAutoSuspendTimer()
+void MusicAppPlayer::onIdlePlaylist()
 {
-    paf::system::Model *model = getModel();
-    if (isAutoSuspendPending() == 0) {
-        return 0;
+    int sysSuspended = getSystemSuspended();
+    if (isPlayable() == 0) {
+        return;
     }
-    if (model == NULL) {
+    if (sysSuspended == 0) {
         clearAutoSuspendCountdown();
-        return 0;
+        return;
     }
 
     SceUInt64 nowUs = sceKernelGetProcessTimeWide();
     if (nowUs == 0) {
-        return 0;
+        return;
     }
 
     SceUInt64 startUs = m_autoSuspendStartUs;
@@ -823,15 +723,13 @@ int MusicAppPlayer::tickAutoSuspendTimer()
 
     if (expired) {
         clearAutoSuspendCountdown();
-        return 0;
+        return;
     }
 
     if (nowUs >= m_autoSuspendLastTickUs + 1000000ULL) {
-        int ret = sceKernelPowerTick(SCE_KERNEL_POWER_TICK_DISABLE_AUTO_SUSPEND);
+        sceKernelPowerTick(SCE_KERNEL_POWER_TICK_DISABLE_AUTO_SUSPEND);
         m_autoSuspendLastTickUs = nowUs;
-        return ret;
     }
-    return 1000000;
 }
 
 struct RowidResultLayout {
@@ -1000,30 +898,26 @@ struct BaseObject;
 
 unsigned int calcPlaylistPlayerSize(int maxItems)
 {
-    (void)maxItems;
-    return static_cast<unsigned int>(MusicAppPlayer::calcRequiredSize(NULL));
+    return static_cast<unsigned int>(MusicAppPlayer::calcRequiredSize(maxItems));
 }
 
 unsigned int calcStreamPlayerSize(int maxStreams)
 {
-    (void)maxStreams;
-    return static_cast<unsigned int>(ExclusiveMusicPlayer::calcRequiredSize(NULL));
+    return static_cast<unsigned int>(ExclusiveMusicPlayer::calcRequiredSize(maxStreams));
 }
 
 BaseObject *constructPlaylistPlayer(void *mem, void *factory, int maxItems,
                                     int *outErr, unsigned int slotSize, unsigned int hdrSize)
 {
-    (void)maxItems;
     return reinterpret_cast<BaseObject *>(
-        new (mem) MusicAppPlayer(factory, NULL, outErr, slotSize, hdrSize));
+        new (mem) MusicAppPlayer(factory, maxItems, outErr, slotSize, hdrSize));
 }
 
 BaseObject *constructStreamPlayer(void *mem, void *factory, int maxStreams,
                                   int *outErr, unsigned int slotSize, unsigned int hdrSize)
 {
-    (void)maxStreams;
     return reinterpret_cast<BaseObject *>(
-        new (mem) ExclusiveMusicPlayer(factory, NULL, outErr, slotSize, hdrSize));
+        new (mem) ExclusiveMusicPlayer(factory, maxStreams, outErr, slotSize, hdrSize));
 }
 
 } /* namespace MusicCore */
