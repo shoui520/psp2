@@ -60,7 +60,7 @@ ConsoleInfoFile::ConsoleInfoFile(const char *name, SceUInt8 recordSize)
 }
 
 /* (0x81377124) Internal ref-counted close helper */
-static int consoleInfoFileClose(ConsoleInfoFile *self)
+static __attribute__((noinline)) int consoleInfoFileClose(ConsoleInfoFile *self)
 {
 	if (self->m_file.get() == NULL)
 		return SCE_ERROR_ERRNO_ESTALE;
@@ -74,7 +74,7 @@ static int consoleInfoFileClose(ConsoleInfoFile *self)
 }
 
 /* (0x8137722C) Internal ref-counted open helper */
-static int consoleInfoFileOpen(ConsoleInfoFile *self)
+static __attribute__((noinline)) int consoleInfoFileOpen(ConsoleInfoFile *self)
 {
 	if (self->m_file.get() != NULL) {
 		self->m_openCount++;
@@ -109,21 +109,26 @@ ConsoleInfoFile::~ConsoleInfoFile()
 }
 
 /* (0x813774FC) Writes one fixed-size record at record index */
-int ConsoleInfoFile::Write(int index, const void *record, int mode)
+__attribute__((noinline)) int ConsoleInfoFile::Write(int index, const void *record, int mode)
 {
 	ensureConsoleInfoDir();
 	paf::thread::MutexLock lock(&s_consoleInfoStoreMutex);
 
 	int ret = 0;
-	if (mode == CONSOLE_INFO_MODE_ONCE) {
+	switch (mode) {
+	case CONSOLE_INFO_MODE_ONCE:
 		ret = consoleInfoFileOpen(this);
-	} else if (mode == CONSOLE_INFO_MODE_KEEP_OPEN || mode == CONSOLE_INFO_MODE_CLOSE_AFTER) {
+		break;
+	case CONSOLE_INFO_MODE_KEEP_OPEN:
+	case CONSOLE_INFO_MODE_CLOSE_AFTER:
 		if (m_opened != 1) {
 			ret = consoleInfoFileOpen(this);
 			m_opened = 1;
 		}
-	} else {
+		break;
+	default:
 		ret = SCE_ERROR_ERRNO_EINVAL;
+		break;
 	}
 	if (ret < 0)
 		return ret;
@@ -138,31 +143,41 @@ int ConsoleInfoFile::Write(int index, const void *record, int mode)
 		}
 	}
 
-	if (mode == CONSOLE_INFO_MODE_ONCE) {
+	switch (mode) {
+	case CONSOLE_INFO_MODE_ONCE:
 		consoleInfoFileClose(this);
-	} else if (mode == CONSOLE_INFO_MODE_CLOSE_AFTER) {
+		break;
+	case CONSOLE_INFO_MODE_CLOSE_AFTER:
 		consoleInfoFileClose(this);
 		m_opened = 0;
+		break;
+	default:
+		break;
 	}
 	return ret;
 }
 
 /* (0x81377634) Reads one fixed-size record at record index */
-int ConsoleInfoFile::Read(int index, void *record, int mode)
+__attribute__((noinline)) int ConsoleInfoFile::Read(int index, void *record, int mode)
 {
 	ensureConsoleInfoDir();
 	paf::thread::MutexLock lock(&s_consoleInfoStoreMutex);
 
 	int ret = 0;
-	if (mode == CONSOLE_INFO_MODE_ONCE) {
+	switch (mode) {
+	case CONSOLE_INFO_MODE_ONCE:
 		ret = consoleInfoFileOpen(this);
-	} else if (mode == CONSOLE_INFO_MODE_KEEP_OPEN || mode == CONSOLE_INFO_MODE_CLOSE_AFTER) {
+		break;
+	case CONSOLE_INFO_MODE_KEEP_OPEN:
+	case CONSOLE_INFO_MODE_CLOSE_AFTER:
 		if (m_opened != 1) {
 			ret = consoleInfoFileOpen(this);
 			m_opened = 1;
 		}
-	} else {
+		break;
+	default:
 		ret = SCE_ERROR_ERRNO_EINVAL;
+		break;
 	}
 	if (ret < 0)
 		return ret;
@@ -177,11 +192,16 @@ int ConsoleInfoFile::Read(int index, void *record, int mode)
 		}
 	}
 
-	if (mode == CONSOLE_INFO_MODE_ONCE) {
+	switch (mode) {
+	case CONSOLE_INFO_MODE_ONCE:
 		consoleInfoFileClose(this);
-	} else if (mode == CONSOLE_INFO_MODE_CLOSE_AFTER) {
+		break;
+	case CONSOLE_INFO_MODE_CLOSE_AFTER:
 		consoleInfoFileClose(this);
 		m_opened = 0;
+		break;
+	default:
+		break;
 	}
 	return ret;
 }
@@ -236,7 +256,7 @@ int consoleInfoFileWriteInt64(int index, SceUInt64 value, int mode)
 }
 
 /* (0x81376BDA) Saturating 32-bit increment on ur0:ci/file/4.dat */
-int shellUsageCounterAdd(int id, unsigned int count, int flags)
+__attribute__((noinline)) int shellUsageCounterAdd(int id, unsigned int count, int flags)
 {
 	SceUInt32 current = 0;
 	int ret = s_consoleInfoFiles[CONSOLE_INFO_FILE_INDEX_UINT32].Read(id, &current, flags);
@@ -250,7 +270,7 @@ int shellUsageCounterAdd(int id, unsigned int count, int flags)
 }
 
 /* (0x81376C4A) Saturating 64-bit increment on ur0:ci/file/r.dat */
-int consoleInfoFileAddInt64(int index, SceUInt64 delta, int mode)
+__attribute__((noinline)) int consoleInfoFileAddInt64(int index, SceUInt64 delta, int mode)
 {
 	SceUInt64 current = 0;
 	int ret = s_consoleInfoFiles[CONSOLE_INFO_FILE_INDEX_UINT64].Read(index, &current, mode);
@@ -305,16 +325,23 @@ public:
 	/* (0x81377090) */
 	virtual int32_t Run()
 	{
-		if (m_op == CONSOLE_INFO_JOB_OP_WRITE) {
-			s_consoleInfoFiles[m_fileIndex].Write(m_recordIndex, m_payload, CONSOLE_INFO_MODE_ONCE);
-		} else if (m_op == CONSOLE_INFO_JOB_OP_ADD) {
+		switch (m_op) {
+		case CONSOLE_INFO_JOB_OP_WRITE:
+			s_consoleInfoFiles[m_fileIndex].Write(m_recordIndex, m_payload,
+							      CONSOLE_INFO_MODE_ONCE);
+			break;
+		case CONSOLE_INFO_JOB_OP_ADD:
 			if (m_fileIndex == CONSOLE_INFO_FILE_INDEX_UINT32) {
 				SceUInt32 delta = *static_cast<const SceUInt32 *>(m_payload);
 				shellUsageCounterAdd(m_recordIndex, delta, CONSOLE_INFO_MODE_ONCE);
 			} else if (m_fileIndex == CONSOLE_INFO_FILE_INDEX_UINT64) {
 				SceUInt64 delta = *static_cast<const SceUInt64 *>(m_payload);
-				consoleInfoFileAddInt64(m_recordIndex, delta, CONSOLE_INFO_MODE_ONCE);
+				consoleInfoFileAddInt64(m_recordIndex, delta,
+							CONSOLE_INFO_MODE_ONCE);
 			}
+			break;
+		default:
+			break;
 		}
 		return 0;
 	}
@@ -332,7 +359,7 @@ private:
 };
 
 /* (0x81376E0C) Enqueues a ConsoleInfoWriterJob onto the default job queue */
-static int consoleInfoEnqueueJob(ConsoleInfoWriterJob *job)
+static __attribute__((noinline)) int consoleInfoEnqueueJob(ConsoleInfoWriterJob *job)
 {
 	if (job == NULL)
 		return CONSOLE_INFO_ERR_NO_MEMORY;
@@ -343,16 +370,18 @@ static int consoleInfoEnqueueJob(ConsoleInfoWriterJob *job)
 		return CONSOLE_INFO_ERR_NO_QUEUE;
 
 	int ret = queue->Enqueue(jobRef);
-	return (ret != 0) ? ret : 0;
+	if (ret != 0)
+		return ret;
+	return 0;
 }
 
 /* (0x81376F7A) Enqueues an async 32-bit write or saturating add */
 static __attribute__((noinline)) int consoleInfoEnqueueInt(int op, int index, SceUInt32 value)
 {
-	SceUInt32 *copy = static_cast<SceUInt32 *>(operator new(sizeof(SceUInt32)));
+	void *copy = operator new(sizeof(SceUInt32));
 	if (copy == NULL)
 		return CONSOLE_INFO_ERR_NO_MEMORY;
-	*copy = value;
+	sce_paf_memcpy(copy, &value, sizeof(SceUInt32));
 
 	ConsoleInfoWriterJob *job = new ConsoleInfoWriterJob(
 		CONSOLE_INFO_FILE_INDEX_UINT32, op, index, copy);
@@ -362,10 +391,10 @@ static __attribute__((noinline)) int consoleInfoEnqueueInt(int op, int index, Sc
 /* (0x81377004) Enqueues an async 64-bit write or saturating add */
 static __attribute__((noinline)) int consoleInfoEnqueueInt64(int op, int index, SceUInt64 value)
 {
-	SceUInt64 *copy = static_cast<SceUInt64 *>(operator new(sizeof(SceUInt64)));
+	void *copy = operator new(sizeof(SceUInt64));
 	if (copy == NULL)
 		return CONSOLE_INFO_ERR_NO_MEMORY;
-	*copy = value;
+	sce_paf_memcpy(copy, &value, sizeof(SceUInt64));
 
 	ConsoleInfoWriterJob *job = new ConsoleInfoWriterJob(
 		CONSOLE_INFO_FILE_INDEX_UINT64, op, index, copy);

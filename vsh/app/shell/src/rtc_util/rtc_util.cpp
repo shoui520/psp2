@@ -256,7 +256,7 @@ static __attribute__((noinline)) const RtcTimeZoneEntry *rtcUtilGetTimeZoneEntry
 }
 
 /* 0x81365B98 */
-static const RtcDstExceptionEntry *rtcUtilGetDstException(unsigned int index, int regTimeZone)
+static __attribute__((noinline)) const RtcDstExceptionEntry *rtcUtilGetDstException(unsigned int index, int regTimeZone)
 {
 	if (index >= RTC_UTIL_DST_EXCEPTION_COUNT)
 		index = 0;
@@ -266,7 +266,7 @@ static const RtcDstExceptionEntry *rtcUtilGetDstException(unsigned int index, in
 }
 
 /* 0x81365BCC */
-static const RtcDstSkipRule *rtcUtilGetDstSkipRule(unsigned int index, int regTimeZone)
+static __attribute__((noinline)) const RtcDstSkipRule *rtcUtilGetDstSkipRule(unsigned int index, int regTimeZone)
 {
 	if (index >= RTC_UTIL_DST_SKIP_RULE_COUNT)
 		index = 0;
@@ -338,10 +338,12 @@ static __attribute__((noinline)) int rtcUtilIsInDstRange(const SceDateTime *loca
 
 	SceUInt16 startYear = localTime->year;
 	SceUInt16 endYear = localTime->year;
-	if (yearSpanMode == 1)
-		endYear = (SceUInt16)(localTime->year + 1);
-	else if (yearSpanMode == 2)
-		startYear = (SceUInt16)(localTime->year - 1);
+	if (yearSpanMode != 0) {
+		if (yearSpanMode == 1)
+			endYear = (SceUInt16)(localTime->year + 1);
+		else
+			startYear = (SceUInt16)(localTime->year - 1);
+	}
 
 	SceDateTime startDateTime;
 	SceDateTime endDateTime;
@@ -444,10 +446,12 @@ static __attribute__((noinline)) int rtcUtilResolveTimeZoneRule(int regTimeZone,
 
 	SceUInt16 startYear = localTime->year;
 	SceUInt16 endYear = localTime->year;
-	if (yearSpanMode == 1)
-		endYear = (SceUInt16)(localTime->year + 1);
-	else if (yearSpanMode == 2)
-		startYear = (SceUInt16)(localTime->year - 1);
+	if (yearSpanMode != 0) {
+		if (yearSpanMode == 1)
+			endYear = (SceUInt16)(localTime->year + 1);
+		else
+			startYear = (SceUInt16)(localTime->year - 1);
+	}
 
 	int matchedException = -1;
 	for (unsigned int i = 0; i < RTC_UTIL_DST_EXCEPTION_COUNT; ++i) {
@@ -492,12 +496,31 @@ static void rtcUtilApplySystemConf(int dateFormat, int timeFormat,
 		return;
 
 	int vshDateFormat = 0;
-	if (conf.dateFormat == 1)
+	switch (conf.dateFormat) {
+	case 0:
+		vshDateFormat = 0;
+		break;
+	case 1:
 		vshDateFormat = 2;
-	else if (conf.dateFormat == 2)
+		break;
+	case 2:
 		vshDateFormat = 1;
+		break;
+	default:
+		break;
+	}
 
-	int isTwelveHour = (conf.timeFormat == 0) ? 1 : 0;
+	int isTwelveHour = 0;
+	switch (conf.timeFormat) {
+	case 0:
+		isTwelveHour = 1;
+		break;
+	case 1:
+		isTwelveHour = 0;
+		break;
+	default:
+		break;
+	}
 	vshRtcSetConf(vshDateFormat, isTwelveHour, conf.utcOffsetMinutes, 60 * conf.summerTime);
 }
 
