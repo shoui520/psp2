@@ -362,6 +362,9 @@ HttpFileReaderContext::HttpFileReaderContext(size_t capacity)
 {
 }
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline))
+#endif
 HttpFileReaderConfig::HttpFileReaderConfig(const HttpFileReaderParam &param)
 	: scheme(param.scheme.c_str()), host(param.host.c_str()), port(param.port),
 	  method(param.method.c_str()), version(param.version.c_str()), uri(param.uri.c_str()),
@@ -389,6 +392,7 @@ common::SharedPtr<HttpFileReaderConfig> HttpFileReaderConfig::Clone(
 	return common::SharedPtr<HttpFileReaderConfig>(config);
 }
 
+#ifndef PAF_BUILD_2014
 bool HttpFileReaderConfig::IsHttpsCheckEnabled() const
 {
 	return !(open_flag & HttpFile::OpenArg::DISABLE_HTTPS_CHECK);
@@ -398,6 +402,7 @@ bool HttpFileReaderConfig::IsProxyIgnored() const
 {
 	return (open_flag & HttpFile::OpenArg::IGNORE_PROXY_SETTING) != 0;
 }
+#endif
 
 HttpFileRangeReader::HttpFileRangeReader(common::SharedPtr<HttpFileReaderConfig> config)
 	: HttpFileReader(config), m_range_enabled(true), m_reader(NULL), m_position(0),

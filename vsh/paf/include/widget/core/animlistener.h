@@ -161,7 +161,7 @@ public:
 			delete[] m_herm_data;
 	}
 
-	virtual void OnTick(void *data1, void *data2);
+	virtual void OnTick(void *tick_context, void *user_context);
 
 	/* the start and the target of the animation and their tangents, which it goes through
 	   as a hermite curve (names ours) */
@@ -216,7 +216,7 @@ public:
 			delete[] m_herm_data;
 	}
 
-	virtual void OnTick(void *data1, void *data2);
+	virtual void OnTick(void *tick_context, void *user_context);
 
 	void SetHermite(const math::v4 &src, const math::v4 &tangent0, const math::v4 &dst,
 			const math::v4 &tangent1);
@@ -237,6 +237,39 @@ public:
 	math::v4 *m_herm_data;
 	AnimPropertyV4 *m_prop;
 };
+
+#ifdef PAF_BUILD_2014
+class ResolutionData;
+
+/* an AnimListenerV4 that applies a saved resolution table when the animation finishes */
+class AnimListenerV4Resolution : public AnimListenerV4 {
+public:
+	AnimListenerV4Resolution(Timer *t, Widget *w, const math::v4 &src, const math::v4 &dst,
+				 AnimPropertyV4 *prop, ResolutionData *resolutions, uint16_t count,
+				 AnimCB cb_fin, void *usrdata)
+		: AnimListenerV4(t, w, src, dst, prop, cb_fin, usrdata),
+		  m_resolutions(resolutions), m_resolution_count(count)
+	{
+		m_owns_resolutions = 1;
+	}
+
+	virtual ~AnimListenerV4Resolution()
+	{
+		if (m_resolution_count != 0 && m_owns_resolutions) {
+			if (m_resolution_count == 1)
+				operator delete(m_resolutions);
+			else
+				operator delete[](m_resolutions);
+		}
+	}
+
+	virtual void OnTick(void *tick_context, void *user_context);
+
+	ResolutionData *m_resolutions;
+	uint16_t m_resolution_count;
+	uint8_t m_owns_resolutions : 1;
+};
+#endif
 
 /* an AnimListenerV4 of one of the widget's draw objects */
 class AnimListenerObj : public AnimListenerV4 {
@@ -288,7 +321,7 @@ public:
 	TexAnimListenerObj(Timer *t, Widget *w, graph::DrawObj *obj, int32_t columns, int32_t rows,
 			   int32_t first, int32_t last, AnimCB cb_fin, void *data);
 
-	virtual void OnTick(void *data1, void *data2);
+	virtual void OnTick(void *tick_context, void *user_context);
 
 	/* the region of the frame the timer's value is at (0 to 1) */
 	void TexAnim(float rate);

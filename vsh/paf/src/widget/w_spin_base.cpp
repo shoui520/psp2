@@ -844,7 +844,11 @@ __attribute__((noinline)) void SpinDrum::Commit(int32_t reason)
 	((SpinBase *)m_parent)->OnDrumCommit(result, reason);
 }
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) void SpinDrum::Release()
+#else
 void SpinDrum::Release()
+#endif
 {
 	m_velocity = 0.0f;
 	m_key_dir = 0.0f;

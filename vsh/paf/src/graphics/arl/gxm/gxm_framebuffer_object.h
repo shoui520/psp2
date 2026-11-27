@@ -65,7 +65,12 @@ public:
 	struct OutOfLine {
 	};
 
+#ifdef PAF_BUILD_2014
+	explicit inline __attribute__((always_inline)) FrameBufferObject(OutOfLine)
+		: m_size_source(NULL)
+#else
 	explicit __attribute__((noinline)) FrameBufferObject(OutOfLine) : m_size_source(NULL)
+#endif
 	{
 	}
 

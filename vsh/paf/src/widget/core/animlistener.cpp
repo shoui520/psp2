@@ -308,6 +308,28 @@ void AnimListenerV4::OnTick(void *data1, void *data2)
 	}
 }
 
+#ifdef PAF_BUILD_2014
+void AnimListenerV4Resolution::OnTick(void *tick_context, void *user_context)
+{
+	if (m_widget == NULL)
+		return;
+	if ((m_timer->m_state & 1) != 0 && m_resolutions != NULL) {
+		switch (m_type) {
+		case Widget::ANIM_MOVE:
+			m_widget->SetResolutionPos_core(m_resolutions, m_resolution_count);
+			break;
+		case Widget::ANIM_SIZE:
+			m_widget->SetResolutionSize_core(m_resolutions, m_resolution_count);
+			break;
+		case Widget::ANIM_ROT:
+			m_widget->SetResolutionRot_core(m_resolutions, m_resolution_count);
+			break;
+		}
+	}
+	AnimListenerV4::OnTick(tick_context, user_context);
+}
+#endif
+
 void AnimListenerF1::OnTick(void *data1, void *data2)
 {
 	if (m_prop != NULL) {

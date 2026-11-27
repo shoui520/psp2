@@ -2508,6 +2508,7 @@ void ListView::InsertCell(int32_t segment, int32_t cell, uint32_t num)
 #endif
 		ScePafWidget_A838831E();
 	}
+#ifndef PAF_BUILD_2014
 	if (m_grab_cell != NULL) {
 		int32_t grab_segment = m_grab_cell->GetSegment()->m_index;
 		int32_t grab_cell = m_grab_cell->m_index;
@@ -2523,7 +2524,6 @@ void ListView::InsertCell(int32_t segment, int32_t cell, uint32_t num)
 			m_focus_list_pos.m_cell = grab_cell;
 		}
 	}
-#ifndef PAF_BUILD_2014
 	if (!IsCellVisible(m_grab_cell, true) && FindChild(m_env->m_focus_cursor.m_target, 0) != NULL)
 		m_env->HideFocus(-1);
 #endif

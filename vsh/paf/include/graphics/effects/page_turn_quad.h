@@ -34,7 +34,11 @@ public:
 	struct OutOfLine {
 	};
 
+#ifdef PAF_BUILD_2014
+	explicit inline __attribute__((always_inline)) PageTurnQuad(OutOfLine)
+#else
 	explicit __attribute__((noinline)) PageTurnQuad(OutOfLine)
+#endif
 	{
 	}
 

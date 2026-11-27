@@ -2250,8 +2250,33 @@ int32_t ScePafWidget_5ABB3393(paf::ui::Widget *widget, uint32_t port, uint32_t i
 void ScePafWidget_A89BE22F(paf::ui::Widget *widget);
 /* the vblank waits counted up and down, with paf::graph::s_wait_vblank_count (state.c; no
    name found) */
+#ifdef PAF_BUILD_2014
+extern uint32_t _ZN3paf5graph19s_wait_vblank_countE;
+
+static inline __attribute__((always_inline)) uint32_t *ScePafWidget_10BEC7CF(uint32_t *self)
+{
+	++_ZN3paf5graph19s_wait_vblank_countE;
+	++*self;
+	return self;
+}
+
+static inline __attribute__((always_inline)) uint32_t *ScePafWidget_DB993F51(uint32_t *self)
+{
+	uint32_t count = *self;
+
+	if (count) {
+		if (_ZN3paf5graph19s_wait_vblank_countE) {
+			--_ZN3paf5graph19s_wait_vblank_countE;
+			count = *self;
+		}
+		*self = count - 1;
+	}
+	return self;
+}
+#else
 uint32_t *ScePafWidget_10BEC7CF(uint32_t *count);
 uint32_t *ScePafWidget_DB993F51(uint32_t *count);
+#endif
 /* prototypes from common_gui_dialog's calls, not written in C yet (no name found) */
 /* adds delta to the count of its children (itself included) that take the rear touch event, up
    to the scene (0x81152a82; no name found) */

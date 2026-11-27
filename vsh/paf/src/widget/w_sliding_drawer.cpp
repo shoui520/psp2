@@ -31,6 +31,9 @@ extern const floatInVec s_zero;
 
 const char SlidingDrawer::m_widget_type[] = "sliding_drawer";
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline))
+#endif
 SlidingDrawer::SlidingDrawer(Widget *parent, CreateParam *param)
 	: ScrollViewBase(parent, param), m_movable_direction(MoveDir_XY),
 	  m_last_pos(0.0f, 0.0f, 0.0f, 0.0f), m_move(0.0f, 0.0f, 0.0f, 0.0f),

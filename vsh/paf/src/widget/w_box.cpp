@@ -379,8 +379,14 @@ int32_t Box::SetSize_core_force(const math::v4 &v, uint32_t notify_layout, bool 
 
 /* the size a child at the position may take in the box: to the nearer edge and as far again
    (align 0), to the far edge (1) or the near one (2), else the box's */
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) float Box::GetFitSize(uint32_t align, float pos,
+		      float box_size, float box_origin_offset, float margin1_size,
+		      float margin2_size) const
+#else
 float Box::GetFitSize(uint32_t align, float pos, float box_size, float box_origin_offset,
 		      float margin1_size, float margin2_size) const
+#endif
 {
 	float half = box_size * 0.5f;
 	float lo = (box_origin_offset - half) + margin1_size;

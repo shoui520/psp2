@@ -426,6 +426,7 @@ void Camera::SetScreenSize(Timer *t, float width, float height, float distance)
 	m_projection_dirty = true;
 }
 
+#ifndef PAF_BUILD_2014
 void Camera::UpdateScreenSize(Timer *t)
 {
 	if (m_screen != NULL) {
@@ -437,6 +438,7 @@ void Camera::UpdateScreenSize(Timer *t)
 		SetScreenSize(t, sp.width(), sp.height(), -1.0f);
 	}
 }
+#endif
 
 }
 }
@@ -754,7 +756,11 @@ __attribute__((noinline)) const math::rect &Camera::PopScissor()
 	return s_scissor_rect;
 }
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) const math::rect &Camera::PopClip()
+#else
 __attribute__((noinline)) const math::rect &Camera::PopClip()
+#endif
 {
 	if (s_clip_stack.size() != 0)
 		s_clip_stack.pop_back();

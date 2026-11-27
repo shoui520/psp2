@@ -26,6 +26,7 @@ int ScePafWidget_E8F862FC(void *self, const void *value)
 }
 
 
+#ifndef PAF_BUILD_2014
 /* paf::graph::s_wait_vblank_count (surface_display.cpp) */
 extern uint32_t _ZN3paf5graph19s_wait_vblank_countE;
 
@@ -49,3 +50,4 @@ uint32_t *ScePafWidget_DB993F51(uint32_t *self)
 	}
 	return self;
 }
+#endif

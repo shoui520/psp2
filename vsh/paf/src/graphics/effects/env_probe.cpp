@@ -244,8 +244,14 @@ common::SharedPtr<arl::Texture2D> EnvProbeBackground::GetSharedTexture()
 	return textures->m_white;
 }
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) bool Trackball::Hit(math::v3 center, math::v3 origin,
+							  math::v3 direction, math::v3 &point,
+							  float radius)
+#else
 inline bool Trackball::Hit(math::v3 center, math::v3 origin, math::v3 direction, math::v3 &point,
 			   float radius)
+#endif
 {
 	Vector3 dir = direction.getImpl();
 
@@ -291,9 +297,15 @@ static inline __attribute__((always_inline)) float SignedAngle(const math::v2 &f
 			       .getAsFloat();
 }
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) void Trackball::Update(const math::v3 &center,
+			      const math::v3 &origin, const math::v3 &direction, bool pressed,
+			      bool down, math::matrix &rotation, float radius)
+#else
 inline void Trackball::Update(const math::v3 &center, const math::v3 &origin,
 			      const math::v3 &direction, bool pressed, bool down,
 			      math::matrix &rotation, float radius)
+#endif
 {
 	math::v3 point(0.0f);
 	bool on_sphere = Hit(center, origin, direction, point, radius);

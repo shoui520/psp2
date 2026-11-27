@@ -51,18 +51,18 @@
  {
 --- a/jdhuff.c
 +++ b/jdhuff.c
-@@ -461,7 +461,11 @@
- #endif
- 
+@@ -632,7 +632,11 @@
+  * Returns FALSE if must suspend.
+  */
  
 +#ifdef PAF_BUILD_2014
 +static inline __attribute__((always_inline)) boolean
 +#else
  LOCAL(boolean)
 +#endif
- jpeg_fill_bit_buffer (bitread_working_state * state,
- 		      register bit_buf_type get_buffer, register int bits_left,
- 		      int nbits)
+ process_restart (j_decompress_ptr cinfo)
+ {
+   huff_entropy_ptr entropy = (huff_entropy_ptr) cinfo->entropy;
 --- a/jdmarker.c
 +++ b/jdmarker.c
 @@ -305,7 +305,7 @@

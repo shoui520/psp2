@@ -1099,7 +1099,12 @@ namespace paf {
 namespace resource {
 
 /* the fields of a string between its delimiters, empty ones left out (name ours) */
+#ifdef PAF_BUILD_2014
+static inline __attribute__((always_inline)) list<string> SplitString(const string &str,
+								      const char *delimiter)
+#else
 static list<string> SplitString(const string &str, const char *delimiter)
+#endif
 {
 	string rest = str;
 	string delim = delimiter;

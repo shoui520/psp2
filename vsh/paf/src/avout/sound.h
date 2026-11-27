@@ -20,7 +20,23 @@ public:
 		Mode_None = 2
 	};
 
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) Output(int mode)
+	{
+		for (int i = 0; i < 8; ++i) {
+			m_sounds[i].state = Sound::State_Default;
+			m_sounds[i].buffer = NULL;
+			m_sounds[i].no = 0;
+		}
+		m_is_init = 0;
+		m_disable_count = 0;
+		m_se_num = 0;
+		m_enabled = true;
+		Init(mode);
+	}
+#else
 	Output(int mode);
+#endif
 	~Output();
 	__declspec(dllexport) void Update();
 

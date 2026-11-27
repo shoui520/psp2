@@ -298,7 +298,11 @@ int32_t AppIconSimple::HandleGestureEvent(Event *e)
 }
 
 /* the last icon gone, the common textures go */
+#ifdef PAF_BUILD_2014
+static inline __attribute__((always_inline)) void ReleaseTextures()
+#else
 static __attribute__((noinline)) void ReleaseTextures()
+#endif
 {
 	if (s_icon_count == 0) {
 		s_mask_texture = NULL;

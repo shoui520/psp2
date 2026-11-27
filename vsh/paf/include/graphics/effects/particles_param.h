@@ -209,8 +209,19 @@ public:
 		Param<float> m_fade;
 	};
 
+#ifdef PAF_BUILD_2014
+	WAVE_PARAM_SET_KEYED(TinkerbellParamSet, "Tinkerbell", inline __attribute__((always_inline)));
+#else
 	WAVE_PARAM_SET_KEYED(TinkerbellParamSet, "Tinkerbell", __attribute__((noinline)));
+#endif
 };
+
+#ifdef PAF_BUILD_2014
+template<>
+inline __attribute__((always_inline)) ParamSetInstance<GlareParamSet>::~ParamSetInstance()
+{
+}
+#endif
 
 }
 }

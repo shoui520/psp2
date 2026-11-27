@@ -272,7 +272,11 @@ common::SharedPtr<Image> Image::Open(const char *filename, HeapAllocator *alloca
 	}
 }
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) ImageFormat Image::DetectFormat(common::SharedPtr<File> file, int64_t offset, size_t size)
+#else
 ImageFormat Image::DetectFormat(common::SharedPtr<File> file, int64_t offset, size_t size)
+#endif
 {
 	uint8_t header[16];
 

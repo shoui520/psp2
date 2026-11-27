@@ -17,7 +17,11 @@ class IDParam {
 public:
 	/* no ID: an empty name of its own, hash 0 (Sony's modules keep it apart from s_empty_name: a
 	   string literal, pooled with the module's strings) */
+#ifdef PAF_BUILD_2014
+	__attribute__((always_inline)) IDParam() : m_id(""), m_idhash(0)
+#else
 	IDParam() : m_id(""), m_idhash(0)
+#endif
 	{
 	}
 
@@ -38,7 +42,12 @@ public:
 	}
 
 	/* an ID known only by its hash, with the empty name (libcdlg_ime's COMDAT copy) */
+#ifdef PAF_BUILD_2014
+	explicit __attribute__((always_inline)) IDParam(uint32_t idhash)
+		: m_id(s_empty_name), m_idhash(idhash)
+#else
 	explicit IDParam(uint32_t idhash) : m_id(s_empty_name), m_idhash(idhash)
+#endif
 	{
 	}
 

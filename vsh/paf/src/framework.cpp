@@ -1044,12 +1044,14 @@ const wchar_t *Framework::GetCommonString(const IDParam &id) const
 	return L"";
 }
 
+#ifndef PAF_BUILD_2014
 intrusive_ptr<graph::Surface> Framework::GetCommonTexture(const IDParam &id)
 {
 	if (m_common_resource_plugin != NULL)
 		return m_common_resource_plugin->GetTexture(id);
 	return intrusive_ptr<graph::Surface>();
 }
+#endif
 
 }
 

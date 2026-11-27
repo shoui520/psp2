@@ -67,31 +67,31 @@ public:
 		return sce_vectormath_extract_f4(getImpl().get128(), idx);
 	}
 
-	void set_x(float value)
-	{
-		getImpl().setX(value);
-	}
-
-	void set_y(float value)
-	{
-		getImpl().setY(value);
-	}
-
-	void set_z(float value)
-	{
-		getImpl().setZ(value);
-	}
-
-	void set_w(float value)
-	{
-		getImpl().setW(value);
-	}
-
 #ifdef PAF_BUILD_2014
 #define PAF_V4_OP_INLINE __attribute__((always_inline))
 #else
 #define PAF_V4_OP_INLINE
 #endif
+
+	PAF_V4_OP_INLINE void set_x(float value)
+	{
+		getImpl().setX(value);
+	}
+
+	PAF_V4_OP_INLINE void set_y(float value)
+	{
+		getImpl().setY(value);
+	}
+
+	PAF_V4_OP_INLINE void set_z(float value)
+	{
+		getImpl().setZ(value);
+	}
+
+	PAF_V4_OP_INLINE void set_w(float value)
+	{
+		getImpl().setW(value);
+	}
 
 	PAF_V4_OP_INLINE v4 operator+(v4 rhs) const
 	{

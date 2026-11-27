@@ -286,7 +286,11 @@ void ImageButton::FrontVertical()
 }
 }
 
+#ifdef PAF_BUILD_2014
+static inline __attribute__((always_inline)) float ScePafWidget_06D0F83A(ImageButton *button)
+#else
 float ScePafWidget_06D0F83A(ImageButton *button)
+#endif
 {
 	if (button->m_label_obj == NULL)
 		return 0.0f;

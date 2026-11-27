@@ -185,7 +185,12 @@ void InputGestureListener::PreUpdateGesturePort(uint32_t port_id)
 	m_capture[port_id].reset();
 }
 
+#ifdef PAF_BUILD_2014
+static inline __attribute__((always_inline)) void SetOnDetach(GestureMap::iterator first,
+							      GestureMap::iterator last)
+#else
 static void SetOnDetach(GestureMap::iterator first, GestureMap::iterator last)
+#endif
 {
 	for (; first != last; ++first)
 		first->second.on_detach = true;

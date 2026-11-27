@@ -62,7 +62,15 @@ public:
 	int32_t SetString(const wstring &str);
 	/* len characters from pos replaced by str (name ours) */
 	int32_t ReplaceString(uint32_t pos, uint32_t len, const wstring &str);
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) int32_t GetString(wstring &str)
+	{
+		str = m_str;
+		return 0;
+	}
+#else
 	int32_t GetString(wstring &str);
+#endif
 	int32_t GetLength(uint32_t &len);
 	int32_t GetStringBuffer(const wchar_t *&buf, uint32_t &len);
 	int32_t GetStyleRuns(_list_iterator<TextStyleRun *> &begin,

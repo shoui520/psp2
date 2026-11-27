@@ -531,7 +531,11 @@ void DisplaySurface::SetDisplayArea()
 }
 #endif
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) void DisplaySurface::Update(const UpdateInfo *info)
+#else
 void DisplaySurface::Update(const UpdateInfo *info)
+#endif
 {
 	bool resized = false;
 	int32_t width = info->width;
@@ -769,7 +773,11 @@ void DisplaySurface::SetDisplayViewport(uint32_t y, uint32_t x, uint32_t width, 
 }
 #endif
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) int32_t DisplaySurface::GetUpdateInfo(UpdateInfo *info)
+#else
 int32_t DisplaySurface::GetUpdateInfo(UpdateInfo *info)
+#endif
 {
 	if (info == NULL)
 		return SCE_PAF_ERROR_GRAPHICS_INVALID_POINTER;

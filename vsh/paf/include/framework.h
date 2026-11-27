@@ -219,7 +219,17 @@ public:
 	void UnLoadCommonResourceAsync(UnloadCRFinishCallback callback);
 	/* L"" without the common resource */
 	const wchar_t *GetCommonString(const IDParam &id) const;
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) intrusive_ptr<graph::Surface> GetCommonTexture(
+		const IDParam &id)
+	{
+		if (m_common_resource_plugin != NULL)
+			return m_common_resource_plugin->GetTexture(id);
+		return intrusive_ptr<graph::Surface>();
+	}
+#else
 	intrusive_ptr<graph::Surface> GetCommonTexture(const IDParam &id);
+#endif
 	int32_t GetCommonResourceStyles(const char *name, vector<string> *styles);
 	int32_t GetCommonResourceTextures(vector<string> *textures);
 	int32_t GetCommonResourceLocale() const;

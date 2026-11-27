@@ -7,6 +7,9 @@
 namespace paf {
 namespace thread {
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline))
+#endif
 CallQueue::CallQueue(const char *name) : m_mutex(name, 0)
 {
 }

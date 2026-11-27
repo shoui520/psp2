@@ -834,7 +834,21 @@ public:
 	/* the touch device regions of the widgets set on the panel (0x8113c3c2) */
 	void OnUpdateTouchDeviceRegion();
 	/* the screen the draws go to; the old one is deleted if it was auto-deleted (0x81139ca0) */
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) int32_t SetScreen(Screen *screen)
+	{
+		Screen *old = m_screen;
+
+		if (old != NULL && old->is_auto_delete)
+			delete old;
+		m_screen = screen;
+		if (screen != NULL)
+			screen->is_auto_delete = false;
+		return 0;
+	}
+#else
 	int32_t SetScreen(Screen *screen);
+#endif
 	void ShowFocus(int32_t port);
 	/* where the touch that hit the widget hit it: 0, or -1 when none did */
 	int32_t GetHitStack(HitInfo *info, Widget *widget);

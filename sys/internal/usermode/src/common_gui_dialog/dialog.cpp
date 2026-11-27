@@ -554,7 +554,11 @@ void CommonGuiDialog::PlaySound()
 #endif
 }
 
+#ifdef COMMON_GUI_DIALOG_2014
+inline __attribute__((always_inline)) void CommonGuiDialog::Select(int32_t button)
+#else
 void CommonGuiDialog::Select(int32_t button)
+#endif
 {
 	if (m_handler == NULL || !m_open)
 		return;

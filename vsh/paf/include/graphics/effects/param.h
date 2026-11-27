@@ -358,7 +358,11 @@ inline __attribute__((noinline)) void ParamKeys<math::v2>::SetCurrent(math::v2 v
 }
 
 template<>
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) void
+#else
 inline __attribute__((noinline)) void
+#endif
 ParamKeys<math::quaternion>::SetCurrent(math::quaternion value)
 {
 	bool changed = !(value == m_key[PARAM_KEY_CURRENT]);

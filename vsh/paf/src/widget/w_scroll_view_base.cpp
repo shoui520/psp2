@@ -441,6 +441,9 @@ public:
    IDs, the views it updates and their listener (names ours) */
 class TouchScrollSupplier {
 public:
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline))
+#endif
 	TouchScrollSupplier() : m_next_snap_id(0), m_touch_state(0)
 	{
 		m_reset = false;
@@ -2262,6 +2265,38 @@ ScrollViewBase::~ScrollViewBase()
 		delete m_anchor;
 	m_anchor = (math::v2 *)-1;
 }
+
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) void ScrollViewBase::ScePafWidget_22EF63CE()
+{
+	uint32_t id = m_track_port;
+
+	if (id != (uint32_t)-1) {
+		Environment *env = m_env;
+		TouchInfo *state = NULL;
+
+		if (id < 8) {
+			env->m_touch_state[0][id].m_port = 0;
+			env->m_touch_state[0][id].m_id = id;
+			state = &env->m_touch_state[0][id];
+		}
+		/* the touch it tracks is gone or released */
+		if (state == NULL || state->m_type == 0x42 || state->m_type == 0x47)
+			TrackEnd(NULL);
+	}
+	if (m_rear_touches != 0 && UpdateRearTouches())
+		TrackRearRelease(NULL);
+	if (m_ime_padding && m_scroll_ended && GetCamera()->FindAnim(0x10000) == NULL) {
+		m_scroll_ended = false;
+		UpdatePadding();
+		UpdateViewLimit();
+		UpdateMovableDirection();
+		UpdateScrollLayout();
+		UpdateScrollRange();
+	}
+	ScePafWidget_77E369F4();
+}
+#endif
 
 void ScrollViewBase::UpdateAfterChildren()
 {
@@ -5280,6 +5315,7 @@ void ScrollViewBase::ScePafWidget_1E6F658F()
 	}
 }
 
+#ifndef PAF_BUILD_2014
 void ScrollViewBase::ScePafWidget_22EF63CE()
 {
 	uint32_t id = m_track_port;
@@ -5309,6 +5345,7 @@ void ScrollViewBase::ScePafWidget_22EF63CE()
 	}
 	ScePafWidget_77E369F4();
 }
+#endif
 
 #ifndef PAF_BUILD_2014
 void ScrollViewBase::ScePafWidget_B6CECFDF()

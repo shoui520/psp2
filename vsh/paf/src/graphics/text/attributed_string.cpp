@@ -285,11 +285,13 @@ int32_t AttributedString::ReplaceString(uint32_t pos, uint32_t len, const wstrin
 	return ret;
 }
 
+#ifndef PAF_BUILD_2014
 int32_t AttributedString::GetString(wstring &str)
 {
 	str = m_str;
 	return SCE_PAF_OK;
 }
+#endif
 
 int32_t AttributedString::GetLength(uint32_t &len)
 {

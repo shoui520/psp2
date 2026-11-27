@@ -62,7 +62,11 @@ void Dialog::SetPartsList(const PartsList *list)
 		m_parts[list->index] = list->id;
 }
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) const IDParam &Dialog::GetPartsWidgetId(int32_t index)
+#else
 const IDParam &Dialog::GetPartsWidgetId(int32_t index)
+#endif
 {
 	map<int32_t, IDParam>::iterator it = m_parts.find(index);
 

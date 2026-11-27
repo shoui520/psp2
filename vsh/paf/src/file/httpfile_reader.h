@@ -107,8 +107,20 @@ public:
 	{
 	}
 
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) bool IsHttpsCheckEnabled() const
+	{
+		return !(open_flag & HttpFile::OpenArg::DISABLE_HTTPS_CHECK);
+	}
+
+	inline __attribute__((always_inline)) bool IsProxyIgnored() const
+	{
+		return (open_flag & HttpFile::OpenArg::IGNORE_PROXY_SETTING) != 0;
+	}
+#else
 	bool IsHttpsCheckEnabled() const;
 	bool IsProxyIgnored() const;
+#endif
 
 	static common::SharedPtr<HttpFileReaderConfig> Create(const HttpFileReaderParam &param);
 	static common::SharedPtr<HttpFileReaderConfig> Clone(
@@ -420,7 +432,9 @@ typedef FileIoCallThread<MemberCall0<int32_t, HttpFileReader> > HttpFileIoThread
 typedef FileIoCallThread<MemberCall2<int32_t, HttpFileReader, void *, size_t> > HttpFileReadIoThread;
 typedef FileIoCallThread<MemberCall2<int64_t, HttpFileReader, int64_t, int32_t> > HttpFileSeekIoThread;
 
+#ifndef PAF_BUILD_2014
 int32_t HttpFileResponseCodeToError(uint16_t code);
+#endif
 datetime::DateTime HttpFileParseDate(const char *text);
 
 }

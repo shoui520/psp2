@@ -1212,16 +1212,10 @@ void Scene::UpdateLayerWeight()
 }
 #endif
 
+#ifndef PAF_BUILD_2014
 void Scene::UpdateScreenSize(Timer *t)
 {
-#ifdef PAF_BUILD_2014
-	SceneResolution *res = m_env != NULL
-		? m_env->FindResolution(m_env->m_resolutions, m_env->m_resolution_num,
-					m_resolution_id)
-		: NULL;
-#else
 	SceneResolution *res = ScePafWidget_CDC90BA2(m_env_param, m_resolution_id);
-#endif
 
 	if (res == NULL)
 		return;
@@ -1233,6 +1227,7 @@ void Scene::UpdateScreenSize(Timer *t)
 	if (m_camera != NULL)
 		m_camera->UpdateScreenSize(t);
 }
+#endif
 
 }
 }

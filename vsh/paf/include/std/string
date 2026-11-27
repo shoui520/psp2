@@ -349,15 +349,19 @@ public:
 
 	_Elem &at(size_type pos)
 	{
+#ifndef PAF_BUILD_2014
 		if (pos >= count)
 			ScePafStdc_D608246A();
+#endif
 		return ptr[pos];
 	}
 
 	const _Elem &at(size_type pos) const
 	{
+#ifndef PAF_BUILD_2014
 		if (pos >= count)
 			ScePafStdc_D608246A();
+#endif
 		return ptr[pos];
 	}
 
@@ -484,8 +488,10 @@ basic_string<_Elem, _Traits, _Ax>::assign(const _Myt &src, size_type pos, size_t
 {
 	size_type size = 0;
 
+#ifndef PAF_BUILD_2014
 	if (pos > src.count)
 		ScePafStdc_D608246A();
+#endif
 	if (pos < src.count) {
 		size_type left = src.count - pos;
 
@@ -568,8 +574,10 @@ template<class _Elem, class _Traits, class _Ax>
 basic_string<_Elem, _Traits, _Ax> &
 basic_string<_Elem, _Traits, _Ax>::erase(size_type pos, size_type len)
 {
+#ifndef PAF_BUILD_2014
 	if (pos > count)
 		ScePafStdc_D608246A();
+#endif
 	if (len > count - pos)
 		len = count - pos;
 
@@ -596,8 +604,10 @@ template<class _Elem, class _Traits, class _Ax>
 basic_string<_Elem, _Traits, _Ax> &
 basic_string<_Elem, _Traits, _Ax>::insert(size_type pos, const _Elem *src, size_type len)
 {
+#ifndef PAF_BUILD_2014
 	if (pos > count)
 		ScePafStdc_D608246A();
+#endif
 
 	_Elem *dst = alloc.allocate(count + len + 1);
 
@@ -622,8 +632,10 @@ template<class _Elem, class _Traits, class _Ax>
 basic_string<_Elem, _Traits, _Ax> &
 basic_string<_Elem, _Traits, _Ax>::insert(size_type pos, size_type len, _Elem ch)
 {
+#ifndef PAF_BUILD_2014
 	if (pos > count)
 		ScePafStdc_D608246A();
+#endif
 
 	_Elem *dst = alloc.allocate(count + len + 1);
 
@@ -677,8 +689,10 @@ template<class _Elem, class _Traits, class _Ax>
 basic_string<_Elem, _Traits, _Ax> &
 basic_string<_Elem, _Traits, _Ax>::replace(size_type pos, _Elem ch, size_type len)
 {
+#ifndef PAF_BUILD_2014
 	if (pos > count)
 		ScePafStdc_D608246A();
+#endif
 	if (pos < count) {
 		size_type size = pos + len > count ? pos + len : count;
 		_Elem *dst = alloc.allocate(size + 1);
@@ -711,8 +725,10 @@ template<class _Elem, class _Traits, class _Ax>
 basic_string<_Elem, _Traits, _Ax> &
 basic_string<_Elem, _Traits, _Ax>::replace(size_type pos, const _Elem *src, size_type len)
 {
+#ifndef PAF_BUILD_2014
 	if (pos > count)
 		ScePafStdc_D608246A();
+#endif
 	if (pos < count) {
 		size_type size = pos + len > count ? pos + len : count;
 		_Elem *dst = alloc.allocate(size + 1);
@@ -740,8 +756,10 @@ template<class _Elem, class _Traits, class _Ax>
 __attribute__((noinline)) basic_string<_Elem, _Traits, _Ax>
 basic_string<_Elem, _Traits, _Ax>::substr(size_type pos, size_type len) const
 {
+#ifndef PAF_BUILD_2014
 	if (pos > count)
 		ScePafStdc_D608246A();
+#endif
 	if (pos >= count)
 		return _Myt();
 	if (len == npos || pos + len > count)
@@ -754,8 +772,10 @@ basic_string<_Elem, _Traits, _Ax> &
 basic_string<_Elem, _Traits, _Ax>::replace(size_type pos, size_type len, const _Elem *src,
 					     size_type srcPos, size_type srcLen)
 {
+#ifndef PAF_BUILD_2014
 	if (pos > count)
 		ScePafStdc_D608246A();
+#endif
 	if (pos < count) {
 		if (len >= count - pos)
 			len = count - pos;
@@ -847,8 +867,10 @@ basic_string<wchar_t>::append(const wchar_t *src, size_type len)
 {
 	wchar_t *dst = alloc.allocate(count + len + 1);
 
+#ifndef PAF_BUILD_2014
 	if (dst == NULL)
 		ScePafStdc_D608246A();
+#endif
 	if (dst != NULL) {
 		size_type size = count + len;
 
@@ -882,7 +904,9 @@ basic_string<char>::append(size_type len, char ch)
 		ptr = dst;
 		count = size;
 	} else {
+#ifndef PAF_BUILD_2014
 		ScePafStdc_D608246A();
+#endif
 	}
 	return *this;
 }
@@ -903,7 +927,9 @@ basic_string<char>::assign(const basic_string<char> &src)
 				count = src.count;
 				char_traits<char>::copy(dst, src.ptr, src.count + 1);
 			} else {
+#ifndef PAF_BUILD_2014
 				ScePafStdc_D608246A();
+#endif
 				ptr = &empty_string;
 				count = 0;
 			}

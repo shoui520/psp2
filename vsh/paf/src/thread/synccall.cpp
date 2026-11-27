@@ -14,6 +14,9 @@ enum {
 	SYNCCALL_IDLE = 4
 };
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline))
+#endif
 SyncCall::SyncCall(const char *name)
 {
 	m_func = NULL;

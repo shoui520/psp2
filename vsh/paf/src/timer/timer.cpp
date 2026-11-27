@@ -740,7 +740,12 @@ float Timer::DoFuncCustomExpoInOut(float rate, const float *param)
 	return value;
 }
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) float Timer::DoFuncCustomExpoOut(float rate,
+								       const float *param)
+#else
 float Timer::DoFuncCustomExpoOut(float rate, const float *param)
+#endif
 {
 	if (rate >= 1.0f)
 		return 1.0f;
@@ -1189,7 +1194,11 @@ float Timer::DoFuncExpoOut(float rate)
 	return 1.0f - DoFuncExpoIn(1.0f - rate);
 }
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) float Timer::DoFuncSineOut(float rate)
+#else
 float Timer::DoFuncSineOut(float rate)
+#endif
 {
 	if (rate >= 1.0f)
 		return 1.0f;

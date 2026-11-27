@@ -147,7 +147,11 @@ int32_t FontRasterizerPvf::Term()
 	return 0;
 }
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) int32_t FontRasterizerPvf::SetFont(const FontParam &param)
+#else
 int32_t FontRasterizerPvf::SetFont(const FontParam &param)
+#endif
 {
 	s_font_map.clear();
 	myPvfCache_expireAll(s_cache, 1);

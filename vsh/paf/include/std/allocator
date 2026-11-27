@@ -47,7 +47,9 @@ public:
 	   heap reports it, an allocator of its own need not (name ours) */
 	void report_failure()
 	{
+#ifndef PAF_BUILD_2014
 		ScePafStdc_D608246A();
+#endif
 	}
 };
 

@@ -17,7 +17,9 @@ enum {
 	HANDLER_FRAME = 4
 };
 
+#ifndef PAF_BUILD_2014
 static Mouse s_mouse;
+#endif
 /* the front panel's slots, as the touchscreen handed them after its last Update */
 static inputdevice::touchscreen::Data s_touch[TOUCH_NUM];
 /* the last frame a finger touched */
@@ -25,6 +27,9 @@ static uint32_t s_touch_frame = 0;
 
 static void TouchHandler(inputdevice::touchscreen::Data *data);
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline))
+#endif
 Mouse::Mouse()
 {
 	for (int32_t i = 0; i < 3; i++)
@@ -34,6 +39,9 @@ Mouse::Mouse()
 	m_screen_width = 1;
 	m_screen_height = 1;
 }
+#ifdef PAF_BUILD_2014
+static Mouse s_mouse;
+#endif
 
 void Mouse::Update()
 {

@@ -30,6 +30,10 @@
 
 using namespace sce::Vectormath::Simd::Aos;
 
+#ifdef PAF_BUILD_2014
+PAF_LIST_INLINE_DTOR(ui::RichText::Table)
+#endif
+
 namespace paf {
 
 /* Sony's ParseTable calls the cells' push_back out of line. */

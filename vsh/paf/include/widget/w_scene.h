@@ -9,6 +9,9 @@
 #include <math/ngp/v4.h>
 #include <widget/core/widget.h>
 #include <widget/core/environment.h>
+#ifdef PAF_BUILD_2014
+#include <widget/w_camera.h>
+#endif
 #include <graphics/drawobj/draw_info.h>
 #include <std/list>
 
@@ -163,7 +166,27 @@ public:
 	void UpdateLayerWeight();
 	/* the screen's viewport and scissor set to the resolution's size, the camera's screen
 	   size taken over again (0x811153de; name ours) */
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) void UpdateScreenSize(Timer *t)
+	{
+		SceneResolution *res = m_env != NULL
+			? m_env->FindResolution(m_env->m_resolutions, m_env->m_resolution_num,
+						m_resolution_id)
+			: NULL;
+
+		if (res == NULL)
+			return;
+
+		Screen *screen = m_screen;
+
+		screen->vp = math::rect(0.0f, 0.0f, res->m_viewport_width, res->m_viewport_height);
+		screen->sp = math::rect(0.0f, 0.0f, res->m_scissor_width, res->m_scissor_height);
+		if (m_camera != NULL)
+			m_camera->UpdateScreenSize(t);
+	}
+#else
 	void UpdateScreenSize(Timer *t);
+#endif
 
 	/* the screen it is drawn to (its camera's Setup and draws use it; name ours) */
 	Screen *m_screen;

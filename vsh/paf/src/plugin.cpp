@@ -2099,7 +2099,11 @@ void Plugin::PageInactivateActually()
 }
 
 /* called whole by PageInactivate(IDParam) */
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) void Plugin::PageInactivate(const cxml::Element &node)
+#else
 __attribute__((noinline)) void Plugin::PageInactivate(const cxml::Element &node)
+#endif
 {
 	if (!m_initialized || m_last_active_page_node != &node)
 		return;
@@ -2181,10 +2185,12 @@ intrusive_ptr<graph::Surface> Plugin::GetTexture(const IDParam &id, graph::Surfa
 	return intrusive_ptr<graph::Surface>();
 }
 
+#ifndef PAF_BUILD_2014
 intrusive_ptr<graph::Surface> Plugin::GetTexture(const IDParam &id)
 {
 	return GetTexture(id, m_surface_pool);
 }
+#endif
 
 void Plugin::Notify(int32_t status) const
 {

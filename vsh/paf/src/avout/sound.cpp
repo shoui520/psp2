@@ -27,6 +27,7 @@ void Output::Init(int mode)
 	m_is_init = 1;
 }
 
+#ifndef PAF_BUILD_2014
 Output::Output(int mode)
 {
 	for (int i = 0; i < 8; ++i) {
@@ -40,6 +41,7 @@ Output::Output(int mode)
 	m_enabled = true;
 	Init(mode);
 }
+#endif
 
 Output::~Output()
 {

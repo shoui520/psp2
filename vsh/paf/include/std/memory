@@ -21,7 +21,11 @@ public:
 	}
 
 	/* add_ref false: the pointer's reference is taken over */
+#ifdef PAF_BUILD_2014
+	__attribute__((always_inline)) intrusive_ptr(T *ptr, bool add_ref = true) : m_ptr(ptr)
+#else
 	intrusive_ptr(T *ptr, bool add_ref = true) : m_ptr(ptr)
+#endif
 	{
 		if (add_ref && m_ptr != NULL)
 			m_ptr->AddRef();

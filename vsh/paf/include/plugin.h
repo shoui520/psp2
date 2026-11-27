@@ -395,7 +395,15 @@ public:
 	void Notify(int32_t status) const;
 
 	const wchar_t *GetString(const IDParam &id) const;
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) intrusive_ptr<graph::Surface> GetTexture(
+		const IDParam &id)
+	{
+		return GetTexture(id, m_surface_pool);
+	}
+#else
 	intrusive_ptr<graph::Surface> GetTexture(const IDParam &id);
+#endif
 	void SetLocale(Locale locale);
 	static void SetLocaleAll(Locale locale);
 	void SetInitEventHandler(const InitEventFunctionEntry *table);

@@ -87,6 +87,15 @@
  
 --- a/src/autofit/aflatin.c
 +++ b/src/autofit/aflatin.c
+@@ -519,7 +519,7 @@
+   /* Adjust scaling value, then scale and shift widths   */
+   /* and blue zones (if applicable) for given dimension. */
+ 
+-  static void
++  static __attribute__(( noinline )) void
+   af_latin_metrics_scale_dim( AF_LatinMetrics  metrics,
+                               AF_Scaler        scaler,
+                               AF_Dimension     dim )
 @@ -1746,7 +1746,7 @@
  
    /* Align one stem edge relative to the previous stem edge. */
@@ -98,6 +107,15 @@
                                AF_Edge        base_edge,
 --- a/src/autofit/aflatin2.c
 +++ b/src/autofit/aflatin2.c
+@@ -502,7 +502,7 @@
+   }
+ 
+ 
+-  static void
++  static __attribute__(( noinline )) void
+   af_latin2_metrics_scale_dim( AF_LatinMetrics  metrics,
+                                AF_Scaler        scaler,
+                                AF_Dimension     dim )
 @@ -1758,7 +1758,7 @@
  
    /* align one stem edge relative to the previous stem edge */
@@ -109,7 +127,23 @@
                                 AF_Edge        base_edge,
 --- a/src/base/ftobjs.c
 +++ b/src/base/ftobjs.c
-@@ -1990,7 +1990,7 @@
+@@ -1056,6 +1056,7 @@
+   /*    This function finds the variant selector charmap, if there is one. */
+   /*    There can only be one (platform=0, specific=5, format=14).         */
+   /*                                                                       */
++#ifndef PAF_STATIC_BUILD
+   static FT_CharMap
+   find_variant_selector_charmap( FT_Face  face )
+   {
+@@ -1094,6 +1095,7 @@
+ 
+     return NULL;
+   }
++#endif /* !PAF_STATIC_BUILD */
+ 
+ 
+   /*************************************************************************/
+@@ -1990,7 +1992,7 @@
  
    /* documentation is in freetype.h */
  
@@ -118,7 +152,32 @@
    FT_Open_Face( FT_Library           library,
                  const FT_Open_Args*  args,
                  FT_Long              face_index,
-@@ -4094,7 +4094,7 @@
+@@ -2552,7 +2554,7 @@
+   }
+ 
+ 
+-  static void
++  static __attribute__(( noinline )) void
+   ft_recompute_scaled_metrics( FT_Face           face,
+                                FT_Size_Metrics*  metrics )
+   {
+@@ -3366,6 +3368,7 @@
+ 
+   /* documentation is in freetype.h */
+ 
++#ifndef PAF_STATIC_BUILD
+   FT_EXPORT_DEF( FT_UInt )
+   FT_Face_GetCharVariantIndex( FT_Face   face,
+                                FT_ULong  charcode,
+@@ -3542,6 +3545,7 @@
+ 
+     return result;
+   }
++#endif /* !PAF_STATIC_BUILD */
+ 
+ 
+   /* documentation is in freetype.h */
+@@ -4094,7 +4098,7 @@
    /* <Note>                                                                */
    /*    The driver _must_ be LOCKED!                                       */
    /*                                                                       */
@@ -169,6 +228,35 @@
    cff_make_private_dict( CFF_SubFont  subfont,
                           PS_Private   priv )
    {
+--- a/src/cff/cffparse.c
++++ b/src/cff/cffparse.c
+@@ -125,7 +125,7 @@
+ 
+ 
+   /* read a real */
+-  static FT_Fixed
++  static __attribute__(( noinline )) FT_Fixed
+   cff_parse_real( FT_Byte*  start,
+                   FT_Byte*  limit,
+                   FT_Long   power_ten,
+@@ -368,7 +368,7 @@
+ 
+ 
+   /* read a number, either integer or real */
+-  static FT_Long
++  static __attribute__(( noinline )) FT_Long
+   cff_parse_num( FT_Byte**  d )
+   {
+     return **d == 30 ? ( cff_parse_real( d[0], d[1], 0, NULL ) >> 16 )
+@@ -387,7 +387,7 @@
+ 
+   /* read a floating point number, either integer or real, */
+   /* but return `10^scaling' times the number read in      */
+-  static FT_Fixed
++  static __attribute__(( noinline )) FT_Fixed
+   cff_parse_fixed_scaled( FT_Byte**  d,
+                           FT_Long    scaling )
+   {
 --- a/src/psaux/afmparse.c
 +++ b/src/psaux/afmparse.c
 @@ -87,7 +87,7 @@
@@ -189,6 +277,15 @@
    afm_stream_read_string( AFM_Stream  stream )
    {
      char*  str;
+@@ -559,7 +559,7 @@
+   }
+ 
+ 
+-  FT_LOCAL_DEF( FT_Error )
++  static inline __attribute__(( always_inline )) FT_Error
+   afm_parser_read_int( AFM_Parser  parser,
+                        FT_Int*     aint )
+   {
 --- a/src/pshinter/pshalgo.c
 +++ b/src/pshinter/pshalgo.c
 @@ -243,7 +243,7 @@
@@ -291,6 +388,15 @@
      FT_Stream       stream = FT_FACE_STREAM(face);
 --- a/src/truetype/ttinterp.c
 +++ b/src/truetype/ttinterp.c
+@@ -784,7 +784,7 @@
+ 
+   /* documentation is in ttinterp.h */
+ 
+-  FT_EXPORT_DEF( TT_ExecContext )
++  FT_EXPORT_DEF( TT_ExecContext ) __attribute__(( noinline ))
+   TT_New_Context( TT_Driver  driver )
+   {
+     TT_ExecContext  exec;
 @@ -1430,7 +1430,7 @@
  
  #if 1
@@ -491,3 +597,12 @@
    tt_size_ready_bytecode( TT_Size  size,
                            FT_Bool  pedantic )
    {
+@@ -1122,7 +1122,7 @@
+   /* <Input>                                                               */
+   /*    size :: A handle to the target size object.                        */
+   /*                                                                       */
+-  FT_LOCAL_DEF( FT_Error )
++  FT_LOCAL_DEF( FT_Error ) __attribute__(( noinline ))
+   tt_size_reset( TT_Size  size )
+   {
+     TT_Face           face;

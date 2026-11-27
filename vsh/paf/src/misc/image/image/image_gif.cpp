@@ -322,7 +322,11 @@ bool GifCodec::LoadImage(common::SharedPtr<File> file, int64_t offset, size_t si
 	return true;
 }
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) GifFileType *GifCodec::OpenBuffer(common::SharedPtr<Buffer> buf)
+#else
 GifFileType *GifCodec::OpenBuffer(common::SharedPtr<Buffer> buf)
+#endif
 {
 	m_source.read = ReadBuffer;
 	m_source.seek = NULL;

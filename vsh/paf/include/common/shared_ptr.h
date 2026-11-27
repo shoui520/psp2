@@ -35,7 +35,11 @@ public:
 		void (*m_deleter)(T *ptr);
 	};
 
+#ifdef PAF_BUILD_2014
+	__attribute__((always_inline)) SharedPtr() : m_ptr(NULL), m_ref_counter(NULL)
+#else
 	SharedPtr() : m_ptr(NULL), m_ref_counter(NULL)
+#endif
 	{
 	}
 
@@ -61,7 +65,12 @@ public:
 		}
 	}
 
+#ifdef PAF_BUILD_2014
+	__attribute__((always_inline)) SharedPtr(const SharedPtr &src)
+		: m_ptr(src.m_ptr), m_ref_counter(src.m_ref_counter)
+#else
 	SharedPtr(const SharedPtr &src) : m_ptr(src.m_ptr), m_ref_counter(src.m_ref_counter)
+#endif
 	{
 		if (m_ptr != NULL)
 			PAF_SHARED_ATOMIC_INC32(&m_ref_counter->m_counter);

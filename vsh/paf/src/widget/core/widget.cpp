@@ -1157,6 +1157,60 @@ int32_t Widget::SetSize(const math::v4 &size, Timer *t, int32_t id, int32_t opt,
 int32_t Widget::SetSize(const ResolutionData *size, uint32_t num, Timer *t, int32_t id,
 			int32_t opt, float delay, AnimCB cb_fin, void *usrdata)
 {
+#ifdef PAF_BUILD_2014
+	if ((m_drag_state[0] != NULL && (m_drag_mode & 0xFFFF00) != 0 &&
+	     (m_drag_mode & 0xFFFF00) != 0x100000) ||
+	    size == NULL) {
+		if (t != NULL)
+			delete t;
+		return -1;
+	}
+	if (t != NULL) {
+		math::v4 cur = *GetSize(0);
+		ResolutionData *copy = (ResolutionData *)operator new[](16 * num);
+
+		sce_paf_memcpy(copy, size, 16 * num);
+		AnimListener *listener = new AnimListenerV4Resolution(
+			t, this, cur, cur, &AnimListener::s_prop_size, copy, (uint16_t)num, cb_fin,
+			usrdata);
+
+		if ((id & 0xFF0000) != 0)
+			id = (id & 0xFF000000) | ANIM_SIZE;
+		SetAnimListener_withDelay(id, listener, delay, opt);
+		return 0;
+	}
+	if (m_env != NULL) {
+		SceneResolution *res = m_env->FindResolution(
+			m_env->m_resolutions, m_env->m_resolution_num, m_resolution_id);
+
+		if (res != NULL && num != 0) {
+			const ResolutionData *entry = NULL;
+
+			for (uint32_t i = 0; i < num; i++) {
+				if (size[i].m_id == res->m_id || size[i].m_id == res->m_base_id) {
+					entry = &size[i];
+					break;
+				}
+			}
+			if (entry != NULL) {
+				int32_t ret = SetSize(math::v4(entry->m_value[0], entry->m_value[1],
+							       entry->m_value[2], 0.0f),
+						      NULL, ANIM_SIZE, 0, 0.0f, NULL, NULL);
+
+				if (ret < 0)
+					return ret;
+			}
+		}
+	}
+	ResolutionData *copy = (ResolutionData *)operator new[](16 * num);
+
+	sce_paf_memcpy(copy, size, 16 * num);
+	if (m_size_array != NULL)
+		delete[] m_size_array;
+	m_size_array = copy;
+	m_size_num = (uint8_t)num;
+	return 0;
+#else
 	ResolutionData *entry = get_resolution_data(const_cast<ResolutionData *>(size), num,
 						    m_resolution_id);
 
@@ -1175,6 +1229,7 @@ int32_t Widget::SetSize(const ResolutionData *size, uint32_t num, Timer *t, int3
 	}
 	return SetSize(math::v4(entry->m_value[0], entry->m_value[1], entry->m_value[2], 0.0f), t, id,
 		       opt, delay, cb_fin, usrdata);
+#endif
 }
 
 /* its world matrix turns it about one of the axes asked by more than the limit: either of the two
@@ -1319,6 +1374,61 @@ int32_t Widget::SetPos(const math::v4 &pos, Timer *t, int32_t id, int32_t opt, f
 int32_t Widget::SetPos(const ResolutionData *pos, uint32_t num, Timer *t, int32_t id,
 		       int32_t opt, float delay, AnimCB cb_fin, void *usrdata)
 {
+#ifdef PAF_BUILD_2014
+	if ((m_drag_state[0] != NULL && (m_drag_mode & 0xFFFF00) != 0 &&
+	     (m_drag_mode & 0xFFFF00) != 0x100000) ||
+	    pos == NULL) {
+		if (t != NULL)
+			delete t;
+		return -1;
+	}
+	if (t != NULL) {
+		math::v4 cur = GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+		ResolutionData *copy = (ResolutionData *)operator new[](16 * num);
+
+		sce_paf_memcpy(copy, pos, 16 * num);
+		AnimListener *listener = new AnimListenerV4Resolution(
+			t, this, cur, cur, &AnimListener::s_prop_move, copy, (uint16_t)num, cb_fin,
+			usrdata);
+
+		if ((id & 0xFF0000) != 0)
+			id = (id & 0xFF000000) | ANIM_MOVE;
+		SetAnimListener_withDelay(id, listener, delay, opt);
+		return 0;
+	}
+	if (m_env != NULL) {
+		SceneResolution *res = m_env->FindResolution(
+			m_env->m_resolutions, m_env->m_resolution_num, m_resolution_id);
+
+		if (res != NULL && num != 0) {
+			const ResolutionData *entry = NULL;
+
+			for (uint32_t i = 0; i < num; i++) {
+				if (pos[i].m_id == res->m_id || pos[i].m_id == res->m_base_id) {
+					entry = &pos[i];
+					break;
+				}
+			}
+			if (entry != NULL) {
+				int32_t ret = SetPosHermite(
+					math::v4(entry->m_value[0], entry->m_value[1],
+						 entry->m_value[2], 0.0f),
+					NULL, NULL, ANIM_MOVE, 0, 0.0f, NULL, NULL);
+
+				if (ret < 0)
+					return ret;
+			}
+		}
+	}
+	ResolutionData *copy = (ResolutionData *)operator new[](16 * num);
+
+	sce_paf_memcpy(copy, pos, 16 * num);
+	if (m_pos_array != NULL)
+		delete[] m_pos_array;
+	m_pos_array = copy;
+	m_pos_num = (uint8_t)num;
+	return 0;
+#else
 	ResolutionData *entry = get_resolution_data(const_cast<ResolutionData *>(pos), num,
 						    m_resolution_id);
 
@@ -1337,6 +1447,7 @@ int32_t Widget::SetPos(const ResolutionData *pos, uint32_t num, Timer *t, int32_
 	}
 	return SetPosHermite(math::v4(entry->m_value[0], entry->m_value[1], entry->m_value[2], 0.0f),
 			     NULL, t, id, opt, delay, cb_fin, usrdata);
+#endif
 }
 
 /* the nearest widget up the tree, this one included, that holds the focus of its children,
@@ -6723,17 +6834,32 @@ common::SharedPtr<inputdevice::GestureListener> ScePafWidget_5E7757AA(Widget *wi
 			      : common::SharedPtr<inputdevice::GestureListener>();
 
 	if (listener.get() == NULL) {
+#ifdef PAF_BUILD_2014
+		listener = common::SharedPtr<inputdevice::GestureListener>(
+			new MoveGestureListener(port, touch_id, widget));
+#else
 		if (port != 0)
 			listener = common::SharedPtr<inputdevice::GestureListener>(
 				new RearTapGestureListener(port, touch_id, widget));
 		else
 			listener = common::SharedPtr<inputdevice::GestureListener>(
 				new MoveGestureListener(port, touch_id, widget));
+#endif
 
 		if (!AttachTouchGesture(widget, port, touch_id, 10, listener))
 			listener = common::SharedPtr<inputdevice::GestureListener>();
 	}
 	if (listener.get() != NULL) {
+#ifdef PAF_BUILD_2014
+		MoveGestureListener *move = static_cast<MoveGestureListener *>(listener.get());
+
+		if (rect != NULL)
+			move->m_param.m_rect = *rect;
+		if ((type & 2) != 0)
+			move->m_tap_target = 2;
+		else if ((type & 1) != 0)
+			move->m_tap_target = 1;
+#else
 		if (port == 0) {
 			MoveGestureListener *move = static_cast<MoveGestureListener *>(listener.get());
 
@@ -6751,6 +6877,7 @@ common::SharedPtr<inputdevice::GestureListener> ScePafWidget_5E7757AA(Widget *wi
 			else if ((type & 1) != 0)
 				tap->m_tap_count = 1;
 		}
+#endif
 	}
 	return listener;
 }
@@ -8234,6 +8361,60 @@ void Widget::SetResolutionRot_core(const ResolutionData *rot, int32_t num)
 int32_t Widget::SetRot(const ResolutionData *rot, uint32_t num, int32_t option, Timer *t,
 		       int32_t id, int32_t opt, float delay, AnimCB cb_fin, void *usrdata)
 {
+#ifdef PAF_BUILD_2014
+	if ((m_drag_state[0] != NULL && (m_drag_mode & 0xFFFF00) != 0 &&
+	     (m_drag_mode & 0xFFFF00) != 0x100000) ||
+	    rot == NULL) {
+		if (t != NULL)
+			delete t;
+		return -1;
+	}
+	if (t != NULL) {
+		math::v4 cur = GetRot(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f), 0);
+		ResolutionData *copy = (ResolutionData *)operator new[](16 * num);
+
+		sce_paf_memcpy(copy, rot, 16 * num);
+		AnimListener *listener = new AnimListenerV4Resolution(
+			t, this, cur, cur, &AnimListener::s_prop_rot, copy, (uint16_t)num, cb_fin,
+			usrdata);
+
+		if ((id & 0xFF0000) != 0)
+			id = (id & 0xFF000000) | ANIM_ROT;
+		SetAnimListener_withDelay(id, listener, delay, opt);
+		return 0;
+	}
+	if (m_env != NULL) {
+		SceneResolution *res = m_env->FindResolution(
+			m_env->m_resolutions, m_env->m_resolution_num, m_resolution_id);
+
+		if (res != NULL && num != 0) {
+			const ResolutionData *entry = NULL;
+
+			for (uint32_t i = 0; i < num; i++) {
+				if (rot[i].m_id == res->m_id || rot[i].m_id == res->m_base_id) {
+					entry = &rot[i];
+					break;
+				}
+			}
+			if (entry != NULL) {
+				int32_t ret = SetRot(math::v4(entry->m_value[0], entry->m_value[1],
+							      entry->m_value[2], 0.0f),
+						     option, NULL, ANIM_ROT, 0, 0.0f, NULL, NULL);
+
+				if (ret < 0)
+					return ret;
+			}
+		}
+	}
+	ResolutionData *copy = (ResolutionData *)operator new[](16 * num);
+
+	sce_paf_memcpy(copy, rot, 16 * num);
+	if (m_rot_array != NULL)
+		delete[] m_rot_array;
+	m_rot_array = copy;
+	m_rot_num = (uint8_t)num;
+	return 0;
+#else
 	ResolutionData *entry = get_resolution_data(const_cast<ResolutionData *>(rot), num,
 						    m_resolution_id);
 
@@ -8252,6 +8433,7 @@ int32_t Widget::SetRot(const ResolutionData *rot, uint32_t num, int32_t option, 
 	}
 	return SetRot(math::v4(entry->m_value[0], entry->m_value[1], entry->m_value[2], 0.0f), option,
 		      t, id, opt, delay, cb_fin, usrdata);
+#endif
 }
 
 void Widget::Update()

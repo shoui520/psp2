@@ -14,6 +14,9 @@
 #include <math/rect.h>
 #include <widget/core/animlistener.h>
 #include <widget/core/widget.h>
+#ifdef PAF_BUILD_2014
+#include <widget/core/environment.h>
+#endif
 
 namespace paf {
 
@@ -89,7 +92,21 @@ public:
 	}
 
 	/* the screen's sizes taken over again, the distance kept (0x810e47a2) */
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) void UpdateScreenSize(Timer *t)
+	{
+		if (m_screen != NULL) {
+			math::rect sp = m_screen->sp;
+			math::rect vp = m_screen->vp;
+
+			m_view_width = vp.width();
+			m_view_height = vp.height();
+			SetScreenSize(t, sp.width(), sp.height(), -1.0f);
+		}
+	}
+#else
 	void UpdateScreenSize(Timer *t);
+#endif
 	/* the screen size and the distance, or with no distance the one the field of view
 	   gives; the camera moved to it (0x810e46a4) */
 	void SetScreenSize(Timer *t, float width, float height, float distance);
@@ -115,7 +132,11 @@ public:
 
 	/* the scissor and the clip stacks popped (0x810e543c, 0x810e5564) */
 	static const math::rect &PopScissor();
+#ifdef PAF_BUILD_2014
+	inline static const math::rect &PopClip();
+#else
 	static const math::rect &PopClip();
+#endif
 
 	/* the scissor set on the surface */
 	static void DrawScissor(const DrawScissorArg &arg);

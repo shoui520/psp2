@@ -140,7 +140,11 @@ int32_t HttpFile::DeleteReader()
 	return 0;
 }
 
+#ifdef PAF_BUILD_2014
+static inline __attribute__((always_inline)) int32_t HttpFileResponseCodeToError(uint16_t code)
+#else
 int32_t HttpFileResponseCodeToError(uint16_t code)
+#endif
 {
 	if (code <= 99) {
 		/* not a status code */

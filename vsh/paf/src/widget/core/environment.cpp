@@ -2219,6 +2219,7 @@ int32_t Environment::RequestTerm()
 }
 
 
+#ifndef PAF_BUILD_2014
 int32_t Environment::SetScreen(Screen *screen)
 {
 	Screen *old = m_screen;
@@ -2230,6 +2231,7 @@ int32_t Environment::SetScreen(Screen *screen)
 		screen->is_auto_delete = false;
 	return 0;
 }
+#endif
 
 #ifdef PAF_BUILD_2014
 void Environment::OnUpdateTouchDeviceRegion()

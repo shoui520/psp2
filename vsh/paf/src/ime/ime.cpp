@@ -729,7 +729,12 @@ int32_t sceImeVshOpen(void **ime, const SceImeVshParam *param)
 }
 
 /* passes an event of the service to the caller's handler */
+#ifdef PAF_BUILD_2014
+static inline __attribute__((always_inline)) void imeVshDispatchEvent(ImeVshContext *ctx,
+								      ImeVshServiceEvent *e)
+#else
 static void imeVshDispatchEvent(ImeVshContext *ctx, ImeVshServiceEvent *e)
+#endif
 {
 	SceImeVshEvent event;
 	wchar_t filtered[IME_VSH_MAX_FILTERED_LENGTH + 32];

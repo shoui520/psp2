@@ -203,7 +203,11 @@ public:
 	static float DoFuncQuintOut(float rate);
 	static float DoFuncQuintInOut(float rate);
 	static float DoFuncSineIn(float rate);
+#ifdef PAF_BUILD_2014
+	inline static float DoFuncSineOut(float rate);
+#else
 	static float DoFuncSineOut(float rate);
+#endif
 	static float DoFuncSineInOut(float rate);
 	static float DoFuncExpoIn(float rate);
 	static float DoFuncExpoOut(float rate);
@@ -221,7 +225,11 @@ public:
 	static float DoFuncBounceOut(float rate);
 	static float DoFuncBounceInOut(float rate);
 	static float DoFuncCustomExpoIn(float rate, const float *param);
+#ifdef PAF_BUILD_2014
+	inline static float DoFuncCustomExpoOut(float rate, const float *param);
+#else
 	static float DoFuncCustomExpoOut(float rate, const float *param);
+#endif
 	static float DoFuncCustomExpoInOut(float rate, const float *param);
 	static float DoFuncCustomExpoOutIn(float rate, const float *param);
 	static float DoFuncCustomParabolicIn(float rate, const float *param);
@@ -262,6 +270,9 @@ private:
 
 class Timer2D : public Timer {
 public:
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline))
+#endif
 	Timer2D(float total, int func_x, int func_y, int repeat, int repeat_count,
 		const float *param_x, const float *param_y)
 		: Timer(total, func_x, repeat, repeat_count, param_x)

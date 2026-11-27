@@ -802,7 +802,11 @@ void ButtonBase::UpdateButtonState(bool enabled)
 	}
 }
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) void ButtonBase::Enable(bool immediate)
+#else
 void ButtonBase::Enable(bool immediate)
+#endif
 {
 	if (!m_enable) {
 		m_enable = true;
@@ -812,7 +816,11 @@ void ButtonBase::Enable(bool immediate)
 	}
 }
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) void ButtonBase::Disable(bool immediate)
+#else
 void ButtonBase::Disable(bool immediate)
+#endif
 {
 	if (m_enable) {
 		m_enable = false;
