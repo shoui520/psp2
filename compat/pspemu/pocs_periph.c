@@ -234,7 +234,7 @@ static __attribute__((noinline, noclone)) int pocsIrdaWaitRxDone(void)
 }
 
 /* 0x81022a4c */
-static __attribute__((noinline, noclone)) int pocsIrdaIsConnected(void)
+int pocsIrdaIsConnected(void)
 {
 	return sceKernelPollEventFlag(g_irdaEventFlag, POCS_IRDA_EVF_CONNECTED, 0U, NULL);
 }

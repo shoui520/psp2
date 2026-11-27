@@ -12,7 +12,7 @@
 #define OSK_CMD_GET_STATUS           270
 
 #define OSK_MAX_TEXT_CHARS           512
-#define OSK_SDK_VERSION_365          0x03650000U
+#define OSK_SDK_VERSION_365          PSPEMU_SDK_VERSION
 #define OSK_COMMON_DIALOG_MAGIC_BASE 0xC0D1A109U
 
 typedef struct PspOskData {

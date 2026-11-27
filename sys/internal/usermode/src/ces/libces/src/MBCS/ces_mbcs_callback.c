@@ -17,6 +17,9 @@
 /* the most bytes of a replacement character in a multi-byte character set */
 #define CES_MBC_REPLACE_MAX	4
 
+static int cesErrorCallbackMbcsToUtf8(const uint8_t *mbcs, uint32_t mbcsMax, uint32_t *mbcsLen,
+				      uint8_t *utf8buf, uint32_t utf8max, uint32_t *utf8Size,
+				      SceCesState *cbState);
 static int cesErrorCallbackMbcsToUtf16(const uint8_t *mbcs, uint32_t mbcsMax, uint32_t *mbcsLen,
 				       uint16_t *utf16buf, uint32_t utf16max, uint32_t *utf16Size,
 				       SceCesState *cbState);
@@ -114,6 +117,66 @@ static inline SceCesUtf16ToMbcsErrorCallback *cesSetupUtf16ToMbcs(uint32_t opera
 	if (operation == SCE_CES_ERR_OPERATION_OK)
 		return sceCesCallbackUtf16ToMbcsErrorSkip;
 	return NULL;
+}
+
+int sceCesCallbackMbcsToUtf8ErrorSkip(const uint8_t *mbcsBuf, uint32_t mbcsMax, uint32_t *mbcsLen,
+				      uint8_t *utf8buf, uint32_t utf8max, uint32_t *utf8Size,
+				      SceCesState *cbState)
+{
+	(void)mbcsBuf;
+	(void)mbcsMax;
+	(void)mbcsLen;
+	(void)utf8buf;
+	(void)utf8max;
+	(void)utf8Size;
+	cbState->codeLen = 0;
+	return SCE_CES_OK;
+}
+
+static inline SceCesMbcsToUtf8ErrorCallback *cesSetupMbcsToUtf8(uint32_t operation,
+								SceCesMbcsToUcsErrorCallback **sub)
+{
+	if (operation == SCE_CES_ERR_OPERATION_REPLACE) {
+		*sub = sceCesCallbackMbcsToUcsErrorReplace;
+		return cesErrorCallbackMbcsToUtf8;
+	}
+	*sub = NULL;
+	if (operation == SCE_CES_ERR_OPERATION_SKIP)
+		return sceCesCallbackMbcsToUtf8ErrorSkip;
+	if (operation == SCE_CES_ERR_OPERATION_OK)
+		return sceCesCallbackMbcsToUtf8ErrorSkip;
+	return NULL;
+}
+
+void _sceCesSetupMbcsToUtf8ErrorCallbacks(uint32_t operation,
+					  SceCesMbcsToUtf8ErrorCallbacks *callbacks,
+					  SceCesMbcsToUcsErrorCallbacks *subCallbacks)
+{
+	callbacks->InvalidEncode = cesSetupMbcsToUtf8(CES_ERR_INVALID_ENCODE(operation),
+						      &subCallbacks->InvalidEncode);
+	callbacks->UnassignedCode = cesSetupMbcsToUtf8(CES_ERR_UNASSIGNED_CODE(operation),
+						       &subCallbacks->UnassignedCode);
+}
+
+static int cesErrorCallbackMbcsToUtf8(const uint8_t *mbcs, uint32_t mbcsMax, uint32_t *mbcsLen,
+				      uint8_t *utf8buf, uint32_t utf8max, uint32_t *utf8Size,
+				      SceCesState *cbState)
+{
+	int ret = cbState->returnValue;
+	SceCesMbcsToUcsErrorCallback *callback = cbState->callback;
+
+	if (callback != NULL) {
+		uint32_t ucs;
+		uint32_t size = 0;
+
+		ret = callback(mbcs, mbcsMax, mbcsLen, &ucs, 1, &size, cbState);
+		if (ret == SCE_CES_OK && size != 0 && utf8buf != NULL) {
+			ret = sceCesUcs4ToUtf8(ucs, utf8buf, utf8max, utf8Size);
+			if (ret == SCE_CES_ERROR_ILLEGAL_CODE)
+				ret = SCE_CES_OK;
+		}
+	}
+	return ret;
 }
 
 void _sceCesSetupMbcsToUtf16ErrorCallbacks(uint32_t operation,

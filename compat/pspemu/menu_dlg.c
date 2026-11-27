@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define MENU_COMMON_DIALOG_SDK_VERSION  0x03650000U
+#define MENU_COMMON_DIALOG_SDK_VERSION  PSPEMU_SDK_VERSION
 #define MENU_COMMON_DIALOG_MAGIC_BASE   0xC0D1A109U
 #define MENU_ERR_BUSY_DIALOG            ((int)0x80020401)
 #define MENU_ERR_DIALOG_ABORTED         ((int)0x80010089)
@@ -169,7 +169,7 @@ static int menuDlgImportVmcEntry(unsigned int dstSlot, const void *entryName)
 
 	if (dstSlot > 1U)
 		return PSPEMU_ERROR_INVALID_ARG;
-	if (vmcManagerFlushAndVerify(dstSlot) < 0)
+	if (vmcLoadCardCache(dstSlot) < 0)
 		return MENU_ERR_IO;
 
 	ret = vmcManagerCopyEntry(dstSlot, 2U, entryName);
@@ -209,7 +209,7 @@ static int menuDlgDeleteVmcEntry(unsigned int slot, const void *entryName)
 
 	if (slot > 1U)
 		return PSPEMU_ERROR_INVALID_ARG;
-	if (vmcManagerFlushAndVerify(slot) < 0)
+	if (vmcLoadCardCache(slot) < 0)
 		return MENU_ERR_IO;
 
 	ret = vmcManagerDeleteEntry(slot, entryName);
@@ -333,7 +333,7 @@ static SceBool menuDlgCheckPocsEntry(int slot, const char *entryName)
 		return SCE_FALSE;
 	if (remotePocsHasMountedMedia() == 0)
 		return SCE_FALSE;
-	if (vmcManagerFlushAndVerify(0U) < 0)
+	if (vmcLoadCardCache(0U) < 0)
 		return SCE_FALSE;
 
 	entryIdx = vmcManagerFindEntryIndex(0U, entryName);
@@ -528,7 +528,7 @@ int pspemuMenuImportVmcPreviewEntries(int entryCount)
 
 	for (i = 0; i < entryCount; i++) {
 		if (g_menuVmcPreview[i].header[82] != 'M' &&
-		    vmcManagerFlushAndVerify(0U) >= 0) {
+		    vmcLoadCardCache(0U) >= 0) {
 			vmcManagerCopyEntry(0U, 2U, g_menuVmcPreview[i].entryName);
 		}
 	}

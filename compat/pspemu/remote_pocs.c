@@ -28,7 +28,7 @@
 #define POCS_ERR_IO                     ((int)0x80010005)
 #define POCS_ERR_INVALID_ARG            ((int)0x80010016)
 
-#define POCS_DIALOG_SDK_VERSION         0x03650000U
+#define POCS_DIALOG_SDK_VERSION         PSPEMU_SDK_VERSION
 #define POCS_DIALOG_MAGIC_BASE          0xC0D1A109U
 
 typedef struct PocsKermitRequest {
@@ -150,7 +150,7 @@ extern int swprintf(uint16_t *dst, size_t maxLen, const uint16_t *fmt, ...);
 static int pocsSaveMcxFile(int skipDiskWrite);
 static int pocsSignAndSaveMcx(int skipDiskWrite);
 static SceUID pocsLoadMcxFile(void);
-static int pocsResetAllHardware(void);
+static int __attribute__((noinline, noclone)) pocsResetAllHardware(void);
 
 /* 0x81022730 */
 void remotePocsKermitThread(SceSize args, void *argp)
@@ -305,7 +305,7 @@ static int pocsSwapVmcBuffer(void)
 }
 
 /* 0x81029108 */
-static int pocsAdhocClearPeer(void)
+static int __attribute__((noinline, noclone)) pocsAdhocClearPeer(void)
 {
 	int ret;
 
@@ -566,7 +566,7 @@ int pocsSpiExchangeWrapper(int portMode, uint8_t txByte)
 }
 
 /* 0x810296b8 */
-static int pocsResetAllHardware(void)
+static int __attribute__((noinline, noclone)) pocsResetAllHardware(void)
 {
 	pocsCpuReset();
 	pocsSysReset();

@@ -33,6 +33,12 @@
 #include <scejpeg.h>
 #include <scejpegenc.h>
 #include <rtc.h>
+
+#if FW_VERSION < 0x03650000
+#define PSPEMU_SDK_VERSION  0x03600000U
+#else
+#define PSPEMU_SDK_VERSION  0x03650000U
+#endif
 #include <net.h>
 #include <libnetctl.h>
 #include <libnet/netinternal.h>
@@ -1125,7 +1131,7 @@ int pspemuBgImageInit(void);
 
 /* remote_pocs.c & pocs_rtc_audio.c & pocs_periph.c & pocs_gxm.c */
 int remotePocsInit(void);
-int remotePocsPollPowerKeepAlive(void);
+int pocsIrdaIsConnected(void);
 void remotePocsKermitThread(SceSize args, void *argp);
 int remotePocsSetEmulationActive(int active);
 void remotePocsNotifyDisplayReset(void);
@@ -1173,8 +1179,6 @@ SceBool popsHostIsOverlayActive(void);
 int popsHostHandlePeripheralCmd(uint32_t cmd, uint32_t arg);
 void *popsHostGetVmcBuffer(unsigned int slot);
 int popsHostReloadVmc(unsigned int slot);
-int popsHostSetDisplayMode(int pocsMode);
-int popsHostSuspend(void);
 int popsHostSetCdramOffset(int offset);
 int popsHostInit(void);
 int popsHostInitForTitle(const char *titleId);
@@ -1192,7 +1196,6 @@ uint32_t popsHostMapButtons(uint32_t buttons);
 uint32_t popsHostGetAnalogButtonMask(int index);
 int popsHostGetPocsBgType(void);
 int popsHostSetPocsBgType(uint8_t bgType);
-int popsHostIsPocsOverlayEnabled(void);
 
 /* vmc_manager.c */
 int vmcLoadCardCache(unsigned int cardIndex);

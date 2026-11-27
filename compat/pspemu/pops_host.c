@@ -18,7 +18,7 @@
 #define POPS_MENUINFO_VERSION       5U
 #define POPS_ERR_IO                 ((int)0x80010005)
 #define POPS_ERR_NO_GUEST           ((int)0x80000001)
-#define POPS_APP_STATE_SDK_VERSION  0x03650000U
+#define POPS_APP_STATE_SDK_VERSION  PSPEMU_SDK_VERSION
 
 typedef struct PopsScaleEntry {
 	uint32_t scaleX;
@@ -1106,13 +1106,11 @@ uint8_t popsHostSetPocsAutoBoot(uint8_t enabled)
 	return enabled;
 }
 
-static inline int16_t popsSaturateSample(int32_t sample)
+static inline int32_t popsSaturateHalfSample(int32_t sample)
 {
-	if (sample > 32767)
-		return 32767;
-	if (sample < -32768)
-		return -32768;
-	return (int16_t)sample;
+	int32_t result;
+	__asm__("ssat %0, #16, %1, asr #1" : "=r"(result) : "r"(sample));
+	return result;
 }
 
 /* 0x81030560 */
@@ -1136,29 +1134,30 @@ static int popsAudioOutThread(SceSize args, void *argp)
 		uint32_t *outBuf = g_popsAudioRingBuf[bufToggle];
 		uint32_t startUs = sceKernelGetProcessTimeLow();
 		int spuFlags = g_popsSpuAudioFlags;
-		int sampleIdx;
+		int sampleIdx = 0;
+		uint32_t *dst = outBuf;
+		uint32_t *end = outBuf + 512;
 
-		for (sampleIdx = 0; sampleIdx < 512; sampleIdx++) {
+		do {
 			uint32_t packed = 0U;
 
 			if (guest->audioPaused == 0U) {
 				uint32_t rawSample = popsSpuMixSample();
-				int32_t left = (gain * (int16_t)(rawSample & 0xFFFFU)) >> 1;
-				int32_t right = (gain * (int16_t)(rawSample >> 16)) >> 1;
-				packed = (uint32_t)(uint16_t)popsSaturateSample(left) |
-				         ((uint32_t)(uint16_t)popsSaturateSample(right) << 16);
+				int32_t left = popsSaturateHalfSample(gain * (int16_t)(rawSample & 0xFFFFU));
+				int32_t right = popsSaturateHalfSample(gain * (int16_t)((int32_t)rawSample >> 16));
+				packed = (uint32_t)(uint16_t)left | ((uint32_t)right << 16);
 			}
-			outBuf[sampleIdx] = packed;
+			*dst++ = packed;
 
-			if (spuFlags != 0 &&
-			    ((sampleIdx == 256) ? (sampleIdx <= 256) : (spuFlags <= 2))) {
+			if (spuFlags != 0 && (sampleIdx == 256 || spuFlags <= 2)) {
 				int32_t waitUs = (int32_t)(startUs + (uint32_t)(10000 * sampleIdx) / 441U -
 				                           sceKernelGetProcessTimeLow());
 				if (waitUs > 1100)
 					sceKernelDelayThread((SceUInt)(waitUs - 1000));
 				spuFlags = g_popsSpuAudioFlags;
 			}
-		}
+			sampleIdx++;
+		} while (dst != end);
 
 		bufToggle ^= 1;
 		sceAudioOutOutput(port, outBuf);

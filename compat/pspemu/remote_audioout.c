@@ -309,8 +309,8 @@ static int audioOutChOneIntrThread(SceSize args, void *argp)
 			if (sceKernelUnlockLwMutex(&g_audioOutputMutex, 1) < 0)
 				break;
 
-			int64_t denom = (int64_t)(uint32_t)(sampleRate << 6);
-			int64_t frameDuration = ((int64_t)((uint64_t)periodUs * (uint64_t)sampleCount) * AUDIOOUT_SAMPLE_RATE) / denom;
+			uint64_t denom = (uint64_t)(uint32_t)(sampleRate << 6);
+			uint64_t frameDuration = ((uint64_t)periodUs * (uint64_t)sampleCount * (uint64_t)AUDIOOUT_SAMPLE_RATE) / denom;
 			SceUInt64 targetTime;
 
 			if (prevTargetTime >= reqTime || prevDuration >= reqTime - prevTargetTime) {
@@ -318,14 +318,14 @@ static int audioOutChOneIntrThread(SceSize args, void *argp)
 					accumSamples += (uint64_t)sampleCount;
 					tickCount++;
 					if ((tickCount & 0x1FFU) != 0) {
-						targetTime = prevTargetTime + (uint64_t)frameDuration;
+						targetTime = prevTargetTime + frameDuration;
 					} else {
 						if (anchorTime == 0)
 							break;
 						tickCount = 0;
-						int64_t scaled = (int64_t)(period512Us * (uint64_t)AUDIOOUT_SAMPLE_RATE * accumSamples);
+						uint64_t scaled = period512Us * (uint64_t)AUDIOOUT_SAMPLE_RATE * accumSamples;
 						accumSamples = 0;
-						baseTime += (uint64_t)(scaled / denom) >> 9;
+						baseTime += (scaled / denom) >> 9;
 						targetTime = baseTime;
 					}
 				} else {

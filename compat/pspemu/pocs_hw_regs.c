@@ -86,7 +86,7 @@ static int pocsPokejimaPromptConnect(void)
 	int alertAction = 0;
 	int32_t connResult = 0;
 
-	if (remotePocsPollPowerKeepAlive() != 0 &&
+	if (pocsIrdaIsConnected() != 0 &&
 	    pspemuBgDialogShowAlert(&alertAction) >= 0 && alertAction == 3) {
 		pspemuMenuSetImeDeadline(sceKernelGetProcessTimeWide());
 		if (remotePocsRunConnectDialog(&connResult) == 0 && connResult == 0)
@@ -154,7 +154,7 @@ uint32_t pocsPokejimaHandleUndefTrap(uint32_t nextPc)
 			g_pocsState.internalRam[POCS_RAM_POKEJIMA_RESULT_A] = 0U;
 			g_pocsState.internalRam[POCS_RAM_POKEJIMA_STATE_A] = 3U;
 			pocsPokejimaPromptConnect();
-			if (remotePocsPollPowerKeepAlive() == 0) {
+			if (pocsIrdaIsConnected() == 0) {
 				uint32_t blkOff = ((uint32_t)g_pocsState.internalRam[POCS_RAM_POKEJIMA_STATE_B] + 77U) << 7;
 				g_pocsState.internalRam[POCS_RAM_POKEJIMA_RESULT_A] =
 					(uint8_t)pocsPokejimaSendChunk(0U, 0x80U, blkOff);
@@ -173,7 +173,7 @@ uint32_t pocsPokejimaHandleUndefTrap(uint32_t nextPc)
 			g_pocsState.internalRam[POCS_RAM_POKEJIMA_RESULT_A] = 0U;
 			g_pocsState.internalRam[POCS_RAM_POKEJIMA_STATE_A] = 3U;
 			pocsPokejimaPromptConnect();
-			if (remotePocsPollPowerKeepAlive() == 0) {
+			if (pocsIrdaIsConnected() == 0) {
 				timeout = POCS_POKEJIMA_WAIT_USEC;
 				if (sceKernelWaitEventFlag(g_pocsPokejimaCtx->eventFlag, 1U,
 				                           SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, NULL, &timeout) == 0) {
@@ -199,7 +199,7 @@ uint32_t pocsPokejimaHandleUndefTrap(uint32_t nextPc)
 			g_pocsState.internalRam[POCS_RAM_POKEJIMA_STATE_B] = 3U;
 			g_pocsState.internalRam[POCS_RAM_POKEJIMA_RESULT_B] = 0U;
 			pocsPokejimaPromptConnect();
-			if (remotePocsPollPowerKeepAlive() == 0 &&
+			if (pocsIrdaIsConnected() == 0 &&
 			    pocsPokejimaSendChunk(1U, 0x680U, 0x2000U) &&
 			    pocsPokejimaSendChunk(2U, 0x1D80U, 111232U) &&
 			    pocsPokejimaSendChunk(3U, 0x2000U, 118784U)) {
@@ -217,7 +217,7 @@ uint32_t pocsPokejimaHandleUndefTrap(uint32_t nextPc)
 			g_pocsState.internalRam[POCS_RAM_POKEJIMA_RESULT_B] = 0U;
 			g_pocsState.internalRam[POCS_RAM_POKEJIMA_STATE_B] = 3U;
 			pocsPokejimaPromptConnect();
-			if (remotePocsPollPowerKeepAlive() == 0) {
+			if (pocsIrdaIsConnected() == 0) {
 				timeout = POCS_POKEJIMA_WAIT_USEC;
 				if (sceKernelWaitEventFlag(g_pocsPokejimaCtx->eventFlag, 0x1EU,
 				                           SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, NULL, &timeout) == 0) {

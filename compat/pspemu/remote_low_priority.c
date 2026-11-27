@@ -174,7 +174,7 @@ static int __attribute__((noinline, noclone)) lowPrioExportPhoto(const char *pat
 	ScePhotoExportParam param;
 	uint8_t workMemory[65460];
 
-	param.version = 0x03650000U;
+	param.version = PSPEMU_SDK_VERSION;
 	param.photoTitle = (const SceChar8 *)g_lowPrioEmptyStr;
 	param.gameTitle = (const SceChar8 *)g_lowPrioEmptyStr;
 	param.gameComment = (const SceChar8 *)g_lowPrioEmptyStr;

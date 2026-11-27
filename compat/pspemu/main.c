@@ -537,7 +537,7 @@ static int suspendSC(void)
 		pspemuTriggerFatalError(res);
 
 	if (g_isPs1Mode == 1) {
-		popsHostSuspend();
+		popsHostClearPendingError();
 	} else {
 		remoteAudioOutSuspend(1);
 		remoteNetSuspend();
@@ -1792,7 +1792,7 @@ int sceCompatMain(SceSize argLen, void *argp)
 		}
 
 		if (remotePocsIsActive() == 1) {
-			if (remotePocsPollPowerKeepAlive() == 0)
+			if (pocsIrdaIsConnected() == 0)
 				sceKernelPowerTick(SCE_KERNEL_POWER_TICK_DISABLE_AUTO_SUSPEND);
 		} else if (g_isPs1Mode != 1 || popsHostIsOverlayActive() == SCE_FALSE) {
 			sceKernelPowerTick(powerTickKind);
@@ -1835,13 +1835,13 @@ int sceCompatMain(SceSize argLen, void *argp)
 
 						if (g_isPocketStationLaunch != 0) {
 							remotePocsEnterMode();
-							popsHostSetDisplayMode(1);
+							popsHostSetPauseState(1);
 						} else {
 							remotePocsExitMode();
 							if (remotePocsHasMountedMedia() != 0)
 								popsHostReloadVmc(0);
 							remotePocsNotifyDisplayReset();
-							popsHostSetDisplayMode(0);
+							popsHostSetPauseState(0);
 						}
 					}
 					continue;
@@ -1876,7 +1876,7 @@ int sceCompatMain(SceSize argLen, void *argp)
 						if (g_isPs1Mode == 1)
 							SceCommonDialog_ED2F1495();
 					} else if (g_isPs1Mode == 1) {
-						popsHostSetDisplayMode(0);
+						popsHostSetPauseState(0);
 					} else {
 						frameBufParam.size = sizeof(frameBufParam);
 						frameBufParam.base = g_frameTempBuf;

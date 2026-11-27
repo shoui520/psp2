@@ -7,7 +7,7 @@
 
 #include <string.h>
 
-#define SETTINGS_COMMON_DIALOG_SDK_VERSION  0x03650000U
+#define SETTINGS_COMMON_DIALOG_SDK_VERSION  PSPEMU_SDK_VERSION
 #define SETTINGS_COMMON_DIALOG_MAGIC_BASE   0xC0D1A109U
 #define SETTINGS_ERR_UNSUPPORTED_MODE       ((int)0x80010086)
 
@@ -487,7 +487,7 @@ int pspemuSettingsRunPocsMenuFlow(int dialogMode)
 	if (pspemuIsPocketStationLaunch() != 0) {
 		if (pspemuSettingsIsFatalNoticeActive() == 0)
 			remotePocsSetEmulationActive(1);
-	} else if (popsHostIsPocsOverlayEnabled() != 0 &&
+	} else if (popsHostGetPocsAutoBoot() != 0 &&
 	           pspemuSettingsIsFatalNoticeActive() == 0) {
 		remotePocsSetEmulationActive(1);
 	}

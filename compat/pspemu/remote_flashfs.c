@@ -5,7 +5,11 @@
 #include "host_common.h"
 #include <string.h>
 
+#if FW_VERSION < 0x03650000
+#define FLASHFS_IMAGE_SIZE          0x00922880U
+#else
 #define FLASHFS_IMAGE_SIZE          0x00922940U
+#endif
 #define FLASHFS_MIPS_IMAGE_BASE     0x8B000000U
 #define FLASHFS_MAX_FILES           187
 #define FLASHFS_MAX_DIRS            11

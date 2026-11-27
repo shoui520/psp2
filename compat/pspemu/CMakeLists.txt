@@ -1,36 +1,27 @@
 # vs0:app/NPXS10028/eboot.bin (ScePspemu): Vita-side PSP & PocketStation emulator
 # Built by Sony with GCC 4.8.3 (Thumb-2 + NEON).
-include("${PSP2_SRC}/vsh/paf/src/misc/zlib/zlib.cmake")
-psp2_paf_zlib(pspemu_zlib)
+include("${PSP2_SRC}/sys/internal/kernel/src/post_ss_mgr/zlib/zlib.cmake")
+psp2_zlib_sce(pspemu_zlib)
 include("${PSP2_SRC}/toolchains/libgcc/lib1funcs.cmake")
 
 set(pspemu_ces "${PSP2_SRC}/sys/internal/usermode/src/ces/libces/src")
 set(pspemu_ces_SOURCES
 	${pspemu_ces}/ces_context.c
-	${pspemu_ces}/UCS/ces_ucs_context.c
-	${pspemu_ces}/UCS/ces_ucs_callback.c
-	${pspemu_ces}/UCS/Str_UTF8_UTF16.c
-	${pspemu_ces}/UCS/Str_UTF16_UTF8.c
-	${pspemu_ces}/UCS/UTF16_UTF8.c
 	${pspemu_ces}/UCS/UTF8.c
-	${pspemu_ces}/UCS/UTF16.c
 	${pspemu_ces}/MBCS/ces_mbcs_context.c
 	${pspemu_ces}/MBCS/ces_mbcs_callback.c
 	${pspemu_ces}/MBCS/MbcsCtx_Ucs.c
-	${pspemu_ces}/MBCS/MbcsStr_ToUTF16.c
-	${pspemu_ces}/MBCS/MbcsStr_FromUTF16.c
-	${pspemu_ces}/MBCS/Mbcs_ToUTF16.c
+	${pspemu_ces}/MBCS/MbcsStr_ToUTF8.c
+	${pspemu_ces}/MBCS/Mbcs_ToUTF8.c
 	${pspemu_ces}/MBCS/Mbcs_ToUCS4.c
 	${pspemu_ces}/MBCS/Mbcs_FromUCS4.c
 	${pspemu_ces}/MBCS/Mbcs_FromUTF32.c
 	${pspemu_ces}/SBCS/ces_sbcs_profile.c
 	${pspemu_ces}/SBCS/Sbc_UCS.c
 	${pspemu_ces}/SBCS/ISO_646/ASCII.c
-	${pspemu_ces}/DBCS/DBCS.c
 	${pspemu_ces}/JIS/JisProfile_SJis1997_CP932.c
 	${pspemu_ces}/JIS/SJis_ToUCS.c
 	${pspemu_ces}/JIS/SJis_FromUCS.c
-	${pspemu_ces}/JIS/SJis_FromUTF16.c
 	${pspemu_ces}/JIS/ShiftJIS.c
 	${pspemu_ces}/JIS/JisMenKuTen.c
 	${pspemu_ces}/JIS/Jis_FromUCS.c
@@ -44,7 +35,7 @@ set(pspemu_ces_SOURCES
 	${pspemu_ces}/JIS/jis2004_row16_84.c
 )
 
-psp2_module(vs0_app_NPXS10028_eboot KIND user COMPILER gcc48 PARTIAL SOURCES
+psp2_module(vs0_app_NPXS10028_eboot KIND user COMPILER gcc48 SOURCES
 	crt0.c
 	lzrc.c
 	main.c
@@ -96,25 +87,27 @@ psp2_module(vs0_app_NPXS10028_eboot KIND user COMPILER gcc48 PARTIAL SOURCES
 	${pspemu_ces_SOURCES}
 	${PSP2_SRC}/sys/sdk/target/src/sha1/libsha1.c
 	${PSP2_SRC}/sys/internal/kernel/src/sysmem/sha1_transform.S
-	${PSP2_SRC}/contrib/zlib-1.2.5/deflate.c
-	${PSP2_SRC}/contrib/zlib-1.2.5/trees.c
+	${pspemu_zlib_INCLUDE}/deflate.c
+	${pspemu_zlib_INCLUDE}/trees.c
+	${pspemu_zlib_INCLUDE}/zutil.c
 	${PSP2_SRC}/sys/sdk/target/src/md5/libmd5.c
 	${PSP2_SRC}/sys/sdk/target/src/md5/md5.S
 	${PSP2_SRC}/sys/sdk/target/src/deflt/crc.S
+	${PSP2_SRC}/sys/sdk/target/src/deflt/vadler.S
 	${PSP2_SRC}/sys/sdk/target/src/deflt/zlibhdr.c
 	${PSP2_SRC}/sys/sdk/target/src/deflt/deflate.S
 	${PSP2_SRC}/sys/sdk/target/src/deflt/deflate2.S
 	${PSP2_SRC}/sys/sdk/target/src/deflt/deflate_common.c
-	${PSP2_SRC}/sys/sdk/target/src/libSceSblSsUpdateMgr_stub/update_mgr_stub.c
+	update_mgr_stub.c
 	${PSP2_SRC}/sys/sdk/target/src/sha256/libsha256.c
 	${PSP2_SRC}/sys/sdk/target/src/sha256/sha256.S
 	${PSP2_SRC}/sys/sdk/target/src/aes/libaes.c
 	${PSP2_SRC}/sys/sdk/target/src/aes/aes.S
 	${PSP2_SRC}/toolchains/libgcc/udiv_weak.S
 	${PSP2_SRC}/toolchains/libgcc/idiv_weak.S
-	${PSP2_SRC}/toolchains/libgcc/ldivmod.S
 	${PSP2_SRC}/toolchains/libgcc/uldivmod.S
-	${PSP2_SRC}/toolchains/libgcc/udiv64_gnu.c
+	${PSP2_SRC}/toolchains/libgcc/uldivmod64.c
+	${PSP2_SRC}/toolchains/libgcc/udiv64.c
 )
 
 if(TARGET vs0_app_NPXS10028_eboot)
@@ -186,6 +179,10 @@ set_source_files_properties(
 	PROPERTIES COMPILE_OPTIONS "-fno-stack-protector;-fno-toplevel-reorder;-ffunction-sections;-Wno-error=implicit-function-declaration")
 
 set_source_files_properties(
+	${pspemu_ces}/UCS/UTF8.c
+	PROPERTIES COMPILE_OPTIONS "-fno-stack-protector;-fno-toplevel-reorder;-ffunction-sections;-finline-functions;-Wno-error=implicit-function-declaration")
+
+set_source_files_properties(
 	crt0.c
 	lzrc.c
 	net_config.c
@@ -195,16 +192,23 @@ set_source_files_properties(
 	${PSP2_SRC}/sys/sdk/target/src/md5/libmd5.c
 	${PSP2_SRC}/sys/sdk/target/src/sha256/libsha256.c
 	${PSP2_SRC}/sys/sdk/target/src/aes/libaes.c
-	${PSP2_SRC}/sys/sdk/target/src/libSceSblSsUpdateMgr_stub/update_mgr_stub.c
+	update_mgr_stub.c
 	PROPERTIES COMPILE_OPTIONS "-fno-stack-protector;-fno-toplevel-reorder;-ffunction-sections")
 
 set_source_files_properties(
-	${PSP2_SRC}/contrib/zlib-1.2.5/deflate.c
-	${PSP2_SRC}/contrib/zlib-1.2.5/trees.c
+	${pspemu_zlib_INCLUDE}/deflate.c
+	${pspemu_zlib_INCLUDE}/trees.c
 	PROPERTIES COMPILE_OPTIONS "-fno-stack-protector;-ffunction-sections")
 
 set_source_files_properties(
-	${PSP2_SRC}/toolchains/libgcc/udiv64_gnu.c
+	${pspemu_zlib_INCLUDE}/zutil.c
+	PROPERTIES
+	COMPILE_DEFINITIONS "MY_ZCALLOC"
+	COMPILE_OPTIONS "-fno-stack-protector;-ffunction-sections")
+
+set_source_files_properties(
+	${PSP2_SRC}/toolchains/libgcc/uldivmod64.c
+	${PSP2_SRC}/toolchains/libgcc/udiv64.c
 	PROPERTIES
 	COMPILE_DEFINITIONS "IN_LIBGCC2"
 	COMPILE_OPTIONS "-fno-stack-protector;-fbuilding-libgcc"

@@ -22,6 +22,8 @@
 #define MSFS_IOCTL_SET_DIR_FILTER   0x02415050U
 #define MSFS_MIN_FREE_SPACE_MARGIN  0x001A8000ULL
 
+int g_compatMsfsSeekFlag;
+
 typedef struct MsfsWriteTrack {
 	SceUID fd;
 	int    hasWritten;
@@ -355,8 +357,8 @@ static int msfsDevctl(const char *dev, unsigned int cmd, void *inData, SceSize i
 
 	MsfsDevctlInfo *outInfo = (MsfsDevctlInfo *)outData;
 	uint32_t clusterSize = (uint32_t)devInfo.clusterSize;
-	outInfo->maxClusters = (uint32_t)(devInfo.maxSize / (SceOff)clusterSize);
-	uint32_t freeClusters = (uint32_t)(devInfo.freeSize / (SceOff)clusterSize);
+	outInfo->maxClusters = (uint32_t)((uint64_t)devInfo.maxSize / (uint64_t)clusterSize);
+	uint32_t freeClusters = (uint32_t)((uint64_t)devInfo.freeSize / (uint64_t)clusterSize);
 	outInfo->freeClusters = freeClusters;
 	outInfo->freeClustersCopy = freeClusters;
 	outInfo->sectorSize = 512U;
@@ -1638,10 +1640,10 @@ int remoteMsfsParseAppParam(char *discId, uint32_t *parentalLevel, char *gamedat
 	char mountPoint[16];
 	char category[4];
 
-	strcpy(g_msfsPbootSuffix, "/PBOOT.PBP");
-	strcpy(g_msfsEbootSuffix, "/EBOOT.PBP");
-	strcpy(g_msfsHiddenEbootName, "/__sce_ebootpbp");
-	strcpy(g_msfsHiddenMenuInfoName, "/__sce_menuinfo");
+	memcpy(g_msfsPbootSuffix, "/PBOOT.PBP", sizeof("/PBOOT.PBP"));
+	memcpy(g_msfsEbootSuffix, "/EBOOT.PBP", sizeof("/EBOOT.PBP"));
+	memcpy(g_msfsHiddenEbootName, "/__sce_ebootpbp", sizeof("/__sce_ebootpbp"));
+	memcpy(g_msfsHiddenMenuInfoName, "/__sce_menuinfo", sizeof("/__sce_menuinfo"));
 	g_msfsRootPrefix[0] = '\0';
 
 	int ret = sceAppMgrGetAppParam(g_msfsAppParamBuf);
@@ -1807,11 +1809,11 @@ int remoteMsfsInit(void)
 			return ret;
 	}
 
-	strcpy(g_msfsOldTempDirPath, "ms0:pspemu_temp");
+	memcpy(g_msfsOldTempDirPath, "ms0:pspemu_temp", sizeof("ms0:pspemu_temp"));
 	msfsRemoveDirectoryContents(g_msfsOldTempDirPath);
 	sceIoRmdir(g_msfsOldTempDirPath);
 
-	strcpy(g_msfsTempDirPath, "ux0:temp/pspemu");
+	memcpy(g_msfsTempDirPath, "ux0:temp/pspemu", sizeof("ux0:temp/pspemu"));
 	if (sceIoMkdir(g_msfsTempDirPath, msfsPspModeToVitaMode(0666)) == PSPEMU_ERROR_ALREADY_EXISTS) {
 		for (int i = 0; i < MSFS_MAX_WRITE_TRACKED; i++) {
 			snprintf(g_msfsWriteLogPath, sizeof(g_msfsWriteLogPath), "%s/w%02d.bin", g_msfsTempDirPath, i);
@@ -1904,9 +1906,11 @@ static int __attribute__((noinline, noclone)) msfsDirFilterMatch(SceUID dfd, con
 	int starActive = 0;
 	int starPatIdx = -1;
 
+	extern const short *_Touptab;
+
 	for (;;) {
-		char patCh = (char)toupper((int)pattern[patIdx]);
-		char nameCh = (char)toupper((int)name[nameIdx]);
+		char patCh = (char)_Touptab[(unsigned char)pattern[patIdx]];
+		char nameCh = (char)_Touptab[(unsigned char)name[nameIdx]];
 
 		if (patCh == '*') {
 			patIdx++;
