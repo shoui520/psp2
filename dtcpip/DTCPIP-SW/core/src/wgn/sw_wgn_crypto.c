@@ -1065,7 +1065,7 @@ void swKmGetNextNc(struct SwKeyPool *pool, unsigned char *outNc)
 	swUnlockMtx(&pool->mutex);
 }
 
-static int swEemiToKeyIdx(unsigned char eemi)
+static __inline int swEemiToKeyIdx(unsigned char eemi)
 {
 	switch (eemi) {
 	case 0x0Cu:

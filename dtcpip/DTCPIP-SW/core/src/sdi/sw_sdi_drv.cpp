@@ -77,12 +77,13 @@ int SwDrv::drvOpen(const char *path)
 int SwDrv::isStreamIoctl(unsigned int cmd)
 {
 	switch (cmd) {
-	case 0x8004C619u:
-	case 0x800CC618u:
-	case 0xC001C616u:
-	case 0xC050C617u:
-	case 0xC098C615u:
-	case 0xC4B0C614u:
+	case 0x80047819u:
+	case 0x8004781Au:
+	case 0x800C7818u:
+	case 0xC0017816u:
+	case 0xC0507817u:
+	case 0xC0987815u:
+	case 0xC4B07814u:
 		return 0;
 	default:
 		return 1;
@@ -99,7 +100,7 @@ int SwDrv::drvIoctl(int fd, unsigned int cmd, void *arg, unsigned int size)
 	isStreamIoctl(cmd);
 	int ret = swIoctl(fd, cmd, arg, size);
 	if (ret != 0) {
-		if (cmd == 0xC008C585u) {
+		if (cmd == 0xC0087885u) {
 			if (ret == 15)
 				mapped = 1005;
 			else if (ret == 4)
@@ -175,7 +176,7 @@ int SwDrv::reset()
 	open();
 	if (m_fd == -1)
 		return 1;
-	return drvIoctl(m_fd, 0x2000C600u, NULL, 0);
+	return drvIoctl(m_fd, 0x20007800u, NULL, 0);
 }
 
 int SwDrv::setParamA(void *buf, unsigned int size)
@@ -184,7 +185,7 @@ int SwDrv::setParamA(void *buf, unsigned int size)
 		return 5;
 	if (!isOpen())
 		return 13;
-	return drvIoctl(m_fd, 0x8020C601u, buf, size);
+	return drvIoctl(m_fd, 0x80207801u, buf, size);
 }
 
 int SwDrv::setParamB(void *buf, unsigned int size)
@@ -193,7 +194,7 @@ int SwDrv::setParamB(void *buf, unsigned int size)
 		return 5;
 	if (!isOpen())
 		return 13;
-	return drvIoctl(m_fd, 0x8008C602u, buf, size);
+	return drvIoctl(m_fd, 0x80087802u, buf, size);
 }
 
 int SwDrv::getParamB(void *buf, unsigned int size)
@@ -202,7 +203,7 @@ int SwDrv::getParamB(void *buf, unsigned int size)
 		return 5;
 	if (!isOpen())
 		return 13;
-	return drvIoctl(m_fd, 0xC008C585u, buf, size);
+	return drvIoctl(m_fd, 0xC0087885u, buf, size);
 }
 
 int SwDrv::getInfo(uint8_t kind, void *outBuf, uint32_t *outSize)
@@ -220,7 +221,7 @@ int SwDrv::getInfo(uint8_t kind, void *outBuf, uint32_t *outSize)
 	req.kind = kind;
 	req.len = 0;
 
-	int ret = drvIoctl(m_fd, 0xC008C586u, &req, sizeof(req));
+	int ret = drvIoctl(m_fd, 0xC0087886u, &req, sizeof(req));
 	if (ret == 0) {
 		memcpy(outBuf, req.data, req.len);
 		if (outSize)
@@ -235,7 +236,7 @@ int SwDrv::setDebugOption(void *buf, unsigned int size)
 		return 5;
 	if (!isOpen())
 		return 13;
-	return drvIoctl(m_fd, 0x8008C692u, buf, size);
+	return drvIoctl(m_fd, 0x80087892u, buf, size);
 }
 
 int SwDrv::setModeFlag(int flag)
@@ -243,7 +244,7 @@ int SwDrv::setModeFlag(int flag)
 	if (!isOpen())
 		return 13;
 	uint8_t val = (uint8_t)flag;
-	return drvIoctl(m_fd, 0x8004C607u, &val, 1);
+	return drvIoctl(m_fd, 0x80047807u, &val, 1);
 }
 
 int SwDrv::setDeviceConfig(int p0, int p1, int p2, char p3, int p4, int p5,
@@ -267,14 +268,14 @@ int SwDrv::setDeviceConfig(int p0, int p1, int p2, char p3, int p4, int p5,
 	cfg[10] = (p10 == 1) ? 1 : 0;
 	cfg[11] = (uint8_t)p11;
 	cfg[12] = (uint8_t)p12;
-	return drvIoctl(m_fd, 0x8008C688u, cfg, sizeof(cfg));
+	return drvIoctl(m_fd, 0x80087888u, cfg, sizeof(cfg));
 }
 
 int SwDrv::setTimeOffset(uint32_t offset)
 {
 	if (!isOpen())
 		return 13;
-	return drvIoctl(m_fd, 0x8004C609u, &offset, sizeof(offset));
+	return drvIoctl(m_fd, 0x80047809u, &offset, sizeof(offset));
 }
 
 int SwDrv::getSrm(void *outBuf, size_t *outSize)
@@ -293,7 +294,7 @@ int SwDrv::getSrm(void *outBuf, size_t *outSize)
 		uint8_t data[2048];
 	} req;
 	memset(&req, 0, sizeof(req));
-	int ret = drvIoctl(m_fd, 0x4008C5ADu, &req, sizeof(req));
+	int ret = drvIoctl(m_fd, 0x400878ADu, &req, sizeof(req));
 	if (ret != 0)
 		return ret;
 	if (req.status != 0)
@@ -330,7 +331,7 @@ int SwDrv::setSrm(const void *buf, size_t size)
 	req.len = (uint32_t)size;
 	memcpy(req.data, buf, size);
 
-	ret = drvIoctl(m_fd, 0xC008C5AEu, &req, sizeof(req));
+	ret = drvIoctl(m_fd, 0xC00878AEu, &req, sizeof(req));
 	if (ret != 0)
 		return ret;
 
@@ -397,7 +398,7 @@ int SacSessionCXD3705::getVersion(void *outBuf, size_t size)
 		return 13;
 	uint8_t ver[4];
 	memset(ver, 0, sizeof(ver));
-	int ret = SwDrv::drvIoctl(m_drv->fd(), 0xC008C59Eu, ver, sizeof(ver));
+	int ret = SwDrv::drvIoctl(m_drv->fd(), 0xC008789Eu, ver, sizeof(ver));
 	if (ret == 0) {
 		memset(outBuf, 0, size);
 		memcpy(outBuf, ver, 4);
@@ -429,7 +430,7 @@ int SacSessionCXD3705::exchangeKey(const void *inBuf, unsigned int inSize,
 	memcpy(req.inA, inBuf, 16);
 	memcpy(req.inB, (const uint8_t *)inBuf + 16, 16);
 
-	int ret = SwDrv::drvIoctl(m_drv->fd(), 0xC008C59Fu, &req, sizeof(req));
+	int ret = SwDrv::drvIoctl(m_drv->fd(), 0xC008789Fu, &req, sizeof(req));
 	if (ret != 0)
 		return ret;
 	if (req.status != 0)
@@ -467,7 +468,7 @@ int SacSessionCXD3705::authenticate(const void *inBuf, unsigned int inSize)
 	memcpy(req.token, inBuf, 16);
 	req.channelId = m_channelId;
 
-	int ret = SwDrv::drvIoctl(m_drv->fd(), 0xC008C5A0u, &req, sizeof(req));
+	int ret = SwDrv::drvIoctl(m_drv->fd(), 0xC00878A0u, &req, sizeof(req));
 	if (ret != 0)
 		return ret;
 	if (req.status != 0) {
@@ -494,7 +495,7 @@ int SacSessionCXD3705::close()
 				uint8_t req[4];
 				memset(req, 0, sizeof(req));
 				req[0] = m_channelId;
-				ret = SwDrv::drvIoctl(m_drv->fd(), 0xC008C5A1u, req, sizeof(req));
+				ret = SwDrv::drvIoctl(m_drv->fd(), 0xC00878A1u, req, sizeof(req));
 				if (ret == 0 && req[1] != 0)
 					ret = 11007;
 			}

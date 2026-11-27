@@ -481,7 +481,7 @@ extern "C" int SwMwSinkGetInfoCommand(struct SwMwCommChannel *channel,
 }
 
 /* 0x220C: set one of the stream's parameters */
-extern "C" int SwMwSinkSetParameterCommand(struct SwMwCommChannel *channel,
+extern "C" void SwMwSinkSetParameterCommand(struct SwMwCommChannel *channel,
 					   struct SwMwIpcMessage *request, void *argument)
 {
 	int status;
@@ -521,7 +521,6 @@ extern "C" int SwMwSinkSetParameterCommand(struct SwMwCommChannel *channel,
 				}
 		}
 	}
-	return 0;
 }
 
 /* 0x220D: poll the stream */

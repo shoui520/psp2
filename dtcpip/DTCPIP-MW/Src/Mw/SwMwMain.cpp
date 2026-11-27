@@ -37,9 +37,9 @@ int SwMwCommServerReplyError(struct SwMwCommChannel *channel,
 
 /* the manager's dispatcher (DTCPIP-MW/Src/Mw/SwMwManagerDispatch.cpp) */
 void SwMwManagerDispatch(void *, void *, void *);
-int SwMwManagerCommandDispatch(struct SwMwCommChannel *, struct SwMwIpcMessage *, void *);
+void SwMwManagerCommandDispatch(struct SwMwCommChannel *, struct SwMwIpcMessage *, void *);
 int SwMwSinkDispatch(struct SwMwCommChannel *, struct SwMwIpcMessage *, void *);
-int SwMwMoveSinkDispatch(struct SwMwCommChannel *, struct SwMwIpcMessage *, void *);
+void SwMwMoveSinkDispatch(struct SwMwCommChannel *, struct SwMwIpcMessage *, void *);
 void SwMwDeviceKeepalive(void *device);
 }
 

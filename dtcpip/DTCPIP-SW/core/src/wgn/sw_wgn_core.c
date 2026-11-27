@@ -207,16 +207,18 @@ static int64_t swGetSecureTime(int64_t *outTime)
 	return now;
 }
 
-static uint32_t swCommonKeyRemainSec(const int64_t *startTimePtr)
+static uint32_t swCommonKeyRemainSec(const void *startTimePtr)
 {
 	uint64_t validPeriod;
 	int64_t nowSec;
+	int64_t startSec;
 	uint64_t elapsed;
 
+	memcpy(&startSec, startTimePtr, sizeof(startSec));
 	validPeriod = SwMwKeyBinGetDeviceId();
 	swGetSecureTime(&nowSec);
 	nowSec += SwMwKeyBinGetSeed();
-	elapsed = swDepElapsedSec(nowSec, *startTimePtr);
+	elapsed = swDepElapsedSec(nowSec, startSec);
 	if (elapsed >= validPeriod)
 		return 0u;
 	return (uint32_t)(validPeriod - elapsed);

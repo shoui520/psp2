@@ -20,7 +20,6 @@
 #define DTCPIP_DOWNLOAD_TRACE(line)						\
 	sceClibPrintf(DTCPIP_DOWNLOAD_SOURCE "(" #line ") : TRACE : %s()\n", __FUNCTION__)
 
-#define SCE_SYSMODULE_HTTP			0x0012
 #define SCE_HTTP_ERROR_PARSE_HTTP_NOT_FOUND	(-2143084507)
 
 /* SceVshBridge, SceRegMgr, private HTTP and statically linked SHA-256 / HMAC-SHA256 helpers */
@@ -36,8 +35,8 @@ int sceHmacSha256BlockUpdate(void *context, const void *data, unsigned int dataL
 int sceHmacSha256BlockResult(void *context, unsigned char *digest);
 
 /* network-state checker cache */
-static int g_nsCheckerConnected;
-static int g_nsCheckerValidConnection;
+static int g_nsCheckerConnected = 1;
+static int g_nsCheckerValidConnection = 1;
 
 /* the download's lock, the request it is waiting on, and the flag its cancel raises */
 SceKernelLwMutexWork g_dtcpIpDownloadMutex;

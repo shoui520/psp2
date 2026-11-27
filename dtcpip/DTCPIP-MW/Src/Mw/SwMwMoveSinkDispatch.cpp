@@ -102,7 +102,7 @@ extern "C" struct SwMwGate **SwMwMoveSinkConnectUnlock(struct SwMwGate **held)
 }
 
 /* 0x2801: create the channel's move sink from its device */
-extern "C" int SwMwMoveSinkConnectCommand(struct SwMwCommChannel *channel,
+extern "C" void SwMwMoveSinkConnectCommand(struct SwMwCommChannel *channel,
 					  struct SwMwIpcMessage *request, void *argument)
 {
 	struct SwMwManagerContextBlock context;
@@ -136,11 +136,10 @@ extern "C" int SwMwMoveSinkConnectCommand(struct SwMwCommChannel *channel,
 		SwMwMoveSinkReplyStatus(channel, request, 12004);
 		swMwTrace("[SWMW] Error %d in %s:%d\n", 12004, SWMW_MOVESINK_SOURCE, 219);
 	}
-	return 0;
 }
 
 /* 0x2802: destroy the request's move sink */
-extern "C" int SwMwMoveSinkCloseCommand(struct SwMwCommChannel *channel,
+extern "C" void SwMwMoveSinkCloseCommand(struct SwMwCommChannel *channel,
 					struct SwMwIpcMessage *request, void *argument)
 {
 	int status;
@@ -178,11 +177,10 @@ extern "C" int SwMwMoveSinkCloseCommand(struct SwMwCommChannel *channel,
 				}
 		}
 	}
-	return 0;
 }
 
 /* 0x2803: give the move sink its URI */
-extern "C" int SwMwMoveSinkSetUriCommand(struct SwMwCommChannel *channel,
+extern "C" void SwMwMoveSinkSetUriCommand(struct SwMwCommChannel *channel,
 					 struct SwMwIpcMessage *request, void *argument)
 {
 	int status;
@@ -225,11 +223,10 @@ extern "C" int SwMwMoveSinkSetUriCommand(struct SwMwCommChannel *channel,
 			swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MOVESINK_SOURCE, 300);
 		}
 	}
-	return 0;
 }
 
 /* 0x2804: the move sink's URI result */
-extern "C" int SwMwMoveSinkGetUriResultCommand(struct SwMwCommChannel *channel,
+extern "C" void SwMwMoveSinkGetUriResultCommand(struct SwMwCommChannel *channel,
 					       struct SwMwIpcMessage *request, void *argument)
 {
 	unsigned char result;
@@ -270,11 +267,10 @@ extern "C" int SwMwMoveSinkGetUriResultCommand(struct SwMwCommChannel *channel,
 				}
 		}
 	}
-	return 0;
 }
 
 /* 0x2805: sync the move sink's state */
-extern "C" int SwMwMoveSinkSyncCommand(struct SwMwCommChannel *channel,
+extern "C" void SwMwMoveSinkSyncCommand(struct SwMwCommChannel *channel,
 				       struct SwMwIpcMessage *request, void *argument)
 {
 	int status;
@@ -306,7 +302,6 @@ extern "C" int SwMwMoveSinkSyncCommand(struct SwMwCommChannel *channel,
 				}
 		}
 	}
-	return 0;
 }
 
 /* 0x2806: open the move sink's stream on the request's shared-memory windows */
@@ -377,7 +372,7 @@ extern "C" int SwMwMoveSinkOpenStreamCommand(struct SwMwCommChannel *channel,
 }
 
 /* 0x2807: close the request's move stream */
-extern "C" int SwMwMoveSinkCloseStreamCommand(struct SwMwCommChannel *channel,
+extern "C" void SwMwMoveSinkCloseStreamCommand(struct SwMwCommChannel *channel,
 					      struct SwMwIpcMessage *request, void *argument)
 {
 	int status;
@@ -423,7 +418,6 @@ extern "C" int SwMwMoveSinkCloseStreamCommand(struct SwMwCommChannel *channel,
 				}
 		}
 	}
-	return 0;
 }
 
 /* 0x280b: the move stream's information (0x240 bytes, 0x200 of payload) */
@@ -490,7 +484,7 @@ extern "C" int SwMwMoveSinkGetInfoCommand(struct SwMwCommChannel *channel,
 }
 
 /* 0x280c: set one of the move stream's parameters */
-extern "C" int SwMwMoveSinkSetParameterCommand(struct SwMwCommChannel *channel,
+extern "C" void SwMwMoveSinkSetParameterCommand(struct SwMwCommChannel *channel,
 					       struct SwMwIpcMessage *request, void *argument)
 {
 	int status;
@@ -528,11 +522,10 @@ extern "C" int SwMwMoveSinkSetParameterCommand(struct SwMwCommChannel *channel,
 				}
 		}
 	}
-	return 0;
 }
 
 /* 0x280d: poll the move stream */
-extern "C" int SwMwMoveSinkPollCommand(struct SwMwCommChannel *channel,
+extern "C" void SwMwMoveSinkPollCommand(struct SwMwCommChannel *channel,
 				       struct SwMwIpcMessage *request, void *argument)
 {
 	int status;
@@ -570,11 +563,10 @@ extern "C" int SwMwMoveSinkPollCommand(struct SwMwCommChannel *channel,
 				}
 		}
 	}
-	return 0;
 }
 
 /* 0x280e: receive a chunk from the move stream */
-extern "C" int SwMwMoveSinkReceiveCommand(struct SwMwCommChannel *channel,
+extern "C" void SwMwMoveSinkReceiveCommand(struct SwMwCommChannel *channel,
 					  struct SwMwIpcMessage *request, void *argument)
 {
 	int window[6];
@@ -620,11 +612,10 @@ extern "C" int SwMwMoveSinkReceiveCommand(struct SwMwCommChannel *channel,
 				}
 		}
 	}
-	return 0;
 }
 
 /* 0x280f: release the bytes the caller has read */
-extern "C" int SwMwMoveSinkReleaseCommand(struct SwMwCommChannel *channel,
+extern "C" void SwMwMoveSinkReleaseCommand(struct SwMwCommChannel *channel,
 					  struct SwMwIpcMessage *request, void *argument)
 {
 	int status;
@@ -662,11 +653,10 @@ extern "C" int SwMwMoveSinkReleaseCommand(struct SwMwCommChannel *channel,
 				}
 		}
 	}
-	return 0;
 }
 
 /* 0x2810: take the peer's chunk from the move stream */
-extern "C" int SwMwMoveSinkSendCommand(struct SwMwCommChannel *channel,
+extern "C" void SwMwMoveSinkSendCommand(struct SwMwCommChannel *channel,
 				       struct SwMwIpcMessage *request, void *argument)
 {
 	int window[6];
@@ -710,11 +700,10 @@ extern "C" int SwMwMoveSinkSendCommand(struct SwMwCommChannel *channel,
 				}
 		}
 	}
-	return 0;
 }
 
 /* 0x2811: send a message to the move stream's peer */
-extern "C" int SwMwMoveSinkSendMessageCommand(struct SwMwCommChannel *channel,
+extern "C" void SwMwMoveSinkSendMessageCommand(struct SwMwCommChannel *channel,
 					      struct SwMwIpcMessage *request, void *argument)
 {
 	int status;
@@ -752,11 +741,10 @@ extern "C" int SwMwMoveSinkSendMessageCommand(struct SwMwCommChannel *channel,
 				}
 		}
 	}
-	return 0;
 }
 
 /* 0x2812: abort the move stream's transfer */
-extern "C" int SwMwMoveSinkAbortCommand(struct SwMwCommChannel *channel,
+extern "C" void SwMwMoveSinkAbortCommand(struct SwMwCommChannel *channel,
 					struct SwMwIpcMessage *request, void *argument)
 {
 	int status;
@@ -794,11 +782,10 @@ extern "C" int SwMwMoveSinkAbortCommand(struct SwMwCommChannel *channel,
 				}
 		}
 	}
-	return 0;
 }
 
 /* 0x2813: the move stream's open state */
-extern "C" int SwMwMoveSinkIsOpenCommand(struct SwMwCommChannel *channel,
+extern "C" void SwMwMoveSinkIsOpenCommand(struct SwMwCommChannel *channel,
 					 struct SwMwIpcMessage *request, void *argument)
 {
 	int status;
@@ -836,7 +823,6 @@ extern "C" int SwMwMoveSinkIsOpenCommand(struct SwMwCommChannel *channel,
 				}
 		}
 	}
-	return 0;
 }
 
 /* 0x1801: the move stream's periodic connect */
@@ -862,7 +848,7 @@ extern "C" int SwMwMoveSinkStreamConnectCommand(struct SwMwCommChannel *channel,
 }
 
 /* 0x2814: wait for the move stream to close */
-extern "C" int SwMwMoveSinkWaitClosedCommand(struct SwMwCommChannel *channel,
+extern "C" void SwMwMoveSinkWaitClosedCommand(struct SwMwCommChannel *channel,
 					     struct SwMwIpcMessage *request, void *argument)
 {
 	int status;
@@ -900,11 +886,10 @@ extern "C" int SwMwMoveSinkWaitClosedCommand(struct SwMwCommChannel *channel,
 				}
 		}
 	}
-	return 0;
 }
 
 /* 0x2815: poll the move stream's close (the MV_COMPLETE message) */
-extern "C" int SwMwMoveSinkPollClosedCommand(struct SwMwCommChannel *channel,
+extern "C" void SwMwMoveSinkPollClosedCommand(struct SwMwCommChannel *channel,
 					     struct SwMwIpcMessage *request, void *argument)
 {
 	int status;
@@ -942,11 +927,10 @@ extern "C" int SwMwMoveSinkPollClosedCommand(struct SwMwCommChannel *channel,
 				}
 		}
 	}
-	return 0;
 }
 
 /* 0x2816: send the move's MV_FINALIZE message with its payload */
-extern "C" int SwMwMoveSinkFinalizeCommand(struct SwMwCommChannel *channel,
+extern "C" void SwMwMoveSinkFinalizeCommand(struct SwMwCommChannel *channel,
 					   struct SwMwIpcMessage *request, void *argument)
 {
 	unsigned short value2;
@@ -990,11 +974,10 @@ extern "C" int SwMwMoveSinkFinalizeCommand(struct SwMwCommChannel *channel,
 			swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MOVESINK_SOURCE, 917);
 		}
 	}
-	return 0;
 }
 
 /* 0x2817: send the move's MV_COMPLETE message */
-extern "C" int SwMwMoveSinkCompleteCommand(struct SwMwCommChannel *channel,
+extern "C" void SwMwMoveSinkCompleteCommand(struct SwMwCommChannel *channel,
 					   struct SwMwIpcMessage *request, void *argument)
 {
 	int status;
@@ -1032,7 +1015,6 @@ extern "C" int SwMwMoveSinkCompleteCommand(struct SwMwCommChannel *channel,
 				}
 		}
 	}
-	return 0;
 }
 
 /* 0x2818: the move stream sends MV_FINALIZE with its label */
@@ -1122,7 +1104,7 @@ extern "C" int SwMwMoveSinkStreamCompleteCommand(struct SwMwCommChannel *channel
 }
 
 /* the move sink's command dispatcher */
-extern "C" int SwMwMoveSinkDispatch(struct SwMwCommChannel *channel,
+extern "C" void SwMwMoveSinkDispatch(struct SwMwCommChannel *channel,
 				    struct SwMwIpcMessage *request, void *argument)
 {
 	struct SwMwManagerContextBlock context;
@@ -1143,7 +1125,7 @@ extern "C" int SwMwMoveSinkDispatch(struct SwMwCommChannel *channel,
 			SwMwMoveSinkConnectLock(&held, (void *)values[4]);
 			SwMwMoveSinkStreamConnectCommand(channel, request, argument);
 			SwMwMoveSinkConnectUnlock(&held);
-			return 0;
+			return;
 		}
 		failed = 1;
 	} else if (command > 0x2819) {
@@ -1272,5 +1254,4 @@ extern "C" int SwMwMoveSinkDispatch(struct SwMwCommChannel *channel,
 		SwMwMoveSinkReplyStatus(channel, request, 12003);
 		swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MOVESINK_SOURCE, 196);
 	}
-	return 0;
 }

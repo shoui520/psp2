@@ -325,7 +325,7 @@ struct SwNvpTable {
 	unsigned char privKeyEnc[32];
 	unsigned char commonKeyFlags;
 	unsigned char flagsAlign[3];
-	int64_t startTime;
+	unsigned char startTime[8];
 	uint32_t certLen;
 	unsigned char cert[132];
 	unsigned char idu[5];
@@ -407,7 +407,6 @@ struct SwWgnCtx {
 	int isPrimary;
 	int timerAlign;
 	struct SwWgnTimer timer;
-	unsigned char timerPad[4];
 	unsigned char snkAkeSeq;
 	unsigned char snkAlign[7];
 	SceKernelLwMutexWork snkMutex;

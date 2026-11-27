@@ -107,7 +107,19 @@ public:
 private:
 	static int parseGenerations(uint8_t *outGen, const uint8_t *data, size_t len);
 	static int getMaxSrmSize(uint32_t *outSize, uint8_t certType);
-	void clear();
+	void clear() {
+		delete[] m_raw;
+		m_raw = NULL;
+		m_len = 0;
+		m_srmType = 0;
+		m_reserved0d = 0;
+		m_genFlag = 0;
+		m_reserved0f = 0;
+		m_version = 0;
+		m_generation = 0;
+		m_reserved13 = 0;
+		m_sig = NULL;
+	}
 
 	uint8_t *m_raw;		/* +0x04 */
 	size_t m_len;		/* +0x08 */

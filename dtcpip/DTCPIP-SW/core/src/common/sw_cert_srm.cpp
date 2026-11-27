@@ -318,22 +318,7 @@ SwSrm::SwSrm()
 
 SwSrm::~SwSrm()
 {
-	clear();
-}
-
-void SwSrm::clear()
-{
 	delete[] m_raw;
-	m_raw = NULL;
-	m_len = 0;
-	m_srmType = 0;
-	m_reserved0d = 0;
-	m_genFlag = 0;
-	m_reserved0f = 0;
-	m_version = 0;
-	m_generation = 0;
-	m_reserved13 = 0;
-	m_sig = NULL;
 }
 
 int SwSrm::parseGenerations(uint8_t *outGen, const uint8_t *data, size_t len)

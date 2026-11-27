@@ -101,7 +101,7 @@ int SdiDeviceCXD3705::openSourceSession(uint32_t *outSessionId, uint8_t *outLabe
 	if (!slot)
 		return 2;
 
-	int ret = SwDrv::drvIoctl(drvFd(), 0xC008C5BCu, &req, sizeof(req));
+	int ret = SwDrv::drvIoctl(drvFd(), 0xC00878BCu, &req, sizeof(req));
 	if (ret != 0) {
 		delete slot;
 		return ret;
@@ -124,7 +124,7 @@ int SdiDeviceCXD3705::openSourceSession(uint32_t *outSessionId, uint8_t *outLabe
 		res = 0;
 	} else {
 		delete slot;
-		SwDrv::drvIoctl(drvFd(), 0x8004C633u, &req.sessionId, 1);
+		SwDrv::drvIoctl(drvFd(), 0x80047833u, &req.sessionId, 1);
 		if (moveFlag == 1)
 			setMoveMode(req.label);
 		res = 1;
@@ -170,7 +170,7 @@ int SdiDeviceCXD3705::openSinkSession(uint32_t *outSessionId, const SwNetAddress
 	if (!slot)
 		return 2;
 
-	int ret = SwDrv::drvIoctl(drvFd(), 0xC008C5D0u, &req, sizeof(req));
+	int ret = SwDrv::drvIoctl(drvFd(), 0xC00878D0u, &req, sizeof(req));
 	if (ret != 0) {
 		delete slot;
 		return ret;
@@ -188,7 +188,7 @@ int SdiDeviceCXD3705::openSinkSession(uint32_t *outSessionId, const SwNetAddress
 		res = 0;
 	} else {
 		delete slot;
-		SwDrv::drvIoctl(drvFd(), 0x8004C633u, &req.sessionId, 1);
+		SwDrv::drvIoctl(drvFd(), 0x80047833u, &req.sessionId, 1);
 		res = 1;
 	}
 	g_sdiSessionListMutex.unlock();
@@ -207,7 +207,7 @@ int SdiDeviceCXD3705::closeSession(uint32_t sessionId)
 			if (p && *p == sessionId) {
 				delete p;
 				m_sourceSessions.erase(it);
-				res = SwDrv::drvIoctl(drvFd(), 0x8004C633u, &sessionId, sizeof(sessionId));
+				res = SwDrv::drvIoctl(drvFd(), 0x80047833u, &sessionId, sizeof(sessionId));
 				break;
 			}
 		}
@@ -218,7 +218,7 @@ int SdiDeviceCXD3705::closeSession(uint32_t sessionId)
 			if (p && *p == sessionId) {
 				delete p;
 				m_sinkSessions.erase(it);
-				res = SwDrv::drvIoctl(drvFd(), 0x8004C633u, &sessionId, sizeof(sessionId));
+				res = SwDrv::drvIoctl(drvFd(), 0x80047833u, &sessionId, sizeof(sessionId));
 				break;
 			}
 		}
@@ -230,7 +230,7 @@ int SdiDeviceCXD3705::closeSession(uint32_t sessionId)
 int SdiDeviceCXD3705::isAkeTypeSupported(uint8_t akeType)
 {
 	uint8_t req[4] = { akeType, 0, 0, 0 };
-	int ret = SwDrv::drvIoctl(drvFd(), 0xC008C5ACu, req, sizeof(req));
+	int ret = SwDrv::drvIoctl(drvFd(), 0xC00878ACu, req, sizeof(req));
 	if (ret != 0)
 		return ret;
 	if (req[2] == 0)
@@ -249,7 +249,7 @@ uint32_t SdiDeviceCXD3705::getHwCapabilities() const
 		uint32_t caps;
 	} req;
 	memset(&req, 0, sizeof(req));
-	if (SwDrv::drvIoctl(drvFd(), 0xC008C5B5u, &req, sizeof(req)) != 0)
+	if (SwDrv::drvIoctl(drvFd(), 0xC00878B5u, &req, sizeof(req)) != 0)
 		return 0;
 	return req.caps;
 }
@@ -272,7 +272,7 @@ int SdiDeviceCXD3705::getRandom(void *outBuf, size_t len)
 	memset(&req, 0, sizeof(req));
 	req.len = (uint32_t)len;
 
-	int ret = SwDrv::drvIoctl(drvFd(), 0x4008C5AFu, &req, sizeof(req));
+	int ret = SwDrv::drvIoctl(drvFd(), 0x400878AFu, &req, sizeof(req));
 	if (ret != 0)
 		return ret;
 	if (req.status == 8)
@@ -314,7 +314,7 @@ int SdiDeviceCXD3705::verifySignature(const void *msg, size_t msgLen,
 			return err;
 	}
 
-	int ret = SwDrv::drvIoctl(drvFd(), 0xC008C5A8u, &req, sizeof(req));
+	int ret = SwDrv::drvIoctl(drvFd(), 0xC00878A8u, &req, sizeof(req));
 	if (ret != 0)
 		return ret;
 	if (req.status == 0)
@@ -343,7 +343,7 @@ int SdiDeviceCXD3705::genKeyPair(void *outPub40, void *outPriv20)
 	} req;
 	memset(&req, 0, sizeof(req));
 
-	int ret = SwDrv::drvIoctl(drvFd(), 0x4008C5AAu, &req, sizeof(req));
+	int ret = SwDrv::drvIoctl(drvFd(), 0x400878AAu, &req, sizeof(req));
 	if (ret != 0)
 		return ret;
 	if (req.status == 0) {
@@ -378,7 +378,7 @@ int SdiDeviceCXD3705::signData(void *outSig40, const void *msg, size_t msgLen)
 	req.msgLen = (uint32_t)msgLen;
 	memcpy(req.msg, msg, msgLen);
 
-	int ret = SwDrv::drvIoctl(drvFd(), 0xC008C5ABu, &req, sizeof(req));
+	int ret = SwDrv::drvIoctl(drvFd(), 0xC00878ABu, &req, sizeof(req));
 	if (ret != 0)
 		return ret;
 	if (req.status == 0) {
@@ -414,7 +414,7 @@ int SdiDeviceCXD3705::computeRttMac(void *outMac20, uint8_t sessionId, uint8_t r
 	req.nVal = nVal;
 	req.isMode1 = (mode == 1) ? 1 : 0;
 
-	int ret = SwDrv::drvIoctl(drvFd(), 0xC008C5B2u, &req, sizeof(req));
+	int ret = SwDrv::drvIoctl(drvFd(), 0xC00878B2u, &req, sizeof(req));
 	if (ret != 0)
 		return ret;
 	if (req.status == 0) {
@@ -447,7 +447,7 @@ int SdiDeviceCXD3705::genMoveKey(void *outMac10, void *outNonce8, uint8_t sessio
 	req.sessionId = sessionId;
 	memcpy(req.inNonce, inNonce8, 8);
 
-	int ret = SwDrv::drvIoctl(drvFd(), 0xC008C5D8u, &req, sizeof(req));
+	int ret = SwDrv::drvIoctl(drvFd(), 0xC00878D8u, &req, sizeof(req));
 	if (ret != 0)
 		return ret;
 	if (req.status == 0) {
@@ -484,7 +484,7 @@ int SdiDeviceCXD3705::verifyMoveMac(uint8_t *outOk, uint8_t sessionId,
 	memcpy(req.nonceA, nonceA8, 8);
 	memcpy(req.mac, mac10, 10);
 
-	int ret = SwDrv::drvIoctl(drvFd(), 0xC008C5D9u, &req, sizeof(req));
+	int ret = SwDrv::drvIoctl(drvFd(), 0xC00878D9u, &req, sizeof(req));
 	if (ret != 0)
 		return ret;
 	if (req.status == 0) {
@@ -522,7 +522,7 @@ int SdiDeviceCXD3705::computeMoveCompleteMac(void *outMac10, uint8_t sessionId,
 	memcpy(req.nonceA, nonceA8, 8);
 	memcpy(req.inMac, inMac10, 10);
 
-	int ret = SwDrv::drvIoctl(drvFd(), 0xC008C5C3u, &req, sizeof(req));
+	int ret = SwDrv::drvIoctl(drvFd(), 0xC00878C3u, &req, sizeof(req));
 	if (ret != 0)
 		return ret;
 	if (req.status == 0) {
@@ -539,7 +539,7 @@ int SdiDeviceCXD3705::computeMoveCompleteMac(void *outMac10, uint8_t sessionId,
 int SdiDeviceCXD3705::getExchangeKeyLabel(uint32_t *outLabel, uint8_t sessionId)
 {
 	uint8_t req[4] = { sessionId, 0, 0, 0 };
-	int ret = SwDrv::drvIoctl(drvFd(), 0xC008C5D1u, req, sizeof(req));
+	int ret = SwDrv::drvIoctl(drvFd(), 0xC00878D1u, req, sizeof(req));
 	if (ret != 0)
 		return ret;
 	if (req[2] == 0) {
@@ -573,7 +573,7 @@ int SdiDeviceCXD3705::setRemoteKey(uint8_t sessionId, uint8_t keyType,
 	memcpy(req.pub, pub20, 20);
 	memcpy(req.sig, sig40, 40);
 
-	int ret = SwDrv::drvIoctl(drvFd(), 0xC008C5D4u, &req, sizeof(req));
+	int ret = SwDrv::drvIoctl(drvFd(), 0xC00878D4u, &req, sizeof(req));
 	if (ret != 0)
 		return ret;
 	if (req.status == 15)
@@ -609,7 +609,7 @@ int SdiDeviceCXD3705::setExchangeKey(uint8_t sessionId, uint8_t keyType, int unu
 	req.label = label;
 	req.flags = flags;
 
-	int ret = SwDrv::drvIoctl(drvFd(), 0xC008C5D5u, &req, sizeof(req));
+	int ret = SwDrv::drvIoctl(drvFd(), 0xC00878D5u, &req, sizeof(req));
 	if (ret != 0)
 		return ret;
 	if (req.status == 15)
@@ -622,7 +622,7 @@ int SdiDeviceCXD3705::setExchangeKey(uint8_t sessionId, uint8_t keyType, int unu
 int SdiDeviceCXD3705::clearSinkKey(uint8_t sessionId, uint8_t keyType)
 {
 	uint8_t req[4] = { sessionId, keyType, 0, 0 };
-	int ret = SwDrv::drvIoctl(drvFd(), 0xC008C5D2u, req, sizeof(req));
+	int ret = SwDrv::drvIoctl(drvFd(), 0xC00878D2u, req, sizeof(req));
 	if (ret != 0)
 		return ret;
 	if (req[2] == 15)
@@ -635,7 +635,7 @@ int SdiDeviceCXD3705::clearSinkKey(uint8_t sessionId, uint8_t keyType)
 void SdiDeviceCXD3705::deleteSinkKey(uint8_t sessionId, uint8_t keyType)
 {
 	uint8_t req[4] = { sessionId, keyType, 0, 0 };
-	SwDrv::drvIoctl(drvFd(), 0xC008C5D3u, req, sizeof(req));
+	SwDrv::drvIoctl(drvFd(), 0xC00878D3u, req, sizeof(req));
 }
 
 int SdiDeviceCXD3705::verifyRemoteCert(uint32_t *outResult, uint8_t sessionId,
@@ -657,7 +657,7 @@ int SdiDeviceCXD3705::verifyRemoteCert(uint32_t *outResult, uint8_t sessionId,
 	if (err != 0)
 		return err;
 
-	int ret = SwDrv::drvIoctl(drvFd(), 0xC008C5BDu, &req, sizeof(req));
+	int ret = SwDrv::drvIoctl(drvFd(), 0xC00878BDu, &req, sizeof(req));
 	if (ret != 0)
 		return ret;
 	switch (req.status) {
@@ -691,7 +691,7 @@ int SdiDeviceCXD3705::computeSharedSecret(uint8_t sessionId, uint8_t keyType,
 	memcpy(req.pub, pub20, 20);
 	memcpy(req.sig, sig40, 40);
 
-	int ret = SwDrv::drvIoctl(drvFd(), 0xC008C5C0u, &req, sizeof(req));
+	int ret = SwDrv::drvIoctl(drvFd(), 0xC00878C0u, &req, sizeof(req));
 	if (ret != 0)
 		return ret;
 	if (req.status == 0)
@@ -723,7 +723,7 @@ int SdiDeviceCXD3705::getExchangeKey(void *outKx12, uint8_t *outLabel, uint8_t *
 	req.sessionId = sessionId;
 	req.keyType = keyType;
 
-	int ret = SwDrv::drvIoctl(drvFd(), 0xC008C5C1u, &req, sizeof(req));
+	int ret = SwDrv::drvIoctl(drvFd(), 0xC00878C1u, &req, sizeof(req));
 	if (ret != 0)
 		return ret;
 	if (req.status == 0) {
@@ -738,7 +738,7 @@ int SdiDeviceCXD3705::getExchangeKey(void *outKx12, uint8_t *outLabel, uint8_t *
 int SdiDeviceCXD3705::commitSourceKey(uint8_t sessionId, uint8_t keyType)
 {
 	uint8_t req[4] = { sessionId, keyType, 0, 0 };
-	int ret = SwDrv::drvIoctl(drvFd(), 0xC008C5BEu, req, sizeof(req));
+	int ret = SwDrv::drvIoctl(drvFd(), 0xC00878BEu, req, sizeof(req));
 	if (ret != 0)
 		return ret;
 	if (req[2] == 0)
@@ -749,7 +749,7 @@ int SdiDeviceCXD3705::commitSourceKey(uint8_t sessionId, uint8_t keyType)
 void SdiDeviceCXD3705::deleteSourceKey(uint8_t sessionId, uint8_t keyType)
 {
 	uint8_t req[4] = { sessionId, keyType, 0, 0 };
-	SwDrv::drvIoctl(drvFd(), 0xC008C5BFu, req, sizeof(req));
+	SwDrv::drvIoctl(drvFd(), 0xC00878BFu, req, sizeof(req));
 }
 
 int SdiDeviceCXD3705::checkCertRevoked(uint8_t *outRevoked, const void *certObj)
@@ -770,7 +770,7 @@ int SdiDeviceCXD3705::checkCertRevoked(uint8_t *outRevoked, const void *certObj)
 	if (err != 0)
 		return err;
 
-	int ret = SwDrv::drvIoctl(drvFd(), 0xC008C5B0u, &req, sizeof(req));
+	int ret = SwDrv::drvIoctl(drvFd(), 0xC00878B0u, &req, sizeof(req));
 	if (ret != 0)
 		return ret;
 	if (req.status == 13)
@@ -801,7 +801,7 @@ int SdiDeviceCXD3705::getSrm(void *srmObj)
 	} req;
 	memset(&req, 0, sizeof(req));
 
-	int ret = SwDrv::drvIoctl(drvFd(), 0x4008C5ADu, &req, sizeof(req));
+	int ret = SwDrv::drvIoctl(drvFd(), 0x400878ADu, &req, sizeof(req));
 	if (ret != 0)
 		return ret;
 
@@ -843,7 +843,7 @@ int SdiDeviceCXD3705::setSrm(const void *srmObj)
 		memcpy(req.data, rawPtr, rawLen);
 	req.len = (uint32_t)rawLen;
 
-	int ret = SwDrv::drvIoctl(drvFd(), 0xC008C5AEu, &req, sizeof(req));
+	int ret = SwDrv::drvIoctl(drvFd(), 0xC00878AEu, &req, sizeof(req));
 	if (ret != 0)
 		return ret;
 	switch (req.status) {
@@ -930,7 +930,7 @@ int SdiDeviceCXD3705::startTxStream(uint32_t *outStreamId, uint8_t sessionId,
 	uint32_t st = params->streamType;
 	if (swIsTxDirectOnly(st) || swIsTxOutOnly(st) ||
 	    st == 0x20020228u || st == 0x20020231u) {
-		int err = SwDrv::drvIoctl(drvFd(), 0x8008C688u, params->modeParam, 20);
+		int err = SwDrv::drvIoctl(drvFd(), 0x80087888u, params->modeParam, 20);
 		if (err != 0)
 			return err;
 	} else if (st != 0x10010002u) {
@@ -1050,7 +1050,7 @@ int SdiDeviceCXD3705::startTxStream(uint32_t *outStreamId, uint8_t sessionId,
 	memcpy(req.optionData, params->optionData, 1024);
 
 	int fd = drvFd();
-	int err = SwDrv::drvIoctl(fd, 0xC4B0C614u, &req, sizeof(req));
+	int err = SwDrv::drvIoctl(fd, 0xC4B07814u, &req, sizeof(req));
 	if (err != 0) {
 		if (auxBuf) {
 			delete auxBuf;
@@ -1091,7 +1091,7 @@ int SdiDeviceCXD3705::startRxStream(uint32_t *outStreamId, uint8_t sessionId,
 	uint32_t st = params->streamType;
 	if (swIsRxInOnly(st) || swIsRxOutOnly(st) ||
 	    st == 0xA0020228u || st == 0xA0020231u) {
-		int err = SwDrv::drvIoctl(drvFd(), 0x8008C688u, params->modeParam, 20);
+		int err = SwDrv::drvIoctl(drvFd(), 0x80087888u, params->modeParam, 20);
 		if (err != 0)
 			return err;
 	} else if (st != 0x90010001u) {
@@ -1202,7 +1202,7 @@ int SdiDeviceCXD3705::startRxStream(uint32_t *outStreamId, uint8_t sessionId,
 	memcpy(req.optionData, params->optionData, 1024);
 
 	int fd = drvFd();
-	int err = SwDrv::drvIoctl(fd, 0xC4B0C614u, &req, sizeof(req));
+	int err = SwDrv::drvIoctl(fd, 0xC4B07814u, &req, sizeof(req));
 	if (err != 0) {
 		if (auxBuf) {
 			delete auxBuf;
@@ -1368,7 +1368,7 @@ int SdiDeviceCXD3705::updateStreamPos(int drvFd, int sessionId, uint8_t streamId
 	req.streamId = streamId;
 	req.dirFlag = dirFlag;
 	req.pos = *posPtr;
-	return SwDrv::drvIoctl(drvFd, 0x800CC618u, &req, sizeof(req)) != 0 ? 1 : 0;
+	return SwDrv::drvIoctl(drvFd, 0x800C7818u, &req, sizeof(req)) != 0 ? 1 : 0;
 }
 
 int SdiDeviceCXD3705::getStreamStatus(int drvFd, int sessionId, uint8_t streamId,
@@ -1399,7 +1399,7 @@ int SdiDeviceCXD3705::getStreamStatus(int drvFd, int sessionId, uint8_t streamId
 	req.len = addrLen[1];
 	req.dirFlag = dirFlag;
 
-	int err = SwDrv::drvIoctl(drvFd, 0xC050C617u, &req, sizeof(req));
+	int err = SwDrv::drvIoctl(drvFd, 0xC0507817u, &req, sizeof(req));
 	if (err == 0) {
 		addrLen[0] = req.addr;
 		addrLen[1] = req.len;
@@ -1423,7 +1423,7 @@ int SdiDeviceCXD3705::stopStreamIoctl(int drvFd, int sessionId, uint8_t streamId
 	if (!params || drvFd < 0)
 		return 5;
 	uint8_t sid = streamId;
-	int err = SwDrv::drvIoctl(drvFd, 0xC001C616u, &sid, 1);
+	int err = SwDrv::drvIoctl(drvFd, 0xC0017816u, &sid, 1);
 	if (err == 0)
 		return 0;
 	return (err == 11016) ? 9 : 1;
@@ -1435,7 +1435,7 @@ int SdiDeviceCXD3705::setLastPacketIoctl(int drvFd, int sessionId, uint8_t strea
 	if (drvFd < 0)
 		return 5;
 	uint32_t sid = streamId;
-	int err = SwDrv::drvIoctl(drvFd, 0x8004C619u, &sid, sizeof(sid));
+	int err = SwDrv::drvIoctl(drvFd, 0x80047819u, &sid, sizeof(sid));
 	if (err == 0 || err == 11015)
 		return 0;
 	return (err == 11008) ? 9 : 1;
@@ -1452,7 +1452,7 @@ int SdiDeviceCXD3705::setCci(uint8_t sessionId, int cci)
 	if (!isDrvOpen())
 		return 13;
 	uint8_t req[4] = { sessionId, (uint8_t)cci, 0, 0 };
-	int ret = SwDrv::drvIoctl(drvFd(), 0xC008C5C4u, req, sizeof(req));
+	int ret = SwDrv::drvIoctl(drvFd(), 0xC00878C4u, req, sizeof(req));
 	if (ret != 0)
 		return ret;
 	if (req[2] == 0)
@@ -1479,7 +1479,7 @@ int SdiDeviceCXD3705::getDeviceCert(void *certObj)
 	} req;
 	memset(&req, 0, sizeof(req));
 
-	int ret = SwDrv::drvIoctl(drvFd(), 0x4008C5A9u, &req, sizeof(req));
+	int ret = SwDrv::drvIoctl(drvFd(), 0x400878A9u, &req, sizeof(req));
 	if (ret != 0)
 		return ret;
 	if (req.status == 27)
@@ -1509,7 +1509,7 @@ int SdiDeviceCXD3705::getCkcInfo(void *outNonce8, bool *outFlag, uint8_t *outA,
 	memset(&req, 0, sizeof(req));
 	req.sessionId = sessionId;
 
-	if (SwDrv::drvIoctl(drvFd(), 0xC008C5C2u, &req, sizeof(req)) != 0)
+	if (SwDrv::drvIoctl(drvFd(), 0xC00878C2u, &req, sizeof(req)) != 0)
 		return 1;
 	if (req.status == 0) {
 		memcpy(outNonce8, req.nonce, 8);
@@ -1524,7 +1524,7 @@ int SdiDeviceCXD3705::getCkcInfo(void *outNonce8, bool *outFlag, uint8_t *outA,
 int SdiDeviceCXD3705::checkCkc(uint8_t *outOk, uint8_t sessionId, int mode)
 {
 	uint8_t req[8] = { sessionId, 0, 0, 0, (uint8_t)mode, 0, 0, 0 };
-	int ret = SwDrv::drvIoctl(drvFd(), 0xC008C5D6u, req, sizeof(req));
+	int ret = SwDrv::drvIoctl(drvFd(), 0xC00878D6u, req, sizeof(req));
 	if (ret != 0)
 		return ret;
 	*outOk = 0;
@@ -1538,7 +1538,7 @@ int SdiDeviceCXD3705::checkCkc(uint8_t *outOk, uint8_t sessionId, int mode)
 int SdiDeviceCXD3705::checkSessionRevoked(uint8_t *outOk, uint8_t sessionId)
 {
 	uint8_t req[4] = { sessionId, 0, 0, 0 };
-	int ret = SwDrv::drvIoctl(drvFd(), 0xC008C5D7u, req, sizeof(req));
+	int ret = SwDrv::drvIoctl(drvFd(), 0xC00878D7u, req, sizeof(req));
 	if (ret != 0)
 		return ret;
 	*outOk = 0;
@@ -1556,7 +1556,7 @@ int SdiDeviceCXD3705::checkSessionRevoked(uint8_t *outOk, uint8_t sessionId)
 int SdiDeviceCXD3705::getKeyLifetime(uint8_t sessionId, uint32_t *outSec)
 {
 	uint8_t req[4] = { sessionId, 0, 0, 0 };
-	int ret = SwDrv::drvIoctl(drvFd(), 0xC008C5DAu, req, sizeof(req));
+	int ret = SwDrv::drvIoctl(drvFd(), 0xC00878DAu, req, sizeof(req));
 	if (ret == 0) {
 		if (req[1] == 0)
 			*outSec = 60u * req[2];
@@ -1598,7 +1598,7 @@ int SdiDeviceCXD3705::setOptionData(size_t len, const void *data)
 	req.len = (uint32_t)len;
 	memcpy(req.data, data, len);
 
-	int ret = SwDrv::drvIoctl(drvFd(), 0xC008C5C5u, &req, sizeof(req));
+	int ret = SwDrv::drvIoctl(drvFd(), 0xC00878C5u, &req, sizeof(req));
 	if (ret != 0)
 		return ret;
 	if (req.status == 0)
@@ -1609,7 +1609,7 @@ int SdiDeviceCXD3705::setOptionData(size_t len, const void *data)
 int SdiDeviceCXD3705::setMoveMode(int mode)
 {
 	uint8_t req[8] = { 0, 0, 0, 0, (uint8_t)mode, 0, 0, 0 };
-	if (SwDrv::drvIoctl(drvFd(), 0xC008C5C6u, req, sizeof(req)) != 0)
+	if (SwDrv::drvIoctl(drvFd(), 0xC00878C6u, req, sizeof(req)) != 0)
 		return 11021;
 	if (req[2] == 0)
 		return 0;
@@ -1633,7 +1633,7 @@ int SdiDeviceCXD3705::computeMoveAuth(void *outMac20, uint8_t sessionId, const v
 	req.sessionId = sessionId;
 	memcpy(req.nonce, nonce8, 8);
 
-	int ret = SwDrv::drvIoctl(drvFd(), 0xC008C5B4u, &req, sizeof(req));
+	int ret = SwDrv::drvIoctl(drvFd(), 0xC00878B4u, &req, sizeof(req));
 	if (ret != 0)
 		return ret;
 	if (req.status == 0) {
@@ -1659,7 +1659,7 @@ int SdiDeviceCXD3705::getDeviceId(uint8_t *outValid, uint8_t *outFlag, void *out
 	} req;
 	memset(&req, 0, sizeof(req));
 
-	int ret = SwDrv::drvIoctl(drvFd(), 0xC008C5DBu, &req, sizeof(req));
+	int ret = SwDrv::drvIoctl(drvFd(), 0xC00878DBu, &req, sizeof(req));
 	if (ret == 0) {
 		if (req.status == 27)
 			return 1508;
@@ -1689,7 +1689,7 @@ int SdiDeviceCXD3705::getCertExpire(uint32_t *outExpire)
 	} req;
 	memset(&req, 0, sizeof(req));
 
-	int ret = SwDrv::drvIoctl(drvFd(), 0xC008C5DBu, &req, sizeof(req));
+	int ret = SwDrv::drvIoctl(drvFd(), 0xC00878DBu, &req, sizeof(req));
 	if (ret == 0) {
 		*outExpire = req.expire;
 		if (req.status == 27)

@@ -61,7 +61,7 @@ int SwMwManagerInitKey(int device);
 }
 
 /* 0x2101: connect the manager to the library's session */
-extern "C" int SwMwManagerConnect(struct SwMwCommChannel *channel, struct SwMwIpcMessage *request,
+extern "C" void SwMwManagerConnect(struct SwMwCommChannel *channel, struct SwMwIpcMessage *request,
 				  void *argument)
 {
 	struct SwMwManagerContextBlock context;
@@ -75,11 +75,13 @@ extern "C" int SwMwManagerConnect(struct SwMwCommChannel *channel, struct SwMwIp
 	device = SwMwManagerContextValues(&context);
 	if (request->channel == 255) {
 		SwMwCommServerReplyStatus(channel, request, 12003);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 162);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 162);
+		return;
 	}
 	if (*device != 0) {
 		SwMwCommServerReplyStatus(channel, request, 12004);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12004, SWMW_MANAGER_SOURCE, 168);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12004, SWMW_MANAGER_SOURCE, 168);
+		return;
 	}
 	values[0] = request->value0;
 	values[1] = request->value1;
@@ -96,11 +98,10 @@ extern "C" int SwMwManagerConnect(struct SwMwCommChannel *channel, struct SwMwIp
 	reply = SwMwCommServerReplyError(channel, request);
 	if (reply != 0)
 		swMwTrace("[SWMW] Error %d in %s:%d\n", reply, SWMW_MANAGER_SOURCE, 192);
-	return 0;
 }
 
 /* 0x2102: disconnect the manager */
-extern "C" int SwMwManagerDisconnect(struct SwMwCommChannel *channel,
+extern "C" void SwMwManagerDisconnect(struct SwMwCommChannel *channel,
 				     struct SwMwIpcMessage *request, void *argument)
 {
 	struct SwMwManagerContextBlock context;
@@ -113,11 +114,13 @@ extern "C" int SwMwManagerDisconnect(struct SwMwCommChannel *channel,
 	device = SwMwManagerContextValues(&context);
 	if (request->channel == 255) {
 		SwMwCommServerReplyStatus(channel, request, 12003);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 206);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 206);
+		return;
 	}
 	if (*device == 0) {
 		SwMwCommServerReplyStatus(channel, request, 12004);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12004, SWMW_MANAGER_SOURCE, 212);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12004, SWMW_MANAGER_SOURCE, 212);
+		return;
 	}
 	result = SwMwManagerTeardown(*device);
 	if (result != 0)
@@ -130,11 +133,10 @@ extern "C" int SwMwManagerDisconnect(struct SwMwCommChannel *channel,
 	reply = SwMwCommServerReplyError(channel, request);
 	if (reply != 0)
 		swMwTrace("[SWMW] Error %d in %s:%d\n", reply, SWMW_MANAGER_SOURCE, 226);
-	return 0;
 }
 
 /* 0x2117: wait for the session to be ready */
-extern "C" int SwMwManagerWaitReady(struct SwMwCommChannel *channel,
+extern "C" void SwMwManagerWaitReady(struct SwMwCommChannel *channel,
 				    struct SwMwIpcMessage *request, void *argument)
 {
 	struct SwMwManagerContextBlock context;
@@ -148,7 +150,8 @@ extern "C" int SwMwManagerWaitReady(struct SwMwCommChannel *channel,
 	device = SwMwManagerContextValues(&context);
 	if (request->channel == 255) {
 		SwMwCommServerReplyStatus(channel, request, 12003);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 241);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 241);
+		return;
 	}
 	result = SwMwManagerEnsureSession(*device, &value);
 	request->result = result;
@@ -158,11 +161,10 @@ extern "C" int SwMwManagerWaitReady(struct SwMwCommChannel *channel,
 	reply = SwMwCommServerReplyError(channel, request);
 	if (reply != 0)
 		swMwTrace("[SWMW] Error %d in %s:%d\n", reply, SWMW_MANAGER_SOURCE, 253);
-	return 0;
 }
 
 /* 0x2118: destroy the session */
-extern "C" int SwMwManagerDestroy(struct SwMwCommChannel *channel,
+extern "C" void SwMwManagerDestroy(struct SwMwCommChannel *channel,
 				  struct SwMwIpcMessage *request, void *argument)
 {
 	struct SwMwManagerContextBlock context;
@@ -175,7 +177,8 @@ extern "C" int SwMwManagerDestroy(struct SwMwCommChannel *channel,
 	device = SwMwManagerContextValues(&context);
 	if (request->channel == 255) {
 		SwMwCommServerReplyStatus(channel, request, 12003);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 266);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 266);
+		return;
 	}
 	result = SwMwManagerCancelDownloadWrap();
 	request->result = result;
@@ -184,11 +187,10 @@ extern "C" int SwMwManagerDestroy(struct SwMwCommChannel *channel,
 	reply = SwMwCommServerReplyError(channel, request);
 	if (reply != 0)
 		swMwTrace("[SWMW] Error %d in %s:%d\n", reply, SWMW_MANAGER_SOURCE, 277);
-	return 0;
 }
 
 /* 0x210a: update the manager's SRM data */
-extern "C" int SwMwManagerSetSrmCommand(struct SwMwCommChannel *channel,
+extern "C" void SwMwManagerSetSrmCommand(struct SwMwCommChannel *channel,
 					struct SwMwIpcMessage *request, void *argument)
 {
 	struct SwMwManagerContextBlock context;
@@ -201,11 +203,13 @@ extern "C" int SwMwManagerSetSrmCommand(struct SwMwCommChannel *channel,
 	device = SwMwManagerContextValues(&context);
 	if (request->channel == 255) {
 		SwMwCommServerReplyStatus(channel, request, 12003);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 290);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 290);
+		return;
 	}
 	if (*device == 0) {
 		SwMwCommServerReplyStatus(channel, request, 12004);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12004, SWMW_MANAGER_SOURCE, 296);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12004, SWMW_MANAGER_SOURCE, 296);
+		return;
 	}
 	result = SwMwManagerSetSrm(*device, request->payload, request->size);
 	if (result != 0)
@@ -216,7 +220,6 @@ extern "C" int SwMwManagerSetSrmCommand(struct SwMwCommChannel *channel,
 	reply = SwMwCommServerReplyError(channel, request);
 	if (reply != 0)
 		swMwTrace("[SWMW] Error %d in %s:%d\n", reply, SWMW_MANAGER_SOURCE, 310);
-	return 0;
 }
 
 /* 0x1101: connect the channel's device */
@@ -241,7 +244,7 @@ extern "C" int SwMwManagerDeviceConnect(struct SwMwCommChannel *channel,
 }
 
 /* 0x2103: create a SAC device handle */
-extern "C" int SwMwManagerCreateSacDevice(struct SwMwCommChannel *channel,
+extern "C" void SwMwManagerCreateSacDevice(struct SwMwCommChannel *channel,
 					  struct SwMwIpcMessage *request, void *argument)
 {
 	struct SwMwManagerContextBlock context;
@@ -255,11 +258,13 @@ extern "C" int SwMwManagerCreateSacDevice(struct SwMwCommChannel *channel,
 	device = SwMwManagerContextValues(&context);
 	if (request->channel == 255) {
 		SwMwCommServerReplyStatus(channel, request, 12003);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 338);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 338);
+		return;
 	}
 	if (*device == 0) {
 		SwMwCommServerReplyStatus(channel, request, 12004);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12004, SWMW_MANAGER_SOURCE, 344);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12004, SWMW_MANAGER_SOURCE, 344);
+		return;
 	}
 	result = SwMwSacDeviceCreate(&sacDevice);
 	if (result != 0)
@@ -271,11 +276,10 @@ extern "C" int SwMwManagerCreateSacDevice(struct SwMwCommChannel *channel,
 	reply = SwMwCommServerReplyError(channel, request);
 	if (reply != 0)
 		swMwTrace("[SWMW] Error %d in %s:%d\n", reply, SWMW_MANAGER_SOURCE, 356);
-	return 0;
 }
 
 /* 0x2104: destroy a SAC device handle */
-extern "C" int SwMwManagerDestroySacDevice(struct SwMwCommChannel *channel,
+extern "C" void SwMwManagerDestroySacDevice(struct SwMwCommChannel *channel,
 					   struct SwMwIpcMessage *request, void *argument)
 {
 	struct SwMwManagerContextBlock context;
@@ -288,11 +292,13 @@ extern "C" int SwMwManagerDestroySacDevice(struct SwMwCommChannel *channel,
 	device = SwMwManagerContextValues(&context);
 	if (request->channel == 255) {
 		SwMwCommServerReplyStatus(channel, request, 12003);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 370);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 370);
+		return;
 	}
 	if (*device == 0) {
 		SwMwCommServerReplyStatus(channel, request, 12004);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12004, SWMW_MANAGER_SOURCE, 376);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12004, SWMW_MANAGER_SOURCE, 376);
+		return;
 	}
 	result = SwMwSacDeviceDestroy((struct SwMwSacDevice *)(uintptr_t)request->value0);
 	if (result != 0)
@@ -303,11 +309,10 @@ extern "C" int SwMwManagerDestroySacDevice(struct SwMwCommChannel *channel,
 	reply = SwMwCommServerReplyError(channel, request);
 	if (reply != 0)
 		swMwTrace("[SWMW] Error %d in %s:%d\n", reply, SWMW_MANAGER_SOURCE, 389);
-	return 0;
 }
 
 /* 0x2105: obtain the 4-byte key from a SAC device */
-extern "C" int SwMwManagerSacSetKey(struct SwMwCommChannel *channel,
+extern "C" void SwMwManagerSacSetKey(struct SwMwCommChannel *channel,
 				    struct SwMwIpcMessage *request, void *argument)
 {
 	struct SwMwManagerContextBlock context;
@@ -321,11 +326,13 @@ extern "C" int SwMwManagerSacSetKey(struct SwMwCommChannel *channel,
 	device = SwMwManagerContextValues(&context);
 	if (request->channel == 255) {
 		SwMwCommServerReplyStatus(channel, request, 12003);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 403);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 403);
+		return;
 	}
 	if (*device == 0) {
 		SwMwCommServerReplyStatus(channel, request, 12004);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12004, SWMW_MANAGER_SOURCE, 409);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12004, SWMW_MANAGER_SOURCE, 409);
+		return;
 	}
 	result = SwMwSacDeviceSetKey((struct SwMwSacDevice *)(uintptr_t)request->value0, key);
 	if (result != 0)
@@ -336,11 +343,10 @@ extern "C" int SwMwManagerSacSetKey(struct SwMwCommChannel *channel,
 	reply = SwMwCommServerReplyError(channel, request);
 	if (reply != 0)
 		swMwTrace("[SWMW] Error %d in %s:%d\n", reply, SWMW_MANAGER_SOURCE, 422);
-	return 0;
 }
 
 /* 0x2106: exchange a 32-byte certificate pair on a SAC device */
-extern "C" int SwMwManagerSacExchangeCert(struct SwMwCommChannel *channel,
+extern "C" void SwMwManagerSacExchangeCert(struct SwMwCommChannel *channel,
 					  struct SwMwIpcMessage *request, void *argument)
 {
 	struct SwMwManagerContextBlock context;
@@ -355,11 +361,13 @@ extern "C" int SwMwManagerSacExchangeCert(struct SwMwCommChannel *channel,
 	device = SwMwManagerContextValues(&context);
 	if (request->channel == 255) {
 		SwMwCommServerReplyStatus(channel, request, 12003);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 437);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 437);
+		return;
 	}
 	if (*device == 0) {
 		SwMwCommServerReplyStatus(channel, request, 12004);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12004, SWMW_MANAGER_SOURCE, 443);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12004, SWMW_MANAGER_SOURCE, 443);
+		return;
 	}
 	sacDevice = (struct SwMwSacDevice *)(uintptr_t)request->value0;
 	memcpy(certPair.input, request->payload, sizeof(certPair.input));
@@ -372,11 +380,10 @@ extern "C" int SwMwManagerSacExchangeCert(struct SwMwCommChannel *channel,
 	reply = SwMwCommServerReplyError(channel, request);
 	if (reply != 0)
 		swMwTrace("[SWMW] Error %d in %s:%d\n", reply, SWMW_MANAGER_SOURCE, 458);
-	return 0;
 }
 
 /* 0x2107: hand a 32-byte certificate to a SAC device */
-extern "C" int SwMwManagerSacSetCert(struct SwMwCommChannel *channel,
+extern "C" void SwMwManagerSacSetCert(struct SwMwCommChannel *channel,
 				     struct SwMwIpcMessage *request, void *argument)
 {
 	struct SwMwManagerContextBlock context;
@@ -391,11 +398,13 @@ extern "C" int SwMwManagerSacSetCert(struct SwMwCommChannel *channel,
 	device = SwMwManagerContextValues(&context);
 	if (request->channel == 255) {
 		SwMwCommServerReplyStatus(channel, request, 12003);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 473);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 473);
+		return;
 	}
 	if (*device == 0) {
 		SwMwCommServerReplyStatus(channel, request, 12004);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12004, SWMW_MANAGER_SOURCE, 479);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12004, SWMW_MANAGER_SOURCE, 479);
+		return;
 	}
 	sacDevice = (struct SwMwSacDevice *)(uintptr_t)request->value0;
 	memcpy(cert, request->payload, sizeof(cert));
@@ -408,11 +417,10 @@ extern "C" int SwMwManagerSacSetCert(struct SwMwCommChannel *channel,
 	reply = SwMwCommServerReplyError(channel, request);
 	if (reply != 0)
 		swMwTrace("[SWMW] Error %d in %s:%d\n", reply, SWMW_MANAGER_SOURCE, 494);
-	return 0;
 }
 
 /* 0x2108: store sender/receiver ids, length and certificate on a SAC device */
-extern "C" int SwMwManagerSacSetInfo(struct SwMwCommChannel *channel,
+extern "C" void SwMwManagerSacSetInfo(struct SwMwCommChannel *channel,
 				     struct SwMwIpcMessage *request, void *argument)
 {
 	struct SwMwManagerContextBlock context;
@@ -428,11 +436,13 @@ extern "C" int SwMwManagerSacSetInfo(struct SwMwCommChannel *channel,
 	device = SwMwManagerContextValues(&context);
 	if (request->channel == 255) {
 		SwMwCommServerReplyStatus(channel, request, 12003);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 511);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 511);
+		return;
 	}
 	if (*device == 0) {
 		SwMwCommServerReplyStatus(channel, request, 12004);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12004, SWMW_MANAGER_SOURCE, 517);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12004, SWMW_MANAGER_SOURCE, 517);
+		return;
 	}
 	sacDevice = (struct SwMwSacDevice *)(uintptr_t)request->value0;
 	cursor = (const unsigned char *)request->payload;
@@ -452,11 +462,10 @@ extern "C" int SwMwManagerSacSetInfo(struct SwMwCommChannel *channel,
 	reply = SwMwCommServerReplyError(channel, request);
 	if (reply != 0)
 		swMwTrace("[SWMW] Error %d in %s:%d\n", reply, SWMW_MANAGER_SOURCE, 547);
-	return 0;
 }
 
 /* 0x210b: update the manager's cached network state */
-extern "C" int SwMwManagerSetNetworkStateCommand(struct SwMwCommChannel *channel,
+extern "C" void SwMwManagerSetNetworkStateCommand(struct SwMwCommChannel *channel,
 						 struct SwMwIpcMessage *request, void *argument)
 {
 	struct SwMwManagerContextBlock context;
@@ -469,7 +478,8 @@ extern "C" int SwMwManagerSetNetworkStateCommand(struct SwMwCommChannel *channel
 	device = SwMwManagerContextValues(&context);
 	if (request->channel == 255) {
 		SwMwCommServerReplyStatus(channel, request, 12003);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 605);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 605);
+		return;
 	}
 	result = SwMwManagerSetNetworkState(*device, request->value0, request->value1);
 	if (result != 0)
@@ -480,11 +490,10 @@ extern "C" int SwMwManagerSetNetworkStateCommand(struct SwMwCommChannel *channel
 	reply = SwMwCommServerReplyError(channel, request);
 	if (reply != 0)
 		swMwTrace("[SWMW] Error %d in %s:%d\n", reply, SWMW_MANAGER_SOURCE, 619);
-	return 0;
 }
 
 /* 0x210d: begin enumerating saved resume records */
-extern "C" int SwMwManagerStartResumeListCommand(struct SwMwCommChannel *channel,
+extern "C" void SwMwManagerStartResumeListCommand(struct SwMwCommChannel *channel,
 						 struct SwMwIpcMessage *request, void *argument)
 {
 	struct SwMwManagerContextBlock context;
@@ -497,7 +506,8 @@ extern "C" int SwMwManagerStartResumeListCommand(struct SwMwCommChannel *channel
 	device = SwMwManagerContextValues(&context);
 	if (request->channel == 255) {
 		SwMwCommServerReplyStatus(channel, request, 12003);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 635);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 635);
+		return;
 	}
 	result = SwMwManagerStartResumeList(*device, request->value0);
 	if (result != 0)
@@ -508,11 +518,10 @@ extern "C" int SwMwManagerStartResumeListCommand(struct SwMwCommChannel *channel
 	reply = SwMwCommServerReplyError(channel, request);
 	if (reply != 0)
 		swMwTrace("[SWMW] Error %d in %s:%d\n", reply, SWMW_MANAGER_SOURCE, 648);
-	return 0;
 }
 
 /* 0x210c: read one resume record from the active list */
-extern "C" int SwMwManagerGetResumeDataCommand(struct SwMwCommChannel *channel,
+extern "C" void SwMwManagerGetResumeDataCommand(struct SwMwCommChannel *channel,
 					       struct SwMwIpcMessage *request, void *argument)
 {
 	struct SwMwManagerContextBlock context;
@@ -527,7 +536,8 @@ extern "C" int SwMwManagerGetResumeDataCommand(struct SwMwCommChannel *channel,
 	device = SwMwManagerContextValues(&context);
 	if (request->channel == 255) {
 		SwMwCommServerReplyStatus(channel, request, 12003);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 664);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 664);
+		return;
 	}
 	result = SwMwManagerGetResumeData(*device, request->value0, request->value1, &record);
 	request->result = result;
@@ -548,11 +558,10 @@ extern "C" int SwMwManagerGetResumeDataCommand(struct SwMwCommChannel *channel,
 	reply = SwMwCommServerReplyError(channel, request);
 	if (reply != 0)
 		swMwTrace("[SWMW] Error %d in %s:%d\n", reply, SWMW_MANAGER_SOURCE, 681);
-	return 0;
 }
 
 /* 0x210e: finish enumerating saved resume records */
-extern "C" int SwMwManagerEndResumeListCommand(struct SwMwCommChannel *channel,
+extern "C" void SwMwManagerEndResumeListCommand(struct SwMwCommChannel *channel,
 					       struct SwMwIpcMessage *request, void *argument)
 {
 	struct SwMwManagerContextBlock context;
@@ -565,7 +574,8 @@ extern "C" int SwMwManagerEndResumeListCommand(struct SwMwCommChannel *channel,
 	device = SwMwManagerContextValues(&context);
 	if (request->channel == 255) {
 		SwMwCommServerReplyStatus(channel, request, 12003);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 695);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 695);
+		return;
 	}
 	result = SwMwManagerEndResumeList(*device, request->value0);
 	if (result != 0)
@@ -576,11 +586,10 @@ extern "C" int SwMwManagerEndResumeListCommand(struct SwMwCommChannel *channel,
 	reply = SwMwCommServerReplyError(channel, request);
 	if (reply != 0)
 		swMwTrace("[SWMW] Error %d in %s:%d\n", reply, SWMW_MANAGER_SOURCE, 708);
-	return 0;
 }
 
 /* 0x210f: append one resume record */
-extern "C" int SwMwManagerAddResumeDataCommand(struct SwMwCommChannel *channel,
+extern "C" void SwMwManagerAddResumeDataCommand(struct SwMwCommChannel *channel,
 					       struct SwMwIpcMessage *request, void *argument)
 {
 	struct SwMwManagerContextBlock context;
@@ -596,13 +605,15 @@ extern "C" int SwMwManagerAddResumeDataCommand(struct SwMwCommChannel *channel,
 	device = SwMwManagerContextValues(&context);
 	if (request->channel == 255) {
 		SwMwCommServerReplyStatus(channel, request, 12003);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 723);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 723);
+		return;
 	}
 	isSink = request->value0;
 	wire = (const struct SwMwWireResumeRecord *)request->payload;
 	if (wire == NULL || request->size < sizeof(*wire)) {
 		SwMwCommServerReplyStatus(channel, request, 12003);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 732);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 732);
+		return;
 	}
 	record.id = 0;
 	record.kind = wire->kind;
@@ -621,11 +632,10 @@ extern "C" int SwMwManagerAddResumeDataCommand(struct SwMwCommChannel *channel,
 	reply = SwMwCommServerReplyError(channel, request);
 	if (reply != 0)
 		swMwTrace("[SWMW] Error %d in %s:%d\n", reply, SWMW_MANAGER_SOURCE, 757);
-	return 0;
 }
 
 /* 0x2110: clear saved sink or source resume records */
-extern "C" int SwMwManagerClearResumeDataCommand(struct SwMwCommChannel *channel,
+extern "C" void SwMwManagerClearResumeDataCommand(struct SwMwCommChannel *channel,
 						 struct SwMwIpcMessage *request, void *argument)
 {
 	struct SwMwManagerContextBlock context;
@@ -638,7 +648,8 @@ extern "C" int SwMwManagerClearResumeDataCommand(struct SwMwCommChannel *channel
 	device = SwMwManagerContextValues(&context);
 	if (request->channel == 255) {
 		SwMwCommServerReplyStatus(channel, request, 12003);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 770);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 770);
+		return;
 	}
 	if (request->value0 != 0)
 		result = SwMwManagerClearSinkResumeData(*device);
@@ -650,11 +661,10 @@ extern "C" int SwMwManagerClearResumeDataCommand(struct SwMwCommChannel *channel
 	reply = SwMwCommServerReplyError(channel, request);
 	if (reply != 0)
 		swMwTrace("[SWMW] Error %d in %s:%d\n", reply, SWMW_MANAGER_SOURCE, 787);
-	return 0;
 }
 
 /* 0x2111: update a move label status */
-extern "C" int SwMwManagerNotifyLabelCommand(struct SwMwCommChannel *channel,
+extern "C" void SwMwManagerNotifyLabelCommand(struct SwMwCommChannel *channel,
 					     struct SwMwIpcMessage *request, void *argument)
 {
 	struct SwMwManagerContextBlock context;
@@ -666,7 +676,8 @@ extern "C" int SwMwManagerNotifyLabelCommand(struct SwMwCommChannel *channel,
 	device = SwMwManagerContextValues(&context);
 	if (request->channel == 255) {
 		SwMwCommServerReplyStatus(channel, request, 12003);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 801);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 801);
+		return;
 	}
 	request->result = SwMwManagerNotifyLabel(*device, request->value0, request->value1);
 	request->outSize = 0;
@@ -674,11 +685,10 @@ extern "C" int SwMwManagerNotifyLabelCommand(struct SwMwCommChannel *channel,
 	reply = SwMwCommServerReplyError(channel, request);
 	if (reply != 0)
 		swMwTrace("[SWMW] Error %d in %s:%d\n", reply, SWMW_MANAGER_SOURCE, 814);
-	return 0;
 }
 
 /* 0x2112: clear all saved move labels */
-extern "C" int SwMwManagerClearLabelsCommand(struct SwMwCommChannel *channel,
+extern "C" void SwMwManagerClearLabelsCommand(struct SwMwCommChannel *channel,
 					     struct SwMwIpcMessage *request, void *argument)
 {
 	struct SwMwManagerContextBlock context;
@@ -690,7 +700,8 @@ extern "C" int SwMwManagerClearLabelsCommand(struct SwMwCommChannel *channel,
 	device = SwMwManagerContextValues(&context);
 	if (request->channel == 255) {
 		SwMwCommServerReplyStatus(channel, request, 12003);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 826);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 826);
+		return;
 	}
 	request->result = SwMwManagerClearLabels(*device);
 	request->outSize = 0;
@@ -698,11 +709,10 @@ extern "C" int SwMwManagerClearLabelsCommand(struct SwMwCommChannel *channel,
 	reply = SwMwCommServerReplyError(channel, request);
 	if (reply != 0)
 		swMwTrace("[SWMW] Error %d in %s:%d\n", reply, SWMW_MANAGER_SOURCE, 837);
-	return 0;
 }
 
 /* 0x2113: the session's status, or 12003 when the request names no stream */
-extern "C" int SwMwManagerGetSessionStatus(struct SwMwCommChannel *channel,
+extern "C" void SwMwManagerGetSessionStatus(struct SwMwCommChannel *channel,
 					   struct SwMwIpcMessage *request, void *argument)
 {
 	struct SwMwManagerContextBlock context;
@@ -715,7 +725,8 @@ extern "C" int SwMwManagerGetSessionStatus(struct SwMwCommChannel *channel,
 	device = SwMwManagerContextValues(&context);
 	if (request->channel == 255) {
 		SwMwCommServerReplyStatus(channel, request, 12003);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 850);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 850);
+		return;
 	}
 	result = SwMwManagerStartActivation();
 	request->result = result;
@@ -724,11 +735,10 @@ extern "C" int SwMwManagerGetSessionStatus(struct SwMwCommChannel *channel,
 	reply = SwMwCommServerReplyError(channel, request);
 	if (reply != 0)
 		swMwTrace("[SWMW] Error %d in %s:%d\n", reply, SWMW_MANAGER_SOURCE, 861);
-	return 0;
 }
 
 /* 0x2114: the session status's value in out0 */
-extern "C" int SwMwManagerGetSessionResult(struct SwMwCommChannel *channel,
+extern "C" void SwMwManagerGetSessionResult(struct SwMwCommChannel *channel,
 					   struct SwMwIpcMessage *request, void *argument)
 {
 	struct SwMwManagerContextBlock context;
@@ -742,7 +752,8 @@ extern "C" int SwMwManagerGetSessionResult(struct SwMwCommChannel *channel,
 	device = SwMwManagerContextValues(&context);
 	if (request->channel == 255) {
 		SwMwCommServerReplyStatus(channel, request, 12003);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 875);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 875);
+		return;
 	}
 	result = SwMwManagerGetActivationResult(&value);
 	request->result = result;
@@ -752,11 +763,10 @@ extern "C" int SwMwManagerGetSessionResult(struct SwMwCommChannel *channel,
 	reply = SwMwCommServerReplyError(channel, request);
 	if (reply != 0)
 		swMwTrace("[SWMW] Error %d in %s:%d\n", reply, SWMW_MANAGER_SOURCE, 887);
-	return 0;
 }
 
 /* 0x2115: close the session */
-extern "C" int SwMwManagerCloseSession(struct SwMwCommChannel *channel,
+extern "C" void SwMwManagerCloseSession(struct SwMwCommChannel *channel,
 				       struct SwMwIpcMessage *request, void *argument)
 {
 	struct SwMwManagerContextBlock context;
@@ -769,7 +779,8 @@ extern "C" int SwMwManagerCloseSession(struct SwMwCommChannel *channel,
 	device = SwMwManagerContextValues(&context);
 	if (request->channel == 255) {
 		SwMwCommServerReplyStatus(channel, request, 12003);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 899);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 899);
+		return;
 	}
 	result = SwMwManagerCancel();
 	request->result = result;
@@ -778,11 +789,10 @@ extern "C" int SwMwManagerCloseSession(struct SwMwCommChannel *channel,
 	reply = SwMwCommServerReplyError(channel, request);
 	if (reply != 0)
 		swMwTrace("[SWMW] Error %d in %s:%d\n", reply, SWMW_MANAGER_SOURCE, 910);
-	return 0;
 }
 
 /* 0x2116: open the session */
-extern "C" int SwMwManagerOpenSession(struct SwMwCommChannel *channel,
+extern "C" void SwMwManagerOpenSession(struct SwMwCommChannel *channel,
 				      struct SwMwIpcMessage *request, void *argument)
 {
 	struct SwMwManagerContextBlock context;
@@ -795,7 +805,8 @@ extern "C" int SwMwManagerOpenSession(struct SwMwCommChannel *channel,
 	device = SwMwManagerContextValues(&context);
 	if (request->channel == 255) {
 		SwMwCommServerReplyStatus(channel, request, 12003);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 922);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 922);
+		return;
 	}
 	result = SwMwManagerCheckActivation();
 	request->result = result;
@@ -804,11 +815,10 @@ extern "C" int SwMwManagerOpenSession(struct SwMwCommChannel *channel,
 	reply = SwMwCommServerReplyError(channel, request);
 	if (reply != 0)
 		swMwTrace("[SWMW] Error %d in %s:%d\n", reply, SWMW_MANAGER_SOURCE, 933);
-	return 0;
 }
 
 /* 0x2119: initialize the key manager */
-extern "C" int SwMwManagerInitKeyCommand(struct SwMwCommChannel *channel,
+extern "C" void SwMwManagerInitKeyCommand(struct SwMwCommChannel *channel,
 					 struct SwMwIpcMessage *request, void *argument)
 {
 	struct SwMwManagerContextBlock context;
@@ -820,7 +830,8 @@ extern "C" int SwMwManagerInitKeyCommand(struct SwMwCommChannel *channel,
 	device = SwMwManagerContextValues(&context);
 	if (request->channel == 255) {
 		SwMwCommServerReplyStatus(channel, request, 12003);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 948);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 948);
+		return;
 	}
 	request->result = SwMwManagerInitKey(*device);
 	request->outSize = 0;
@@ -828,11 +839,10 @@ extern "C" int SwMwManagerInitKeyCommand(struct SwMwCommChannel *channel,
 	reply = SwMwCommServerReplyError(channel, request);
 	if (reply != 0)
 		swMwTrace("[SWMW] Error %d in %s:%d\n", reply, SWMW_MANAGER_SOURCE, 959);
-	return 0;
 }
 
 /* the manager's command dispatcher */
-extern "C" int SwMwManagerCommandDispatch(struct SwMwCommChannel *channel,
+extern "C" void SwMwManagerCommandDispatch(struct SwMwCommChannel *channel,
 					  struct SwMwIpcMessage *request, void *argument)
 {
 	if (channel == NULL)
@@ -841,57 +851,83 @@ extern "C" int SwMwManagerCommandDispatch(struct SwMwCommChannel *channel,
 		swMwTrace("[SWMW] Assertion Failed in %s:%d\n", SWMW_MANAGER_SOURCE, 58);
 	switch (request->command) {
 	case 0x2101:
-		return SwMwManagerConnect(channel, request, argument);
+		SwMwManagerConnect(channel, request, argument);
+		break;
 	case 0x2102:
-		return SwMwManagerDisconnect(channel, request, argument);
+		SwMwManagerDisconnect(channel, request, argument);
+		break;
 	case 0x2103:
-		return SwMwManagerCreateSacDevice(channel, request, argument);
+		SwMwManagerCreateSacDevice(channel, request, argument);
+		break;
 	case 0x2104:
-		return SwMwManagerDestroySacDevice(channel, request, argument);
+		SwMwManagerDestroySacDevice(channel, request, argument);
+		break;
 	case 0x2105:
-		return SwMwManagerSacSetKey(channel, request, argument);
+		SwMwManagerSacSetKey(channel, request, argument);
+		break;
 	case 0x2106:
-		return SwMwManagerSacExchangeCert(channel, request, argument);
+		SwMwManagerSacExchangeCert(channel, request, argument);
+		break;
 	case 0x2107:
-		return SwMwManagerSacSetCert(channel, request, argument);
+		SwMwManagerSacSetCert(channel, request, argument);
+		break;
 	case 0x2108:
-		return SwMwManagerSacSetInfo(channel, request, argument);
+		SwMwManagerSacSetInfo(channel, request, argument);
+		break;
 	case 0x210a:
-		return SwMwManagerSetSrmCommand(channel, request, argument);
+		SwMwManagerSetSrmCommand(channel, request, argument);
+		break;
 	case 0x210b:
-		return SwMwManagerSetNetworkStateCommand(channel, request, argument);
+		SwMwManagerSetNetworkStateCommand(channel, request, argument);
+		break;
 	case 0x210c:
-		return SwMwManagerGetResumeDataCommand(channel, request, argument);
+		SwMwManagerGetResumeDataCommand(channel, request, argument);
+		break;
 	case 0x210d:
-		return SwMwManagerStartResumeListCommand(channel, request, argument);
+		SwMwManagerStartResumeListCommand(channel, request, argument);
+		break;
 	case 0x210e:
-		return SwMwManagerEndResumeListCommand(channel, request, argument);
+		SwMwManagerEndResumeListCommand(channel, request, argument);
+		break;
 	case 0x210f:
-		return SwMwManagerAddResumeDataCommand(channel, request, argument);
+		SwMwManagerAddResumeDataCommand(channel, request, argument);
+		break;
 	case 0x2110:
-		return SwMwManagerClearResumeDataCommand(channel, request, argument);
+		SwMwManagerClearResumeDataCommand(channel, request, argument);
+		break;
 	case 0x2111:
-		return SwMwManagerNotifyLabelCommand(channel, request, argument);
+		SwMwManagerNotifyLabelCommand(channel, request, argument);
+		break;
 	case 0x2112:
-		return SwMwManagerClearLabelsCommand(channel, request, argument);
+		SwMwManagerClearLabelsCommand(channel, request, argument);
+		break;
 	case 0x2113:
-		return SwMwManagerGetSessionStatus(channel, request, argument);
+		SwMwManagerGetSessionStatus(channel, request, argument);
+		break;
 	case 0x2114:
-		return SwMwManagerGetSessionResult(channel, request, argument);
+		SwMwManagerGetSessionResult(channel, request, argument);
+		break;
 	case 0x2115:
-		return SwMwManagerCloseSession(channel, request, argument);
+		SwMwManagerCloseSession(channel, request, argument);
+		break;
 	case 0x2116:
-		return SwMwManagerOpenSession(channel, request, argument);
+		SwMwManagerOpenSession(channel, request, argument);
+		break;
 	case 0x2117:
-		return SwMwManagerWaitReady(channel, request, argument);
+		SwMwManagerWaitReady(channel, request, argument);
+		break;
 	case 0x2118:
-		return SwMwManagerDestroy(channel, request, argument);
+		SwMwManagerDestroy(channel, request, argument);
+		break;
 	case 0x2119:
-		return SwMwManagerInitKeyCommand(channel, request, argument);
+		SwMwManagerInitKeyCommand(channel, request, argument);
+		break;
 	case 0x1101:
-		return SwMwManagerDeviceConnect(channel, request, argument);
+		SwMwManagerDeviceConnect(channel, request, argument);
+		break;
 	default:
 		SwMwCommServerReplyStatus(channel, request, 12003);
-		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 147);
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 147);
+		break;
 	}
 }
