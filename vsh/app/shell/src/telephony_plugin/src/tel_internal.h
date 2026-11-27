@@ -602,7 +602,6 @@ public:
 						     SceInt64 *outLimitBytes) = 0;
 	virtual TelephonyResult CheckRoamingDownloadAllowed(unsigned int serviceType) = 0;
 	virtual TelephonyResult GetUpdateListUrl(paf::string *outUrl) = 0;
-	virtual TelephonyResult Terminate() { return TelephonyResult(TEL_OK); }
 };
 
 class TelGeneralLogicNetCtlFactory {
