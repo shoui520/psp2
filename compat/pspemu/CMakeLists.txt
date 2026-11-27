@@ -10,6 +10,13 @@ psp2_module(vs0_app_NPXS10028_eboot KIND user COMPILER gcc48 PARTIAL SOURCES
 	remotefs.c
 	remote_msfs.c
 	remote_flashfs.c
+	remote_audioout.c
+	remote_audioin.c
+	remote_me.c
+	remote_me_avcdec.c
+	remote_me_jpegdec.c
+	me_edram.c
+	me_wrapper_api.c
 	iocache.c
 	${PSP2_SRC}/sys/sdk/target/src/sha1/libsha1.c
 	${PSP2_SRC}/sys/internal/kernel/src/sysmem/sha1_transform.S
@@ -52,6 +59,13 @@ set_source_files_properties(
 	remotefs.c
 	remote_msfs.c
 	remote_flashfs.c
+	remote_audioout.c
+	remote_audioin.c
+	remote_me.c
+	remote_me_avcdec.c
+	remote_me_jpegdec.c
+	me_edram.c
+	me_wrapper_api.c
 	iocache.c
 	PROPERTIES COMPILE_OPTIONS "-fno-toplevel-reorder;-fno-section-anchors;-fno-partial-inlining;-ffunction-sections")
 

@@ -26,6 +26,11 @@
 #include <vshbridge/vshbridge.h>
 #include <libmd5.h>
 #include <ces/libces_jis.h>
+#include <audioout.h>
+#include <audioin.h>
+#include <avcdec.h>
+#include <audiodec.h>
+#include <scejpeg.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -398,7 +403,7 @@ typedef struct PspemuKermitRequest {
 	uint32_t semaId;
 	uint32_t retAddr;
 	uint32_t padWord;
-	uint64_t args[8];
+	uint64_t args[9];
 } PspemuKermitRequest;
 
 /* Virtual filesystem operations table for compatFsLoop */
@@ -482,16 +487,157 @@ int pspemuSettingsSetEmuListFlag(void);
 extern int g_compatMsfsSeekFlag;
 
 /* remote_audioout.c & remote_audioin.c */
+typedef struct PspemuAudioResampler {
+	int      consumedFrames;
+	int      producedFrames;
+	uint32_t phaseFrac;
+	uint32_t phaseStep;
+	int      srcRate;
+	int      dstRate;
+	int      ringReadIdx;
+	int      ringWriteIdx;
+	int16_t  ringBuf[64][2];
+} PspemuAudioResampler;
+
+extern int g_audioFadeStep;
+extern int g_audioFadeShift;
+extern int g_audioFadeDir;
+extern int g_audioFadeHoldCount;
+
 int remoteAudioOutInit(void);
 int remoteAudioOutSuspend(int suspend);
+uint32_t audioResamplerInit(PspemuAudioResampler *resampler, int srcRate, int dstRate);
+int audioResamplerProcess(PspemuAudioResampler *resampler, const int16_t *inSamples, int inFrames,
+                          int16_t *outSamples, int maxOutFrames, unsigned int volume);
 int remoteAudioInInit(void);
 
-/* remote_me.c, remote_me_avcdec.c, me_edram.c, me_wrapper_api */
+/* Vita internal codec imports used by Milestone 4 */
+typedef struct SceAvcdecPictureInternal {
+	SceSize              size;
+	SceUInt32            pixelType;
+	SceUInt32            framePitch;
+	SceUInt32            frameWidth;
+	SceUInt32            frameHeight;
+	SceUInt32            horizontalSize;
+	SceUInt32            verticalSize;
+	SceUInt32            frameCropLeftOffset;
+	SceUInt32            frameCropRightOffset;
+	SceUInt32            frameCropTopOffset;
+	SceUInt32            frameCropBottomOffset;
+	SceAvcdecFrameOption opt;
+	void                *pPicture[2];
+	void                *yPlane;
+	void                *cbPlane;
+	void                *crPlane;
+	void                *extraPlanes[3];
+	SceAvcdecInfo        info;
+} SceAvcdecPictureInternal;
+
+int sceAvcdecCscInternal(const SceAvcdecPictureInternal *dstPic, const SceAvcdecPictureInternal *srcPic);
+int sceAvcdecDecodeAuInternal(const SceAvcdecCtrl *ctrl, const SceAvcdecAu *au, int *outStatus);
+int sceAvcdecDecodeGetPictureInternal(const SceAvcdecCtrl *ctrl, SceAvcdecArrayPicture *arrayPic, SceUInt *opt);
+int sceAvcdecGetSeiPictureTimingInternal(const SceAvcdecCtrl *ctrl, int index, void *outSei);
+int sceAvcdecRegisterCallbackInternal(const SceAvcdecCtrl *ctrl, SceUID cbid, int mode);
+int sceAvcdecUnregisterCallbackInternal(const SceAvcdecCtrl *ctrl);
+int sceAvcdecSetDecodeModeInternal(uint32_t codecType, int mode);
+int sceVideodecSetConfigInternal(uint32_t codecType, int config);
+
+int sceJpegArmDecodeMJpegYCbCr(const SceUInt8 *pJpeg, SceSize isize, SceUInt8 *pYCbCr, SceSize osize,
+                               int decodeMode, void *pCoefBuffer, SceSize coefBufferSize);
+
+int SceAudiocodec_E2AF3A54(void *work, int codecType);
+int SceAudiocodec_1F9A3722(void *work, int codecType);
+int SceAudiocodec_E827E04F(void *work, int codecType);
+
+int sceG729EncodeGetContextSize(void);
+int sceG729DecodeGetContextSize(void);
+int sceG729EncodeInit(void *ctx, unsigned int mode, unsigned int flags);
+int sceG729EncodeCore(void *ctx, const void *pcmIn, void *bitstreamOut);
+int sceG729DecodeInit(void *ctx);
+int sceG729DecodeCore(void *ctx, int frameType, int frameLen, const void *bitstreamIn, void *pcmOut);
+
+/* remote_me.c, remote_me_avcdec.c, remote_me_jpegdec.c, me_edram.c, me_wrapper_api.c */
 int remoteMeInit(void);
+int remoteMeAtxDispatch(int cmd, uint32_t argA, uint32_t argB, uint32_t argC, uint32_t argD, uint32_t argE);
+int remoteMeAt3Dispatch(int cmd, uint32_t argA, uint32_t argB, uint32_t argC, uint32_t argD, uint32_t argE);
+int remoteMeMp3Dispatch(int cmd, uint32_t argA, uint32_t argB, uint32_t argC, uint32_t argD);
+int remoteMeAacDispatch(int cmd, uint32_t argA, uint32_t argB, uint32_t argC, uint32_t argD, uint32_t argE);
+int remoteMeG729Dispatch(int cmd, uint32_t argA, uint32_t argB, uint32_t argC, uint32_t argD, uint32_t argE);
+int remoteMeMixerDispatch(int cmd, uint32_t argA, uint32_t argB, uint32_t argC);
+int remoteMeSasDispatch(int cmd, uint32_t argA, uint32_t argB, uint32_t argC, uint32_t argD, uint32_t argE, uint32_t argF);
+
 int remoteMeAvcdecNotifyResume(void);
+int remoteMeAvcdecCsc(void *dstRgb, uint32_t dstSize, void *srcYuv, uint32_t *params);
+int remoteMeAvcdecSetTimestamp(uint32_t ptsHi, uint32_t ptsLo, uint32_t dtsHi, uint32_t dtsLo);
+int remoteMeAvcdecCopyFrameToHost(void *dstHost, void *srcEdram, uint32_t frameBytes);
+int remoteMeAvcdecDispatch(int cmd, uint32_t argA, uint32_t argB, uint32_t argC, uint32_t argD, uint32_t argE);
+int remoteMeAvcdecSetActive(int active);
+int remoteMeAvcdecSetPatchFlag(int patchId);
+int remoteMeAvcdecInit(void);
+int remoteMeAvcdecUpscale(void *dstBuf, void *srcBuf);
+int remoteMeAvcdecHasDecoded(void);
+int remoteMeAvcdecZoomFrame(void *dstBuf, void *srcBuf, int zoomScale);
+
+int remoteMeUnusedVideoDispatch(int cmd);
+int remoteMeWorkDispatch(int cmd, uint32_t argA, uint32_t argB);
+int remoteMeJpegInit(void);
+int remoteMeJpegFinish(void);
+int remoteMeJpegCsc(void *dstBuf, uint32_t dstSize, void *srcYuv, int pixelFormat, int width, int height, int pitch);
+int remoteMeJpegDispatch(int cmd, uint32_t argA, uint32_t argB, uint32_t argC, uint32_t argD, uint32_t argE, uint32_t argF);
+int remoteMeCscDispatch(int cmd, uint32_t argA, uint32_t argB, uint32_t argC, uint32_t argD, uint32_t argE, uint32_t argF, uint32_t argG, uint32_t argH);
+
 int meEdramInit(uint32_t size);
 void *meEdramGetBase(uint32_t offset);
+
 int meWrapperApiInit(void);
+int meAt3DecodeFrame(void *codecBuf);
+int meAt3GetInternalError(uint32_t *outErr, void *workCtx);
+int meAt3InitContext(uint32_t channelMode, uint32_t sampleRate, uint32_t frameBytes, void *workCtx, uint32_t outputMode);
+int meAtxDecodeFrame(void *codecBuf);
+int meAtxParseHeader(uint32_t *outSampleRate, uint32_t *outChannelMode, uint32_t *outFrameBytes, const uint8_t *headerBytes);
+int meAtxGetOutputSize(uint32_t *outSize, const void *workCtx);
+int meAtxInitContext(uint32_t sampleRate, uint32_t channelMode, uint32_t frameBytes, uint32_t outputMode, void *workCtx);
+int meAtxSetChannels(const uint32_t *inChannels, void *workCtx);
+int meAtxGetInternalError(uint32_t *outErr, void *workCtx);
+int meMp3FindSyncAndParse(const uint8_t *esBuf, uint32_t *outBitOffset, void *outInfo, void *workCtx);
+int meMp3DecodeFrame(void *codecBuf);
+int meMp3SetFrameSize(uint32_t esSize, void *workCtx);
+int meMp3ResetContext(void *workCtx);
+int meAacInitContext(uint32_t sampleRate, void *workCtx);
+int meAacDecodeFrame(const void *esBuf, uint32_t *outConsumed, void *pcmBuf, uint32_t *outPcmBytes, void *workCtx);
+int meAacGetInternalError(uint32_t *outErr, void *workCtx);
+int meAacSetSampleRate(uint8_t rateCode, void *workCtx);
+int meAacSetOption(uint32_t optA, uint32_t optB, uint32_t optC, void *workCtx);
+int meG729EncodeInit(uint32_t *workCtx, uint32_t mode, uint32_t flags);
+int meG729EncodeCore(uint32_t *workCtx, const void *pcmIn, void *bitstreamOut);
+int meG729DecodeInit(void *workCtx);
+int meG729DecodeCore(void *workCtx, int frameType, int frameLen, const void *bitstreamIn, void *pcmOut);
+int meAudioMixerMix(const void *mixerParams, void **inStreams, int16_t *outStereo, uint32_t streamCount, int sampleCount);
+int meSasInit(void *ctx, uint32_t optA, uint32_t optB);
+int meSasSetOutputSize(void *ctx, uint32_t grainSamples, uint32_t optA, uint32_t optB, uint32_t optC, uint32_t optD);
+int meSasCopyBuffer(void *ctx, const void *srcBuf, void *dstBuf);
+int meSasTerm(void *ctx, uint32_t optA, uint32_t optB);
+
+/* Cross-module callees from Milestone 4 into Milestone 5 (dmacplus, scejpeg) */
+int remoteDmacplusIsEnabled(void);
+int remoteDmacplusSetEnabled(int enabled);
+int remoteDmacplusMeDispatch(int cmd, uint32_t argA, uint32_t argB, uint32_t argC, uint32_t argD, uint32_t argE);
+int sceJpegMjpegCsc(void *dstRgb, const void *srcYuv, uint32_t widthHeight, int pitch, int pixelFormat, int yuvFormat);
+void *sceJpegWorkReset(void);
+void *sceJpegWorkAlloc(uint32_t size);
+int sceJpegWorkFree(void *hostPtr);
+int sceJpegWorkGetFreeSize(void);
+void *sceJpegWorkAllocZero(uint32_t size);
+int sceJpegWorkHostToGuest(void *hostPtr, uint32_t *outGuestAddr);
+int sceJpegWorkGuestToHost(uint32_t guestAddr, void **outHostPtr);
+int sceJpegDecInit(void *ctx, const void *srcBuf, uint32_t srcSize, uint32_t widthHeight, int opt);
+int sceJpegDecDecode(void *ctx);
+int sceJpegDecFinish(void);
+int sceJpegDecGetOutputInfo(const void *srcBuf, uint32_t srcSize, void *outYuv, uint32_t outSize, int mode);
+int sceJpegDecTerm(void *ctx);
+int sceJpegDecClose(void *ctx, void *outBuf);
+int sceJpegDecReset(void *ctx);
+int sceJpegDecDelete(void *ctx);
 
 /* remote_dmacplus.c & remote_sas2.c */
 int remoteDmacplusInit(void);
@@ -507,7 +653,6 @@ int remoteNetIsAdhocActive(void);
 int remoteUsbInit(void *workBuf);
 int remoteUsbPspcmInit(void);
 int remoteUsbPspcmSuspend(void);
-void *sceJpegWorkReset(void);
 void *sceJpegWorkInit(void *edramBase);
 
 /* remote_peripheral.c & remote_osk.c */
