@@ -233,4 +233,432 @@ int pictureBuildExifApp1(PictureExifApp1Writer &writer, const PictureExifData *e
 			 uint32_t thumbSize, const void *makerNotePtr, uint32_t makerNoteSize,
 			 void **outPtr, uint32_t *outLen);
 
+/* Image dimensions and cursor coordinates used by the pixel pipeline */
+struct PictureSize {
+	uint32_t width;
+	uint32_t height;
+};
+
+struct PicturePoint {
+	uint32_t posX;
+	uint32_t posY;
+};
+
+/* Pipeline color spaces (returned by GetColorSpace) */
+enum PictureColorSpace {
+	PIC_COLOR_SPACE_NONE	= 0,
+	PIC_COLOR_SPACE_YUV	= 1,
+	PIC_COLOR_SPACE_RGB	= 2
+};
+
+/* YUV chroma subsampling modes */
+enum PictureYuvSubsampling {
+	PIC_YUV_444	= 1,
+	PIC_YUV_422	= 2,
+	PIC_YUV_420	= 3,
+	PIC_YUV_411	= 4
+};
+
+/* RGB channel packing layouts */
+enum PictureRgbLayout {
+	PIC_RGB_LAYOUT_BGR888	= 1,
+	PIC_RGB_LAYOUT_RGB888	= 2,
+	PIC_RGB_LAYOUT_ARGB8888	= 3,
+	PIC_RGB_LAYOUT_ABGR8888	= 4,
+	PIC_RGB_LAYOUT_BGRA8888	= 5,
+	PIC_RGB_LAYOUT_RGBA8888	= 6
+};
+
+/* Abstract pixel source base (vtable 0x8153D95C, 16 bytes) */
+class PicturePixelSource {
+public:
+	PicturePixelSource();
+	virtual ~PicturePixelSource();
+
+	virtual void Term(bool deleteChild);
+	virtual bool IsInitialized() const;
+	virtual PictureSize GetSize() const;
+	virtual int GetColorSpace() const = 0;
+	virtual uint32_t GetPixel(uint32_t posX, uint32_t posY);
+	virtual uint32_t GetDefaultPixel() const;
+	virtual uint32_t GetPixelAt(uint32_t posX, uint32_t posY) = 0;
+
+protected:
+	int InitBase(uint32_t width, uint32_t height);
+
+	uint32_t m_width;
+	uint32_t m_height;
+	bool m_initialized;
+};
+
+/* Centered canvas / letterbox wrapper (vtable 0x8153D930, 44 bytes) */
+class PictureCanvasSource : public PicturePixelSource {
+public:
+	PictureCanvasSource();
+	virtual ~PictureCanvasSource();
+
+	int Init(PicturePixelSource *source, uint32_t width, uint32_t height);
+	virtual void Term(bool deleteChild);
+	virtual int GetColorSpace() const;
+	virtual uint32_t GetDefaultPixel() const;
+	virtual uint32_t GetPixelAt(uint32_t posX, uint32_t posY);
+
+private:
+	PicturePixelSource *m_source;
+	uint32_t m_clipLeft;
+	uint32_t m_clipRight;
+	uint32_t m_clipTop;
+	uint32_t m_clipBottom;
+	int32_t m_offsetX;
+	int32_t m_offsetY;
+};
+
+/* Abstract scaler source base (vtable 0x8153D988, 36 bytes) */
+class PictureScalerSource : public PicturePixelSource {
+public:
+	PictureScalerSource();
+	virtual ~PictureScalerSource();
+
+	virtual void Term(bool deleteChild);
+	virtual int GetColorSpace() const;
+
+protected:
+	int InitScaler(PicturePixelSource *source, float scaleX, float scaleY);
+	int InitUniformScaler(PicturePixelSource *source, float scale);
+
+	float m_scaleX;
+	float m_invScaleX;
+	float m_scaleY;
+	float m_invScaleY;
+	PicturePixelSource *m_source;
+};
+
+/* Bilinear upscaler with 8-entry pixel cache (vtable 0x8153D8FC, 44 bytes) */
+class PictureBilinearScaler : public PictureScalerSource {
+public:
+	PictureBilinearScaler();
+	virtual ~PictureBilinearScaler();
+
+	int Init(PicturePixelSource *source, float scaleX, float scaleY);
+	virtual void Term(bool deleteChild);
+	virtual uint32_t GetDefaultPixel() const;
+	virtual uint32_t GetPixelAt(uint32_t posX, uint32_t posY);
+	virtual uint32_t SampleClampedPixel(int32_t posX, int32_t posY);
+	virtual uint32_t SampleCachedPixel(int32_t posX, int32_t posY);
+
+private:
+	int32_t m_halfStepX;
+	int32_t m_halfStepY;
+};
+
+/* Nearest-neighbor thumbnail scaler (vtable 0x8153D9B4, 44 bytes) */
+class PictureNearestScaler : public PictureScalerSource {
+public:
+	PictureNearestScaler();
+	virtual ~PictureNearestScaler();
+
+	int Init(PicturePixelSource *source, float scale);
+	virtual void Term(bool deleteChild);
+	virtual uint32_t GetDefaultPixel() const;
+	virtual uint32_t GetPixelAt(uint32_t posX, uint32_t posY);
+
+private:
+	uint32_t m_offsetX;
+	uint32_t m_offsetY;
+};
+
+/* Centered alpha-blending overlay compositor (vtable 0x8153D9E0, 36 bytes) */
+class PictureOverlayCompositor : public PicturePixelSource {
+public:
+	PictureOverlayCompositor();
+	virtual ~PictureOverlayCompositor();
+
+	int Init(PicturePixelSource *base, PicturePixelSource *overlay, uint8_t overlayAlpha);
+	virtual void Term(bool deleteChild);
+	virtual int GetColorSpace() const;
+	virtual uint32_t GetDefaultPixel() const;
+	virtual uint32_t GetPixelAt(uint32_t posX, uint32_t posY);
+
+private:
+	PicturePixelSource *m_base;
+	PicturePixelSource *m_overlay;
+	int32_t m_offsetX;
+	int32_t m_offsetY;
+	uint8_t m_overlayAlpha;
+};
+
+/* Cropped memory buffer pixel source base (vtable 0x8153DBCC, 40 bytes) */
+class PictureBufferSource : public PicturePixelSource {
+public:
+	PictureBufferSource();
+	virtual ~PictureBufferSource();
+
+	virtual void Term(bool deleteChild);
+	virtual uint32_t GetPixel(uint32_t posX, uint32_t posY);
+
+protected:
+	int InitRegion(uint32_t bufWidth, uint32_t bufHeight, uint32_t cropX, uint32_t cropY,
+		       uint32_t cropWidth, uint32_t cropHeight);
+
+	uint32_t m_bufWidth;
+	uint32_t m_bufHeight;
+	uint32_t m_cropX;
+	uint32_t m_cropY;
+	uint32_t m_cropWidth;
+	uint32_t m_cropHeight;
+};
+
+/* Shared RGB buffer source fields & setup (88 bytes) */
+class PictureRgbSourceBase : public PictureBufferSource {
+public:
+	PictureRgbSourceBase();
+	virtual ~PictureRgbSourceBase();
+
+	int Init(const void *pixels, uint32_t bufWidth, uint32_t bufHeight, uint32_t pitchBytes,
+		 uint32_t cropX, uint32_t cropY, uint32_t cropWidth, uint32_t cropHeight,
+		 int layoutCode);
+	virtual void Term(bool deleteChild);
+
+protected:
+	const uint8_t *m_pixels;
+	int m_layoutCode;
+	uint32_t m_bytesPerPixel;
+	uint32_t m_hasAlpha;
+	uint32_t m_alphaByteOffset;
+	uint32_t m_redByteOffset;
+	uint32_t m_greenByteOffset;
+	uint32_t m_blueByteOffset;
+	uint32_t m_sourceWidth;
+	uint32_t m_sourceHeight;
+	uint32_t m_pitchBytes;
+	uint32_t m_bufferByteSize;
+};
+
+/* RGB buffer -> RGB pixel source (vtable 0x8153DA0C, 88 bytes) */
+class PictureRgbToRgbSource : public PictureRgbSourceBase {
+public:
+	PictureRgbToRgbSource();
+	virtual ~PictureRgbToRgbSource();
+
+	virtual int GetColorSpace() const;
+	virtual uint32_t GetDefaultPixel() const;
+	virtual uint32_t GetPixelAt(uint32_t posX, uint32_t posY);
+};
+
+/* RGB buffer -> YUV pixel source (vtable 0x8153DA38, 88 bytes) */
+class PictureRgbToYuvSource : public PictureRgbSourceBase {
+public:
+	PictureRgbToYuvSource();
+	virtual ~PictureRgbToYuvSource();
+
+	virtual int GetColorSpace() const;
+	virtual uint32_t GetDefaultPixel() const;
+	virtual uint32_t GetPixelAt(uint32_t posX, uint32_t posY);
+};
+
+/* Shared planar YUV buffer source fields & setup (96 bytes) */
+class PictureYuvSourceBase : public PictureBufferSource {
+public:
+	PictureYuvSourceBase();
+	virtual ~PictureYuvSourceBase();
+
+	int Init(const void *pixels, uint32_t bufWidth, uint32_t bufHeight, uint32_t pitchBytes,
+		 uint32_t cropX, uint32_t cropY, uint32_t cropWidth, uint32_t cropHeight,
+		 int subsampling, int colorRange);
+	virtual void Term(bool deleteChild);
+
+protected:
+	const uint8_t *m_yPlane;
+	const uint8_t *m_cbPlane;
+	const uint8_t *m_crPlane;
+	int m_subsampling;
+	uint32_t m_chromaDivX;
+	uint32_t m_chromaDivY;
+	uint32_t m_yStride;
+	uint32_t m_yHeight;
+	uint32_t m_uvStride;
+	uint32_t m_uvHeight;
+	uint32_t m_yPlaneSize;
+	uint32_t m_uvPlaneSize;
+	uint32_t m_totalSize;
+	int m_colorRange;
+};
+
+/* YUV buffer -> RGB pixel source (vtable 0x8153DAE8, 96 bytes) */
+class PictureYuvToRgbSource : public PictureYuvSourceBase {
+public:
+	PictureYuvToRgbSource();
+	virtual ~PictureYuvToRgbSource();
+
+	virtual int GetColorSpace() const;
+	virtual uint32_t GetDefaultPixel() const;
+	virtual uint32_t GetPixelAt(uint32_t posX, uint32_t posY);
+
+private:
+	uint32_t ConvertYuvToRgb(uint32_t yuvPixel);
+};
+
+/* YUV buffer -> YUV pixel source (vtable 0x8153DB14, 96 bytes) */
+class PictureYuvToYuvSource : public PictureYuvSourceBase {
+public:
+	PictureYuvToYuvSource();
+	virtual ~PictureYuvToYuvSource();
+
+	virtual int GetColorSpace() const;
+	virtual uint32_t GetDefaultPixel() const;
+	virtual uint32_t GetPixelAt(uint32_t posX, uint32_t posY);
+};
+
+/* Abstract pixel sink base (vtable 0x8153DB9C, 40 bytes) */
+class PicturePixelSink {
+public:
+	PicturePixelSink();
+	virtual ~PicturePixelSink();
+
+	virtual void Term();
+	virtual bool IsInitialized() const;
+	virtual PictureSize GetSize() const;
+	virtual int GetColorSpace() const = 0;
+	virtual int GetSubsampling() const = 0;
+	virtual void SetPixel(uint32_t posX, uint32_t posY, uint32_t pixel);
+	virtual void Clear() = 0;
+	virtual void SetPixelAt(uint32_t posX, uint32_t posY, uint32_t pixel) = 0;
+
+protected:
+	int InitBase(uint32_t bufWidth, uint32_t bufHeight, uint32_t cropX, uint32_t cropY,
+		     uint32_t cropWidth, uint32_t cropHeight);
+
+	uint32_t m_width;
+	uint32_t m_height;
+	uint32_t m_bufWidth;
+	uint32_t m_bufHeight;
+	uint32_t m_cropX;
+	uint32_t m_cropY;
+	uint32_t m_cropWidth;
+	uint32_t m_cropHeight;
+	bool m_initialized;
+};
+
+/* Planar YUV MCU sink for SceJpegEncArm (vtable 0x8153DB40, 92 bytes) */
+class PictureYuvMcuSink : public PicturePixelSink {
+public:
+	PictureYuvMcuSink();
+	virtual ~PictureYuvMcuSink();
+
+	int Init(void *buffer, uint32_t bufWidth, uint32_t bufHeight, uint32_t pitchBytes,
+		 uint32_t cropX, uint32_t cropY, uint32_t cropWidth, uint32_t cropHeight,
+		 int subsampling);
+	virtual void Term();
+	virtual int GetColorSpace() const;
+	virtual int GetSubsampling() const;
+	virtual void Clear();
+	virtual void SetPixelAt(uint32_t posX, uint32_t posY, uint32_t pixel);
+
+	uint8_t *GetYPlane() const;
+	uint8_t *GetCbPlane() const;
+	uint8_t *GetCrPlane() const;
+
+private:
+	uint8_t *m_yPlane;
+	uint8_t *m_cbPlane;
+	uint8_t *m_crPlane;
+	int m_subsampling;
+	uint32_t m_chromaDivX;
+	uint32_t m_chromaDivY;
+	uint32_t m_yStride;
+	uint32_t m_yHeight;
+	uint32_t m_uvStride;
+	uint32_t m_uvHeight;
+	uint32_t m_yPlaneSize;
+	uint32_t m_uvPlaneSize;
+	uint32_t m_totalSize;
+};
+
+/* Abstract MCU feeder base (vtable 0x8153DB70, 12 bytes) */
+class PictureMcuFeederBase {
+public:
+	PictureMcuFeederBase();
+	virtual ~PictureMcuFeederBase();
+
+	virtual bool CanBindSink(PictureYuvMcuSink *sink) = 0;
+	virtual int Term() = 0;
+	virtual bool IsInitialized() const;
+	virtual bool IsReady() const;
+	virtual int BindSink(PictureYuvMcuSink *sink);
+	virtual PictureSize GetSourceSize() const = 0;
+	virtual int FetchNextBlock(PicturePoint *cursor) = 0;
+
+protected:
+	int InitBase();
+	void TermBase();
+
+	bool m_initialized;
+	PictureYuvMcuSink *m_sink;
+};
+
+/* Fast-path 960x544 ABGR8888 -> YUV420 MCU feeder (vtable 0x8153DA64, 16 bytes) */
+class PictureFastRgbaMcuFeeder : public PictureMcuFeederBase {
+public:
+	PictureFastRgbaMcuFeeder();
+	virtual ~PictureFastRgbaMcuFeeder();
+
+	static bool CanUse(const PictureSourceInfo *source);
+	int Init(const PictureSourceInfo *source);
+	virtual bool CanBindSink(PictureYuvMcuSink *sink);
+	virtual int Term();
+	virtual PictureSize GetSourceSize() const;
+	virtual int FetchNextBlock(PicturePoint *cursor);
+
+private:
+	const PictureSourceInfo *m_source;
+};
+
+/* Fast-path planar YUV420 -> YUV420 MCU feeder (vtable 0x8153DA90, 76 bytes) */
+class PictureFastYuvMcuFeeder : public PictureMcuFeederBase {
+public:
+	PictureFastYuvMcuFeeder();
+	virtual ~PictureFastYuvMcuFeeder();
+
+	static bool CanUse(const PictureSourceInfo *source);
+	int Init(const PictureSourceInfo *source);
+	virtual bool CanBindSink(PictureYuvMcuSink *sink);
+	virtual int Term();
+	virtual PictureSize GetSourceSize() const;
+	virtual int FetchNextBlock(PicturePoint *cursor);
+
+private:
+	const PictureSourceInfo *m_source;
+	int m_subsampling;
+	uint32_t m_chromaDivX;
+	uint32_t m_chromaDivY;
+	uint32_t m_yStride;
+	uint32_t m_yHeight;
+	uint32_t m_uvStride;
+	uint32_t m_uvHeight;
+	uint32_t m_yPlaneSize;
+	uint32_t m_uvPlaneSize;
+	uint32_t m_totalSize;
+	uint32_t m_cropWidth;
+	uint32_t m_cropHeight;
+	const uint8_t *m_yStart;
+	const uint8_t *m_cbStart;
+	const uint8_t *m_crStart;
+};
+
+/* Generic PicturePixelSource -> YUV MCU feeder (vtable 0x8153DABC, 16 bytes) */
+class PictureGenericMcuFeeder : public PictureMcuFeederBase {
+public:
+	PictureGenericMcuFeeder();
+	virtual ~PictureGenericMcuFeeder();
+
+	int Init(PicturePixelSource *source);
+	virtual bool CanBindSink(PictureYuvMcuSink *sink);
+	virtual int Term();
+	virtual PictureSize GetSourceSize() const;
+	virtual int FetchNextBlock(PicturePoint *cursor);
+
+private:
+	PicturePixelSource *m_source;
+};
+
 #endif /* SHELL_PICTURE_FILE_CREATOR_INTERNAL_H */
