@@ -683,7 +683,7 @@ void *sceJpegWorkReset(void);
 void *sceJpegWorkAlloc(uint32_t size);
 int sceJpegWorkFree(void *hostPtr);
 int sceJpegWorkGetFreeSize(void);
-void *sceJpegWorkAllocZero(uint32_t size);
+void *sceJpegWorkAllocZero(uint32_t count, uint32_t elemSize);
 int sceJpegWorkHostToGuest(void *hostPtr, uint32_t *outGuestAddr);
 int sceJpegWorkGuestToHost(uint32_t guestAddr, void **outHostPtr);
 int sceJpegDecInit(void *ctx, const void *srcBuf, uint32_t srcSize, uint32_t widthHeight, int opt);
@@ -691,7 +691,7 @@ int sceJpegDecDecode(void *ctx);
 int sceJpegDecFinish(void);
 int sceJpegDecGetOutputInfo(const void *srcBuf, uint32_t srcSize, void *outYuv, uint32_t outSize, int mode);
 int sceJpegDecTerm(void *ctx);
-int sceJpegDecClose(void *ctx, void *outBuf);
+int sceJpegDecClose(void *ctx, void *outBuf, int startX, int startY, int endX, int endY);
 int sceJpegDecReset(void *ctx);
 int sceJpegDecDelete(void *ctx);
 

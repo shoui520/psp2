@@ -61,7 +61,7 @@ int remoteMeWorkDispatch(int cmd, uint32_t argA, uint32_t argB)
 		return sceJpegWorkFree(hostPtr);
 	}
 	case 386: {
-		void *hostPtr = sceJpegWorkAllocZero(argB);
+		void *hostPtr = sceJpegWorkAllocZero(argA, argB);
 		uint32_t guestAddr = 0U;
 		sceJpegWorkHostToGuest(hostPtr, &guestAddr);
 		return (int)guestAddr;
@@ -191,7 +191,7 @@ int remoteMeJpegDispatch(int cmd, uint32_t argA, uint32_t argB, uint32_t argC, u
 		void *outBuf = meEdramGetBase(argB);
 		if (outBuf == NULL)
 			outBuf = remotefsTranslateUserGuestAddr(argB, 2, 0U);
-		return sceJpegDecClose(ctx, outBuf);
+		return sceJpegDecClose(ctx, outBuf, (int)argC, (int)argD, (int)argE, (int)argF);
 	}
 	case 324: {
 		const SceUInt8 *srcJpeg = (const SceUInt8 *)remotefsTranslateUserGuestAddr(argA, 1, argB);

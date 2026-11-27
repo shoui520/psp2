@@ -24,16 +24,17 @@ psp2_module(vs0_app_NPXS10028_eboot KIND user COMPILER gcc48 PARTIAL SOURCES
 	remote_osk.c
 	me_wrapper_api.c
 	remote_usbpspcm.c
+	scejpeg_decmain.c
+	scejpeg_csc.c
+	zlib_glue.c
+	scejpeg_work.c
 	remote_low_priority.c
 	iocache.c
 	osk_filter.c
 	${PSP2_SRC}/sys/sdk/target/src/sha1/libsha1.c
 	${PSP2_SRC}/sys/internal/kernel/src/sysmem/sha1_transform.S
-	${PSP2_SRC}/contrib/zlib-1.2.5/adler32.c
-	${PSP2_SRC}/contrib/zlib-1.2.5/crc32.c
 	${PSP2_SRC}/contrib/zlib-1.2.5/deflate.c
 	${PSP2_SRC}/contrib/zlib-1.2.5/trees.c
-	${PSP2_SRC}/contrib/zlib-1.2.5/zutil.c
 	${PSP2_SRC}/sys/sdk/target/src/md5/libmd5.c
 	${PSP2_SRC}/sys/sdk/target/src/md5/md5.S
 	${PSP2_SRC}/sys/sdk/target/src/deflt/crc.S
@@ -82,6 +83,10 @@ set_source_files_properties(
 	remote_osk.c
 	me_wrapper_api.c
 	remote_usbpspcm.c
+	scejpeg_decmain.c
+	scejpeg_csc.c
+	zlib_glue.c
+	scejpeg_work.c
 	remote_low_priority.c
 	iocache.c
 	osk_filter.c
@@ -97,11 +102,8 @@ set_source_files_properties(
 	PROPERTIES COMPILE_OPTIONS "-fno-stack-protector;-fno-toplevel-reorder;-ffunction-sections")
 
 set_source_files_properties(
-	${PSP2_SRC}/contrib/zlib-1.2.5/adler32.c
-	${PSP2_SRC}/contrib/zlib-1.2.5/crc32.c
 	${PSP2_SRC}/contrib/zlib-1.2.5/deflate.c
 	${PSP2_SRC}/contrib/zlib-1.2.5/trees.c
-	${PSP2_SRC}/contrib/zlib-1.2.5/zutil.c
 	PROPERTIES COMPILE_OPTIONS "-fno-stack-protector;-ffunction-sections")
 
 set_source_files_properties(
