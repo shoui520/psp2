@@ -2,7 +2,7 @@
 #include <sysmem_kernel.h>
 
 #include "intr.h"
-#include "memory.h"
+#include "block.h"
 #include "misc.h"
 
 #include "partition.h"

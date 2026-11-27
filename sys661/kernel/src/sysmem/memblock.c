@@ -1,5 +1,5 @@
 #include <sysmem_kernel.h>
-#include "memory.h"
+#include "block.h"
 
 SceUID sceKernelAllocMemoryBlock(char *name, u32 type, u32 size, SceSysmemMemoryBlockAllocOption *opt)
 {

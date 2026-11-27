@@ -4,11 +4,11 @@
 
 #include "heap.h"
 #include "intr.h"
-#include "memory.h"
+#include "block.h"
 #include "misc.h"
 #include "partition.h"
 #include "sysmem.h"
-#include "uid.h"
+#include "uidmemory.h"
 
 typedef struct SceSysmemHoldElem {
     struct SceSysmemHoldElem *next; // 0

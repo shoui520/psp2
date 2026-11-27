@@ -6,7 +6,7 @@
 #include "misc.h"
 #include "sysmem.h"
 
-#include "memory.h"
+#include "block.h"
 
 s32 block_do_initialize(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap);
 s32 block_do_delete(SceSysmemUidCB *uid, SceSysmemUidCB *uidWithFunc, s32 funcId, va_list ap);

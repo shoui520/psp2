@@ -6,13 +6,13 @@
 
 #include "kdebug.h"
 #include "intr.h"
-#include "memory.h"
-#include "memoryop.h"
+#include "block.h"
+#include "protection.h"
 #include "misc.h"
 #include "partition.h"
 #include "suspend.h"
 #include "sysevent.h"
-#include "uid.h"
+#include "uidmemory.h"
 
 #include "sysmem.h"
 
