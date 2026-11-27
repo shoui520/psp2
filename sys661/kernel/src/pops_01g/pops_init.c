@@ -694,11 +694,11 @@ s32 popsLoadGameQuirks(const char *titleId, u32 pkgVersion, u32 minVersion, cons
 
     for (idx = 0U; idx < 1043U && g_popsQuirkIndex[idx].titleHash != 0U; idx++) {
         if (g_popsQuirkIndex[idx].titleHash == titleHash) {
-            const u32 *pairs = g_popsQuirkIndex[idx].quirkPairs;
+            const PopsQuirkPair *pairs = g_popsQuirkIndex[idx].quirkPairs;
             u32 pairIdx;
             for (pairIdx = 0U; pairIdx < g_popsQuirkIndex[idx].entryCount; pairIdx++) {
-                s32 slot = (s32)pairs[2U * pairIdx];
-                u32 val = pairs[2U * pairIdx + 1U];
+                s32 slot = pairs[pairIdx].slot;
+                u32 val = pairs[pairIdx].value;
                 if (slot >= 0) {
                     quirkWords[slot] = val;
                 } else {

@@ -886,10 +886,50 @@ int sceUtilitySavedataUpdate(int n);
 /* =========================================================================
  * Global Data & Tables (pops_data.c)
  * ========================================================================= */
+typedef enum PopsQuirkSlot {
+    POPS_QUIRK_SLOT_FLAGS               = -1,
+    POPS_QUIRK_SLOT_JIT_MODE_FLAGS      = 0,
+    POPS_QUIRK_SLOT_DISPLAY_HEIGHT_CLAMP = 1,
+    POPS_QUIRK_SLOT_DISPLAY_TOP_NORMAL  = 2,
+    POPS_QUIRK_SLOT_DISPLAY_TOP_WIDE    = 3,
+    POPS_QUIRK_SLOT_CD_SPEED_SCALE      = 4,
+    POPS_QUIRK_SLOT_BRANCH_CYCLE_BIAS   = 5,
+    POPS_QUIRK_SLOT_DISPLAY_TOP_LOW     = 6,
+    POPS_QUIRK_SLOT_DISPLAY_TOP_HIGH    = 7,
+    POPS_QUIRK_SLOT_GPU_CLOCK_DIVISOR   = 8,
+    POPS_QUIRK_SLOT_GPU_TEX_COLOR_MASK  = 9,
+    POPS_QUIRK_SLOT_JIT_CHECKSUM_LIMIT  = 10,
+    POPS_QUIRK_SLOT_GPU_VBLANK_SLICES   = 11,
+    POPS_QUIRK_SLOT_JIT_SPLIT_ADDRESS   = 12,
+    POPS_QUIRK_SLOT_JIT_WATCH_ADDRESS   = 13,
+    POPS_QUIRK_SLOT_GPU_DMA_CYCLE_SHIFT = 14,
+    POPS_QUIRK_SLOT_CD_SEEK_DELAY_BIAS  = 15,
+    POPS_QUIRK_SLOT_SPU_DELAY_QUIRK     = 16,
+    POPS_QUIRK_SLOT_JIT_BREAK_ADDRESS   = 17,
+    POPS_QUIRK_SLOT_CD_SECTOR_QUIRK     = 18,
+    POPS_QUIRK_SLOT_JIT_RAM_LIMIT       = 19,
+    POPS_QUIRK_SLOT_SPU_DMA_LATENCY     = 20,
+    POPS_QUIRK_SLOT_CD_READ_LATENCY     = 21,
+    POPS_QUIRK_SLOT_VBLANK_IRQ_DELAY    = 22,
+    POPS_QUIRK_SLOT_GPU_TEX_PAGE_COST   = 23,
+    POPS_QUIRK_SLOT_GPU_READ_CYCLE_COST = 24,
+    POPS_QUIRK_SLOT_GPU_UV_BIAS         = 25,
+    POPS_QUIRK_SLOT_GPU_VRAM_COPY_SHIFT = 26,
+    POPS_QUIRK_SLOT_PAD_POLL_QUIRK      = 27,
+    POPS_QUIRK_SLOT_SIO_IRQ_LATENCY     = 28,
+    POPS_QUIRK_SLOT_DISPLAY_WIDTH_BIAS  = 29,
+    POPS_QUIRK_SLOT_FLAGS_EXT           = 30
+} PopsQuirkSlot;
+
+typedef struct PopsQuirkPair {
+    s32 slot;
+    u32 value;
+} PopsQuirkPair;
+
 typedef struct PopsQuirkIndex {
     u32 titleHash;
     u32 entryCount;
-    const u32 *quirkPairs;
+    const PopsQuirkPair *quirkPairs;
 } PopsQuirkIndex;
 
 extern u8 g_psxBiosRom[0x80000];
@@ -919,7 +959,7 @@ extern const float g_atracImdctSinCos[512];
 extern const float g_atracButterflyTable[127];
 extern const u16 g_atracBitRevPairs[128];
 extern const PopsQuirkIndex g_popsQuirkIndex[1043];
-extern const u32 g_popsQuirkPool[];
+extern const PopsQuirkPair g_popsQuirkPool[];
 extern const char g_popsSpecialTitleIds[5][12];
 
 /* =========================================================================
