@@ -1896,10 +1896,10 @@ int sceCompatMain(SceSize argLen, void *argp)
 					refreshRes = pspemuSettingsRefreshDynamic(sysSettings);
 					if (refreshRes < 0) {
 						if (g_isPocketStationTitle != 0)
-							remotePocsSetDisplayLock(0);
+							remotePocsSetEmulationActive(0);
 						pspemuSettingsShowFatalNotice(refreshRes);
 						if (g_isPocketStationTitle != 0)
-							remotePocsSetDisplayLock(1);
+							remotePocsSetEmulationActive(1);
 					}
 
 					res = sceCompatSuspendResume(1);

@@ -375,10 +375,37 @@ int SceCommonDialog_FA26EB30(void); /* sceCompatDialogGetStatus */
 int SceCommonDialog_A68A44EA(void); /* sceCompatDialogAbort */
 int SceCommonDialog_ED2F1495(void); /* sceCompatDialogResume */
 int SceCommonDialog_500229F0(void); /* scePocketStationDialogGetStatus */
+int SceCommonDialog_63B08CA3(void); /* scePocketStationDialogNotifyDisconnect */
 int SceCommonDialog_7030E4A6(void); /* scePocketStationDialogAbort */
 int scePhotoImportDialogGetStatus(void);
 int scePhotoImportDialogAbort(void);
 int sceImeDialogGetStatus(void);
+int sceNetCheckDialogInit(void *param);
+int sceNetCheckDialogAbort(void);
+int sceNetCheckDialogGetResult(void *result);
+int sceNetCheckDialogTerm(void);
+
+typedef enum SceNetAdhocMatchingMode {
+	SCE_NET_ADHOC_MATCHING_MODE_PARENT = 1,
+	SCE_NET_ADHOC_MATCHING_MODE_CHILD  = 2,
+	SCE_NET_ADHOC_MATCHING_MODE_P2P    = 3
+} SceNetAdhocMatchingMode;
+
+typedef void (*SceNetAdhocMatchingCallback)(
+	int id, int type, SceNetInAddr *addr, SceSize optLen, void *opt);
+
+int sceNetAdhocMatchingInit(unsigned int poolSize, void *poolPtr);
+int sceNetAdhocMatchingCreate(SceNetAdhocMatchingMode mode, int maxMembers,
+                              uint16_t port, int rxBufLen,
+                              unsigned int helloInterval, unsigned int keepAliveInterval,
+                              int retryCount, unsigned int rexmtInterval,
+                              SceNetAdhocMatchingCallback callback);
+int sceNetAdhocMatchingStart(int id, int threadPriority, int threadStackSize,
+                             int threadCpuAffinity, int helloOptLen, void *helloOpt);
+int sceNetAdhocMatchingStop(int id);
+int sceNetAdhocMatchingSelectTarget(int id, SceNetInAddr *target, int optLen, void *opt);
+int sceNetAdhocMatchingCancelTarget(int id, SceNetInAddr *target);
+int sceNetAdhocMatchingSendData(int id, SceNetInAddr *addr, int dataLen, void *data);
 
 int sceAppMgrAcquireBgmPort(void);
 int sceAppMgrExitToLiveboardForGameApp(void);
@@ -388,6 +415,10 @@ int sceAppMgrWorkDirMount(uint32_t id, char *mountPoint);
 SceUInt32 vshKernelCheckModelCapability(int capability);
 
 SceInt32 sceKernelAtomicGetAndSet8(volatile SceInt8 *ptr, SceInt8 value);
+SceInt32 sceKernelAtomicSet8(volatile SceInt8 *ptr, SceInt8 value);
+SceInt32 sceKernelAtomicCompareAndSet8(volatile SceInt8 *ptr, SceInt8 oldValue, SceInt8 newValue);
+SceInt32 sceKernelAtomicDecIfPositive8(volatile SceInt8 *ptr);
+int sceClibMemcmpConstTime(const void *left, const void *right, SceSize len);
 SceUInt32 sceKernelGetProcessTimeLow(void);
 int sceKernelPowerUnlock(int type);
 int sceClibStrncasecmp(const char *sLeft, const char *sRight, SceSize len);
@@ -1091,10 +1122,11 @@ int pspemuBgDialogNotifyPocsEvent(int eventArg);
 int pspemuBgImageImportPhotoDialog(int32_t *outResult);
 int pspemuBgImageInit(void);
 
-/* remote_pocs.c */
+/* remote_pocs.c & pocs_rtc_audio.c & pocs_periph.c & pocs_gxm.c */
 int remotePocsInit(void);
 int remotePocsPollPowerKeepAlive(void);
-int remotePocsSetDisplayLock(int unlock);
+void remotePocsKermitThread(SceSize args, void *argp);
+int remotePocsSetEmulationActive(int active);
 void remotePocsNotifyDisplayReset(void);
 int remotePocsMountSaveData(const char *titleId);
 int remotePocsEnterMode(void);
@@ -1102,21 +1134,19 @@ int remotePocsExitMode(void);
 int remotePocsHasMountedMedia(void);
 int remotePocsIsActive(void);
 int remotePocsInstallAppSupport(void);
-int remotePocsSetEmulationPaused(int resume);
-int remotePocsIsAudioActive(void);
-int remotePocsRunConnectDialog(uint32_t *outResult);
-int remotePocsGetDialogStatus(void);
-int remotePocsQueryDialogState(int mode, uint32_t *outVal);
-int remotePocsNotifyDialogModeChanged(void);
-int remotePocsResumeAfterDialog(void);
-int remotePocsSetSoundSetting(int arg);
-int remotePocsResetSession(void);
-int remotePocsSyncFlashState(void);
-int remotePocsSetClockSync(int arg);
-int remotePocsGetAudioState(void);
-int remotePocsToggleAudioState(void);
-int remotePocsGetBatteryLevel(void);
-int remotePocsGetClockState(void);
+int remotePocsRunConnectDialog(int32_t *outResult);
+const uint16_t *remotePocsGetSerialWideStr(void);
+int remotePocsGetAdhocPeerList(void *outPeers, unsigned int *inOutCount);
+int remotePocsGetAdhocStatus(void);
+int remotePocsStopAdhocIfIdle(void);
+int remotePocsSelectAdhocTarget(uint32_t peerIp);
+int remotePocsCancelAdhocTarget(void);
+int remotePocsAcceptAdhocTarget(void);
+int remotePocsDisconnectAdhoc(int stopMatching);
+int remotePocsGetPeerInfo(void *outPeer);
+int remotePocsGetConnectedPeerInfo(void *outPeer);
+int remotePocsSetPeerRequestCallback(int (*callback)(void));
+int remotePocsGetAdhocError(int index);
 int remotePocsGetActiveFrameIndex(void);
 void *remotePocsGetDefaultFrameBuffer(void);
 void *remotePocsGetCustomFrameBuffer(int index);
@@ -1124,20 +1154,20 @@ void *remotePocsGetBgTextureBuffer(void);
 void remotePocsCommitBgTexture(void);
 void remotePocsClearBgPreviewCache(void);
 int remotePocsConsumeDirtyFlag(void);
-int remotePocsIsStandbyActive(void);
-int remotePocsNotifyVmcDirty(void);
-int remotePocsStartCore(void);
-int remotePocsActivateStandalone(void);
-int remotePocsNotifyBootReady(void);
-int remotePocsSyncTimeFromHost(void);
+int remotePocsIsSavePending(void);
+void remotePocsNotifyVmcDirty(void);
+void pocsHandleGuestMemcWrite(uint32_t writeCmd);
+uint32_t remotePocsStartCore(void);
+int remotePocsWaitSaveIdle(void);
 int remotePocsStopBackgroundTasks(void);
 int remotePocsFlushVmc(void);
+int pocsRenderCurrentDisplay(void);
+int pocsSyncRtcFromHost(void);
+int pocsSpiSyncHost(void);
 
-/* pops_spu.c (Milestone 7) */
-int popsSpuFlushRing(void);
+/* pops_spu.c */
 uint32_t popsSpuMixSample(void);
 int popsSpuReset(void);
-int pocsResetAudioBuffer(void);
 
 /* pops_host.c */
 SceBool popsHostIsOverlayActive(void);
@@ -1166,6 +1196,7 @@ int popsHostSetPocsBgType(uint8_t bgType);
 int popsHostIsPocsOverlayEnabled(void);
 
 /* vmc_manager.c */
+int vmcLoadCardCache(unsigned int cardIndex);
 int vmcManagerInitWork(void *workBuf, int workSize);
 int vmcManagerRegisterSlot(unsigned int slot, void *slotBuf, int slotSize);
 int vmcManagerMountFile(unsigned int slot, int flags, const char *path);

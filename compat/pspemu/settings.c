@@ -431,11 +431,11 @@ int pspemuSettingsRunPocsMenuFlow(int dialogMode)
 		return 0;
 	}
 
-	remotePocsSetEmulationPaused(0);
+	remotePocsSetEmulationActive(0);
 	if (popsHostGetDiscLoadSpeed(g_popsMenuConfig) == 2)
 		hasMedia = 2;
 	else
-		hasMedia = (remotePocsIsAudioActive() == 0) ? 1 : 0;
+		hasMedia = (remotePocsGetInsertedSlot() == 0) ? 1 : 0;
 
 	for (;;) {
 		int bgType;
@@ -458,14 +458,14 @@ int pspemuSettingsRunPocsMenuFlow(int dialogMode)
 			break;
 
 		if (dialogAction == 1) {
-			uint32_t alertResult = 0U;
+			int32_t alertResult = 0;
 			if (remotePocsRunConnectDialog(&alertResult) != 0)
 				continue;
-			if (alertResult == 0U) {
+			if (alertResult == 0) {
 				dialogMode = 1;
 				continue;
 			}
-			if (alertResult != 2U)
+			if (alertResult != 2)
 				continue;
 			break;
 		} else if (dialogAction == 2) {
@@ -486,10 +486,10 @@ int pspemuSettingsRunPocsMenuFlow(int dialogMode)
 
 	if (pspemuIsPocketStationLaunch() != 0) {
 		if (pspemuSettingsIsFatalNoticeActive() == 0)
-			remotePocsSetEmulationPaused(1);
+			remotePocsSetEmulationActive(1);
 	} else if (popsHostIsPocsOverlayEnabled() != 0 &&
 	           pspemuSettingsIsFatalNoticeActive() == 0) {
-		remotePocsSetEmulationPaused(1);
+		remotePocsSetEmulationActive(1);
 	}
 
 	return 0;
@@ -518,7 +518,7 @@ static int settingsShellEventCallback(int eventArg, int eventType, int eventPara
 				pspemuSettingsRunPocsMenuFlow(0);
 			} else {
 				if (pspemuIsPocketStationEnabled() != 0)
-					remotePocsSetEmulationPaused(0);
+					remotePocsSetEmulationActive(0);
 				sceTouchSetSamplingState(1, SCE_TOUCH_SAMPLING_STATE_STOP);
 				popsHostSetPauseState(1);
 				if (remotePocsHasMountedMedia() == 0)
@@ -536,7 +536,7 @@ static int settingsShellEventCallback(int eventArg, int eventType, int eventPara
 					popsHostSetPauseState(0);
 				if (pspemuIsPocketStationEnabled() != 0 &&
 				    pspemuSettingsIsFatalNoticeActive() == 0) {
-					remotePocsSetEmulationPaused(1);
+					remotePocsSetEmulationActive(1);
 				}
 			}
 		} else {

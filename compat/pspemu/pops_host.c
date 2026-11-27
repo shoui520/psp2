@@ -479,7 +479,7 @@ int popsHostIsSingleDisc(void)
 /* 0x8102f8a0 */
 int popsHostIsAnalogDisabled(void)
 {
-	if (pspemuIsPocketStationEnabled() != 0 && remotePocsIsStandbyActive() != 0)
+	if (pspemuIsPocketStationEnabled() != 0 && remotePocsIsSavePending() != 0)
 		return 0;
 	return (int)*(const uint8_t *)remotefsTranslateGuestAddr(POPS_SHARED_STATE_PADDR + 171U, 2, 0);
 }
@@ -547,10 +547,10 @@ int popsHostFinishPocsTransition(void)
 {
 	if (remotePocsHasMountedMedia() != 0) {
 		popsSetVmcSyncFlag(0, 1U);
-		popsSpuFlushRing();
+		pocsSyncRtcFromHost();
 		g_popsDisplayPaused = 0;
-		remotePocsSetEmulationPaused(0);
-		popsSpuFlushRing();
+		remotePocsSetEmulationActive(0);
+		pocsSyncRtcFromHost();
 		g_popsDisplayPaused = 1;
 	}
 	return 0;
@@ -614,7 +614,7 @@ int popsHostApplyMenuSettings(PspemuMenuSettings settings)
 			sceDisplayWaitVblankStart();
 		}
 		popsSpuReset();
-		pocsResetAudioBuffer();
+		pocsSpiSyncHost();
 		guest->resetAction = 2U;
 	} else if (settings.resetRequest == 1U) {
 		guest->resetAction = 1U;
@@ -677,7 +677,7 @@ int popsHostHandlePocsFirstBoot(void)
 		int confirmRes = 0;
 		int importRes = 0;
 
-		popsSpuFlushRing();
+		pocsSyncRtcFromHost();
 		g_popsDisplayPaused = 1;
 		pspemuSettingsSetMenuEnabled(0);
 
@@ -704,7 +704,7 @@ int popsHostHandlePocsFirstBoot(void)
 		}
 
 		pspemuSettingsSetMenuEnabled(1);
-		popsSpuFlushRing();
+		pocsSyncRtcFromHost();
 		g_popsDisplayPaused = 0;
 	}
 	return 0;
@@ -875,27 +875,27 @@ int popsHostInitSettings(PspemuMenuSettings *settings)
 	if (pspemuIsPocketStationEnabled() == 0)
 		return 0;
 
-	remotePocsStartCore();
+	remotePocsWaitSaveIdle();
 	if (g_popsMenuInfo.pocsMounted == 1U) {
 		remotePocsMountMediaFromMenu();
 		popsHostReloadVmc(0U);
 	}
 	if (pspemuIsPocketStationLaunch() != 0) {
-		remotePocsActivateStandalone();
-		popsSpuFlushRing();
+		remotePocsEnterMode();
+		pocsSyncRtcFromHost();
 		g_popsDisplayPaused = 0;
 	} else {
-		remotePocsNotifyBootReady();
-		remotePocsSyncTimeFromHost();
+		remotePocsStartCore();
+		remotePocsNotifyDisplayReset();
 	}
-	remotePocsSetEmulationPaused(1);
+	remotePocsSetEmulationActive(1);
 	return 0;
 }
 
 /* 0x810300d4 */
 int popsHostSetPauseState(int paused)
 {
-	popsSpuFlushRing();
+	pocsSyncRtcFromHost();
 	g_popsDisplayPaused = paused;
 	return paused;
 }
@@ -985,17 +985,17 @@ int popsHostClearPendingError(void)
 {
 	if (pspemuIsPocketStationEnabled() != 0) {
 		remotePocsStopBackgroundTasks();
-		remotePocsSetClockSync(1);
+		remotePocsDisconnectAdhoc(1);
 	}
 	if (!pspemuSettingsIsMenuEnabled())
 		return 0;
 
 	if (pspemuIsPocketStationEnabled() != 0) {
-		while (remotePocsIsStandbyActive() != 0)
+		while (remotePocsIsSavePending() != 0)
 			sceDisplayWaitVblankStart();
 	}
 
-	popsSpuFlushRing();
+	pocsSyncRtcFromHost();
 	g_popsDisplayPaused = 1;
 	return 0;
 }

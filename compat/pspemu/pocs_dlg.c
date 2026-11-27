@@ -38,7 +38,7 @@ typedef struct PocsDialogParam {
 	int32_t extraArg;
 	uint8_t screenshotCompat;
 	uint8_t padCompat[3];
-	int32_t pocsStatus;
+	const uint16_t *serialWideStr;
 	const char *bgPath;
 	uint32_t reservedC;
 	int32_t selectedBgType;
@@ -46,14 +46,14 @@ typedef struct PocsDialogParam {
 	int (*onTriggerScreenshot)(void (*doneCb)(void));
 	void *(*onCapturePreview)(void);
 	int (*onSelectBgType)(int bgType);
-	int (*onQueryStatus)(int mode, uint32_t *outVal);
+	int (*onGetPeerList)(void *outPeers, unsigned int *inOutCount);
 	int (*onPocsCommand)(int cmd, int arg);
 	int (*onModeChanged)(int mode);
-	int (*onGetAudioState)(void);
-	int (*onToggleAudio)(void);
+	int (*onGetPeerInfo)(void *outPeer);
+	int (*onGetConnectedPeerInfo)(void *outPeer);
 	int (*onSetExitCallback)(int (*cb)(void));
-	int (*onGetBatteryLevel)(void);
-	int (*onGetClockState)(void);
+	int (*onSetPeerRequestCallback)(int (*cb)(void));
+	int (*onGetAdhocError)(int index);
 } PocsDialogParam;
 
 _Static_assert(sizeof(PocsDialogParam) == 0xB0U, "PocsDialogParam size");
@@ -212,7 +212,7 @@ static int bgDialogOnModeChanged(int mode)
 {
 	if (mode != 0)
 		return 0;
-	return remotePocsNotifyDialogModeChanged();
+	return remotePocsGetAdhocStatus();
 }
 
 /* 0x810220a8 */
@@ -268,16 +268,16 @@ static int bgDialogOnPocsCommand(int cmd, int arg)
 		sceKernelLockLwMutex(&g_pocsDialogNotStopMutex, 1, NULL);
 		g_pocsDialogNotStopFlag = 0;
 		sceKernelUnlockLwMutex(&g_pocsDialogNotStopMutex, 1);
-		return remotePocsResumeAfterDialog();
+		return remotePocsStopAdhocIfIdle();
 	case 2:
-		return remotePocsSetSoundSetting(arg);
+		return remotePocsSelectAdhocTarget((uint32_t)arg);
 	case 3:
 	case 5:
-		return remotePocsResetSession();
+		return remotePocsCancelAdhocTarget();
 	case 4:
-		return remotePocsSyncFlashState();
+		return remotePocsAcceptAdhocTarget();
 	case 6:
-		return remotePocsSetClockSync(0);
+		return remotePocsDisconnectAdhoc(0);
 	default:
 		return 0;
 	}
@@ -352,15 +352,15 @@ static int __attribute__((noinline)) bgDialogRunModal(int mode, int subMode, int
 			param.onCapturePreview = bgDialogCapturePreview;
 			param.onSelectBgType = bgDialogOnSelectBgType;
 			param.screenshotCompat = (uint8_t)pspemuCompatHasFlag(0x80000000U);
-			param.pocsStatus = remotePocsGetDialogStatus();
-			param.onQueryStatus = remotePocsQueryDialogState;
+			param.serialWideStr = remotePocsGetSerialWideStr();
+			param.onGetPeerList = remotePocsGetAdhocPeerList;
 			param.onPocsCommand = bgDialogOnPocsCommand;
 			param.onModeChanged = bgDialogOnModeChanged;
-			param.onGetAudioState = remotePocsGetAudioState;
-			param.onToggleAudio = remotePocsToggleAudioState;
+			param.onGetPeerInfo = remotePocsGetPeerInfo;
+			param.onGetConnectedPeerInfo = remotePocsGetConnectedPeerInfo;
 			param.onSetExitCallback = bgDialogSetExitCallback;
-			param.onGetBatteryLevel = remotePocsGetBatteryLevel;
-			param.onGetClockState = remotePocsGetClockState;
+			param.onSetPeerRequestCallback = remotePocsSetPeerRequestCallback;
+			param.onGetAdhocError = remotePocsGetAdhocError;
 
 			ret = SceCommonDialog_631DC45C(&param);
 			if (ret >= 0) {
@@ -445,7 +445,7 @@ int pspemuBgDialogNotifyPocsEvent(int eventArg)
 	sceKernelUnlockLwMutex(&g_pocsDialogNotStopMutex, 1);
 
 	if (notStop == 0)
-		remotePocsResumeAfterDialog();
+		remotePocsStopAdhocIfIdle();
 
 	if (SceCommonDialog_500229F0() != 1)
 		return bgDialogRunModal(5, 1, 0, NULL, NULL, eventArg, NULL);

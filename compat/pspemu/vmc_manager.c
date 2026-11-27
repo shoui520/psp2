@@ -302,7 +302,7 @@ static int __attribute__((noinline, noclone)) vmcFormatCardInternal(unsigned int
 }
 
 /* 0x81031830 */
-static int __attribute__((noinline, noclone)) vmcLoadCardCache(unsigned int cardIndex)
+int __attribute__((noinline, noclone)) vmcLoadCardCache(unsigned int cardIndex)
 {
 	VmcCardCache *card = &g_vmcCards[cardIndex];
 	uint8_t sectorBuf[VMC_SECTOR_SIZE];
