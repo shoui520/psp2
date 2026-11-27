@@ -37,6 +37,8 @@
 /* 0x00102403 runs 0x00102603's code (an earlier board of the same design) */
 #define HW_102603		(HW_IS(0x00102603) || HW_IS(0x00102403))
 #define FW_SINCE(version)	(ERNIE_FW >= (version))
+/* 0x00080302 (0x00102003's one version), where it differs from 0x00080307's code */
+#define FW_0302			(FW_SINCE(0x00080302) && !FW_SINCE(0x00080307))
 /* the 0x0103 source: the slim models' firmware (0x01030505 on), which the PS TV's (0x01030603 on,
    on the fat models' chip and wiring) is built from too; board.h's BOARD_USS1001 is the slim's
    board itself (its RL78, pins and touch panels) */

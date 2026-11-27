@@ -73,6 +73,11 @@ void rtcStart(void)
 	setClock(0);
 	setAlarm(RTC_ALARM_NONE);
 	alarmReached = 0;
+#elif FW_0302
+	/* 0x00080302: the clock and the alarm cleared at every start */
+	setClock(0);
+	setAlarm(RTC_ALARM_NONE);
+	sleepFactorSet3(0);
 #elif !FW_SINCE(0x01000104)
 	/* before 0x01000104 a warm reset keeps the clock and the alarm, which has no mode */
 	switch (getResetCause()) {

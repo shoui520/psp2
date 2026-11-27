@@ -94,7 +94,9 @@ __sreg unsigned char chargeUsbMode;
 __sreg unsigned char chargeUsbHold;
 #endif
 __sreg unsigned char chargeVbus;
+#if !FW_0302	/* 0x00080302 reads no modem version */
 __sreg unsigned char chargeBbmcVersion;
+#endif
 #if !CHARGE_SINCE(0x00090006)
 __sreg unsigned char chargeControl;	/* 0x00080504's place */
 #endif
@@ -135,8 +137,9 @@ __sreg unsigned char chargeUsbTicks;
 #else
 #define CHARGE_LEVELS	9	/* 0x00090009's nine levels */
 #endif
-#if !CHARGE_SINCE(0x00080302)
-/* 0x00080003's battery levels (remainCap, volt) are the program's: no parameters yet */
+#if !CHARGE_SINCE(0x00080307)
+/* 0x00080003's and 0x00080302's battery levels (remainCap, volt) are the program's: no
+   parameters yet */
 static const struct ChargeLevel chargeLevels[CHARGE_LEVELS] = {
 	{ 0x00d6, 0x0dac },
 	{ 0x0047, 0x0ce4 },
@@ -376,7 +379,7 @@ void chargeInit(void)
 		charge.flagsLast = 0;
 		charge.flagsRead = 0;
 		charge.flags = 0;
-#elif CHARGE_SINCE(0x00080302)	/* 0x00080003 keeps the flags */
+#elif CHARGE_SINCE(0x00080307)	/* 0x00080003 and 0x00080302 keep the flags */
 		charge.flags = charge.flagsLast = charge.flagsRead = 0;
 #endif
 		sleepFactorSetStatus3(1);
@@ -1148,6 +1151,107 @@ void chargeUpdate(void)
 		logEvent(0x0e);
 	}
 }
+#elif FW_0302
+/* 0x00080302's: the AC's transition 0x16 not there; a USB charger at a state 0x000c (with no
+   wake by it) asks for transition 0x0f, sent at the next battery reading */
+void chargeUpdate(void)
+{
+	unsigned char reg;
+	union CookieStatus1 status1;
+	union CookieStatus2 status2;
+	unsigned int changed;
+
+	if (deviceVersions.cookie[1] == 0xff)
+		return;
+	status1 = cookieStatus1;
+	status2 = cookieStatus2;
+	reg = COOKIE_CTRL_REG(1);
+	cookieRead(&reg, cookieStatus1.byte);
+	reg = COOKIE_CTRL_REG(2);
+	cookieRead(&reg, cookieStatus2.byte);
+	if (status1.word != cookieStatus1.word || status2.word != cookieStatus2.word) {
+		dis_dsp();
+		powerStatus.bits.charging = cookieStatus1.bits.charging;
+		powerStatus.bits.battery = cookieStatus1.bits.battery;
+		powerStatus.bits.ac = cookieStatus1.bits.ac;
+		powerStatus.bits.status3 = cookieStatus1.bits.status3;
+		powerStatus.bits.status2 = cookieStatus1.bits.status2;
+		powerStatus.bits.status1 = cookieStatus1.bits.status1;
+		powerStatus.bits.level = cookieStatus1.bits.level;
+		powerStatus.bits.usb = cookieStatus2.bits.usb;
+		CHARGE_FACTOR_STATUS3 = powerStatus.bits.ac ? 1 : (cookieStatus2.bits.usb & 2) ? 1 : 0;
+		sleepFactorSetStatus3(CHARGE_FACTOR_STATUS3);
+		if ((cookieStatus2.byte[1] & 0x0c) == 0x04 && (cookieStatus1.byte[1] & 0xc0) == 0x80)
+			CHARGE_FACTOR_STATUS4 = 1;
+		else
+			CHARGE_FACTOR_STATUS4 = 0;
+		sleepFactorSetStatus4(CHARGE_FACTOR_STATUS4);
+		ena_dsp();
+		if (cookieStatus2.bits.vbusCharge) {
+			if (!(status2.word & 0x8000)) {
+				if (cookieStatus2.bits.usb & 2) {
+					if (chargeUsbMode == 0)
+						chargeUsbMode = 1;
+					chargeSetCurrent();
+				}
+				if ((stateGet() & 0x000c) && !(stateGetWakeMask() & 0x8000))
+					CHARGE_AC_DUE = 1;
+			}
+		} else if (status2.word & 0x8000) {
+			CHARGE_AC_DUE = 0;
+			if (deviceVersions.cookie[1] < 0x31)
+				cookieCtrlSupplyCurrentUsb(0x10);
+		}
+		if (cookieStatus1.bits.level)
+			;
+	}
+	if (!powerStatus.bits.battery)
+		return;
+	if (deviceVersions.battery.id == 0) {
+		if (batteryReadInfo(&deviceVersions.battery.id) == 0) {
+			chargeSetBattery();
+		} else {
+			deviceVersions.battery.id = deviceVersions.battery.version[0] =
+				deviceVersions.battery.version[1] = deviceVersions.battery.version[2] = 0;
+			return;
+		}
+	}
+	batteryReadRemainCap(&charge.batteryRemainCap);
+	batteryReadVolt(&charge.batteryVolt);
+	charge.flagsRead = chargeReadFlags();
+	changed = ~(charge.flagsRead ^ charge.flagsLast) & (charge.flags ^ charge.flagsRead);
+	if (changed != 0) {
+		dis_dsp();
+		charge.flags ^= changed;
+		ena_dsp();
+		CHARGE_FACTOR_16 = (charge.flags & 0x0010) ? 1 : 0;
+		sleepFactorSet16(CHARGE_FACTOR_16);
+		CHARGE_FACTOR_17 = (charge.flags & 0x0008) ? 1 : 0;
+		sleepFactorSet17(CHARGE_FACTOR_17);
+		CHARGE_FACTOR_18 = (charge.flags & 0x0100) ? 1 : 0;
+		sleepFactorSet18(CHARGE_FACTOR_18);
+		if (charge.flags & 0x0040)
+			chargeTransition(0x40);
+		else if (charge.flags & 0x0020) {
+			if (!(stateGetWakeMask() & 0x40) && !(stateGet() & 0x8000) && (stateGet() & 0x0008))
+				chargeTransition(0x06);
+			else if (!(stateGet() & 0x8000) && (stateGet() & 0x0028))
+				chargeTransition(0x32);
+		}
+	}
+	charge.flagsLast = charge.flagsRead;
+	if (CHARGE_AC_DUE &&
+	    (!(charge.flags & 0x0004) || (CHARGE_FACTOR_STATUS3 && !(charge.flags & 0x0001)))) {
+		chargeTransition(0x0f);
+		CHARGE_AC_DUE = 0;
+	}
+	batteryReadTemp(&charge.batteryTemp);
+	charge.batteryTempC = charge.batteryTemp - 0x0aac;
+	chargeTempUpdate(charge.batteryTemp, &chargeTemp);
+	timerGetTicks(&chargeCheckTicks);
+	if (chargeCheckTicks - chargeTempTicks >= TIMER_RTC_TICKS(0x78) + 1)
+		chargeTempTicks = chargeCheckTicks;
+}
 #else
 /* 0x00090804's: the power status made here, no Cookie charge lines, and the temperature's
    ranges followed for any battery */
@@ -1515,7 +1619,7 @@ unsigned int chargeReadFlags(void)
 	unsigned char i;
 
 	flags = 0;
-#if CHARGE_SINCE(0x00080302)
+#if CHARGE_SINCE(0x00080307)
 	paramGetChargeLevels(chargeLevels);
 #endif
 	for (i = 0; i < CHARGE_LEVELS; i++) {
@@ -1871,8 +1975,8 @@ int chargeUsbRequestUpdate(void)
    its event 0x82) */
 void chargeTimer(void)
 {
-#if !CHARGE_SINCE(0x00080302)
-	timerStart(TIMER_RTC(0x17), charge.acDelay);	/* 0x00080003: whatever the flags */
+#if !CHARGE_SINCE(0x00080307)
+	timerStart(TIMER_RTC(0x17), charge.acDelay);	/* 0x00080003, 0x00080302: whatever the flags */
 #else
 	if (charge.flags & 0x8000)
 		timerStart(TIMER_RTC(0x17), TIMER_RTC_TICKS(1));
@@ -2331,6 +2435,13 @@ char chargeBatteryLevel3(void)
    levels whatever the state */
 int chargeMayStart(void)
 {
+#if !CHARGE_SINCE(0x00080307)
+	/* 0x00080003 and 0x00080302 never let the battery start the system: level 1 looked at,
+	   0 either way */
+	if (charge.flags & 0x0002)
+		return 0;
+	return 0;
+#else
 #if CHARGE_SINCE(0x00090903)
 	if (charge.alarmsOn.byte & 0x01)
 		return 0;
@@ -2343,12 +2454,6 @@ int chargeMayStart(void)
 	if (deviceVersions.battery.id == 0xfffe)
 		return 1;
 #endif
-#if !CHARGE_SINCE(0x00080302)
-	/* 0x00080003: level 1 looked at, and never */
-	if (charge.flags & 0x0002)
-		return 0;
-	return 0;
-#else
 	if (charge.flags & 0x8000)
 		return 0;
 	if (charge.flags & 0x0002)

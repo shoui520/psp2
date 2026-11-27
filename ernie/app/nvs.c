@@ -19,8 +19,9 @@
 #include "flash.h"
 #endif
 
-#if !FW_SINCE(0x00080302)
-/* 0x00080003 prints through the NVS's own print, which prints nothing (the file's last) */
+#if !FW_SINCE(0x00080307)
+/* 0x00080003 and 0x00080302 print through the NVS's own print, which prints nothing (the
+   file's last) */
 static void nvsPrintf(const char *format, ...);
 #define tracePrintf	nvsPrintf
 #endif
@@ -1283,7 +1284,7 @@ unsigned char nvsClean(unsigned char count)
 	unsigned char block;
 	struct NvsMark *mark;
 
-#if !FW_SINCE(0x00080302)	/* 0x00080003: 0 when nothing is erased */
+#if !FW_SINCE(0x00080307)	/* 0x00080003 and 0x00080302: 0 when nothing is erased */
 	result = 0;
 #else
 	result = 0x20;
@@ -2782,7 +2783,7 @@ struct NvsBlockInfo *nvsListPopFront(struct NvsList *list)
 }
 #endif	/* BOARD_USS1001 */
 
-#if !FW_SINCE(0x00080302)
+#if !FW_SINCE(0x00080307)
 static void nvsPrintf(const char *format, ...)
 {
 }

@@ -205,8 +205,8 @@ unsigned char boardMultiCnStop(void)
 
 #if SOURCE_0103
 /* the slim's in multicn.c */
-#elif defined(ERNIE_UPDATER) || (HW_102603 && !FW_SINCE(0x00090502))
-/* the updater's (and 0x00102603's 0x00090206): something on the multi-connector, as its
+#elif defined(ERNIE_UPDATER) || (HW_102603 && !FW_SINCE(0x00090502)) || FW_0302
+/* the updater's (and 0x00102603's 0x00090206, and 0x00080302's): something on the multi-connector, as its
    inputs report it */
 unsigned char boardMultiCnIsDongle(void)
 {
@@ -235,6 +235,8 @@ void boardInit(void)
 {
 #if HW_102603 && !FW_SINCE(0x00090203)
 	boardPortInit102603();	/* 0x00090009 */
+#elif FW_0302
+	boardPortInitB();
 #else
 	boardPortInit();
 #endif
@@ -429,6 +431,42 @@ void boardPortInit(void)
 	PM14 = BOARD_PM14;
 	P15 = 0x00;
 	PM15 = BOARD_PM15;
+}
+#endif
+#if FW_0302
+/* 0x00080302: one more board's ports, which nothing calls */
+void boardPortInitC(void)
+{
+	P0 = 0x00;
+	PM0 = 0x88;
+	P1 = 0x08;
+	PM1 = 0x52;
+	P2 = 0x00;
+	PM2 = 0x01;
+	P3 = 0x00;
+	PM3 = 0x07;
+	P4 = 0x00;
+	PM4 = 0xd0;
+	P5 = 0x00;
+	PM5 = 0x00;
+	P6 = 0x05;
+	PM6 = 0x12;
+	P7 = 0x00;
+	PM7 = 0xf1;
+	P8 = 0x00;
+	PM8 = 0x00;
+	P9 = 0x00;
+	PM9 = 0x00;
+	P11 = 0x00;
+	PM11 = 0xf2;
+	P12 = 0x80;
+	PM12 = 0x5f;
+	P13 = 0x00;
+	PM13 = 0xfc;
+	P14 = 0x00;
+	PM14 = 0xee;
+	P15 = 0x00;
+	PM15 = 0xfe;
 }
 #endif
 #if BOARD_DOL1001

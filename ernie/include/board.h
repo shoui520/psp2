@@ -85,6 +85,8 @@
 #define BOARD_TOUCH_CHG1_PIN	P6.7
 #elif BOARD_DOL1001
 #define BOARD_TOUCH_CHG1_PIN	1
+#elif FW_0302
+#define BOARD_TOUCH_CHG1_PIN	P7.4
 #else
 #define BOARD_TOUCH_CHG1_PIN	P6.4
 #endif
@@ -115,8 +117,8 @@
 #endif
 
 /* the multi-connector's switch: the output's bits 0 and 1 are P13.0 and P2.2, set at once
-   (0x00102603); the others' a mode, with a wait between the two pins */
-#define BOARD_MULTICN_BITS	BOARD_102603
+   (0x00102603, and 0x00080302); the others' a mode, with a wait between the two pins */
+#define BOARD_MULTICN_BITS	(BOARD_102603 || FW_0302)
 
 /* the multi-connector's level that is a dongle (analogGetMultiCn) */
 #define BOARD_MULTICN_DONGLE_ID	(BOARD_102603 ? 0x51 : BOARD_USS1001 ? 4 : 2)
@@ -148,8 +150,9 @@
 
 /* the settings' cookieRegHigh: the Cookie and the battery at 0xa4, the Cookie's registers from
    0xa0; PCH-1000 has neither choice (the Cookie at 0xa8, the battery at 0xaa), nor have
-   0x00411000 after 0x00090206, 0x00315200 and 0x00102603 before 0x00090206 */
-#define BOARD_COOKIE_REG_HIGH	(ERNIE_BOARD != 0x00406000 && !HW_IRT001 && \
+   0x00411000 after 0x00090206, 0x00315200, 0x00102603 before 0x00090206 and 0x00080302 (no
+   settings) */
+#define BOARD_COOKIE_REG_HIGH	(ERNIE_BOARD != 0x00406000 && !HW_IRT001 && !FW_0302 && \
 				 (!BOARD_IS(0x00411000) || !FW_SINCE(0x00090502)) && \
 				 (!BOARD_102603 || FW_SINCE(0x00090203)))
 
@@ -157,7 +160,7 @@
    PCH-1000 always asks the battery (DOL-1001, on its code, does not), and so do 0x00411000
    after 0x00090206, 0x00315200 and
    0x00102603 before 0x00090206 */
-#define BOARD_BATTERY_STANDIN	((ERNIE_BOARD != 0x00406000 || BOARD_DOL1001) && !HW_IRT001 && \
+#define BOARD_BATTERY_STANDIN	((ERNIE_BOARD != 0x00406000 || BOARD_DOL1001) && !HW_IRT001 && !FW_0302 && \
 				 (!BOARD_IS(0x00411000) || !FW_SINCE(0x00090502)) && \
 				 (!BOARD_102603 || FW_SINCE(0x00090203)))
 
@@ -191,12 +194,13 @@
 
 /* the RTC's interrupt in state 0x0010 watches input 1's bit 7 (P14.5) once a shutdown is
    marked, and runs transition 0x62 when it settles low (input1Bit7Poll): PCH-1000's; the others
-   keep input1Bit7Poll empty */
-#define BOARD_INPUT1_BIT7_POLL	((ERNIE_BOARD == 0x00406000 || BOARD_102603 && !HW_IRT001) && !BOARD_USS1001)
+   keep input1Bit7Poll empty (0x00080302 samples the bit too) */
+#define BOARD_INPUT1_BIT7_POLL	((ERNIE_BOARD == 0x00406000 || (BOARD_102603 && !HW_IRT001) || FW_0302) && \
+				 !BOARD_USS1001)
 
-/* INTP11 (P7.7, intp11Level): not on PCH-1000 or 0x00102603, nor in 0x00080003, whose
-   intp11Enable does nothing and whose handler is empty */
-#define BOARD_INTP11		(ERNIE_BOARD != 0x00406000 && (!BOARD_102603 || HW_IRT001) && FW_SINCE(0x00080302))
+/* INTP11 (P7.7, intp11Level): not on PCH-1000 or 0x00102603, nor in 0x00080003 or 0x00080302,
+   whose intp11Enable does nothing and whose handler is empty */
+#define BOARD_INTP11		(ERNIE_BOARD != 0x00406000 && (!BOARD_102603 || HW_IRT001) && FW_SINCE(0x00080307))
 /* and its level kept on both edges since 0x00090203; 0x00090009's INTP11 takes the rising edge
    only, holding the scan (intp11Interrupt), and intp11Low reads input group 3 */
 #define BOARD_INTP11_LEVEL	(BOARD_INTP11 && FW_SINCE(0x00090203))
@@ -238,7 +242,7 @@
    (P2.1); the wake inputs INTP2 (rising), INTP4 and INTP7 (falling) and their pin monitors 3
    (P3.1) and 2 (P14.1, a transition 3); INTP8 and pin monitor 6 only ever disabled; the
    WLAN's line on P6.7 (P3.1 an input) */
-#define BOARD_INPUTS_102603	BOARD_102603
+#define BOARD_INPUTS_102603	(BOARD_102603 || FW_0302)
 /* its own pin monitor 3 (P3.1, no WLAN line on it) from 0x01000104; before, the others' */
 #define BOARD_PIN3_102603	(BOARD_INPUTS_102603 && FW_SINCE(0x01000104))
 /* its WLAN's line on P6.7 (the power sequences', powerJobCut's) from 0x01000104; before, P3.1
@@ -248,12 +252,12 @@
 /* P9.5, driven high at a resume and low at an off or a suspend (powerseq.c): not on
    0x00102603, whose WLAN line is P6.7 and whose SD power comes first, retimed, with no RMR or
    multi-connector power */
-#define BOARD_P95		(!BOARD_102603)
+#define BOARD_P95		(!BOARD_102603 && !FW_0302)
 
 /* the motion sensor's ready line, read by inputreq.c's 0x0484-0x0488 and powerMotionOn: P7.2;
    0x00102603's P7.7 (its input 3 takes P7.2; 0x00315200's input 3 does not), and
-   0x00080003's (its input 3 as 0x00102603's) */
-#if BOARD_102603 && (!HW_IRT001 || !FW_SINCE(0x00080302))
+   0x00080003's and 0x00080302's (their input 3 as 0x00102603's) */
+#if (BOARD_102603 && (!HW_IRT001 || !FW_SINCE(0x00080302))) || FW_0302
 #define BOARD_MOTION_READY	P7.7
 #else
 #define BOARD_MOTION_READY	P7.2
@@ -271,13 +275,22 @@
    (its PM5 still opened with 0x0f); its 0x00090007's and CEM-3000 0x00404400's all four */
 #define BOARD_KEYS_P5		(ERNIE_BOARD == 0x00406000 && FW_SINCE(0x00090203) && !HW_IS(0x00404400) ? 0x06 : 0x0f)
 
+/* the button of pin monitor 0 (input 1's bit 6): P11.5; 0x00080302's is P5.4, beside the keys'
+   pins */
+#if FW_0302
+#define BOARD_BUTTON1_PIN	P5.4
+#else
+#define BOARD_BUTTON1_PIN	P11.5
+#endif
+
 /* the port modes boardPortInit sets: PCH-1000 drives P7.3 and P7.7 (no input 3 pins there)
    and P9.3 */
 #define BOARD_PM7		(ERNIE_BOARD == 0x00406000 ? 0x75 : BOARD_PORTS_315200 ? 0xed : 0xfd)
 #define BOARD_PM9		(ERNIE_BOARD == 0x00406000 ? 0x00 : 0x08)
 /* 0x00315200's values (below), also in 0x00102603's 0x00090009, where boardPortInit is not
-   called (boardInit calls boardPortInit102603) */
-#define BOARD_PORTS_315200	(HW_IRT001 || (HW_102603 && !FW_SINCE(0x00090203)))
+   called (boardInit calls boardPortInit102603), and 0x00080302's (boardInit calls
+   boardPortInitB) */
+#define BOARD_PORTS_315200	(HW_IRT001 || (HW_102603 && !FW_SINCE(0x00090203)) || FW_0302)
 /* and 0x00102603's own */
 /* (0x00411000's 0x00090206 port modes are 0x00102603's, but for PM14; the other boards'
    0x00090206 keep its PM6 only, with PM2 0xff and PM14 0xec; 0x00090502 its PM6 and PM14) */
@@ -286,10 +299,10 @@
 #define BOARD_PM2		(BOARD_PORTS_315200 ? 0x01 : BOARD_PORTS_102603 ? 0xab : \
 				 ERNIE_BOARD == 0x00406000 && !FW_SINCE(0x00090203) ? 0x01 : \
 				 !FW_SINCE(0x00090502) ? 0xff : 0x01)
-#define BOARD_PM4		(BOARD_102603 ? 0xd0 : 0x40)
+#define BOARD_PM4		(BOARD_102603 || FW_0302 ? 0xd0 : 0x40)
 #define BOARD_PM6		((BOARD_102603 && !HW_IRT001) || !FW_SINCE(0x00090804) ? 0x12 : 0x92)
 #define BOARD_PM11		(BOARD_PORTS_315200 ? 0xf0 : BOARD_102603 ? 0xf2 : 0xf1)
-#define BOARD_P12		(BOARD_102603 ? 0x80 : 0x00)
+#define BOARD_P12		(BOARD_102603 || FW_0302 ? 0x80 : 0x00)
 #define BOARD_PM14		(BOARD_PORTS_315200 ? 0xc6 : BOARD_102603 ? 0xe6 : \
 				 !FW_SINCE(0x00090804) && !BOARD_IS(0x00411000) ? 0xec : 0xe4)
 /* and 0x00315200's own: P11.1 high, PM3 0x03, PM5 0x30, PM12 0x1f */
@@ -382,6 +395,9 @@ extern unsigned char boardDummyPin;
 extern void boardPortInitA(void);
 extern void boardPortInitB(void);
 extern void boardPortInit102603(void);
+#if FW_0302
+extern void boardPortInitC(void);
+#endif
 #endif
 
 #endif

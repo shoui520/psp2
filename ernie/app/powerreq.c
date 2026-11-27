@@ -44,7 +44,7 @@
 
 /* the host-controlled devices asked through the hardware info flags (0x00102603's 0x00080502
    has no such test) */
-#define POWERREQ_HWINFO	(!HW_102603 || FW_SINCE(0x00090006))
+#define POWERREQ_HWINFO	((!HW_102603 || FW_SINCE(0x00090006)) && !FW_0302)
 
 /* request 9's data and answer: the battery's registers are words */
 union BatteryBuffer {
@@ -106,7 +106,11 @@ static void powerRequestCtrlSdPower(void);
 static void powerRequestCtrlAccPower(void);
 static void powerRequestCtrlWirelessPower(void);
 static void powerRequest088B(void);
+#if FW_0302
+static void powerRequest0899(void);
+#else
 static void powerRequest088C(void);
+#endif
 static void powerRequestCtrlHpremote(void);
 static void powerRequestCtrlUsbStatus(void);
 static void powerRequest088D(void);
@@ -228,7 +232,11 @@ static const struct PowerCommand powerCommands[] = {
 	{ 0x0889, powerRequestCtrlAccPower },
 	{ 0x088a, powerRequestCtrlWirelessPower },
 	{ 0x088b, powerRequest088B },
+#if FW_0302
+	{ 0x088c, powerRequestCtrlHpremote },
+#else
 	{ 0x088c, powerRequest088C },
+#endif
 	{ 0x088d, powerRequest088D },
 	{ 0x088e, powerRequestCtrlVoltage },
 	{ 0x088f, powerRequestCtrlDeviceReset },
@@ -241,7 +249,11 @@ static const struct PowerCommand powerCommands[] = {
 	{ 0x0896, powerRequestWriteElmoReg },
 	{ 0x0897, powerRequestReadCookieReg },
 	{ 0x0898, powerRequestWriteCookieReg },
+#if FW_0302
+	{ 0x0899, powerRequest0899 },
+#else
 	{ 0x0899, powerRequestCtrlHpremote },
+#endif
 	{ 0x089a, powerRequestCtrlUsbStatus },
 #if FW_SINCE(0x00090006)	/* not in 0x00080504 */
 	{ 0x089b, powerRequestCtrlRMRPower },
@@ -1042,7 +1054,7 @@ static void powerRequest0884(void)
 }
 
 /* 0x0885 (SceSysconForDriver_79E6DD8B) */
-#if BOARD_102603 && !HW_IS(0x00315200)	/* 0x00315000 has 0x00102603's */
+#if (BOARD_102603 && !HW_IS(0x00315200)) || FW_0302	/* 0x00315000 and 0x00080302 have 0x00102603's */
 /* Elmo register 0xa3's bits 15 and 14 and register 0xa0's bit 12: bit 14 (data bit 1 to set,
    bit 2 to clear) must be on, or already on, for bit 15 (data bit 2 to set, bit 1 to clear),
    0x3c otherwise */
@@ -1214,6 +1226,46 @@ static void powerRequestCtrlWirelessPower(void)
 	powerRequestDone(result);
 }
 
+#if FW_0302
+/* 0x088b (SceSysconForDriver_5A614349): 0x00080302's device on the Elmo's mask 0 bit 5 */
+static void powerRequest088B(void)
+{
+	unsigned char result;
+
+	if (powerRequest.length == 1) {
+		if (powerRequestData[0] != 0)
+			result = power088BOn();
+		else
+			result = power088BOff();
+		result = powerResult(result);
+	} else
+		result = 0x3b;
+	powerRequestDone(result);
+}
+
+/* 0x088c (SceSysconForDriver_B872E904): 0x00080302's headphone remote (0x0899's later) */
+static void powerRequestCtrlHpremote(void)
+{
+	unsigned char result;
+
+	if (powerRequest.length == 1) {
+		if (powerRequestData[0] != 0)
+			result = powerHpremoteOn();
+		else
+			result = powerHpremoteOff();
+		result = powerResult(result);
+	} else
+		result = 0x3b;
+	powerRequestDone(result);
+}
+
+/* 0x0899: nothing in 0x00080302 */
+static void powerRequest0899(void)
+{
+	powerRequestDone(0);
+	return;
+}
+#else
 /* 0x088b (SceSysconForDriver_5A614349): not on this syscon */
 static void powerRequest088B(void)
 {
@@ -1243,6 +1295,7 @@ static void powerRequestCtrlHpremote(void)
 		result = 0x3b;
 	powerRequestDone(result);
 }
+#endif	/* FW_0302 */
 
 /* 0x089a (sceSysconCtrlUsbStatus) */
 #if SOURCE_0103
@@ -1360,6 +1413,8 @@ static void powerRequestCtrlUsbStatus(void)
 /* the 3G modem's P3.3 pulse: powerBbmcPulse since 0x01000104, written out before */
 #if FW_SINCE(0x01000104)
 #define POWER_BBMC_PULSE()	powerBbmcPulse()
+#elif FW_0302
+#define POWER_BBMC_PULSE()	(P33 = 1, powerSleep(0x0bb8), P33 = 0)
 #else
 #define POWER_BBMC_PULSE()	(P33 = 1, powerSleep(0x0e74), P33 = 0)
 #endif
@@ -1386,18 +1441,27 @@ static void powerRequest088D(void)
 #endif
 		if (powerRequest.length == 1) {
 			if (powerRequestData[0] & 0x01) {
+#if FW_0302	/* 0x00080302 pulses whatever the modem's state, with no wait */
+				if (powerRequestData[0] & 0x80)
+					POWER_BBMC_PULSE();
+#else
 				if (powerRequestData[0] & 0x80) {
 					if (input2Bit0Get() == 1) {
 						POWER_BBMC_PULSE();
 						powerSleep(500);
 					}
 				}
+#endif
 				result = powerBbmcStart();
 			} else {
 				result = powerBbmcCycle();
 				if (powerRequestData[0] & 0x80) {
+#if FW_0302
+					POWER_BBMC_PULSE();
+#else
 					if (input2Bit0Get() == 1)
 						POWER_BBMC_PULSE();
+#endif
 					if (result != 0 && input2Bit1Get() == 0)
 						result = 0;
 				}
@@ -1678,8 +1742,8 @@ static void powerRequest089F(void)
 #endif
 
 /* 0x088e (sceSysconCtrlVoltage): data[0] the regulator 1-4, data[1] its level */
-#if !FW_SINCE(0x00080302)
-/* 0x00080003 sets no voltage, and answers 0 */
+#if !FW_SINCE(0x00080307)
+/* 0x00080003 and 0x00080302 set no voltage, and answer 0 */
 static void powerRequestCtrlVoltage(void)
 {
 	powerRequestDone(0);
@@ -1770,8 +1834,14 @@ static void powerRequestCtrlDeviceReset(void)
 #else
 	if (powerRequest.length == 2) {
 		if (powerRequestData[0] < 2) {
+#if FW_0302
+			/* 0x00080302: device 0x01 is request 0x088b's line */
+			if (powerRequestData[1] & 0x01)
+				P6.6 = powerRequestData[0];
+#else
 			if (powerRequestData[1] & 0x01)
 				;
+#endif
 #if BOARD_DOL1001
 			/* DOL-1001 has none of the slim's three: the dummy byte, then P13.1 */
 			if (powerRequestData[1] & 0x02)

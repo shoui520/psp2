@@ -282,7 +282,7 @@ unsigned char csi10GetState(void)
 	return csi10.state;
 }
 
-#if FW_SINCE(0x00080302)	/* 0x00080003's transfer ends the channel open */
+#if FW_SINCE(0x00080307)	/* 0x00080003's and 0x00080302's transfers end the channel open themselves */
 /* ends the running transfer */
 void csi10Release(void)
 {
@@ -522,8 +522,10 @@ void csi10Interrupt(void)
 		csi10.receive++;
 		csi10.receiveCount--;
 	}
+#if !FW_0302
 	for (i = 0; i < TOUCH_DELAY_BYTE; i++)
 		NOP();
+#endif
 	if (csi10.sendCount != 0) {
 		CSI10_SIO = *csi10.send;
 		csi10.send++;
@@ -534,7 +536,11 @@ void csi10Interrupt(void)
 		csi10.state &= ~CSI10_BUSY;
 		switch (csi10.state & CSI10_PHASE) {
 		case CSI10_TRANSFER:
+#if FW_0302
+			csi10.state = CSI10_OPEN;	/* 0x00080302 has no CSI10_DONE */
+#else
 			csi10.state = CSI10_DONE;
+#endif
 			break;
 		case CSI10_COMMAND1:
 			csi10.receive = touchFrames[touch.frame].panel[1];
@@ -552,8 +558,10 @@ void csi10Interrupt(void)
 #if FW_SINCE(0x00090804)
 				touchFrames[touch.frame].state0 = touch.state.value;
 #endif
+#if !FW_0302
 				for (i = 0; i < TOUCH_DELAY_SELECT; i++)
 					NOP();
+#endif
 				touchCommand.address = touch.panel[0].objects.report | TOUCH_READ;
 				csi10.receive = (unsigned char *)&touchReply;
 				csi10.receiveCount = 0;

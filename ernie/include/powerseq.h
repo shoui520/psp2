@@ -102,6 +102,10 @@ extern unsigned char powerHdmiCecOff(void);
 extern unsigned char powerMotionOn(void);
 extern unsigned char powerMotionOff(void);
 #if !FW_SINCE(0x0100060B)
+#if FW_0302
+extern unsigned char power088BOn(void);
+extern unsigned char power088BOff(void);
+#endif
 extern unsigned char powerNone2On(void);
 extern unsigned char powerNone2Off(void);
 extern unsigned char powerNone3On(void);

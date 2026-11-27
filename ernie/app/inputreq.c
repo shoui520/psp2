@@ -754,6 +754,9 @@ void controlsReadButtons(unsigned char *out)
 #elif SOURCE_0103
 	out[1] = (P7 & 0x5f) | 0xa0;
 	out[2] = (P5 & 3) | 0xfc;
+#elif FW_0302	/* the button on P5.4, with the keys */
+	out[1] = (0x1f & P5) | ((!P4.6 ? (unsigned char)0xbf : (unsigned char)0xff) & 0xe0);
+	out[2] = (P11 >> 2 & 3) | 0xfc;
 #else
 	out[1] = (0x0f & P5) | ((!P11.5 ? (unsigned char)0xef : (unsigned char)0xff) &
 				  (!P4.6 ? (unsigned char)0xbf : (unsigned char)0xff) & 0xf0);
@@ -4288,7 +4291,7 @@ static void motionRequest0480(void)
 {
 #if HW_IRT001 && !FW_SINCE(0x01000104)
 	unsigned char result;	/* 0x00315200's before 0x01000104: unused, its register saved */
-#elif (HW_102603 && !FW_SINCE(0x00090203)) || HW_IS(0x00404400)
+#elif (HW_102603 && !FW_SINCE(0x00090203)) || HW_IS(0x00404400) || FW_0302
 	unsigned char result;	/* and 0x00102603's 0x00090009, 0x00404400's 0x00090502 */
 
 #endif

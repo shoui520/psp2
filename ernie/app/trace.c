@@ -11,7 +11,7 @@
 #include "trace.h"
 #include "uart.h"
 #if !FW_SINCE(0x01000104)
-#if !FW_SINCE(0x00080302)
+#if !FW_SINCE(0x00080307)
 #include <stdarg.h>
 #include <stdio.h>
 #endif
@@ -37,8 +37,8 @@ struct TraceCommand {
 	unsigned char	length;
 };
 
-#if !FW_SINCE(0x00080302)
-/* 0x00080003's console reads its line in full (traceConsoleEvent) */
+#if !FW_SINCE(0x00080307)
+/* 0x00080003's and 0x00080302's console reads its line in full (traceConsoleEvent) */
 static unsigned char traceReceived[16];
 static unsigned char traceLine[16];
 #else
@@ -58,9 +58,9 @@ const char __far traceNewline[] = "\r\n";
 #endif
 
 unsigned int traceMask;			/* the categories not written */
-#if !FW_SINCE(0x00080302)
+#if !FW_SINCE(0x00080307)
 static char tracePrintBuffer[128];	/* tracePrintf's text */
-/* 0x00080003's prompt, a constant of its own after the banner */
+/* 0x00080003's and 0x00080302's prompt, a constant of its own after the banner */
 static const char __far tracePrompt[] = "\nDBG>";
 #endif
 
@@ -94,15 +94,21 @@ int traceInit(void)
 	return 0;
 }
 
+#if !FW_SINCE(0x00080307)
 #if !FW_SINCE(0x00080302)
-/* UART3's timeout event (0x0100 of flag 6, traceInit): the bytes received echoed and added to
+#define TRACE_CONSOLE_EVENT	0x0100	/* traceInit's timeout pattern; the next bit unused */
+#else
+#define TRACE_CONSOLE_EVENT	0x1000
+#endif
+
+/* UART3's timeout event (TRACE_CONSOLE_EVENT of flag 6, traceInit): the bytes received echoed and added to
    the console's line, a backspace taking one back and a return running it. Nothing calls it. */
 void traceConsoleEvent(unsigned int ptn)
 {
 	unsigned char length;
 	unsigned char i;
 
-	if (ptn & 0x0100) {
+	if (ptn & TRACE_CONSOLE_EVENT) {
 		length = traceUartRead(traceReceived, sizeof(traceReceived));
 		if (length != 0) {
 			traceUartWrite(traceReceived, length);
@@ -131,7 +137,7 @@ void traceConsoleEvent(unsigned int ptn)
 			}
 		}
 	}
-	if (ptn & 0x0200)
+	if (ptn & (TRACE_CONSOLE_EVENT << 1))
 		;
 }
 #endif
@@ -140,7 +146,7 @@ void traceConsoleEvent(unsigned int ptn)
 /* the console's prompt */
 void traceConsolePrompt(void)
 {
-#if !FW_SINCE(0x00080302)
+#if !FW_SINCE(0x00080307)
 	tracePrintf(tracePrompt);
 #else
 	tracePrintf("\nDBG>");
@@ -158,7 +164,7 @@ void traceConsoleInit(void)
 void traceConsoleCommand(void)
 {
 	unsigned int command;
-#if FW_SINCE(0x00080302)
+#if FW_SINCE(0x00080307)
 	unsigned char version[4];
 #endif
 
@@ -168,7 +174,7 @@ void traceConsoleCommand(void)
 	command = (unsigned int)traceLine[0] << 8 | traceLine[1];
 	switch (command) {
 	case 0x7672:	/* "vr" */
-#if !FW_SINCE(0x00080302)	/* 0x00080003 prints the version block's bytes */
+#if !FW_SINCE(0x00080307)	/* 0x00080003 and 0x00080302 print the version block's bytes */
 		tracePrintf("version is \r\n");
 		tracePrintf(" Ernie : %02X.%02X.%02X.%02X\r\n", appVersionInfo.version[0],
 			    appVersionInfo.version[1], appVersionInfo.version[2],
@@ -209,7 +215,7 @@ void traceConsoleCommand(void)
 		setResetCause(0xf1);
 		resetSystem();
 		break;
-#if FW_SINCE(0x00080302)	/* not in 0x00080003 */
+#if FW_SINCE(0x00080307)	/* not in 0x00080003 or 0x00080302 */
 	case 0x636c:	/* "cl" */
 		tracePrintf("ErnieClockTick is %08lXh\r\n", getClock().value);
 		break;
@@ -270,9 +276,9 @@ void traceWrite(unsigned int mask, unsigned char *data, unsigned char size)
 	traceUartWrite(data, size);
 }
 
-#if !FW_SINCE(0x00080302)
-/* 0x00080003's prints: the text formatted into tracePrintBuffer and written while UART3 is in
-   its debug mode */
+#if !FW_SINCE(0x00080307)
+/* 0x00080003's and 0x00080302's prints: the text formatted into tracePrintBuffer and written
+   while UART3 is in its debug mode */
 void tracePrintf(const char *format, ...)
 {
 	int length;
@@ -363,7 +369,7 @@ static void traceConsoleDb(unsigned char *line, unsigned char length)
 			if (digits == 2)
 				mask = mask >> 8 | mask << 8;
 			traceDisable(mask);
-#if FW_SINCE(0x00080302)	/* 0x00080003 prints nothing */
+#if FW_SINCE(0x00080307)	/* 0x00080003 and 0x00080302 print nothing */
 			tracePrintf(" mask=0x%04X\r\n", traceGetMask());
 #endif
 		}
@@ -373,13 +379,13 @@ static void traceConsoleDb(unsigned char *line, unsigned char length)
 			if (digits == 2)
 				mask = mask >> 8 | mask << 8;
 			traceEnable(mask);
-#if FW_SINCE(0x00080302)	/* 0x00080003 prints nothing */
+#if FW_SINCE(0x00080307)	/* 0x00080003 and 0x00080302 print nothing */
 			tracePrintf(" mask=0x%04X\r\n", traceGetMask());
 #endif
 		}
 		break;
 	case 2:
-#if !FW_SINCE(0x00080302)
+#if !FW_SINCE(0x00080307)
 		tracePrintf("=%04X\r\nusage\n\r >dbmask s 0001 (mask set 0x0001)\r\n"
 			    " >dbmask c 00ff (mask clr 0x00ff)\r\n", traceGetMask());
 #else

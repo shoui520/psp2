@@ -161,20 +161,19 @@ static unsigned char serial2Command0200(struct SerialBuffer *request, struct Ser
 /* 0x0201: the hardware info, the firmware's version and the updater's */
 static unsigned char serial2Command0201(struct SerialBuffer *request, struct SerialBuffer *response)
 {
-#if !FW_SINCE(0x00080302)
-	/* 0x00080003 copies the version block, the hardware info and the version, at once */
+#if !FW_SINCE(0x00080307)
+	/* 0x00080003 and 0x00080302 copy the version block, the hardware info and the version,
+	   as they are */
 	memcpy(serial2Data, &appVersionInfo, sizeof(appVersionInfo));
-	memset(&serial2Data[8], 0, 8);
 #else
 	getHardwareInfo(&serial2Data[0]);
 	getErnieVersion(&serial2Data[4]);
 #endif
-#if !FW_SINCE(0x00080302)
-#elif FW_SINCE(0x00080502)
+#if FW_SINCE(0x00080502)
 	getErnieDlVersion(&serial2Data[8]);
 	memset(&serial2Data[12], 0, 4);
 #else
-	memset(&serial2Data[8], 0, 8);	/* 0x00080307 reports no updater's version */
+	memset(&serial2Data[8], 0, 8);	/* 0x00080307 and older report no updater's version */
 #endif
 	response->data = serial2Data;
 	response->length = 0x10;

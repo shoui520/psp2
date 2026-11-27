@@ -486,9 +486,9 @@ int uart2Open(void)
 	SRMK2 = 0;
 	SREMK2 = 0;
 #if ((HW_102603 || ERNIE_BOARD == 0x00406000) && !FW_SINCE(0x00090206)) || \
-    (FW_SINCE(0x00090502) && !FW_SINCE(0x00090804))
+    (FW_SINCE(0x00090502) && !FW_SINCE(0x00090804)) || FW_0302
 	uart2.flags = UART_OPEN;	/* 0x00102603's 0x00090009, 0x00102403's 0x00090204, PCH-1000's
-					   0x00090007 and 0x00090502 drop the closed flag */
+					   0x00090007, 0x00090502 and 0x00080302 drop the closed flag */
 #else
 	uart2.flags |= UART_OPEN;
 #endif
@@ -506,8 +506,8 @@ int uart2Close(void)
 		uartStopRx(2);
 		SS1L.0 = 0;
 		SS1L.1 = 0;
-#if HW_102603 && !FW_SINCE(0x00090206)
-		P14.3 = 1;	/* 0x00102603's 0x00090009 and 0x00102403's 0x00090204: P14.3 an output, high */
+#if (HW_102603 && !FW_SINCE(0x00090206)) || FW_0302
+		P14.3 = 1;	/* 0x00102603's 0x00090009, 0x00102403's 0x00090204 and 0x00080302: P14.3 an output, high */
 		PM14.3 = 0;
 #endif
 		P14.4 = 0;

@@ -55,21 +55,21 @@ void nvsRequestEvent(FLGPTN ptn)
 			break;
 		case NVS_STATE_FULL:
 			result = nvsMove();
-#if FW_SINCE(0x00080302)
+#if FW_SINCE(0x00080307)	/* 0x00080003 and 0x00080302 do not test the results */
 			if (result == 0x0a)
 				;
 #endif
 			break;
 		case NVS_STATE_MOVED:
 			result = nvsClean(2);
-#if FW_SINCE(0x00080302)
+#if FW_SINCE(0x00080307)
 			if (result == 0x20)
 				;
 #endif
 			break;
 		default:
 			result = nvsClean(2);
-#if FW_SINCE(0x00080302)	/* 0x00080003 does not test the results */
+#if FW_SINCE(0x00080307)
 			if (result == 0x20)
 				;
 #endif

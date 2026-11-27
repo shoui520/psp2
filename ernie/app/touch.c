@@ -471,7 +471,7 @@ void touchStartFrame(void)
 			TOUCH_FRAME_STATE(touch.frame, 0) = touch.state.value;
 #endif
 		}
-#if FW_SINCE(0x00080302)
+#if FW_SINCE(0x00080307)	/* 0x00080003 and 0x00080302 have no select delay */
 		touchDelaySelect();
 #endif
 		transfer.receive = (unsigned char *)&touchReply;
@@ -1823,7 +1823,7 @@ unsigned char touchWrite(unsigned int address, unsigned char *data, unsigned int
 		P0.0 = 0;
 	else
 		return 1;
-#if FW_SINCE(0x00080302)
+#if FW_SINCE(0x00080307)	/* 0x00080003 and 0x00080302 have no select delay */
 	touchDelaySelect();
 #endif
 	transfer.receive = (unsigned char *)&touchReply;
@@ -1832,7 +1832,22 @@ unsigned char touchWrite(unsigned int address, unsigned char *data, unsigned int
 	transfer.sendCount = length + 2;
 	transfer.state = CSI10_TRANSFER;
 	csi10Transfer(&transfer);
-#if FW_SINCE(0x00090006)
+#if FW_0302
+	/* 0x00080302 waits a tick between its 30 looks, for the channel open again */
+	retry = 30;
+	for (;;) {
+		if (csi10GetState() == CSI10_OPEN) {
+			if (panel == 0)
+				P0.1 = 1;
+			else if (panel == 1)
+				P0.0 = 1;
+			return 0;
+		}
+		if (retry-- == 0)
+			break;
+		dly_tsk(1);
+	}
+#elif FW_SINCE(0x00090006)
 	retry = 0xff;
 	do {
 		if (csi10GetState() == CSI10_DONE) {
@@ -1886,7 +1901,7 @@ unsigned char touchRead(unsigned int address, unsigned char *data, unsigned int 
 		P0.0 = 0;
 	else
 		return 1;
-#if FW_SINCE(0x00080302)
+#if FW_SINCE(0x00080307)	/* 0x00080003 and 0x00080302 have no select delay */
 	touchDelaySelect();
 #endif
 	transfer.receive = (unsigned char *)&touchReply;
@@ -1895,7 +1910,23 @@ unsigned char touchRead(unsigned int address, unsigned char *data, unsigned int 
 	transfer.sendCount = 2;
 	transfer.state = CSI10_TRANSFER;
 	csi10Transfer(&transfer);
-#if FW_SINCE(0x00090006)
+#if FW_0302
+	/* 0x00080302 waits a tick between its 30 looks, for the channel open again */
+	retry = 30;
+	for (;;) {
+		if (csi10GetState() == CSI10_OPEN) {
+			if (panel == 0)
+				P0.1 = 1;
+			else if (panel == 1)
+				P0.0 = 1;
+			memcpy(data, touchReply.data, length);
+			return 0;
+		}
+		if (retry-- == 0)
+			break;
+		dly_tsk(1);
+	}
+#elif FW_SINCE(0x00090006)
 	retry = 0xff;
 	do {
 		if (csi10GetState() == CSI10_DONE) {
@@ -3007,7 +3038,7 @@ void touchDelay(unsigned char count)
 	for (i = 0; i < count; i++)
 		NOP();
 }
-#elif FW_SINCE(0x00080302)	/* 0x00080003 has no delay after a chip select */
+#elif FW_SINCE(0x00080307)	/* 0x00080003 and 0x00080302 have no delay after a chip select */
 /* after a chip select */
 void touchDelaySelect(void)
 {

@@ -32,8 +32,13 @@
 static const struct PowerDeviceJob powerDeviceJobs[POWER_DEVICE_JOBS] = {
 	{ 0x0001, powerAccOn },
 	{ 0x0002, powerAccOff },
+#if FW_0302
+	{ 0x0004, powerNone3On },
+	{ 0x0008, powerNone3Off },
+#else
 	{ 0x0004, powerHpremoteOn },
 	{ 0x0008, powerHpremoteOff },
+#endif
 #if FW_SINCE(0x00090006)
 	{ 0x0010, powerMultiCnOn },
 	{ 0x0020, powerMultiCnOff },
@@ -43,7 +48,7 @@ static const struct PowerDeviceJob powerDeviceJobs[POWER_DEVICE_JOBS] = {
 #endif
 #if SOURCE_0103
 	{ 0x0040, (unsigned char (*)(void))chargeUsbRequestUpdate },
-#elif BOARD_102603
+#elif BOARD_102603 || FW_0302
 	{ 0x0040, powerSdOn },
 	{ 0x0080, powerSdOff },
 #elif !FW_SINCE(0x0100060B)

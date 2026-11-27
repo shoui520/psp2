@@ -141,10 +141,17 @@ void intp2Interrupt(void)
 		intp2Enable(0);
 #endif
 		inputGroup1.prev &= ~0x10;
+#if FW_0302
+		if (inputScan.interval != 1) {	/* 0x00080302: the scan every tick */
+			inputScan.interval = 1;
+			timerStart(INPUT_SCAN_TIMER, 1);
+		}
+#else
 #if !FW_SINCE(0x00090502)
 		if (INPUT_SCAN_NOT_MODE1())
 #endif
 		INTP_SCAN_HOLD();
+#endif
 	}
 }
 
@@ -158,10 +165,17 @@ void intp7Interrupt(void)
 		if (pinMonitors.pin[2].config.reload != 0) {
 			pinMonitor2Enable(1);
 			pinMonitors.pin[2].last = 0;
+#if FW_0302
+			if (inputScan.interval != 1) {	/* 0x00080302: the scan every tick */
+				inputScan.interval = 1;
+				timerStart(INPUT_SCAN_TIMER, 1);
+			}
+#else
 #if !FW_SINCE(0x00090502)
 			if (INPUT_SCAN_NOT_MODE1())
 #endif
 			INTP_SCAN_HOLD();
+#endif
 		} else
 			pinMonitors.pin[2].config.handler();
 	}
@@ -206,8 +220,15 @@ void intp4Interrupt(void)
 		if (pinMonitors.pin[3].config.reload != 0) {
 			pinMonitor3Enable(1);
 			pinMonitors.pin[3].last = 0;
+#if FW_0302
+			if (inputScan.interval != 1) {	/* 0x00080302: the scan every tick */
+				inputScan.interval = 1;
+				timerStart(INPUT_SCAN_TIMER, 1);
+			}
+#else
 			if (INPUT_SCAN_NOT_MODE1())
 				INTP_SCAN_HOLD();
+#endif
 		} else
 			pinMonitors.pin[3].config.handler();
 	}
@@ -242,10 +263,17 @@ void intp3Interrupt(void)
 		if (pinMonitors.pin[4].config.reload != 0) {
 			pinMonitor4Enable(1);
 			pinMonitors.pin[4].last = 0;
+#if FW_0302
+			if (inputScan.interval != 1) {	/* 0x00080302: the scan every tick */
+				inputScan.interval = 1;
+				timerStart(INPUT_SCAN_TIMER, 1);
+			}
+#else
 #if !FW_SINCE(0x00090502)
 			if (INPUT_SCAN_NOT_MODE1())
 #endif
 			INTP_SCAN_HOLD();
+#endif
 		} else
 			pinMonitors.pin[4].config.handler();
 	}
@@ -261,10 +289,17 @@ void intp10Interrupt(void)
 		if (pinMonitors.pin[5].config.reload != 0) {
 			pinMonitor5Enable(1);
 			pinMonitors.pin[5].last = 0;
+#if FW_0302
+			if (inputScan.interval != 1) {	/* 0x00080302: the scan every tick */
+				inputScan.interval = 1;
+				timerStart(INPUT_SCAN_TIMER, 1);
+			}
+#else
 #if !FW_SINCE(0x00090502)
 			if (INPUT_SCAN_NOT_MODE1())
 #endif
 			INTP_SCAN_HOLD();
+#endif
 		} else
 			pinMonitors.pin[5].config.handler();
 	}
@@ -333,6 +368,9 @@ void intp0Interrupt(void)
 /* BOARD_SRE0_PIN (P11.5) low: bit 0 of input group 1 taken as changed, and the scan held long */
 void sre0Interrupt(void)
 {
+#if FW_0302
+	/* nothing in 0x00080302 (INTP13 is never enabled) */
+#else
 	if (!BOARD_SRE0_PIN) {
 #if FW_SINCE(0x00090502)
 		inputGroup1.prev &= ~0x01;
@@ -350,6 +388,7 @@ void sre0Interrupt(void)
 #endif
 #endif
 	}
+#endif	/* FW_0302 */
 }
 #endif
 

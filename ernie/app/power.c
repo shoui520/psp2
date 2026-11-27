@@ -256,7 +256,7 @@ int powerFaulty(void)
 {
 	return 0;
 }
-#elif BOARD_102603
+#elif BOARD_102603 || FW_0302
 /* its fault line: input 3's bit 5 */
 int powerFaulty(void)
 {
@@ -656,7 +656,7 @@ unsigned char powerOff(void)
 	POWER_WAIT(5, 0x8ca);
 	powerPendingClear(5);
 	POWER_WAIT_CLEAR(6);
-#if FW_SINCE(0x00080302)	/* 0x00080003 tells task 6 nothing */
+#if FW_SINCE(0x00080307)	/* 0x00080003 and 0x00080302 tell task 6 nothing */
 	task6SetFlag(6, 0x80);
 #endif
 #if FW_SINCE(0x00090502)
@@ -945,8 +945,8 @@ unsigned char powerCut(void)
 		P33 = 1;
 #endif
 	P6.2 = 0;
-#if !FW_SINCE(0x00090203)
-	clockOutputStop();	/* 0x00090009: after the line */
+#if !FW_SINCE(0x00090203) && !FW_0302
+	clockOutputStop();	/* 0x00090009: after the line; 0x00080302 leaves it */
 #endif
 #endif
 	hostIntDisable();
@@ -979,7 +979,11 @@ unsigned char powerCut(void)
 	P6.2 = 1;
 #if BOARD_BBMC
 	if (P33) {
+#if FW_0302
+		dly_tsk(0x2ee);	/* 0x00080302: 750 ticks */
+#else
 		dly_tsk(0x39d);
+#endif
 		P33 = 0;
 	}
 #endif

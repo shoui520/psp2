@@ -146,6 +146,8 @@ const unsigned char timeStampDigits[12] = {
 static const unsigned int commandBaseRequests[COMMAND_BASE_REQUESTS] = {
 	0x0080, 0x0083, 0x0084, 0x0085, 0x00a0, 0x00c0,
 };
+#elif FW_0302
+/* 0x00080302: none, no handshake */
 #else
 #define COMMAND_BASE_REQUESTS	4
 static const unsigned int commandBaseRequests[COMMAND_BASE_REQUESTS] = {
@@ -156,7 +158,11 @@ static const unsigned int commandBaseRequests[COMMAND_BASE_REQUESTS] = {
 /* 0x0001 (sceSysconGetErnieVersion) */
 unsigned char hostCommandErnieVersion(unsigned char *out, unsigned char *length)
 {
+#if FW_0302	/* no version.c: the version block as it is */
+	memcpy(out, appVersionInfo.version, 4);
+#else
 	getErnieVersion(out);
+#endif
 	*length = 4;
 	return 0;
 }
@@ -202,7 +208,11 @@ unsigned char hostCommandTimeStamp(unsigned char *out, unsigned char *length)
 /* 0x0005 (sceSysconGetHardwareInfo) */
 unsigned char hostCommandHardwareInfo(unsigned char *out, unsigned char *length)
 {
+#if FW_0302
+	memcpy(out, appVersionInfo.hardwareInfo, 4);
+#else
 	getHardwareInfo(out);
+#endif
 	*length = 4;
 	return 0;
 }
@@ -752,6 +762,14 @@ allowed:
 			else
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 2, 0);
 			break;
+#if FW_0302
+		case 0x0092:		/* 0x00080302: no NVS parameters */
+			hostRequestAnswer(&commandRequest, 0x10, 0x3f, 0);
+			break;
+		case 0x0093:
+			hostRequestAnswer(&commandRequest, 0x10, 0x3f, 0);
+			break;
+#else
 		case 0x0092:		/* the NVS's read */
 			if (commandRequest.length != 3) {
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3b, 0);
@@ -776,6 +794,7 @@ allowed:
 			else
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 2, 0);
 			break;
+#endif
 		case 0x00a0:		/* the handshake */
 #if FW_SINCE(0x01000104)
 			hostGetLinkSize(&linkSize);
@@ -803,7 +822,7 @@ allowed:
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3b, 0);
 			break;
 		case 0x00b1:		/* sceSysconCtrlWirelessPowerDown */
-#if HW_102603
+#if HW_102603 || FW_0302
 			/* the wireless power line, P6.7 */
 			if (commandRequest.length == 1) {
 				if (commandRequestData[0] == 1)
@@ -1043,7 +1062,23 @@ allowed:
 			break;
 #else
 			if (commandRequest.length == 4) {
-#if !FW_SINCE(0x01000104)
+#if FW_0302
+				/* the parameter's three bytes as they are, the mask not set */
+				if (commandRequestData[0] == 0x00) {
+					transitionEvent.transition = 0x50;
+					memcpy(&transitionEvent.wakeMask, &commandRequestData[1], 3);
+				} else if (commandRequestData[0] == 0x01) {
+					transitionEvent.transition = 0x51;
+					memcpy(&transitionEvent.wakeMask, &commandRequestData[1], 3);
+				} else {
+					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3c, 0);
+					break;
+				}
+				if ((unsigned char)stateTransition(&transitionEvent) == 0)
+					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 0);
+				else
+					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 6, 0);
+#elif !FW_SINCE(0x01000104)
 				if (commandRequestData[0] == 0x00) {
 					transitionEvent.transition = 0x50;
 					transitionEvent.wakeMask = COMMAND_PARAMETER(commandRequestData);

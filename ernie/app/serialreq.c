@@ -37,11 +37,11 @@ extern unsigned char serialRequestData[0x1c];
 #if FW_SINCE(0x00090903)
 #define SERIAL_REQUEST_COPY()	(result = serial1BufferRead(offset, size, serial.buffer))
 #define SERIAL_REQUEST_RESULT	result
-#elif FW_SINCE(0x00080302)
+#elif FW_SINCE(0x00080307)
 #define SERIAL_REQUEST_COPY()	memcpy(serial.buffer, &serial1Buffer[offset], size)
 #define SERIAL_REQUEST_RESULT	0
 #else
-/* 0x00080003: the frame sent from serial1Buffer itself */
+/* 0x00080003 and 0x00080302: the frame sent from serial1Buffer itself */
 #define SERIAL_REQUEST_COPY()	(serial.buffer = &serial1Buffer[offset])
 #define SERIAL_REQUEST_RESULT	0
 #endif
@@ -78,7 +78,7 @@ void serialRequestNotify(void)
 	unsigned char offset;
 	unsigned char size;
 
-#if FW_SINCE(0x00080302)	/* 0x00080003 has no handshake */
+#if FW_SINCE(0x00080307)	/* 0x00080003 and 0x00080302 have no handshake */
 	if (!handshakeUnlocked11()) {
 		hostRequestAnswer(&serialRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
 		handshakeRefuse();

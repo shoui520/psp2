@@ -870,10 +870,12 @@ void inputResumePrepare(void)
 {
 	intp1Enable(0);
 	intp13Enable(0);
-#if (BOARD_INTP11 || BOARD_102603 || ERNIE_BOARD == 0x00406000) && !FW_SINCE(0x00090203)	/* 0x00102603's does nothing; PCH-1000's 0x00090007 has it */
+#if (BOARD_INTP11 || BOARD_102603 || ERNIE_BOARD == 0x00406000 || FW_0302) && !FW_SINCE(0x00090203)	/* 0x00102603's does nothing; PCH-1000's 0x00090007 has it */
 	intp11Enable(0);
 #endif
-#if SOURCE_0103
+#if FW_0302
+	/* 0x00080302: none of the wake inputs */
+#elif SOURCE_0103
 	intp7Enable(0);
 #if BOARD_DOL1001
 	intp8Enable(0);
@@ -912,7 +914,9 @@ void inputResumeOpen(void)
 	analogInit();
 #endif
 	adcOpenForBoard();
-#if BOARD_INPUTS_102603 && !FW_SINCE(0x00090502)
+#if FW_0302
+	/* no line on P12.7 */
+#elif BOARD_INPUTS_102603 && !FW_SINCE(0x00090502)
 	P127 = 1;
 #elif BOARD_INPUTS_102603
 	P12 |= 0x80;
@@ -920,7 +924,7 @@ void inputResumeOpen(void)
 	inputGroup1.pending |= 0x08;
 #if (BOARD_INPUTS_102603 || (!FW_SINCE(0x00090502) && BOARD_IS(0x00411000))) && \
     !(HW_IRT001 && !FW_SINCE(0x00090502))
-#if HW_102603 && !FW_SINCE(0x00090206)
+#if (HW_102603 || FW_0302) && !FW_SINCE(0x00090206)
 	inputDelays.analog80 = 0x1c;	/* 0x00102603's 0x00090009 and 0x00102403's 0x00090204 start channel 8 */
 #else
 	inputDelays.latchOn = 0x1c;
@@ -952,7 +956,7 @@ void inputPowerOff(void)
 	adcCloseForBoard();
 	inputKeysClose();
 	boardMultiCnOutputOff();
-#if BOARD_INPUTS_102603
+#if BOARD_INPUTS_102603 && !FW_0302	/* 0x00080302's P5.4 is the button */
 	P127 = 0;
 	P5.4 = 0;
 #endif
@@ -1067,6 +1071,12 @@ void inputStateOff(void)
 	else
 		inputScanMode2(1);
 	coldStart = 0;
+}
+#elif FW_0302
+	/* 0x00080302: no wake inputs, the scan back to every tick */
+	inputScan.interval = 1;
+	inputScan.hold = 0;
+	timerStart(INPUT_SCAN_TIMER, inputScan.interval);
 }
 #else
 	intp7Enable(0);
@@ -1217,6 +1227,18 @@ void inputStateCut(void)
 }
 #endif
 
+#if FW_0302
+/* 0x00080302: no wake inputs to arm */
+void inputSuspend(void)
+{
+	touchClose();
+#if BOARD_MOTION
+	motionClose();
+#endif
+	adcCloseForBoard();
+	inputKeysClose();
+}
+#else
 void inputSuspend(void)
 {
 #if STATE_WAKE_BITS
@@ -1381,11 +1403,12 @@ void inputSuspend(void)
 	return;
 #endif
 }
+#endif	/* FW_0302 */
 
 void inputStateSuspend(void)
 {
-#if !FW_SINCE(0x00080302)
-	/* 0x00080003: as inputStateOff */
+#if !FW_SINCE(0x00080307)
+	/* 0x00080003 and 0x00080302: no wake inputs, as inputStateOff: the scan back to every tick */
 	inputScan.interval = 1;
 	inputScan.hold = 0;
 	timerStart(INPUT_SCAN_TIMER, inputScan.interval);
@@ -1454,23 +1477,31 @@ void inputStateReset(void)
 /* P5.0-3, P8 and P11.2-3 inputs with their pull-ups (the keys button1Keys reads) */
 void inputKeysOpen(void)
 {
+#if FW_0302
+	/* 0x00080302: the ports as boardPortInit left them */
+#else
 	PU5 = BOARD_KEYS_P5 | PU5;
 	PM5 = 0x0f | PM5;
 	PU8 = 0xff;
 	PM8 = 0xff;
 	PU11 = 0x0c | PU11;
 	PM11 = 0x0c | PM11;
+#endif
 }
 
 /* and back to outputs at 0 */
 void inputKeysClose(void)
 {
+#if FW_0302
+	/* 0x00080302: the ports as boardPortInit left them */
+#else
 	P5 = (unsigned char)~BOARD_KEYS_P5 & P5;
 	PM5 = (unsigned char)~BOARD_KEYS_P5 & PM5;
 	P8 = 0;
 	PM8 = 0;
 	P11 = 0xf3 & P11;
 	PM11 = 0xf3 & PM11;
+#endif
 }
 #endif
 
@@ -1581,7 +1612,7 @@ void sampleInputs1(void)
 	inputRaw1.3 = P14.2;
 	inputRaw1.4 = P4.6;
 	inputRaw1.5 = P2.0;
-	inputRaw1.6 = P11.5;
+	inputRaw1.6 = BOARD_BUTTON1_PIN;
 #endif
 #if BOARD_INPUT1_BIT7_POLL && !BOARD_DOL1001
 	inputRaw1.7 = BOARD_INPUT1_BIT7_PIN;
@@ -1760,7 +1791,7 @@ void pinMonitorPoll(void)
 
 	if (pinMonitors.mask != 0) {
 		if (pinMonitors.mask & 0x01) {
-			level = P11.5;
+			level = BOARD_BUTTON1_PIN;
 			if (pinMonitors.pin[0].last == level) {
 				if (pinMonitors.pin[0].count-- == 0) {
 					pinMonitor0Enable(0);
@@ -1793,7 +1824,7 @@ void pinMonitorPoll(void)
 				}
 			} else {
 				pinMonitor2Enable(0);
-#if !FW_SINCE(0x00090502) && FW_SINCE(0x00080302)	/* not in 0x00080003 */
+#if !FW_SINCE(0x00090502) && FW_SINCE(0x00080307)	/* 0x00080003 and 0x00080302: the interrupt stays off */
 				intp7Enable(1);
 #endif
 			}
@@ -1810,7 +1841,7 @@ void pinMonitorPoll(void)
 				}
 			} else {
 				pinMonitor3Enable(0);
-#if !FW_SINCE(0x00090502) && FW_SINCE(0x00080302)	/* not in 0x00080003 */
+#if !FW_SINCE(0x00090502) && FW_SINCE(0x00080307)	/* 0x00080003 and 0x00080302: the interrupt stays off */
 				intp4Enable(1);
 #endif
 			}
@@ -1839,7 +1870,7 @@ void pinMonitorPoll(void)
 				}
 			} else {
 				pinMonitor4Enable(0);
-#if !FW_SINCE(0x00090502) && FW_SINCE(0x00080302)	/* not in 0x00080003 */
+#if !FW_SINCE(0x00090502) && FW_SINCE(0x00080307)	/* 0x00080003 and 0x00080302: the interrupt stays off */
 				intp3Enable(1);
 #endif
 			}
@@ -1854,7 +1885,7 @@ void pinMonitorPoll(void)
 				}
 			} else {
 				pinMonitor5Enable(0);
-#if !FW_SINCE(0x00090502) && FW_SINCE(0x00080302)	/* not in 0x00080003 */
+#if !FW_SINCE(0x00090502) && FW_SINCE(0x00080307)	/* 0x00080003 and 0x00080302: the interrupt stays off */
 				intp10Enable(1);
 #endif
 			}
@@ -2248,6 +2279,8 @@ void intp13Enable(unsigned char enable)
 {
 #if BOARD_DOL1001
 	/* DOL-1001: nothing (its INTP8 is powerJobOn's, INTP13 intp8Enable's) */
+#elif FW_0302
+	/* 0x00080302: nothing */
 #elif SOURCE_0103	/* the slim's INTP8 */
 	if (enable == 0) {
 		EGP1.0 = 0;
@@ -2310,7 +2343,7 @@ void pinMonitor0Enable(unsigned char enable)
 #if FW_SINCE(0x0100060B)
 		pinMonitors.pin[0].last = 0;
 #else
-		pinMonitors.pin[0].last = P11.5;
+		pinMonitors.pin[0].last = BOARD_BUTTON1_PIN;
 #endif
 		pinMonitors.pin[0].count = pinMonitors.pin[0].config.reload;
 		pinMonitors.mask |= 0x01;
@@ -2390,7 +2423,7 @@ unsigned char button2Keys(void)
 #if SOURCE_0103
 	if (P7.4)
 #else
-	if (P11.5)
+	if (BOARD_BUTTON1_PIN)
 #endif
 		keys++;
 #endif
@@ -2428,6 +2461,8 @@ unsigned char button1Keys(void)
 #if BOARD_DOL1001
 #elif SOURCE_0103	/* the slim's keys on P7, its buttons P7.4 and P7.6 */
 	keys[1] = (P7 & 0x5f) | 0xa0;
+#elif FW_0302	/* the button on P5.4, with the keys */
+	keys[1] = (0x1f & P5) | ((!P4.6 ? (unsigned char)0xbf : (unsigned char)0xff) & 0xe0);
 #else
 	keys[1] = (0x0f & P5) | ((!P11.5 ? (unsigned char)0xef : (unsigned char)0xff) &
 				 (!P4.6 ? (unsigned char)0xbf : (unsigned char)0xff) & 0xf0);
@@ -2505,7 +2540,12 @@ void button1Held(void)
 			break;
 		}
 	} else if (stateGet() != 0x0020) {
+#if FW_0302
+		buttonPress1.keys = 1;
+		buttonPress1.result = buttonPress1.keys;
+#else
 		buttonPress1.result = buttonPress1.keys = 1;
+#endif
 		STATE_TRANSITION(0x13);
 	}
 }
@@ -3075,7 +3115,7 @@ void inputScanTimer(void)
 	unsigned char toggled;
 
 	inputKeys.events = 0;
-#if HW_102603	/* 0x00102603's 0x00080502: channel 8 started after inputResumeOpen's delay */
+#if HW_102603 || FW_0302	/* 0x00102603's 0x00080502: channel 8 started after inputResumeOpen's delay */
 	if (inputDelays.analog80 != 0) {
 		if (--inputDelays.analog80 == 0)
 			analogStart80();

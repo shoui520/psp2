@@ -166,7 +166,9 @@ unsigned char serial4Receive(void)
 	length = serial4Read(SERIAL4_PORT, serial4.buffer,
 			     uartReceived(SERIAL4_PORT) < 0x7f ? uartReceived(SERIAL4_PORT) : 0x7f);
 	serial4Flush(SERIAL4_PORT);
+#if !FW_0302	/* 0x00080302 has no trace */
 	serial4Trace(serial4.buffer);
+#endif
 	if (hexDecode((unsigned char *)&serial4.command, (char *)serial4.buffer, 2)) {
 		serial4.command = 0xffff;
 		return SERIAL_BAD_HEX;
@@ -332,7 +334,9 @@ unsigned char serial4SendAnswer(void)
 		serial4Text[textLength + 14] = '\r';
 		serial4Text[textLength + 15] = '\n';
 		serial4Write(SERIAL4_PORT, serial4Text, textLength + 16);
+#if !FW_0302
 		serial4Trace(serial4.buffer);
+#endif
 	}
 	return 0;
 }
@@ -371,7 +375,7 @@ unsigned char serial4Open2(int baud)
 	uart4Open(baud);
 	serial4Start(2);
 	serial2SetLink(1);
-#if !FW_SINCE(0x01000104) && (!BOARD_102603 || HW_IRT001) && FW_SINCE(0x00080302)
+#if !FW_SINCE(0x01000104) && (!BOARD_102603 || HW_IRT001) && FW_SINCE(0x00080307)
 	dly_tsk(13);
 #endif
 	serial2SetP71(0);
@@ -494,11 +498,13 @@ unsigned char serial4GetP71(void)
 }
 #endif
 
+#if !FW_0302
 /* a frame received or sent (does nothing) */
 void serial4Trace(unsigned char *buffer)
 {
 }
 #endif /* FW_SINCE(0x00080302) */
+#endif
 #endif
 
 #if !FW_SINCE(0x00080302)

@@ -30,7 +30,7 @@ extern const char __far traceNewline[];
 extern void traceConsolePrompt(void);
 extern void traceConsoleInit(void);
 extern void traceConsoleCommand(void);
-#if ERNIE_FW < 0x00080302
+#if ERNIE_FW < 0x00080307
 extern void traceConsoleEvent(unsigned int ptn);
 #endif
 #endif

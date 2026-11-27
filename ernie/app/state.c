@@ -353,12 +353,15 @@ void stateInit(void)
 #elif !FW_SINCE(0x00080302)
 	/* 0x00080003 wakes on everything */
 	stateSetWakeMask(0xffffffff);
-#elif !FW_SINCE(0x00080502)
+#elif !FW_SINCE(0x00080502) && !FW_0302
 	/* 0x00080307 never wakes on factors 22 and 15 */
 	stateSetWakeMask(~0x00408000UL);
 #elif !FW_SINCE(0x00090006)
-	/* 0x00080504 wakes on everything */
+	/* 0x00080302 and 0x00080504 wake on everything */
 	stateSetWakeMask(0xffffffff);
+#if FW_0302
+	return;
+#endif
 #else
 	/* 0x00090206's configuration has no wake masks */
 	if (configGet()->start.bits.wakeUnmask22)
@@ -478,7 +481,7 @@ int stateEnter(void)
 	return 0;
 }
 
-#if FW_SINCE(0x00080302)	/* not in 0x00080003 */
+#if FW_SINCE(0x00080307)	/* not in 0x00080003 or 0x00080302 */
 int stateCheck(void)
 {
 	struct StateMsg *msg;
@@ -802,7 +805,10 @@ static int stateOffHandle(struct StateEvent *event)
 			stateRequest.bits.mode = event->transition & 0x7f;
 		}
 		stateRequest.bits.notify = 0;
-#if FW_SINCE(0x00090804)
+#if FW_0302
+		/* 0x00080302: the updater's mask, factors 0, 9-12, 14 and 17-21 never wake */
+		stateWakeMask = event->wakeMask & ~0x003e7a01UL;
+#elif FW_SINCE(0x00090804)
 		stateWakeMask |= configGet()->BOARD_WAKE_MASKS.on;
 		stateWakeMask &= ~configGet()->BOARD_WAKE_MASKS.off;
 #elif !FW_SINCE(0x00080302)
@@ -857,7 +863,7 @@ static int stateOffHandle(struct StateEvent *event)
 		    (serial2TestAreaUsed() == 0 && !configGet()->test.bits.startCheckOff &&
 		     serial2InTime() != 0))
 			stateNext = 0;
-#elif FW_SINCE(0x00080302)	/* 0x00080003 asks the charger nothing */
+#elif FW_SINCE(0x00080307)	/* 0x00080003 and 0x00080302 ask the charger nothing */
 		if (!(unsigned char)chargeMayStart())
 			stateNext = 0;
 #endif
@@ -996,8 +1002,9 @@ static int stateSuspendHandle(struct StateEvent *event)
 	}
 #else
 	}
-#if !FW_SINCE(0x00080302)
-	/* 0x00080003: the event's mask, less factors 0 and 18-20, at every event, and no charger */
+#if !FW_SINCE(0x00080307)
+	/* 0x00080003 and 0x00080302: the event's mask, less factors 0 and 18-20, at every event,
+	   and no charger */
 	stateWakeMask = event->wakeMask & ~0x001c0001UL;
 	if (stateRequest.bits.mode != 0 &&
 	    ((1UL << stateRequest.bits.mode) & stateWakeMask))
@@ -1218,6 +1225,13 @@ void stateInputWake1(void)
 	STATE_TRANSITION_EVENT
 
 	if (input1Bit6Active()) {
+#if FW_0302
+		/* 0x00080302: outside a resume, the scan every tick */
+		if (stateGet() != STATE_RESUME && inputScan.interval != 1) {
+			inputScan.interval = 1;
+			timerStart(INPUT_SCAN_TIMER, 1);
+		}
+#endif
 		button1Reset();
 		pinMonitor0Enable(1);
 	} else {

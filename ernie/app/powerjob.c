@@ -525,7 +525,11 @@ static void powerJobOn(void)
 	timerStart(TIMER_RTC(0x17), TIMER_RTC_TICKS(10));	/* 0x00080003: no charge LED, every 10 */
 #else
 	chargeLedInit();
+#if FW_0302
+	timerStart(TIMER_RTC(0x17), TIMER_RTC_TICKS(10));	/* 0x00080302's first update after 5 s */
+#else
 	timerStart(TIMER_RTC(0x17), TIMER_RTC_TICKS(1));
+#endif
 #endif
 #else
 	if (configGet()->start.bits.chargeLedOff) {
@@ -794,7 +798,10 @@ static void powerJobCut(void)
 	P0.5 = 0;
 	P6.3 = 0;
 	P13.1 = 0;
-#if BOARD_102603 && !HW_IRT001
+#if FW_0302
+	P6.6 = 0;	/* 0x00080302: request 0x088b's line too */
+	P6.7 = 0;
+#elif BOARD_102603 && !HW_IRT001
 	P6.7 = 0;
 #endif
 	reg = 0xb0;

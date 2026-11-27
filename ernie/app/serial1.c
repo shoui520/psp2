@@ -373,6 +373,8 @@ unsigned char serialCommands1Count(void)
 	return 0x2c;	/* 0x00090502: no 0x0146-0x0147, 0x0160, 0x0170-0x0171 */
 #elif FW_SINCE(0x00090006)
 	return 0x25;
+#elif FW_0302
+	return 0x0e;	/* 0x00080302: none of 0x0900-0x0951 */
 #elif FW_SINCE(0x00080302)
 	return 0x1f;
 #else
@@ -401,8 +403,8 @@ static unsigned char serial1Command0101(struct SerialBuffer *request, struct Ser
 	union PowerRequest factor;
 
 #endif
-#if !FW_SINCE(0x00080302)
-	/* 0x00080003: the version block at once */
+#if !FW_SINCE(0x00080307)
+	/* 0x00080003 and 0x00080302: the version block's hardware ID and version, as they are */
 	memcpy(serial1Data.version.hardwareInfo, &appVersionInfo, sizeof(appVersionInfo));
 #else
 	getHardwareInfo(serial1Data.version.hardwareInfo);
@@ -2535,7 +2537,7 @@ static unsigned char serial1Command01d1(struct SerialBuffer *request, struct Ser
 #endif	/* !ERNIE_UPDATER */
 #endif
 #ifndef ERNIE_UPDATER
-#if FW_SINCE(0x00080302)	/* 0x00080003 has none of 0x0900-0x0951 */
+#if FW_SINCE(0x00080307)	/* 0x00080003 and 0x00080302 have none of 0x0900-0x0951 */
 
 #if FW_SINCE(0x00090502)
 int serial1KeyOpen(void)
@@ -3250,7 +3252,7 @@ done:
 	return result;
 }
 #endif
-#endif	/* FW_SINCE(0x00080302) */
+#endif	/* FW_SINCE(0x00080307) */
 
 #endif	/* !ERNIE_UPDATER */
 
@@ -3460,7 +3462,7 @@ const struct SerialCommand serialCommands1[] = {
 #endif
 	{ 0x0300, serial1Command0300 },
 	{ 0x0301, serial1Command0301 },
-#if FW_SINCE(0x00080302)
+#if FW_SINCE(0x00080307)
 	{ 0x0900, serial1Command0900 },
 	{ 0x0901, serial1Command0901 },
 	{ 0x0910, serial1Command0910 },
@@ -3586,7 +3588,7 @@ const struct SerialNotify serialNotifies1[] = {
 #endif
 };
 
-#if !FW_SINCE(0x0100060B) && FW_SINCE(0x00080302)
+#if !FW_SINCE(0x0100060B) && FW_SINCE(0x00080307)	/* 0x00080003 and 0x00080302 have no levels (0x0950) */
 const struct Serial1Level serial1Levels[SERIAL1_LEVELS] = {
 	{ 0x81, &param.levels[0] },
 	{ 0x82, &param.levels[1] },

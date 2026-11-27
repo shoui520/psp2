@@ -950,7 +950,11 @@ unsigned char analogStart(unsigned int inputs)
 	}
 #else
 	if (inputs & 0x0020)
+#if FW_0302	/* 0x00080302: the multi connector on channels 2 and 3, as 0x00102603's */
+		mask |= 0x0c;
+#else
 		mask |= 0x08;
+#endif
 	if (inputs & 0x0001)
 		;	/* Sony's tests bit 0 and does nothing */
 #endif
@@ -1076,7 +1080,7 @@ void analogEvent(unsigned int inputs)
    connector's level reported when two readings agree on a new one */
 void analogEvent(unsigned int inputs)
 {
-#if BOARD_102603
+#if BOARD_102603 || FW_0302
 	unsigned char high;
 	unsigned char low;
 
@@ -1152,7 +1156,7 @@ void analogEvent(unsigned int inputs)
 	if (inputs & 0x0020) {
 #endif
 		analogMultiCnInput = ANALOG_HIGH(adcResults[4]);
-#if BOARD_102603
+#if BOARD_102603 || FW_0302	/* 0x00080302's connector as 0x00102603's */
 		/* two connector lines: channel 4's level in the high nibble, channel 5's in the low */
 		analogMultiCnReserved = ANALOG_HIGH(adcResults[5]);
 		high = analogLevelFind(analogMultiCnInput, analogMultiCnLevels,
@@ -1179,7 +1183,7 @@ void analogEvent(unsigned int inputs)
 			task2SetFlag(3, 0x0001);
 #else
 			switch (analogMultiCnReported) {
-#if BOARD_102603
+#if BOARD_102603 || FW_0302
 			case 0x51:	/* its levels are two inputs' nibbles */
 #else
 			case 2:

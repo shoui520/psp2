@@ -196,8 +196,8 @@ unsigned char handshakeCommand(unsigned char *data)
 		handshake.mode = 0x0b;
 		randomGenerate(seed, nonce);
 		memcpy(handshake.challenge, nonce, 8);
-#if !FW_SINCE(0x00080302)
-		HANDSHAKE_DUMP("hello");	/* 0x00080003 swaps the two tags */
+#if !FW_SINCE(0x00080307)	/* 0x00080003 and 0x00080302 swap the two tags */
+		HANDSHAKE_DUMP("hello");
 #else
 		HANDSHAKE_DUMP("reqhello");
 #endif
@@ -217,7 +217,7 @@ unsigned char handshakeCommand(unsigned char *data)
 		memset(handshakePacket.header, 0, 0x24);
 		memcpy(handshakePacket.challenge, handshake.challenge, 8);
 		memcpy(data, &handshakePacket, sizeof(handshakePacket));
-#if !FW_SINCE(0x00080302)
+#if !FW_SINCE(0x00080307)
 		HANDSHAKE_DUMP("reqHello");
 #else
 		HANDSHAKE_DUMP("hello");
@@ -620,8 +620,14 @@ unsigned char handshakeRefuse(void)
 #endif
 
 #if !FW_SINCE(0x00080502)
-/* 0x00080307 ships the header and the keys blank */
+/* 0x00080307 ships the header and the keys blank (0x00080302 the header's first byte set) */
+#if FW_0302
+static const unsigned char handshakeHeader[4] = {
+	0x01, 0x00, 0x00, 0x00
+};
+#else
 static const unsigned char handshakeHeader[4] = { 0 };
+#endif
 static const unsigned char mode11Check[16] = { 0 };
 static const unsigned char mode11Key1[16] = { 0 };
 const unsigned long randomKey[4] = { 0 };

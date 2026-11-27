@@ -11,6 +11,8 @@
 #include "kernel.h"
 #include "param.h"
 
+#if !FW_0302	/* 0x00080302 has no parameter block (its battery levels: charge.c) */
+
 #if FW_SINCE(0x00090502) && !BOARD_DOL1001	/* DOL-1001 keeps no default patterns */
 static TABLE_CONST unsigned char paramPattern1Default[PARAM_PATTERN_SIZE] = {
 	0x00, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
@@ -322,3 +324,4 @@ void paramGetPattern1(unsigned char *pattern)
 }
 #endif
 #endif
+#endif	/* !FW_0302 */

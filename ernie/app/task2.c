@@ -288,10 +288,10 @@ unsigned char task2On(void)
 	if (nvsInit() != 0)
 #if FW_SINCE(0x00090903)
 		nvsJobService();
-#elif FW_SINCE(0x00080302)
+#elif FW_SINCE(0x00080307)
 		task2SetFlag(3, 0x0040);
 #else
-		;	/* 0x00080003 tests the result and does nothing */
+		;	/* 0x00080003 and 0x00080302 test the result and do nothing */
 #endif
 	serial1Reset();
 #if FW_SINCE(0x00090502)

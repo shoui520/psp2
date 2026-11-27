@@ -128,10 +128,10 @@ void hdwinit(void)
 	TS0L = 0x01;
 #endif
 	rtcInit();
-#if FW_SINCE(0x00080302)
+#if FW_SINCE(0x00080307)
 	clockOutputStop();
 #else
-	clockOutputStart();	/* 0x00080003 leaves the clock output on */
+	clockOutputStart();	/* 0x00080003 and 0x00080302 leave the clock output on */
 #endif
 	return;
 }
