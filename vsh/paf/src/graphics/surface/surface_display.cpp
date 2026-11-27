@@ -288,6 +288,23 @@ int32_t DisplaySurface::Begin(uint32_t flags)
 	return 0;
 }
 
+#ifdef PAF_BUILD_2014
+int32_t DisplaySurface::End(const SceGxmNotification *vertex_notification,
+			    const SceGxmNotification *fragment_notification)
+{
+	SceGxmContext *context = GetRawContext();
+
+	if (context == NULL)
+		return SCE_PAF_ERROR_GRAPHICS_INVALID_POINTER;
+
+	int32_t ret = sceGxmEndScene(context, vertex_notification, fragment_notification);
+
+	if (ret < 0)
+		return ret;
+	return 0;
+}
+#endif
+
 void DisplaySurface::SetDirty(bool dirty)
 {
 	if (m_page_dirty != NULL)

@@ -159,7 +159,15 @@ public:
 	{
 	}
 
-	virtual void Release() = 0;
+	virtual int32_t Release() = 0;
+	virtual int32_t Cancel() = 0;
+	virtual int32_t Start(bool async_mode, int32_t priority, int32_t stack_size) = 0;
+	virtual int32_t Wait(int32_t timeout) = 0;
+	virtual int32_t Pause() = 0;
+	virtual int32_t Resume() = 0;
+	virtual int32_t GetStatus() = 0;
+	virtual int32_t SetOption(int32_t option_key, int32_t option_value) = 0;
+	virtual int32_t GetOption(int32_t option_key, int32_t option_value) = 0;
 };
 
 class MapTaskHolder {
@@ -174,6 +182,71 @@ public:
 			m_task->Release();
 			m_task = NULL;
 		}
+	}
+
+	virtual int32_t Release()
+	{
+		if (m_task != NULL) {
+			m_task->Release();
+			m_task = NULL;
+		}
+		return 0;
+	}
+
+	virtual int32_t Cancel()
+	{
+		if (m_task != NULL)
+			return m_task->Cancel();
+		return 0;
+	}
+
+	virtual int32_t Start(bool async_mode, int32_t priority, int32_t stack_size)
+	{
+		if (m_task != NULL)
+			return m_task->Start(async_mode, priority, stack_size);
+		return 0;
+	}
+
+	virtual int32_t Wait(int32_t timeout)
+	{
+		if (m_task != NULL)
+			return m_task->Wait(timeout);
+		return 0;
+	}
+
+	virtual int32_t Pause()
+	{
+		if (m_task != NULL)
+			return m_task->Pause();
+		return 0;
+	}
+
+	virtual int32_t Resume()
+	{
+		if (m_task != NULL)
+			return m_task->Resume();
+		return 0;
+	}
+
+	virtual int32_t GetStatus()
+	{
+		if (m_task != NULL)
+			return m_task->GetStatus();
+		return 0;
+	}
+
+	virtual int32_t SetOption(int32_t option_key, int32_t option_value)
+	{
+		if (m_task != NULL)
+			return m_task->SetOption(option_key, option_value);
+		return 0;
+	}
+
+	virtual int32_t GetOption(int32_t option_key, int32_t option_value)
+	{
+		if (m_task != NULL)
+			return m_task->GetOption(option_key, option_value);
+		return 0;
 	}
 
 	MapAsyncTask *m_task;

@@ -40,6 +40,14 @@ public:
 	bool m_opaque : 1;
 };
 
+/* the style bubbles are made with (blend 1, depth 4), exported as its word (no Sony name found) */
+extern "C" const uint32_t ScePafGraphics_156C46B4;
+
+static inline __attribute__((always_inline)) const DrawStyle &BubbleObjStyle()
+{
+	return reinterpret_cast<const DrawStyle &>(ScePafGraphics_156C46B4);
+}
+
 }
 }
 

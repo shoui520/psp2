@@ -40,9 +40,11 @@ ListItem::ListItem(Widget *parent, CreateParam *param)
 		AddDrawObj(DrawObjEntry(new graph::PlaneObj(graph::PlaneObjStyle()), OBJ_BG), false);
 }
 
+#ifndef PAF_BUILD_2014
 ListItemParam::ListItemParam()
 {
 }
+#endif
 
 ListItemStyleParam::ListItemStyleParam()
 {
@@ -320,6 +322,7 @@ Widget *FindListItemFocusChild(Widget *widget, int32_t mode)
 	return found;
 }
 
+#ifndef PAF_BUILD_2014
 const char *ListItemParam::GetParamName() const
 {
 	return "list_item_base";
@@ -359,6 +362,7 @@ int32_t ListItemParam::Get()
 	}
 	return ret;
 }
+#endif
 
 const char ListItemStyleParam::m_param_name[] = "style_list_item";
 
@@ -419,7 +423,11 @@ static Widget *NewListItem(Widget *parent)
 
 static WidgetParam *NewListItemParam()
 {
+#ifdef PAF_BUILD_2014
+	return new WidgetParam;
+#else
 	return new ListItemParam;
+#endif
 }
 
 static VersatileParam *NewListItemLayoutParam()

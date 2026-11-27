@@ -178,8 +178,6 @@ set(swu_ft2_SOURCES
 	${FT2_SCE}/src/truetype/truetype.c
 	${FT2}/src/type1/type1.c
 	${FT2}/src/cff/cff.c
-	${FT2}/src/otvalid/otvalid.c
-	${FT2}/src/base/ftotval.c
 	${FT2_SCE}/src/base/ftsystem.c
 	${FT2_SCE}/src/psaux/psaux.c
 	${FT2}/src/psnames/psnames.c
@@ -189,8 +187,8 @@ set(swu_ft2_SOURCES
 	${FT2}/src/smooth/smooth.c
 )
 set_source_files_properties(${swu_ft2_SOURCES} PROPERTIES
-	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;FT2_BUILD_LIBRARY"
-	COMPILE_OPTIONS "-O3;-fstack-protector;-fhosted;-fbuiltin;-fdelete-null-pointer-checks;-ffunction-sections;-fdata-sections;-fsigned-char"
+	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;FT2_BUILD_LIBRARY;FT_CONFIG_NO_OTVALID"
+	COMPILE_OPTIONS "-O3;-fno-stack-protector;-fhosted;-fbuiltin;-fdelete-null-pointer-checks;-ffunction-sections;-fdata-sections;-fsigned-char"
 	INCLUDE_DIRECTORIES "${FT2_DIR}/include;${FT2_SCE}/include;${FT2}/include;${FT2}/src;${FT2}/src/base")
 set_source_files_properties(${FT2_DIR}/libc.c PROPERTIES
 	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;FT2_BUILD_LIBRARY;PAF_STATIC_BUILD"
@@ -201,12 +199,11 @@ set_source_files_properties(${FT2_DIR}/setjmp.S PROPERTIES
 set(swu_pvf "${PSP2_SRC}/sys/internal/usermode/src/libpvf")
 set(swu_pvf_SOURCES
 	${swu_pvf}/libpvf.c
-	${swu_pvf}/pvf_gsub.c
 	${swu_pvf}/pvf_rasterizer.c
 )
 set_source_files_properties(${swu_pvf_SOURCES} PROPERTIES
 	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;SCE_PVF_2014"
-	COMPILE_OPTIONS "-mfloat-abi=hard"
+	COMPILE_OPTIONS "-O3;-fno-stack-protector;-mfloat-abi=hard"
 	INCLUDE_DIRECTORIES "${FT2}/include")
 
 set(swu_updater_SOURCES
@@ -664,7 +661,7 @@ set_source_files_properties(${PSP2_SRC}/sys/sdk/target/src/aes/libaes.c PROPERTI
 	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;SCE_AES_2014"
 	COMPILE_OPTIONS "-fno-stack-protector;-fno-toplevel-reorder;-ffunction-sections")
 set_source_files_properties(${PSP2_SRC}/sys/sdk/target/src/aes/aes.S PROPERTIES
-	COMPILE_DEFINITIONS PSP2_COMPILER_GCC48)
+	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;SCE_AES_2014")
 
 set_source_files_properties(${PSP2_SRC}/sys/sdk/target/src/sha256/libsha256.c PROPERTIES
 	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;SCE_PSP2_SDK_VERSION=0x03100010"

@@ -1444,7 +1444,7 @@ char *MapJsScriptFormatter::FormatCircle(MapJsRequest *request)
 	return WrapJsBinder(buf, len);
 }
 
-MapJsBridge::MapJsBridge(MapCore *core)
+__attribute__((noinline)) MapJsBridge::MapJsBridge(MapCore *core)
 	: m_bridge_flags(0),
 	  m_map_core(core),
 	  m_pending_handle(NULL),
@@ -1453,12 +1453,12 @@ MapJsBridge::MapJsBridge(MapCore *core)
 {
 }
 
-int32_t MapJsBridge::IsReady() const
+__attribute__((noinline)) int32_t MapJsBridge::IsReady() const
 {
 	return 0;
 }
 
-int32_t MapJsBridge::LoadMapPage()
+__attribute__((noinline)) int32_t MapJsBridge::LoadMapPage()
 {
 	return m_map_core->LoadPageUrl(s_load_map_url);
 }

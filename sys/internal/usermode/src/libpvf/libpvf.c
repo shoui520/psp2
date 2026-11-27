@@ -351,9 +351,15 @@ static ScePvf_t_error pvfGetSystemFontPath(PvfLib *lib, char *path, ScePvf_t_s32
  * The font a handle opens: one already open the same way gets another reference, else a free
  * slot opens it (a system font by index, a user file by name, or a font image in memory).
  */
+#ifdef SCE_PVF_2014
+static PvfFont *pvfOpenFont(PvfLib *lib, ScePvf_t_s32 index, const char *fileName,
+	const void *buffer, ScePvf_t_s32 size, ScePvf_t_u32 openMode,
+	ScePvf_t_error *errorCode)
+#else
 static PvfFont *pvfOpenFont(PvfLib *lib, ScePvf_t_s32 index, const char *fileName,
 	const void *buffer, ScePvf_t_s32 size, ScePvf_t_s32 subFontIndex, ScePvf_t_u32 openMode,
 	ScePvf_t_error *errorCode)
+#endif
 {
 	char path[PVF_PATH_SIZE];
 	PvfFaceInfo info;
@@ -390,8 +396,10 @@ static PvfFont *pvfOpenFont(PvfLib *lib, ScePvf_t_s32 index, const char *fileNam
 		if (openMode == PVF_OPEN_USER_STREAM || openMode == PVF_OPEN_USER_MEMORY) {
 			if (sceClibStrncmp(fileName, font->fileName, SCE_PVF_FONTFILENAME_LENGTH) != 0)
 				continue;
+#ifndef SCE_PVF_2014
 			if (font->subFontIndex != subFontIndex)
 				continue;
+#endif
 		} else if (openMode == PVF_OPEN_USER_BUFFER) {
 			continue;
 		} else if (index != font->fontIndex) {
@@ -441,14 +449,26 @@ static PvfFont *pvfOpenFont(PvfLib *lib, ScePvf_t_s32 index, const char *fileNam
 	switch (openMode) {
 	case PVF_OPEN_SYSTEM_MEMORY:
 	case PVF_OPEN_USER_MEMORY:
+#ifdef SCE_PVF_2014
+		face = PvfRasterizerOpenFile(lib->rasterizer, path, 0, errorCode);
+#else
 		face = PvfRasterizerOpenFile(lib->rasterizer, path, 0, subFontIndex, errorCode);
+#endif
 		break;
 	case PVF_OPEN_USER_BUFFER:
+#ifdef SCE_PVF_2014
+		face = PvfRasterizerOpenMemory(lib->rasterizer, buffer, size, errorCode);
+#else
 		face = PvfRasterizerOpenMemory(lib->rasterizer, buffer, size, subFontIndex,
 			errorCode);
+#endif
 		break;
 	default:
+#ifdef SCE_PVF_2014
+		face = PvfRasterizerOpenFile(lib->rasterizer, path, 1, errorCode);
+#else
 		face = PvfRasterizerOpenFile(lib->rasterizer, path, 1, subFontIndex, errorCode);
+#endif
 		break;
 	}
 	if (*errorCode != 0)
@@ -458,7 +478,9 @@ static PvfFont *pvfOpenFont(PvfLib *lib, ScePvf_t_s32 index, const char *fileNam
 
 	font->openMode = openMode;
 	font->cacheable = 1;
+#ifndef SCE_PVF_2014
 	font->subFontIndex = subFontIndex;
+#endif
 	switch (openMode) {
 	case PVF_OPEN_USER_STREAM:
 	case PVF_OPEN_USER_MEMORY:
@@ -485,7 +507,9 @@ static PvfFont *pvfOpenFont(PvfLib *lib, ScePvf_t_s32 index, const char *fileNam
 	PvfRasterizerGetFaceInfo(lib->rasterizer, face, &info);
 	font->unitsPerEM = info.unitsPerEM;
 	font->numGlyphs = info.numGlyphs;
+#ifndef SCE_PVF_2014
 	font->numFaces = info.numFaces;
+#endif
 	sceClibStrncpy(font->familyName, info.familyName, sizeof(font->familyName) - 1);
 	font->familyName[sizeof(font->familyName) - 1] = '\0';
 	sceClibStrncpy(font->styleName, info.styleName, sizeof(font->styleName) - 1);
@@ -587,7 +611,12 @@ static inline void pvfSetRasterizer(PvfFontHandle *handle)
 {
 	PvfLib *lib = handle->font->lib;
 
+#ifdef SCE_PVF_2014
+	PvfRasterizerSetResolution(lib->rasterizer, (FT_UInt)lib->resolution.h,
+		(FT_UInt)lib->resolution.v);
+#else
 	PvfRasterizerSetResolution(lib->rasterizer, lib->resolution.h, lib->resolution.v);
+#endif
 	PvfRasterizerSetCharSize(handle->font->lib->rasterizer,
 		(FT_F26Dot6)(handle->hCharSize * 64.0f), (FT_F26Dot6)(handle->vCharSize * 64.0f));
 	PvfRasterizerSetSkew(handle->font->lib->rasterizer, handle->skewAngleX,
@@ -625,13 +654,22 @@ static inline void pvfSetGlyphMetrics(PvfFontHandle *handle, const FT_Glyph_Metr
 static inline void pvfCacheKey(const PvfFontHandle *handle, ScePvfCacheKey *key,
 	ScePvf_t_s32 glyphMode, ScePvf_t_s32 vertical)
 {
+#ifdef SCE_PVF_2014
+	(void)vertical;
+	key->keyValue0 = handle->font->fontIndex;
+#else
 	key->keyValue0 = (handle->font->fontIndex & 0x1F) |
 		((ScePvf_t_u8)handle->font->subFontIndex << 5);
+#endif
 	key->keyValue1 = handle->charCode;
 	key->keyValue2 = handle->resolution.h * handle->hCharSize;
 	key->keyValue3 = handle->resolution.v * handle->vCharSize;
 	key->keyValue4 = (float)glyphMode;
+#ifdef SCE_PVF_2014
+	key->keyValue5 = 0.0f;
+#else
 	key->keyValue5 = vertical ? 1.0f : 0.0f;
+#endif
 	key->keyValue6 = handle->skewAngleX;
 	key->keyValue7 = handle->skewAngleY;
 	key->keyValue8 = handle->emboldenRate;
@@ -643,15 +681,24 @@ static inline void pvfCacheKey(const PvfFontHandle *handle, ScePvfCacheKey *key,
  * (4-bit) or 8-bit pixels. vertical loads the vertical layout's; isVert says whether the glyph
  * has a vertical form.
  */
+#ifdef SCE_PVF_2014
+static ScePvf_t_error pvfLoadGlyph(PvfFontHandle *handle, ScePvf_t_charCode charCode,
+	ScePvf_t_s32 depth4)
+#else
 static ScePvf_t_error pvfLoadGlyph(PvfFontHandle *handle, ScePvf_t_charCode charCode,
 	ScePvf_t_s32 depth4, ScePvf_t_s32 vertical, ScePvf_t_s32 *isVert)
+#endif
 {
 	ScePvf_t_cacheSystemInterface *cache;
 	ScePvf_t_bool found;
 	ScePvf_t_pointer slot;
 	ScePvf_t_error result;
 	PvfLib *lib;
+#ifdef SCE_PVF_2014
+	ScePvf_t_s32 width, rows, top, left, pitch;
+#else
 	ScePvf_t_s32 width, rows, top, left, pitch, vert;
+#endif
 	ScePvf_t_u8 *buffer;
 
 	if (!pvfHasChar(handle, charCode)) {
@@ -669,7 +716,11 @@ static ScePvf_t_error pvfLoadGlyph(PvfFontHandle *handle, ScePvf_t_charCode char
 		ScePvfCacheKey key;
 
 		cache->lockFunc(cache->cacheInstance);
+#ifdef SCE_PVF_2014
+		pvfCacheKey(handle, &key, depth4, 0);
+#else
 		pvfCacheKey(handle, &key, depth4, vertical);
+#endif
 		cache = handle->font->lib->init.cache;
 		slot = cache->findFunc(cache->cacheInstance, pvfCacheHash(&key), &key, &found);
 		if (!found) {
@@ -708,22 +759,34 @@ static ScePvf_t_error pvfLoadGlyph(PvfFontHandle *handle, ScePvf_t_charCode char
 
 	pvfSetRasterizer(handle);
 	lib = handle->font->lib;
+#ifndef SCE_PVF_2014
 	if (isVert != NULL)
 		*isVert = 0;
+#endif
 	{
 		FT_Glyph_Metrics metrics;
 
+#ifdef SCE_PVF_2014
+		result = PvfRasterizerGetGlyphMetrics(lib->rasterizer, handle->font->face,
+			handle->charCode, &metrics);
+#else
 		if (vertical)
 			result = PvfRasterizerGetVertGlyphMetrics(lib->rasterizer,
 				handle->font->face, handle->charCode, &metrics, &vert);
 		else
 			result = PvfRasterizerGetGlyphMetrics(lib->rasterizer, handle->font->face,
 				handle->charCode, &metrics);
+#endif
 		if (result != 0)
 			return result;
 		buffer = NULL;
 		pvfSetGlyphMetrics(handle, &metrics);
 	}
+#ifdef SCE_PVF_2014
+	result = PvfRasterizerRenderGlyph(handle->font->lib->rasterizer,
+		handle->font->face, handle->charCode, depth4 != 0, &width, &rows, &top,
+		&left, &pitch, &buffer);
+#else
 	if (vertical) {
 		result = PvfRasterizerRenderVertGlyph(handle->font->lib->rasterizer,
 			handle->font->face, handle->charCode, depth4 != 0, &width, &rows, &top,
@@ -735,6 +798,7 @@ static ScePvf_t_error pvfLoadGlyph(PvfFontHandle *handle, ScePvf_t_charCode char
 			handle->font->face, handle->charCode, depth4 != 0, &width, &rows, &top,
 			&left, &pitch, &buffer);
 	}
+#endif
 	if (result != 0)
 		return result;
 	lib = handle->font->lib;
@@ -780,9 +844,15 @@ static inline PvfFontHandle *pvfAllocHandle(PvfLib *lib)
 }
 
 /* opens a handle on a font (pvfOpenFont's), with the library's sizes */
+#ifdef SCE_PVF_2014
+static PvfFontHandle *pvfOpenHandle(PvfLib *lib, ScePvf_t_s32 index,
+	const char *fileName, const void *buffer, ScePvf_t_s32 size, ScePvf_t_u32 openMode,
+	ScePvf_t_error *errorCode)
+#else
 static PvfFontHandle *pvfOpenHandle(PvfLib *lib, ScePvf_t_s32 index,
 	const char *fileName, const void *buffer, ScePvf_t_s32 size, ScePvf_t_u32 openMode,
 	ScePvf_t_s32 subFontIndex, ScePvf_t_error *errorCode)
+#endif
 {
 	PvfFontHandle *handle;
 	ScePvf_t_u32 numHandles;
@@ -804,8 +874,12 @@ static PvfFontHandle *pvfOpenHandle(PvfLib *lib, ScePvf_t_s32 index,
 	handle->memBlockBase = NULL;
 	handle->glyphMode = 2;
 	handle->memBlock = -1;
+#ifdef SCE_PVF_2014
+	handle->font = pvfOpenFont(lib, index, fileName, buffer, size, openMode, errorCode);
+#else
 	handle->font = pvfOpenFont(lib, index, fileName, buffer, size, subFontIndex, openMode,
 		errorCode);
+#endif
 	if (*errorCode != 0 || handle->font == NULL) {
 		if (*errorCode == SCE_PVF_ERROR_FILEOPEN) {
 			if ((ScePvf_t_s32)numHandles < lib->numHandles)
@@ -905,8 +979,12 @@ static PvfFontHandle *pvfOpenDefaultFontServer(PvfLib *lib, ScePvf_t_s32 languag
 	if (sceIoClose(fd) < 0)
 		goto failed;
 	if (base != NULL)
+#ifdef SCE_PVF_2014
+		handle = pvfOpenHandle(lib, 0, NULL, base, size, PVF_OPEN_USER_BUFFER, &error);
+#else
 		handle = pvfOpenHandle(lib, 0, NULL, base, size, PVF_OPEN_USER_BUFFER, 0,
 			&error);
+#endif
 	else
 		handle = NULL;
 	handle->memBlock = uid;
@@ -972,8 +1050,12 @@ static __attribute__((noclone)) PvfFontHandle *pvfOpenDefaultFontClient(PvfLib *
 		return NULL;
 	}
 	if (base != NULL) {
+#ifdef SCE_PVF_2014
+		handle = pvfOpenHandle(lib, 0, NULL, base, size, PVF_OPEN_USER_BUFFER, errorCode);
+#else
 		handle = pvfOpenHandle(lib, 0, NULL, base, size, PVF_OPEN_USER_BUFFER, 0,
 			errorCode);
+#endif
 	} else {
 		handle = NULL;
 		*errorCode = SCE_PVF_ERROR_ARG;
@@ -1037,7 +1119,7 @@ ScePvf_t_libId scePvfNewLib(ScePvf_t_initRec *initParam, ScePvf_t_error *errorCo
 	lib->init.allocFunc = initParam->allocFunc;
 	lib->init.reallocFunc = initParam->reallocFunc;
 	lib->init.freeFunc = initParam->freeFunc;
-	lib->reserved0 = 0;
+	lib->autoHintMode = 0;
 	lib->resolution.h = PVF_DEFAULT_RESOLUTION;
 	lib->resolution.v = PVF_DEFAULT_RESOLUTION;
 	lib->hCharSize = PVF_DEFAULT_CHAR_SIZE;
@@ -1071,14 +1153,21 @@ ScePvf_t_libId scePvfNewLib(ScePvf_t_initRec *initParam, ScePvf_t_error *errorCo
 		lib->fonts[i].inUse = 0;
 		lib->fonts[i].refCount = 0;
 		lib->fonts[i].fontIndex = 0;
+#ifndef SCE_PVF_2014
 		lib->fonts[i].subFontIndex = 0;
+#endif
 		lib->fonts[i].reserved = -1;
 	}
 	rasterizer = PvfRasterizerNew(lib->init.maxNumFonts, lib, lib, pvfAlloc, pvfRealloc,
 		pvfFree);
 	lib->rasterizer = rasterizer;
 	if (rasterizer != NULL) {
+#ifdef SCE_PVF_2014
+		PvfRasterizerSetResolution(rasterizer, (FT_UInt)lib->resolution.h,
+			(FT_UInt)lib->resolution.v);
+#else
 		PvfRasterizerSetResolution(rasterizer, lib->resolution.h, lib->resolution.v);
+#endif
 		PvfRasterizerSetCharSize(lib->rasterizer, (FT_F26Dot6)(lib->hCharSize * 64.0f),
 			(FT_F26Dot6)(lib->vCharSize * 64.0f));
 		if (PVF_IS_NONZERO(lib->emboldenRate))
@@ -1166,6 +1255,26 @@ ScePvf_t_error scePvfSetCharSize(ScePvf_t_fontId fontID, ScePvf_t_f32 hSize, Sce
 	return 0;
 }
 
+#ifdef SCE_PVF_2014
+ScePvf_t_error pvfSetDefaultCharSize(ScePvf_t_libId libID, ScePvf_t_f32 hSize, ScePvf_t_f32 vSize)
+{
+	PvfLib *lib = libID;
+	ScePvf_t_s32 i;
+
+	if (lib == NULL)
+		return SCE_PVF_ERROR_LIBID;
+	if (hSize <= 0.0f || vSize <= 0.0f)
+		return SCE_PVF_ERROR_ARG;
+	lib->hCharSize = hSize;
+	lib->vCharSize = vSize;
+	for (i = 0; i < (ScePvf_t_s32)lib->init.maxNumFonts; i++) {
+		lib->handles[i].hCharSize = hSize;
+		lib->handles[i].vCharSize = vSize;
+	}
+	return 0;
+}
+#endif
+
 ScePvf_t_error scePvfSetEmboldenRate(ScePvf_t_fontId fontID, ScePvf_t_f32 emboldenRate)
 {
 	PvfFontHandle *handle = fontID;
@@ -1189,6 +1298,46 @@ ScePvf_t_error scePvfSetSkewValue(ScePvf_t_fontId fontID, ScePvf_t_f32 angleX,
 	handle->skewAngleY = angleY;
 	return 0;
 }
+
+#ifdef SCE_PVF_2014
+ScePvf_t_error pvfSetDefaultEmboldenRate(ScePvf_t_libId libID, ScePvf_t_f32 emboldenRate)
+{
+	PvfLib *lib = libID;
+	ScePvf_t_s32 i;
+
+	if (lib == NULL)
+		return SCE_PVF_ERROR_LIBID;
+	lib->emboldenRate = emboldenRate;
+	for (i = 0; i < (ScePvf_t_s32)lib->init.maxNumFonts; i++)
+		lib->handles[i].libEmboldenRate = emboldenRate;
+	return 0;
+}
+
+ScePvf_t_error pvfSetDefaultSkewValue(ScePvf_t_libId libID, ScePvf_t_f32 skewValue)
+{
+	PvfLib *lib = libID;
+	ScePvf_t_s32 i;
+
+	if (lib == NULL)
+		return SCE_PVF_ERROR_LIBID;
+	lib->skewValue = skewValue;
+	for (i = 0; i < (ScePvf_t_s32)lib->init.maxNumFonts; i++)
+		lib->handles[i].libSkewValue = skewValue;
+	return 0;
+}
+
+ScePvf_t_error pvfSetAutoHintMode(ScePvf_t_libId libID, ScePvf_t_u32 mode)
+{
+	PvfLib *lib = libID;
+
+	if (lib == NULL)
+		return SCE_PVF_ERROR_LIBID;
+	if (mode > 1)
+		return SCE_PVF_ERROR_ARG;
+	lib->autoHintMode = (ScePvf_t_s32)mode;
+	return 0;
+}
+#endif
 
 ScePvf_t_int scePvfGetNumFontList(ScePvf_t_libId libID, ScePvf_t_error *errorCode)
 {
@@ -1454,7 +1603,11 @@ ScePvf_t_fontId scePvfOpen(ScePvf_t_libId libID, ScePvf_t_fontIndex fontIndex,
 	}
 	if (*errorCode != 0)
 		return NULL;
+#ifdef SCE_PVF_2014
+	return pvfOpenHandle(libID, fontIndex, NULL, NULL, 0, mode, errorCode);
+#else
 	return pvfOpenHandle(libID, fontIndex, NULL, NULL, 0, mode, 0, errorCode);
+#endif
 }
 
 /* the open mode of a user file read as mode says; 0 for a bad mode */
@@ -1483,9 +1636,14 @@ ScePvf_t_fontId scePvfOpenUserFile(ScePvf_t_libId libID, ScePvf_t_pointer filena
 		*errorCode = SCE_PVF_ERROR_LIBID;
 		return NULL;
 	}
+#ifdef SCE_PVF_2014
+	return pvfOpenHandle(libID, 0, filename, NULL, 0, openMode, errorCode);
+#else
 	return pvfOpenHandle(libID, 0, filename, NULL, 0, openMode, 0, errorCode);
+#endif
 }
 
+#ifndef SCE_PVF_2014
 ScePvf_t_fontId scePvfOpenUserFileWithSubfontIndex(ScePvf_t_libId libID,
 	ScePvf_t_pointer filename, ScePvf_t_u32 mode, ScePvf_t_u32 subFontIndex,
 	ScePvf_t_error *errorCode)
@@ -1505,6 +1663,7 @@ ScePvf_t_fontId scePvfOpenUserFileWithSubfontIndex(ScePvf_t_libId libID,
 	}
 	return pvfOpenHandle(libID, 0, filename, NULL, 0, openMode, subFontIndex, errorCode);
 }
+#endif
 
 ScePvf_t_fontId scePvfOpenUserMemory(ScePvf_t_libId libID, ScePvf_t_pointer addr,
 	ScePvf_t_u32 size, ScePvf_t_error *errorCode)
@@ -1519,9 +1678,14 @@ ScePvf_t_fontId scePvfOpenUserMemory(ScePvf_t_libId libID, ScePvf_t_pointer addr
 		*errorCode = SCE_PVF_ERROR_LIBID;
 		return NULL;
 	}
+#ifdef SCE_PVF_2014
+	return pvfOpenHandle(libID, 0, NULL, addr, size, PVF_OPEN_USER_BUFFER, errorCode);
+#else
 	return pvfOpenHandle(libID, 0, NULL, addr, size, PVF_OPEN_USER_BUFFER, 0, errorCode);
+#endif
 }
 
+#ifndef SCE_PVF_2014
 ScePvf_t_fontId scePvfOpenUserMemoryWithSubfontIndex(ScePvf_t_libId libID,
 	ScePvf_t_pointer addr, ScePvf_t_u32 size, ScePvf_t_u32 subFontIndex,
 	ScePvf_t_error *errorCode)
@@ -1539,12 +1703,14 @@ ScePvf_t_fontId scePvfOpenUserMemoryWithSubfontIndex(ScePvf_t_libId libID,
 	return pvfOpenHandle(libID, 0, NULL, addr, size, PVF_OPEN_USER_BUFFER, subFontIndex,
 		errorCode);
 }
+#endif
 
 ScePvf_t_bool scePvfIsElement(ScePvf_t_fontId fontID, ScePvf_t_charCode charCode)
 {
 	return pvfHasChar(fontID, charCode);
 }
 
+#ifndef SCE_PVF_2014
 ScePvf_t_bool scePvfIsVertElement(ScePvf_t_fontId fontID, ScePvf_t_charCode charCode)
 {
 	PvfFontHandle *handle = fontID;
@@ -1556,6 +1722,7 @@ ScePvf_t_bool scePvfIsVertElement(ScePvf_t_fontId fontID, ScePvf_t_charCode char
 	handle->charCode = charCode;
 	return PvfRasterizerHasVertChar(font->lib->rasterizer, font->face, charCode) != 0;
 }
+#endif
 
 ScePvf_t_error scePvfClose(ScePvf_t_fontId fontID)
 {
@@ -1725,12 +1892,18 @@ static inline ScePvf_t_error pvfGetCharInfo(PvfFontHandle *handle, ScePvf_t_char
 	}
 	pvfSetRasterizer(handle);
 	lib = handle->font->lib;
+#ifdef SCE_PVF_2014
+	(void)isVert;
+	error = PvfRasterizerGetGlyphMetrics(lib->rasterizer, handle->font->face,
+		handle->charCode, &u.metrics);
+#else
 	if (vertical)
 		error = PvfRasterizerGetVertGlyphMetrics(lib->rasterizer, handle->font->face,
 			handle->charCode, &u.metrics, &isVert);
 	else
 		error = PvfRasterizerGetGlyphMetrics(lib->rasterizer, handle->font->face,
 			handle->charCode, &u.metrics);
+#endif
 	if (error != 0)
 		return error;
 	pvfSetGlyphMetrics(handle, &u.metrics);
@@ -1752,6 +1925,36 @@ ScePvf_t_error scePvfGetCharInfo(ScePvf_t_fontId fontID, ScePvf_t_charCode charC
 	return pvfGetCharInfo(fontID, charCode, charInfo, 0);
 }
 
+#ifdef SCE_PVF_2014
+ScePvf_t_error pvfGetCharMetricsDirect(ScePvf_t_fontId fontID, ScePvf_t_charCode charCode,
+	ScePvf_t_charInfo *charInfo)
+{
+	PvfFontHandle *handle = fontID;
+	FT_Glyph_Metrics metrics;
+	ScePvf_t_error error;
+	PvfLib *lib;
+
+	if (handle == NULL || charInfo == NULL)
+		return SCE_PVF_ERROR_ARG;
+	if (!pvfHasChar(handle, charCode)) {
+		charCode = handle->font->lib->altCharCode;
+		if (charCode == 0)
+			return SCE_PVF_ERROR_NOGLYPH;
+	}
+	lib = handle->font->lib;
+	handle->resolution = lib->resolution;
+	handle->charCode = charCode;
+	pvfSetRasterizer(handle);
+	lib = handle->font->lib;
+	error = PvfRasterizerGetGlyphMetrics(lib->rasterizer, handle->font->face,
+		handle->charCode, &metrics);
+	if (error == 0) {
+		pvfSetGlyphMetrics(handle, &metrics);
+		*charInfo = handle->charInfo;
+	}
+	return error;
+}
+#else
 ScePvf_t_error scePvfGetVertCharInfo(ScePvf_t_fontId fontID, ScePvf_t_charCode charCode,
 	ScePvf_t_charInfo *charInfo)
 {
@@ -1781,6 +1984,7 @@ ScePvf_t_error scePvfGetKerningInfo(ScePvf_t_fontId fontID, ScePvf_t_charCode le
 	}
 	return error;
 }
+#endif
 
 /* the handle's glyph image rectangle, vertical layout's or not */
 static inline ScePvf_t_error pvfGetCharImageRect(PvfFontHandle *handle,
@@ -1790,7 +1994,12 @@ static inline ScePvf_t_error pvfGetCharImageRect(PvfFontHandle *handle,
 
 	if (handle == NULL || rect == NULL)
 		return SCE_PVF_ERROR_ARG;
+#ifdef SCE_PVF_2014
+	(void)vertical;
+	error = pvfLoadGlyph(handle, charCode, handle->glyphMode);
+#else
 	error = pvfLoadGlyph(handle, charCode, handle->glyphMode, vertical, NULL);
+#endif
 	if (error != 0)
 		return error;
 	rect->width = handle->charInfo.bitmapWidth;
@@ -1804,11 +2013,13 @@ ScePvf_t_error scePvfGetCharImageRect(ScePvf_t_fontId fontID, ScePvf_t_charCode 
 	return pvfGetCharImageRect(fontID, charCode, rect, 0);
 }
 
+#ifndef SCE_PVF_2014
 ScePvf_t_error scePvfGetVertCharImageRect(ScePvf_t_fontId fontID, ScePvf_t_charCode charCode,
 	ScePvf_t_irect *rect)
 {
 	return pvfGetCharImageRect(fontID, charCode, rect, 1);
 }
+#endif
 
 /* draws the handle's loaded glyph into imageBuffer, within the clip rectangle */
 static inline ScePvf_t_error pvfDrawGlyph(PvfFontHandle *handle,
@@ -1845,13 +2056,18 @@ ScePvf_t_error scePvfGetCharGlyphImage(ScePvf_t_fontId fontID, ScePvf_t_charCode
 
 	if (handle == NULL || imageBuffer == NULL)
 		return SCE_PVF_ERROR_ARG;
+#ifdef SCE_PVF_2014
+	error = pvfLoadGlyph(handle, charCode, imageBuffer->pixelFormat);
+#else
 	error = pvfLoadGlyph(handle, charCode, imageBuffer->pixelFormat, 0, NULL);
+#endif
 	if (error != 0)
 		return error;
 	return pvfDrawGlyph(handle, imageBuffer, 0, 0, imageBuffer->rect.width,
 		imageBuffer->rect.height);
 }
 
+#ifndef SCE_PVF_2014
 ScePvf_t_error scePvfGetVertCharGlyphImage(ScePvf_t_fontId fontID, ScePvf_t_charCode charCode,
 	ScePvf_t_userImageBufferRec *imageBuffer)
 {
@@ -1867,6 +2083,7 @@ ScePvf_t_error scePvfGetVertCharGlyphImage(ScePvf_t_fontId fontID, ScePvf_t_char
 	return pvfDrawGlyph(handle, imageBuffer, 0, 0, imageBuffer->rect.width,
 		imageBuffer->rect.height);
 }
+#endif
 
 ScePvf_t_error scePvfGetCharGlyphImage_Clip(ScePvf_t_fontId fontID, ScePvf_t_charCode charCode,
 	ScePvf_t_userImageBufferRec *imageBuffer, ScePvf_t_s32 clipX, ScePvf_t_s32 clipY,
@@ -1882,12 +2099,17 @@ ScePvf_t_error scePvfGetCharGlyphImage_Clip(ScePvf_t_fontId fontID, ScePvf_t_cha
 		return 0;
 	if (clipX >= imageBuffer->rect.width || clipY >= imageBuffer->rect.height)
 		return 0;
+#ifdef SCE_PVF_2014
+	error = pvfLoadGlyph(handle, charCode, imageBuffer->pixelFormat);
+#else
 	error = pvfLoadGlyph(handle, charCode, imageBuffer->pixelFormat, 0, NULL);
+#endif
 	if (error != 0)
 		return error;
 	return pvfDrawGlyph(handle, imageBuffer, clipX, clipY, clipWidth, clipHeight);
 }
 
+#ifndef SCE_PVF_2014
 ScePvf_t_error scePvfGetVertCharGlyphImage_Clip(ScePvf_t_fontId fontID,
 	ScePvf_t_charCode charCode, ScePvf_t_userImageBufferRec *imageBuffer, ScePvf_t_s32 clipX,
 	ScePvf_t_s32 clipY, ScePvf_t_u32 clipWidth, ScePvf_t_u32 clipHeight)
@@ -1970,6 +2192,7 @@ ScePvf_t_error scePvfReleaseCharGlyphOutline(ScePvf_t_fontId fontID, FT_Outline 
 	return PvfRasterizerFreeOutline(handle->font->lib->rasterizer, outline->contours,
 		outline->points, outline->tags);
 }
+#endif
 
 /* a float no conversion can use: infinite, or the library's NaN */
 static inline ScePvf_t_bool pvfIsBadFloat(ScePvf_t_f32 x)

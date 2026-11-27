@@ -313,6 +313,39 @@ int32_t ButtonBase::HandleTouchEvent(Event *e)
 
 int32_t ButtonBase::HandleKeycodeEvent(Event *e)
 {
+#ifdef PAF_BUILD_2014
+	if ((e->m_type & Event::STATE_CONSUME) == 0)
+		HandleFocusSwitchEvent(e);
+
+	uint32_t detail = e->m_detail;
+
+	if ((uint8_t)detail != 27)
+		return -1;
+	if (IsButtonEnabled() && m_env != NULL) {
+		uint32_t port = (detail >> 20) & 0xF;
+		uint32_t type = e->GetType();
+
+		if (type > 0x12) {
+			if (type == 0x14) {
+				remove_pad_gesture_mask(port, m_touch_gesture_mask);
+				DoButtonEvent(CB_BTN_NORMAL);
+				ChangeButtonState(ST_BTN_NORMAL);
+				e->Consume();
+			}
+		} else if (type > 0x10) {
+			if (type <= 0x11) {
+				apply_pad_gesture_mask(port, m_touch_gesture_mask);
+				DoButtonEvent(CB_BTN_PRESS);
+				ScePafWidget_2B1A1493(this, SOUND_PRESS);
+				ChangeButtonState(ST_BTN_PRESS);
+				e->Consume();
+			} else {
+				e->Consume();
+			}
+		}
+	}
+	return 0;
+#else
 	uint32_t detail = e->m_detail;
 
 	if (!(detail & 0x1000000) && (detail & 0xFF) != 27)
@@ -331,16 +364,12 @@ int32_t ButtonBase::HandleKeycodeEvent(Event *e)
 			}
 		} else if (type > 0x10) {
 			if (type <= 0x11) {
-#ifdef PAF_BUILD_2014
-				if (IsInputTarget()) {
-#else
 				uint32_t mask;
 
 				if (IsInputTarget() ||
 				    (m_keycode_capture && (mask = KeycodeToMask(detail & 0xFF),
 						    detail = e->m_detail, m_bound_keycode) &&
 				     (mask & m_keycode) != 0)) {
-#endif
 					CapturePad((detail >> 20) & 0xF, detail & 0xFF, true, true);
 					ScePafWidget_2B1A1493(this, SOUND_PRESS);
 					ChangeButtonState(ST_BTN_PRESS);
@@ -357,6 +386,7 @@ int32_t ButtonBase::HandleKeycodeEvent(Event *e)
 		}
 	}
 	return Handler::HandleKeycodeEvent(e);
+#endif
 }
 
 void ButtonBase::SetGlowAnim(int32_t type, bool store)

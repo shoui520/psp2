@@ -10,9 +10,9 @@
 namespace paf {
 namespace graph {
 
-static bool s_earth_objs_ready;
-static int32_t s_earth_count;
-static int32_t s_draws_earth;
+bool g_earth_objs_ready;
+int32_t g_earth_count;
+int32_t g_draws_earth;
 
 static inline Renderer *MapLayerRenderer()
 {
@@ -21,16 +21,16 @@ static inline Renderer *MapLayerRenderer()
 
 void UpdateMapLayers()
 {
-	if (!s_earth_objs_ready)
+	if (!g_earth_objs_ready)
 		return;
 
 	int32_t mode = 2;
 
-	if (s_earth_count > 0)
+	if (g_earth_count > 0)
 		mode = 1;
-	if (s_draws_earth == 0)
+	if (g_draws_earth == 0)
 		mode = 2;
-	s_draws_earth = 0;
+	g_draws_earth = 0;
 
 	Renderer *renderer = MapLayerRenderer();
 	DrawLayer *earth_layer = ScePafGraphics_71E2CB77(renderer, false)->m_rs_earth;
@@ -40,7 +40,7 @@ void UpdateMapLayers()
 
 void FlushMapLayers()
 {
-	if (!s_earth_objs_ready || s_earth_count <= 0)
+	if (!g_earth_objs_ready || g_earth_count <= 0)
 		return;
 
 	Renderer *renderer = MapLayerRenderer();

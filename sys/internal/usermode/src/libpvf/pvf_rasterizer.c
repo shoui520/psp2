@@ -14,7 +14,9 @@
 #include <libSceFt2/libSceFt2.h>
 #include FT_GLYPH_H
 #include FT_OUTLINE_H
+#ifndef SCE_PVF_2014
 #include FT_OPENTYPE_VALIDATE_H
+#endif
 #include FT_MODULE_H
 #include "libpvf_internal.h"
 
@@ -88,6 +90,7 @@ __attribute__((noinline)) ScePvf_t_error PvfRasterizerError(FT_Error error)
 	}
 }
 
+#ifndef SCE_PVF_2014
 /* the vertical-substitution table's memory: the library's */
 static void *pvfGsubAlloc(void *user, ScePvf_t_u32 size)
 {
@@ -102,6 +105,7 @@ static void pvfGsubFree(void *user, void *ptr)
 
 	rasterizer->free(rasterizer->memUserData, ptr);
 }
+#endif
 
 /* FreeType's memory object, and FreeType's memory through it */
 static void *pvfFtAllocSelf(void *user, long size)
@@ -142,6 +146,7 @@ static void pvfRasterizerPrintf(const char *format, ...)
 	va_end(args);
 }
 
+#ifndef SCE_PVF_2014
 /* a face's vertical substitutions, read from its GSUB table the first time they are needed */
 static void pvfLoadVertTable(PvfRasterizer *rasterizer, ScePvf_t_s32 face)
 {
@@ -174,6 +179,7 @@ static void pvfLoadVertTable(PvfRasterizer *rasterizer, ScePvf_t_s32 face)
 	if (jstf != NULL)
 		rasterizer->free(rasterizer->memUserData, (void *)jstf);
 }
+#endif
 
 /* x - 2pi n for the n that brings it into [-pi, pi] */
 static inline float pvfReduceAngle(float x)
@@ -273,6 +279,7 @@ PvfRasterizer *PvfRasterizerNew(ScePvf_t_s32 maxFaces, void *userData, void *mem
 	table->numFaces = 0;
 	table->faces = alloc(memUserData, maxFaces * sizeof(*table->faces));
 	table->buffers = alloc(memUserData, maxFaces * sizeof(*table->buffers));
+#ifndef SCE_PVF_2014
 	table->vertTables = alloc(memUserData, maxFaces * sizeof(*table->vertTables));
 	if (table->faces != NULL) {
 		if (table->buffers != NULL && table->vertTables != NULL) {
@@ -281,6 +288,14 @@ PvfRasterizer *PvfRasterizerNew(ScePvf_t_s32 maxFaces, void *userData, void *mem
 				table->buffers[i] = NULL;
 				table->vertTables[i] = NULL;
 			}
+#else
+	if (table->faces != NULL) {
+		if (table->buffers != NULL) {
+			for (i = 0; i < maxFaces; i++) {
+				table->faces[i] = NULL;
+				table->buffers[i] = NULL;
+			}
+#endif
 			rasterizer->realloc = realloc;
 			rasterizer->userData = userData;
 			rasterizer->memUserData = memUserData;
@@ -309,8 +324,10 @@ PvfRasterizer *PvfRasterizerNew(ScePvf_t_s32 maxFaces, void *userData, void *mem
 	}
 	if (table->buffers != NULL)
 		free(memUserData, table->buffers);
+#ifndef SCE_PVF_2014
 	if (table->vertTables != NULL)
 		free(memUserData, table->vertTables);
+#endif
 	free(memUserData, rasterizer->table);
 free_rasterizer:
 	free(memUserData, rasterizer);
@@ -339,6 +356,7 @@ void PvfRasterizerDelete(PvfRasterizer *rasterizer)
 		}
 		rasterizer->free(rasterizer->memUserData, table->buffers);
 	}
+#ifndef SCE_PVF_2014
 	if (table->vertTables != NULL) {
 		for (i = 0; i < table->maxFaces; i++) {
 			if (table->vertTables[i] != NULL)
@@ -346,6 +364,7 @@ void PvfRasterizerDelete(PvfRasterizer *rasterizer)
 		}
 		rasterizer->free(rasterizer->memUserData, table->vertTables);
 	}
+#endif
 	FT_Done_FreeType(table->library);
 	rasterizer->free(rasterizer->memUserData, rasterizer->table);
 	rasterizer->free(rasterizer->memUserData, rasterizer);
@@ -363,9 +382,16 @@ static inline ScePvf_t_s32 pvfFreeFace(PvfFaceTable *table)
 	return -1;
 }
 
+#ifdef SCE_PVF_2014
+ScePvf_t_s32 PvfRasterizerOpenFile(PvfRasterizer *rasterizer, const char *path,
+	ScePvf_t_s32 stream, ScePvf_t_error *errorCode)
+{
+	const ScePvf_t_s32 subFontIndex = 0;
+#else
 ScePvf_t_s32 PvfRasterizerOpenFile(PvfRasterizer *rasterizer, const char *path,
 	ScePvf_t_s32 stream, ScePvf_t_s32 subFontIndex, ScePvf_t_error *errorCode)
 {
+#endif
 	PvfFaceTable *table;
 	VfsBuffCtlIoctlArg cache;
 	SceIoStat stat;
@@ -446,9 +472,16 @@ fail:
 	return -1;
 }
 
+#ifdef SCE_PVF_2014
+ScePvf_t_s32 PvfRasterizerOpenMemory(PvfRasterizer *rasterizer, const void *buffer,
+	ScePvf_t_s32 size, ScePvf_t_error *errorCode)
+{
+	const ScePvf_t_s32 subFontIndex = 0;
+#else
 ScePvf_t_s32 PvfRasterizerOpenMemory(PvfRasterizer *rasterizer, const void *buffer,
 	ScePvf_t_s32 size, ScePvf_t_s32 subFontIndex, ScePvf_t_error *errorCode)
 {
+#endif
 	PvfFaceTable *table;
 	ScePvf_t_error error;
 	ScePvf_t_s32 face;
@@ -495,14 +528,38 @@ ScePvf_t_error PvfRasterizerClose(PvfRasterizer *rasterizer, ScePvf_t_s32 face)
 		rasterizer->free(rasterizer->memUserData, table->buffers[face]);
 		table->buffers[face] = NULL;
 	}
+#ifndef SCE_PVF_2014
 	if (table->vertTables[face] != NULL) {
 		PvfGsubDelete(table->vertTables[face]);
 		table->vertTables[face] = NULL;
 	}
+#endif
 	table->numFaces--;
 	return PvfRasterizerError(error);
 }
 
+#ifdef SCE_PVF_2014
+void PvfRasterizerSetAntiAlias(PvfRasterizer *rasterizer, ScePvf_t_s32 enable)
+{
+	if (rasterizer != NULL)
+		rasterizer->antialias = enable;
+}
+
+void PvfRasterizerSetForceAutohint(PvfRasterizer *rasterizer, ScePvf_t_s32 enable)
+{
+	if (rasterizer != NULL)
+		rasterizer->forceAutohint = enable;
+}
+
+void PvfRasterizerSetResolution(PvfRasterizer *rasterizer, FT_UInt hResolution,
+	FT_UInt vResolution)
+{
+	if (rasterizer != NULL) {
+		rasterizer->hResolution = hResolution;
+		rasterizer->vResolution = vResolution;
+	}
+}
+#else
 void PvfRasterizerSetResolution(PvfRasterizer *rasterizer, ScePvf_t_f32 hResolution,
 	ScePvf_t_f32 vResolution)
 {
@@ -511,6 +568,7 @@ void PvfRasterizerSetResolution(PvfRasterizer *rasterizer, ScePvf_t_f32 hResolut
 		rasterizer->vResolution = vResolution;
 	}
 }
+#endif
 
 void PvfRasterizerSetCharSize(PvfRasterizer *rasterizer, FT_F26Dot6 width, FT_F26Dot6 height)
 {
@@ -564,7 +622,9 @@ void PvfRasterizerGetFaceInfo(PvfRasterizer *rasterizer, ScePvf_t_s32 face, PvfF
 	info->styleFlags = ftFace->style_flags;
 	info->faceFlags = ftFace->face_flags;
 	info->numFaces = ftFace->num_faces;
+#ifndef SCE_PVF_2014
 	info->faceIndex = ftFace->face_index;
+#endif
 	info->numGlyphs = ftFace->num_glyphs;
 	info->numCharmaps = ftFace->num_charmaps;
 	sceClibStrncpy(info->familyName, ftFace->family_name, sizeof(info->familyName) - 1);
@@ -589,6 +649,7 @@ ScePvf_t_bool PvfRasterizerHasChar(PvfRasterizer *rasterizer, ScePvf_t_s32 face,
 	return FT_Get_Char_Index(rasterizer->table->faces[face], charCode) != 0;
 }
 
+#ifndef SCE_PVF_2014
 ScePvf_t_bool PvfRasterizerHasVertChar(PvfRasterizer *rasterizer, ScePvf_t_s32 face,
 	ScePvf_t_charCode charCode)
 {
@@ -604,6 +665,7 @@ ScePvf_t_bool PvfRasterizerHasVertChar(PvfRasterizer *rasterizer, ScePvf_t_s32 f
 		return 0;
 	return PvfGsubGetVertGlyph(rasterizer->table->vertTables[face], glyph) >= 0;
 }
+#endif
 
 /* the face at the rasterizer's size */
 static inline FT_Error pvfSetCharSize(PvfRasterizer *rasterizer, FT_Face face)
@@ -618,6 +680,7 @@ static inline FT_Int32 pvfLoadFlags(PvfRasterizer *rasterizer)
 	return rasterizer->forceAutohint != 0 ? FT_LOAD_FORCE_AUTOHINT : FT_LOAD_NO_HINTING;
 }
 
+#ifndef SCE_PVF_2014
 ScePvf_t_error PvfRasterizerGetKerning(PvfRasterizer *rasterizer, ScePvf_t_s32 face,
 	ScePvf_t_charCode left, ScePvf_t_charCode right, ScePvf_t_iKerningInfo *kerning)
 {
@@ -644,6 +707,7 @@ ScePvf_t_error PvfRasterizerGetKerning(PvfRasterizer *rasterizer, ScePvf_t_s32 f
 	kerning->yOffset64 = delta.y;
 	return 0;
 }
+#endif
 
 ScePvf_t_error PvfRasterizerGetGlyphMetrics(PvfRasterizer *rasterizer, ScePvf_t_s32 face,
 	ScePvf_t_charCode charCode, FT_Glyph_Metrics *metrics)
@@ -666,6 +730,7 @@ ScePvf_t_error PvfRasterizerGetGlyphMetrics(PvfRasterizer *rasterizer, ScePvf_t_
 	return 0;
 }
 
+#ifndef SCE_PVF_2014
 /* the glyph of charCode, its vertical form if the face has one (and *vertical then 1) */
 static inline FT_UInt pvfVertGlyph(PvfRasterizer *rasterizer, ScePvf_t_s32 face, FT_UInt glyph,
 	ScePvf_t_s32 *vertical)
@@ -709,6 +774,7 @@ ScePvf_t_error PvfRasterizerGetVertGlyphMetrics(PvfRasterizer *rasterizer, ScePv
 	*metrics = rasterizer->table->faces[face]->glyph->metrics;
 	return 0;
 }
+#endif
 
 /* the loaded glyph's outline emboldened and skewed (or slanted) */
 static inline void pvfTransformGlyph(PvfRasterizer *rasterizer, ScePvf_t_s32 face)
@@ -728,6 +794,76 @@ static inline void pvfTransformGlyph(PvfRasterizer *rasterizer, ScePvf_t_s32 fac
 	FT_Outline_Transform(&rasterizer->table->faces[face]->glyph->outline, &matrix);
 }
 
+#ifdef SCE_PVF_2014
+ScePvf_t_error PvfRasterizerGetOutline(PvfRasterizer *rasterizer, ScePvf_t_s32 face,
+	ScePvf_t_charCode charCode, ScePvf_t_s32 *numContours, ScePvf_t_s32 **contours,
+	PvfOutlinePoint **points)
+{
+	FT_Glyph glyph;
+	FT_UInt index;
+	FT_Int32 loadFlags;
+	FT_Error error;
+
+	if (rasterizer == NULL || numContours == NULL || contours == NULL || points == NULL)
+		return SCE_PVF_ERROR_ARG;
+	index = FT_Get_Char_Index(rasterizer->table->faces[face], charCode);
+	if (index == 0)
+		return SCE_PVF_ERROR_NOGLYPH;
+	loadFlags = rasterizer->forceAutohint != 0 ?
+		(FT_LOAD_FORCE_AUTOHINT | FT_LOAD_NO_SCALE) :
+		(FT_LOAD_NO_HINTING | FT_LOAD_NO_SCALE);
+	error = FT_Load_Glyph(rasterizer->table->faces[face], index, loadFlags);
+	if (error != 0)
+		return PvfRasterizerError(error);
+	error = FT_Get_Glyph(rasterizer->table->faces[face]->glyph, &glyph);
+	if (error != 0) {
+		FT_Done_Glyph(glyph);
+		return PvfRasterizerError(error);
+	}
+	if (glyph->format == PVF_GLYPH_FORMAT_OUTLINE) {
+		FT_Outline *outline = &((FT_OutlineGlyph)glyph)->outline;
+		FT_Vector *srcPoints = outline->points;
+		char *srcTags = outline->tags;
+		short *srcContours = outline->contours;
+		int i;
+
+		*numContours = outline->n_contours;
+		*contours = rasterizer->alloc(rasterizer->userData,
+			outline->n_contours * sizeof(**contours));
+		if (*contours != NULL) {
+			*points = rasterizer->alloc(rasterizer->userData,
+				outline->n_points * sizeof(**points));
+			if (*points != NULL) {
+				for (i = 0; i < outline->n_contours; i++)
+					(*contours)[i] = srcContours[i];
+				for (i = 0; i < outline->n_points; i++) {
+					(*points)[i].x = srcPoints[i].x;
+					(*points)[i].y = srcPoints[i].y;
+					(*points)[i].tag = srcTags[i];
+				}
+			} else {
+				rasterizer->free(rasterizer->userData, contours);
+			}
+		}
+	} else {
+		pvfRasterizerPrintf("NOT OUTLINE\n");
+	}
+	FT_Done_Glyph(glyph);
+	return 0;
+}
+
+ScePvf_t_error PvfRasterizerFreeOutline(PvfRasterizer *rasterizer, ScePvf_t_s32 *contours,
+	PvfOutlinePoint *points)
+{
+	if (rasterizer == NULL)
+		return SCE_PVF_ERROR_ARG;
+	if (contours != NULL)
+		rasterizer->free(rasterizer->memUserData, contours);
+	if (points != NULL)
+		rasterizer->free(rasterizer->memUserData, points);
+	return 0;
+}
+#else
 /* a copy of an outline glyph's outline, in the library's memory */
 static inline ScePvf_t_error pvfCopyOutline(PvfRasterizer *rasterizer, FT_Glyph glyph,
 	int *flags, short *numContours, short *numPoints, short **contours, FT_Vector **points,
@@ -847,6 +983,7 @@ ScePvf_t_error PvfRasterizerFreeOutline(PvfRasterizer *rasterizer, short *contou
 		rasterizer->free(rasterizer->memUserData, tags);
 	return 0;
 }
+#endif
 
 /* a FreeType bitmap as one byte a pixel (depth8) or two pixels a byte, in the library's memory */
 static inline ScePvf_t_error pvfConvertBitmap(PvfRasterizer *rasterizer, FT_Bitmap *bitmap,
@@ -1023,6 +1160,7 @@ ScePvf_t_error PvfRasterizerRenderGlyph(PvfRasterizer *rasterizer, ScePvf_t_s32 
 	return pvfRenderGlyph(rasterizer, face, depth8, width, rows, top, left, pitch, buffer);
 }
 
+#ifndef SCE_PVF_2014
 ScePvf_t_error PvfRasterizerRenderVertGlyph(PvfRasterizer *rasterizer, ScePvf_t_s32 face,
 	ScePvf_t_charCode charCode, ScePvf_t_s32 depth8, ScePvf_t_s32 *width,
 	ScePvf_t_s32 *rows, ScePvf_t_s32 *top, ScePvf_t_s32 *left, ScePvf_t_s32 *pitch,
@@ -1045,6 +1183,7 @@ ScePvf_t_error PvfRasterizerRenderVertGlyph(PvfRasterizer *rasterizer, ScePvf_t_
 		return PvfRasterizerError(error);
 	return pvfRenderGlyph(rasterizer, face, depth8, width, rows, top, left, pitch, buffer);
 }
+#endif
 
 ScePvf_t_error PvfRasterizerFreeBitmap(PvfRasterizer *rasterizer, ScePvf_t_u8 *buffer)
 {

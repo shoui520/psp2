@@ -9,6 +9,7 @@
 #include <versatileparam/resourceparam.h>
 #include <widget/core/event.h>
 #include <common/resource_hooks.h>
+#include <graphics/drawobj/bubble_obj.h>
 #include <widget/factory.h>
 #include <widget/w_appicon_simple.h>
 
@@ -186,31 +187,51 @@ int32_t AppIconSimple::GetTexture(intrusive_ptr<graph::Surface> &surf, int32_t o
 
 void AppIconSimple::SetAppearance(uint32_t appearance)
 {
-	if (appearance != 0 && appearance != 3 && appearance != 2)
-		return;
-	if (m_overlay != NULL) {
-		vector<DrawObjEntry>::iterator it = FindDrawObj(1);
+	if (appearance == 0 || appearance == 3 || appearance == 2) {
+		if (m_overlay != NULL) {
+			vector<DrawObjEntry>::iterator it = FindDrawObj(1);
 
-		if (it != m_drawobjs.end())
-			m_drawobjs.erase(it, it + 1);
-		m_overlay = NULL;
-	}
-	m_icon->SetVisible(true);
+			if (it != m_drawobjs.end())
+				m_drawobjs.erase(it, it + 1);
+			m_overlay = NULL;
+		}
+		m_icon->SetVisible(true);
 
-	graph::PlaneObj *icon = m_icon;
+		graph::PlaneObj *icon = m_icon;
 
-	if (appearance == 2)
-		icon->SetTexture(intrusive_ptr<graph::Surface>(), 1);
-	else
-		icon->SetTexture(GetMaskTexture(), 1);
+		if (appearance == 2)
+			icon->SetTexture(intrusive_ptr<graph::Surface>(), 1);
+		else
+			icon->SetTexture(GetMaskTexture(), 1);
 
-	intrusive_ptr<graph::Surface> frame_texture;
+		intrusive_ptr<graph::Surface> frame_texture;
 
-	m_frame->GetTexture(frame_texture, 0);
-	if (frame_texture.get() != NULL && appearance == 0)
-		m_frame->SetVisible(true);
-	else
+		m_frame->GetTexture(frame_texture, 0);
+		if (frame_texture.get() != NULL && appearance == 0)
+			m_frame->SetVisible(true);
+		else
+			m_frame->SetVisible(false);
+#ifdef PAF_BUILD_2014
+	} else if (appearance == 1) {
+		if (m_overlay == NULL) {
+			graph::BubbleObj *bubble = new graph::BubbleObj(graph::BubbleObjStyle());
+
+			m_overlay = bubble;
+			if (bubble != NULL) {
+				AddDrawObj(DrawObjEntry(bubble, 1), false);
+				bubble->m_opaque = true;
+				ScePafGraphics_5AF8179A(bubble,
+							math::v4(600.0f, 850.0f, 2300.0f, 0.0f));
+				bubble->SetSize(math::v3(m_size.extract_x(), m_size.extract_y(),
+							 m_size.extract_z()));
+				if (m_texture.get() != NULL)
+					bubble->SetTexture(m_texture, 0);
+			}
+		}
+		m_icon->SetVisible(false);
 		m_frame->SetVisible(false);
+#endif
+	}
 }
 
 int32_t AppIconSimple::EnableTap(bool on_off)

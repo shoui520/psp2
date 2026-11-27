@@ -2852,6 +2852,16 @@ routed:
 
 int32_t Widget::HandleKeycodeEvent(Event *e)
 {
+#ifdef PAF_BUILD_2014
+	if (e->GetType() == 0x11) {
+		uint32_t detail = e->m_detail;
+
+		if ((uint8_t)detail != 27 && m_touch_gesture_mask != 0)
+			apply_pad_gesture_mask((detail >> 20) & 0xf, m_touch_gesture_mask);
+	}
+	Handler::HandleKeycodeEvent(e);
+	return 0;
+#else
 	Environment *env = m_env;
 
 	if (env == NULL)
@@ -2896,16 +2906,12 @@ int32_t Widget::HandleKeycodeEvent(Event *e)
 				}
 			} else if ((uint16_t)type > 0x10) {
 				if ((uint16_t)type <= 0x11) {
-#ifdef PAF_BUILD_2014
-					if (ScePafWidget_DB0FFD33(this)) {
-#else
 					uint32_t mask;
 
 					if (ScePafWidget_DB0FFD33(this) ||
 					    (m_keycode_capture &&
 					     (mask = KeycodeToMask((uint8_t)e->m_detail), m_bound_keycode) &&
 					     (mask & m_keycode) != 0)) {
-#endif
 						CapturePad((e->m_detail >> 20) & 0xf, (uint8_t)e->m_detail, true, true);
 						e->m_type = (e->m_type & 0xf0ffffff) | Event::STATE_CONSUME;
 					}
@@ -2920,6 +2926,7 @@ int32_t Widget::HandleKeycodeEvent(Event *e)
 		}
 	}
 	return Handler::HandleKeycodeEvent(e);
+#endif
 }
 
 bool Widget::IsAnimRunning(int32_t id)

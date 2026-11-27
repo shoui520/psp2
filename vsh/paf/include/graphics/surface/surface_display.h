@@ -104,6 +104,10 @@ public:
 	}
 
 	virtual int32_t Begin(uint32_t flags);
+#ifdef PAF_BUILD_2014
+	virtual int32_t End(const SceGxmNotification *vertex_notification,
+			    const SceGxmNotification *fragment_notification);
+#endif
 	/* a frame begun and ended: the surface's own steps, under the surface list's lock (names
 	   ours) */
 	virtual int32_t OnStartFrame();
