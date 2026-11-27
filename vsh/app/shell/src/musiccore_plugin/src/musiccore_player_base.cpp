@@ -348,7 +348,7 @@ public:
                unsigned int totalBytes, unsigned int headerBytes);
     virtual ~BasePlayer();
 
-    virtual void onConstructReserved() {}
+    virtual unsigned int calcAllocSize() { return ((calcMediaQueueSize(m_capacity, 2, 2, 56) - 1) & ~7u) + 480; }
     virtual int attach(unsigned char channelId, const PlayerCallbacks *cbs, void *dbMgr, void *audioOut);
     virtual int detach();
     virtual void setAudioFocus(int granted) { (void)granted; }
@@ -359,22 +359,21 @@ public:
     virtual int close(unsigned char *flags);
     virtual int isOpen() { return m_isOpen; }
     virtual int isBusy() { return m_isBusy; }
-    virtual void onDbSuspend(unsigned char *flags);
     virtual void onDbResume(unsigned char *flags);
     virtual void onPauseForDb(unsigned char *flags);
     virtual PlayerPriorityInfo getPriorityInfo();
-    virtual int isActive() { return 0; }
-    virtual void onPriorityReserved() {}
-    virtual int wantsAudio() { return 0; }
-    virtual void onAudioReserved() {}
+    virtual int isActive() { PlayerPriorityInfo info = getPriorityInfo(); return isActiveForInfo(info); }
+    virtual int isActiveForInfo(PlayerPriorityInfo info) { (void)info; return 0; }
+    virtual int wantsAudio() { PlayerPriorityInfo info = getPriorityInfo(); return wantsAudioForInfo(info); }
+    virtual int wantsAudioForInfo(PlayerPriorityInfo info) { (void)info; return 0; }
     virtual int isLocked() { return m_isSuspended; }
     virtual int getContentInfo(MetadataBuffers *outMeta);
     virtual void onIdleActive() {}
     virtual void onIdlePlaylist() {}
-    virtual void onIdleReserved() {}
-    virtual void setSystemSuspended(int suspended) { m_systemSuspended = (unsigned char)suspended; }
     virtual int getSystemSuspended() { return m_systemSuspended; }
+    virtual void setSystemSuspended(int suspended) { m_systemSuspended = (unsigned char)suspended; }
     virtual int isPlayable() { return m_playable; }
+    virtual int hasNoPendingSeek() { return m_pendingSeekCount <= 0; }
 
     /* Command handlers (vtable slots +112 .. +228) */
     virtual int cmdEnable(CmdNode *node, unsigned char *flags);
@@ -674,11 +673,6 @@ void BasePlayer::onPauseForDb(unsigned char *flags)
     m_dbAllowed = 0;
     if (prevWant != wantsAudio())
         *flags |= 4u;
-}
-
-void BasePlayer::onDbSuspend(unsigned char *flags)
-{
-    onPauseForDb(flags);
 }
 
 PlayerPriorityInfo BasePlayer::getPriorityInfo()

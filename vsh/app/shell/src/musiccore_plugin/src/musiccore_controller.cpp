@@ -201,7 +201,7 @@ struct PlayerCallbacks {
 
 struct BasePlayer {
     virtual ~BasePlayer() {}
-    virtual void onConstructReserved() {}
+    virtual unsigned int calcAllocSize() = 0;
     virtual int attach(unsigned char channelId, const PlayerCallbacks *cbs, void *dbMgr, void *audioOut) = 0;
     virtual int detach() = 0;
     virtual void setAudioFocus(int granted) = 0;
@@ -212,22 +212,21 @@ struct BasePlayer {
     virtual int close(void *flags) = 0;
     virtual int isOpen() = 0;
     virtual int isBusy() = 0;
-    virtual void onDbSuspend(void *flags) = 0;
     virtual void onDbResume(void *flags) = 0;
     virtual void onPauseForDb(void *flags) = 0;
     virtual PlayerPriorityInfo getPriorityInfo() = 0;
     virtual int isActive() = 0;
-    virtual void onPriorityReserved() {}
+    virtual int isActiveForInfo(PlayerPriorityInfo info) = 0;
     virtual int wantsAudio() = 0;
-    virtual void onAudioReserved() {}
+    virtual int wantsAudioForInfo(PlayerPriorityInfo info) = 0;
     virtual int isLocked() = 0;
     virtual int getContentInfo(void *infoBuf) = 0;
     virtual void onIdleActive() = 0;
     virtual void onIdlePlaylist() = 0;
-    virtual void onIdleReserved() {}
-    virtual void setSystemSuspended(int suspended) = 0;
     virtual int getSystemSuspended() = 0;
+    virtual void setSystemSuspended(int suspended) = 0;
     virtual int isPlayable() = 0;
+    virtual int hasNoPendingSeek() = 0;
 
     char playerKind;
     unsigned char channelId;
