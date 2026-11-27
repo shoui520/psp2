@@ -7,6 +7,10 @@
  */
 
 #include <stddef.h>
+namespace std {
+using ::size_t;
+}
+#include <new>
 #include <scetypes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -425,7 +429,7 @@ extern "C" int SwMwCommServerCreateShared(struct SwMwSharedMemory **out, const c
 		SceKernelAllocMemBlockOpt sdkOption;
 	} blockOption;
 
-	shared = new struct SwMwSharedMemory;
+	shared = new (std::nothrow) struct SwMwSharedMemory;
 	if (shared == NULL)
 		return SWMW_SHARED_ERROR;
 	memset(shared, 0, 32);

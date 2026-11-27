@@ -298,7 +298,8 @@ extern "C" int SwMwManagerSessionStart(struct SwMwManagerSinkSlots *slots, int m
 	}
 	if (failed != 0)
 		return SwMwManagerMapStatus(status);
-	status = ((struct SwMwContentSupport *)slots->support)->createContent(&slots->content);
+	status = ((struct SwMwContentSupport *)slots->support)->createContent(&slots->content,
+									      slots);
 	failed = 0;
 	if (status != 0) {
 		swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MANAGER_SOURCE, 291);
@@ -315,7 +316,7 @@ extern "C" int SwMwManagerSessionStart(struct SwMwManagerSinkSlots *slots, int m
 	if (failed == 0)
 		return 0;
 	status = SwMwManagerMapStatus(status);
-	((struct SwMwContentSupport *)slots->support)->release();
+	((struct SwMwContentSupport *)slots->support)->releaseContent();
 	slots->content = NULL;
 	slots->owner = NULL;
 	return status;
@@ -1513,11 +1514,38 @@ extern "C" int SwMwManagerFilterKeyStatus(int status)
 	}
 }
 
-/* observer callback table for SwMwManagerSinkSlots */
-static void *g_swMwManagerSlotsVtable[14] = {
-	(void *)SwMwManagerOnSinkAuthSuccess,
-	(void *)SwMwManagerOnSinkAuthFailed,
+static void SwMwManagerSlotsDestroy(struct SwMwManagerSinkSlots *slots)
+{
+	slots->table = NULL;
+}
+
+static void SwMwManagerSlotsDispose(struct SwMwManagerSinkSlots *slots)
+{
+	SwMwManagerSlotsDestroy(slots);
+	::operator delete(slots);
+}
+
+static void SwMwManagerSlotsLegacyAuthNoop(void)
+{
+}
+
+extern "C" int SwMwCoreNotifyDevice(int device, int value);
+
+static int SwMwManagerSlotsIsValidConn(struct SwMwManagerSinkSlots *slots, int sock)
+{
+	if (slots->owner == NULL)
+		return 0;
+	return SwMwCoreNotifyDevice((int)(uintptr_t)slots->owner, sock) != 0;
+}
+
+/* observer callback table for SwMwManagerSinkSlots (16 slots) */
+static void *g_swMwManagerSlotsVtable[16] = {
+	(void *)SwMwManagerSlotsDestroy,
+	(void *)SwMwManagerSlotsDispose,
+	(void *)SwMwManagerSlotsLegacyAuthNoop,
+	(void *)SwMwManagerSlotsLegacyAuthNoop,
 	(void *)SwMwManagerOnSinkSrmTxFailed,
+	(void *)SwMwManagerSlotsIsValidConn,
 	(void *)SwMwManagerSrmUpdated,
 	(void *)SwMwManagerOnMoveAuthSucceeded,
 	(void *)SwMwManagerOnMoveAuthFailed,
@@ -1526,9 +1554,8 @@ static void *g_swMwManagerSlotsVtable[14] = {
 	(void *)SwMwManagerOnMoveCompleteAccepted,
 	(void *)SwMwManagerOnMoveCompleteFailed,
 	(void *)SwMwManagerOnMoveCancelReceived,
-	NULL,
-	NULL,
-	NULL,
+	(void *)SwMwManagerOnSinkAuthSuccess,
+	(void *)SwMwManagerOnSinkAuthFailed,
 };
 
 /* construct and tear down the SwMwManager base fields */
@@ -1556,12 +1583,13 @@ extern "C" int SwMwManagerClearSlots(void *slotsPtr)
 	slots->owner = NULL;
 	support = (struct SwMwContentSupport *)slots->support;
 	if (support != NULL) {
-		if (support->createManager(&slots->manager) != 0)
+		if (support->releaseManager() != 0)
 			swMwTrace("[SWMW] Assertion Failed in %s:%d\n", SWMW_MANAGER_SOURCE, 323);
+		slots->content = NULL;
+		if (support->releaseContent() != 0)
+			swMwTrace("[SWMW] Assertion Failed in %s:%d\n", SWMW_MANAGER_SOURCE, 327);
 		slots->manager = NULL;
-		support->release();
 	}
-	slots->content = NULL;
 	slots->support = NULL;
 	return 0;
 }

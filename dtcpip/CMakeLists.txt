@@ -18,7 +18,7 @@ if(FW STREQUAL "3.630.011-DEBUGGER")
 		PROPERTIES COMPILE_OPTIONS "-O2"
 	)
 else()
-	psp2_module(vs0_app_NPXS10080_eboot KIND user COMPILER snc PARTIAL SOURCES
+	psp2_module(vs0_app_NPXS10080_eboot KIND user COMPILER snc SOURCES
 		crt0.c
 		main.cpp
 		DTCPIP-MW/Src/Mw/SwMwKeyBin.c
@@ -44,6 +44,10 @@ else()
 		DTCPIP-SW/core/src/common/sw_cert_srm.cpp
 		DTCPIP-SW/core/src/ake/sw_ake_packet.cpp
 		DTCPIP-SW/core/src/ake/sw_ake_transport.cpp
+		DTCPIP-SW/core/src/ake/sw_ake_session.cpp
+		DTCPIP-SW/core/src/ake/sw_sink_ake.cpp
+		DTCPIP-SW/core/src/engine/sw_content_support.cpp
+		DTCPIP-SW/core/src/engine/sw_transfer.cpp
 		DTCPIP-SW/core/src/sdi/sw_sdi_cxd3705.cpp
 		DTCPIP-SW/core/src/sdi/sw_sdi_drv.cpp
 		DTCPIP-SW/core/src/sdi/sw_sdi_buffer.cpp

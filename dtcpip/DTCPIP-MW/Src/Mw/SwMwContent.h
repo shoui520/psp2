@@ -119,7 +119,10 @@ struct SwSdiBuffer {
 struct SwMwContentManager {
 	virtual void destroy();						/* 0x00 */
 	virtual void dispose();						/* 0x04 */
-	virtual int createTransfer(struct SwMwTransfer **transfer);	/* 0x08 */
+	virtual int createTransfer(struct SwMwTransfer **transfer, struct SwMwUri *uri,
+				   int mode, struct SwMwStreamEvent *event,
+				   int receiveSize, struct SwMwSinkWork *work,
+				   int sendBase);			/* 0x08 */
 	virtual int releaseTransfer(struct SwMwTransfer *transfer);	/* 0x0c */
 	virtual int createTransferOn(struct SwMwTransfer **transfer, struct SwMwUri *uri,
 				      int mode, struct SwMwStreamEvent *event,

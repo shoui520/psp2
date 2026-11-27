@@ -115,11 +115,13 @@ struct SwMwManager {
 
 /* the SWS content support singleton's interface the start builds ('s class) */
 struct SwMwContentSupport {
-	virtual void destroy();				/* 0x00 */
-	virtual void dispose();				/* 0x04 */
-	virtual int createContent(void **content);	/* 0x08 */
-	virtual void release();				/* 0x0c */
-	virtual int createManager(void **manager);	/* 0x10 */
+	virtual void destroy();						/* 0x00 */
+	virtual void dispose();						/* 0x04 */
+	virtual int createContent(void **content, void *observer);	/* 0x08 */
+	virtual int releaseContent();					/* 0x0c */
+	virtual int createManager(void **manager);			/* 0x10 */
+	virtual int releaseManager();					/* 0x14 */
+	virtual int setSrm(const void *data, size_t size);		/* 0x18 */
 };
 
 extern "C" {

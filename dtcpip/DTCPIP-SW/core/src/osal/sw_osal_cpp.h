@@ -39,10 +39,9 @@ int swNetGetSockName(int sock, SceNetSockaddr *addr, unsigned int *addrLen);
 int swNetGetPeerName(int sock, SceNetSockaddr *addr, unsigned int *addrLen);
 int swNetSetTcpNoDelay(int sock, int enable);
 int swNetSetIpTtl(int sock, int ttl);
-int SwMwNetResolveName(const char *hostname, uint16_t port, unsigned char family,
-		       SceNetSockaddrIn *outAddr);
-int SwMwNetParseAddress(int family, const char *src, void *dst);
-int SwMwNetFormatAddress(int family, const void *src, char *dst, unsigned int size);
+int SwMwNetResolveName(const char *text, unsigned short size, int kind, void *address);
+int SwMwNetParseAddress(int kind, const char *text, void *address);
+int SwMwNetFormatAddress(int kind, const void *address, char *text, int size);
 int swNetWaitReadable(int sock, int timeoutMs, int epollId, const int *cancelFlag);
 int swNetWaitWritable(int sock, int timeoutMs, int epollId, const int *cancelFlag);
 int swNetSelect(int nfds, struct SwFdSet *readFds, struct SwFdSet *writeFds,

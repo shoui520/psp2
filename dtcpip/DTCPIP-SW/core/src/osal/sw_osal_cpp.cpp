@@ -332,10 +332,12 @@ int SwString::findChar(char ch, size_t startPos) const
 	size_t len = m_buf->length();
 	if (startPos > len)
 		return -1;
-	const char *found = strchr(m_buf->data() + startPos, (unsigned char)ch);
-	if (!found)
-		return -1;
-	return (int)(found - m_buf->data());
+	const char *data = m_buf->data();
+	for (size_t i = startPos; i < len; ++i) {
+		if (data[i] == ch)
+			return (int)i;
+	}
+	return -1;
 }
 
 int SwString::compare(const SwString &other) const

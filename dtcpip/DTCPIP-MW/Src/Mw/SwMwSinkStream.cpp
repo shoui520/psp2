@@ -586,11 +586,10 @@ extern "C" int SwMwSinkStreamGetInfo(struct SwMwSinkStream *stream, void *infoPt
 	stream->work.blockSize = stream->window.blockSize;
 	swMwTrace("sw mw:SinkStreamStart contentID=%d\n", stream->contentId);
 
-	started = stream->manager->createTransferOn(
+	started = stream->manager->createTransfer(
 		&stream->downloader,
 		(struct SwMwUri *)((unsigned char *)(uintptr_t)stream->sink + 20),
-		0, &stream->event, (unsigned char)stream->window.receiveSize,
-		stream->window.receiveSize, &stream->work,
+		0, &stream->event, stream->window.receiveSize, &stream->work,
 		(int)(uintptr_t)stream->window.sendBase);
 	stage = 0;
 	if (started != 0) {

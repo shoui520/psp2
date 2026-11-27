@@ -236,6 +236,8 @@ char **getargv(void)
 	return __argv;
 }
 
+void module_start(SceSize arglen, const void *argp) __attribute__((noreturn));
+
 void module_start(SceSize arglen, const void *argp)
 {
 	_start(arglen, (char *)argp);
