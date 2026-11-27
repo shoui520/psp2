@@ -241,6 +241,11 @@ ConsoleInfoCiKey::ConsoleInfoCiKey(SceUInt16 id, char type, SceUInt16 size, bool
 	}
 }
 
+/* (0x814098DC: an empty function the build shares) */
+ConsoleInfoCiKey::~ConsoleInfoCiKey()
+{
+}
+
 /* (0x810F4490) "d<id>=" and the value's conversion */
 string ConsoleInfoCiKey::GetFormat(const char *decimal, const char *hex) const
 {

@@ -33,10 +33,6 @@
 
 using namespace paf;
 
-ConsoleInfoCiKey::~ConsoleInfoCiKey()
-{
-}
-
 /* SceCompat's list of the PSP titles played (sceCompatGetTitleList's user call) */
 extern "C" int SceCompatForVsh_4915DEE7(void *buf, SceSize length);
 
