@@ -620,8 +620,9 @@ public:
                      unsigned int arenaSize, int headerSize);
     virtual ~OrderListFactory();
 
-    void *acquireOrderList(void *ownerList, int *outPrevOwnerId, SceUInt *timeout);
-    void releaseOrderList(void *bufferPtr, uint8_t clearOwner);
+    virtual void *acquireOrderList(void *ownerList, int *outPrevOwnerId, SceUInt *timeout);
+    virtual void releaseOrderList(void *bufferPtr, uint8_t clearOwner);
+    virtual int getMaxItems() const { return m_maxItems; }
 
 private:
     uint8_t *m_slotsBase;          /* +4 */
@@ -905,29 +906,66 @@ static int classifyContentSourceType(const char *path)
 
 /* ===== MediaListBase (0x811F21EC - 0x811F29E1) ===== */
 
+struct MediaListStatus {
+    int reservedHeader;
+    unsigned int itemCount;
+    int currentIndex;
+    int padIndex;
+    int64_t anchorId;
+    int initialIndex;
+    int shuffleMode;
+    int sortMode;
+    int tableCategory;
+};
+
 class MediaListBase {
 public:
     MediaListBase(MediaEntryPool *entryPool, OrderListFactory *orderFactory);
     virtual ~MediaListBase();
 
+    virtual int checkOrderListStatus(int *outPrevId, uint8_t *outAllocated);
     virtual int releaseOrderList(uint8_t clearOwner);
-    virtual void onOrderListReserved(int *outPrevId, int timeoutParam);
     virtual int getListId() const { return m_listId; }
+    virtual MediaEntryPool *getEntryPool() { return m_entryPool; }
+    virtual int navigateTo(int navTarget, uint8_t *outValid);
+    virtual int resolveErrorNavigation(int unused, int repeatMode, int direction,
+                                       unsigned int *ioAttempts, int *ioErr,
+                                       uint8_t *outWrappedAll, uint8_t *outWrappedOne);
+    virtual int refreshAndKeepTrack(int64_t initialRowId, int64_t fallbackRowId,
+                                    int64_t *outKeptRowId)
+    {
+        (void)initialRowId;
+        (void)fallbackRowId;
+        (void)outKeptRowId;
+        return 0;
+    }
+    virtual void setEntryTrackId(int index, int64_t trackId)
+    {
+        (void)index;
+        (void)trackId;
+    }
+    virtual int checkChangedFlag(uint8_t *outChanged, uint8_t queryLive);
     virtual int checkValid();
     virtual int checkPlayableAt(int index, int *outStatus) = 0;
-    virtual int loadItemAt(int navTarget, MediaItem *outItem, int unused, int64_t expectedRowId) = 0;
-    virtual int saveItemChanges(MediaItem *origItem, MediaItem *updatedItem) = 0;
+    virtual int getListStatus(MediaListStatus *outStatus);
+    virtual int getTableCategory() const { return m_tableCategory; }
+    virtual unsigned int getItemCount() const { return m_itemCount; }
+    virtual int getCurrentIndex() const { return m_currentIndex; }
+    virtual int64_t getAnchorId() const { return m_anchorId; }
     virtual int rebuildOrderList(int shuffleMode, int64_t anchorRowId,
                                  uint8_t *outChanged, uint8_t forceRebuild);
+    virtual int unlockOrderList(uint8_t clearOwner)
+    {
+        (void)clearOwner;
+        return 0;
+    }
     virtual int refreshOrderBuffer(int shuffleMode, int64_t anchorRowId);
     virtual int fetchItemMetadata(int64_t musicId, const char *path, MetadataOutputRequest *outMeta);
-    virtual int checkChangedFlag(uint8_t *outChanged, uint8_t queryLive);
+    virtual int getOrderedIndex(unsigned int orderPos) const { return static_cast<int>(orderPos); }
+    virtual int loadItemAt(int navTarget, MediaItem *outItem, int unused, int64_t expectedRowId) = 0;
+    virtual int saveItemChanges(MediaItem *origItem, MediaItem *updatedItem) = 0;
 
     int resolveNavigationIndex(int navTarget, int currentIdx, uint8_t *outValid) const;
-    int navigateTo(int navTarget, uint8_t *outValid);
-    int resolveErrorNavigation(int unused, int repeatMode, int direction,
-                               unsigned int *ioAttempts, int *ioErr,
-                               uint8_t *outWrappedAll, uint8_t *outWrappedOne);
     void releaseItemSlot(const MediaItem *item);
     MediaItem *allocateItemSlot();
     MediaItem *findItemSlot(int slotSerial);
@@ -987,22 +1025,50 @@ MediaListBase::~MediaListBase()
 {
 }
 
+int MediaListBase::checkOrderListStatus(int *outPrevId, uint8_t *outAllocated)
+{
+    if (m_orderFactory == NULL) {
+        return 0;
+    }
+    if (m_orderBuffer != NULL) {
+        if (outPrevId != NULL) {
+            *outPrevId = getListId();
+        }
+        if (outAllocated != NULL) {
+            *outAllocated = 0;
+        }
+        return 0;
+    }
+    m_orderBuffer = static_cast<uint16_t *>(
+        m_orderFactory->acquireOrderList(this, outPrevId, NULL));
+    m_orderCapacity = static_cast<unsigned int>(m_orderFactory->getMaxItems());
+    if (outAllocated != NULL) {
+        *outAllocated = 1;
+    }
+    return 1;
+}
+
 int MediaListBase::releaseOrderList(uint8_t clearOwner)
 {
-    if (m_orderFactory != NULL && m_orderBuffer != NULL) {
+    if (m_orderFactory != NULL) {
         m_orderFactory->releaseOrderList(m_orderBuffer, clearOwner);
         m_orderBuffer = NULL;
         m_orderCapacity = 0;
+        return 0;
     }
     return 0;
 }
 
-void MediaListBase::onOrderListReserved(int *outPrevId, int timeoutParam)
+int MediaListBase::getListStatus(MediaListStatus *outStatus)
 {
-    (void)timeoutParam;
-    if (outPrevId != NULL) {
-        *outPrevId = -1;
-    }
+    outStatus->itemCount = m_itemCount;
+    outStatus->currentIndex = m_currentIndex;
+    outStatus->anchorId = m_anchorId;
+    outStatus->initialIndex = m_initialIndex;
+    outStatus->shuffleMode = m_shuffleMode;
+    outStatus->sortMode = m_sortMode;
+    outStatus->tableCategory = m_tableCategory;
+    return 0;
 }
 
 /* 0x811F2732 */
@@ -1430,12 +1496,12 @@ public:
     UriMediaList(MediaEntryPool *entryPool, int shuffleMode, OrderListFactory *orderFactory);
     virtual ~UriMediaList() {}
 
+    virtual void setEntryTrackId(int index, int64_t trackId);
     virtual int checkPlayableAt(int index, int *outStatus);
     virtual int loadItemAt(int navTarget, MediaItem *outItem, int unused, int64_t expectedRowId);
     virtual int saveItemChanges(MediaItem *origItem, MediaItem *updatedItem);
 
     int resolveEntryTrackId(int index, int64_t *ioTrackId);
-    void setEntryTrackId(int index, int64_t trackId);
 };
 
 /* 0x811F1CE0 */
@@ -1841,19 +1907,20 @@ public:
                 OrderListFactory *orderFactory);
     virtual ~DbMediaList();
 
-    virtual int releaseOrderList(uint8_t clearOwner);
+    virtual int refreshAndKeepTrack(int64_t initialRowId, int64_t fallbackRowId,
+                                    int64_t *outKeptRowId);
+    virtual int checkChangedFlag(uint8_t *outChanged, uint8_t queryLive);
     virtual int checkPlayableAt(int index, int *outStatus);
-    virtual int loadItemAt(int navTarget, MediaItem *outItem, int unused, int64_t expectedRowId);
-    virtual int saveItemChanges(MediaItem *origItem, MediaItem *updatedItem);
     virtual int rebuildOrderList(int shuffleMode, int64_t anchorRowId,
                                  uint8_t *outChanged, uint8_t forceRebuild);
+    virtual int unlockOrderList(uint8_t clearOwner);
     virtual int refreshOrderBuffer(int shuffleMode, int64_t anchorRowId);
     virtual int fetchItemMetadata(int64_t musicId, const char *path, MetadataOutputRequest *outMeta);
-    virtual int checkChangedFlag(uint8_t *outChanged, uint8_t queryLive);
+    virtual int getOrderedIndex(unsigned int orderPos) const;
+    virtual int loadItemAt(int navTarget, MediaItem *outItem, int unused, int64_t expectedRowId);
+    virtual int saveItemChanges(MediaItem *origItem, MediaItem *updatedItem);
 
     int executeInitialQuery(const char *sqlQuery);
-    int refreshAndKeepTrack(int64_t primaryRowId, int64_t fallbackRowId, int64_t *outKeptRowId);
-    int getOrderedIndex(unsigned int orderPos) const;
 
 private:
     paf::string formatQualifiedColumn(unsigned int tableCategory, int columnIndex) const;
@@ -1947,7 +2014,7 @@ DbMediaList::DbMediaList(MediaEntryPool *entryPool, DbConnectionProvider *dbProv
 }
 
 /* 0x811EEEAE */
-int DbMediaList::releaseOrderList(uint8_t clearOwner)
+int DbMediaList::unlockOrderList(uint8_t clearOwner)
 {
     MediaListBase::releaseOrderList(clearOwner);
     return 0;
@@ -1956,7 +2023,7 @@ int DbMediaList::releaseOrderList(uint8_t clearOwner)
 /* 0x811EEEBC / 0x811EEF26 */
 DbMediaList::~DbMediaList()
 {
-    releaseOrderList(1u);
+    unlockOrderList(1u);
 }
 
 /* 0x811EEF3C */
@@ -2283,9 +2350,12 @@ int DbMediaList::checkPlayableAt(int index, int *outStatus)
 int DbMediaList::rebuildOrderList(int shuffleMode, int64_t anchorRowId,
                                   uint8_t *outChanged, uint8_t forceRebuild)
 {
-    (void)outChanged;
     int prevOwnerId = 0;
-    onOrderListReserved(&prevOwnerId, 0);
+    uint8_t newlyAllocated = 0;
+    checkOrderListStatus(&prevOwnerId, &newlyAllocated);
+    if (outChanged != NULL) {
+        *outChanged = newlyAllocated;
+    }
     if (m_orderBuffer == NULL) {
         return MC_ERR_NO_MEMORY;
     }
