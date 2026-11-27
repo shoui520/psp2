@@ -36,12 +36,12 @@ private:
 	void Notify(int step, SceUInt64 remaining);
 	int GetNextTick(SceRtcTick *tick, int *step);
 
-	SceUInt32 reserved0;
+	SceUInt32 headerPad;
 	SceRtcTick m_expireTime;
 	paf::string m_titleId;
-	paf::wstring reserved1;		/* nothing reads or writes it */
+	paf::wstring unusedLabel;	/* nothing reads or writes it */
 	paf::string m_name;		/* the notice's: "SceGameAlarm" and the title ID */
-	SceUInt32 reserved2;
+	SceUInt32 tailPad;
 };
 
 typedef char GameAlarmEntrySize[sizeof(GameAlarmEntry) == 56 ? 1 : -1];

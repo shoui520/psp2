@@ -213,10 +213,11 @@ static int shellNetHostIsAnyProcessAllowed(const SceUID *processIds, SceUInt32 c
 	return 0;
 }
 
-static void shellNetOnWisprEvent(int event, int arg0, int arg1, int arg2, int arg3, int arg4)
+static void shellNetOnWisprEvent(int prevState, int newState, int eventCode, int errorCode,
+				 int resultInfoPtr, int userArg)
 {
 	if (s_wisprCallback != NULL)
-		s_wisprCallback(event, arg0, arg1, arg2, arg3, arg4);
+		s_wisprCallback(prevState, newState, eventCode, errorCode, resultInfoPtr, userArg);
 }
 
 /* the WISPr login started for the access point */
@@ -341,6 +342,8 @@ static void shellNetHostNotifyComPrevented(int wlan, int mobile)
 			}
 		}
 	}
+	bool showNotice = true;
+
 	if (wlan == 1 && mobile == 1) {
 		if ((dataEnabled | wlanOn) == 0)
 			return;
@@ -348,20 +351,22 @@ static void shellNetHostNotifyComPrevented(int wlan, int mobile)
 		if (restricted == 1 && dataEnabled == 0)
 			return;
 		if (!restricted)
-			goto debug;
+			showNotice = false;
 	}
-	if (sceAppMgrGetStatusByAppId(SHELL_NET_APP_ID_NOTICE, &status) >= 0) {
+	if (showNotice && sceAppMgrGetStatusByAppId(SHELL_NET_APP_ID_NOTICE, &status) >= 0) {
 		if (wlan == 1 && mobile == 1) {
 			if (s_wlanPreventProcess == status.processId)
-				goto debug;
-			s_wlanPreventProcess = status.processId;
+				showNotice = false;
+			else
+				s_wlanPreventProcess = status.processId;
 		} else if (wlan == 0 && mobile == 1) {
 			if (s_comPreventProcess == status.processId)
-				goto debug;
-			s_comPreventProcess = status.processId;
+				showNotice = false;
+			else
+				s_comPreventProcess = status.processId;
 		}
 	}
-	{
+	if (showNotice) {
 		ImposeNotice notice;
 		Plugin *impose = Plugin::Find("impose_plugin");
 		ImposePluginInterface *iface = NULL;
@@ -382,7 +387,6 @@ static void shellNetHostNotifyComPrevented(int wlan, int mobile)
 		}
 		iface->showNotice(&notice);
 	}
-debug:
 	sceClibMemset(&request, 0, sizeof(request));
 	sceClibSnprintf((char *)request.payload, sizeof(request.payload) - 1,
 			"Power:\nR3147 -\n3G connection has been restricted.");

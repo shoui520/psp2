@@ -485,8 +485,9 @@ typedef char GamePspAppmetaWriterSize[sizeof(GamePspAppmetaWriter) == 48 ? 1 : -
  */
 class GamePatchPromoter : public GamePromoter {
 public:
-	GamePatchPromoter(const char *path, const LsdbAppInfoPtr *sfo, bool flag1, bool flag2,
-			  const GameJobProgress *progress, int userData, float scale);
+	GamePatchPromoter(const char *path, const LsdbAppInfoPtr *sfo, bool replace,
+			  bool copyLiveArea, const GameJobProgress *progress, int userData,
+			  float scale);
 	virtual ~GamePatchPromoter();
 
 	virtual int Run(GameAppRegistration *reg, bool registerApp, GameCancelFunc cancel,
@@ -516,8 +517,8 @@ public:
 
 	const LsdbAppInfoPtr *m_sfo;	/* the parameters an update keeps, when set */
 	paf::string m_mountPoint;	/* unmounted when set */
-	bool m_flag1;
-	bool m_flag2;
+	bool m_replace;
+	bool m_copyLiveArea;
 	bool m_move;			/* MovePatch after the promotion */
 	int m_drive;			/* GAME_PATCH_DRIVE_* */
 };
@@ -683,7 +684,7 @@ typedef char GameLicenseInstallerSize[sizeof(GameLicenseInstaller) == 128 ? 1 : 
 class GameInstallJob {
 public:
 	GameInstallJob(const GameInstallParam *param, bool flag, bool (*isStopRequested)(void),
-		       int arg4);
+		       int cancelArg);
 	virtual ~GameInstallJob();
 
 	/* the install run: the promoter of the package's kind, then the progress at 100 */
@@ -704,7 +705,7 @@ public:
 	bool m_flag;				/* the promoter's registerApp */
 	bool m_otherFlag;			/* not read in this file */
 	bool (*m_isStopRequested)(void);	/* the promoter's cancel */
-	int m_arg4;				/* its argument */
+	int m_cancelArg;			/* its argument */
 	float m_percent;
 	GameJobProgress m_progress;
 	paf::string m_errorTitleId;		/* the title ID an error names */
@@ -873,12 +874,12 @@ public:
 	 * install); the names are ours
 	 */
 	virtual int Install(const paf::string *path, const paf::string *titleId, paf::string *dir,
-			    paf::string *installPath, GameJobProgress *progress, int reserved1,
-			    int reserved2, float scale) = 0;
+			    paf::string *installPath, GameJobProgress *progress, int cancel,
+			    int cancelArg, float scale) = 0;
 
 	/* the install of dir and installPath completed (the name is ours) */
-	virtual int Complete(paf::string *dir, paf::string *installPath, int reserved1,
-			     int reserved2, int reserved3, float scale) = 0;
+	virtual int Complete(paf::string *dir, paf::string *installPath, int progress,
+			     int cancel, int cancelArg, float scale) = 0;
 };
 
 /*
@@ -894,10 +895,10 @@ public:
 	virtual ~GameAppInstallSource();
 
 	virtual int Install(const paf::string *path, const paf::string *titleId, paf::string *dir,
-			    paf::string *installPath, GameJobProgress *progress, int reserved1,
-			    int reserved2, float scale);
-	virtual int Complete(paf::string *dir, paf::string *installPath, int reserved1,
-			     int reserved2, int reserved3, float scale);
+			    paf::string *installPath, GameJobProgress *progress, int cancel,
+			    int cancelArg, float scale);
+	virtual int Complete(paf::string *dir, paf::string *installPath, int progress,
+			     int cancel, int cancelArg, float scale);
 
 	/* the package installed with its free trial license only (0x81084C98) */
 	void SetFreeTrial(bool freeTrial);
@@ -933,10 +934,10 @@ public:
 	virtual ~GameLicenseInstallSource();
 
 	virtual int Install(const paf::string *path, const paf::string *titleId, paf::string *dir,
-			    paf::string *installPath, GameJobProgress *progress, int reserved1,
-			    int reserved2, float scale);
-	virtual int Complete(paf::string *dir, paf::string *installPath, int reserved1,
-			     int reserved2, int reserved3, float scale);
+			    paf::string *installPath, GameJobProgress *progress, int cancel,
+			    int cancelArg, float scale);
+	virtual int Complete(paf::string *dir, paf::string *installPath, int progress,
+			     int cancel, int cancelArg, float scale);
 
 	const GameInstallParam *m_param;
 	bool m_noLicense;			/* a package of a free trial, without its license */
@@ -959,10 +960,10 @@ public:
 	virtual ~GamePsmAppInstallSource();
 
 	virtual int Install(const paf::string *path, const paf::string *titleId, paf::string *dir,
-			    paf::string *installPath, GameJobProgress *progress, int reserved1,
-			    int reserved2, float scale);
-	virtual int Complete(paf::string *dir, paf::string *installPath, int reserved1,
-			     int reserved2, int reserved3, float scale);
+			    paf::string *installPath, GameJobProgress *progress, int cancel,
+			    int cancelArg, float scale);
+	virtual int Complete(paf::string *dir, paf::string *installPath, int progress,
+			     int cancel, int cancelArg, float scale);
 
 private:
 	int WriteLicense(const paf::string *path, const paf::string *dir, paf::string *licensePath,
@@ -989,8 +990,8 @@ public:
 	virtual int Install(const paf::string *path, const paf::string *titleId, paf::string *dir,
 			    paf::string *installPath, GameJobProgress *progress, int cancel,
 			    int cancelArg, float scale);
-	virtual int Complete(paf::string *dir, paf::string *installPath, int reserved1,
-			     int reserved2, int reserved3, float scale);
+	virtual int Complete(paf::string *dir, paf::string *installPath, int progress,
+			     int cancel, int cancelArg, float scale);
 
 private:
 	int MoveToTemp(const paf::string *from, const paf::string *to, paf::string *detail);
@@ -1049,8 +1050,8 @@ public:
 	virtual int Install(const paf::string *path, const paf::string *titleId, paf::string *dir,
 			    paf::string *installPath, GameJobProgress *progress, int cancel,
 			    int cancelArg, float scale);
-	virtual int Complete(paf::string *dir, paf::string *installPath, int reserved1,
-			     int reserved2, int reserved3, float scale);
+	virtual int Complete(paf::string *dir, paf::string *installPath, int progress,
+			     int cancel, int cancelArg, float scale);
 
 private:
 	int MergePatch(const paf::string *appDir, const paf::string *patchDir,
@@ -1078,10 +1079,10 @@ public:
 	virtual ~GameGdAppSource();
 
 	virtual int Install(const paf::string *path, const paf::string *titleId, paf::string *dir,
-			    paf::string *installPath, GameJobProgress *progress, int reserved1,
-			    int reserved2, float scale);
-	virtual int Complete(paf::string *dir, paf::string *installPath, int reserved1,
-			     int reserved2, int reserved3, float scale);
+			    paf::string *installPath, GameJobProgress *progress, int cancel,
+			    int cancelArg, float scale);
+	virtual int Complete(paf::string *dir, paf::string *installPath, int progress,
+			     int cancel, int cancelArg, float scale);
 
 private:
 	const SceNpDrmInstallInfo *m_info;
@@ -1172,7 +1173,7 @@ typedef char GameGdInstallerSize[sizeof(GameGdInstaller) == 156 ? 1 : -1];
  */
 class GameInstallExJob {
 public:
-	GameInstallExJob(const GameInstallExParam *param, bool flag, int arg3, int arg4);
+	GameInstallExJob(const GameInstallExParam *param, bool flag, int cancel, int cancelArg);
 	virtual ~GameInstallExJob();
 
 	/* the install run: the promoter of the content type, then the progress at 100 */
@@ -1195,9 +1196,9 @@ public:
 	GameJobProgress m_progress;
 	bool m_flag;				/* the promoter's registerApp */
 	bool m_otherFlag;			/* not read in this file */
-	bool m_flag2;				/* not read in this file */
-	int m_arg3;				/* the promoter's cancel */
-	int m_arg4;				/* its argument */
+	bool m_unusedFlag;			/* not read in this file */
+	int m_cancel;				/* the promoter's cancel */
+	int m_cancelArg;			/* its argument */
 	paf::string m_errorTitleId;		/* the title ID an error names */
 };
 
@@ -1385,10 +1386,10 @@ public:
 	virtual ~GamePsmInstallSource();
 
 	virtual int Install(const paf::string *path, const paf::string *titleId, paf::string *dir,
-			    paf::string *installPath, GameJobProgress *progress, int reserved1,
-			    int reserved2, float scale);
-	virtual int Complete(paf::string *dir, paf::string *installPath, int reserved1,
-			     int reserved2, int reserved3, float scale);
+			    paf::string *installPath, GameJobProgress *progress, int cancel,
+			    int cancelArg, float scale);
+	virtual int Complete(paf::string *dir, paf::string *installPath, int progress,
+			     int cancel, int cancelArg, float scale);
 
 private:
 	int WriteLicense(const paf::string *path, const paf::string *dir, paf::string *licensePath,
@@ -1442,10 +1443,10 @@ public:
 	virtual ~GamePspInstallSource();
 
 	virtual int Install(const paf::string *path, const paf::string *titleId, paf::string *dir,
-			    paf::string *installPath, GameJobProgress *progress, int reserved1,
-			    int reserved2, float scale);
-	virtual int Complete(paf::string *dir, paf::string *installPath, int reserved1,
-			     int reserved2, int reserved3, float scale);
+			    paf::string *installPath, GameJobProgress *progress, int cancel,
+			    int cancelArg, float scale);
+	virtual int Complete(paf::string *dir, paf::string *installPath, int progress,
+			     int cancel, int cancelArg, float scale);
 
 private:
 	static int MoveMgGame(const paf::string *path, const paf::string &titleId,
@@ -1559,10 +1560,10 @@ public:
 	virtual ~GamePspPbootInstallSource();
 
 	virtual int Install(const paf::string *path, const paf::string *titleId, paf::string *dir,
-			    paf::string *installPath, GameJobProgress *progress, int reserved1,
-			    int reserved2, float scale);
-	virtual int Complete(paf::string *dir, paf::string *installPath, int reserved1,
-			     int reserved2, int reserved3, float scale);
+			    paf::string *installPath, GameJobProgress *progress, int cancel,
+			    int cancelArg, float scale);
+	virtual int Complete(paf::string *dir, paf::string *installPath, int progress,
+			     int cancel, int cancelArg, float scale);
 
 private:
 	int MoveContent(const paf::string *content, const paf::string *gameDir,
@@ -1669,10 +1670,10 @@ typedef char GamePspAppInstallerSize[sizeof(GamePspAppInstaller) == 156 ? 1 : -1
 class GamePspAppInstallSource : public GameInstallSource {
 public:
 	virtual int Install(const paf::string *path, const paf::string *titleId, paf::string *dir,
-			    paf::string *installPath, GameJobProgress *progress, int reserved1,
-			    int reserved2, float scale);
-	virtual int Complete(paf::string *dir, paf::string *installPath, int reserved1,
-			     int reserved2, int reserved3, float scale);
+			    paf::string *installPath, GameJobProgress *progress, int cancel,
+			    int cancelArg, float scale);
+	virtual int Complete(paf::string *dir, paf::string *installPath, int progress,
+			     int cancel, int cancelArg, float scale);
 	GamePspAppInstallSource(const GameInstallParam *param,
 				const paf::vector<paf::string> *titleIds,
 				const paf::string *gameDataId, paf::string *errorTitleId);
@@ -1704,12 +1705,12 @@ public:
 	virtual ~GameType17InstallSource();
 
 	virtual int Install(const paf::string *path, const paf::string *titleId, paf::string *dir,
-			    paf::string *installPath, GameJobProgress *progress, int reserved1,
-			    int reserved2, float scale);
+			    paf::string *installPath, GameJobProgress *progress, int cancel,
+			    int cancelArg, float scale);
 
 	/* nothing to complete: Install put the folder in place */
-	virtual int Complete(paf::string *dir, paf::string *installPath, int reserved1,
-			     int reserved2, int reserved3, float scale)
+	virtual int Complete(paf::string *dir, paf::string *installPath, int progress,
+			     int cancel, int cancelArg, float scale)
 	{
 		return 0;
 	}

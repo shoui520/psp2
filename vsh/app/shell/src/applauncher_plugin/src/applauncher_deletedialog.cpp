@@ -151,17 +151,17 @@ public:
 	~ApplauncherDeleteDialog();
 
 	bool m_installed;		/* the application's path is there */
-	bool reserved0;
+	bool m_unusedFlag;
 	ApplauncherTopmenuHold *m_hold;
 	ui::BusyIndicator *m_busy;
 	common::SharedPtr<job::JobItem> m_job;
 	common::SharedPtr<ApplauncherIcon> m_icon;
 	int m_dialogId;
-	int reserved1;
+	int m_unusedState;
 	const LsdbAppInfoPtr *m_appInfo;	/* the context menu's, kept by it */
 	int m_value;			/* the context menu's */
-	int reserved2;
-	wstring reserved3;
+	int m_unusedIndex;
+	wstring m_unusedText;
 	bool m_umassFiles;		/* ux0:umass holds files of the application */
 };
 
@@ -223,10 +223,10 @@ static void applauncherDeleteDialogOnConfirm(SceInt32 value, SceInt32 button, vo
 		SceCommonGuiDialog_BC311DC0(value);
 		dialog->m_dialogId = -1;
 	}
-	if (button != APPLAUNCHER_DELETE_BUTTON_OK)
-		goto edit;
+	do {
+		if (button != APPLAUNCHER_DELETE_BUTTON_OK)
+			break;
 
-	{
 		CommonGuiLayoutDialogParam param;
 
 		param.priority = APPLAUNCHER_DELETE_PRIORITY;
@@ -242,37 +242,36 @@ static void applauncherDeleteDialogOnConfirm(SceInt32 value, SceInt32 button, vo
 
 		if (ret < 0) {
 			dialog->m_dialogId = -1;
-			goto edit;
+			break;
 		}
 		dialog->m_dialogId = ret;
 
 		Plugin *plugin = Plugin::Find("game_plugin");
 
 		if (plugin == NULL)
-			goto edit;
+			break;
 
 		GamePluginInterface *game = (GamePluginInterface *)plugin->GetInterface(1);
 
 		if (game == NULL)
-			goto edit;
+			break;
 
 		job::JobQueue *queue =
 			((job::JobQueue *(*)(void))game->func[GAME_PLUGIN_FUNC_GET_JOB_QUEUE])();
 
 		if (queue == NULL)
-			goto edit;
+			break;
 
 		dialog->m_job = common::SharedPtr<job::JobItem>(new ApplauncherDeleteDialogJob(
 			"DeleteDialog", dialog, applauncherDeleteDialogDelete,
 			applauncherDeleteDialogOnDeleted));
 		if (dialog->m_job.get() == NULL)
-			goto edit;
+			break;
 		if (queue->Enqueue(dialog->m_job) < 0)
-			goto edit;
+			break;
 		return;
-	}
+	} while (0);
 
-edit:
 	applauncherDeleteDialogEndEdit();
 }
 
@@ -305,9 +304,9 @@ static void applauncherDeleteDialogShowError(ApplauncherDeleteDialog *dialog, in
 /* (0x810D5FBE) */
 ApplauncherDeleteDialog::ApplauncherDeleteDialog(const common::SharedPtr<ApplauncherIcon> &icon,
 						 void *context, int value)
-	: m_installed(false), reserved0(false), m_hold(NULL), m_busy(NULL), m_job(), m_icon(icon),
-	  m_dialogId(-1), reserved1(0), m_appInfo((const LsdbAppInfoPtr *)context), m_value(value),
-	  reserved2(-1), m_umassFiles(false)
+	: m_installed(false), m_unusedFlag(false), m_hold(NULL), m_busy(NULL), m_job(), m_icon(icon),
+	  m_dialogId(-1), m_unusedState(0), m_appInfo((const LsdbAppInfoPtr *)context), m_value(value),
+	  m_unusedIndex(-1), m_umassFiles(false)
 {
 	g_applauncherDeleteDialog = this;
 

@@ -127,16 +127,16 @@ SystemUpdateResult SystemUpdateDownloadJob::Download(bool *reserved)
 
 	sce_paf_memset(s_buffer, 0, sizeof(s_buffer));
 
-	string reserved2;
-	vector<SystemUpdateData> reserved3;
+	string unusedPath;
+	vector<SystemUpdateData> unusedList;
 	UpdateListParser parser;
 	SceInt64 size = file->GetFileSize();
-	bool sizeUnknown = false;
+	bool isUnboundedSize = false;
 
 	if (size < 0) {
 		if (size == SCE_PAF_ERROR_FILE_UNKNOWN_SIZE) {
 			size = UPDATE_LIST_SIZE_MAX;
-			sizeUnknown = true;
+			isUnboundedSize = true;
 		} else {
 			result.error = SYSTEM_UPDATE_ERROR;
 			result.detail = (int)size;
@@ -164,7 +164,7 @@ SystemUpdateResult SystemUpdateDownloadJob::Download(bool *reserved)
 				int n = file->Read(s_buffer, sizeof(s_buffer));
 
 				if (n <= 0) {
-					if (n != 0 || !sizeUnknown) {
+					if (n != 0 || !isUnboundedSize) {
 						if (m_type == 0)
 							result.error = SYSTEM_UPDATE_ERROR_HTTP;
 						if (m_type == 1 || m_type == 2)
@@ -184,7 +184,7 @@ SystemUpdateResult SystemUpdateDownloadJob::Download(bool *reserved)
 			}
 			parser.Bgdl_81135E1A();
 			if (result.error == 0) {
-				if (sizeUnknown) {
+				if (isUnboundedSize) {
 					if (!ended && total != read)
 						result.error = SYSTEM_UPDATE_ERROR;
 				} else if (total != read) {
@@ -256,7 +256,7 @@ SystemUpdateResult SystemUpdateDownloadJob::Fetch(common::SharedPtr<File> file, 
 		MtpHttpFileOpenArg arg;
 
 		arg.file_type = MTP_HTTP_FILE_TYPE;
-		arg.reserved2 = result.error;
+		arg.bufferPad = result.error;
 		arg.offset = 0;
 		arg.bufferSize = 0x10000;
 		arg.options[0] = 0x10000100;

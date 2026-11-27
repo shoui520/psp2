@@ -54,8 +54,8 @@ ImposeVolumeBar *g_imposeVolumeBar;
 	 (graph::PlaneObj *)(widget)->GetDrawObj(0) : NULL)
 
 static void imposeVolumeBarOnFade(SceInt32 type, ui::Handler *self, ui::Event *e, void *data);
-static void imposeVolumeBarOnLimit(Timer *t, ui::AnimListener *listener, void *data1,
-				   void *data2, void *data3);
+static void imposeVolumeBarOnLimit(Timer *t, ui::AnimListener *listener, void *target,
+				   void *userData, void *context);
 
 /* (0x81145B00) */
 ImposeVolumeBar::ImposeVolumeBar(Plugin *plugin)
@@ -494,8 +494,8 @@ void ImposeVolumeBar::ShowLimit()
 }
 
 /* (0x81148004) */
-static void imposeVolumeBarOnLimit(Timer *t, ui::AnimListener *listener, void *data1,
-				   void *data2, void *data3)
+static void imposeVolumeBarOnLimit(Timer *t, ui::AnimListener *listener, void *target,
+				   void *userData, void *context)
 {
 	if (g_imposeVolumeBar != NULL)
 		g_imposeVolumeBar->ShowLimit();

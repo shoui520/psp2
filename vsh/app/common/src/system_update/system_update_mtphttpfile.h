@@ -23,7 +23,7 @@ struct MtpHttpFileOpenArg : public paf::File::OpenArg {
 	int reserved;
 	SceInt64 offset;
 	int bufferSize;
-	int reserved2;
+	int bufferPad;
 	SceUInt32 options[3];		/* PLACEHOLDER: kept as they are */
 };
 

@@ -404,8 +404,8 @@ int GameLicenseServer::DoUpdateLicense(const GameLicenseUpdateArgs *args)
 {
 	int ret;
 	SceSize size;
-	int result1 = 0;
-	int result2 = 0;
+	int maxCount = 0;
+	int currentCount = 0;
 	char path[256];
 	char dir[256];
 	SceIoStat stat;
@@ -421,32 +421,35 @@ int GameLicenseServer::DoUpdateLicense(const GameLicenseUpdateArgs *args)
 	if (m_isPsp) {
 		sce_paf_snprintf(path, sizeof(path), "%s", GAME_LICENSE_PSP_DIR);
 		ret = sceIoGetstat(path, &stat);
-		if (ret < 0)
-			goto out;
-		sce_paf_snprintf(path, sizeof(path), "%s/%s", GAME_LICENSE_PSP_DIR, args->rifName);
-		m_licensePath = path;
+		if (ret >= 0) {
+			sce_paf_snprintf(path, sizeof(path), "%s/%s", GAME_LICENSE_PSP_DIR,
+					 args->rifName);
+			m_licensePath = path;
+		}
 	} else {
 		sce_paf_snprintf(path, sizeof(path), "%s/%s", GAME_LICENSE_APP_DIR, args->titleId);
 		ret = sceIoGetstat(path, &stat);
-		if (ret < 0)
-			goto out;
-		sce_paf_snprintf(path, sizeof(path), "%s/%s/%s", GAME_LICENSE_APP_DIR, args->titleId,
-				 args->rifName);
-		m_licensePath = path;
-	}
-
-	ret = CreateTempLicense(args->rifName, GAME_LICENSE_BUF_SIZE);
-	if (ret == 0) {
-		ret = SceNpKdc_78E56B9B(args->contentId, args->epw, buf, GAME_LICENSE_BUF_SIZE,
-					&size, &result1, &result2);
-		if (ret == 0) {
-			ret = WriteTempLicense(buf, size);
-			if (ret == 0)
-				ret = CommitLicense();
+		if (ret >= 0) {
+			sce_paf_snprintf(path, sizeof(path), "%s/%s/%s", GAME_LICENSE_APP_DIR,
+					 args->titleId, args->rifName);
+			m_licensePath = path;
 		}
 	}
 
-out:
+	if (ret >= 0) {
+		ret = CreateTempLicense(args->rifName, GAME_LICENSE_BUF_SIZE);
+		if (ret == 0) {
+			ret = SceNpKdc_78E56B9B(args->contentId, args->epw, buf,
+						GAME_LICENSE_BUF_SIZE, &size, &maxCount,
+						&currentCount);
+			if (ret == 0) {
+				ret = WriteTempLicense(buf, size);
+				if (ret == 0)
+					ret = CommitLicense();
+			}
+		}
+	}
+
 	sce_paf_free(buf);
 	ClearTempDir();
 	sce_paf_snprintf(dir, sizeof(dir), "%s", GAME_LICENSE_SERVER_TEMP_DIR);
@@ -587,8 +590,8 @@ int GameLicenseServer::CreateDriveTempLicense(const char *drive, const char *rif
 int GameLicenseServer::DoUpdateAddcontLicense(GameAddcontLicenseUpdateArgs *args)
 {
 	bool expired = false;
-	int result1 = 0;
-	int result2 = 0;
+	int maxCount = 0;
+	int currentCount = 0;
 	int ret;
 	SceSize size;
 	char path[256];
@@ -606,46 +609,50 @@ int GameLicenseServer::DoUpdateAddcontLicense(GameAddcontLicenseUpdateArgs *args
 		sce_paf_snprintf(path, sizeof(path), "%s%s/%s/%s", args->drive,
 				 GAME_LICENSE_DRIVE_ADDCONT_DIR, args->titleId, args->addcontId);
 		ret = sceIoGetstat(path, &stat);
-		if (ret < 0)
-			goto out;
-		sce_paf_snprintf(path, sizeof(path), "%s%s/%s/%s/%s", args->drive,
-				 GAME_LICENSE_DRIVE_ADDCONT_DIR, args->titleId, args->addcontId,
-				 args->rifName);
-		m_licensePath = path;
+		if (ret >= 0) {
+			sce_paf_snprintf(path, sizeof(path), "%s%s/%s/%s/%s", args->drive,
+					 GAME_LICENSE_DRIVE_ADDCONT_DIR, args->titleId,
+					 args->addcontId, args->rifName);
+			m_licensePath = path;
+		}
 	} else {
-		sce_paf_snprintf(path, sizeof(path), "%s%s", args->drive, GAME_LICENSE_DRIVE_PSP_DIR);
+		sce_paf_snprintf(path, sizeof(path), "%s%s", args->drive,
+				 GAME_LICENSE_DRIVE_PSP_DIR);
 		ret = sceIoGetstat(path, &stat);
-		if (ret < 0)
-			goto out;
-		sce_paf_snprintf(path, sizeof(path), "%s%s/%s", args->drive,
-				 GAME_LICENSE_DRIVE_PSP_DIR, args->rifName);
-		m_licensePath = path;
+		if (ret >= 0) {
+			sce_paf_snprintf(path, sizeof(path), "%s%s/%s", args->drive,
+					 GAME_LICENSE_DRIVE_PSP_DIR, args->rifName);
+			m_licensePath = path;
+		}
 	}
 
-	ret = CreateDriveTempLicense(args->drive, args->rifName, GAME_LICENSE_BUF_SIZE);
-	if (ret == 0) {
-		ret = SceNpKdc_78E56B9B(args->contentId, args->epw, buf, GAME_LICENSE_BUF_SIZE,
-					&size, &result1, &result2);
+	if (ret >= 0) {
+		ret = CreateDriveTempLicense(args->drive, args->rifName, GAME_LICENSE_BUF_SIZE);
 		if (ret == 0) {
-			SceUInt64 startTime = 0;
-			SceUInt64 expireTime = 0;
-
-			ret = GetLicensePeriod(buf, size, &expired, &startTime, &expireTime);
+			ret = SceNpKdc_78E56B9B(args->contentId, args->epw, buf,
+						GAME_LICENSE_BUF_SIZE, &size, &maxCount,
+						&currentCount);
 			if (ret == 0) {
-				args->startTime = startTime;
-				args->expireTime = expireTime;
-				if (expired) {
-					ret = GAME_LICENSE_SERVER_ERROR_NO_LICENSE;
-				} else {
-					ret = WriteTempLicense(buf, size);
-					if (ret == 0)
-						ret = CommitLicense();
+				SceUInt64 startTime = 0;
+				SceUInt64 expireTime = 0;
+
+				ret = GetLicensePeriod(buf, size, &expired, &startTime,
+						       &expireTime);
+				if (ret == 0) {
+					args->startTime = startTime;
+					args->expireTime = expireTime;
+					if (expired) {
+						ret = GAME_LICENSE_SERVER_ERROR_NO_LICENSE;
+					} else {
+						ret = WriteTempLicense(buf, size);
+						if (ret == 0)
+							ret = CommitLicense();
+					}
 				}
 			}
 		}
 	}
 
-out:
 	sce_paf_free(buf);
 	RemoveDriveTempDir(args->drive);
 	return ret;
@@ -658,8 +665,8 @@ GameLicenseServer::DoDownloadLicense(const GameLicenseDownloadArgs *args)
 	if (args == NULL)
 		return GAME_ERROR_INVALID_ARGUMENT;
 
-	int result1 = 0;
-	int result2 = 0;
+	int maxCount = 0;
+	int currentCount = 0;
 	SceSize size = 0;
 
 	ClearTempDir();
@@ -671,7 +678,8 @@ GameLicenseServer::DoDownloadLicense(const GameLicenseDownloadArgs *args)
 
 		if (buf != NULL) {
 			ret = SceNpKdc_78E56B9B(args->contentId, args->epw, buf,
-						GAME_LICENSE_BUF_SIZE, &size, &result1, &result2);
+						GAME_LICENSE_BUF_SIZE, &size, &maxCount,
+						&currentCount);
 			if (ret == 0)
 				ret = WriteTempLicense(buf, size);
 		} else {

@@ -42,10 +42,10 @@ static ui::AnimCB s_callback = NULL;
 static intrusive_ptr<graph::Surface> s_texture(NULL);
 static string s_iconPath(NULL);
 
-static void indicatorInhaleAnimLanded(Timer *t, ui::AnimListener *listener, void *data1,
-				      void *data2, void *data3);
-static void indicatorInhaleAnimEnd(Timer *t, ui::AnimListener *listener, void *data1,
-				   void *data2, void *data3);
+static void indicatorInhaleAnimLanded(Timer *t, ui::AnimListener *listener, void *target,
+				      void *userData, void *context);
+static void indicatorInhaleAnimEnd(Timer *t, ui::AnimListener *listener, void *target,
+				   void *userData, void *context);
 
 /* the icon given its texture, or its file's image, and the button the image the bar shows
    without new notices, laid out over the bar's button (0x8117F6A4) */
@@ -193,11 +193,11 @@ void indicatorNoticePageClose(void)
 
 /* the button faded: the caller told, the page closed and forgotten and the screen's dimmer
    hidden (0x811802C2) */
-static void indicatorInhaleAnimEnd(Timer *t, ui::AnimListener *listener, void *data1,
-				   void *data2, void *data3)
+static void indicatorInhaleAnimEnd(Timer *t, ui::AnimListener *listener, void *target,
+				   void *userData, void *context)
 {
 	if (s_callback != NULL)
-		s_callback(t, listener, data1, data2, data3);
+		s_callback(t, listener, target, userData, context);
 	s_callback = NULL;
 	if (s_page != NULL) {
 		g_indicatorPlugin->PageClose(IDParam(s_empty_name, INDICATOR_INHALE_PAGE),
@@ -214,8 +214,8 @@ static void indicatorInhaleAnimEnd(Timer *t, ui::AnimListener *listener, void *d
 
 /* the icon landed: put into the button, faded in and grown to its size there, the button
    shrunk and faded, the page closed after it (0x81180400) */
-static void indicatorInhaleAnimLanded(Timer *t, ui::AnimListener *listener, void *data1,
-				      void *data2, void *data3)
+static void indicatorInhaleAnimLanded(Timer *t, ui::AnimListener *listener, void *target,
+				      void *userData, void *context)
 {
 	ui::Widget *icon = s_icon;
 	ui::Widget *button = s_button;

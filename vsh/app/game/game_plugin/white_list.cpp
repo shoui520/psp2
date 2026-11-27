@@ -122,132 +122,105 @@ static int gameWhiteListVersionRead(const string &path, GameWhiteListVersion *ve
 			sce_paf_memset(emuVersion, 0, sizeof(emuVersion));
 			sce_paf_memset(teleportVersion, 0, sizeof(teleportVersion));
 
-			p = sce_paf_strchr(buf, ':');
-			if (p == NULL) {
-				ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
-				goto done;
-			}
-			start = p + 1;
-			sce_paf_strncpy(format, start, 3);
-			format[3] = '\0';
-			version->format = sce_paf_atoi(format);
+			do {
+				p = sce_paf_strchr(buf, ':');
+				if (p == NULL) {
+					ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
+					break;
+				}
+				start = p + 1;
+				sce_paf_strncpy(format, start, 3);
+				format[3] = '\0';
+				version->format = sce_paf_atoi(format);
 
-			p = sce_paf_strchr(start, ':');
-			if (p == NULL) {
-				ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
-				goto done;
-			}
-			start = p + 1;
-			sce_paf_strncpy(vitaVersion, start, 10);
-			vitaVersion[10] = '\0';
-			version->vita.version = sce_paf_atoi(vitaVersion);
-			p = sce_paf_strchr(start, ':');
-			if (p == NULL) {
-				ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
-				goto done;
-			}
-			start = p + 1;
-			end = sce_paf_strchr(start, '\n');
-			if (end == NULL) {
-				ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
-				goto done;
-			}
-			if (end[-1] == '\r') {
-				len = end - start - 1;
+				p = sce_paf_strchr(start, ':');
+				if (p == NULL) {
+					ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
+					break;
+				}
+				start = p + 1;
+				sce_paf_strncpy(vitaVersion, start, 10);
+				vitaVersion[10] = '\0';
+				version->vita.version = sce_paf_atoi(vitaVersion);
+				p = sce_paf_strchr(start, ':');
+				if (p == NULL) {
+					ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
+					break;
+				}
+				start = p + 1;
+				end = sce_paf_strchr(start, '\n');
+				if (end == NULL) {
+					ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
+					break;
+				}
+				len = end[-1] == '\r' ? (end - start - 1) : (end - start);
 				if (len >= WHITE_LIST_URL_LIMIT || len <= 0) {
 					ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
-					goto done;
+					break;
 				}
 				sce_paf_strncpy(version->vita.url, start, len);
 				version->vita.url[len] = '\0';
-			} else {
-				len = end - start;
-				if (len >= WHITE_LIST_URL_LIMIT || len <= 0) {
-					ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
-					goto done;
-				}
-				sce_paf_strncpy(version->vita.url, start, len);
-				version->vita.url[len] = '\0';
-			}
 
-			p = sce_paf_strchr(end, ':');
-			if (p == NULL) {
-				ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
-				goto done;
-			}
-			start = p + 1;
-			sce_paf_strncpy(emuVersion, start, 10);
-			emuVersion[10] = '\0';
-			version->emu.version = sce_paf_atoi(emuVersion);
-			p = sce_paf_strchr(start, ':');
-			if (p == NULL) {
-				ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
-				goto done;
-			}
-			start = p + 1;
-			end = sce_paf_strchr(start, '\n');
-			if (end == NULL) {
-				ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
-				goto done;
-			}
-			if (end[-1] == '\r') {
-				len = end - start - 1;
+				p = sce_paf_strchr(end, ':');
+				if (p == NULL) {
+					ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
+					break;
+				}
+				start = p + 1;
+				sce_paf_strncpy(emuVersion, start, 10);
+				emuVersion[10] = '\0';
+				version->emu.version = sce_paf_atoi(emuVersion);
+				p = sce_paf_strchr(start, ':');
+				if (p == NULL) {
+					ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
+					break;
+				}
+				start = p + 1;
+				end = sce_paf_strchr(start, '\n');
+				if (end == NULL) {
+					ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
+					break;
+				}
+				len = end[-1] == '\r' ? (end - start - 1) : (end - start);
 				if (len >= WHITE_LIST_URL_LIMIT || len <= 0) {
 					ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
-					goto done;
+					break;
 				}
 				sce_paf_strncpy(version->emu.url, start, len);
 				version->emu.url[len] = '\0';
-			} else {
-				len = end - start;
-				if (len >= WHITE_LIST_URL_LIMIT || len <= 0) {
-					ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
-					goto done;
-				}
-				sce_paf_strncpy(version->emu.url, start, len);
-				version->emu.url[len] = '\0';
-			}
 
-			/* the teleport line is optional */
-			p = sce_paf_strchr(end, ':');
-			if (p == NULL) {
-				ret = 0;
-				goto done;
-			}
-			start = p + 1;
-			sce_paf_strncpy(teleportVersion, start, 10);
-			teleportVersion[10] = '\0';
-			version->teleport.version = sce_paf_atoi(teleportVersion);
-			p = sce_paf_strchr(start, ':');
-			if (p == NULL) {
-				ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
-				goto done;
-			}
-			start = p + 1;
-			end = sce_paf_strchr(start, '\n');
-			if (end == NULL) {
-				ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
-				goto done;
-			}
-			if (end[-1] == '\r') {
-				len = end - start - 1;
+				/* the teleport line is optional */
+				p = sce_paf_strchr(end, ':');
+				if (p == NULL) {
+					ret = 0;
+					break;
+				}
+				start = p + 1;
+				sce_paf_strncpy(teleportVersion, start, 10);
+				teleportVersion[10] = '\0';
+				version->teleport.version = sce_paf_atoi(teleportVersion);
+				p = sce_paf_strchr(start, ':');
+				if (p == NULL) {
+					ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
+					break;
+				}
+				start = p + 1;
+				end = sce_paf_strchr(start, '\n');
+				if (end == NULL) {
+					ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
+					break;
+				}
+				len = end[-1] == '\r' ? (end - start - 1) : (end - start);
 				if (len >= WHITE_LIST_URL_LIMIT || len <= 0) {
 					ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
-					goto done;
+					break;
 				}
-			} else {
-				len = end - start;
-				if (len >= WHITE_LIST_URL_LIMIT || len <= 0) {
-					ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
-					goto done;
-				}
-			}
-			sce_paf_strncpy(version->teleport.url, start, len);
-			version->teleport.url[len] = '\0';
+				sce_paf_strncpy(version->teleport.url, start, len);
+				version->teleport.url[len] = '\0';
+			} while (0);
 		}
 	}
 
-done:
 	if (ret < 0) {
 		version->vita.version = 0;
 		version->emu.version = 0;
@@ -357,122 +330,129 @@ static int gameWhiteListTeleportSync(common::SharedPtr<File> file)
 
 	char *buf = new char[WHITE_LIST_TELEPORT_MAX_SIZE];
 
-	if (buf == NULL) {
-		ret = GAME_WHITE_LIST_ERROR_NO_MEMORY;
-		goto fail;
-	}
+	if (buf == NULL)
+		return GAME_WHITE_LIST_ERROR_NO_MEMORY;
 
 	ret = gameWhiteListFileRead(file, buf, &size);
-	if (ret < 0)
-		goto fail;
+	if (ret < 0) {
+		delete[] buf;
+		return ret;
+	}
 
 	GameWhiteListTeleportHeader header;
 
 	sce_paf_memset(&header, 0, sizeof(header));
 	ret = gameWhiteListTeleportHeaderRead(buf, size, &header);
-	if (ret < 0)
-		goto fail;
 	delete[] buf;
+	if (ret < 0)
+		return ret;
 
 	Dir::Create(WHITE_LIST_TM0_DIR);
+
+	bool needWrite = true;
+
 	if (!LocalFile::Exists(WHITE_LIST_TM0_TELEPORT)) {
-		if (!LocalFile::Exists(WHITE_LIST_TM0_TELEPORT_OLD))
-			goto write;
-		ret = LocalFile::RenameFile(WHITE_LIST_TM0_TELEPORT_OLD, WHITE_LIST_TM0_TELEPORT);
-		if (ret < 0)
-			return ret;
+		if (LocalFile::Exists(WHITE_LIST_TM0_TELEPORT_OLD)) {
+			ret = LocalFile::RenameFile(WHITE_LIST_TM0_TELEPORT_OLD,
+						    WHITE_LIST_TM0_TELEPORT);
+			if (ret < 0)
+				return ret;
+		} else {
+			needWrite = true;
+		}
 	}
 
-	old = LocalFile::Open(WHITE_LIST_TM0_TELEPORT, SCE_O_RDONLY, 0, &ret);
-	if (old.get() == NULL)
-		goto out;
-
-	oldSize = WHITE_LIST_TELEPORT_MAX_SIZE;
-	oldBuf = new char[WHITE_LIST_TELEPORT_MAX_SIZE];
-	if (oldBuf == NULL) {
-		ret = GAME_WHITE_LIST_ERROR_NO_MEMORY;
-		goto close;
-	}
-
-	ret = gameWhiteListFileRead(old, oldBuf, &oldSize);
-	if (ret < 0)
-		goto close;
-	old->Close();
-
-	GameWhiteListTeleportHeader oldHeader;
-
-	sce_paf_memset(&oldHeader, 0, sizeof(oldHeader));
-	ret = gameWhiteListTeleportHeaderRead(oldBuf, oldSize, &oldHeader);
-	if (ret < 0)
-		goto close;
-	if (oldHeader.version >= header.version) {
-		ret = 0;
-		goto close;
-	}
-	delete[] oldBuf;
-
-write:
-	oldBuf = NULL;
-	if (LocalFile::Exists(WHITE_LIST_TM0_TELEPORT_TMP)) {
-		ret = LocalFile::RemoveFile(WHITE_LIST_TM0_TELEPORT_TMP);
-		if (ret < 0)
-			goto close;
-	}
-
-	out = LocalFile::Open(WHITE_LIST_TM0_TELEPORT_TMP, SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC,
-			      6, &ret);
-	if (out.get() != NULL) {
-		copy = new char[(size_t)fileSize];
-		if (copy != NULL) {
-			file->Seek(0, SCE_SEEK_SET);
-
-			int n = file->Read(copy, (size_t)fileSize);
-
-			if (n < 0) {
-				ret = n;
-			} else if (n != fileSize) {
-				ret = GAME_WHITE_LIST_ERROR_SHORT_READ;
+	if (LocalFile::Exists(WHITE_LIST_TM0_TELEPORT)) {
+		old = LocalFile::Open(WHITE_LIST_TM0_TELEPORT, SCE_O_RDONLY, 0, &ret);
+		if (old.get() == NULL) {
+			needWrite = false;
+		} else {
+			oldSize = WHITE_LIST_TELEPORT_MAX_SIZE;
+			oldBuf = new char[WHITE_LIST_TELEPORT_MAX_SIZE];
+			if (oldBuf == NULL) {
+				ret = GAME_WHITE_LIST_ERROR_NO_MEMORY;
+				needWrite = false;
 			} else {
-				int written = out->Write(copy, n);
-
-				if (written < 0) {
-					ret = written;
-				} else if (n != written) {
-					ret = GAME_WHITE_LIST_ERROR_SHORT_WRITE;
+				ret = gameWhiteListFileRead(old, oldBuf, &oldSize);
+				if (ret < 0) {
+					needWrite = false;
 				} else {
-					out->Close();
-					delete[] copy;
-					copy = NULL;
-					if (!LocalFile::Exists(WHITE_LIST_TM0_TELEPORT_OLD) ||
-					    (ret = LocalFile::RemoveFile(WHITE_LIST_TM0_TELEPORT_OLD)) >= 0) {
-						if (!LocalFile::Exists(WHITE_LIST_TM0_TELEPORT) ||
-						    (ret = LocalFile::RenameFile(WHITE_LIST_TM0_TELEPORT,
-										 WHITE_LIST_TM0_TELEPORT_OLD)) >= 0)
-							ret = LocalFile::RenameFile(WHITE_LIST_TM0_TELEPORT_TMP,
-										    WHITE_LIST_TM0_TELEPORT);
+					old->Close();
+
+					GameWhiteListTeleportHeader oldHeader;
+
+					sce_paf_memset(&oldHeader, 0, sizeof(oldHeader));
+					ret = gameWhiteListTeleportHeaderRead(oldBuf, oldSize,
+									      &oldHeader);
+					if (ret < 0) {
+						needWrite = false;
+					} else if (oldHeader.version >= header.version) {
+						ret = 0;
+						needWrite = false;
+					} else {
+						delete[] oldBuf;
+						oldBuf = NULL;
 					}
 				}
 			}
-		} else {
-			ret = GAME_WHITE_LIST_ERROR_NO_MEMORY;
 		}
-		if (out->IsOpened())
-			out->Close();
 	}
 
-close:
+	if (needWrite) {
+		oldBuf = NULL;
+		if (LocalFile::Exists(WHITE_LIST_TM0_TELEPORT_TMP))
+			ret = LocalFile::RemoveFile(WHITE_LIST_TM0_TELEPORT_TMP);
+
+		if (ret >= 0) {
+			out = LocalFile::Open(WHITE_LIST_TM0_TELEPORT_TMP,
+					      SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC, 6, &ret);
+			if (out.get() != NULL) {
+				copy = new char[(size_t)fileSize];
+				if (copy != NULL) {
+					file->Seek(0, SCE_SEEK_SET);
+
+					int n = file->Read(copy, (size_t)fileSize);
+
+					if (n < 0) {
+						ret = n;
+					} else if (n != fileSize) {
+						ret = GAME_WHITE_LIST_ERROR_SHORT_READ;
+					} else {
+						int written = out->Write(copy, n);
+
+						if (written < 0) {
+							ret = written;
+						} else if (n != written) {
+							ret = GAME_WHITE_LIST_ERROR_SHORT_WRITE;
+						} else {
+							out->Close();
+							delete[] copy;
+							copy = NULL;
+							if (!LocalFile::Exists(WHITE_LIST_TM0_TELEPORT_OLD) ||
+							    (ret = LocalFile::RemoveFile(WHITE_LIST_TM0_TELEPORT_OLD)) >= 0) {
+								if (!LocalFile::Exists(WHITE_LIST_TM0_TELEPORT) ||
+								    (ret = LocalFile::RenameFile(WHITE_LIST_TM0_TELEPORT,
+												 WHITE_LIST_TM0_TELEPORT_OLD)) >= 0)
+									ret = LocalFile::RenameFile(WHITE_LIST_TM0_TELEPORT_TMP,
+												    WHITE_LIST_TM0_TELEPORT);
+							}
+						}
+					}
+				} else {
+					ret = GAME_WHITE_LIST_ERROR_NO_MEMORY;
+				}
+				if (out->IsOpened())
+					out->Close();
+			}
+		}
+	}
+
 	if (old.get() != NULL && old->IsOpened())
 		old->Close();
-out:
 	if (copy != NULL)
 		delete[] copy;
 	if (oldBuf != NULL)
 		delete[] oldBuf;
-	return ret;
-
-fail:
-	if (buf != NULL)
-		delete[] buf;
 	return ret;
 }
 
@@ -515,81 +495,82 @@ static int gameWhiteListRead(const string &path, vector<string> *list, int *type
 
 			sce_paf_memset(format, 0, sizeof(format));
 
-			char *p = sce_paf_strchr(buf, ':');
+			do {
+				char *p = sce_paf_strchr(buf, ':');
 
-			if (p == NULL) {
-				ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
-				goto out;
-			}
-			sce_paf_strncpy(format, p + 1, 3);
-			format[3] = '\0';
-			p = sce_paf_strchr(p + 1, ':');
-			if (p == NULL) {
-				ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
-				goto out;
-			}
-
-			int kind;
-
-			if (p[1] == 'w') {
-				kind = GAME_WHITE_LIST_TYPE_WHITE;
-			} else if (p[1] == 'b') {
-				kind = GAME_WHITE_LIST_TYPE_BLACK;
-			} else {
-				ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
-				goto out;
-			}
-			*type = kind;
-
-			const char *last = buf + n - 1;
-			const char *line = p + 2;
-
-			if (p[2] == '\r')
-				line = p + 3;
-			if (*line == '\n')
-				++line;
-
-			char *nl;
-
-			for (const char *prev = line - 1;; prev = nl) {
-				char titleId[10];
-
-				sce_paf_memset(titleId, 0, sizeof(titleId));
-				if (prev == last)
+				if (p == NULL) {
+					ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
 					break;
-				nl = sce_paf_strchr(line, '\n');
-				if (nl == NULL)
+				}
+				sce_paf_strncpy(format, p + 1, 3);
+				format[3] = '\0';
+				p = sce_paf_strchr(p + 1, ':');
+				if (p == NULL) {
+					ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
 					break;
-				if (nl[-1] == '\r') {
-					int len = nl - line - 1;
+				}
 
-					if (nl - line != 10) {
-						ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
-						goto out;
-					}
-					sce_paf_strncpy(titleId, line, len);
-					titleId[len] = '\0';
+				int kind;
+
+				if (p[1] == 'w') {
+					kind = GAME_WHITE_LIST_TYPE_WHITE;
+				} else if (p[1] == 'b') {
+					kind = GAME_WHITE_LIST_TYPE_BLACK;
 				} else {
-					if (nl - line != 9) {
-						ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
-						goto out;
-					}
-					sce_paf_strncpy(titleId, line, 9);
-					titleId[nl - line] = '\0';
-				}
-				{
-					string id(titleId);
-
-					line = nl + 1;
-					list->push_back(id);
-				}
-				if (first)
+					ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
 					break;
-			}
+				}
+				*type = kind;
+
+				const char *last = buf + n - 1;
+				const char *line = p + 2;
+
+				if (p[2] == '\r')
+					line = p + 3;
+				if (*line == '\n')
+					++line;
+
+				char *nl;
+
+				for (const char *prev = line - 1;; prev = nl) {
+					char titleId[10];
+
+					sce_paf_memset(titleId, 0, sizeof(titleId));
+					if (prev == last)
+						break;
+					nl = sce_paf_strchr(line, '\n');
+					if (nl == NULL)
+						break;
+					if (nl[-1] == '\r') {
+						int len = nl - line - 1;
+
+						if (nl - line != 10) {
+							ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
+							break;
+						}
+						sce_paf_strncpy(titleId, line, len);
+						titleId[len] = '\0';
+					} else {
+						if (nl - line != 9) {
+							ret = GAME_WHITE_LIST_ERROR_BAD_FORMAT;
+							break;
+						}
+						sce_paf_strncpy(titleId, line, 9);
+						titleId[nl - line] = '\0';
+					}
+					{
+						string id(titleId);
+
+						line = nl + 1;
+						list->push_back(id);
+					}
+					if (first)
+						break;
+				}
+			} while (0);
 		}
 	}
 
-out:
 	if (file.get() != NULL)
 		file->Close();
 	sce_paf_free(buf);
@@ -674,200 +655,206 @@ int gameWhiteListUpdate(void)
 	if (!LocalFile::Exists(WHITE_LIST_VS0_VERSION))
 		return 0;
 
-	if (LocalFile::Exists(WHITE_LIST_UR0_VERSION)) {
-		ret = gameWhiteListVersionRead(string(WHITE_LIST_UR0_VERSION), &current);
-		if (ret < 0) {
-			if (ret == GAME_WHITE_LIST_ERROR_BAD_FORMAT)
-				Dir::RemoveRecursive(WHITE_LIST_UR0_DIR);
-			goto out;
-		}
-		ret = gameWhiteListVersionRead(string(WHITE_LIST_VS0_VERSION), &internal);
-		if (ret < 0)
-			goto out;
-
-		string currentVita(current.vita.url);
-		string currentEmu(current.emu.url);
-		string currentTeleport(current.teleport.url);
-		string internalVita(internal.vita.url);
-		string internalEmu(internal.emu.url);
-		string internalTeleport(internal.teleport.url);
-
-		if (currentVita == internalVita && currentEmu == internalEmu &&
-		    currentTeleport == internalTeleport) {
-			refresh = current.vita.version < internal.vita.version ||
-				  current.emu.version < internal.emu.version ||
-				  current.teleport.version < internal.teleport.version;
-		} else {
-			refresh = false;
-			if (currentTeleport.empty())
-				refresh = !internalTeleport.empty();
-		}
-
-		ret = gameWhiteListCheckType(string(WHITE_LIST_UR0_VITA));
-		if (ret < 0) {
-			if (ret != GAME_WHITE_LIST_ERROR_BLACK_LIST &&
-			    ret != GAME_WHITE_LIST_ERROR_BAD_FORMAT)
-				goto out;
-			refresh = true;
-		}
-	} else {
-		refresh = true;
-	}
-
-	if (refresh) {
-		ret = gameWhiteListDirRecreate(WHITE_LIST_UR0_TEMP_DIR);
-		if (ret < 0)
-			goto out;
-		ret = gameWhiteListFileCopy(WHITE_LIST_VS0_VERSION, WHITE_LIST_UR0_TEMP_VERSION);
-		if (ret < 0)
-			goto out;
-		ret = gameWhiteListFileCopy(WHITE_LIST_VS0_VITA, WHITE_LIST_UR0_TEMP_VITA);
-		if (ret < 0)
-			goto out;
-		ret = gameWhiteListFileCopy(WHITE_LIST_VS0_EMU, WHITE_LIST_UR0_TEMP_EMU);
-		if (ret < 0)
-			goto out;
-		if (LocalFile::Exists(WHITE_LIST_VS0_TELEPORT)) {
-			ret = gameWhiteListFileCopy(WHITE_LIST_VS0_TELEPORT,
-						    WHITE_LIST_UR0_TEMP_TELEPORT);
-			if (ret < 0)
-				goto out;
-		}
-		if (Dir::IsExist(WHITE_LIST_UR0_GAME)) {
-			if (Dir::IsExist(WHITE_LIST_UR0_DIR)) {
-				ret = Dir::RemoveRecursive(WHITE_LIST_UR0_DIR);
-				if (ret < 0)
-					goto out;
-			}
-		} else {
-			ret = Dir::CreateRecursive(WHITE_LIST_UR0_GAME);
-			if (ret < 0)
-				goto out;
-		}
-		ret = LocalFile::RenameFile(WHITE_LIST_UR0_TEMP_DIR, WHITE_LIST_UR0_DIR);
-		if (ret < 0)
-			goto out;
-		if (LocalFile::Exists(WHITE_LIST_UR0_TELEPORT)) {
-			int forced = gameWhiteListTeleportForceCheck();
-
-			ret = forced;
-			if (forced < 0)
-				goto out;
-			if (forced == 0) {
-				teleport = LocalFile::Open(WHITE_LIST_UR0_TELEPORT, SCE_O_RDONLY, 0, &ret);
-				if (teleport.get() == NULL)
-					goto out;
-				ret = gameWhiteListTeleportSync(teleport);
-				if (ret < 0)
-					goto out;
-				teleport->Close();
-			}
-		}
-	}
-
-	if (fromUx0) {
-		sce_paf_memset(&current, 0, sizeof(current));
-		ret = gameWhiteListVersionRead(string(WHITE_LIST_UR0_VERSION), &current);
-		if (ret < 0) {
-			if (ret == GAME_WHITE_LIST_ERROR_BAD_FORMAT)
-				Dir::RemoveRecursive(WHITE_LIST_UR0_DIR);
-			goto out;
-		}
-		ret = gameWhiteListDirRecreate(WHITE_LIST_UR0_TEMP_DIR);
-		if (ret >= 0) {
-			SceSize size = WHITE_LIST_VERSION_MAX_SIZE;
-
-			ret = gameWhiteListFileUnwrap(WHITE_LIST_UX0_VERSION, WHITE_LIST_UR0_TEMP_VERSION,
-						      &size, false);
+	do {
+		if (LocalFile::Exists(WHITE_LIST_UR0_VERSION)) {
+			ret = gameWhiteListVersionRead(string(WHITE_LIST_UR0_VERSION), &current);
 			if (ret < 0) {
-				Dir::RemoveRecursive(WHITE_LIST_UX0_DIR);
-				goto out;
+				if (ret == GAME_WHITE_LIST_ERROR_BAD_FORMAT)
+					Dir::RemoveRecursive(WHITE_LIST_UR0_DIR);
+				break;
 			}
-			ret = gameWhiteListVersionRead(string(WHITE_LIST_UR0_TEMP_VERSION), &update);
-			if (ret < 0) {
-				if (ret != GAME_WHITE_LIST_ERROR_BAD_FORMAT)
-					goto out;
-				ret = Dir::RemoveRecursive(WHITE_LIST_UX0_DIR);
-				if (ret < 0)
-					goto out;
-			}
+			ret = gameWhiteListVersionRead(string(WHITE_LIST_VS0_VERSION), &internal);
+			if (ret < 0)
+				break;
 
 			string currentVita(current.vita.url);
 			string currentEmu(current.emu.url);
 			string currentTeleport(current.teleport.url);
-			string updateVita(update.vita.url);
-			string updateEmu(update.emu.url);
-			string updateTeleport(update.teleport.url);
+			string internalVita(internal.vita.url);
+			string internalEmu(internal.emu.url);
+			string internalTeleport(internal.teleport.url);
 
-			if (currentVita == updateVita && currentEmu == updateEmu &&
-			    currentTeleport == updateTeleport) {
-				if (current.vita.version >= update.vita.version &&
-				    current.emu.version >= update.emu.version &&
-				    current.teleport.version >= update.teleport.version)
-					goto done;
+			if (currentVita == internalVita && currentEmu == internalEmu &&
+			    currentTeleport == internalTeleport) {
+				refresh = current.vita.version < internal.vita.version ||
+					  current.emu.version < internal.emu.version ||
+					  current.teleport.version < internal.teleport.version;
 			} else {
-				if (!currentTeleport.empty() && updateTeleport.empty())
-					goto done;
+				refresh = false;
+				if (currentTeleport.empty())
+					refresh = !internalTeleport.empty();
 			}
 
-			SceSize listSize = WHITE_LIST_LIST_MAX_SIZE;
+			ret = gameWhiteListCheckType(string(WHITE_LIST_UR0_VITA));
+			if (ret < 0) {
+				if (ret != GAME_WHITE_LIST_ERROR_BLACK_LIST &&
+				    ret != GAME_WHITE_LIST_ERROR_BAD_FORMAT)
+					break;
+				refresh = true;
+			}
+		} else {
+			refresh = true;
+		}
 
-			ret = gameWhiteListFileUnwrap(WHITE_LIST_UX0_VITA, WHITE_LIST_UR0_TEMP_VITA,
-						      &listSize, false);
+		if (refresh) {
+			ret = gameWhiteListDirRecreate(WHITE_LIST_UR0_TEMP_DIR);
 			if (ret < 0)
-				goto done;
-			ret = gameWhiteListCheckVersion(string(WHITE_LIST_UR0_TEMP_VITA),
-							update.vita.version);
+				break;
+			ret = gameWhiteListFileCopy(WHITE_LIST_VS0_VERSION,
+						    WHITE_LIST_UR0_TEMP_VERSION);
 			if (ret < 0)
-				goto done;
-			ret = gameWhiteListCheckType(string(WHITE_LIST_UR0_TEMP_VITA));
+				break;
+			ret = gameWhiteListFileCopy(WHITE_LIST_VS0_VITA, WHITE_LIST_UR0_TEMP_VITA);
 			if (ret < 0)
-				goto done;
-			listSize = WHITE_LIST_LIST_MAX_SIZE;
-			ret = gameWhiteListFileUnwrap(WHITE_LIST_UX0_EMU, WHITE_LIST_UR0_TEMP_EMU,
-						      &listSize, false);
+				break;
+			ret = gameWhiteListFileCopy(WHITE_LIST_VS0_EMU, WHITE_LIST_UR0_TEMP_EMU);
 			if (ret < 0)
-				goto done;
-			ret = gameWhiteListCheckVersion(string(WHITE_LIST_UR0_TEMP_EMU),
-							update.emu.version);
-			if (ret < 0)
-				goto done;
-			if (LocalFile::Exists(WHITE_LIST_UX0_TELEPORT)) {
-				ret = gameWhiteListFileCopy(WHITE_LIST_UX0_TELEPORT,
+				break;
+			if (LocalFile::Exists(WHITE_LIST_VS0_TELEPORT)) {
+				ret = gameWhiteListFileCopy(WHITE_LIST_VS0_TELEPORT,
 							    WHITE_LIST_UR0_TEMP_TELEPORT);
 				if (ret < 0)
-					goto done;
+					break;
 			}
 			if (Dir::IsExist(WHITE_LIST_UR0_GAME)) {
 				if (Dir::IsExist(WHITE_LIST_UR0_DIR)) {
 					ret = Dir::RemoveRecursive(WHITE_LIST_UR0_DIR);
 					if (ret < 0)
-						goto done;
+						break;
 				}
 			} else {
 				ret = Dir::CreateRecursive(WHITE_LIST_UR0_GAME);
 				if (ret < 0)
-					goto done;
+					break;
 			}
 			ret = LocalFile::RenameFile(WHITE_LIST_UR0_TEMP_DIR, WHITE_LIST_UR0_DIR);
-			if (ret >= 0 && LocalFile::Exists(WHITE_LIST_UR0_TELEPORT)) {
-				ret = gameWhiteListTeleportForceCheck();
-				if (ret == 0) {
-					teleport = LocalFile::Open(WHITE_LIST_UR0_TELEPORT, SCE_O_RDONLY,
-								   0, &ret);
-					if (teleport.get() != NULL) {
-						ret = gameWhiteListTeleportSync(teleport);
-						if (ret >= 0)
-							teleport->Close();
+			if (ret < 0)
+				break;
+			if (LocalFile::Exists(WHITE_LIST_UR0_TELEPORT)) {
+				int forced = gameWhiteListTeleportForceCheck();
+
+				ret = forced;
+				if (forced < 0)
+					break;
+				if (forced == 0) {
+					teleport = LocalFile::Open(WHITE_LIST_UR0_TELEPORT,
+								   SCE_O_RDONLY, 0, &ret);
+					if (teleport.get() == NULL)
+						break;
+					ret = gameWhiteListTeleportSync(teleport);
+					if (ret < 0)
+						break;
+					teleport->Close();
+				}
+			}
+		}
+
+		if (fromUx0) {
+			sce_paf_memset(&current, 0, sizeof(current));
+			ret = gameWhiteListVersionRead(string(WHITE_LIST_UR0_VERSION), &current);
+			if (ret < 0) {
+				if (ret == GAME_WHITE_LIST_ERROR_BAD_FORMAT)
+					Dir::RemoveRecursive(WHITE_LIST_UR0_DIR);
+				break;
+			}
+			ret = gameWhiteListDirRecreate(WHITE_LIST_UR0_TEMP_DIR);
+			if (ret >= 0) {
+				SceSize size = WHITE_LIST_VERSION_MAX_SIZE;
+
+				ret = gameWhiteListFileUnwrap(WHITE_LIST_UX0_VERSION,
+							      WHITE_LIST_UR0_TEMP_VERSION, &size,
+							      false);
+				if (ret < 0) {
+					Dir::RemoveRecursive(WHITE_LIST_UX0_DIR);
+					break;
+				}
+				ret = gameWhiteListVersionRead(string(WHITE_LIST_UR0_TEMP_VERSION),
+							       &update);
+				if (ret < 0) {
+					if (ret != GAME_WHITE_LIST_ERROR_BAD_FORMAT)
+						break;
+					ret = Dir::RemoveRecursive(WHITE_LIST_UX0_DIR);
+					if (ret < 0)
+						break;
+				}
+
+				string currentVita(current.vita.url);
+				string currentEmu(current.emu.url);
+				string currentTeleport(current.teleport.url);
+				string updateVita(update.vita.url);
+				string updateEmu(update.emu.url);
+				string updateTeleport(update.teleport.url);
+
+				if (currentVita == updateVita && currentEmu == updateEmu &&
+				    currentTeleport == updateTeleport) {
+					if (current.vita.version >= update.vita.version &&
+					    current.emu.version >= update.emu.version &&
+					    current.teleport.version >= update.teleport.version)
+						break;
+				} else {
+					if (!currentTeleport.empty() && updateTeleport.empty())
+						break;
+				}
+
+				SceSize listSize = WHITE_LIST_LIST_MAX_SIZE;
+
+				ret = gameWhiteListFileUnwrap(WHITE_LIST_UX0_VITA,
+							      WHITE_LIST_UR0_TEMP_VITA, &listSize,
+							      false);
+				if (ret < 0)
+					break;
+				ret = gameWhiteListCheckVersion(string(WHITE_LIST_UR0_TEMP_VITA),
+								update.vita.version);
+				if (ret < 0)
+					break;
+				ret = gameWhiteListCheckType(string(WHITE_LIST_UR0_TEMP_VITA));
+				if (ret < 0)
+					break;
+				listSize = WHITE_LIST_LIST_MAX_SIZE;
+				ret = gameWhiteListFileUnwrap(WHITE_LIST_UX0_EMU,
+							      WHITE_LIST_UR0_TEMP_EMU, &listSize,
+							      false);
+				if (ret < 0)
+					break;
+				ret = gameWhiteListCheckVersion(string(WHITE_LIST_UR0_TEMP_EMU),
+								update.emu.version);
+				if (ret < 0)
+					break;
+				if (LocalFile::Exists(WHITE_LIST_UX0_TELEPORT)) {
+					ret = gameWhiteListFileCopy(WHITE_LIST_UX0_TELEPORT,
+								    WHITE_LIST_UR0_TEMP_TELEPORT);
+					if (ret < 0)
+						break;
+				}
+				if (Dir::IsExist(WHITE_LIST_UR0_GAME)) {
+					if (Dir::IsExist(WHITE_LIST_UR0_DIR)) {
+						ret = Dir::RemoveRecursive(WHITE_LIST_UR0_DIR);
+						if (ret < 0)
+							break;
+					}
+				} else {
+					ret = Dir::CreateRecursive(WHITE_LIST_UR0_GAME);
+					if (ret < 0)
+						break;
+				}
+				ret = LocalFile::RenameFile(WHITE_LIST_UR0_TEMP_DIR,
+							    WHITE_LIST_UR0_DIR);
+				if (ret >= 0 && LocalFile::Exists(WHITE_LIST_UR0_TELEPORT)) {
+					ret = gameWhiteListTeleportForceCheck();
+					if (ret == 0) {
+						teleport = LocalFile::Open(WHITE_LIST_UR0_TELEPORT,
+									   SCE_O_RDONLY, 0, &ret);
+						if (teleport.get() != NULL) {
+							ret = gameWhiteListTeleportSync(teleport);
+							if (ret >= 0)
+								teleport->Close();
+						}
 					}
 				}
 			}
-done:
-			;
 		}
-	}
+	} while (0);
 
-out:
 	gameWhiteListDirRemove(WHITE_LIST_UR0_TEMP_DIR);
 	if (teleport.get() != NULL && teleport->IsOpened())
 		teleport->Close();
@@ -907,22 +894,22 @@ static int gameWhiteListTeleportInstall(common::SharedPtr<File> file)
 
 	char *buf = new char[WHITE_LIST_TELEPORT_MAX_SIZE];
 
-	if (buf == NULL) {
-		ret = GAME_WHITE_LIST_ERROR_NO_MEMORY;
-		goto fail;
-	}
+	if (buf == NULL)
+		return GAME_WHITE_LIST_ERROR_NO_MEMORY;
 
 	ret = gameWhiteListFileRead(file, buf, &size);
-	if (ret < 0)
-		goto fail;
+	if (ret < 0) {
+		delete[] buf;
+		return ret;
+	}
 
 	GameWhiteListTeleportHeader header;
 
 	sce_paf_memset(&header, 0, sizeof(header));
 	ret = gameWhiteListTeleportHeaderRead(buf, size, &header);
-	if (ret < 0)
-		goto fail;
 	delete[] buf;
+	if (ret < 0)
+		return ret;
 
 	if (!Dir::IsExist(WHITE_LIST_TM0_DIR))
 		Dir::Create(WHITE_LIST_TM0_DIR);
@@ -965,11 +952,6 @@ static int gameWhiteListTeleportInstall(common::SharedPtr<File> file)
 	}
 	if (copy != NULL)
 		delete[] copy;
-	return ret;
-
-fail:
-	if (buf != NULL)
-		delete[] buf;
 	return ret;
 }
 
@@ -1023,155 +1005,162 @@ int gameWhiteListDownload(void)
 	char *buf = NULL;
 	common::SharedPtr<File> teleport;
 
-	ret = gameWhiteListDirRecreate(downloadDir.c_str());
-	if (ret < 0)
-		goto out;
-	ret = gameWhiteListDirRecreate(WHITE_LIST_UR0_NEW_DIR);
-	if (ret < 0)
-		goto out;
-	{
-		SceUInt64 maxSize = WHITE_LIST_VERSION_MAX_SIZE;
-
-		ret = gameWhiteListDownloadFile(WHITE_LIST_VERSION_URL, downloadVersion.c_str(),
-						&maxSize);
+	do {
+		ret = gameWhiteListDirRecreate(downloadDir.c_str());
 		if (ret < 0)
-			goto out;
-	}
-	{
-		SceSize versionSize = WHITE_LIST_VERSION_MAX_SIZE;
-
-		ret = gameWhiteListFileUnwrap(downloadVersion.c_str(), newVersion.c_str(),
-					      &versionSize, !ux0);
+			break;
+		ret = gameWhiteListDirRecreate(WHITE_LIST_UR0_NEW_DIR);
 		if (ret < 0)
-			goto out;
-	}
-	ret = gameWhiteListVersionRead(newVersion, &update);
-	if (ret < 0)
-		goto out;
+			break;
+		{
+			SceUInt64 maxSize = WHITE_LIST_VERSION_MAX_SIZE;
 
-	currentVita = current.vita.url;
-	currentEmu = current.emu.url;
-	currentTeleport = current.teleport.url;
-	updateVita = update.vita.url;
-	updateEmu = update.emu.url;
-	updateTeleport = update.teleport.url;
-
-	{
-		int forced = gameWhiteListTeleportForceCheck();
-
-		if (forced < 0)
-			goto out;
-		if (forced != 1 && currentVita == updateVita && currentEmu == updateEmu &&
-		    (currentTeleport == updateTeleport || currentTeleport.empty() ||
-		     updateTeleport.empty()) &&
-		    current.vita.version == update.vita.version &&
-		    current.emu.version == update.emu.version &&
-		    (updateTeleport.empty() || current.teleport.version == update.teleport.version)) {
-			ret = 0;
-			goto out;
+			ret = gameWhiteListDownloadFile(WHITE_LIST_VERSION_URL,
+							downloadVersion.c_str(), &maxSize);
+			if (ret < 0)
+				break;
 		}
-	}
+		{
+			SceSize versionSize = WHITE_LIST_VERSION_MAX_SIZE;
 
-	downloaded = true;
-	{
-		SceUInt64 maxSize = WHITE_LIST_LIST_MAX_SIZE;
-		SceSize listSize;
+			ret = gameWhiteListFileUnwrap(downloadVersion.c_str(), newVersion.c_str(),
+						      &versionSize, !ux0);
+			if (ret < 0)
+				break;
+		}
+		ret = gameWhiteListVersionRead(newVersion, &update);
+		if (ret < 0)
+			break;
 
-		ret = gameWhiteListDownloadFile(update.vita.url, downloadVita.c_str(), &maxSize);
-		if (ret < 0)
-			goto out;
-		listSize = WHITE_LIST_LIST_MAX_SIZE;
-		ret = gameWhiteListFileUnwrap(downloadVita.c_str(), newVita.c_str(), &listSize, !ux0);
-		if (ret < 0)
-			goto out;
-		ret = gameWhiteListCheckVersion(newVita, update.vita.version);
-		if (ret < 0)
-			goto out;
-		maxSize = WHITE_LIST_LIST_MAX_SIZE;
-		ret = gameWhiteListDownloadFile(update.emu.url, downloadEmu.c_str(), &maxSize);
-		if (ret < 0)
-			goto out;
-		listSize = WHITE_LIST_LIST_MAX_SIZE;
-		ret = gameWhiteListFileUnwrap(downloadEmu.c_str(), newEmu.c_str(), &listSize, !ux0);
-		if (ret < 0)
-			goto out;
-		ret = gameWhiteListCheckVersion(newEmu, update.emu.version);
-		if (ret < 0)
-			goto out;
-	}
-	{
-		string teleportUrl(update.teleport.url);
+		currentVita = current.vita.url;
+		currentEmu = current.emu.url;
+		currentTeleport = current.teleport.url;
+		updateVita = update.vita.url;
+		updateEmu = update.emu.url;
+		updateTeleport = update.teleport.url;
 
-		if (!teleportUrl.empty()) {
+		{
+			int forced = gameWhiteListTeleportForceCheck();
+
+			if (forced < 0)
+				break;
+			if (forced != 1 && currentVita == updateVita && currentEmu == updateEmu &&
+			    (currentTeleport == updateTeleport || currentTeleport.empty() ||
+			     updateTeleport.empty()) &&
+			    current.vita.version == update.vita.version &&
+			    current.emu.version == update.emu.version &&
+			    (updateTeleport.empty() ||
+			     current.teleport.version == update.teleport.version)) {
+				ret = 0;
+				break;
+			}
+		}
+
+		downloaded = true;
+		{
 			SceUInt64 maxSize = WHITE_LIST_LIST_MAX_SIZE;
+			SceSize listSize;
 
-			ret = gameWhiteListDownloadFile(update.teleport.url, downloadTeleport.c_str(),
+			ret = gameWhiteListDownloadFile(update.vita.url, downloadVita.c_str(),
 							&maxSize);
-			if (ret < 0 || (ret = gameWhiteListFileCopy(downloadTeleport.c_str(),
-								    newTeleport.c_str())) < 0)
-				goto out;
-			if (!ux0)
-				LocalFile::RemoveFile(downloadTeleport.c_str());
-			teleport = LocalFile::Open(newTeleport.c_str(), SCE_O_RDONLY, 0, &ret);
+			if (ret < 0)
+				break;
+			listSize = WHITE_LIST_LIST_MAX_SIZE;
+			ret = gameWhiteListFileUnwrap(downloadVita.c_str(), newVita.c_str(),
+						      &listSize, !ux0);
+			if (ret < 0)
+				break;
+			ret = gameWhiteListCheckVersion(newVita, update.vita.version);
+			if (ret < 0)
+				break;
+			maxSize = WHITE_LIST_LIST_MAX_SIZE;
+			ret = gameWhiteListDownloadFile(update.emu.url, downloadEmu.c_str(),
+							&maxSize);
+			if (ret < 0)
+				break;
+			listSize = WHITE_LIST_LIST_MAX_SIZE;
+			ret = gameWhiteListFileUnwrap(downloadEmu.c_str(), newEmu.c_str(),
+						      &listSize, !ux0);
+			if (ret < 0)
+				break;
+			ret = gameWhiteListCheckVersion(newEmu, update.emu.version);
+			if (ret < 0)
+				break;
+		}
+		{
+			string teleportUrl(update.teleport.url);
+
+			if (!teleportUrl.empty()) {
+				SceUInt64 maxSize = WHITE_LIST_LIST_MAX_SIZE;
+
+				ret = gameWhiteListDownloadFile(update.teleport.url,
+								downloadTeleport.c_str(),
+								&maxSize);
+				if (ret < 0 ||
+				    (ret = gameWhiteListFileCopy(downloadTeleport.c_str(),
+								 newTeleport.c_str())) < 0)
+					break;
+				if (!ux0)
+					LocalFile::RemoveFile(downloadTeleport.c_str());
+				teleport = LocalFile::Open(newTeleport.c_str(), SCE_O_RDONLY, 0,
+							   &ret);
+				if (teleport.get() == NULL)
+					break;
+				size = WHITE_LIST_TELEPORT_MAX_SIZE;
+				buf = new char[WHITE_LIST_TELEPORT_MAX_SIZE];
+				if (buf == NULL) {
+					ret = GAME_WHITE_LIST_ERROR_NO_MEMORY;
+					break;
+				}
+				ret = gameWhiteListFileRead(teleport, buf, &size);
+				if (ret < 0)
+					break;
+				teleport->Close();
+
+				GameWhiteListTeleportHeader header;
+
+				sce_paf_memset(&header, 0, sizeof(header));
+				ret = gameWhiteListTeleportHeaderRead(buf, size, &header);
+				if (ret < 0)
+					break;
+				delete[] buf;
+				buf = NULL;
+				if (update.teleport.version > header.version) {
+					ret = GAME_WHITE_LIST_ERROR_OLD_VERSION;
+					break;
+				}
+			}
+
+			if (Dir::IsExist(WHITE_LIST_UR0_DIR)) {
+				ret = Dir::RemoveRecursive(WHITE_LIST_UR0_DIR);
+				if (ret < 0)
+					break;
+			}
+			ret = LocalFile::RenameFile(WHITE_LIST_UR0_NEW_DIR, WHITE_LIST_UR0_DIR);
+			if (ret < 0)
+				break;
+			if (!LocalFile::Exists(WHITE_LIST_UR0_TELEPORT))
+				break;
+
+			int forced = gameWhiteListTeleportForceCheck();
+
+			if (forced < 0) {
+				ret = forced;
+				break;
+			}
+			teleport = LocalFile::Open(WHITE_LIST_UR0_TELEPORT, SCE_O_RDONLY, 0, &ret);
 			if (teleport.get() == NULL)
-				goto out;
-			size = WHITE_LIST_TELEPORT_MAX_SIZE;
-			buf = new char[WHITE_LIST_TELEPORT_MAX_SIZE];
-			if (buf == NULL) {
-				ret = GAME_WHITE_LIST_ERROR_NO_MEMORY;
-				goto out;
-			}
-			ret = gameWhiteListFileRead(teleport, buf, &size);
+				break;
+			if (forced == 1)
+				ret = gameWhiteListTeleportInstall(teleport);
+			else
+				ret = gameWhiteListTeleportSync(teleport);
 			if (ret < 0)
-				goto installed;
+				break;
 			teleport->Close();
-
-			GameWhiteListTeleportHeader header;
-
-			sce_paf_memset(&header, 0, sizeof(header));
-			ret = gameWhiteListTeleportHeaderRead(buf, size, &header);
-			if (ret < 0)
-				goto installed;
-			delete[] buf;
-			buf = NULL;
-			if (update.teleport.version > header.version) {
-				ret = GAME_WHITE_LIST_ERROR_OLD_VERSION;
-				goto out;
-			}
 		}
+	} while (0);
 
-		if (Dir::IsExist(WHITE_LIST_UR0_DIR)) {
-			ret = Dir::RemoveRecursive(WHITE_LIST_UR0_DIR);
-			if (ret < 0)
-				goto installed;
-		}
-		ret = LocalFile::RenameFile(WHITE_LIST_UR0_NEW_DIR, WHITE_LIST_UR0_DIR);
-		if (ret < 0)
-			goto installed;
-		if (!LocalFile::Exists(WHITE_LIST_UR0_TELEPORT))
-			goto installed;
-
-		int forced = gameWhiteListTeleportForceCheck();
-
-		if (forced < 0) {
-			ret = forced;
-			goto out;
-		}
-		teleport = LocalFile::Open(WHITE_LIST_UR0_TELEPORT, SCE_O_RDONLY, 0, &ret);
-		if (teleport.get() == NULL)
-			goto installed;
-		if (forced == 1)
-			ret = gameWhiteListTeleportInstall(teleport);
-		else
-			ret = gameWhiteListTeleportSync(teleport);
-		if (ret < 0)
-			goto installed;
-		teleport->Close();
-installed:
-		;
-	}
-
-out:
 	if (ux0 && downloaded && ret == 0) {
 		if (Dir::IsExist(WHITE_LIST_UX0_GAME)) {
 			if (Dir::IsExist(WHITE_LIST_UX0_DIR))

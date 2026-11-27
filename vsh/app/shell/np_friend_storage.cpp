@@ -94,36 +94,39 @@ int NpFriendStorage::Open(memory::HeapAllocator *heap)
 	npFriendStorageSetHeap(heap);
 
 	int ret = 0;
+	bool opened = false;
 	void *mem = npFriendStorageMalloc(sizeof(NpFriendStorage));
 
-	if (mem != NULL)
-		s_instance = new (mem) NpFriendStorage();
-	else
-		ret = NP_FRIEND_STORAGE_ERROR_NO_MEMORY;
-	if (ret < 0)
-		goto error;
-	ret = s_instance->BuildPath();
-	if (ret < 0)
-		goto error;
-	ret = s_instance->m_connection->Open(string(s_instance->m_path),
-					     NP_FRIEND_STORAGE_OPEN_FLAGS);
-	if (ret < 0)
-		goto error;
-	ret = s_instance->m_connection->SetBusyTimeout(NP_FRIEND_STORAGE_BUSY_TIMEOUT);
-	if (ret < 0)
-		goto close;
-	{
-		dbutil::Connection::ErrorHandler handler = { npFriendStorageError, s_instance };
+	do {
+		if (mem != NULL)
+			s_instance = new (mem) NpFriendStorage();
+		else
+			ret = NP_FRIEND_STORAGE_ERROR_NO_MEMORY;
+		if (ret < 0)
+			break;
+		ret = s_instance->BuildPath();
+		if (ret < 0)
+			break;
+		ret = s_instance->m_connection->Open(string(s_instance->m_path),
+						     NP_FRIEND_STORAGE_OPEN_FLAGS);
+		if (ret < 0)
+			break;
+		opened = true;
+		ret = s_instance->m_connection->SetBusyTimeout(NP_FRIEND_STORAGE_BUSY_TIMEOUT);
+		if (ret < 0)
+			break;
+		{
+			dbutil::Connection::ErrorHandler handler = { npFriendStorageError, s_instance };
 
-		ret = s_connection->SetErrorHandler(&handler);
-	}
-	if (ret < 0)
-		goto close;
-	return ret;
+			ret = s_connection->SetErrorHandler(&handler);
+		}
+		if (ret < 0)
+			break;
+		return ret;
+	} while (0);
 
-close:
-	s_instance->m_connection->Close();
-error:
+	if (opened)
+		s_instance->m_connection->Close();
 	npFriendStorageClearHeap();
 	return ret;
 }
@@ -188,10 +191,10 @@ int NpFriendStorage::DeleteFriends()
 {
 	NpFriendString sql("DELETE FROM " NP_FRIEND_TABLE_PLAYERS);
 	dbutil::RefPtr<dbutil::Statement> statement;
-	dbutil::Value type2;
-	dbutil::Value type3;
-	dbutil::Value type4;
-	dbutil::Value type1;
+	dbutil::Value typeFriend;
+	dbutil::Value typeRequestRecv;
+	dbutil::Value typeRequestSent;
+	dbutil::Value typePending;
 
 	sql += " WHERE ";
 	sql += "player_type";
@@ -206,25 +209,25 @@ int NpFriendStorage::DeleteFriends()
 	int ret = m_connection->Prepare(string(sql.c_str()), &statement);
 
 	if (ret >= 0) {
-		sce_paf_memset(&type2, 0, sizeof(type2));
-		type2.type = SQLITE_INTEGER;
-		type2.data.integer = NP_FRIEND_PLAYER_TYPE_2;
-		sce_paf_memset(&type3, 0, sizeof(type3));
-		type3.type = SQLITE_INTEGER;
-		type3.data.integer = NP_FRIEND_PLAYER_TYPE_3;
-		sce_paf_memset(&type4, 0, sizeof(type4));
-		type4.type = SQLITE_INTEGER;
-		type4.data.integer = NP_FRIEND_PLAYER_TYPE_4;
-		sce_paf_memset(&type1, 0, sizeof(type1));
-		type1.type = SQLITE_INTEGER;
-		type1.data.integer = NP_FRIEND_PLAYER_TYPE_1;
-		ret = statement->Bind(1, &type2, false);
+		sce_paf_memset(&typeFriend, 0, sizeof(typeFriend));
+		typeFriend.type = SQLITE_INTEGER;
+		typeFriend.data.integer = NP_FRIEND_PLAYER_TYPE_2;
+		sce_paf_memset(&typeRequestRecv, 0, sizeof(typeRequestRecv));
+		typeRequestRecv.type = SQLITE_INTEGER;
+		typeRequestRecv.data.integer = NP_FRIEND_PLAYER_TYPE_3;
+		sce_paf_memset(&typeRequestSent, 0, sizeof(typeRequestSent));
+		typeRequestSent.type = SQLITE_INTEGER;
+		typeRequestSent.data.integer = NP_FRIEND_PLAYER_TYPE_4;
+		sce_paf_memset(&typePending, 0, sizeof(typePending));
+		typePending.type = SQLITE_INTEGER;
+		typePending.data.integer = NP_FRIEND_PLAYER_TYPE_1;
+		ret = statement->Bind(1, &typeFriend, false);
 		if (ret >= 0) {
-			ret = statement->Bind(2, &type3, false);
+			ret = statement->Bind(2, &typeRequestRecv, false);
 			if (ret >= 0) {
-				ret = statement->Bind(3, &type4, false);
+				ret = statement->Bind(3, &typeRequestSent, false);
 				if (ret >= 0) {
-					ret = statement->Bind(4, &type1, false);
+					ret = statement->Bind(4, &typePending, false);
 					if (ret >= 0) {
 						ret = statement->Step(1);
 						statement->Reset();
@@ -400,28 +403,27 @@ int NpFriendStorage::StoreFriends(unsigned int count, const intrusive_ptr<NpFrie
 	if (ret >= 0) {
 		if (count != 0 || clear) {
 			ret = DeleteFriends();
-			if (ret < 0)
-				goto rollback;
-			for (unsigned int i = 0; i < count; i++, players++) {
-				if ((*players)->GetPlayerType() != NP_FRIEND_PLAYER_TYPE_4 &&
-				    (*players)->GetPlayerType() != NP_FRIEND_PLAYER_TYPE_2 &&
-				    (*players)->GetPlayerType() != NP_FRIEND_PLAYER_TYPE_3) {
-					ret = NP_FRIEND_STORAGE_ERROR_INVALID_PLAYER_TYPE;
-					goto rollback;
+			if (ret >= 0) {
+				for (unsigned int i = 0; i < count; i++, players++) {
+					if ((*players)->GetPlayerType() != NP_FRIEND_PLAYER_TYPE_4 &&
+					    (*players)->GetPlayerType() != NP_FRIEND_PLAYER_TYPE_2 &&
+					    (*players)->GetPlayerType() != NP_FRIEND_PLAYER_TYPE_3) {
+						ret = NP_FRIEND_STORAGE_ERROR_INVALID_PLAYER_TYPE;
+						break;
+					}
+					ret = StorePlayer(*players);
+					if (ret < 0)
+						break;
 				}
-				ret = StorePlayer(*players);
-				if (ret < 0)
-					goto rollback;
 			}
-			m_friendsCleared = 1;
+			if (ret >= 0)
+				m_friendsCleared = 1;
 		}
-		ret = m_connection->Commit();
+		if (ret < 0)
+			m_connection->Rollback();
+		else
+			ret = m_connection->Commit();
 	}
-	goto out;
-
-rollback:
-	m_connection->Rollback();
-out:
 	m_lock.Unlock();
 	return ret;
 }
@@ -440,25 +442,24 @@ int NpFriendStorage::StoreBlocked(unsigned int count, const intrusive_ptr<NpFrie
 	}
 	if (count != 0 || clear) {
 		ret = DeleteBlocked();
-		if (ret < 0)
-			goto rollback;
-		for (unsigned int i = 0; i < count; i++, players++) {
-			if ((*players)->GetPlayerType() != NP_FRIEND_PLAYER_TYPE_BLOCKED) {
-				ret = NP_FRIEND_STORAGE_ERROR_INVALID_PLAYER_TYPE;
-				goto rollback;
+		if (ret >= 0) {
+			for (unsigned int i = 0; i < count; i++, players++) {
+				if ((*players)->GetPlayerType() != NP_FRIEND_PLAYER_TYPE_BLOCKED) {
+					ret = NP_FRIEND_STORAGE_ERROR_INVALID_PLAYER_TYPE;
+					break;
+				}
+				ret = StorePlayer(*players);
+				if (ret < 0)
+					break;
 			}
-			ret = StorePlayer(*players);
-			if (ret < 0)
-				goto rollback;
 		}
-		m_blockedCleared = 1;
+		if (ret >= 0)
+			m_blockedCleared = 1;
 	}
-	ret = m_connection->Commit();
-	m_lock.Unlock();
-	return ret;
-
-rollback:
-	m_connection->Rollback();
+	if (ret < 0)
+		m_connection->Rollback();
+	else
+		ret = m_connection->Commit();
 	m_lock.Unlock();
 	return ret;
 }
@@ -476,24 +477,24 @@ static inline string npFriendInt64ToString(SceInt64 value)
 int NpFriendStorage::GetFriendCount(unsigned int *count)
 {
 	string sql;
-	string type4 = npFriendInt64ToString(NP_FRIEND_PLAYER_TYPE_4);
-	string type2 = npFriendInt64ToString(NP_FRIEND_PLAYER_TYPE_2);
-	string type3 = npFriendInt64ToString(NP_FRIEND_PLAYER_TYPE_3);
+	string typeRequestSent = npFriendInt64ToString(NP_FRIEND_PLAYER_TYPE_4);
+	string typeFriend = npFriendInt64ToString(NP_FRIEND_PLAYER_TYPE_2);
+	string typeRequestRecv = npFriendInt64ToString(NP_FRIEND_PLAYER_TYPE_3);
 
 	sql = "SELECT count(*) FROM ";
 	sql += NP_FRIEND_TABLE_PLAYERS;
 	sql += " WHERE ";
 	sql += "player_type";
 	sql += " = ";
-	sql += type4.c_str();
+	sql += typeRequestSent.c_str();
 	sql += " OR ";
 	sql += "player_type";
 	sql += " = ";
-	sql += type2.c_str();
+	sql += typeFriend.c_str();
 	sql += " OR ";
 	sql += "player_type";
 	sql += " = ";
-	sql += type3.c_str();
+	sql += typeRequestRecv.c_str();
 	sql += ";";
 
 	dbutil::RefPtr<dbutil::Statement> statement;
@@ -565,10 +566,10 @@ int NpFriendStorage::DeletePlayer(const char *onlineId, int which)
 	switch (which) {
 	case NP_FRIEND_DELETE_FRIEND: {
 		dbutil::Value id;
-		dbutil::Value type2;
-		dbutil::Value type3;
-		dbutil::Value type4;
-		dbutil::Value type1;
+		dbutil::Value typeFriend;
+		dbutil::Value typeRequestRecv;
+		dbutil::Value typeRequestSent;
+		dbutil::Value typePending;
 
 		sql += "player_type";
 		sql += " = ? OR ";
@@ -584,31 +585,31 @@ int NpFriendStorage::DeletePlayer(const char *onlineId, int which)
 		id.type = SQLITE_TEXT;
 		id.size = sce_paf_strlen(onlineId);
 		id.data.text = onlineId;
-		sce_paf_memset(&type2, 0, sizeof(type2));
-		type2.type = SQLITE_INTEGER;
-		type2.data.integer = NP_FRIEND_PLAYER_TYPE_2;
-		sce_paf_memset(&type3, 0, sizeof(type3));
-		type3.type = SQLITE_INTEGER;
-		type3.data.integer = NP_FRIEND_PLAYER_TYPE_3;
-		sce_paf_memset(&type4, 0, sizeof(type4));
-		type4.type = SQLITE_INTEGER;
-		type4.data.integer = NP_FRIEND_PLAYER_TYPE_4;
-		sce_paf_memset(&type1, 0, sizeof(type1));
-		type1.type = SQLITE_INTEGER;
-		type1.data.integer = NP_FRIEND_PLAYER_TYPE_1;
+		sce_paf_memset(&typeFriend, 0, sizeof(typeFriend));
+		typeFriend.type = SQLITE_INTEGER;
+		typeFriend.data.integer = NP_FRIEND_PLAYER_TYPE_2;
+		sce_paf_memset(&typeRequestRecv, 0, sizeof(typeRequestRecv));
+		typeRequestRecv.type = SQLITE_INTEGER;
+		typeRequestRecv.data.integer = NP_FRIEND_PLAYER_TYPE_3;
+		sce_paf_memset(&typeRequestSent, 0, sizeof(typeRequestSent));
+		typeRequestSent.type = SQLITE_INTEGER;
+		typeRequestSent.data.integer = NP_FRIEND_PLAYER_TYPE_4;
+		sce_paf_memset(&typePending, 0, sizeof(typePending));
+		typePending.type = SQLITE_INTEGER;
+		typePending.data.integer = NP_FRIEND_PLAYER_TYPE_1;
 		ret = statement->Bind(1, &id, false);
 		if (ret < 0)
 			break;
-		ret = statement->Bind(2, &type2, false);
+		ret = statement->Bind(2, &typeFriend, false);
 		if (ret < 0)
 			break;
-		ret = statement->Bind(3, &type3, false);
+		ret = statement->Bind(3, &typeRequestRecv, false);
 		if (ret < 0)
 			break;
-		ret = statement->Bind(4, &type4, false);
+		ret = statement->Bind(4, &typeRequestSent, false);
 		if (ret < 0)
 			break;
-		ret = statement->Bind(5, &type1, false);
+		ret = statement->Bind(5, &typePending, false);
 		break;
 	}
 	case NP_FRIEND_DELETE_BLOCKED: {
@@ -633,14 +634,12 @@ int NpFriendStorage::DeletePlayer(const char *onlineId, int which)
 		break;
 	}
 	default:
-		ret = NP_FRIEND_STORAGE_ERROR_INVALID_ARGUMENT;
-		goto out;
+		return NP_FRIEND_STORAGE_ERROR_INVALID_ARGUMENT;
 	}
 	if (ret >= 0) {
 		ret = statement->Step(1);
 		statement->Reset();
 	}
-out:
 	return ret;
 }
 
@@ -731,85 +730,80 @@ int NpFriendStorage::UpdateProfile(const char *onlineId, const NpFriendProfile *
 		dbutil::RefPtr<dbutil::Statement> statement;
 
 		ret = m_connection->Begin(DBUTIL_TRANSACTION_IMMEDIATE);
-		if (ret < 0)
-			goto out;
+		if (ret >= 0) {
+			dbutil::Value avatarUrl;
+			dbutil::Value aboutMe;
+			dbutil::Value color;
+			dbutil::Value language1;
+			dbutil::Value language2;
+			dbutil::Value language3;
+			dbutil::Value plus;
+			dbutil::Value panelUrl;
+			dbutil::Value msgFlg;
+			dbutil::Value id;
 
-		dbutil::Value avatarUrl;
-		dbutil::Value aboutMe;
-		dbutil::Value color;
-		dbutil::Value language1;
-		dbutil::Value language2;
-		dbutil::Value language3;
-		dbutil::Value plus;
-		dbutil::Value panelUrl;
-		dbutil::Value msgFlg;
-		dbutil::Value id;
-
-		sql = "UPDATE " NP_FRIEND_TABLE_PLAYERS;
-		sql += " SET ";
-		sql += "avatar_url = ?, ";
-		sql += "about_me = ?, ";
-		sql += "color = ?, ";
-		sql += "language1 = ?, ";
-		sql += "language2 = ?, ";
-		sql += "language3 = ?, ";
-		sql += "plus = ?, ";
-		sql += "panel_url = ?, ";
-		sql += "msg_flg = ? ";
-		sql += "WHERE online_id = ?;";
-		ret = m_connection->Prepare(string(sql.c_str()), &statement);
-		if (ret < 0)
-			goto rollback;
-		avatarUrl.type = SQLITE_TEXT;
-		avatarUrl.size = sce_paf_strlen(profile->avatarUrl);
-		avatarUrl.data.text = profile->avatarUrl;
-		aboutMe.type = SQLITE_TEXT;
-		aboutMe.size = sce_paf_strlen(profile->aboutMe);
-		aboutMe.data.text = profile->aboutMe;
-		color.type = SQLITE_INTEGER;
-		color.data.integer = profile->color;
-		language1.type = SQLITE_INTEGER;
-		language1.data.integer = profile->language1;
-		language2.type = SQLITE_INTEGER;
-		language2.data.integer = profile->language2;
-		language3.type = SQLITE_INTEGER;
-		language3.data.integer = profile->language3;
-		plus.type = SQLITE_INTEGER;
-		plus.data.integer = profile->plus;
-		panelUrl.type = SQLITE_TEXT;
-		if (profile->panelUrl != NULL) {
-			panelUrl.size = sce_paf_strlen(profile->panelUrl);
-			panelUrl.data.text = profile->panelUrl;
-		} else {
-			panelUrl.size = 0;
-			panelUrl.data.text = "";
+			sql = "UPDATE " NP_FRIEND_TABLE_PLAYERS;
+			sql += " SET ";
+			sql += "avatar_url = ?, ";
+			sql += "about_me = ?, ";
+			sql += "color = ?, ";
+			sql += "language1 = ?, ";
+			sql += "language2 = ?, ";
+			sql += "language3 = ?, ";
+			sql += "plus = ?, ";
+			sql += "panel_url = ?, ";
+			sql += "msg_flg = ? ";
+			sql += "WHERE online_id = ?;";
+			ret = m_connection->Prepare(string(sql.c_str()), &statement);
+			if (ret >= 0) {
+				avatarUrl.type = SQLITE_TEXT;
+				avatarUrl.size = sce_paf_strlen(profile->avatarUrl);
+				avatarUrl.data.text = profile->avatarUrl;
+				aboutMe.type = SQLITE_TEXT;
+				aboutMe.size = sce_paf_strlen(profile->aboutMe);
+				aboutMe.data.text = profile->aboutMe;
+				color.type = SQLITE_INTEGER;
+				color.data.integer = profile->color;
+				language1.type = SQLITE_INTEGER;
+				language1.data.integer = profile->language1;
+				language2.type = SQLITE_INTEGER;
+				language2.data.integer = profile->language2;
+				language3.type = SQLITE_INTEGER;
+				language3.data.integer = profile->language3;
+				plus.type = SQLITE_INTEGER;
+				plus.data.integer = profile->plus;
+				panelUrl.type = SQLITE_TEXT;
+				if (profile->panelUrl != NULL) {
+					panelUrl.size = sce_paf_strlen(profile->panelUrl);
+					panelUrl.data.text = profile->panelUrl;
+				} else {
+					panelUrl.size = 0;
+					panelUrl.data.text = "";
+				}
+				msgFlg.type = SQLITE_INTEGER;
+				msgFlg.data.integer = msgFlag;
+				id.type = SQLITE_TEXT;
+				id.size = sce_paf_strlen(onlineId);
+				id.data.text = onlineId;
+				if ((ret = statement->Bind(1, &avatarUrl, false)) >= 0 &&
+				    (ret = statement->Bind(2, &aboutMe, false)) >= 0 &&
+				    (ret = statement->Bind(3, &color, false)) >= 0 &&
+				    (ret = statement->Bind(4, &language1, false)) >= 0 &&
+				    (ret = statement->Bind(5, &language2, false)) >= 0 &&
+				    (ret = statement->Bind(6, &language3, false)) >= 0 &&
+				    (ret = statement->Bind(7, &plus, false)) >= 0 &&
+				    (ret = statement->Bind(8, &panelUrl, false)) >= 0 &&
+				    (ret = statement->Bind(9, &msgFlg, false)) >= 0 &&
+				    (ret = statement->Bind(10, &id, false)) >= 0) {
+					ret = statement->Step(1);
+					statement->Reset();
+				}
+			}
+			if (ret < 0)
+				m_connection->Rollback();
+			else
+				ret = m_connection->Commit();
 		}
-		msgFlg.type = SQLITE_INTEGER;
-		msgFlg.data.integer = msgFlag;
-		id.type = SQLITE_TEXT;
-		id.size = sce_paf_strlen(onlineId);
-		id.data.text = onlineId;
-		if ((ret = statement->Bind(1, &avatarUrl, false)) >= 0 &&
-		    (ret = statement->Bind(2, &aboutMe, false)) >= 0 &&
-		    (ret = statement->Bind(3, &color, false)) >= 0 &&
-		    (ret = statement->Bind(4, &language1, false)) >= 0 &&
-		    (ret = statement->Bind(5, &language2, false)) >= 0 &&
-		    (ret = statement->Bind(6, &language3, false)) >= 0 &&
-		    (ret = statement->Bind(7, &plus, false)) >= 0 &&
-		    (ret = statement->Bind(8, &panelUrl, false)) >= 0 &&
-		    (ret = statement->Bind(9, &msgFlg, false)) >= 0 &&
-		    (ret = statement->Bind(10, &id, false)) >= 0) {
-			ret = statement->Step(1);
-			statement->Reset();
-		}
-		if (ret < 0) {
-rollback:
-			m_connection->Rollback();
-		} else {
-			ret = m_connection->Commit();
-		}
-out:
-		;
 	}
 	m_lock.Unlock();
 	return ret;
@@ -892,75 +886,72 @@ int NpFriendStorage::AddSessionLog(const NpFriendSessionLog *log)
 		char date[NP_FRIEND_DATE_SIZE];
 
 		ret = GetSessionLogCount(NP_FRIEND_SESSION_LOG_ALL, NULL, &count);
-		if (ret < 0)
-			goto out;
-		if (count == NP_FRIEND_SESSION_LOG_MAX && (ret = DeleteOldestSessionLog()) < 0)
-			goto out;
-		sql = "INSERT INTO ";
-		sql += NP_FRIEND_TABLE_SESSION_LOG;
-		sql += " (";
-		sql += "date";
-		sql += ", ";
-		sql += "tbl_game_psn_players_online_id";
-		sql += ", ";
-		sql += "sce_np_id";
-		sql += ", ";
-		sql += "sce_np_communication_id";
-		sql += ", ";
-		sql += "tbl_game_title_title_id";
-		sql += ", ";
-		sql += "short_title_name";
-		sql += ", ";
-		sql += "long_title_name";
-		sql += ", ";
-		sql += "description";
-		sql += ") VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
-		sce_paf_memset(date, 0, sizeof(date));
-		ret = rtc::FormatRFC3339(date, &log->date, 0);
-		if (ret >= 0) {
-			dbutil::Value dateValue;
-			dbutil::Value onlineId;
-			dbutil::Value npId;
-			dbutil::Value communicationId;
-			dbutil::Value titleId;
-			dbutil::Value shortTitleName;
-			dbutil::Value longTitleName;
-			dbutil::Value description;
+		if (ret >= 0 && (count != NP_FRIEND_SESSION_LOG_MAX ||
+				 (ret = DeleteOldestSessionLog()) >= 0)) {
+			sql = "INSERT INTO ";
+			sql += NP_FRIEND_TABLE_SESSION_LOG;
+			sql += " (";
+			sql += "date";
+			sql += ", ";
+			sql += "tbl_game_psn_players_online_id";
+			sql += ", ";
+			sql += "sce_np_id";
+			sql += ", ";
+			sql += "sce_np_communication_id";
+			sql += ", ";
+			sql += "tbl_game_title_title_id";
+			sql += ", ";
+			sql += "short_title_name";
+			sql += ", ";
+			sql += "long_title_name";
+			sql += ", ";
+			sql += "description";
+			sql += ") VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
+			sce_paf_memset(date, 0, sizeof(date));
+			ret = rtc::FormatRFC3339(date, &log->date, 0);
+			if (ret >= 0) {
+				dbutil::Value dateValue;
+				dbutil::Value onlineId;
+				dbutil::Value npId;
+				dbutil::Value communicationId;
+				dbutil::Value titleId;
+				dbutil::Value shortTitleName;
+				dbutil::Value longTitleName;
+				dbutil::Value description;
 
-			dateValue.type = SQLITE_TEXT;
-			dateValue.size = sce_paf_strlen(date);
-			dateValue.data.text = date;
-			onlineId.type = SQLITE_TEXT;
-			onlineId.size = sce_paf_strlen(log->npId.handle.data);
-			onlineId.data.text = log->npId.handle.data;
-			npId.type = SQLITE_BLOB;
-			npId.size = sizeof(SceNpId);
-			npId.data.blob = &log->npId;
-			communicationId.type = SQLITE_BLOB;
-			communicationId.size = sizeof(SceNpCommunicationId);
-			communicationId.data.blob = &log->communicationId;
-			titleId.type = SQLITE_TEXT;
-			titleId.size = sce_paf_strlen(log->titleId.c_str());
-			titleId.data.text = log->titleId.c_str();
-			shortTitleName.type = SQLITE_TEXT;
-			shortTitleName.size = sce_paf_strlen(log->shortTitleName.c_str());
-			shortTitleName.data.text = log->shortTitleName.c_str();
-			longTitleName.type = SQLITE_TEXT;
-			longTitleName.size = sce_paf_strlen(log->longTitleName.c_str());
-			longTitleName.data.text = log->longTitleName.c_str();
-			description.type = SQLITE_TEXT;
-			description.size = sce_paf_strlen(log->description.c_str());
-			description.data.text = log->description.c_str();
+				dateValue.type = SQLITE_TEXT;
+				dateValue.size = sce_paf_strlen(date);
+				dateValue.data.text = date;
+				onlineId.type = SQLITE_TEXT;
+				onlineId.size = sce_paf_strlen(log->npId.handle.data);
+				onlineId.data.text = log->npId.handle.data;
+				npId.type = SQLITE_BLOB;
+				npId.size = sizeof(SceNpId);
+				npId.data.blob = &log->npId;
+				communicationId.type = SQLITE_BLOB;
+				communicationId.size = sizeof(SceNpCommunicationId);
+				communicationId.data.blob = &log->communicationId;
+				titleId.type = SQLITE_TEXT;
+				titleId.size = sce_paf_strlen(log->titleId.c_str());
+				titleId.data.text = log->titleId.c_str();
+				shortTitleName.type = SQLITE_TEXT;
+				shortTitleName.size = sce_paf_strlen(log->shortTitleName.c_str());
+				shortTitleName.data.text = log->shortTitleName.c_str();
+				longTitleName.type = SQLITE_TEXT;
+				longTitleName.size = sce_paf_strlen(log->longTitleName.c_str());
+				longTitleName.data.text = log->longTitleName.c_str();
+				description.type = SQLITE_TEXT;
+				description.size = sce_paf_strlen(log->description.c_str());
+				description.data.text = log->description.c_str();
 
-			dbutil::Value values[8] = {
-				dateValue, onlineId, npId, communicationId, titleId, shortTitleName,
-				longTitleName, description
-			};
+				dbutil::Value values[8] = {
+					dateValue, onlineId, npId, communicationId, titleId, shortTitleName,
+					longTitleName, description
+				};
 
-			ret = m_connection->Execute(string(sql.c_str()), 8, values, NULL, NULL, NULL);
+				ret = m_connection->Execute(string(sql.c_str()), 8, values, NULL, NULL, NULL);
+			}
 		}
-out:
-		;
 	}
 	m_lock.Unlock();
 	return ret;

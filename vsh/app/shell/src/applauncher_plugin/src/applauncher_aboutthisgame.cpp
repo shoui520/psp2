@@ -77,9 +77,9 @@ struct ApplauncherGameRight {
 	memory::HeapAllocator *heap;
 	void *(*memalign)(memory::HeapAllocator *heap, size_t alignment, size_t size);
 	void (*free)(memory::HeapAllocator *heap, void *ptr);
-	SceUInt32 reserved0;
+	SceUInt32 allocPad;
 	ApplauncherGameRightFuncs *funcs;
-	SceUInt32 reserved1[16];
+	SceUInt32 modulePad[16];
 	memory::HeapAllocator *owner;
 };
 
@@ -249,46 +249,45 @@ ApplauncherAboutThisGame::ApplauncherAboutThisGame(const common::SharedPtr<Appla
 
 	if (ret < 0) {
 		m_dialogId = -1;
-		goto error;
-	}
-	m_dialogId = ret;
-
-	{
-		ui::Widget *contents = SceCommonGuiDialog_8947FC23(ret, APPLAUNCHER_ABOUT_CONTENTS);
-		ui::Widget *image =
-			contents->FindChild(IDParam(s_empty_name, APPLAUNCHER_ABOUT_IMAGE), 0);
-
-		if (image != NULL) {
-			HideWidget(image, NULL);
-			image->AddEventListener(ui::Handler::CB_STATE_READY,
-				new ui::EventCBListener(applauncherAboutThisGameOnReady, this));
-		}
-
-		ui::Widget *text =
-			contents->FindChild(IDParam(s_empty_name, APPLAUNCHER_ABOUT_TEXT), 0);
-
-		if (text != NULL) {
-			HideWidget(text, NULL);
-			text->AddEventListener(ui::Handler::CB_STATE_READY,
-				new ui::EventCBListener(applauncherAboutThisGameOnReady, this));
-		}
-
-		m_busy = APPLAUNCHER_ABOUT_FIND(contents, ui::BusyIndicator, APPLAUNCHER_ABOUT_BUSY);
-		sce_paf_printf_dummy();
-		if (m_busy != NULL)
-			m_busy->Start();
-	}
-
-	m_job = common::SharedPtr<job::JobItem>(new ApplauncherAboutThisGameJob("AboutThisGame",
-		this, applauncherAboutThisGameLoad, applauncherAboutThisGameOnLoaded));
-	if (m_job.get() != NULL) {
-		ret = job::JobQueue::default_queue->Enqueue(m_job);
-		if (ret >= 0)
-			return;
 	} else {
-		ret = APPLAUNCHER_ERROR_NO_LIVEAREA;
+		m_dialogId = ret;
+
+		{
+			ui::Widget *contents = SceCommonGuiDialog_8947FC23(ret, APPLAUNCHER_ABOUT_CONTENTS);
+			ui::Widget *image =
+				contents->FindChild(IDParam(s_empty_name, APPLAUNCHER_ABOUT_IMAGE), 0);
+
+			if (image != NULL) {
+				HideWidget(image, NULL);
+				image->AddEventListener(ui::Handler::CB_STATE_READY,
+					new ui::EventCBListener(applauncherAboutThisGameOnReady, this));
+			}
+
+			ui::Widget *text =
+				contents->FindChild(IDParam(s_empty_name, APPLAUNCHER_ABOUT_TEXT), 0);
+
+			if (text != NULL) {
+				HideWidget(text, NULL);
+				text->AddEventListener(ui::Handler::CB_STATE_READY,
+					new ui::EventCBListener(applauncherAboutThisGameOnReady, this));
+			}
+
+			m_busy = APPLAUNCHER_ABOUT_FIND(contents, ui::BusyIndicator, APPLAUNCHER_ABOUT_BUSY);
+			sce_paf_printf_dummy();
+			if (m_busy != NULL)
+				m_busy->Start();
+		}
+
+		m_job = common::SharedPtr<job::JobItem>(new ApplauncherAboutThisGameJob("AboutThisGame",
+			this, applauncherAboutThisGameLoad, applauncherAboutThisGameOnLoaded));
+		if (m_job.get() != NULL) {
+			ret = job::JobQueue::default_queue->Enqueue(m_job);
+			if (ret >= 0)
+				return;
+		} else {
+			ret = APPLAUNCHER_ERROR_NO_LIVEAREA;
+		}
 	}
-error:
 	applauncherAboutThisGameShowError(this, &m_dialogId, ret);
 }
 
@@ -356,57 +355,58 @@ static int applauncherAboutThisGameLoad(ApplauncherAboutThisGameJob *job, void *
 	LsdbAppInfo::iterator it = info->find(LSDB_KEY_ORG_PATH);
 	AppInfoQClient *client = new AppInfoQClient;
 
-	if (client == NULL || (client = SceLsdb_A6D8772C(client)) == NULL) {
-		ret = APPLAUNCHER_ERROR_NO_MEMORY;
-		goto out;
-	}
-	ret = SceLsdb_E90B81CD(client);
-	if (ret < 0) {
+	do {
+		if (client == NULL || (client = SceLsdb_A6D8772C(client)) == NULL) {
+			ret = APPLAUNCHER_ERROR_NO_MEMORY;
+			break;
+		}
+		ret = SceLsdb_E90B81CD(client);
+		if (ret < 0) {
+			operator delete(SceLsdb_E2101B03(client));
+			break;
+		}
+		ret = SceLsdb_D239031A(client, &about->m_icon->m_data->titleId, &info);
+		if (ret < 0) {
+			operator delete(SceLsdb_E2101B03(client));
+			break;
+		}
 		operator delete(SceLsdb_E2101B03(client));
-		goto out;
-	}
-	ret = SceLsdb_D239031A(client, &about->m_icon->m_data->titleId, &info);
-	if (ret < 0) {
-		operator delete(SceLsdb_E2101B03(client));
-		goto out;
-	}
-	operator delete(SceLsdb_E2101B03(client));
 
-	it = info->find(LSDB_KEY_ORG_PATH);
-	if (it == info->end()) {
-		ret = APPLAUNCHER_ERROR_NO_TITLE;
-		goto out;
-	}
-
-	{
-		string path(it->second.type == LSDB_VALUE_TEXT && it->second.text != NULL ?
-			    it->second.text->c_str() : "");
-		GamePluginInterface *game =
-			(GamePluginInterface *)applauncherPluginGetInterface("game_plugin", 1);
-
-		if (game == NULL) {
-			ret = APPLAUNCHER_ERROR_NO_LIVEAREA;
-			goto out;
+		it = info->find(LSDB_KEY_ORG_PATH);
+		if (it == info->end()) {
+			ret = APPLAUNCHER_ERROR_NO_TITLE;
+			break;
 		}
 
-		char mountPoint[APPLAUNCHER_ABOUT_MOUNT_POINT_SIZE];
+		{
+			string path(it->second.type == LSDB_VALUE_TEXT && it->second.text != NULL ?
+				    it->second.text->c_str() : "");
+			GamePluginInterface *game =
+				(GamePluginInterface *)applauncherPluginGetInterface("game_plugin", 1);
 
-		ret = ((int (*)(const char *, char *, SceSize))
-		       game->func[GAME_PLUGIN_FUNC_APP_DIR_MOUNT])(path.c_str(), mountPoint,
-								   APPLAUNCHER_ABOUT_MOUNT_POINT_SIZE);
-		if (ret < 0)
-			goto out;
-		about->m_mountPoint = mountPoint;
-		about->m_path = about->m_mountPoint + string("/sce_sys/about/right.suprx");
-	}
+			if (game == NULL) {
+				ret = APPLAUNCHER_ERROR_NO_LIVEAREA;
+				break;
+			}
 
-	file = LocalFile::Open(about->m_path.c_str(), SCE_O_RDONLY, 0, &ret);
-	if (ret >= 0) {
-		file->Close();
-		ret = 0;
-	}
+			char mountPoint[APPLAUNCHER_ABOUT_MOUNT_POINT_SIZE];
 
-out:
+			ret = ((int (*)(const char *, char *, SceSize))
+			       game->func[GAME_PLUGIN_FUNC_APP_DIR_MOUNT])(path.c_str(), mountPoint,
+									   APPLAUNCHER_ABOUT_MOUNT_POINT_SIZE);
+			if (ret < 0)
+				break;
+			about->m_mountPoint = mountPoint;
+			about->m_path = about->m_mountPoint + string("/sce_sys/about/right.suprx");
+		}
+
+		file = LocalFile::Open(about->m_path.c_str(), SCE_O_RDONLY, 0, &ret);
+		if (ret >= 0) {
+			file->Close();
+			ret = 0;
+		}
+	} while (0);
+
 	if (job->IsCanceled())
 		return APPLAUNCHER_ERROR_CANCELED;
 	return ret;
@@ -522,48 +522,49 @@ static void applauncherAboutThisGameOnRightStarted(int result, void *arg)
 
 	ApplauncherGameRightFuncs *funcs = about->m_right->funcs;
 
-	if (funcs == NULL) {
-		ret = APPLAUNCHER_ERROR_NO_LIVEAREA;
-		goto error;
-	}
-	ret = funcs->getInfo(&info);
-	if (ret < 0)
-		goto error;
-
-	{
-		ui::Widget *contents = SceCommonGuiDialog_8947FC23(about->m_dialogId,
-								   APPLAUNCHER_ABOUT_CONTENTS);
-
-		image = graph::Surface::Load(g_applauncherHome->m_plugin->m_surface_pool, info.image,
-					     info.imageSize, &option);
-		ret = option.error;
+	do {
+		if (funcs == NULL) {
+			ret = APPLAUNCHER_ERROR_NO_LIVEAREA;
+			break;
+		}
+		ret = funcs->getInfo(&info);
 		if (ret < 0)
-			goto error;
+			break;
 
-		if (contents != NULL) {
-			ui::Widget *widget = contents->FindChild(IDParam(s_empty_name,
-				APPLAUNCHER_ABOUT_IMAGE), 0);
+		{
+			ui::Widget *contents = SceCommonGuiDialog_8947FC23(about->m_dialogId,
+									   APPLAUNCHER_ABOUT_CONTENTS);
 
-			if (widget != NULL)
-				widget->SetTexture(image);
+			image = graph::Surface::Load(g_applauncherHome->m_plugin->m_surface_pool, info.image,
+						     info.imageSize, &option);
+			ret = option.error;
+			if (ret < 0)
+				break;
+
+			if (contents != NULL) {
+				ui::Widget *widget = contents->FindChild(IDParam(s_empty_name,
+					APPLAUNCHER_ABOUT_IMAGE), 0);
+
+				if (widget != NULL)
+					widget->SetTexture(image);
+			}
+
+			text = applauncherAboutThisGameToWide(string(info.text));
+
+			if (contents != NULL) {
+				ui::Widget *widget = contents->FindChild(IDParam(s_empty_name,
+					APPLAUNCHER_ABOUT_TEXT), 0);
+
+				if (widget != NULL)
+					widget->SetString(text);
+			}
+
+			about->ReleaseRight();
+			applauncherAboutThisGameOnReady(0, NULL, NULL, about);
+			return;
 		}
+	} while (0);
 
-		text = applauncherAboutThisGameToWide(string(info.text));
-
-		if (contents != NULL) {
-			ui::Widget *widget = contents->FindChild(IDParam(s_empty_name,
-				APPLAUNCHER_ABOUT_TEXT), 0);
-
-			if (widget != NULL)
-				widget->SetString(text);
-		}
-
-		about->ReleaseRight();
-		applauncherAboutThisGameOnReady(0, NULL, NULL, about);
-		return;
-	}
-
-error:
 	if (about->m_busy != NULL)
 		about->m_busy->Stop();
 	applauncherAboutThisGameShowError(about, &about->m_dialogId, ret);

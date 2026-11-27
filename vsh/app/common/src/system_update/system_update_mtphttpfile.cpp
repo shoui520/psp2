@@ -228,13 +228,14 @@ int32_t MtpHttpFile::Read(void *buf, size_t nbyte)
 		return 0;
 	}
 
+	char *dst = (char *)buf;
 	size_t done = 0;
 	int n;
 
 	do {
 		n = 0;
 
-		int ret = MTPR2Read(m_client, (char *)buf + done, nbyte - done, m_offset, (unsigned int *)&n);
+		int ret = MTPR2Read(m_client, dst + done, nbyte - done, m_offset, (unsigned int *)&n);
 
 		if (ret < 0) {
 			m_lock.Unlock();

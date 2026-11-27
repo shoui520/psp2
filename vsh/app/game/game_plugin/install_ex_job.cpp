@@ -81,11 +81,11 @@ int GameInstallExJob::CheckParam()
 	return 0;
 }
 
-GameInstallExJob::GameInstallExJob(const GameInstallExParam *param, bool flag, int arg3,
-				   int arg4)
+GameInstallExJob::GameInstallExJob(const GameInstallExParam *param, bool flag, int cancel,
+				   int cancelArg)
 	: m_result(0), m_param(), m_readInfo(true), m_info(), m_percent(0.0f),
 	  m_progress(&m_percent, param->progressFunc, param->progressArg), m_flag(flag),
-	  m_otherFlag(true), m_flag2(false), m_arg3(arg3), m_arg4(arg4)
+	  m_otherFlag(true), m_unusedFlag(false), m_cancel(cancel), m_cancelArg(cancelArg)
 {
 	sce_paf_memcpy(&m_param, param, sizeof(m_param));
 	sce_paf_memset(&m_info, 0, sizeof(m_info));
@@ -157,7 +157,7 @@ int GameInstallExJob::Run()
 	if (ret < 0)
 		return ret;
 
-	ret = promoter->Run(&m_reg, m_flag, (GameCancelFunc)m_arg3, (void *)m_arg4);
+	ret = promoter->Run(&m_reg, m_flag, (GameCancelFunc)m_cancel, (void *)m_cancelArg);
 	if (ret < 0) {
 		if (promoter != NULL)
 			delete promoter;

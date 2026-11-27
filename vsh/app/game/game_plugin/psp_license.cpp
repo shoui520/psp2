@@ -138,9 +138,9 @@ static char s_removePath[SCE_IO_MAX_PATH_BUFFER_SIZE];
 struct GameGcPartition {
 	SceUInt8 index;
 	SceUInt8 type;
-	SceUInt16 reserved;
+	SceUInt16 pad;
 	SceUInt32 clusterSize;
-	SceUInt32 reserved2;
+	SceUInt32 reserved;
 };
 
 static const GameGcPartition s_gcPartitions[] = {
@@ -150,38 +150,37 @@ static const GameGcPartition s_gcPartitions[] = {
 };
 
 /*
- * PLACEHOLDER: what the FAT formatter linked into the shell (0x81383D8C, its messages name it
- * "FatFormat") is given, 48 bytes; the names are ours, from what the deletion stores.
+ * What the FAT formatter linked into the shell (0x81383D8C, its messages name it "FatFormat")
+ * is given, 48 bytes; matches AppmgrFatFormatArguments in appmgr/fat_format_internal.h.
  */
 struct GameFatFormatParam {
-	SceUInt32 reserved[2];
+	SceUInt64 volumeSize;
 	const char *device;
 	void *buf;
 	SceSize bufSize;
 	SceUInt32 clusterSize;
-	SceUInt32 initialSize;		/* 512: only the partition table made */
-	SceUInt32 reserved2;
+	SceUInt32 initialImageSize;
+	SceUInt32 writtenDataSize;
 	SceUInt32 fatTime;		/* the volume's date and time, as FAT keeps them */
-	SceUInt32 reserved3[2];
+	const char *volumeLabel;
+	SceUInt32 phase;
 	SceUInt32 fsKind;		/* from the partition type: 2 FAT16, 3 FAT32, 4 exFAT */
 };
 
 /*
- * the FAT formatter linked into the shell, not written yet (FatFormat is named by its messages;
- * the time helper's name is ours)
- */
-/*
- * PLACEHOLDER: SceVideoExport's empr0: call (SceVideoExportEmpr 8493BF31) and its 0x498-byte
- * request and 0x448-byte result; no header of the exporter names them yet. The names are ours.
+ * SceVideoExport's empr0: call (SceVideoExportEmpr 8493BF31) and its 0x498-byte request and
+ * 0x448-byte result; matches VideoExportEmprInput in libSceVideoExport/video_export_internal.h.
  */
 struct GameEmprParam {
 	char path[1024];
-	char reserved[64];
+	char titleReserved[64];
 	int mode;
-	int reserved2[3];
+	void *cancelFunc;
+	void *progressFunc;
+	void *userData;
 	void *buf;
 	SceSize bufSize;
-	char reserved3[64];
+	char tailReserved[64];
 };
 
 struct GameEmprResult {
@@ -429,7 +428,7 @@ int gamePspTreeRemoveStep(char *path, SceSize *pathLen, char *names, unsigned in
 		for (unsigned int i = 0; i < count; i++) {
 			if (baseLen + sce_paf_strlen(name) + 1 > SCE_IO_MAX_PATH_BUFFER_SIZE) {
 				ret = GAME_ERROR_TOO_DEEP;
-				goto removed;
+				break;
 			}
 
 			if (sce_paf_strlen(filePath) != SCE_IO_MAX_PATH_BUFFER_SIZE)
@@ -441,30 +440,37 @@ int gamePspTreeRemoveStep(char *path, SceSize *pathLen, char *names, unsigned in
 
 			ret = gamePspLicenseRemove(string(filePath));
 			if (ret < 0)
-				goto removed;
+				break;
 
 			ret = LocalFile::RemoveFile(filePath);
 			if (ret < 0)
-				goto removed;
+				break;
 
 			filePath[baseLen] = '\0';
 			name += GAME_PSP_NAME_SIZE;
 		}
+		if (ret < 0)
+			break;
 	}
 
-removed:
-	if (ret < 0)
-		goto failed;
+	if (ret < 0) {
+		*result = ret;
+		return GAME_PSP_REMOVE_FAILED;
+	}
 
 	if (dir.Open(path) < 0) {
 		ret = LocalFile::Getstat(path, &stat);
-		if (ret < 0)
-			goto failed;
+		if (ret < 0) {
+			*result = ret;
+			return GAME_PSP_REMOVE_FAILED;
+		}
 
 		if (stat.st_mode & SCE_STM_FREG) {
 			ret = LocalFile::RemoveFile(path);
-			if (ret < 0)
-				goto failed;
+			if (ret < 0) {
+				*result = ret;
+				return GAME_PSP_REMOVE_FAILED;
+			}
 		}
 
 		*result = 0;
@@ -473,16 +479,18 @@ removed:
 
 	for (;;) {
 		if (s_stopRequested) {
-			ret = GAME_ERROR_ABORTED;
-			goto failed;
+			*result = GAME_ERROR_ABORTED;
+			return GAME_PSP_REMOVE_FAILED;
 		}
 
 		ret = dir.Read(&entry);
 		if (ret == SCE_PAF_ERROR_DIR_NO_MORE_ENTRY)
 			break;
 
-		if (ret < 0)
-			goto failed;
+		if (ret < 0) {
+			*result = ret;
+			return GAME_PSP_REMOVE_FAILED;
+		}
 
 		if (entry.type != DirEnt::Type_Dir ||
 		    sce_paf_strncmp(entry.name.c_str(), ".", 2) == 0 ||
@@ -506,8 +514,10 @@ removed:
 			ret = GAME_ERROR_TOO_DEEP;
 		}
 
-		if (ret < 0)
-			goto failed;
+		if (ret < 0) {
+			*result = ret;
+			return GAME_PSP_REMOVE_FAILED;
+		}
 
 		(*depth)++;
 		*result = 0;
@@ -518,12 +528,16 @@ removed:
 
 	if (*depth > 0) {
 		ret = LocalFile::Getstat(path, &stat);
-		if (ret < 0)
-			goto failed;
+		if (ret < 0) {
+			*result = ret;
+			return GAME_PSP_REMOVE_FAILED;
+		}
 
 		ret = Dir::Remove(path);
-		if (ret < 0)
-			goto failed;
+		if (ret < 0) {
+			*result = ret;
+			return GAME_PSP_REMOVE_FAILED;
+		}
 	} else {
 		ret = 0;
 	}
@@ -546,10 +560,6 @@ removed:
 
 	*result = ret;
 	return GAME_PSP_REMOVE_DONE;
-
-failed:
-	*result = ret;
-	return GAME_PSP_REMOVE_FAILED;
 }
 
 /* path as one file name: each '/' made a '_' (0x8105AD9A) */
@@ -915,15 +925,14 @@ int gameGcAppDelete(const char *titleId, LsdbAppInfoPtr *info)
 
 					param.device = GAME_GC_GAMERW_DEVICE;
 					param.buf = buf;
-					param.reserved[0] = 0;
-					param.reserved[1] = 0;
+					param.volumeSize = 0;
 					param.bufSize = GAME_GC_FORMAT_BUF_SIZE;
 					param.clusterSize = clusterSize;
 					param.fatTime = fatTime;
-					param.reserved3[0] = 0;
-					param.reserved3[1] = 0;
-					param.initialSize = 0;
-					param.reserved2 = 0;
+					param.volumeLabel = NULL;
+					param.phase = 0;
+					param.initialImageSize = 0;
+					param.writtenDataSize = 0;
 
 					switch (type) {
 					case 0x06:
@@ -1286,8 +1295,8 @@ int gameVideoExportEmpr(void)
 
 	sce_paf_memset(&result, 0, sizeof(result));
 	sce_paf_memset(&param, 0, sizeof(param));
-	sce_paf_memset(param.reserved3, 0, sizeof(param.reserved3));
-	sce_paf_memset(param.reserved, 0, sizeof(param.reserved));
+	sce_paf_memset(param.tailReserved, 0, sizeof(param.tailReserved));
+	sce_paf_memset(param.titleReserved, 0, sizeof(param.titleReserved));
 	sce_paf_strncpy(param.path, GAME_EMPR_DEVICE, sce_paf_strlen(GAME_EMPR_DEVICE));
 	param.mode = 1;
 	param.bufSize = GAME_EMPR_BUF_SIZE;
@@ -1977,10 +1986,10 @@ int gameFileShrink(const string &path, SceOff size)
 /*
  * The save data of the application titleId deleted, by what (0x81063906): one user's (user
  * userNo), the current user's, or every user's; a game card application's from the card's
- * writable partition. reserved and reserved2 are not read.
+ * writable partition. unusedOption and unusedFlags are not read.
  */
 int gameAppDataOperateFiles(const string &titleId, LsdbAppInfoPtr *info, int what, int userNo,
-			    int reserved, int reserved2)
+			    int unusedOption, int unusedFlags)
 {
 	int storage = 0;
 	int ret = gameAppGetStorage(info, &storage);

@@ -144,8 +144,8 @@ __attribute__((noinline)) void ImposeZoom::Finish()
 	Release();
 }
 
-static void imposeZoomOnFaded(Timer *t, ui::AnimListener *listener, void *data1, void *data2,
-			      void *data3);
+static void imposeZoomOnFaded(Timer *t, ui::AnimListener *listener, void *target, void *userData,
+			      void *context);
 
 /* the capture zoomed in from the point to the whole screen, then faded out (0x811521DC) */
 void ImposeZoom::Show(int x, int y)
@@ -201,8 +201,8 @@ int ImposeZoom::IsBlocked()
 }
 
 /* (0x8115275E) */
-static void imposeZoomOnFaded(Timer *t, ui::AnimListener *listener, void *data1, void *data2,
-			      void *data3)
+static void imposeZoomOnFaded(Timer *t, ui::AnimListener *listener, void *target, void *userData,
+			      void *context)
 {
 	s_zoom->Finish();
 }

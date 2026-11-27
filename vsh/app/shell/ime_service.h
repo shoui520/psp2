@@ -149,17 +149,17 @@ public:
 
 /* the IME an application opens (40 bytes): the plugin's, with the client's process */
 struct ImeServiceOpenParam {
-	SceUInt8 param[20];
+	SceUInt8 openHeader[20];
 	SceUID pid;
-	SceUInt8 param2[16];
+	SceUInt8 openTail[16];
 };
 
-/* an asynchronous request's parameters (256 bytes): two values, then what the plugin fills */
+/* an asynchronous dictionary request's parameters (256 bytes): 64-bit language mask and words */
 struct ImeServiceAsyncParam {
-	int arg0;
-	int arg1;
-	SceUInt8 data[104];
-	SceUInt8 data2[144];
+	SceUInt32 languageLow;
+	SceUInt32 languageHigh;
+	SceUInt8 word[104];
+	SceUInt8 newWord[144];
 };
 
 /* ime_plugin's interface 1: a table of functions */
@@ -175,12 +175,13 @@ struct ImePluginInterface {
 	int (*IsOpen)(void);
 	void (*SetConfig)(ImeConfig *config);
 	void (*Abort)(void);
-	int (*GetCandidates)(int arg0, int arg1, void *out);
-	int (*Request22)(int arg0, int arg1, void *data);
-	int (*Request23)(int arg0, int arg1, void *data);
-	int (*Request24)(int arg0, int arg1, void *data, void *data2);
-	int (*Request25)(void);
-	int (*Request26)(void);
+	int (*GetDicWords)(SceUInt32 languageLow, SceUInt32 languageHigh, void *outWords);
+	int (*AddDicWord)(SceUInt32 languageLow, SceUInt32 languageHigh, void *word);
+	int (*DeleteDicWord)(SceUInt32 languageLow, SceUInt32 languageHigh, void *word);
+	int (*ReplaceDicWord)(SceUInt32 languageLow, SceUInt32 languageHigh, void *oldWord,
+			      void *newWord);
+	int (*ClearLearningDic)(void);
+	int (*ClearUserDic)(void);
 };
 
 /* the commands the main thread gives the plugin */

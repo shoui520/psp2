@@ -242,8 +242,8 @@ public:
 	virtual int Run();
 	virtual void Finish(int result);
 
-	string m_reserved1;	/* not read */
-	string m_reserved2;
+	string m_unusedPath;	/* not read */
+	string m_unusedName;
 	int m_state;		/* 0 when run; not read (PLACEHOLDER) */
 	IndicatorRegInfoCallback m_callback;
 	void *m_data;
@@ -308,8 +308,8 @@ void JobGetRegistryInfo::Finish(int result)
 	}
 }
 
-static int indicatorGroupOnLayout(ui::Layouter *layouter, ui::Widget *widget, void *data1,
-				  void *data2, void *data3);
+static int indicatorGroupOnLayout(ui::Layouter *layouter, ui::Widget *widget, void *layoutArg,
+				  void *userData, void *context);
 
 /* the group's items made in its widget, laid out by indicatorGroupOnLayout: the mobile network's
    with a modem that needs its check, then the Wi-Fi's, the battery's but on the Dolce, and the
@@ -381,8 +381,8 @@ void IndicatorLeftGroup::OnStatus(IndicatorStatus status)
 
 /* the group's widgets put one after the other from the left, 4 apart, the empty ones taking no
    room (0x81160310) */
-static int indicatorGroupOnLayout(ui::Layouter *layouter, ui::Widget *widget, void *data1,
-				  void *data2, void *data3)
+static int indicatorGroupOnLayout(ui::Layouter *layouter, ui::Widget *widget, void *layoutArg,
+				  void *userData, void *context)
 {
 	if (widget != NULL && layouter->IsDirty(0xff)) {
 		float x = 0.0f;
@@ -428,8 +428,8 @@ static void indicatorRemovePageDot(int key);
 static void indicatorRefreshPageDots(void);
 static void indicatorSetPageDotImage(int key, const intrusive_ptr<ui::TextureSource> *image);
 static void indicatorSetPageDotTexture(int key, const intrusive_ptr<graph::Surface> &texture);
-static int indicatorPageDotsOnLayout(ui::Layouter *layouter, ui::Widget *widget, void *data1,
-				     void *data2, void *data3);
+static int indicatorPageDotsOnLayout(ui::Layouter *layouter, ui::Widget *widget, void *layoutArg,
+				     void *userData, void *context);
 static void indicatorPageDotsOnRefreshTimer(SceInt32 type, ui::Handler *self, ui::Event *e,
 					    void *data);
 
@@ -640,8 +640,8 @@ static void indicatorSetPageDotTexture(int key, const intrusive_ptr<graph::Surfa
 
 /* the dots put side by side, 4 apart, centred on the widget as topmenu places their pages; a new
    dot (still clear) put in place and faded in, the others moved there (0x8116126A) */
-static int indicatorPageDotsOnLayout(ui::Layouter *layouter, ui::Widget *widget, void *data1,
-				     void *data2, void *data3)
+static int indicatorPageDotsOnLayout(ui::Layouter *layouter, ui::Widget *widget, void *layoutArg,
+				     void *userData, void *context)
 {
 	if (!layouter->IsDirty(0xff) || widget == NULL)
 		return 0;

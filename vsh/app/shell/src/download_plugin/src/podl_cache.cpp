@@ -318,12 +318,11 @@ int Bgdl_8113CBAC(common::SharedPtr<File> src, common::SharedPtr<File> dst, SceU
 				return ret;
 			left -= n;
 			if (left == 0)
-				goto done;
+				break;
 		}
-		if (*size == 0)
+		if (left != 0 && *size == 0)
 			*size = *maxSize - left;
 	}
-done:
 	if (*size != 0)
 		return 0;
 	return PODL_ERROR_TOO_LARGE;

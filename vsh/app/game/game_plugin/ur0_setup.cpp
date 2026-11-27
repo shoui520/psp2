@@ -47,41 +47,38 @@ GameUr0Setup::GameUr0Setup(const LsdbAppInfoPtr *info, int type)
 
 		if (it == (*info)->end()) {
 			ret = GAME_ERROR_NO_VALUE;
-			goto end;
-		}
+		} else {
+			m_titleId = LsdbValueText(it->second);
 
-		m_titleId = LsdbValueText(it->second);
+			it = (*info)->find(LSDB_KEY_CATEGORY);
+			if (it == (*info)->end()) {
+				ret = GAME_ERROR_NO_VALUE;
+			} else {
+				m_category = LsdbValueText(it->second);
 
-		it = (*info)->find(LSDB_KEY_CATEGORY);
-		if (it == (*info)->end()) {
-			ret = GAME_ERROR_NO_VALUE;
-			goto end;
-		}
+				it = (*info)->find(LSDB_KEY_ORG_PATH);
+				if (it == (*info)->end()) {
+					ret = GAME_ERROR_NO_VALUE;
+				} else {
+					m_orgPath = LsdbValueText(it->second);
 
-		m_category = LsdbValueText(it->second);
+					ret = gameAppGetStorage(info, &m_storage);
+					if (ret >= 0) {
+						it = (*info)->find(LSDB_KEY_UP_STATUS);
+						if (it != (*info)->end())
+							m_upStatus = (SceUInt32)gameLsdbValueInteger(
+								it->second);
 
-		it = (*info)->find(LSDB_KEY_ORG_PATH);
-		if (it == (*info)->end()) {
-			ret = GAME_ERROR_NO_VALUE;
-			goto end;
-		}
-
-		m_orgPath = LsdbValueText(it->second);
-
-		ret = gameAppGetStorage(info, &m_storage);
-		if (ret >= 0) {
-			it = (*info)->find(LSDB_KEY_UP_STATUS);
-			if (it != (*info)->end())
-				m_upStatus = (SceUInt32)gameLsdbValueInteger(it->second);
-
-			if (gameAppInfoPromoteAttrBit2(info))
-				m_promoteAttrBit2 = true;
+						if (gameAppInfoPromoteAttrBit2(info))
+							m_promoteAttrBit2 = true;
+					}
+				}
+			}
 		}
 	} else {
 		ret = GAME_ERROR_INVALID_ARGUMENT;
 	}
 
-end:
 	m_error = ret;
 }
 
@@ -217,8 +214,6 @@ int GameUr0Setup::SetupPsm(void)
 					return ret;
 
 				ret = gameRemoveDirectoryContents(tempDir.c_str(), 0, 0, 0, true);
-				if (ret < 0)
-					goto end;
 			} else {
 				ret = gameAppmetaCommit(&tempDir, &m_titleId, 0);
 				if (ret >= 0)
@@ -228,7 +223,6 @@ int GameUr0Setup::SetupPsm(void)
 		}
 	}
 
-end:
 	delete appInfo;
 
 	return ret;
@@ -326,53 +320,41 @@ int GameUr0Setup::SetupPspIcons(const string &dir, const string *ebootPath)
 		return GAME_ERROR_NO_INFO_MEMORY;
 
 	ret = gameFileReadAt(ebootPath, header.icon0Offset, size, icon);
-	if (ret < 0)
-		goto end;
-
-	if (m_type == 1 || m_type == 2 || m_type == 0) {
+	if (ret >= 0 && (m_type == 1 || m_type == 2 || m_type == 0)) {
 		ret = gameAppInfoGetCategoryKind(&m_info, &kind);
-		if (ret < 0)
-			goto end;
+		if (ret >= 0) {
+			int attributeKind = 0;
 
-		int attributeKind = 0;
+			if (kind == 2)
+				attributeKind = gameAppInfoGetAttributeKind(&m_info);
 
-		if (kind == 2)
-			attributeKind = gameAppInfoGetAttributeKind(&m_info);
+			iconPath = dir + string("/icon0.dds");
 
-		iconPath = dir + string("/icon0.dds");
-
-		ret = gameIconWrite(kind, attributeKind, &iconPath, icon, size);
-		if (ret < 0)
-			goto end;
+			ret = gameIconWrite(kind, attributeKind, &iconPath, icon, size);
+		}
 	}
 
-	if (m_type == 0) {
+	if (ret >= 0 && m_type == 0) {
 		string contentsDir = dir + string("/livearea/contents");
 
 		ret = Dir::CreateRecursive(contentsDir.c_str(), 6);
-		if (ret < 0)
-			goto end;
+		if (ret >= 0) {
+			startupPath = dir + string("/livearea/contents/startup.png");
 
-		startupPath = dir + string("/livearea/contents/startup.png");
-
-		ret = gameFileWrite(&startupPath, icon, size);
-		if (ret < 0)
-			goto end;
-
-		if (m_category == "EG")
-			ret = SetupPspLiveArea(dir);
-		else if (m_category == "ME")
-			ret = SetupPs1LiveArea(dir);
-		else
-			ret = GAME_ERROR_NOT_APP_PACKAGE;
-
-		if (ret < 0)
-			goto end;
-
-		ret = 0;
+			ret = gameFileWrite(&startupPath, icon, size);
+		}
+		if (ret >= 0) {
+			if (m_category == "EG")
+				ret = SetupPspLiveArea(dir);
+			else if (m_category == "ME")
+				ret = SetupPs1LiveArea(dir);
+			else
+				ret = GAME_ERROR_NOT_APP_PACKAGE;
+		}
+		if (ret >= 0)
+			ret = 0;
 	}
 
-end:
 	delete[] icon;
 
 	return ret;
@@ -546,45 +528,35 @@ int GameUr0Setup::SetupPsp(void)
 		return ret;
 
 	ret = gamePspemuWorkMount(&mountPoint);
-	if (ret < 0)
-		goto end;
+	if (ret >= 0)
+		ret = GetPspBootPath(&bootPath);
 
-	ret = GetPspBootPath(&bootPath);
-	if (ret < 0)
-		goto end;
+	if (ret >= 0 && bootPath.length() != 0) {
+		gameRemoveDirectoryContents(GAME_TEMP_APPMETA_DIR, 0, 0, 0, true);
+		Dir::CreateRecursive(GAME_APPMETA_DIR, 6);
 
-	if (bootPath.length() == 0) {
-		ret = 0;
-		goto end;
+		tempDir = string(GAME_TEMP_APPMETA_DIR);
+		appmetaDir = tempDir + string("/") + m_titleId;
+
+		ret = SetupPspIcons(appmetaDir, &bootPath);
+		if (ret >= 0) {
+			if (m_type == 1 || m_type == 2) {
+				dst = string(GAME_APPMETA_DIR "/") + m_titleId;
+
+				ret = gameMoveTree(appmetaDir.c_str(), dst.c_str(), NULL, NULL,
+						   &m_detail);
+				if (ret >= 0)
+					ret = gameRemoveDirectoryContents(tempDir.c_str(), 0, 0, 0,
+									  true);
+			} else {
+				ret = gameAppmetaCommit(&tempDir, &m_titleId, 0);
+				if (ret >= 0)
+					ret = gameRemoveDirectoryContents(tempDir.c_str(), 0, 0, 0,
+									  true);
+			}
+		}
 	}
 
-	gameRemoveDirectoryContents(GAME_TEMP_APPMETA_DIR, 0, 0, 0, true);
-	Dir::CreateRecursive(GAME_APPMETA_DIR, 6);
-
-	tempDir = string(GAME_TEMP_APPMETA_DIR);
-	appmetaDir = tempDir + string("/") + m_titleId;
-
-	ret = SetupPspIcons(appmetaDir, &bootPath);
-	if (ret < 0)
-		goto end;
-
-	if (m_type == 1 || m_type == 2) {
-		dst = string(GAME_APPMETA_DIR "/") + m_titleId;
-
-		ret = gameMoveTree(appmetaDir.c_str(), dst.c_str(), NULL, NULL, &m_detail);
-		if (ret < 0)
-			goto end;
-
-		ret = gameRemoveDirectoryContents(tempDir.c_str(), 0, 0, 0, true);
-	} else {
-		ret = gameAppmetaCommit(&tempDir, &m_titleId, 0);
-		if (ret < 0)
-			goto end;
-
-		ret = gameRemoveDirectoryContents(tempDir.c_str(), 0, 0, 0, true);
-	}
-
-end:
 	gamePspemuWorkUnmount(&mountPoint);
 
 	return ret;
@@ -693,48 +665,44 @@ int GameUr0Setup::SetupGameDir(const string &dir, bool skipParams)
 {
 	int ret;
 
-	if (skipParams)
-		goto appmeta;
+	if (!skipParams) {
+		if (m_type == 0 && (m_storage == 1 || m_storage == 2)) {
+			ret = SetupGcParamSfo(dir.c_str());
+			if (ret < 0)
+				return ret;
+		}
 
-	if (m_type == 0 && (m_storage == 1 || m_storage == 2)) {
-		ret = SetupGcParamSfo(dir.c_str());
-		if (ret < 0)
-			return ret;
-	}
+		if (m_type == 0 || m_type == 2) {
+			ret = gameAppmetaCopyParams(m_mountPoint.c_str(), dir.c_str(), &m_detail);
+			if (ret < 0)
+				return ret;
 
-	if (m_type != 0 && m_type != 2)
-		goto appmeta;
+			LocalFileStat stat;
+			string ebootPath = m_mountPoint + string("/eboot.bin");
+			string paramPath = dir + string("/ebootparam.bin");
 
-	ret = gameAppmetaCopyParams(m_mountPoint.c_str(), dir.c_str(), &m_detail);
-	if (ret < 0)
-		return ret;
+			ret = gameAppmetaWriteEbootParam(&ebootPath, &paramPath, &m_detail);
+			if (ret < 0)
+				return ret;
 
-	{
-		LocalFileStat stat;
-		string ebootPath = m_mountPoint + string("/eboot.bin");
-		string paramPath = dir + string("/ebootparam.bin");
+			for (SceUInt32 i = 0; i < GAME_EXTRA_EBOOT_COUNT; i++) {
+				char name[32];
 
-		ret = gameAppmetaWriteEbootParam(&ebootPath, &paramPath, &m_detail);
-		if (ret < 0)
-			return ret;
+				sce_paf_snprintf(name, sizeof(name), "/eboot%u.bin", i + 2);
+				ebootPath = m_orgPath + string(name);
 
-		for (SceUInt32 i = 0; i < GAME_EXTRA_EBOOT_COUNT; i++) {
-			char name[32];
+				if (LocalFile::Getstat(ebootPath.c_str(), &stat) == 0) {
+					paramPath = dir + string("/ebootparam2.bin");
 
-			sce_paf_snprintf(name, sizeof(name), "/eboot%u.bin", i + 2);
-			ebootPath = m_orgPath + string(name);
-
-			if (LocalFile::Getstat(ebootPath.c_str(), &stat) == 0) {
-				paramPath = dir + string("/ebootparam2.bin");
-
-				ret = gameAppmetaWriteEbootParam(&ebootPath, &paramPath, &m_detail);
-				if (ret < 0)
-					return ret;
+					ret = gameAppmetaWriteEbootParam(&ebootPath, &paramPath,
+									 &m_detail);
+					if (ret < 0)
+						return ret;
+				}
 			}
 		}
 	}
 
-appmeta:
 	ret = SetupGameAppmeta(dir);
 	if (ret >= 0)
 		return 0;
@@ -840,7 +808,7 @@ int GameUr0Setup::Mount(void)
 
 	if (m_orgPath.find("vs0:", 0, sce_paf_strlen("vs0:")) != string::npos) {
 		patchPath.clear();
-		goto end;
+		return 0;
 	}
 
 	if (m_orgPath.find("gro0:app/", 0, sce_paf_strlen("gro0:app/")) != string::npos) {
@@ -893,7 +861,6 @@ int GameUr0Setup::Mount(void)
 			return ret;
 	}
 
-end:
 	return ret;
 }
 
@@ -920,37 +887,35 @@ int GameUr0Setup::SetupGame(void)
 	bool skipParams = false;
 	int ret = Mount();
 
-	if (ret < 0)
-		goto unmount;
+	if (ret >= 0) {
+		gameRemoveDirectoryContents(GAME_TEMP_APPMETA_DIR, 0, 0, 0, true);
+		Dir::CreateRecursive(GAME_APPMETA_DIR, 6);
 
-	gameRemoveDirectoryContents(GAME_TEMP_APPMETA_DIR, 0, 0, 0, true);
-	Dir::CreateRecursive(GAME_APPMETA_DIR, 6);
+		if (m_promoteAttrBit2) {
+			ret = SetupPromoteAppmeta(&m_titleId);
+		} else {
+			switch (m_storage) {
+			case 1:
+				break;
+			case 2:
+				if (Dir::IsExist("ux0:"))
+					skipParams = true;
+				break;
+			case 3:
+				skipParams = true;
+				break;
+			case 4:
+				break;
+			default:
+				ret = GAME_ERROR_NO_STORAGE;
+				break;
+			}
 
-	if (m_promoteAttrBit2) {
-		ret = SetupPromoteAppmeta(&m_titleId);
-		goto unmount;
+			if (ret >= 0)
+				ret = SetupGameAppmetaDir(skipParams);
+		}
 	}
 
-	switch (m_storage) {
-	case 1:
-		break;
-	case 2:
-		if (Dir::IsExist("ux0:"))
-			skipParams = true;
-		break;
-	case 3:
-		skipParams = true;
-		break;
-	case 4:
-		break;
-	default:
-		ret = GAME_ERROR_NO_STORAGE;
-		goto unmount;
-	}
-
-	ret = SetupGameAppmetaDir(skipParams);
-
-unmount:
 	if (m_mountPoint.length() != 0) {
 		if (m_mounted && gameAppUnmount(&m_mountPoint) < 0)
 			return ret;

@@ -33,8 +33,8 @@ GameType17InstallSource::~GameType17InstallSource()
 }
 
 int GameType17InstallSource::Install(const string *path, const string *titleId, string *dir,
-				     string *installPath, GameJobProgress *progress, int reserved1,
-				     int reserved2, float scale)
+				     string *installPath, GameJobProgress *progress, int cancel,
+				     int cancelArg, float scale)
 {
 	int ret;
 

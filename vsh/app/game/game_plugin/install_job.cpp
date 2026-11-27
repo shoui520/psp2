@@ -44,9 +44,9 @@ int GameInstallJob::CheckParam()
 }
 
 GameInstallJob::GameInstallJob(const GameInstallParam *param, bool flag,
-			       bool (*isStopRequested)(void), int arg4)
+			       bool (*isStopRequested)(void), int cancelArg)
 	: m_result(0), m_param(), m_flag(flag), m_otherFlag(true),
-	  m_isStopRequested(isStopRequested), m_arg4(arg4), m_percent(0.0f),
+	  m_isStopRequested(isStopRequested), m_cancelArg(cancelArg), m_percent(0.0f),
 	  m_progress(&m_percent, param->progressFunc, param->progressArg)
 {
 	sce_paf_memcpy(&m_param, param, sizeof(m_param));
@@ -96,7 +96,7 @@ int GameInstallJob::Run()
 	if (ret < 0)
 		return ret;
 
-	ret = promoter->Run(&m_reg, m_flag, (GameCancelFunc)m_isStopRequested, (void *)m_arg4);
+	ret = promoter->Run(&m_reg, m_flag, (GameCancelFunc)m_isStopRequested, (void *)m_cancelArg);
 	if (ret < 0) {
 		if (promoter != NULL)
 			delete promoter;

@@ -71,49 +71,65 @@ void shellNpFriendFree(void *ptr)
 /* (0x810F5F4A) */
 void shellNpFriendInit(void)
 {
-	if (s_modelMem == NULL) {
-		s_modelMem = shellNpFriendMalloc(NP_FRIEND_MODEL_HEAP_SIZE);
-		if (s_modelMem == NULL)
-			return;
-		s_modelHeap = new memory::HeapAllocator(s_modelMem, NP_FRIEND_MODEL_HEAP_SIZE,
-							"SceNpFriendVshModelAlloc", NULL);
-		if (s_modelHeap == NULL)
-			goto free_model;
-		if (npFriendStorageInit(s_modelHeap) < 0)
-			goto delete_model;
-	}
-	if (s_importerMem == NULL) {
-		s_importerMem = shellNpFriendMalloc(NP_FRIEND_IMPORTER_HEAP_SIZE);
-		if (s_importerMem == NULL)
-			goto term_storage;
-		s_importerHeap = new memory::HeapAllocator(s_importerMem, NP_FRIEND_IMPORTER_HEAP_SIZE,
-							   "SceNpFriendImporterAlloc", NULL);
-		if (s_importerHeap == NULL)
-			goto free_importer;
-		if (npFriendImporterInit(s_importerHeap) < 0)
-			goto delete_importer;
-	}
-	{
-		NpFriendAllocator allocator = { sce_paf_malloc, sce_paf_free };
+	int stage = 0;
 
-		if (npFriendListSetAllocator(&allocator) >= 0)
-			return;
+	do {
+		if (s_modelMem == NULL) {
+			s_modelMem = shellNpFriendMalloc(NP_FRIEND_MODEL_HEAP_SIZE);
+			if (s_modelMem == NULL)
+				return;
+			stage = 1;
+			s_modelHeap = new memory::HeapAllocator(s_modelMem, NP_FRIEND_MODEL_HEAP_SIZE,
+								"SceNpFriendVshModelAlloc", NULL);
+			if (s_modelHeap == NULL)
+				break;
+			stage = 2;
+			if (npFriendStorageInit(s_modelHeap) < 0)
+				break;
+		}
+		stage = 3;
+		if (s_importerMem == NULL) {
+			s_importerMem = shellNpFriendMalloc(NP_FRIEND_IMPORTER_HEAP_SIZE);
+			if (s_importerMem == NULL)
+				break;
+			stage = 4;
+			s_importerHeap = new memory::HeapAllocator(s_importerMem, NP_FRIEND_IMPORTER_HEAP_SIZE,
+								   "SceNpFriendImporterAlloc", NULL);
+			if (s_importerHeap == NULL)
+				break;
+			stage = 5;
+			if (npFriendImporterInit(s_importerHeap) < 0)
+				break;
+		}
+		stage = 6;
+		{
+			NpFriendAllocator allocator = { sce_paf_malloc, sce_paf_free };
+
+			if (npFriendListSetAllocator(&allocator) >= 0)
+				return;
+		}
+	} while (0);
+
+	if (stage >= 6)
+		npFriendImporterTerm();
+	if (stage >= 5) {
+		if (s_importerHeap != NULL)
+			delete s_importerHeap;
+		s_importerHeap = NULL;
 	}
-	npFriendImporterTerm();
-delete_importer:
-	if (s_importerHeap != NULL)
-		delete s_importerHeap;
-	s_importerHeap = NULL;
-free_importer:
-	shellNpFriendFree(s_importerMem);
-	s_importerMem = NULL;
-term_storage:
-	npFriendStorageTerm();
-delete_model:
-	if (s_modelHeap != NULL)
-		delete s_modelHeap;
-	s_modelHeap = NULL;
-free_model:
-	shellNpFriendFree(s_modelMem);
-	s_modelMem = NULL;
+	if (stage >= 4) {
+		shellNpFriendFree(s_importerMem);
+		s_importerMem = NULL;
+	}
+	if (stage >= 3)
+		npFriendStorageTerm();
+	if (stage >= 2) {
+		if (s_modelHeap != NULL)
+			delete s_modelHeap;
+		s_modelHeap = NULL;
+	}
+	if (stage >= 1) {
+		shellNpFriendFree(s_modelMem);
+		s_modelMem = NULL;
+	}
 }

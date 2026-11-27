@@ -142,43 +142,36 @@ int gameEbootSigGen(const SceNpDrmInstallInfo *info, const string &ebootPath, co
 		ret = gamePbpReadHeader(ebootPath.c_str(), &header, &multiDisc);
 		if (ret < 0) {
 			gamePathGetMountedDrive(ebootPath, detail);
-			goto end;
-		}
-
-		if (multiDisc) {
+		} else if (multiDisc) {
 			ret = gameEbootSigGenMultiDisc(info, ebootPath, signature, detail);
-			if (ret < 0)
-				goto end;
 		} else {
 			ret = vshNpDrmEbootSigGenPs1(ebootPath.c_str(), sha256, signature,
 						     info->swVersion);
-			if (ret < 0)
-				goto end;
 		}
 	} else {
 		ret = vshNpDrmEbootSigGenPsp(ebootPath.c_str(), sha256, signature, info->swVersion);
-		if (ret < 0)
-			goto end;
 	}
 
-	file = LocalFile::Open(sigPath.c_str(), SCE_O_RDWR | SCE_O_CREAT | SCE_O_TRUNC, 6, &ret);
-	if (ret < 0) {
-		gamePathGetMountedDrive(sigPath, detail);
-	} else {
-		int size = file->Write(signature, sizeof(*signature));
-
-		if (size < 0) {
-			ret = size;
+	if (ret >= 0) {
+		file = LocalFile::Open(sigPath.c_str(), SCE_O_RDWR | SCE_O_CREAT | SCE_O_TRUNC, 6,
+				       &ret);
+		if (ret < 0) {
 			gamePathGetMountedDrive(sigPath, detail);
 		} else {
-			ret = 0;
+			int size = file->Write(signature, sizeof(*signature));
+
+			if (size < 0) {
+				ret = size;
+				gamePathGetMountedDrive(sigPath, detail);
+			} else {
+				ret = 0;
+			}
 		}
+
+		if (file.get() != NULL)
+			file->Close();
 	}
 
-	if (file.get() != NULL)
-		file->Close();
-
-end:
 	delete signature;
 
 	return ret;

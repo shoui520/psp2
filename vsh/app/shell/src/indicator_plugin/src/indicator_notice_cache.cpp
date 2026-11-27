@@ -110,10 +110,10 @@ static void indicatorNoticeCacheOnEnd(SceInt32 type, ui::Handler *self, ui::Even
 static void indicatorNoticeCacheOnIconInfo(IndicatorIconInfoMap *icons, int result, void *arg);
 static void indicatorNoticeCacheOnBoxEvent(SceInt32 type, ui::Handler *self, ui::Event *e,
 					   void *data);
-static void indicatorNoticeCacheOnHidden(Timer *t, ui::AnimListener *listener, void *data1,
-					 void *data2, void *data3);
-static void indicatorNoticeCacheOnShown(Timer *t, ui::AnimListener *listener, void *data1,
-					void *data2, void *data3);
+static void indicatorNoticeCacheOnHidden(Timer *t, ui::AnimListener *listener, void *target,
+					 void *userData, void *context);
+static void indicatorNoticeCacheOnShown(Timer *t, ui::AnimListener *listener, void *target,
+					void *userData, void *context);
 
 /* the event's sound: one that pops up plays the default sound for none and is silent for -1;
    one without the sound flag none (0x8116DA80) */
@@ -648,8 +648,8 @@ static void indicatorNoticeCacheOnBoxEvent(SceInt32 type, ui::Handler *self, ui:
 }
 
 /* the notice's widget moved out: destroyed, and the next notice shown (0x8116F926) */
-static void indicatorNoticeCacheOnHidden(Timer *t, ui::AnimListener *listener, void *data1,
-					 void *data2, void *data3)
+static void indicatorNoticeCacheOnHidden(Timer *t, ui::AnimListener *listener, void *target,
+					 void *userData, void *context)
 {
 	g_indicatorNoticeCache->m_popup->DestroyWidget();
 	g_indicatorNoticeCache->m_popup = NULL;
@@ -657,8 +657,8 @@ static void indicatorNoticeCacheOnHidden(Timer *t, ui::AnimListener *listener, v
 }
 
 /* the bar popped: it blinks, and the notice's icon is read (0x8116F948) */
-static void indicatorNoticeCacheOnShown(Timer *t, ui::AnimListener *listener, void *data1,
-					void *data2, void *data3)
+static void indicatorNoticeCacheOnShown(Timer *t, ui::AnimListener *listener, void *target,
+					void *userData, void *context)
 {
 	g_indicatorNewEvent->StartBlink();
 	g_indicatorNoticeCache->LoadIconInfo();

@@ -39,10 +39,6 @@ void applauncherDataCacheMakeSpace(void);
 /* the IconCacheManager made and taken down (0x810BD35C, 0x810BD372) */
 void applauncherIconCacheCreate(paf::Plugin *plugin);
 void applauncherIconCacheDestroy(void);
-/* empty in this build: called at the plugin's end after the caches (folded into one empty
-   function) */
-void applauncherExitReserved0(void);
-void applauncherExitReserved1(void);
 
 /* the colours of the user's own wave (preset 31), from waveparam.bin (0x810C6DF8) */
 struct ApplauncherWaveColors {
@@ -79,7 +75,7 @@ int photoExportConvertFile(const PhotoExportConvertParam *param, void *workMemor
 
 /*
  * pd0:wave/waveparam.bin: a paf::graph::WavePreset as the wave editor wrote it (672 bytes), its
- * head read here: the preset's index and the eight words paf's header calls m_reserved1, the
+ * head read here: the preset's index and the eight words holding the
  * user's wave colours. Read as the file, so the file does not take wave_renderer.h's headers
  * (and color.h's static colours) with it.
  */

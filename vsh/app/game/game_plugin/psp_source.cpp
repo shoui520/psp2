@@ -167,84 +167,76 @@ int gamePbpReadSfo(const string *path, LsdbAppInfoPtr *sfo)
 	GamePbpHeader header;
 	int ret = gamePbpReadHeader(path->c_str(), &header, NULL);
 
-	if (ret < 0)
-		goto out;
-
-	{
+	if (ret >= 0) {
 		SceSize size = header.icon0Offset - header.paramSfoOffset;
 
 		ret = gameFileReadAlloc(path->c_str(), header.paramSfoOffset, &buf, size);
-		if (ret < 0)
-			goto out;
-
-		ret = gameSfoLoadParams(buf, size, gameSfoGetPspCheckParams(),
-					gameSfoGetPspCheckParamCount(), sfo, true);
-		if (ret < 0)
-			goto out;
-
-		LsdbAppInfo::iterator end = (*sfo)->end();
-		LsdbAppInfo::iterator it = (*sfo)->find(LSDB_KEY_CATEGORY);
-
-		if (it == end) {
-			ret = GAME_ERROR_BAD_DATA;
-			goto out;
-		}
-
-		category = LsdbValueText(it->second);
-
-		const GameSfoParam *params = NULL;
-		unsigned int count;
-
-		if ((*sfo)->find(LSDB_KEY_UPDATER_VER) == end) {
-			if (category == "MG") {
-				it = (*sfo)->find(LSDB_KEY_BOOTABLE);
-				if (it == end) {
-					params = gameSfoGetPspGameParams();
-					count = gameSfoGetPspGameParamCount();
-				} else {
-					if (gameLsdbValueInteger(it->second) != 0)
-						params = gameSfoGetPspGameParams();
-					else
-						params = gameSfoGetPspGameBootParams();
-					count = gameSfoGetPspGameParamCount();
-				}
-			} else if (category == "MA") {
-				params = gameSfoGetPspAppParams();
-				count = gameSfoGetPspAppParamCount();
-			} else if (category == "ME") {
-				params = gameSfoGetPspPs1Params();
-				count = gameSfoGetPspPs1ParamCount();
-			} else if (category == "EG") {
-				params = gameSfoGetPspDiscGameParams();
-				count = gameSfoGetPspDiscGameParamCount();
-			} else if (category == "PG") {
-				params = gameSfoGetPspPatchParams();
-				count = gameSfoGetPspPatchParamCount();
-			} else if (category == "WG") {
-				params = gameSfoGetPspWgParams();
-				count = gameSfoGetPspWgParamCount();
-			}
-		} else {
-			if (category != "MG") {
-				ret = GAME_ERROR_BAD_DATA;
-				goto out;
-			}
-
-			params = gameSfoGetPspUpdaterParams();
-			count = gameSfoGetPspUpdaterParamCount();
-		}
-
-		if (params == NULL) {
-			ret = GAME_ERROR_NOT_APP_PACKAGE;
-			goto out;
-		}
-
-		ret = gameSfoLoadParams(buf, size, params, count, sfo, true);
 		if (ret >= 0)
-			ret = 0;
+			ret = gameSfoLoadParams(buf, size, gameSfoGetPspCheckParams(),
+						gameSfoGetPspCheckParamCount(), sfo, true);
+
+		if (ret >= 0) {
+			LsdbAppInfo::iterator end = (*sfo)->end();
+			LsdbAppInfo::iterator it = (*sfo)->find(LSDB_KEY_CATEGORY);
+
+			if (it == end) {
+				ret = GAME_ERROR_BAD_DATA;
+			} else {
+				category = LsdbValueText(it->second);
+
+				const GameSfoParam *params = NULL;
+				unsigned int count = 0;
+
+				if ((*sfo)->find(LSDB_KEY_UPDATER_VER) == end) {
+					if (category == "MG") {
+						it = (*sfo)->find(LSDB_KEY_BOOTABLE);
+						if (it == end) {
+							params = gameSfoGetPspGameParams();
+							count = gameSfoGetPspGameParamCount();
+						} else {
+							if (gameLsdbValueInteger(it->second) != 0)
+								params = gameSfoGetPspGameParams();
+							else
+								params = gameSfoGetPspGameBootParams();
+							count = gameSfoGetPspGameParamCount();
+						}
+					} else if (category == "MA") {
+						params = gameSfoGetPspAppParams();
+						count = gameSfoGetPspAppParamCount();
+					} else if (category == "ME") {
+						params = gameSfoGetPspPs1Params();
+						count = gameSfoGetPspPs1ParamCount();
+					} else if (category == "EG") {
+						params = gameSfoGetPspDiscGameParams();
+						count = gameSfoGetPspDiscGameParamCount();
+					} else if (category == "PG") {
+						params = gameSfoGetPspPatchParams();
+						count = gameSfoGetPspPatchParamCount();
+					} else if (category == "WG") {
+						params = gameSfoGetPspWgParams();
+						count = gameSfoGetPspWgParamCount();
+					}
+				} else if (category != "MG") {
+					ret = GAME_ERROR_BAD_DATA;
+				} else {
+					params = gameSfoGetPspUpdaterParams();
+					count = gameSfoGetPspUpdaterParamCount();
+				}
+
+				if (ret >= 0) {
+					if (params == NULL) {
+						ret = GAME_ERROR_NOT_APP_PACKAGE;
+					} else {
+						ret = gameSfoLoadParams(buf, size, params, count,
+									sfo, true);
+						if (ret >= 0)
+							ret = 0;
+					}
+				}
+			}
+		}
 	}
 
-out:
 	if (buf != NULL) {
 		sce_paf_free(buf);
 		buf = NULL;

@@ -33,8 +33,8 @@ GameLicenseInstallSource::~GameLicenseInstallSource()
 }
 
 int GameLicenseInstallSource::Install(const string *path, const string *titleId, string *dir,
-				      string *installPath, GameJobProgress *progress, int reserved1,
-				      int reserved2, float scale)
+				      string *installPath, GameJobProgress *progress, int cancel,
+				      int cancelArg, float scale)
 {
 	int ret;
 
@@ -53,8 +53,8 @@ int GameLicenseInstallSource::Install(const string *path, const string *titleId,
 	return 0;
 }
 
-int GameLicenseInstallSource::Complete(string *dir, string *installPath, int reserved1,
-				       int reserved2, int reserved3, float scale)
+int GameLicenseInstallSource::Complete(string *dir, string *installPath, int progress,
+				       int cancel, int cancelArg, float scale)
 {
 	string titleId(m_param->titleId);
 	int ret;

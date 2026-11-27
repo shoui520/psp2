@@ -145,15 +145,15 @@ void coldbootOpen(void)
 
 	ScePafWidget_0253DC9C(plane, true);
 
-	ui::Widget *text1 = s_state->page->FindChild(IDParam(COLDBOOT_PAGE_TEXT1), 0);
-	ui::Widget *text2 = s_state->page->FindChild(IDParam(COLDBOOT_PAGE_TEXT2), 0);
+	ui::Widget *leadText = s_state->page->FindChild(IDParam(COLDBOOT_PAGE_TEXT1), 0);
+	ui::Widget *followText = s_state->page->FindChild(IDParam(COLDBOOT_PAGE_TEXT2), 0);
 
-	text1->SetMetaAlpha(0.0f);
-	text2->SetMetaAlpha(0.0f);
+	leadText->SetMetaAlpha(0.0f);
+	followText->SetMetaAlpha(0.0f);
 	if (shellStartupNeedsInitialSetup() && !shellStartupIsPmMode() &&
 	    shellStartupGetIduMode() != 1 && !shellStartupIsTestMode()) {
-		FadeInOut(text1, s_state->delay, COLDBOOT_TEXT_TIME, NULL);
-		FadeInOut(text2, s_state->delay + COLDBOOT_TEXT2_START, COLDBOOT_TEXT_TIME, NULL);
+		FadeInOut(leadText, s_state->delay, COLDBOOT_TEXT_TIME, NULL);
+		FadeInOut(followText, s_state->delay + COLDBOOT_TEXT2_START, COLDBOOT_TEXT_TIME, NULL);
 
 		ui::Scene *page = s_state->page;
 		float delay = s_state->delay + COLDBOOT_PAGE_TIME;
@@ -174,8 +174,8 @@ void coldbootClose(void)
 	g_coldbootPlugin->PageClose(IDParam(COLDBOOT_PAGE), Plugin::PageCloseParam());
 }
 
-static void coldbootOnFaded(Timer *t, ui::AnimListener *listener, void *data1, void *data2,
-			    void *data3);
+static void coldbootOnFaded(Timer *t, ui::AnimListener *listener, void *target, void *userData,
+			    void *context);
 
 /* (0x810E569E) the region text's event: it fades out, the page shown, and the plugin unloads */
 static void coldbootOnRegionText(int32_t type, ui::Handler *self, ui::Event *e, void *data)
@@ -188,8 +188,8 @@ static void coldbootOnRegionText(int32_t type, ui::Handler *self, ui::Event *e, 
 }
 
 /* (0x810E593C) */
-static void coldbootOnFaded(Timer *t, ui::AnimListener *listener, void *data1, void *data2,
-			    void *data3)
+static void coldbootOnFaded(Timer *t, ui::AnimListener *listener, void *target, void *userData,
+			    void *context)
 {
 	Plugin::UnloadAsync(g_coldbootPlugin, NULL, 0);
 }

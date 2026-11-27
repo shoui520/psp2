@@ -78,8 +78,8 @@ static void onFocus(SceInt32 type, ui::Handler *self, ui::Event *e, void *data);
 static void onHold(SceInt32 type, ui::Handler *self, ui::Event *e, void *data);
 static void onHoldEnd(SceInt32 type, ui::Handler *self, ui::Event *e, void *data);
 static void onDrag(SceInt32 type, ui::Handler *self, ui::Event *e, void *data);
-static void onFreed(Timer *timer, ui::AnimListener *listener, void *data1, void *data2,
-		    void *data3);
+static void onFreed(Timer *timer, ui::AnimListener *listener, void *target, void *userData,
+		    void *context);
 
 /* (0x810BB748) */
 ApplauncherIconView::ApplauncherIconView()
@@ -549,10 +549,10 @@ static void onUpdate(ui::AppIconBase *icon, void *data)
 }
 
 /* the view shrunk away: hidden, taken off its page and given back to the pool (0x810BCD6A) */
-static void onFreed(Timer *timer, ui::AnimListener *listener, void *data1, void *data2,
-		    void *data3)
+static void onFreed(Timer *timer, ui::AnimListener *listener, void *target, void *userData,
+		    void *context)
 {
-	ApplauncherIconView *view = (ApplauncherIconView *)data2;
+	ApplauncherIconView *view = (ApplauncherIconView *)userData;
 
 	if (view->m_widget != NULL) {
 		view->m_widget->SetIconMode(0);

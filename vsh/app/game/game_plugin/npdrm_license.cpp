@@ -176,6 +176,8 @@ int GameRifInfo::Load(const string &dir, const SceUInt64 *accountId, bool allowP
 	SceUInt32 skuFlags = 0;
 	int ret;
 
+	bool found = false;
+
 	if (dir.find(GAME_GAMECARD_DRIVE, 0, sce_paf_strlen(GAME_GAMECARD_DRIVE)) !=
 	    string::npos) {
 		ret = gameRifGetFixedPath(dir, 1, &path);
@@ -186,7 +188,7 @@ int GameRifInfo::Load(const string &dir, const SceUInt64 *accountId, bool allowP
 			       allowPeriod);
 		if (ret == 0) {
 			gameRifSetLicenseType(&m_licenseType, skuFlags);
-			goto done;
+			found = true;
 		}
 	} else if (*accountId != 0) {
 		ret = gameRifGetAccountPath(dir, accountId, &path);
@@ -197,19 +199,21 @@ int GameRifInfo::Load(const string &dir, const SceUInt64 *accountId, bool allowP
 			       allowPeriod);
 		if (ret == 0) {
 			gameRifSetLicenseType(&m_licenseType, skuFlags);
-			goto done;
+			found = true;
 		}
 	}
 
-	ret = gameRifGetFixedPath(dir, 0, &path);
-	if (ret < 0)
-		return ret;
+	if (!found) {
+		ret = gameRifGetFixedPath(dir, 0, &path);
+		if (ret < 0)
+			return ret;
 
-	ret = ReadFile(path, &m_accountId, &m_startTime, &m_expireTime, &skuFlags, allowPeriod);
-	if (ret == 0)
-		gameRifSetLicenseType(&m_licenseType, skuFlags);
+		ret = ReadFile(path, &m_accountId, &m_startTime, &m_expireTime, &skuFlags,
+			       allowPeriod);
+		if (ret == 0)
+			gameRifSetLicenseType(&m_licenseType, skuFlags);
+	}
 
-done:
 	m_result = ret;
 	m_loaded = true;
 	if (ret == GAME_NPDRM_ERROR_NO_ACCOUNT)

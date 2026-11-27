@@ -202,40 +202,37 @@ int gameContentImportDialogInit(GameInstallingDialog *dialog, const char *titleI
 		LsdbIconPtr icon(new LsdbIcon);
 
 		ret = SceLsdb_7AF9008C(&client, &string(titleId), &icon, false);
-		if (ret < 0)
-			goto out;
+		if (ret >= 0) {
+			OpenUrl url;
 
-		OpenUrl url;
+			url.RegisterOpenFunc(LocalFile::OpenUrl);
 
-		url.RegisterOpenFunc(LocalFile::OpenUrl);
+			common::SharedPtr<File> file =
+				url.Open(icon->iconPath.c_str(), SCE_O_RDONLY, 0, &ret);
 
-		common::SharedPtr<File> file =
-			url.Open(icon->iconPath.c_str(), SCE_O_RDONLY, 0, &ret);
+			if (ret >= 0) {
+				int count = 0;
 
-		if (ret < 0)
-			goto out;
+				ret = gameContentImportCount(titleId, &count);
+				if (ret == 0) {
+					graph::Surface::LoadOption option;
 
-		int count = 0;
+					option.decode_heap = plugin->m_private_heap;
+					option.data_load_heap = plugin->m_private_heap;
+					option.direct_load = true;
 
-		ret = gameContentImportCount(titleId, &count);
-		if (ret != 0)
-			goto out;
-
-		graph::Surface::LoadOption option;
-
-		option.decode_heap = plugin->m_private_heap;
-		option.data_load_heap = plugin->m_private_heap;
-		option.direct_load = true;
-
-		dialog->title = icon->title;
-		dialog->icon = graph::Surface::Load(plugin->m_surface_pool, file, &option);
-		dialog->progress = 0;
-		dialog->frame = true;
-		dialog->done = 0;
-		dialog->total = (float)count;
+					dialog->title = icon->title;
+					dialog->icon = graph::Surface::Load(plugin->m_surface_pool,
+									    file, &option);
+					dialog->progress = 0;
+					dialog->frame = true;
+					dialog->done = 0;
+					dialog->total = (float)count;
+				}
+			}
+		}
 	}
 
-out:
 	SceLsdb_E2101B03(&client);
 
 	return ret;
@@ -463,7 +460,7 @@ bool gameAddcontIsOnlyFor(const char *addcontDir, const char *titleId)
 
 	const unsigned int *key = s_addcontKeys;
 
-	for (int i = 0; i < GAME_ADDCONT_DIR_NUM; i++, key++) {
+	for (int i = 0; i < GAME_ADDCONT_DIR_NUM && onlyFor; i++, key++) {
 		LsdbQueryCondition condition;
 
 		condition.key = *key;
@@ -475,12 +472,11 @@ bool gameAddcontIsOnlyFor(const char *addcontDir, const char *titleId)
 		for (unsigned int j = 0; j < titleIds.size(); j++) {
 			if (sce_paf_strncmp(titleIds[j].c_str(), titleId, GAME_ADDCONT_DIR_LEN) != 0) {
 				onlyFor = false;
-				goto out;
+				break;
 			}
 		}
 	}
 
-out:
 	SceLsdb_E2101B03(&client);
 
 	return onlyFor;

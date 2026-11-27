@@ -143,32 +143,31 @@ static __attribute__((noinline)) int gameSelfReadEbootParam(const string &path,
 	SceInt64 fileSize = file->GetFileSize();
 
 	if (fileSize < 0) {
-		ret = (int)fileSize;
-		goto end;
+		file->Close();
+		return (int)fileSize;
 	}
 
 	ret = file->Read(&header, sizeof(header));
-	if (ret < 0)
-		goto end;
-
-	if (header.magic[0] != 'S' || header.magic[1] != 'C' || header.magic[2] != 'E' ||
-	    header.magic[3] != '\0') {
-		ret = GAME_ERROR_BAD_SELF;
-		goto end;
+	if (ret < 0) {
+		file->Close();
+		return ret;
 	}
 
-	if ((SceUInt64)fileSize < header.headerLength) {
-		ret = GAME_ERROR_BAD_SELF;
-		goto end;
+	if (header.magic[0] != 'S' || header.magic[1] != 'C' || header.magic[2] != 'E' ||
+	    header.magic[3] != '\0' || (SceUInt64)fileSize < header.headerLength) {
+		file->Close();
+		return GAME_ERROR_BAD_SELF;
 	}
 
 	ret = file->Read(&extHeader, sizeof(extHeader));
-	if (ret < 0)
-		goto end;
+	if (ret < 0) {
+		file->Close();
+		return ret;
+	}
 
 	if ((extHeader.controlInfoOffset & 0xF) != 0) {
-		ret = GAME_ERROR_BAD_SELF;
-		goto end;
+		file->Close();
+		return GAME_ERROR_BAD_SELF;
 	}
 
 	{
@@ -186,8 +185,10 @@ static __attribute__((noinline)) int gameSelfReadEbootParam(const string &path,
 				if (size < 0)
 					ret = size;
 			}
-			if (ret < 0)
-				goto end;
+			if (ret < 0) {
+				file->Close();
+				return ret;
+			}
 
 			if (info.type == GAME_SELF_CONTROL_INFO_EBOOT_PARAM) {
 				sce_paf_memset(data, 0, sizeof(*data));
@@ -202,8 +203,10 @@ static __attribute__((noinline)) int gameSelfReadEbootParam(const string &path,
 					if (size < 0)
 						ret = size;
 				}
-				if (ret < 0)
-					goto end;
+				if (ret < 0) {
+					file->Close();
+					return ret;
+				}
 
 				data->header = param.header;
 				sce_paf_memcpy(&data->attribute, param.params, sizeof(param.params));
@@ -214,12 +217,9 @@ static __attribute__((noinline)) int gameSelfReadEbootParam(const string &path,
 		} while (offset < header.headerLength);
 	}
 
-	ret = 0;
-
-end:
 	file->Close();
 
-	return ret;
+	return 0;
 }
 
 /* The eboot parameters of the SELF at path read (0x8103328C). */

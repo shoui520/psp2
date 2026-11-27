@@ -39,8 +39,8 @@ GameGdAppSource::~GameGdAppSource()
 }
 
 int GameGdAppSource::Install(const string *path, const string *titleId, string *dir,
-			     string *installPath, GameJobProgress *progress, int reserved1,
-			     int reserved2, float scale)
+			     string *installPath, GameJobProgress *progress, int cancel,
+			     int cancelArg, float scale)
 {
 	if (m_info == NULL)
 		return GAME_ERROR_INVALID_ARGUMENT;
@@ -55,8 +55,8 @@ int GameGdAppSource::Install(const string *path, const string *titleId, string *
 	return 0;
 }
 
-int GameGdAppSource::Complete(string *dir, string *installPath, int reserved1, int reserved2,
-			      int reserved3, float scale)
+int GameGdAppSource::Complete(string *dir, string *installPath, int progress, int cancel,
+			      int cancelArg, float scale)
 {
 	int ret;
 

@@ -27,11 +27,11 @@ using namespace paf;
 #define GAME_APP_VER_DIGITS	8
 
 
-GamePatchPromoter::GamePatchPromoter(const char *path, const LsdbAppInfoPtr *sfo, bool flag1,
-				     bool flag2, const GameJobProgress *progress, int userData,
-				     float scale)
-	: GamePromoter(path, progress, userData, scale), m_sfo(sfo), m_flag1(flag1),
-	  m_flag2(flag2), m_move(false), m_drive(0)
+GamePatchPromoter::GamePatchPromoter(const char *path, const LsdbAppInfoPtr *sfo, bool replace,
+				     bool copyLiveArea, const GameJobProgress *progress,
+				     int userData, float scale)
+	: GamePromoter(path, progress, userData, scale), m_sfo(sfo), m_replace(replace),
+	  m_copyLiveArea(copyLiveArea), m_move(false), m_drive(0)
 {
 	m_weights[0] = 0.3f;
 	m_weights[1] = 0.3f;
@@ -528,7 +528,7 @@ int GamePatchPromoter::Prepare(bool flag)
 				return GAME_ERROR_NO_INFO_MEMORY;
 		}
 
-		GameUpdateChecker *checker = new GameUpdateChecker(m_path, m_flag1, true,
+		GameUpdateChecker *checker = new GameUpdateChecker(m_path, m_replace, true,
 			progress != NULL ? progress : &m_progress, (string *)m_userData);
 
 		if (checker == NULL) {
@@ -726,7 +726,7 @@ int GamePatchPromoter::SetInfo(GamePromoteSource *source, bool registerApp,
 /*
  * What is left once the record is built: the parental values an update keeps, the EBOOT
  * parameters of eboot.bin and of the first related application's eboot2.bin, and the LiveArea
- * brought into ur0:appmeta when m_flag2 is set (0x810458A0).
+ * brought into ur0:appmeta when m_copyLiveArea is set (0x810458A0).
  */
 int GamePatchPromoter::Finish(GameAppRegistration *reg, GameCancelFunc cancel, void *arg)
 {
@@ -758,7 +758,7 @@ int GamePatchPromoter::Finish(GameAppRegistration *reg, GameCancelFunc cancel, v
 			gameAppInfoUpdateEbootParam(ebootPath, &reg->related[i], NULL);
 	}
 
-	if (m_flag2) {
+	if (m_copyLiveArea) {
 		LsdbAppInfo::iterator it = reg->info->find(LSDB_KEY_CATEGORY);
 
 		if (it == reg->info->end())

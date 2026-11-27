@@ -264,38 +264,37 @@ void ApplauncherChangeLog::Open()
 
 	if (ret < 0) {
 		m_dialogId = -1;
-		goto error;
-	}
-	m_dialogId = ret;
+	} else {
+		m_dialogId = ret;
 
-	ui::Widget *contents = SceCommonGuiDialog_8947FC23(ret, APPLAUNCHER_CHANGE_LOG_CONTENTS);
-	ui::Widget *text = contents->FindChild(IDParam(s_empty_name, APPLAUNCHER_CHANGE_LOG_TEXT), 0);
+		ui::Widget *contents = SceCommonGuiDialog_8947FC23(ret, APPLAUNCHER_CHANGE_LOG_CONTENTS);
+		ui::Widget *text = contents->FindChild(IDParam(s_empty_name, APPLAUNCHER_CHANGE_LOG_TEXT), 0);
 
-	if (text != NULL) {
-		text->SetColor(math::v4(0.0f, 0.0f, 0.0f, 0.0f));
-		HideWidget(text, NULL);
-	}
+		if (text != NULL) {
+			text->SetColor(math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+			HideWidget(text, NULL);
+		}
 
-	ui::Widget *error = contents->FindChild(IDParam(s_empty_name, APPLAUNCHER_CHANGE_LOG_ERROR), 0);
+		ui::Widget *error = contents->FindChild(IDParam(s_empty_name, APPLAUNCHER_CHANGE_LOG_ERROR), 0);
 
-	if (error != NULL)
-		HideWidget(error, NULL);
+		if (error != NULL)
+			HideWidget(error, NULL);
 
-	m_busy = APPLAUNCHER_CHANGE_LOG_FIND(contents, ui::BusyIndicator, APPLAUNCHER_CHANGE_LOG_BUSY);
-	if (m_busy != NULL)
-		m_busy->Start();
+		m_busy = APPLAUNCHER_CHANGE_LOG_FIND(contents, ui::BusyIndicator, APPLAUNCHER_CHANGE_LOG_BUSY);
+		if (m_busy != NULL)
+			m_busy->Start();
 
-	m_info = new ApplauncherChangeInfo();
-	if (m_info != NULL) {
-		m_job = common::SharedPtr<job::JobItem>(new ApplauncherChangeLogJob("LoadChangeLog",
-			this, applauncherChangeLogLoad, applauncherChangeLogOnLoaded));
-		if (m_job.get() != NULL) {
-			ret = job::JobQueue::default_queue->Enqueue(m_job);
-			if (ret >= 0)
-				return;
+		m_info = new ApplauncherChangeInfo();
+		if (m_info != NULL) {
+			m_job = common::SharedPtr<job::JobItem>(new ApplauncherChangeLogJob("LoadChangeLog",
+				this, applauncherChangeLogLoad, applauncherChangeLogOnLoaded));
+			if (m_job.get() != NULL) {
+				ret = job::JobQueue::default_queue->Enqueue(m_job);
+				if (ret >= 0)
+					return;
+			}
 		}
 	}
-error:
 	ShowError(ret);
 }
 
@@ -432,63 +431,64 @@ static int applauncherChangeLogLoad(ApplauncherChangeLogJob *job, void *arg)
 	string text;
 	AppInfoQClient *client = new AppInfoQClient;
 
-	if (client == NULL || (client = SceLsdb_A6D8772C(client)) == NULL) {
-		ret = APPLAUNCHER_ERROR_NO_MEMORY;
-		goto out;
-	}
-	ret = SceLsdb_E90B81CD(client);
-	if (ret < 0) {
+	do {
+		if (client == NULL || (client = SceLsdb_A6D8772C(client)) == NULL) {
+			ret = APPLAUNCHER_ERROR_NO_MEMORY;
+			break;
+		}
+		ret = SceLsdb_E90B81CD(client);
+		if (ret < 0) {
+			operator delete(SceLsdb_E2101B03(client));
+			break;
+		}
+		ret = SceLsdb_D239031A(client, &log->m_titleId, &info);
+		if (ret < 0) {
+			operator delete(SceLsdb_E2101B03(client));
+			break;
+		}
 		operator delete(SceLsdb_E2101B03(client));
-		goto out;
-	}
-	ret = SceLsdb_D239031A(client, &log->m_titleId, &info);
-	if (ret < 0) {
-		operator delete(SceLsdb_E2101B03(client));
-		goto out;
-	}
-	operator delete(SceLsdb_E2101B03(client));
 
-	log->m_subType = SceLsdb_298134FE(&info);
-	{
-		LsdbAppInfo::iterator it = info->find(LSDB_KEY_ORG_PATH);
+		log->m_subType = SceLsdb_298134FE(&info);
+		{
+			LsdbAppInfo::iterator it = info->find(LSDB_KEY_ORG_PATH);
 
-		if (it == info->end()) {
-			ret = APPLAUNCHER_ERROR_NO_TITLE;
-			goto out;
+			if (it == info->end()) {
+				ret = APPLAUNCHER_ERROR_NO_TITLE;
+				break;
+			}
+
+			GamePluginInterface *game =
+				(GamePluginInterface *)applauncherPluginGetInterface("game_plugin", 1);
+
+			if (game != NULL) {
+				char mountPoint[APPLAUNCHER_CHANGE_LOG_MOUNT_POINT_SIZE];
+
+				if (job->IsCanceled())
+					break;
+				ret = ((int (*)(const char *, char *, SceSize))
+				       game->func[GAME_PLUGIN_FUNC_APP_DIR_MOUNT])(
+					it->second.type == LSDB_VALUE_TEXT && it->second.text != NULL ?
+						it->second.text->c_str() : "",
+					mountPoint, APPLAUNCHER_CHANGE_LOG_MOUNT_POINT_SIZE);
+				if (ret < 0 || job->IsCanceled())
+					break;
+				log->m_mountPoint = mountPoint;
+				dir = log->m_mountPoint + string("/sce_sys/changeinfo");
+			}
 		}
 
-		GamePluginInterface *game =
-			(GamePluginInterface *)applauncherPluginGetInterface("game_plugin", 1);
-
-		if (game != NULL) {
-			char mountPoint[APPLAUNCHER_CHANGE_LOG_MOUNT_POINT_SIZE];
-
-			if (job->IsCanceled())
-				goto out;
-			ret = ((int (*)(const char *, char *, SceSize))
-			       game->func[GAME_PLUGIN_FUNC_APP_DIR_MOUNT])(
-				it->second.type == LSDB_VALUE_TEXT && it->second.text != NULL ?
-					it->second.text->c_str() : "",
-				mountPoint, APPLAUNCHER_CHANGE_LOG_MOUNT_POINT_SIZE);
-			if (ret < 0 || job->IsCanceled())
-				goto out;
-			log->m_mountPoint = mountPoint;
-			dir = log->m_mountPoint + string("/sce_sys/changeinfo");
+		if (!job->IsCanceled()) {
+			ret = log->m_info->Load(job, dir.c_str(), language, loadArg);
+			if (ret >= 0) {
+				log->m_info->GetText(&text);
+				if (text.length() != 0)
+					ret = 0;
+				else
+					ret = APPLAUNCHER_ERROR_NO_CHANGE_INFO;
+			}
 		}
-	}
+	} while (0);
 
-	if (!job->IsCanceled()) {
-		ret = log->m_info->Load(job, dir.c_str(), language, loadArg);
-		if (ret >= 0) {
-			log->m_info->GetText(&text);
-			if (text.length() != 0)
-				ret = 0;
-			else
-				ret = APPLAUNCHER_ERROR_NO_CHANGE_INFO;
-		}
-	}
-
-out:
 	if (job->IsCanceled())
 		return APPLAUNCHER_ERROR_CANCELED;
 	return ret;

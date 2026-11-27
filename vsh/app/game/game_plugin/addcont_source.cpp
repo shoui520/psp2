@@ -467,8 +467,8 @@ int GameAddcontSource::Install(const string *path, const string *titleId, string
 	return 0;
 }
 
-int GameAddcontSource::Complete(string *dir, string *installPath, int reserved1, int reserved2,
-				int reserved3, float scale)
+int GameAddcontSource::Complete(string *dir, string *installPath, int progress, int cancel,
+				int cancelArg, float scale)
 {
 	if (m_infoDir.length() != 0 &&
 	    (Dir::IsExist(m_infoDir.c_str()) || Dir::CreateRecursive(m_infoDir.c_str(), 6) >= 0) &&

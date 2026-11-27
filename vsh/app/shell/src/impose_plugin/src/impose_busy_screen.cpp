@@ -46,8 +46,8 @@ ImposeBusyScreen::~ImposeBusyScreen()
 	s_busyScreen = NULL;
 }
 
-static void imposeBusyScreenOnShown(Timer *t, ui::AnimListener *listener, void *data1,
-				    void *data2, void *data3);
+static void imposeBusyScreenOnShown(Timer *t, ui::AnimListener *listener, void *target,
+				    void *userData, void *context);
 
 /* the scene made, the plane faded to black and the indicator started (0x8114FD50) */
 int ImposeBusyScreen::Show(void (*onShown)(void *data), void *data)
@@ -85,8 +85,8 @@ int ImposeBusyScreen::Show(void (*onShown)(void *data), void *data)
 }
 
 /* the fade has ended: the caller's function (0x8114FF80) */
-static void imposeBusyScreenOnShown(Timer *t, ui::AnimListener *listener, void *data1,
-				    void *data2, void *data3)
+static void imposeBusyScreenOnShown(Timer *t, ui::AnimListener *listener, void *target,
+				    void *userData, void *context)
 {
 	ImposeBusyScreen *screen = s_busyScreen;
 

@@ -202,19 +202,19 @@ int GameLiveAreaCopier::Write(const string *dir, unsigned int kind, bool gcParam
 											 &paramPath,
 											 m_detail);
 							if (ret < 0)
-								goto out;
+								break;
 						}
 
 						progress->Add(step * i);
 					}
 
-					ret = 0;
+					if (ret >= 0)
+						ret = 0;
 				}
 			}
 		}
 	}
 
-out:
 	if (mountPoint.length() != 0)
 		gameAppDataUnmount(&mountPoint);
 
@@ -397,74 +397,59 @@ int GameLiveAreaCopier::CopyFttIcon(const string *mountPoint, const LsdbAppInfoP
 	string iconPath = *mountPoint + string("/icon0.png");
 	LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_CONTENT_ID);
 
-	if (it == (*info)->end()) {
-		ret = GAME_ERROR_NO_VALUE;
-		goto end;
-	}
+	if (it == (*info)->end())
+		return GAME_ERROR_NO_VALUE;
 
 	contentId = LsdbValueText(it->second);
 
 	src = LocalFile::Open(m_name.c_str(), SCE_O_RDONLY, 0, &ret);
-	if (ret < 0)
-		goto end;
-
-	{
+	if (ret >= 0) {
 		GameFttLicense license;
 
 		sce_paf_memset(&license, 0, sizeof(license));
 		ret = gameFttLicenseRead(src, &license);
-		if (ret < 0)
-			goto end;
-
-		fileContentId = license.contentId;
+		if (ret >= 0) {
+			fileContentId = license.contentId;
+			if (contentId != fileContentId)
+				ret = GAME_ERROR_FTT_MISMATCH;
+		}
 	}
 
-	if (contentId != fileContentId) {
-		ret = GAME_ERROR_FTT_MISMATCH;
-		goto end;
+	if (ret >= 0) {
+		ret = gameFttLicenseGetDataSize(src, &size);
+		if (ret >= 0 && size != 0) {
+			buf = new char[size];
+			if (buf == NULL) {
+				ret = GAME_ERROR_NO_INFO_MEMORY;
+			} else {
+				n = src->Read(buf, size);
+				if (n < 0)
+					ret = n;
+				else if ((SceSize)n != size)
+					ret = GAME_ERROR_SHORT_IO;
+			}
+		}
 	}
 
-	ret = gameFttLicenseGetDataSize(src, &size);
-	if (ret < 0 || size == 0)
-		goto end;
+	if (ret >= 0 && size != 0) {
+		src->Close();
 
-	buf = new char[size];
-	if (buf == NULL) {
-		ret = GAME_ERROR_NO_INFO_MEMORY;
-		goto end;
+		dst = LocalFile::Open(iconPath.c_str(), SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC, 6,
+				      &ret);
+		if (ret >= 0) {
+			n = dst->Write(buf, size);
+			if (n < 0) {
+				ret = n;
+			} else if ((SceSize)n != size) {
+				ret = GAME_ERROR_SHORT_IO;
+			} else {
+				dst->Close();
+				delete[] buf;
+				buf = NULL;
+			}
+		}
 	}
 
-	n = src->Read(buf, size);
-	if (n < 0) {
-		ret = n;
-		goto end;
-	}
-	if ((SceSize)n != size) {
-		ret = GAME_ERROR_SHORT_IO;
-		goto end;
-	}
-
-	src->Close();
-
-	dst = LocalFile::Open(iconPath.c_str(), SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC, 6, &ret);
-	if (ret < 0)
-		goto end;
-
-	n = dst->Write(buf, size);
-	if (n < 0) {
-		ret = n;
-		goto end;
-	}
-	if ((SceSize)n != size) {
-		ret = GAME_ERROR_SHORT_IO;
-		goto end;
-	}
-
-	dst->Close();
-	delete[] buf;
-	buf = NULL;
-
-end:
 	if (buf != NULL)
 		delete[] buf;
 	if (dst.get() != NULL && dst->IsOpened())

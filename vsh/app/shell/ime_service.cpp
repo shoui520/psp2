@@ -49,19 +49,19 @@ using namespace paf;
 #define IME_METHOD_STATE		5
 #define IME_METHOD_CONFIG		20
 
-/* the asynchronous methods: the events (with the IME opened), and the plugin's requests */
+/* the asynchronous methods: the events (with the IME opened), and the dictionary requests */
 #define IME_METHOD_EVENTS		4
-#define IME_METHOD_CANDIDATES		0x21
-#define IME_METHOD_REQUEST22		0x22
-#define IME_METHOD_REQUEST23		0x23
-#define IME_METHOD_REQUEST24		0x24
-#define IME_METHOD_REQUEST25		0x25
-#define IME_METHOD_REQUEST26		0x26
+#define IME_METHOD_DIC_GET_WORDS	0x21
+#define IME_METHOD_DIC_ADD_WORD		0x22
+#define IME_METHOD_DIC_DELETE_WORD	0x23
+#define IME_METHOD_DIC_REPLACE_WORD	0x24
+#define IME_METHOD_DIC_CLEAR_LEARNING	0x25
+#define IME_METHOD_DIC_CLEAR_USER	0x26
 
-/* how many events one answer carries, and the candidates' room */
+/* how many events one answer carries, and the dictionary word buffer */
 #define IME_SERVICE_EVENTS_MAX		10
-#define IME_SERVICE_CANDIDATE_SIZE	104
-#define IME_SERVICE_CANDIDATES_MAX	50
+#define IME_SERVICE_DIC_WORD_SIZE	104
+#define IME_SERVICE_DIC_WORDS_MAX	50
 
 /* the state method's changes */
 #define IME_STATE_TEXT			0x1
@@ -332,6 +332,7 @@ void ImeServer::Update()
 	while (it != queue->m_commands.end()) {
 		cmd = *it;
 		SceUID active = m_activePid;
+		bool requeue = false;
 
 		if ((cmd->m_pid == -1 || active == cmd->m_pid) &&
 		    (!inputdevice::IsOwnershipGotten(IME_SERVICE_INPUT_DEVICES, 0) ||
@@ -363,42 +364,50 @@ void ImeServer::Update()
 				}
 				break;
 			case IME_COMMAND_UPDATE:
-				if (iface == NULL || iface->IsOpen() == 0)
-					goto requeue;
+				if (iface == NULL || iface->IsOpen() == 0) {
+					requeue = true;
+					break;
+				}
 				cmd->m_data.open.pid = active;
 				iface->Update(&cmd->m_data.open);
 				break;
 			case IME_COMMAND_VISIBLE:
-				if (iface == NULL)
-					goto requeue;
+				if (iface == NULL) {
+					requeue = true;
+					break;
+				}
 				iface->SetVisible(cmd->m_data.value != 0);
 				if (iface->IsOpen() == 0)
-					goto requeue;
+					requeue = true;
 				break;
 			case IME_COMMAND_TEXT:
-				if (iface == NULL)
-					goto requeue;
+				if (iface == NULL) {
+					requeue = true;
+					break;
+				}
 				iface->SetText(cmd->m_data.value);
 				break;
 			case IME_COMMAND_CARET:
-				if (iface == NULL)
-					goto requeue;
+				if (iface == NULL) {
+					requeue = true;
+					break;
+				}
 				iface->SetCaret(cmd->m_data.value);
 				break;
 			default:
 				break;
 			}
 		}
+		if (requeue) {
+			queue->m_commands.erase(it);
+			queue->m_commands.push_back(cmd);
+			lock->Unlock();
+			return;
+		}
 		if (cmd != NULL)
 			delete cmd;
 		it = queue->m_commands.erase(it);
 	}
-	lock->Unlock();
-	return;
-
-requeue:
-	queue->m_commands.erase(it);
-	queue->m_commands.push_back(cmd);
 	lock->Unlock();
 }
 
@@ -676,40 +685,41 @@ void ImeServer::RunRequest(IPMI::Session *session, SceUInt32 requestId, SceUInt3
 	}
 
 	const ImeServiceAsyncParam *param = (const ImeServiceAsyncParam *)data;
-	int arg0 = param->arg0;
-	int arg1 = param->arg1;
+	SceUInt32 languageLow = param->languageLow;
+	SceUInt32 languageHigh = param->languageHigh;
 	int ret;
 
 	switch (methodId) {
-	case IME_METHOD_CANDIDATES: {
-		SceUInt8 candidates[IME_SERVICE_CANDIDATES_MAX * IME_SERVICE_CANDIDATE_SIZE];
+	case IME_METHOD_DIC_GET_WORDS: {
+		SceUInt8 words[IME_SERVICE_DIC_WORDS_MAX * IME_SERVICE_DIC_WORD_SIZE];
 
-		ret = iface->GetCandidates(arg0, arg1, candidates);
+		ret = iface->GetDicWords(languageLow, languageHigh, words);
 		if (ret < 0)
 			session->respondToAsyncMethodRequest(requestId, ret, NULL, 0);
 		else
-			session->respondToAsyncMethodRequest(requestId, ret, candidates,
-							     ret * IME_SERVICE_CANDIDATE_SIZE);
+			session->respondToAsyncMethodRequest(requestId, ret, words,
+							     ret * IME_SERVICE_DIC_WORD_SIZE);
 		break;
 	}
-	case IME_METHOD_REQUEST22:
-		ret = iface->Request22(arg0, arg1, (void *)param->data);
+	case IME_METHOD_DIC_ADD_WORD:
+		ret = iface->AddDicWord(languageLow, languageHigh, (void *)param->word);
 		session->respondToAsyncMethodRequest(requestId, ret, NULL, 0);
 		break;
-	case IME_METHOD_REQUEST23:
-		ret = iface->Request23(arg0, arg1, (void *)param->data);
+	case IME_METHOD_DIC_DELETE_WORD:
+		ret = iface->DeleteDicWord(languageLow, languageHigh, (void *)param->word);
 		session->respondToAsyncMethodRequest(requestId, ret, NULL, 0);
 		break;
-	case IME_METHOD_REQUEST24:
-		ret = iface->Request24(arg0, arg1, (void *)param->data, (void *)param->data2);
+	case IME_METHOD_DIC_REPLACE_WORD:
+		ret = iface->ReplaceDicWord(languageLow, languageHigh, (void *)param->word,
+					    (void *)param->newWord);
 		session->respondToAsyncMethodRequest(requestId, ret, NULL, 0);
 		break;
-	case IME_METHOD_REQUEST25:
-		ret = iface->Request25();
+	case IME_METHOD_DIC_CLEAR_LEARNING:
+		ret = iface->ClearLearningDic();
 		session->respondToAsyncMethodRequest(requestId, ret, NULL, 0);
 		break;
-	case IME_METHOD_REQUEST26:
-		ret = iface->Request26();
+	case IME_METHOD_DIC_CLEAR_USER:
+		ret = iface->ClearUserDic();
 		session->respondToAsyncMethodRequest(requestId, ret, NULL, 0);
 		break;
 	default:

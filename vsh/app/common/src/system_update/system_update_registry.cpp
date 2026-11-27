@@ -110,19 +110,22 @@ int Bgdl_81132BAE(const char *path, string *str)
 
 	buf[max - 1] = '\0';
 	if (max > 0) {
+		bool found = false;
+
 		len = 0;
 		do {
 			char ch = buf[len];
 
 			if (ch == '\r' || ch == '\n' || ch == '\0') {
 				buf[len] = '\0';
-				goto found;
+				found = true;
+				break;
 			}
 			len++;
 		} while (len < max);
-		len = 0;
+		if (!found)
+			len = 0;
 	}
-found:
 	str->append(buf, len);
 	return 0;
 }
@@ -183,6 +186,8 @@ SystemUpdateResult Bgdl_81132EDA(int type, string *url)
 			SystemUpdateVersionInfo info;
 
 			if (Bgdl_8137C396(&info) >= 0) {
+				bool hasServer = false;
+
 				if (!cex || info.flag == 0) {
 					if (sceRegMgrGetKeyStr("/CONFIG/SYSTEM/UPDATE", "server_url", buf,
 							       sizeof(buf)) == 0)
@@ -190,13 +195,15 @@ SystemUpdateResult Bgdl_81132EDA(int type, string *url)
 					if (server.length() != 0) {
 						*url = server;
 						error = 0;
-						goto done;
+						hasServer = true;
 					}
 				}
-				if (cex)
-					*url = Bgdl_81132CDC();
-				else
-					error = SYSTEM_UPDATE_ERROR_NO_SERVER;
+				if (!hasServer) {
+					if (cex)
+						*url = Bgdl_81132CDC();
+					else
+						error = SYSTEM_UPDATE_ERROR_NO_SERVER;
+				}
 			} else {
 				error = 0;
 			}
@@ -204,7 +211,6 @@ SystemUpdateResult Bgdl_81132EDA(int type, string *url)
 			error = 0;
 		}
 	}
-done:
 	result.error = error;
 	result.detail = 0;
 	return result;

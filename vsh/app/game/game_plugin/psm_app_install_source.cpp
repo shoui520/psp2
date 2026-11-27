@@ -37,8 +37,8 @@ GamePsmAppInstallSource::~GamePsmAppInstallSource()
 }
 
 int GamePsmAppInstallSource::Install(const string *path, const string *titleId, string *dir,
-				     string *installPath, GameJobProgress *progress, int reserved1,
-				     int reserved2, float scale)
+				     string *installPath, GameJobProgress *progress, int cancel,
+				     int cancelArg, float scale)
 {
 	gameRemoveDirectory("ux0:temp/promote", NULL, NULL, NULL, true);
 
@@ -105,8 +105,8 @@ __attribute__((noinline)) int GamePsmAppInstallSource::WriteLicense(const string
 	return ret;
 }
 
-int GamePsmAppInstallSource::Complete(string *dir, string *installPath, int reserved1,
-				      int reserved2, int reserved3, float scale)
+int GamePsmAppInstallSource::Complete(string *dir, string *installPath, int progress,
+				      int cancel, int cancelArg, float scale)
 {
 	int ret;
 

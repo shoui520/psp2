@@ -380,8 +380,8 @@ int GamePspInstallSource::MovePackage(const string *path, const SceNpDrmInstallI
 }
 
 int GamePspInstallSource::Install(const string *path, const string *titleId, string *dir,
-				  string *installPath, GameJobProgress *progress, int reserved1,
-				  int reserved2, float scale)
+				  string *installPath, GameJobProgress *progress, int cancel,
+				  int cancelArg, float scale)
 {
 	int ret;
 
@@ -435,8 +435,8 @@ static void NotifyLiveArea(void)
 	}
 }
 
-int GamePspInstallSource::Complete(string *dir, string *installPath, int reserved1,
-				   int reserved2, int reserved3, float scale)
+int GamePspInstallSource::Complete(string *dir, string *installPath, int progress,
+				   int cancel, int cancelArg, float scale)
 {
 	int ret = 0;
 	unsigned int i;

@@ -250,19 +250,17 @@ int gameAppUpdateUpStatusAll(const char *titleId, int userData)
 		vector<string> titles;
 
 		ret = gameFindTitles(&condition, &titles);
-		if (ret < 0)
-			goto out;
+		if (ret >= 0) {
+			SceUInt32 count = titles.size();
 
-		SceUInt32 count = titles.size();
-
-		for (SceUInt32 i = 0; i < count; i++)
-			gameAppUpdateUpStatus(titles[i].c_str(), userData);
-		ret = 0;
+			for (SceUInt32 i = 0; i < count; i++)
+				gameAppUpdateUpStatus(titles[i].c_str(), userData);
+			ret = 0;
+		}
 	} else {
 		ret = gameAppUpdateUpStatus(titleId, userData);
 	}
 
-out:
 	if (ret >= 0)
 		ret = 0;
 

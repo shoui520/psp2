@@ -82,8 +82,8 @@ static inline void imposeScreenshotHideWidget(ui::Widget *widget)
 }
 
 static void imposeScreenshotCapture(void *data);
-static void imposeScreenshotOnFlash(Timer *t, ui::AnimListener *listener, void *data1,
-				    void *data2, void *data3);
+static void imposeScreenshotOnFlash(Timer *t, ui::AnimListener *listener, void *target,
+				    void *userData, void *context);
 static void imposeScreenshotOnFlashEnd(SceInt32 type, ui::Handler *self, ui::Event *e,
 				       void *data);
 static void imposeScreenshotOnPower(void);
@@ -234,11 +234,11 @@ void ImposeScreenshot::HideCapturing()
 }
 
 /* the flash faded out: hidden a frame later (0x8114A85A) */
-static void imposeScreenshotOnFlash(Timer *t, ui::AnimListener *listener, void *data1,
-				    void *data2, void *data3)
+static void imposeScreenshotOnFlash(Timer *t, ui::AnimListener *listener, void *target,
+				    void *userData, void *context)
 {
 	listener->m_widget->SetTimeoutEvent(IMPOSE_SCREENSHOT_TIMER, IMPOSE_SCREENSHOT_FRAME,
-					    imposeScreenshotOnFlashEnd, data1);
+					    imposeScreenshotOnFlashEnd, target);
 }
 
 /* the flash hidden (0x8114A8B8) */

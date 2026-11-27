@@ -58,8 +58,8 @@ GamePsmInstallSource::~GamePsmInstallSource()
 }
 
 int GamePsmInstallSource::Install(const string *path, const string *titleId, string *dir,
-				  string *installPath, GameJobProgress *progress, int reserved1,
-				  int reserved2, float scale)
+				  string *installPath, GameJobProgress *progress, int cancel,
+				  int cancelArg, float scale)
 {
 	m_pkgPath = *path;
 
@@ -117,22 +117,23 @@ __attribute__((noinline)) int GamePsmInstallSource::WriteLicense(const string *p
 
 						sce_paf_memset(name, 0, sizeof(name));
 						ret = sceNpDrmGetRifNameForInstall(name, buf, 1);
-						if (ret < 0)
-							goto out;
-						rifName = name;
+						if (ret >= 0)
+							rifName = name;
 					} else {
 						char name[GAME_RIF_NAME_SIZE];
 
 						sce_paf_memset(name, 0, sizeof(name));
 						ret = scePsmDrmGetRifNameForInstall(name, buf);
-						if (ret < 0)
-							goto out;
-						rifName = name;
+						if (ret >= 0)
+							rifName = name;
 					}
-					ret = gameFileWriteToDir(buf, (SceSize)size, dir, rifName.c_str(),
-								 licensePath, detail);
-					if (ret >= 0)
-						ret = 0;
+					if (ret >= 0) {
+						ret = gameFileWriteToDir(buf, (SceSize)size, dir,
+									 rifName.c_str(),
+									 licensePath, detail);
+						if (ret >= 0)
+							ret = 0;
+					}
 				} else {
 					file->Close();
 				}
@@ -140,7 +141,6 @@ __attribute__((noinline)) int GamePsmInstallSource::WriteLicense(const string *p
 		}
 	}
 
-out:
 	if (buf != NULL)
 		pool->Free(buf);
 
@@ -148,8 +148,8 @@ out:
 	return ret;
 }
 
-int GamePsmInstallSource::Complete(string *dir, string *installPath, int reserved1, int reserved2,
-				   int reserved3, float scale)
+int GamePsmInstallSource::Complete(string *dir, string *installPath, int progress, int cancel,
+				   int cancelArg, float scale)
 {
 	unsigned int i;
 	bool hadOld;

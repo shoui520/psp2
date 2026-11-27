@@ -50,27 +50,21 @@ int gameFileReadAlloc(const char *path, SceInt64 offset, void **buf, SceSize siz
 
 	common::SharedPtr<File> file = LocalFile::Open(path, SCE_O_RDONLY, 0, &ret);
 
-	if (ret != 0)
-		goto error;
-
-	if (offset > 0) {
+	if (ret == 0 && offset > 0) {
 		int pos = (int)file->Seek(offset, SCE_SEEK_SET);
 
-		if (pos < 0) {
+		if (pos < 0)
 			ret = pos;
-			goto error;
+	}
+
+	if (ret == 0) {
+		ret = file->Read(*buf, size);
+		if (ret >= 0) {
+			file->Close();
+			return 0;
 		}
 	}
 
-	ret = file->Read(*buf, size);
-	if (ret < 0)
-		goto error;
-
-	file->Close();
-
-	return 0;
-
-error:
 	if (file.get() != NULL)
 		file->Close();
 

@@ -70,8 +70,8 @@ static inline void HideWidget(ui::Widget *widget, Timer *timer)
 }
 
 static void onLayoutDone(ApplauncherLsdbJob *job, void *arg);
-static void onOpened(Timer *timer, ui::AnimListener *listener, void *data1, void *data2,
-		     void *data3);
+static void onOpened(Timer *timer, ui::AnimListener *listener, void *target, void *userData,
+		     void *context);
 static void onCloseTimer(SceInt32 type, ui::Handler *self, ui::Event *e, void *data);
 
 /* (0x810BA824) */
@@ -265,8 +265,8 @@ static void onLayoutDone(ApplauncherLsdbJob *lsdbJob, void *arg)
 }
 
 /* the page's opening done: the home's view let go (0x810BB60E) */
-static void onOpened(Timer *timer, ui::AnimListener *listener, void *data1, void *data2,
-		     void *data3)
+static void onOpened(Timer *timer, ui::AnimListener *listener, void *target, void *userData,
+		     void *context)
 {
 	g_applauncherHome->ReleaseView();
 }

@@ -25,8 +25,9 @@ using namespace paf;
 /* the shell's block the functions run in */
 #define EXCLUSIVE_FUNC_MEM_BLOCK_SIZE	0x400000
 
-/* power_manage_plugin's callback on the power events (PLACEHOLDER) */
-typedef void (*ExclusiveFuncPowerCallback)(int event, int arg1, int arg2, void *arg);
+/* power_manage_plugin's callback on the power events */
+typedef void (*ExclusiveFuncPowerCallback)(int eventCode, const void *eventBuf, SceSize eventSize,
+					   void *userData);
 
 /* Sony's build keeps the queue's clear and pop_back out of line, pop_back with the count checked */
 template<>
@@ -65,9 +66,10 @@ __attribute__((noinline)) void list<ExclusiveFuncPtr>::pop_back()
 static ExclusiveFuncMgr *s_exclusiveFuncMgr = NULL;
 
 /* (0x810E2046) */
-static void exclusiveFuncMgrOnPower(int event, int arg1, int arg2, void *arg)
+static void exclusiveFuncMgrOnPower(int eventCode, const void *eventBuf, SceSize eventSize,
+				    void *userData)
 {
-	ExclusiveFuncMgr *mgr = (ExclusiveFuncMgr *)arg;
+	ExclusiveFuncMgr *mgr = (ExclusiveFuncMgr *)userData;
 
 	mgr->m_mutex.Lock();
 	mgr->m_events |= EXCLUSIVE_FUNC_EVENT_POWER;

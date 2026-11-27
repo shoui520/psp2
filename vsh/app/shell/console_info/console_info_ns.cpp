@@ -100,22 +100,22 @@ static int consoleInfoNsFormatModel(const ConsoleInfoRecord::Field *field, char 
 /* (0x810E8306) */
 static int consoleInfoNsFormatNetwork(const ConsoleInfoRecord::Field *field, char *buf, int *len)
 {
-	SceUInt8 flag1 = 0;
+	SceUInt8 netKind = 0;
 
-	consoleInfoFileReadFlag(CONSOLE_INFO_NS_FLAG_INDEX_1, &flag1, 0);
+	consoleInfoFileReadFlag(CONSOLE_INFO_NS_FLAG_INDEX_1, &netKind, 0);
 
-	SceUInt8 flag2 = 0;
+	SceUInt8 lastNetKind = 0;
 
-	consoleInfoFileReadFlag(CONSOLE_INFO_NS_FLAG_INDEX_2, &flag2, 0);
-	if (flag2 == 1 && flag1 == 1)
+	consoleInfoFileReadFlag(CONSOLE_INFO_NS_FLAG_INDEX_2, &lastNetKind, 0);
+	if (lastNetKind == 1 && netKind == 1)
 		buf[0] = '1';
-	else if (flag2 == 2 && flag1 == 1)
+	else if (lastNetKind == 2 && netKind == 1)
 		buf[0] = '2';
-	else if (flag2 == 1 && flag1 == 3)
+	else if (lastNetKind == 1 && netKind == 3)
 		buf[0] = '3';
-	else if (flag2 == 3 && flag1 == 1)
+	else if (lastNetKind == 3 && netKind == 1)
 		buf[0] = '4';
-	else if (flag2 == 3 && flag1 == 3)
+	else if (lastNetKind == 3 && netKind == 3)
 		buf[0] = '5';
 	else
 		buf[0] = '0';

@@ -21,10 +21,10 @@ public:
 	virtual ~GameThemeCopier();
 	virtual int Install(const paf::string &path, const paf::string &themeId,
 			    paf::string *themeDir, paf::string *contentPath,
-			    GameJobProgress *progress, float share, int arg6, int arg7);
+			    GameJobProgress *progress, float share, int cancel, int cancelArg);
 
 	int Commit(paf::string *themeDir, paf::string *contentPath, GameJobProgress *progress,
-		   float share, int arg4, int arg5);
+		   float share, int cancel, int cancelArg);
 
 	SceNpDrmInstallInfo *m_info;
 	paf::string m_themeId;

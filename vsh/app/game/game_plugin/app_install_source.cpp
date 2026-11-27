@@ -48,8 +48,8 @@ GameAppInstallSource::~GameAppInstallSource()
 }
 
 int GameAppInstallSource::Install(const string *path, const string *titleId, string *dir,
-				  string *installPath, GameJobProgress *progress, int reserved1,
-				  int reserved2, float scale)
+				  string *installPath, GameJobProgress *progress, int cancel,
+				  int cancelArg, float scale)
 {
 	int ret;
 
@@ -88,22 +88,22 @@ int GameAppInstallSource::ListDirs(const string &path, vector<string> *names)
 		return 0;
 
 	ret = dir.Open(path.c_str());
-	if (ret < 0)
-		goto out;
+	if (ret >= 0) {
+		for (;;) {
+			ret = dir.Read(&entry);
+			if (ret == SCE_PAF_ERROR_DIR_NO_MORE_ENTRY) {
+				ret = 0;
+				break;
+			}
+			if (ret < 0)
+				break;
 
-	for (;;) {
-		ret = dir.Read(&entry);
-		if (ret == SCE_PAF_ERROR_DIR_NO_MORE_ENTRY)
-			break;
-		if (ret < 0)
-			goto out;
-
-		if (entry.type == DirEnt::Type_Dir && entry.name != "." && entry.name != "..")
-			names->push_back(entry.name);
+			if (entry.type == DirEnt::Type_Dir && entry.name != "." &&
+			    entry.name != "..")
+				names->push_back(entry.name);
+		}
 	}
 
-	ret = 0;
-out:
 	dir.Close();
 	return ret;
 }
@@ -321,8 +321,8 @@ int GameAppInstallSource::MoveOld(const string &oldDir, const string &uxOldDir,
 	return ret;
 }
 
-int GameAppInstallSource::Complete(string *dir, string *installPath, int reserved1,
-				   int reserved2, int reserved3, float scale)
+int GameAppInstallSource::Complete(string *dir, string *installPath, int progress,
+				   int cancel, int cancelArg, float scale)
 {
 	string titleId(m_param->titleId);
 	string appmetaPath;

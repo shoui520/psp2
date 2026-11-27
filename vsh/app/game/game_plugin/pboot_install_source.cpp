@@ -76,7 +76,7 @@ int GamePspPbootInstallSource::MoveContent(const string *content, const string *
 
 int GamePspPbootInstallSource::Install(const string *path, const string *titleId, string *dir,
 				       string *installPath, GameJobProgress *progress,
-				       int reserved1, int reserved2, float scale)
+				       int cancel, int cancelArg, float scale)
 {
 	int ret;
 	unsigned int i;
@@ -136,8 +136,8 @@ int GamePspPbootInstallSource::Install(const string *path, const string *titleId
 	return ret;
 }
 
-int GamePspPbootInstallSource::Complete(string *dir, string *installPath, int reserved1,
-					int reserved2, int reserved3, float scale)
+int GamePspPbootInstallSource::Complete(string *dir, string *installPath, int progress,
+					int cancel, int cancelArg, float scale)
 {
 	int ret;
 	unsigned int i;

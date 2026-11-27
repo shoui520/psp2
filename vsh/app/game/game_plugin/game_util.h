@@ -15,15 +15,15 @@
  */
 class GameDialogFuncHandler : public CommonGuiDialogHandler {
 public:
-	typedef void (*Func)(SceInt32 value, SceInt32 button, void *arg1, void *arg2);
+	typedef void (*Func)(SceInt32 value, SceInt32 button, void *firstArg, void *secondArg);
 
-	GameDialogFuncHandler(Func func, void *arg1, void *arg2);
+	GameDialogFuncHandler(Func func, void *firstArg, void *secondArg);
 
 	virtual void operator()(SceInt32 value, SceInt32 button);
 
 	Func m_func;
-	void *m_arg1;
-	void *m_arg2;
+	void *m_firstArg;
+	void *m_secondArg;
 };
 
 /* func called with arg on the power events, and no longer (0x81063A60, 0x81063A8C) */

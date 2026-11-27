@@ -21,8 +21,8 @@ using namespace paf;
 /* the room between two items */
 #define INDICATOR_RIGHT_GROUP_SPACING	2.0f
 
-static int indicatorRightGroupOnLayout(ui::Layouter *layouter, ui::Widget *widget, void *data1,
-				       void *data2, void *data3);
+static int indicatorRightGroupOnLayout(ui::Layouter *layouter, ui::Widget *widget, void *layoutArg,
+				       void *userData, void *context);
 
 /* the group's items made in its widget with the indicator's plugin, laid out by
    indicatorRightGroupOnLayout: the timed icon but on the Dolce, the started item, the impose
@@ -79,8 +79,8 @@ IndicatorRightGroup::~IndicatorRightGroup()
 }
 
 /* the group's widgets put one before the other from the right, 2 apart (0x8116D618) */
-static int indicatorRightGroupOnLayout(ui::Layouter *layouter, ui::Widget *widget, void *data1,
-				       void *data2, void *data3)
+static int indicatorRightGroupOnLayout(ui::Layouter *layouter, ui::Widget *widget, void *layoutArg,
+				       void *userData, void *context)
 {
 	if (widget != NULL && layouter->IsDirty(0xff)) {
 		float x = 0.0f;

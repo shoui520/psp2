@@ -45,8 +45,8 @@ using namespace paf;
    indicator_plugin's indicator_interface.cpp) */
 void shellWidgetDestroyCB(SceInt32 type, ui::Handler *self, ui::Event *e, void *data);
 
-static int onLayout(ui::Layouter *layouter, ui::Widget *widget, void *data1, void *data2,
-		    void *data3);
+static int onLayout(ui::Layouter *layouter, ui::Widget *widget, void *layoutArg, void *userData,
+		    void *context);
 static void onInsert(int event, void *arg, int key, void *data);
 static void onRemove(int event, void *arg, int key, void *data);
 static void onMove(int event, void *arg, int key, void *data);
@@ -319,8 +319,8 @@ static void onMove(int event, void *arg, int key, void *data)
 
 /* the box laid out: put at its parent's left, the dots one under the other, centred on it; a
    new dot (still clear) put in place and faded in, the others moved there (0x810C3878) */
-static int onLayout(ui::Layouter *layouter, ui::Widget *widget, void *data1, void *data2,
-		    void *data3)
+static int onLayout(ui::Layouter *layouter, ui::Widget *widget, void *layoutArg, void *userData,
+		    void *context)
 {
 	if (!layouter->IsDirty(0xff) || widget == NULL)
 		return 0;

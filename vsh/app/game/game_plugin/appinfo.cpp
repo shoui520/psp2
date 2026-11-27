@@ -999,19 +999,15 @@ int gameSfoLoad(const string &path, const GameSfoParam *params, unsigned int cou
 	size = LocalFile::GetFileSize(path.c_str());
 	if (size < 0) {
 		ret = size;
-		goto out;
+	} else {
+		ret = gameFileReadAlloc(path.c_str(), 0, &sfo, size);
+		if (ret >= 0) {
+			ret = gameSfoLoadParams(sfo, size, params, count, info, true);
+			if (ret >= 0)
+				ret = 0;
+		}
 	}
 
-	ret = gameFileReadAlloc(path.c_str(), 0, &sfo, size);
-	if (ret < 0)
-		goto out;
-
-	ret = gameSfoLoadParams(sfo, size, params, count, info, true);
-	if (ret < 0)
-		goto out;
-
-	ret = 0;
-out:
 	if (sfo != NULL) {
 		sce_paf_free(sfo);
 		sfo = NULL;
@@ -1032,38 +1028,31 @@ int gameSfoLoadVerified(const string &path, const GameSfoParam *params, unsigned
 	int size;
 	int ret;
 
-	if (digest == NULL || digestLength == 0) {
-		ret = GAME_ERROR_INVALID_ARGUMENT;
-		goto out;
-	}
+	if (digest == NULL || digestLength == 0)
+		return GAME_ERROR_INVALID_ARGUMENT;
 
 	size = LocalFile::GetFileSize(path.c_str());
 	if (size < 0) {
 		ret = size;
-		goto out;
+	} else {
+		ret = gameFileReadAlloc(path.c_str(), 0, &sfo, size);
+		if (ret >= 0) {
+			sce_paf_memset(sum, 0, sizeof(sum));
+			ret = sceSha256Digest(sfo, size, sum);
+			if (ret >= 0) {
+				gameDebugDump("sceSha256Digest() digest", sum, sizeof(sum));
+				if (sce_paf_strncmp(digest, (const char *)sum, digestLength) != 0) {
+					ret = GAME_ERROR_BAD_DATA;
+				} else {
+					ret = gameSfoLoadParams(sfo, size, params, count, info,
+								true);
+					if (ret >= 0)
+						ret = 0;
+				}
+			}
+		}
 	}
 
-	ret = gameFileReadAlloc(path.c_str(), 0, &sfo, size);
-	if (ret < 0)
-		goto out;
-
-	sce_paf_memset(sum, 0, sizeof(sum));
-	ret = sceSha256Digest(sfo, size, sum);
-	if (ret < 0)
-		goto out;
-
-	gameDebugDump("sceSha256Digest() digest", sum, sizeof(sum));
-	if (sce_paf_strncmp(digest, (const char *)sum, digestLength) != 0) {
-		ret = GAME_ERROR_BAD_DATA;
-		goto out;
-	}
-
-	ret = gameSfoLoadParams(sfo, size, params, count, info, true);
-	if (ret < 0)
-		goto out;
-
-	ret = 0;
-out:
 	if (sfo != NULL)
 		sce_paf_free(sfo);
 

@@ -115,7 +115,7 @@ int GameThemeInstaller::InstallPackage(bool (*cancel)(void *arg), void *arg)
 	string path;
 	LsdbTheme theme;
 	common::SharedPtr<LsdbThemeInfo> themeInfo;
-	GameThemeCopier *copier;
+	GameThemeCopier *copier = NULL;
 	int ret = 0;
 	int err = CheckSystemVersion();
 
@@ -123,76 +123,62 @@ int GameThemeInstaller::InstallPackage(bool (*cancel)(void *arg), void *arg)
 		ret = err;
 
 	if (ret >= 0) {
-		if (cancel != NULL && cancel(arg)) {
-			ret = GAME_ERROR_ABORTED;
-			goto end;
-		}
+		if (cancel != NULL && cancel(arg))
+			return GAME_ERROR_ABORTED;
 
 		SetProgress(0);
 
 		copier = new GameThemeCopier(m_info, m_errorTitleId);
 		if (copier == NULL) {
 			ret = GAME_ERROR_NO_INFO_MEMORY;
-			goto error;
+		} else {
+			path = string(m_param->path);
+			ret = copier->Install(path, m_themeId, &themeDir, &contentPath, &m_progress,
+					      m_weights[1], 0, 0);
 		}
 
-		path = string(m_param->path);
-
-		ret = copier->Install(path, m_themeId, &themeDir, &contentPath, &m_progress,
-				      m_weights[1], 0, 0);
-		if (ret < 0)
-			goto error;
-
-		if (cancel != NULL && cancel(arg)) {
+		if (ret >= 0 && cancel != NULL && cancel(arg))
 			ret = GAME_ERROR_ABORTED;
-			goto error;
+
+		if (ret >= 0) {
+			SetProgress(1);
+
+			reader = new GameThemeReader(m_info, &m_themeId, &themeDir, &contentPath,
+						     m_param->extracted);
+			if (reader == NULL)
+				ret = GAME_ERROR_NO_INFO_MEMORY;
+			else
+				ret = reader->Read(&theme, &themeInfo, 0, 0);
 		}
 
-		SetProgress(1);
-
-		reader = new GameThemeReader(m_info, &m_themeId, &themeDir, &contentPath,
-					     m_param->extracted);
-		if (reader == NULL) {
-			ret = GAME_ERROR_NO_INFO_MEMORY;
-			goto error;
-		}
-
-		ret = reader->Read(&theme, &themeInfo, 0, 0);
-		if (ret < 0)
-			goto error;
-
-		if (cancel != NULL && cancel(arg)) {
+		if (ret >= 0 && cancel != NULL && cancel(arg))
 			ret = GAME_ERROR_ABORTED;
-			goto error;
+
+		if (ret >= 0) {
+			SetProgress(2);
+			ret = gameThemeSetInfo(&theme, &themeInfo);
 		}
 
-		SetProgress(2);
+		if (ret >= 0) {
+			delete reader;
+			reader = NULL;
 
-		ret = gameThemeSetInfo(&theme, &themeInfo);
-		if (ret < 0)
-			goto error;
+			SetProgress(3);
+			ret = copier->Commit(&themeDir, &contentPath, &m_progress, m_weights[4], 0,
+					     0);
+		}
 
-		delete reader;
-		reader = NULL;
-
-		SetProgress(3);
-
-		ret = copier->Commit(&themeDir, &contentPath, &m_progress, m_weights[4], 0, 0);
-		if (ret < 0)
-			goto error;
-
-		delete copier;
-
-		SetProgress(4);
+		if (ret >= 0) {
+			delete copier;
+			copier = NULL;
+			SetProgress(4);
+		}
 	}
-	goto end;
 
-error:
 	if (copier != NULL)
 		delete copier;
 	if (reader != NULL)
 		delete reader;
-end:
 	return ret;
 }
 
@@ -212,34 +198,26 @@ int GameThemeInstaller::InstallExtracted(bool (*cancel)(void *arg), void *arg)
 	reader = new GameThemeReader(m_info, &m_themeId, &path, &themeDir, m_param->extracted);
 	if (reader == NULL) {
 		ret = GAME_ERROR_NO_INFO_MEMORY;
-		goto error;
+	} else {
+		ret = reader->Read(&theme, &themeInfo, 0, 0);
+		if (ret >= 0 && cancel != NULL && cancel(arg))
+			ret = GAME_ERROR_ABORTED;
+
+		if (ret >= 0) {
+			SetProgress(2);
+			ret = gameThemeSetInfo(&theme, &themeInfo);
+		}
+
+		if (ret >= 0) {
+			delete reader;
+			reader = NULL;
+			SetProgress(3);
+			SetProgress(4);
+		}
 	}
 
-	ret = reader->Read(&theme, &themeInfo, 0, 0);
-	if (ret < 0)
-		goto error;
-
-	if (cancel != NULL && cancel(arg)) {
-		ret = GAME_ERROR_ABORTED;
-		goto error;
-	}
-
-	SetProgress(2);
-
-	ret = gameThemeSetInfo(&theme, &themeInfo);
-	if (ret < 0)
-		goto error;
-
-	delete reader;
-
-	SetProgress(3);
-	SetProgress(4);
-	goto end;
-
-error:
 	if (reader != NULL)
 		delete reader;
-end:
 	return ret;
 }
 

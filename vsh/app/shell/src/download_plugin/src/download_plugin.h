@@ -136,7 +136,7 @@ struct FgdlTitleResult {
  * object, not read yet): the install's arguments, 3496 bytes in
  */
 struct FgdlCaller {
-	char unknown[3496];
+	char callerPrefix[3496];
 	FgdlInstallArgs args;
 };
 

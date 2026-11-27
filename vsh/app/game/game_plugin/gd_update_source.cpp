@@ -324,8 +324,8 @@ int GameGdUpdateSource::Install(const string *path, const string *titleId, strin
 	return 0;
 }
 
-int GameGdUpdateSource::Complete(string *dir, string *installPath, int reserved1, int reserved2,
-				 int reserved3, float scale)
+int GameGdUpdateSource::Complete(string *dir, string *installPath, int progress, int cancel,
+				 int cancelArg, float scale)
 {
 	int ret;
 

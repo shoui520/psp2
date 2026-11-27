@@ -522,14 +522,12 @@ static int gamePackageRepair(const char *appDir)
 		string path = string(appDir) + string("/");
 
 		ret = gamePackageReadInfo(&info, path.c_str(), buf, size);
-		if (ret < 0)
-			goto out;
-		ret = gamePackageRebuild(appDir, &info, buf, size);
-		if (ret < 0)
-			goto out;
-		ret = 0;
+		if (ret >= 0) {
+			ret = gamePackageRebuild(appDir, &info, buf, size);
+			if (ret >= 0)
+				ret = 0;
+		}
 	}
-out:
 	if (buf != NULL)
 		pool->Free(buf);
 	gamePluginReleasePool(&pool);
@@ -633,6 +631,8 @@ static int gamePackageConcatenateInstalling(const string &dir, const string &pat
 
 		string file = dir + string("/") + string(files[i]);
 
+		bool wroteBodyZeros = false;
+
 		in = LocalFile::Open(file.c_str(), SCE_O_RDONLY, 0, &ret);
 		if (ret != GAME_PAF_ERROR_NOT_FOUND) {
 			if (ret < 0) {
@@ -666,30 +666,31 @@ static int gamePackageConcatenateInstalling(const string &dir, const string &pat
 				pos += chunk;
 				remain -= chunk;
 			}
-			goto next;
+			wroteBodyZeros = true;
 		}
 
-		remain = entries[i].size;
-		chunk = chunkSize;
-		while (remain > 0) {
-			if (remain < chunkSize)
-				chunk = remain;
-			ret = in->Read(buf, chunk);
-			if (ret < 0) {
-				out->Close();
-				in->Close();
-				return ret;
+		if (!wroteBodyZeros) {
+			remain = entries[i].size;
+			chunk = chunkSize;
+			while (remain > 0) {
+				if (remain < chunkSize)
+					chunk = remain;
+				ret = in->Read(buf, chunk);
+				if (ret < 0) {
+					out->Close();
+					in->Close();
+					return ret;
+				}
+				ret = out->Write(buf, chunk);
+				if (ret < 0) {
+					out->Close();
+					in->Close();
+					return ret;
+				}
+				pos += chunk;
+				remain -= chunk;
 			}
-			ret = out->Write(buf, chunk);
-			if (ret < 0) {
-				out->Close();
-				in->Close();
-				return ret;
-			}
-			pos += chunk;
-			remain -= chunk;
 		}
-next:
 		mod = pos & (GAME_PACKAGE_ALIGN - 1);
 	}
 	if (mod != 0) {
@@ -776,14 +777,12 @@ static int gamePackageRepairInstalling(const char *appDir)
 		string path = string(appDir) + string("/");
 
 		ret = gamePackageReadInfo(&info, path.c_str(), buf, size);
-		if (ret < 0)
-			goto out;
-		ret = gamePackageRebuildInstalling(appDir, &info, buf, size);
-		if (ret < 0)
-			goto out;
-		ret = 0;
+		if (ret >= 0) {
+			ret = gamePackageRebuildInstalling(appDir, &info, buf, size);
+			if (ret >= 0)
+				ret = 0;
+		}
 	}
-out:
 	if (buf != NULL)
 		pool->Free(buf);
 	gamePluginReleasePool(&pool);
@@ -985,13 +984,13 @@ int gameCleanupInstall(const char *path, const SceNpDrmInstallInfo *package, con
 					pool->Free(buf);
 				gamePluginReleasePool(&pool);
 			}
-			if (ret < 0)
-				goto fail;
+			if (ret < 0) {
+				gamePathGetMountedDrive(string(appDir), detail);
+				return ret;
+			}
 		}
 		return 0;
 	}
-	ret = GAME_ERROR_INVALID_ARGUMENT;
-fail:
 	gamePathGetMountedDrive(string(appDir), detail);
-	return ret;
+	return GAME_ERROR_INVALID_ARGUMENT;
 }

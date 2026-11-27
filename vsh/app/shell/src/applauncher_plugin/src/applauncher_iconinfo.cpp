@@ -103,9 +103,9 @@ public:
 	common::SharedPtr<ApplauncherIcon> m_icon;
 	LsdbAppInfoPtr m_appInfo;
 	ApplauncherIconInfoFactory *m_factory;
-	bool m_reserved1;
+	bool m_unusedFlag;
 	int m_dialogId;
-	int m_reserved2;
+	int m_unusedState;
 	GameFttInfo m_ftt;		/* the job's, once done */
 	GameLicenseStatus m_license;	/* the job's, once done */
 	common::SharedPtr<job::JobItem> m_job;
@@ -231,7 +231,7 @@ static void applauncherIconInfoOnListEvent(int32_t type, ui::Handler *self, ui::
 ApplauncherIconInfo::ApplauncherIconInfo(const common::SharedPtr<ApplauncherIcon> &icon,
 					 LsdbAppInfoPtr *appInfo)
 	: m_root(NULL), m_view(NULL), m_icon(icon), m_appInfo(*appInfo), m_factory(NULL),
-	  m_reserved1(false), m_dialogId(-1), m_reserved2(0)
+	  m_unusedFlag(false), m_dialogId(-1), m_unusedState(0)
 {
 	s_iconInfo = this;
 	g_applauncherIconInfoAppSize = 0;
@@ -412,94 +412,95 @@ int ApplauncherIconInfoJob::Run()
 	int ret;
 	LsdbAppInfo::iterator it = m_appInfo->find(LSDB_KEY_ORG_PATH);
 
-	if (it == end) {
-		ret = APPLAUNCHER_ERROR_NO_TITLE;
-		goto out;
-	}
-	src = LsdbValueText(it->second);
-	path = src + string("/sce_sys/about/right.suprx");
-	if ((int)LocalFile::GetFileSize(path.c_str()) > 0)
-		m_hasRight = true;
-	else
-		m_hasRight = false;
-
-	{
-		Plugin *plugin = Plugin::Find("game_plugin");
-		GamePluginInterface *game;
-
-		if (plugin == NULL) {
-			ret = APPLAUNCHER_ERROR_NO_LIVEAREA;
-			goto out;
+	do {
+		if (it == end) {
+			ret = APPLAUNCHER_ERROR_NO_TITLE;
+			break;
 		}
-		game = (GamePluginInterface *)plugin->GetInterface(1);
-		if (game == NULL) {
-			ret = APPLAUNCHER_ERROR_NO_LIVEAREA;
-			goto out;
-		}
+		src = LsdbValueText(it->second);
+		path = src + string("/sce_sys/about/right.suprx");
+		if ((int)LocalFile::GetFileSize(path.c_str()) > 0)
+			m_hasRight = true;
+		else
+			m_hasRight = false;
 
-		if (sceLsdbGetType(&m_appInfo) == 1) {
-			it = m_appInfo->find(LSDB_KEY_PROMOTE_ATTR);
-			if (it != end) {
-				SceInt64 attr = 0;
+		{
+			Plugin *plugin = Plugin::Find("game_plugin");
+			GamePluginInterface *game;
 
-				if (it->second.type == APPLAUNCHER_INFO_VALUE_INTEGER)
-					attr = it->second.integer;
-				if (attr & APPLAUNCHER_INFO_PROMOTE_ATTR_FTT) {
-					it = m_appInfo->find(LSDB_KEY_TITLE_ID);
-					if (it == end) {
-						ret = APPLAUNCHER_ERROR_NO_TITLE;
-						goto out;
+			if (plugin == NULL) {
+				ret = APPLAUNCHER_ERROR_NO_LIVEAREA;
+				break;
+			}
+			game = (GamePluginInterface *)plugin->GetInterface(1);
+			if (game == NULL) {
+				ret = APPLAUNCHER_ERROR_NO_LIVEAREA;
+				break;
+			}
+
+			if (sceLsdbGetType(&m_appInfo) == 1) {
+				it = m_appInfo->find(LSDB_KEY_PROMOTE_ATTR);
+				if (it != end) {
+					SceInt64 attr = 0;
+
+					if (it->second.type == APPLAUNCHER_INFO_VALUE_INTEGER)
+						attr = it->second.integer;
+					if (attr & APPLAUNCHER_INFO_PROMOTE_ATTR_FTT) {
+						it = m_appInfo->find(LSDB_KEY_TITLE_ID);
+						if (it == end) {
+							ret = APPLAUNCHER_ERROR_NO_TITLE;
+							break;
+						}
+
+						string titleId(LsdbValueText(it->second));
+
+						ret = ((int (*)(const char *, GameFttInfo *))
+						       game->func[GAME_PLUGIN_FUNC_FTT_READ])(titleId.c_str(),
+											     &m_ftt);
+						if (ret < 0)
+							break;
+						m_hasFtt = true;
 					}
-
-					string titleId(LsdbValueText(it->second));
-
-					ret = ((int (*)(const char *, GameFttInfo *))
-					       game->func[GAME_PLUGIN_FUNC_FTT_READ])(titleId.c_str(),
-										     &m_ftt);
-					if (ret < 0)
-						goto out;
-					m_hasFtt = true;
 				}
 			}
+
+			sce_paf_strncpy(m_license.path, src.c_str(), sizeof(m_license.path) - 1);
+			m_license.path[sizeof(m_license.path) - 1] = '\0';
+			ret = ((int (*)(GameLicenseStatus *))
+			       game->func[GAME_PLUGIN_FUNC_LICENSE_GET_STATUS])(&m_license);
+			if (ret < 0)
+				break;
 		}
 
-		sce_paf_strncpy(m_license.path, src.c_str(), sizeof(m_license.path) - 1);
-		m_license.path[sizeof(m_license.path) - 1] = '\0';
-		ret = ((int (*)(GameLicenseStatus *))
-		       game->func[GAME_PLUGIN_FUNC_LICENSE_GET_STATUS])(&m_license);
-		if (ret < 0)
-			goto out;
-	}
+		it = m_appInfo->find(LSDB_KEY_CATEGORY);
+		if (it == end) {
+			ret = APPLAUNCHER_ERROR_NO_TITLE;
+			break;
+		}
 
-	it = m_appInfo->find(LSDB_KEY_CATEGORY);
-	if (it == end) {
-		ret = APPLAUNCHER_ERROR_NO_TITLE;
-		goto out;
-	}
+		{
+			string category(LsdbValueText(it->second));
 
-	{
-		string category(LsdbValueText(it->second));
+			if (category == "gd" || category == "gp") {
+				it = m_appInfo->find(LSDB_KEY_TITLE_ID);
+				if (it == end) {
+					ret = APPLAUNCHER_ERROR_NO_TITLE;
+					break;
+				}
 
-		if (category == "gd" || category == "gp") {
-			it = m_appInfo->find(LSDB_KEY_TITLE_ID);
-			if (it == end) {
-				ret = APPLAUNCHER_ERROR_NO_TITLE;
-				goto out;
+				string titleId(LsdbValueText(it->second));
+
+				if (SceLsdb_DB73BD7E(&client.client, &titleId, LSDB_KEY_APPCONF,
+						     &value) == 0 &&
+				    value.type == APPLAUNCHER_INFO_VALUE_INTEGER &&
+				    (value.integer & APPLAUNCHER_INFO_FLAG) != 0)
+					m_flag = true;
+				else
+					m_flag = false;
 			}
-
-			string titleId(LsdbValueText(it->second));
-
-			if (SceLsdb_DB73BD7E(&client.client, &titleId, LSDB_KEY_APPCONF,
-					     &value) == 0 &&
-			    value.type == APPLAUNCHER_INFO_VALUE_INTEGER &&
-			    (value.integer & APPLAUNCHER_INFO_FLAG) != 0)
-				m_flag = true;
-			else
-				m_flag = false;
 		}
-	}
-	ret = 0;
-out:
+		ret = 0;
+	} while (0);
 	return ret;
 }
 

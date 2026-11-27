@@ -62,15 +62,15 @@ static const GameErrorMessage s_errorMessages[] = {
 	{ (int)0x80101147, 0xBB293247 },	/* GAME_ERROR_GC_LICENSE_EXPIRED */
 };
 
-GameDialogFuncHandler::GameDialogFuncHandler(Func func, void *arg1, void *arg2)
-	: m_func(func), m_arg1(arg1), m_arg2(arg2)
+GameDialogFuncHandler::GameDialogFuncHandler(Func func, void *firstArg, void *secondArg)
+	: m_func(func), m_firstArg(firstArg), m_secondArg(secondArg)
 {
 }
 
 void GameDialogFuncHandler::operator()(SceInt32 value, SceInt32 button)
 {
 	if (m_func != NULL)
-		m_func(value, button, m_arg1, m_arg2);
+		m_func(value, button, m_firstArg, m_secondArg);
 }
 
 int gamePowerManageAddCallback(void (*func)(void *arg), void *arg)

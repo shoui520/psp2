@@ -105,19 +105,19 @@ static __attribute__((noinline)) int gameWhiteListFileMac(common::SharedPtr<File
 
 	if (ctx == NULL) {
 		ret = GAME_WHITE_LIST_ERROR_NO_MEMORY;
-		goto out;
+	} else {
+		ret = sceHmacSha256BlockInit(ctx, appKey.key, appKey.size);
+		if (ret >= 0) {
+			stored = new char[macSize];
+			if (stored == NULL)
+				ret = GAME_WHITE_LIST_ERROR_NO_MEMORY;
+		}
 	}
-	ret = sceHmacSha256BlockInit(ctx, appKey.key, appKey.size);
-	if (ret < 0)
-		goto out;
-	stored = new char[macSize];
-	if (stored == NULL) {
-		ret = GAME_WHITE_LIST_ERROR_NO_MEMORY;
-		goto out;
-	}
-	sce_paf_memset(stored, 0, macSize);
-	sce_paf_memset(mac, 0, macSize);
-	{
+
+	if (ret >= 0) {
+		sce_paf_memset(stored, 0, macSize);
+		sce_paf_memset(mac, 0, macSize);
+
 		SceInt64 first = macOffset + 1;
 		SceInt64 last = macEnd;
 		SceInt64 length = bufSize;
@@ -129,7 +129,7 @@ static __attribute__((noinline)) int gameWhiteListFileMac(common::SharedPtr<File
 
 			if (n < 0) {
 				ret = n;
-				goto out;
+				break;
 			}
 			if (n == 0)
 				break;
@@ -141,7 +141,7 @@ static __attribute__((noinline)) int gameWhiteListFileMac(common::SharedPtr<File
 				/* the whole MAC in this block */
 				if (macStart < start) {
 					ret = GAME_WHITE_LIST_ERROR_MAC_RANGE;
-					goto out;
+					break;
 				}
 
 				char *p = (char *)buf + (macStart - start);
@@ -154,7 +154,7 @@ static __attribute__((noinline)) int gameWhiteListFileMac(common::SharedPtr<File
 
 				if (length < part || part < 0) {
 					ret = GAME_WHITE_LIST_ERROR_MAC_RANGE;
-					goto out;
+					break;
 				}
 
 				char *p = (char *)buf + (length - part);
@@ -167,7 +167,7 @@ static __attribute__((noinline)) int gameWhiteListFileMac(common::SharedPtr<File
 
 				if (macLength < done || done < 0) {
 					ret = GAME_WHITE_LIST_ERROR_MAC_RANGE;
-					goto out;
+					break;
 				}
 
 				SceSize rest = macSize - done;
@@ -182,14 +182,15 @@ static __attribute__((noinline)) int gameWhiteListFileMac(common::SharedPtr<File
 				len = (n & ~7) + 8;
 			ret = sceHmacSha256BlockUpdate(ctx, buf, len);
 			if (ret < 0)
-				goto out;
+				break;
+		}
+		if (ret >= 0) {
+			ret = sceHmacSha256BlockResult(ctx, (SceUChar8 *)mac);
+			if (ret >= 0 && verify && sce_paf_strncmp(stored, mac, macSize) != 0)
+				ret = GAME_WHITE_LIST_ERROR_BAD_MAC;
 		}
 	}
-	ret = sceHmacSha256BlockResult(ctx, (SceUChar8 *)mac);
-	if (ret >= 0 && verify && sce_paf_strncmp(stored, mac, macSize) != 0)
-		ret = GAME_WHITE_LIST_ERROR_BAD_MAC;
 
-out:
 	if (ctx != NULL)
 		delete ctx;
 	if (stored != NULL)
@@ -291,38 +292,28 @@ static inline int gameWhiteListCopyStream(common::SharedPtr<File> src,
 
 			if (n == WHITE_LIST_HTTP_ABORTED) {
 				*aborted = true;
-				ret = 0;
-				goto out;
+				return 0;
 			}
 			if (n == 0)
 				break;
-			if (n < 0) {
-				ret = n;
-				goto out;
-			}
+			if (n < 0)
+				return n;
 
 			ret = dst->Write(buf->GetAddr(), n);
 			if (ret == WHITE_LIST_HTTP_ABORTED) {
 				*aborted = true;
-				ret = 0;
-				goto out;
+				return 0;
 			}
 			if (n != ret)
-				goto out;
+				return ret;
 			left -= n;
 			if (left == 0)
-				goto done;
+				return *size != 0 ? 0 : GAME_WHITE_LIST_ERROR_TOO_LARGE;
 		}
 		if (*size == 0)
 			*size = *maxSize - left;
 	}
-done:
-	if (*size != 0)
-		ret = 0;
-	else
-		ret = GAME_WHITE_LIST_ERROR_TOO_LARGE;
-out:
-	return ret;
+	return *size != 0 ? 0 : GAME_WHITE_LIST_ERROR_TOO_LARGE;
 }
 
 /* url downloaded to path, at most *maxSize bytes; tried again when cut off (0x810A5D6C) */
@@ -354,19 +345,19 @@ int gameWhiteListDownloadFile(const char *url, const char *path, const SceUInt64
 
 			if (length >= 0) {
 				size = length;
-				goto opened;
-			}
-			if (length == WHITE_LIST_HTTP_NO_LENGTH || length == WHITE_LIST_HTTP_NO_LENGTH2) {
+				ret = 0;
+			} else if (length == WHITE_LIST_HTTP_NO_LENGTH ||
+				   length == WHITE_LIST_HTTP_NO_LENGTH2) {
 				size = 0;
-				goto opened;
+				ret = 0;
+			} else {
+				ret = (int)length;
 			}
-			ret = (int)length;
 		} else {
 			ret = err;
 		}
 		if (ret < 0)
 			return ret;
-opened:
 		if (size > *maxSize)
 			return GAME_WHITE_LIST_ERROR_TOO_LARGE;
 
@@ -419,67 +410,69 @@ int gameWhiteListFileUnwrap(const char *src, const char *dst, SceSize *maxSize,
 
 	if (in.get() == NULL) {
 		ret = GAME_WHITE_LIST_ERROR_NO_FILE;
-		goto done;
-	}
-	{
+	} else {
 		int n = in->Read(package, (SceSize)stat.st_size);
 
 		if (n < 0) {
 			ret = n;
-			goto done;
-		}
-		if (n != stat.st_size) {
+		} else if (n != stat.st_size) {
 			ret = GAME_WHITE_LIST_ERROR_SHORT_READ;
-			goto done;
+		} else {
+			ret = sceSblUsInspectSpackage(WHITE_LIST_SPKG_TYPE, package,
+						      (SceSize)stat.st_size,
+						      WHITE_LIST_SPKG_FLAGS, &requestId);
 		}
 	}
-	ret = sceSblUsInspectSpackage(WHITE_LIST_SPKG_TYPE, package, (SceSize)stat.st_size,
-				      WHITE_LIST_SPKG_FLAGS, &requestId);
-	if (ret != 0)
-		goto done;
-	for (;;) {
-		ret = sceSblUsGetStatus(WHITE_LIST_SPKG_NODE, requestId, &seqNo, &result, &progress,
-					&writtenRates);
-		if (ret != 0)
-			goto done;
-		if (progress == WHITE_LIST_SPKG_DONE)
-			break;
-		sceKernelDelayThread(WHITE_LIST_SPKG_POLL_USEC);
-	}
-	ret = result;
-	if (result == 0) {
-		const cf_header *header = (const cf_header *)package;
-		const SpkgPackageInfo *info =
-			(const SpkgPackageInfo *)((const char *)package + header->file_offset);
-		const SpkgChunkInfo *chunk = (const SpkgChunkInfo *)(info + 1);
-		void *data = sce_paf_malloc(*maxSize);
 
-		if (data == NULL) {
-			ret = GAME_WHITE_LIST_ERROR_NO_MEMORY;
-		} else {
-			ret = sceSblUsGetExtractSpackage(WHITE_LIST_SPKG_NODE, requestId,
-							 (uint32_t)info->decryptedSize,
-							 *maxSize, data);
-			if (ret == 0) {
-				out = LocalFile::Open(dst, SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC,
-						      0606, &ret);
-				if (out.get() == NULL) {
-					ret = GAME_WHITE_LIST_ERROR_NO_FILE;
+	if (ret == 0) {
+		for (;;) {
+			ret = sceSblUsGetStatus(WHITE_LIST_SPKG_NODE, requestId, &seqNo, &result,
+						&progress, &writtenRates);
+			if (ret != 0)
+				break;
+			if (progress == WHITE_LIST_SPKG_DONE)
+				break;
+			sceKernelDelayThread(WHITE_LIST_SPKG_POLL_USEC);
+		}
+		if (ret == 0) {
+			ret = result;
+			if (result == 0) {
+				const cf_header *header = (const cf_header *)package;
+				const SpkgPackageInfo *info = (const SpkgPackageInfo *)
+					((const char *)package + header->file_offset);
+				const SpkgChunkInfo *chunk = (const SpkgChunkInfo *)(info + 1);
+				void *data = sce_paf_malloc(*maxSize);
+
+				if (data == NULL) {
+					ret = GAME_WHITE_LIST_ERROR_NO_MEMORY;
 				} else {
-					int n = out->Write(data, (SceSize)chunk->size);
+					ret = sceSblUsGetExtractSpackage(WHITE_LIST_SPKG_NODE,
+									 requestId,
+									 (uint32_t)info->decryptedSize,
+									 *maxSize, data);
+					if (ret == 0) {
+						out = LocalFile::Open(dst,
+								      SCE_O_WRONLY | SCE_O_CREAT |
+								      SCE_O_TRUNC, 0606, &ret);
+						if (out.get() == NULL) {
+							ret = GAME_WHITE_LIST_ERROR_NO_FILE;
+						} else {
+							int n = out->Write(data,
+									   (SceSize)chunk->size);
 
-					if (n < 0)
-						ret = n;
-					else if (n != chunk->size)
-						ret = GAME_WHITE_LIST_ERROR_SHORT_WRITE;
+							if (n < 0)
+								ret = n;
+							else if (n != chunk->size)
+								ret = GAME_WHITE_LIST_ERROR_SHORT_WRITE;
+						}
+					}
 				}
+				if (data != NULL)
+					sce_paf_free(data);
 			}
 		}
-		if (data != NULL)
-			sce_paf_free(data);
 	}
 
-done:
 	if (package != NULL)
 		sceSblUsReleaseBuffer(package);
 	if (in.get() != NULL)
@@ -752,23 +745,25 @@ int gameWhiteListFileCopy(const char *src, const char *dst)
 			int n;
 			int written;
 
-			do {
+			for (;;) {
 				n = in->Read(buf, WHITE_LIST_COPY_SIZE);
 				if (n < 0) {
 					ret = n;
-					goto done;
+					break;
 				}
 				if (n == 0)
-					goto done;
+					break;
 				written = out->Write(buf, n);
 				if (written < 0) {
 					ret = written;
-					goto done;
+					break;
 				}
-			} while (n == written);
-			ret = GAME_WHITE_LIST_ERROR_SHORT_WRITE;
+				if (n != written) {
+					ret = GAME_WHITE_LIST_ERROR_SHORT_WRITE;
+					break;
+				}
+			}
 		}
-done:
 		if (in.get() != NULL)
 			in->Close();
 	}

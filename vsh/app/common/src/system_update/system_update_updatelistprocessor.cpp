@@ -288,26 +288,25 @@ int UpdateListProcessor::startElement(void *userData, const char *name, int leng
 							UPLIST_ERROR(UPDATE_LIST_ERROR_NO_FROM_VERSION);
 							from = -1;
 						}
-						if (ok != true)
-							goto done;
 					} else {
 						from = -1;
+						ok = true;
 					}
-					if (m_list_updata != NULL) {
-						UPLIST_LOG("[APP][UPLIST] m_list_updata error\n");
-						UPLIST_ERROR(UPDATE_LIST_ERROR_STATE);
-					} else {
-						m_list_updata = new SystemUpdateImage;
-						m_list_updata->type = from;
-						m_list_updata->kind = kind;
-						m_inData = true;
-						m_state = UPDATE_LIST_STATE_DATA;
+					if (ok) {
+						if (m_list_updata != NULL) {
+							UPLIST_LOG("[APP][UPLIST] m_list_updata error\n");
+							UPLIST_ERROR(UPDATE_LIST_ERROR_STATE);
+						} else {
+							m_list_updata = new SystemUpdateImage;
+							m_list_updata->type = from;
+							m_list_updata->kind = kind;
+							m_inData = true;
+							m_state = UPDATE_LIST_STATE_DATA;
+						}
 					}
 				} else {
 					UPLIST_ERROR(UPDATE_LIST_ERROR_UPDATE_TYPE);
 				}
-done:
-				;
 			}
 		}
 		break;

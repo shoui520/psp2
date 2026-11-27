@@ -41,8 +41,8 @@ GameThemeCopier::~GameThemeCopier()
  * (0x8103C1F2).
  */
 int GameThemeCopier::Install(const string &path, const string &themeId, string *themeDir,
-			     string *contentPath, GameJobProgress *progress, float share, int arg6,
-			     int arg7)
+			     string *contentPath, GameJobProgress *progress, float share,
+			     int cancel, int cancelArg)
 {
 	gameRemoveDirectory(GAME_THEME_PROMOTE_DIR, 0, 0, 0, true);
 
@@ -58,7 +58,7 @@ int GameThemeCopier::Install(const string &path, const string &themeId, string *
  * license written to ux0:license/theme/<themeId> (0x8103C33C).
  */
 int GameThemeCopier::Commit(string *themeDir, string *contentPath, GameJobProgress *progress,
-			    float share, int arg4, int arg5)
+			    float share, int cancel, int cancelArg)
 {
 	int ret;
 

@@ -96,11 +96,11 @@ public:
 	bool m_regionDone;
 	int m_result;
 	paf::string m_url;		/* the image's text */
-	int reserved2[3];		/* PLACEHOLDER: not read */
+	int urlPad[3];			/* not read */
 	paf::string m_text;		/* PLACEHOLDER: what m_inText collects */
 	int m_state;			/* UpdateListState */
-	paf::string m_text2;		/* PLACEHOLDER: not read */
-	int reserved3;			/* PLACEHOLDER: not read */
+	paf::string m_unusedText;	/* not read */
+	int statePad;			/* not read */
 	paf::string m_recoveryUrl;
 	SceInt64 m_recoverySize;
 	SystemUpdateRecoveryInfo *m_pRcvInfo_array[UPDATE_LIST_RECOVERY_MAX];
