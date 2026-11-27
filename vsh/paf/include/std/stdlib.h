@@ -24,6 +24,7 @@ int sce_paf_wprintf_dummy(void);
 long sce_paf_strtol(const char *str, char **endptr, int base);
 unsigned long sce_paf_strtoul(const char *str, char **endptr, int base);
 long long sce_paf_strtoll(const char *str, char **endptr, int base);
+double sce_paf_strtod(const char *str, char **endptr);
 double sce_paf_atof(const char *str);
 int sce_paf_rand(void);
 void sce_paf_srand(unsigned int seed);

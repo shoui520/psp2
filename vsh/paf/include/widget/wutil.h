@@ -28,6 +28,10 @@ class TextBoxEditMenuListener;
 
 /* told when a plugin starts, before its own start function; an abstract class of sixteen
    virtual methods (all but the first named by their slot, ours) */
+#ifdef PAF_BUILD_2014
+struct WebSslCertInfo;
+#endif
+
 /* what a message dialog is asked with: its owner, its texts (names ours) */
 struct MessageDialogParam {
 	void *owner;
@@ -35,8 +39,25 @@ struct MessageDialogParam {
 	common::String title;
 	common::String message;
 	common::String button;
+#ifndef PAF_BUILD_2014
 	/* the owner's, given back when the dialog closes */
 	void *user_data;
+#endif
+
+#ifdef PAF_BUILD_2014
+	void Clear()
+	{
+		owner = NULL;
+		values[0] = 0;
+		values[1] = 0;
+		values[2] = 0;
+		values[3] = 0;
+		values[4] = 0;
+		title = common::String(L"");
+		message = common::String(L"");
+		button = common::String(L"");
+	}
+#endif
 };
 
 /* the four texts a dialog is opened with (the web view's: the two lines of its request, the
@@ -67,6 +88,18 @@ public:
 	virtual void Method6() = 0;
 	/* the text of the dialog's text field at the index */
 	virtual const wstring *Method7(int index) = 0;
+#ifdef PAF_BUILD_2014
+	/* 2014 WebViewBase dialog hooks at slots 8..14 (+32..+56). */
+	virtual int OpenJsDialog(MessageDialogParam *param) = 0;
+	virtual int OpenNavigationWarningDialog(MessageDialogParam *param) = 0;
+	virtual void OnDialogIdle() = 0;
+	virtual int OpenBadCertificateDialog(MessageDialogParam *param) = 0;
+	virtual int OpenBadCertificateDetailDialog(MessageDialogParam *param,
+						   WebSslCertInfo *cert_info) = 0;
+	virtual int OpenBasicAuthDialog(MessageDialogParam *param,
+					const MessageDialogTexts &texts) = 0;
+	virtual int OpenNormalDialog(MessageDialogParam *param) = 0;
+#else
 	/* whether a dialog is open */
 	virtual bool Method8() = 0;
 	/* opens the dialog asked for */
@@ -86,6 +119,7 @@ public:
 	virtual void Method16() = 0;
 	/* the owner's dialog closed */
 	virtual void Method17(MessageDialogParam *param) = 0;
+#endif
 };
 
 namespace wutil {

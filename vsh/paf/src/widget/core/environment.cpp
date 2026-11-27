@@ -226,6 +226,13 @@ inline __attribute__((noinline)) void list<ui::Scene *>::push_back(ui::Scene *co
 	}
 }
 
+#ifdef PAF_HAS_WEBVIEW
+namespace graph {
+extern void UpdateMapLayers();
+extern void FlushMapLayers();
+}
+#endif
+
 namespace ui {
 
 #ifndef PAF_BUILD_2014
@@ -3450,13 +3457,6 @@ void Environment::UpdateRestructScene()
 #endif
 
 #ifdef PAF_BUILD_2014
-#ifdef PAF_HAS_WEBVIEW
-namespace graph {
-extern void UpdateMapLayers();
-extern void FlushMapLayers();
-}
-#endif
-
 extern "C" void ScePafWidget_DC1B19DB(Environment *env)
 {
 	env->UpdateRestructScene();

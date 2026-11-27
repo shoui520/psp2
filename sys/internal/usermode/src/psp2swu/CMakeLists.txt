@@ -227,7 +227,7 @@ set(swu_updater_SOURCES
 	${PSP2_SRC}/sys/internal/usermode/src/updater_core/memory_fat_fs.cpp
 )
 
-psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
+psp2_module(${PSP2_TARGET} KIND user COMPILER snc SOURCES
 	# psp2swu application and embedded RCO/font assets
 	update_view_base.cpp
 	update_cui_view.cpp
@@ -443,8 +443,14 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	${PAF}/src/graphics/effects/env_probe.cpp
 	${PAF}/src/graphics/effects/effect_unused.cpp
 	${PAF}/src/graphics/effects/effect_globals.cpp
+	${PAF}/src/graphics/effects/screen_copy.cpp
 	${PAF}/src/graphics/effects/wave_switch.cpp
 	${PAF}/src/graphics/drawobj/panel_obj_list.cpp
+	${PAF}/src/graphics/drawobj/map_obj_list.cpp
+	${PAF}/src/graphics/drawobj/map_obj.cpp
+	${PAF}/src/graphics/drawobj/web_blit_list.cpp
+	${PAF}/src/graphics/drawobj/web_obj.cpp
+	${PAF}/src/graphics/drawobj/web_bg_obj.cpp
 	${PAF}/src/graphics/effects/custom_trail.cpp
 	${PAF}/src/graphics/drawobj/drawobj_factory.cpp
 	${PAF}/src/widget/w_appicon2d.cpp
@@ -459,6 +465,7 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	${PAF}/src/widget/w_supplier.cpp
 	${PAF}/src/widget/w_text.cpp
 	${PAF}/src/widget/w_text_box.cpp
+	${PAF}/src/widget/w_webview.cpp
 	${PAF}/src/widget/wutil.cpp
 	${PAF}/src/widget/w_check_box.cpp
 	${PAF}/src/widget/w_composite_drawer.cpp
@@ -472,6 +479,7 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	${PAF}/src/widget/w_item_spin.cpp
 	${PAF}/src/widget/w_list_item.cpp
 	${PAF}/src/widget/w_list_view.cpp
+	${PAF}/src/widget/w_mapview.cpp
 	${PAF}/src/widget/w_num_spin.cpp
 	${PAF}/src/widget/w_pageturn.cpp
 	${PAF}/src/widget/w_pageturn_base.cpp
@@ -492,6 +500,17 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	${PAF}/src/widget/w_sliding_drawer.cpp
 	${PAF}/src/widget/w_speech_balloon.cpp
 	${PAF}/src/widget/w_spin_base.cpp
+	${PAF}/src/widget/map_core.cpp
+	${PAF}/src/widget/map_canvas.cpp
+	${PAF}/src/widget/js_document.cpp
+	${PAF}/src/widget/web_rect.cpp
+	${PAF}/src/widget/web_renderer.cpp
+	${PAF}/src/widget/web_controller.cpp
+	${PAF}/src/widget/w_webview_base.cpp
+	${PAF}/src/widget/map_bg_loader.cpp
+	${PAF}/src/widget/web_context_menu_info.cpp
+	${PAF}/src/widget/w_document_widget.cpp
+	${PAF}/src/widget/web_core.cpp
 	${PAF}/src/graphics/arl/gxm/gxm_default_textures.cpp
 	${PAF}/src/graphics/arl/gxm/gxm_framebuffer_object.cpp
 	${PAF}/src/graphics/effects/fft.cpp
@@ -592,6 +611,7 @@ target_compile_definitions(${PSP2_TARGET} PRIVATE
 	PAF_BUILD_2014
 	PAF_STATIC_BUILD
 	PAF_LIBRARY_BUILD
+	PAF_HAS_WEBVIEW
 	UPDATER_CORE_2014
 	COMMON_GUI_DIALOG_2014
 	MSG_DIALOG_UTIL_2014
@@ -755,6 +775,16 @@ set_source_files_properties(
 	${PAF}/src/widget/core/uiinputlistener.cpp ${PAF}/src/widget/core/widget_gesture.cpp
 	${PAF}/src/widget/core/focuser.cpp ${PAF}/src/widget/core/handler.cpp
 	${PAF}/src/widget/core/screen.cpp ${PAF}/src/widget/w_state_button_base.cpp
+	${PAF}/src/graphics/drawobj/map_obj_list.cpp ${PAF}/src/graphics/drawobj/map_obj.cpp
+	${PAF}/src/graphics/drawobj/web_blit_list.cpp ${PAF}/src/graphics/drawobj/web_obj.cpp
+	${PAF}/src/graphics/drawobj/web_bg_obj.cpp
+	${PAF}/src/widget/w_mapview.cpp ${PAF}/src/widget/w_webview.cpp
+	${PAF}/src/widget/map_core.cpp ${PAF}/src/widget/map_canvas.cpp
+	${PAF}/src/widget/js_document.cpp ${PAF}/src/widget/web_rect.cpp
+	${PAF}/src/widget/web_renderer.cpp ${PAF}/src/widget/web_controller.cpp
+	${PAF}/src/widget/w_webview_base.cpp ${PAF}/src/widget/map_bg_loader.cpp
+	${PAF}/src/widget/web_context_menu_info.cpp ${PAF}/src/widget/w_document_widget.cpp
+	${PAF}/src/widget/web_core.cpp
 	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 
 set_source_files_properties(${PAF}/src/widget/text_box_ime_listener.cpp PROPERTIES
