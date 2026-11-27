@@ -13,40 +13,6 @@
 static SwMutex g_swContentSupportMutex;
 static SwAkeConfig g_swDefaultAkeConfig(4, 8, 1);
 
-/* ---- Base interface key-function / destructor definitions ---- */
-
-void SwMwContentSupport::destroy() {}
-void SwMwContentSupport::dispose() {}
-int SwMwContentSupport::createContent(void **, void *) { return 1; }
-int SwMwContentSupport::releaseContent() { return 1; }
-int SwMwContentSupport::createManager(void **) { return 1; }
-int SwMwContentSupport::releaseManager() { return 1; }
-int SwMwContentSupport::setSrm(const void *, size_t) { return 1; }
-
-void SwMwContentManager::destroy() {}
-void SwMwContentManager::dispose() {}
-int SwMwContentManager::createTransfer(struct SwMwTransfer **, struct SwMwUri *,
-				       int, struct SwMwStreamEvent *, int,
-				       struct SwMwSinkWork *, int) { return 1; }
-int SwMwContentManager::releaseTransfer(struct SwMwTransfer *) { return 1; }
-int SwMwContentManager::createTransferOn(struct SwMwTransfer **, struct SwMwUri *,
-					 int, struct SwMwStreamEvent *, unsigned char,
-					 int, struct SwMwSinkWork *, int) { return 1; }
-
-SwMwContent::~SwMwContent() {}
-int SwMwContent::begin(void *, int, int) { return 1; }
-int SwMwContent::start(int *, struct SwMwUri *, int) { return 1; }
-int SwMwContent::close(struct SwMwUri *) { return 1; }
-int SwMwContent::list(void *) { return 1; }
-int SwMwContent::setUri(int *, struct SwMwUri *, int) { return 1; }
-int SwMwContent::operation(struct SwMwUri *, int *) { return 1; }
-int SwMwContent::request(struct SwMwUri *, unsigned char, struct SwMwMoveMessage *, int) { return 1; }
-int SwMwContent::finalize(struct SwMwUri *, struct SwMwMoveMessage *) { return 1; }
-int SwMwContent::complete(struct SwMwUri *, unsigned char) { return 1; }
-int SwMwContent::abort(struct SwMwUri *, unsigned char) { return 1; }
-int SwMwContent::getState() { return 1; }
-int SwMwContent::getStateResult(struct SwMwUri *, int) { return 1; }
-
 /* ---- SwMwContentSupportCreate ---- */
 
 extern "C" int SwMwContentSupportCreate(struct SwMwContentSupport **support)

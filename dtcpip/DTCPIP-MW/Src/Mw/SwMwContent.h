@@ -64,23 +64,23 @@ struct SwMwStreamEvent;
  * rest carry the behaviour their bodies showed. Ours (no Sony record names the library
  * class; recorded in agent/namecheck). */
 struct SwMwTransfer {
-	virtual void destroy();				/* 0x00 */
-	virtual void dispose();				/* 0x04 */
-	virtual int setEvent(struct SwMwStreamEvent *event);	/* 0x08 */
-	virtual int start();				/* 0x0C */
-	virtual int reset();				/* 0x10 */
-	virtual int isReady();				/* 0x14 */
-	virtual int getState();				/* 0x18 */
-	virtual int setParameter(int parameter);	/* 0x1C */
-	virtual int attach(int value);			/* 0x20 */
-	virtual int transfer(int value);		/* 0x24 */
-	virtual int write(int offset, int size);	/* 0x28 */
-	virtual int getChunkList(void **chunks, int *count);	/* 0x2C */
-	virtual int release(int size);			/* 0x30 */
-	virtual int setSessionData(const void *data);	/* 0x34 */
-	virtual int getSessionData(int *out);		/* 0x38 */
-	virtual int isKeyExpiring();			/* 0x3C */
-	virtual int startMove(int value);		/* 0x40 */
+	virtual void destroy() = 0;				/* 0x00 */
+	virtual void dispose() = 0;				/* 0x04 */
+	virtual int setEvent(struct SwMwStreamEvent *event) = 0;	/* 0x08 */
+	virtual int start() = 0;				/* 0x0C */
+	virtual int reset() = 0;				/* 0x10 */
+	virtual int isReady() = 0;				/* 0x14 */
+	virtual int getState() = 0;				/* 0x18 */
+	virtual int setParameter(int parameter) = 0;		/* 0x1C */
+	virtual int attach(int value) = 0;			/* 0x20 */
+	virtual int transfer(int value) = 0;			/* 0x24 */
+	virtual int write(int offset, int size) = 0;		/* 0x28 */
+	virtual int getChunkList(void **chunks, int *count) = 0;	/* 0x2C */
+	virtual int release(int size) = 0;			/* 0x30 */
+	virtual int setSessionData(const void *data) = 0;	/* 0x34 */
+	virtual int getSessionData(int *out) = 0;		/* 0x38 */
+	virtual int isKeyExpiring() = 0;			/* 0x3C */
+	virtual int startMove(int value) = 0;			/* 0x40 */
 };
 
 /* the SWS transfer's other interface: its dispatch table's negative words name the
@@ -117,33 +117,33 @@ struct SwSdiBuffer {
 };
 
 struct SwMwContentManager {
-	virtual void destroy();						/* 0x00 */
-	virtual void dispose();						/* 0x04 */
+	virtual void destroy() = 0;						/* 0x00 */
+	virtual void dispose() = 0;						/* 0x04 */
 	virtual int createTransfer(struct SwMwTransfer **transfer, struct SwMwUri *uri,
 				   int mode, struct SwMwStreamEvent *event,
 				   int receiveSize, struct SwMwSinkWork *work,
-				   int sendBase);			/* 0x08 */
-	virtual int releaseTransfer(struct SwMwTransfer *transfer);	/* 0x0c */
+				   int sendBase) = 0;				/* 0x08 */
+	virtual int releaseTransfer(struct SwMwTransfer *transfer) = 0;		/* 0x0c */
 	virtual int createTransferOn(struct SwMwTransfer **transfer, struct SwMwUri *uri,
 				      int mode, struct SwMwStreamEvent *event,
 				      unsigned char label, int receiveSize,
-				      struct SwMwSinkWork *work, int sendBase);	/* 0x10 */
+				      struct SwMwSinkWork *work, int sendBase) = 0;	/* 0x10 */
 };
 
 /* the content object (14 dispatch slots, in table order) */
 struct SwMwContent {
-	virtual ~SwMwContent();					/* 0x00/0x04 */
-	virtual int begin(void *uri, int value, int mode);	/* 0x08 */
-	virtual int start(int *uriSet, struct SwMwUri *uri, int mode);	/* 0x0c */
-	virtual int close(struct SwMwUri *uri);			/* 0x10 */
-	virtual int list(void *out);				/* 0x14 */
-	virtual int setUri(int *uriSet, struct SwMwUri *uri, int mode);	/* 0x18 */
-	virtual int operation(struct SwMwUri *uri, int *result);	/* 0x1c */
+	virtual ~SwMwContent() {}				/* 0x00/0x04 */
+	virtual int begin(void *uri, int value, int mode) = 0;	/* 0x08 */
+	virtual int start(int *uriSet, struct SwMwUri *uri, int mode) = 0;	/* 0x0c */
+	virtual int close(struct SwMwUri *uri) = 0;		/* 0x10 */
+	virtual int list(void *out) = 0;			/* 0x14 */
+	virtual int setUri(int *uriSet, struct SwMwUri *uri, int mode) = 0;	/* 0x18 */
+	virtual int operation(struct SwMwUri *uri, int *result) = 0;	/* 0x1c */
 	virtual int request(struct SwMwUri *uri, unsigned char label,
-			    struct SwMwMoveMessage *message, int value);	/* 0x20 */
-	virtual int finalize(struct SwMwUri *uri, struct SwMwMoveMessage *message);	/* 0x24 */
-	virtual int complete(struct SwMwUri *uri, unsigned char state);		/* 0x28 */
-	virtual int abort(struct SwMwUri *uri, unsigned char state);		/* 0x2c */
-	virtual int getState();					/* 0x30 */
-	virtual int getStateResult(struct SwMwUri *uri, int mode);	/* 0x34 */
+			    struct SwMwMoveMessage *message, int value) = 0;	/* 0x20 */
+	virtual int finalize(struct SwMwUri *uri, struct SwMwMoveMessage *message) = 0;	/* 0x24 */
+	virtual int complete(struct SwMwUri *uri, unsigned char state) = 0;		/* 0x28 */
+	virtual int abort(struct SwMwUri *uri, unsigned char state) = 0;		/* 0x2c */
+	virtual int getState() = 0;					/* 0x30 */
+	virtual int getStateResult(struct SwMwUri *uri, int mode) = 0;	/* 0x34 */
 };

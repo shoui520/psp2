@@ -7,26 +7,6 @@
 
 #include <string.h>
 
-/* ---- SwMwTransfer base interface definitions ---- */
-
-void SwMwTransfer::destroy() {}
-void SwMwTransfer::dispose() {}
-int SwMwTransfer::setEvent(struct SwMwStreamEvent *) { return 1; }
-int SwMwTransfer::start() { return 1; }
-int SwMwTransfer::reset() { return 1; }
-int SwMwTransfer::isReady() { return 0; }
-int SwMwTransfer::getState() { return 0; }
-int SwMwTransfer::setParameter(int) { return 1; }
-int SwMwTransfer::attach(int) { return 1; }
-int SwMwTransfer::transfer(int) { return 1; }
-int SwMwTransfer::write(int, int) { return 1; }
-int SwMwTransfer::getChunkList(void **, int *) { return 1; }
-int SwMwTransfer::release(int) { return 1; }
-int SwMwTransfer::setSessionData(const void *) { return 0; }
-int SwMwTransfer::getSessionData(int *) { return 1; }
-int SwMwTransfer::isKeyExpiring() { return 0; }
-int SwMwTransfer::startMove(int) { return 1; }
-
 /* ---- SwTransfer ---- */
 
 SwTransfer::SwTransfer(void *extMem, uint32_t bufferSize)
