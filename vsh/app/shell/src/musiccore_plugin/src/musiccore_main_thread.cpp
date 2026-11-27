@@ -13,6 +13,9 @@
 #include <system/system.h>
 #include <inputdevice/inputdevice.h>
 
+#include "musiccore_ctrl_client.h"
+#include "musiccore_main_thread.h"
+
 extern "C" {
 extern int sceAppMgrGetStatusByName(const char *name, void *status);
 extern int sceAppMgrGetStatusByAppId(SceUID appId, void *status);
@@ -31,44 +34,6 @@ extern int musicCoreQueueSend(void *queue, int seqId, SceUInt32 cmd,
 	const void *payload, SceSize payloadSize);		/* 0x811D3C80 */
 extern int musicCoreQueueRecv(void *queue, void **outMsg, SceUInt *timeout); /* 0x811D499E */
 extern int musicCoreQueueRelease(void *queue, void *msg);	/* 0x811D4AAA */
-
-extern int musicCoreCtrlInit(void);				/* 0x811D2030 */
-extern int musicCoreCtrlFini(void);				/* 0x811D2114 */
-extern int musicCoreCtrlOpenChannel(int seqId, SceUInt8 chType, int priority, SceUInt8 *outSlot); /* 0x811D2174 */
-extern int musicCoreCtrlOpenExChannel(int seqId, SceUInt8 chType, int priority, SceUInt8 *outSlot, void *param); /* 0x811D2226 */
-extern int musicCoreCtrlCloseChannel(int seqId);		/* 0x811D22F4 */
-extern int musicCoreCtrlSetActiveSlot(int seqId, SceUInt8 slot); /* 0x811D2372 */
-extern int musicCoreCtrlSetContent(int seqId);			/* 0x811D23E4 */
-extern int musicCoreCtrlOpenUri(int seqId);			/* 0x811D24A2 */
-extern int musicCoreCtrlResumeAudio(int flags, int mode);	/* 0x811D2564 */
-extern int musicCoreCtrlPlay(int seqId, SceUInt8 slot, int param); /* 0x811D25D6 */
-extern int musicCoreCtrlPause(int seqId, SceUInt8 slot, int mode, int param); /* 0x811D2658 */
-extern int musicCoreCtrlControl(int seqId);			/* 0x811D26E0 */
-extern int musicCoreCtrlSetRepeat(int seqId);			/* 0x811D27B2 */
-extern int musicCoreCtrlSetShuffle(int seqId);			/* 0x811D2834 */
-extern int musicCoreCtrlSetVolume(int seqId);			/* 0x811D2902 */
-extern int musicCoreCtrlSetEq(int seqId);			/* 0x811D298C */
-extern int musicCoreCtrlSetAvls(int seqId);			/* 0x811D2A3E */
-extern int musicCoreCtrlSetStatusCb(int mode, void *cb);	/* 0x811D2AC0 */
-extern int musicCoreCtrlSetCapCb(int mode, void *cb);		/* 0x811D2B3A */
-extern int musicCoreCtrlSetMediaCb(int mode, void *cb);		/* 0x811D2BB4 */
-extern int musicCoreCtrlSetNotifyCb(int mode, void *cb);	/* 0x811D2C30 */
-extern int musicCoreCtrlSetTimeCb(int mode, void *cb, int interval); /* 0x811D2CAA */
-extern int musicCoreCtrlSetExtraCb(int mode, void *cb);		/* 0x811D2D2E */
-extern int musicCoreCtrlDbOpen(int seqId);			/* 0x811D2DA8 */
-extern int musicCoreCtrlDbSuspend(int seqId, int flag);		/* 0x811D2E20 */
-extern int musicCoreCtrlDbClose(int seqId);			/* 0x811D2E9C */
-extern int musicCoreCtrlDbQuery(int seqId, const void *buf, int mode, int opt); /* 0x811D2F04 */
-extern int musicCoreCtrlGetMeta(SceUInt8 ch, void *metaDesc);	/* 0x811D2F86 */
-extern int musicCoreCtrlGetSlotStatus(SceUInt8 slot, void *outRaw, int *outTime, SceUInt8 *outValid); /* 0x811D305A */
-extern int musicCoreCtrlGetSlotUri(SceUInt8 slot, int mode, int *outType, void *outUri, SceUInt8 *outValid); /* 0x811D317A */
-extern int musicCoreCtrlSetAvrcp(SceUInt8 enable, SceUInt8 *outPrev); /* 0x811D321A */
-extern int musicCoreCtrlSuspendAudio(int flags, int mode);	/* 0x811D325A */
-extern int musicCoreCtrlSeek(void);				/* 0x811D32CC */
-extern int musicCoreCtrlStop(void);				/* 0x811D336C */
-extern int musicCoreCtrlClearAudio(int flags, int mode);	/* 0x811D33DE */
-
-typedef void (*MusicCoreNotifyCb)(const void *ctx, SceUInt16 eventId, const int *err, const void *status);
 
 struct MusicCoreAppSlot {
 	int seqId;						/* +0 */
@@ -93,25 +58,6 @@ struct MusicCorePlayTimeEntry {
 	int cmdId;						/* +0 */
 	int errCode;						/* +4 */
 	int extra;						/* +8 */
-};
-
-struct MusicCoreQueueMsg {
-	int header[2];						/* +0 */
-	int seqId;						/* +8 */
-	SceUInt8 channel;					/* +12 */
-	SceUInt8 padChannel;					/* +13 */
-	SceUInt16 cmdId;					/* +14 */
-	const void *payload;					/* +16 */
-	SceSize payloadSize;					/* +20 */
-};
-
-struct MusicCoreClientReq {
-	int seqId;						/* +0 */
-	SceUInt8 channel;					/* +4 */
-	SceUInt8 subMode;					/* +5 */
-	SceUInt8 reserved[2];					/* +6 */
-	int pid;						/* +8 */
-	int appId;						/* +12 */
 };
 
 struct MusicCoreMetaDesc {
@@ -280,76 +226,12 @@ static SceUInt8 s_btrmOwned = 0;				/* 0x8156EC94 */
 static SceUInt8 s_titleDirty = 0;				/* 0x8156EC95 */
 
 /* Forward declarations for internal callbacks */
+int musicCoreSetImposePausedNotice(int mode, const char *text, SceUInt8 show); /* 0x811D1740 */
 static int musicCoreOnCapCb(const void *cap);			/* 0x811D16FE */
 static int musicCoreOnStatusCb(const void *raw, SceUInt16 eventId, SceUInt32 cmd, int err); /* 0x811D18B0 */
 static int musicCoreOnExtraCb(const void *data);		/* 0x811D1E06 */
 static int musicCoreOnTimeCb(const void *data);			/* 0x811D1E82 */
 static int musicCoreOnMediaCb(int kind, const void *rawStatus, const void *data); /* 0x811D1F18 */
-
-class MusicCoreMain {
-public:
-	MusicCoreMain(int *outErr);				/* 0x811CE626 */
-	~MusicCoreMain();					/* 0x811CE882 */
-
-	int SendCmd(SceUInt32 cmdTag, int seqId, SceUInt32 packedCmd,
-		const void *payload, SceSize payloadSize);	/* 0x811CE796 */
-	int InitController();					/* 0x811CE940 */
-	int SetCallback(MusicCoreNotifyCb cb);			/* 0x811CEB88 */
-	int ClearCallback(MusicCoreNotifyCb cb);		/* 0x811CEB9A */
-	int ParseMsgHeader(const MusicCoreQueueMsg *msg, int *outSeq, SceUInt8 *outCh); /* 0x811CEBA8 */
-	int ResolveSlot(SceUInt32 chType, int appId, SceUInt8 *outSlot); /* 0x811CEC06 */
-	int SetSlotBgmAllowed(SceUInt32 chType, int appId, SceUInt8 allowed); /* 0x811CEC72 */
-	int SetSlotLastCtrl(SceUInt32 chType, int appId, SceUInt8 ctrl); /* 0x811CECCA */
-	int CheckSlotPaused(SceUInt32 chType, int appId, SceUInt8 *outState); /* 0x811CED22 */
-
-	int HandleSetContent(const MusicCoreQueueMsg *msg);	/* 0x811CEDC4 */
-	int HandleControl(const MusicCoreQueueMsg *msg);	/* 0x811CEF6C */
-	int HandleSetRepeat(const MusicCoreQueueMsg *msg);	/* 0x811CF388 */
-	int HandleSetShuffle(const MusicCoreQueueMsg *msg);	/* 0x811CF428 */
-	int HandleSetAvls(const MusicCoreQueueMsg *msg);	/* 0x811CF4B8 */
-	int HandleOpenChannel(const MusicCoreQueueMsg *msg);	/* 0x811CF548 */
-	int HandleCloseChannel(const MusicCoreQueueMsg *msg);	/* 0x811CF6A8 */
-	int HandleSetEq(const MusicCoreQueueMsg *msg);		/* 0x811CF7AC */
-	int HandleDbQuery(const MusicCoreQueueMsg *msg);	/* 0x811CF850 */
-	int HandleAppFocusChange(const MusicCoreQueueMsg *msg);	/* 0x811CF8E2 */
-	int HandleSystemPause(const MusicCoreQueueMsg *msg);	/* 0x811CFE7C */
-	int HandlePowerSuspend(const MusicCoreQueueMsg *msg);	/* 0x811D0016 */
-	int HandlePowerResume(const MusicCoreQueueMsg *msg);	/* 0x811D015C */
-
-	int GetStatus(const MusicCoreClientReq *req, void *outRaw); /* 0x811D02D2 */
-	int GetError(const MusicCoreClientReq *req, int *outErr); /* 0x811D038A */
-	int GetTrackInfo(const MusicCoreClientReq *req, void *outTrack, void *outRaw); /* 0x811D04AC */
-	int GetUri(const MusicCoreClientReq *req, void *outUri); /* 0x811D04FA */
-	int GetPlayTimeFlag(const MusicCoreClientReq *req, int *outVal); /* 0x811D05CE */
-	int GetCap(const MusicCoreClientReq *req, void *outCap); /* 0x811D068A */
-	int GetMeta(const MusicCoreClientReq *req, char *outMeta); /* 0x811D06A0 */
-	int GetPlayTimeEntry(const MusicCoreClientReq *req, void *outEntry); /* 0x811D06FE */
-	int GetAllAppSlots(int unused, void *outSlots);		/* 0x811D07D6 */
-	int GetBgmSlot(int unused, void *outSlot);		/* 0x811D07EE */
-	int SetAvrcpActive(const MusicCoreClientReq *req, SceUInt8 enable); /* 0x811D0804 */
-	int SetErrorSuppression(const MusicCoreClientReq *req, SceUInt8 mode); /* 0x811D082E */
-	int ClearErrorSuppression(const MusicCoreClientReq *req, SceUInt8 mode); /* 0x811D087C */
-
-	int DispatchMsg(const MusicCoreQueueMsg *msg);		/* 0x811D08CE */
-	int MainLoop();						/* 0x811D0FBA */
-	static int ThreadEntry(SceSize args, void *argp);	/* 0x811D1174 */
-
-	SceUID m_threadId;					/* +0 */
-	SceUID m_semaId;					/* +4 */
-	int m_initResult;					/* +8 */
-	int m_initAlignPad;					/* +12 */
-	int m_state;						/* +16 */
-	int m_stateAlignPad;					/* +20 */
-	paf::thread::Mutex m_mutex;				/* +24 */
-	paf::thread::Cond m_cond;				/* +56 */
-	void *m_ackVtbl;					/* +76 */
-	paf::thread::Cond *m_ackCond;				/* +80 */
-	paf::thread::Mutex *m_ackMutex;				/* +84 */
-	int m_ackState;						/* +88 */
-	void *m_queue;						/* +92 */
-	SceUInt8 m_initialized;					/* +96 */
-	SceUInt8 m_stopping;					/* +97 */
-};
 
 /* 0x811CE626 */
 MusicCoreMain::MusicCoreMain(int *outErr)
@@ -473,24 +355,24 @@ int MusicCoreMain::InitController()
 	sce_paf_strncpy(s_curAppTitle, "NPXS19999", sce_paf_strlen("NPXS19999"));
 	sce_paf_strncpy(s_prevAppTitle, "NPXS19999", sce_paf_strlen("NPXS19999"));
 
-	int ret = musicCoreCtrlInit();
+	int ret = sce::MusicCore::ctrlInit();
 	if (ret != 0) return ret;
-	ret = musicCoreCtrlSetStatusCb(0, (void *)musicCoreOnStatusCb);
+	ret = sce::MusicCore::ctrlSetIdleCallback(0, (void *)musicCoreSetImposePausedNotice);
 	if (ret != 0) return ret;
-	ret = musicCoreCtrlSetCapCb(0, (void *)musicCoreOnCapCb);
+	ret = sce::MusicCore::ctrlSetCapCallback(0, (void *)musicCoreOnCapCb);
 	if (ret != 0) return ret;
-	ret = musicCoreCtrlSetMediaCb(0, (void *)musicCoreOnMediaCb);
+	ret = sce::MusicCore::ctrlSetStatusCallback(0, (void *)musicCoreOnStatusCb);
 	if (ret != 0) return ret;
-	ret = musicCoreCtrlSetNotifyCb(0, (void *)musicCoreOnExtraCb);
+	ret = sce::MusicCore::ctrlSetExtraCallback(0, (void *)musicCoreOnExtraCb);
 	if (ret != 0) return ret;
-	ret = musicCoreCtrlSetExtraCb(0, (void *)musicCoreOnExtraCb);
+	ret = sce::MusicCore::ctrlSetMediaCallback(0, (void *)musicCoreOnMediaCb);
 	if (ret != 0) return ret;
-	ret = musicCoreCtrlSetTimeCb(0, (void *)musicCoreOnTimeCb, 90000);
+	ret = sce::MusicCore::ctrlSetTimeCallback(0, (void *)musicCoreOnTimeCb, 90000);
 	if (ret != 0) return ret;
 
 	m_initialized = 1;
 	SceUInt8 slot = 0xFF;
-	return musicCoreCtrlOpenChannel(0, 1, 128, &slot);
+	return sce::MusicCore::ctrlOpenSimple(0, 1, 128, &slot);
 }
 
 /* 0x811CEB88 */
@@ -613,29 +495,74 @@ int MusicCoreMain::HandleSetContent(const MusicCoreQueueMsg *msg)
 	if (ret != 0)
 		return ret;
 
-	SceUInt32 buf[524];
-	sce_paf_memset(buf, 0, sizeof(buf));
-	sce_paf_memcpy(buf, msg->payload, msg->payloadSize);
-	s_ptCh1.extra = 117;
+	struct SetContentMsg {
+		char uri[0x804];
+		int listIndex;
+		int trackIndex;
+		int padTrackId;
+		SceInt64 trackId;
+		SceUInt32 shuffleMode;
+		SceUInt32 contentKind;
+		SceUInt32 extraMeta;
+		int padMeta;
+		int pid;
+		int appId;
+	} contentMsg;
+	sce_paf_memset(&contentMsg, 0, sizeof(contentMsg));
+	sce_paf_memcpy(&contentMsg, msg->payload, msg->payloadSize);
 
-	if (buf[518] > 2)
+	sce::MusicCore::TrackContentDesc trackDesc;
+	sce_paf_memset(&trackDesc, 0, sizeof(trackDesc));
+	trackDesc.trackId = contentMsg.trackId;
+	trackDesc.trackIndex = contentMsg.trackIndex;
+	s_ptCh1.extra = 117;
+	sce_paf_strncpy(trackDesc.uri, contentMsg.uri, 0x800u);
+	trackDesc.uri[0x800] = '\0';
+	trackDesc.listIndex = contentMsg.listIndex;
+
+	if (contentMsg.shuffleMode <= 1u) {
+		trackDesc.shuffleFlag = (contentMsg.shuffleMode != 0u) ? 1 : 0;
+	} else if (contentMsg.shuffleMode == 2u) {
+		trackDesc.shuffleFlag = -1;
+	} else {
 		return (int)0x80100D01;
-	SceUInt32 mode = buf[519];
-	if (mode != 0 && mode != 2 && mode != 18)
+	}
+
+	if (contentMsg.contentKind == 0u) {
+		trackDesc.contentKind = 1;
+	} else if (contentMsg.contentKind == 2u) {
+		trackDesc.contentKind = 2;
+	} else if (contentMsg.contentKind == 18u) {
+		trackDesc.contentKind = -1;
+	} else {
 		return (int)0x80100D01;
-	if (buf[520] > 2)
+	}
+
+	if (contentMsg.extraMeta <= 1u) {
+		trackDesc.extraMeta = (contentMsg.extraMeta != 0u) ? 1 : 0;
+	} else if (contentMsg.extraMeta == 2u) {
+		trackDesc.extraMeta = -1;
+	} else {
 		return (int)0x80100D01;
+	}
 
 	SceUInt8 slot = 0;
-	ret = ResolveSlot(ch, (int)buf[523], &slot);
+	ret = ResolveSlot(ch, contentMsg.appId, &slot);
 	if (ret == 0)
-		return musicCoreCtrlSetContent(seqId);
+		return sce::MusicCore::ctrlSetUriData((uint32_t)seqId, slot, &trackDesc);
 	return ret;
 }
 
 /* 0x811CEF6C */
 int MusicCoreMain::HandleControl(const MusicCoreQueueMsg *msg)
 {
+	sce::MusicCore::ControlParams ctrlParams;
+	ctrlParams.seekTarget = -1;
+	ctrlParams.speedValue = (int)0x80000000u;
+	ctrlParams.trackIndex = -2;
+	ctrlParams.seekMode = -2;
+	ctrlParams.seekPositionMs = -2;
+
 	int seqId = 0;
 	SceUInt8 ch = 0;
 	int ret = ParseMsgHeader(msg, &seqId, &ch);
@@ -680,33 +607,99 @@ int MusicCoreMain::HandleControl(const MusicCoreQueueMsg *msg)
 			return 0;
 	}
 
+	int fadeMs = payload[1];
 	switch (payload[0]) {
 	case 0:
-		ret = musicCoreCtrlControl(seqId);
+		ctrlParams.speedValue = 1;
+		ret = sce::MusicCore::ctrlControl((uint32_t)seqId, slot, &ctrlParams);
 		if (ret == 0) {
-			ret = musicCoreCtrlPlay(seqId, slot, payload[1]);
-			if (paused != 0)
-				ret = musicCoreCtrlPause(seqId, slot, 1, 0);
+			ret = sce::MusicCore::ctrlPlay((uint32_t)seqId, slot, fadeMs);
+			if (paused == 1)
+				ret = sce::MusicCore::ctrlPause((uint32_t)seqId, slot, 1, 0);
 		}
 		break;
 	case 1:
-		ret = musicCoreCtrlPause(seqId, slot, 1, payload[1]);
+		ret = sce::MusicCore::ctrlPause((uint32_t)seqId, slot, 1, fadeMs);
 		break;
 	case 2:
-		ret = musicCoreCtrlPause(seqId, slot, 0, 0);
+		ret = sce::MusicCore::ctrlPause((uint32_t)seqId, slot, 0, 0);
 		break;
 	case 3:
-	case 4:
-	case 5: case 6: case 7: case 8: case 9: case 10:
-		ret = musicCoreCtrlControl(seqId);
+		ctrlParams.seekTarget = -3;
+		ctrlParams.seekPositionMs = -1;
+		ret = sce::MusicCore::ctrlControl((uint32_t)seqId, slot, &ctrlParams);
 		break;
-	case 11: case 12: case 13: case 14: case 15: case 16:
-		ret = musicCoreCtrlSeek();
-		if (paused != 0)
-			ret = musicCoreCtrlPause(seqId, slot, 1, 0);
+	case 4:
+		if (seqId == 156 && (unsigned int)s_playTimeCh1 > 1000u) {
+			ctrlParams.seekPositionMs = 0;
+		} else {
+			ctrlParams.seekTarget = -4;
+			ctrlParams.seekPositionMs = -1;
+		}
+		ret = sce::MusicCore::ctrlControl((uint32_t)seqId, slot, &ctrlParams);
+		break;
+	case 5:
+		ctrlParams.speedValue = 10;
+		ret = sce::MusicCore::ctrlControl((uint32_t)seqId, slot, &ctrlParams);
+		break;
+	case 6:
+		ctrlParams.speedValue = 30;
+		ret = sce::MusicCore::ctrlControl((uint32_t)seqId, slot, &ctrlParams);
+		break;
+	case 7:
+		ctrlParams.speedValue = 100;
+		ret = sce::MusicCore::ctrlControl((uint32_t)seqId, slot, &ctrlParams);
+		break;
+	case 8:
+		ctrlParams.speedValue = -10;
+		ret = sce::MusicCore::ctrlControl((uint32_t)seqId, slot, &ctrlParams);
+		break;
+	case 9:
+		ctrlParams.speedValue = -30;
+		ret = sce::MusicCore::ctrlControl((uint32_t)seqId, slot, &ctrlParams);
+		break;
+	case 10:
+		ctrlParams.speedValue = -100;
+		ret = sce::MusicCore::ctrlControl((uint32_t)seqId, slot, &ctrlParams);
+		break;
+	case 11:
+		ctrlParams.speedValue = 10;
+		ret = sce::MusicCore::ctrlSeekAndPlay((uint32_t)seqId, slot, &ctrlParams, fadeMs);
+		if (paused == 1)
+			ret = sce::MusicCore::ctrlPause((uint32_t)seqId, slot, 1, 0);
+		break;
+	case 12:
+		ctrlParams.speedValue = 30;
+		ret = sce::MusicCore::ctrlSeekAndPlay((uint32_t)seqId, slot, &ctrlParams, fadeMs);
+		if (paused == 1)
+			ret = sce::MusicCore::ctrlPause((uint32_t)seqId, slot, 1, 0);
+		break;
+	case 13:
+		ctrlParams.speedValue = 100;
+		ret = sce::MusicCore::ctrlSeekAndPlay((uint32_t)seqId, slot, &ctrlParams, fadeMs);
+		if (paused == 1)
+			ret = sce::MusicCore::ctrlPause((uint32_t)seqId, slot, 1, 0);
+		break;
+	case 14:
+		ctrlParams.speedValue = -10;
+		ret = sce::MusicCore::ctrlSeekAndPlay((uint32_t)seqId, slot, &ctrlParams, fadeMs);
+		if (paused == 1)
+			ret = sce::MusicCore::ctrlPause((uint32_t)seqId, slot, 1, 0);
+		break;
+	case 15:
+		ctrlParams.speedValue = -30;
+		ret = sce::MusicCore::ctrlSeekAndPlay((uint32_t)seqId, slot, &ctrlParams, fadeMs);
+		if (paused == 1)
+			ret = sce::MusicCore::ctrlPause((uint32_t)seqId, slot, 1, 0);
+		break;
+	case 16:
+		ctrlParams.speedValue = -100;
+		ret = sce::MusicCore::ctrlSeekAndPlay((uint32_t)seqId, slot, &ctrlParams, fadeMs);
+		if (paused == 1)
+			ret = sce::MusicCore::ctrlPause((uint32_t)seqId, slot, 1, 0);
 		break;
 	case 17:
-		ret = musicCoreCtrlStop();
+		ret = sce::MusicCore::ctrlStop((uint32_t)seqId, slot);
 		break;
 	default:
 		return (int)0x80100D01;
@@ -728,12 +721,19 @@ int MusicCoreMain::HandleSetRepeat(const MusicCoreQueueMsg *msg)
 	SceUInt32 payload[5];
 	sce_paf_memset(payload, 0, sizeof(payload));
 	sce_paf_memcpy(payload, msg->payload, msg->payloadSize);
-	if (payload[0] > 2)
+	int mappedRepeat = 0;
+	if (payload[0] == 0u)
+		mappedRepeat = 1;
+	else if (payload[0] == 1u)
+		mappedRepeat = 2;
+	else if (payload[0] == 2u)
+		mappedRepeat = 0;
+	else
 		return (int)0x80100D01;
 	SceUInt8 slot = 0;
 	ret = ResolveSlot(ch, (int)payload[4], &slot);
 	if (ret == 0)
-		return musicCoreCtrlSetRepeat(seqId);
+		return sce::MusicCore::ctrlSetRepeat((uint32_t)seqId, slot, mappedRepeat);
 	return ret;
 }
 
@@ -753,7 +753,7 @@ int MusicCoreMain::HandleSetShuffle(const MusicCoreQueueMsg *msg)
 	SceUInt8 slot = 0;
 	ret = ResolveSlot(ch, (int)payload[4], &slot);
 	if (ret == 0)
-		return musicCoreCtrlSetShuffle(seqId);
+		return sce::MusicCore::ctrlSetShuffle((uint32_t)seqId, slot, (int)payload[0]);
 	return ret;
 }
 
@@ -773,7 +773,7 @@ int MusicCoreMain::HandleSetAvls(const MusicCoreQueueMsg *msg)
 	SceUInt8 slot = 0;
 	ret = ResolveSlot(ch, (int)payload[4], &slot);
 	if (ret == 0)
-		return musicCoreCtrlSetAvls(seqId);
+		return sce::MusicCore::ctrlSetAudioNormalizer((uint32_t)seqId, slot, (int)payload[0]);
 	return ret;
 }
 
@@ -805,7 +805,7 @@ int MusicCoreMain::HandleOpenChannel(const MusicCoreQueueMsg *msg)
 		return (int)0x80100D01;
 
 	SceUInt8 slotId = 0xFF;
-	ret = musicCoreCtrlOpenChannel(seqId, ch, priority, &slotId);
+	ret = sce::MusicCore::ctrlOpenSimple((uint32_t)seqId, ch, priority, &slotId);
 	if (ret != 0)
 		return ret;
 
@@ -826,7 +826,7 @@ int MusicCoreMain::HandleOpenChannel(const MusicCoreQueueMsg *msg)
 	if (appId == activeApp || (activeApp == -1 && appId == fallbackApp)) {
 		slot->focusState = 1;
 		if (ch == 0)
-			return musicCoreCtrlSetActiveSlot(seqId, slotId);
+			return sce::MusicCore::ctrlSetActiveSlot((uint32_t)seqId, slotId);
 	} else {
 		slot->focusState = 2;
 	}
@@ -846,7 +846,7 @@ int MusicCoreMain::HandleCloseChannel(const MusicCoreQueueMsg *msg)
 	sce_paf_memcpy(payload, msg->payload, msg->payloadSize);
 	int appId = payload[4];
 
-	if (ch != 0)
+	if (ch != 0 && ch != 2)
 		return (int)0x80100D01;
 	SceUInt8 slotId = 0;
 	ret = ResolveSlot(ch, appId, &slotId);
@@ -855,7 +855,7 @@ int MusicCoreMain::HandleCloseChannel(const MusicCoreQueueMsg *msg)
 
 	for (int i = 0; i < 8; ++i) {
 		if (s_appSlots[i].appId == appId) {
-			ret = musicCoreCtrlCloseChannel(seqId);
+			ret = sce::MusicCore::ctrlClose((uint32_t)seqId, slotId);
 			if (ret != 0)
 				return ret;
 			s_appSlots[i].appId = -1;
@@ -888,7 +888,7 @@ int MusicCoreMain::HandleSetEq(const MusicCoreQueueMsg *msg)
 	SceUInt8 slot = 0;
 	ret = ResolveSlot(ch, payload[4], &slot);
 	if (ret == 0)
-		return musicCoreCtrlSetEq(seqId);
+		return sce::MusicCore::ctrlSetEqualizer((uint32_t)seqId, slot, payload[0], 0, 0, 0);
 	return ret;
 }
 
@@ -911,7 +911,7 @@ int MusicCoreMain::HandleDbQuery(const MusicCoreQueueMsg *msg)
 	sce_paf_memcpy(&buf, msg->payload, msg->payloadSize);
 	if (buf.opt > 2)
 		return (int)0x80100D01;
-	return musicCoreCtrlDbQuery(seqId, buf.data, buf.queryType, (int)buf.opt);
+	return sce::MusicCore::ctrlDbQuery((uint32_t)seqId, buf.data, buf.queryType, (int)buf.opt);
 }
 
 static void applyPauseToTitleSlots(MusicCoreMain *self, bool forceStop)
@@ -928,12 +928,12 @@ static void applyPauseToTitleSlots(MusicCoreMain *self, bool forceStop)
 		self->CheckSlotPaused(0, s_appSlots[foundIdx].appId, &st);
 		if (forceStop) {
 			if (st == 0 || st == 1)
-				musicCoreCtrlPause(s_appSlots[foundIdx].seqId, s_appSlots[foundIdx].slotId, 0, 0);
+				sce::MusicCore::ctrlPause((uint32_t)s_appSlots[foundIdx].seqId, s_appSlots[foundIdx].slotId, 0, 0);
 		} else {
 			if (st == 0)
-				musicCoreCtrlPlay(s_appSlots[foundIdx].seqId, s_appSlots[foundIdx].slotId, 0);
+				sce::MusicCore::ctrlPlay((uint32_t)s_appSlots[foundIdx].seqId, s_appSlots[foundIdx].slotId, 0);
 			if (st == 1)
-				musicCoreCtrlPause(s_appSlots[foundIdx].seqId, s_appSlots[foundIdx].slotId, 1, 0);
+				sce::MusicCore::ctrlPause((uint32_t)s_appSlots[foundIdx].seqId, s_appSlots[foundIdx].slotId, 1, 0);
 		}
 	}
 	if (foundIdx < 0 || foundIdx >= 7) {
@@ -943,12 +943,12 @@ static void applyPauseToTitleSlots(MusicCoreMain *self, bool forceStop)
 				self->CheckSlotPaused(0, s_appSlots[i].appId, &st);
 				if (forceStop) {
 					if (st == 0 || st == 1)
-						musicCoreCtrlPause(s_appSlots[i].seqId, s_appSlots[i].slotId, 0, 0);
+						sce::MusicCore::ctrlPause((uint32_t)s_appSlots[i].seqId, s_appSlots[i].slotId, 0, 0);
 				} else {
 					if (st == 0)
-						musicCoreCtrlPlay(s_appSlots[i].seqId, s_appSlots[i].slotId, 0);
+						sce::MusicCore::ctrlPlay((uint32_t)s_appSlots[i].seqId, s_appSlots[i].slotId, 0);
 					if (st == 1)
-						musicCoreCtrlPause(s_appSlots[i].seqId, s_appSlots[i].slotId, 1, 0);
+						sce::MusicCore::ctrlPause((uint32_t)s_appSlots[i].seqId, s_appSlots[i].slotId, 1, 0);
 				}
 				break;
 			}
@@ -988,12 +988,12 @@ int MusicCoreMain::HandleAppFocusChange(const MusicCoreQueueMsg *msg)
 	if (sce_paf_strncmp(s_prevAppTitle, "NPXS10009", sce_paf_strlen(s_prevAppTitle)) == 0 &&
 	    sce_paf_strncmp(s_curAppTitle, "NPXS19999", sce_paf_strlen(s_curAppTitle)) == 0 &&
 	    (SceUInt64)s_rawStatusCh1.trackId >= 0xFFFFFFFFFFFFFFFEULL) {
-		musicCoreCtrlPause(0, 1, 0, 0);
+		sce::MusicCore::ctrlPause(0, 1, 0, 0);
 	}
 
 	int ret = 0;
 	if (sce_paf_strncmp(s_prevAppTitle, s_bgmSlot.titleId, sce_paf_strlen(s_prevAppTitle)) == 0)
-		ret = musicCoreCtrlSuspendAudio(512, 1);
+		ret = sce::MusicCore::ctrlSuspendAudio(512, 1);
 
 	if (sce_paf_strncmp(s_prevAppTitle, s_curAppTitle, sce_paf_strlen(s_curAppTitle)) != 0) {
 		for (int i = 0; i < 8; ++i) {
@@ -1001,7 +1001,7 @@ int MusicCoreMain::HandleAppFocusChange(const MusicCoreQueueMsg *msg)
 				s_appSlots[i].focusState = 2;
 				SceUInt8 sl = 0xFF;
 				if (ResolveSlot(0, s_appSlots[i].appId, &sl) == 0)
-					ret = musicCoreCtrlSetActiveSlot(257, 255);
+					ret = sce::MusicCore::ctrlSetActiveSlot(257, 255);
 				break;
 			}
 		}
@@ -1010,14 +1010,14 @@ int MusicCoreMain::HandleAppFocusChange(const MusicCoreQueueMsg *msg)
 				SceUInt8 st = 0;
 				CheckSlotPaused(0, s_appSlots[i].appId, &st);
 				if (st == 0)
-					musicCoreCtrlPlay(s_appSlots[i].seqId, s_appSlots[i].slotId, 0);
-				else
-					musicCoreCtrlPause(s_appSlots[i].seqId, s_appSlots[i].slotId, 0, 0);
+					sce::MusicCore::ctrlPlay((uint32_t)s_appSlots[i].seqId, s_appSlots[i].slotId, 0);
+				if (st == 1)
+					sce::MusicCore::ctrlPause((uint32_t)s_appSlots[i].seqId, s_appSlots[i].slotId, 0, 0);
 				s_appSlots[i].focusState = 1;
 				SceUInt8 sl = 0;
 				int resolveRet = ResolveSlot(0, s_appSlots[i].appId, &sl);
 				if (resolveRet == 0)
-					return musicCoreCtrlSetActiveSlot(256, sl);
+					return sce::MusicCore::ctrlSetActiveSlot(256, sl);
 				return resolveRet;
 			}
 		}
@@ -1076,12 +1076,12 @@ int MusicCoreMain::GetStatus(const MusicCoreClientReq *req, void *outRaw)
 			sce_paf_memcpy(outRaw, &s_rawStatusCh0, sizeof(s_rawStatusCh0));
 			return 0;
 		}
-		SceUInt8 tmp[144];
+		sce::MusicCore::PlaybackStatusOut statusOut;
 		int tm = 0;
 		SceUInt8 valid = 0;
-		ret = musicCoreCtrlGetSlotStatus(slot, tmp, &tm, &valid);
+		ret = sce::MusicCore::ctrlGetPlaybackStatus(slot, &statusOut, &tm, &valid);
 		if (ret == 0)
-			sce_paf_memcpy(outRaw, tmp, 144);
+			sce_paf_memcpy(outRaw, &statusOut, 144);
 		return ret;
 	}
 	if (req->channel == 2) {
@@ -1159,7 +1159,7 @@ int MusicCoreMain::GetUri(const MusicCoreClientReq *req, void *outUri)
 		int kind = 0;
 		SceUInt8 buf[0x828];
 		SceUInt8 valid = 0;
-		ret = musicCoreCtrlGetSlotUri(slot, 0, &kind, buf, &valid);
+		ret = sce::MusicCore::ctrlGetPlaybackMode(slot, 0, &kind, buf, &valid);
 		if (ret == 0 && kind == 1)
 			sce_paf_memcpy(outUri, buf, 0x401);
 		return ret;
@@ -1187,10 +1187,10 @@ int MusicCoreMain::GetPlayTimeFlag(const MusicCoreClientReq *req, int *outVal)
 			*outVal = s_playTimeCh0Val;
 			return 0;
 		}
-		SceUInt8 tmp[144];
+		sce::MusicCore::PlaybackStatusOut statusOut;
 		int tm = 0;
 		SceUInt8 valid = 0;
-		ret = musicCoreCtrlGetSlotStatus(slot, tmp, &tm, &valid);
+		ret = sce::MusicCore::ctrlGetPlaybackStatus(slot, &statusOut, &tm, &valid);
 		if (ret == 0)
 			*outVal = (valid != 0) ? tm : 0;
 		return ret;
@@ -1274,7 +1274,7 @@ int MusicCoreMain::SetAvrcpActive(const MusicCoreClientReq *req, SceUInt8 enable
 {
 	(void)req;
 	SceUInt8 prev = 0;
-	return musicCoreCtrlSetAvrcp(enable, &prev);
+	return sce::MusicCore::ctrlGetState(enable, &prev);
 }
 
 /* 0x811D082E */
@@ -1327,18 +1327,42 @@ int MusicCoreMain::DispatchMsg(const MusicCoreQueueMsg *msg)
 		sce_paf_memset(payload, 0, 20);
 		sce_paf_memcpy(payload, msg->payload, msg->payloadSize);
 		if (ResolveSlot(ch, payload[4], &slot) != 0) return (int)0x80100D01;
-		return musicCoreCtrlSetVolume(seqId);
+		return sce::MusicCore::ctrlSetVolume((uint32_t)seqId, slot, payload[0]);
 	case 4:  return HandleSetRepeat(msg);
 	case 5:  return HandleSetShuffle(msg);
-	case 6:
-	case 7:
-	case 8:
-	case 14:
-		if (ParseMsgHeader(msg, &seqId, &ch) != 0) return (int)0x80100D01;
+	case 6: {
+		sce::MusicCore::ControlParams ctrlParams = { -1, (int)0x80000000u, -2, -2, -2 };
+		int ret = ParseMsgHeader(msg, &seqId, &ch);
+		if (ret != 0) return ret;
 		sce_paf_memset(payload, 0, 20);
 		sce_paf_memcpy(payload, msg->payload, msg->payloadSize);
-		if (ResolveSlot(ch, payload[4], &slot) != 0) return (int)0x80100D01;
-		return musicCoreCtrlControl(seqId);
+		ctrlParams.seekPositionMs = payload[0];
+		ret = ResolveSlot(ch, payload[4], &slot);
+		if (ret != 0) return ret;
+		return sce::MusicCore::ctrlControl((uint32_t)seqId, slot, &ctrlParams);
+	}
+	case 7: {
+		sce::MusicCore::ControlParams ctrlParams = { -1, (int)0x80000000u, -2, -2, -2 };
+		int ret = ParseMsgHeader(msg, &seqId, &ch);
+		if (ret != 0) return ret;
+		sce_paf_memset(payload, 0, 20);
+		sce_paf_memcpy(payload, msg->payload, msg->payloadSize);
+		ctrlParams.trackIndex = payload[0];
+		ret = ResolveSlot(ch, payload[4], &slot);
+		if (ret != 0) return ret;
+		return sce::MusicCore::ctrlControl((uint32_t)seqId, slot, &ctrlParams);
+	}
+	case 8: {
+		sce::MusicCore::ControlParams ctrlParams = { -1, (int)0x80000000u, -2, -2, -2 };
+		int ret = ParseMsgHeader(msg, &seqId, &ch);
+		if (ret != 0) return ret;
+		sce_paf_memset(payload, 0, 20);
+		sce_paf_memcpy(payload, msg->payload, msg->payloadSize);
+		ctrlParams.seekMode = payload[0];
+		ret = ResolveSlot(ch, payload[4], &slot);
+		if (ret != 0) return ret;
+		return sce::MusicCore::ctrlControl((uint32_t)seqId, slot, &ctrlParams);
+	}
 	case 9:  return HandleSetAvls(msg);
 	case 10: return HandleOpenChannel(msg);
 	case 11: return HandleCloseChannel(msg);
@@ -1347,7 +1371,7 @@ int MusicCoreMain::DispatchMsg(const MusicCoreQueueMsg *msg)
 		if (ret != 0) return ret;
 		struct OpenUriMsg {
 			char uri[1028];
-			SceUInt8 uriOptions[4];
+			int uriFlags;
 			SceUInt8 bgmAllowed;
 			SceUInt8 optRest[11];
 			int pid;
@@ -1355,27 +1379,46 @@ int MusicCoreMain::DispatchMsg(const MusicCoreQueueMsg *msg)
 		} uriPayload;
 		sce_paf_memset(&uriPayload, 0, sizeof(uriPayload));
 		sce_paf_memcpy(&uriPayload, msg->payload, msg->payloadSize);
+		char uriCopy[1028];
+		sce_paf_strncpy(uriCopy, uriPayload.uri, 0x400u);
+		uriCopy[0x400] = '\0';
 		int appId = uriPayload.appId;
 		s_ptCh1.extra = 119;
 		ret = SetSlotBgmAllowed(ch, appId, uriPayload.bgmAllowed);
 		if (ret != 0) return ret;
 		ret = ResolveSlot(ch, appId, &slot);
 		if (ret != 0) return ret;
-		return musicCoreCtrlOpenUri(seqId);
+		return sce::MusicCore::ctrlSetUriString((uint32_t)seqId, slot, uriCopy, uriPayload.uriFlags);
 	}
 	case 13: return HandleSetEq(msg);
+	case 14: {
+		sce::MusicCore::ControlParams ctrlParams = { -1, (int)0x80000000u, -2, -2, -2 };
+		int ret = ParseMsgHeader(msg, &seqId, &ch);
+		if (ret != 0) return ret;
+		sce_paf_memset(payload, 0, 20);
+		sce_paf_memcpy(payload, msg->payload, msg->payloadSize);
+		if (payload[0] != -1)
+			ctrlParams.seekPositionMs = payload[0];
+		if (payload[1] != -1)
+			ctrlParams.trackIndex = payload[1];
+		if (payload[2] != -1)
+			ctrlParams.seekMode = payload[2];
+		ret = ResolveSlot(ch, payload[4], &slot);
+		if (ret != 0) return ret;
+		return sce::MusicCore::ctrlControl((uint32_t)seqId, slot, &ctrlParams);
+	}
 	case 15:
 		if (ParseMsgHeader(msg, &seqId, &ch) != 0) return (int)0x80100D01;
-		return musicCoreCtrlDbOpen(seqId);
+		return sce::MusicCore::ctrlDbOpen((uint32_t)seqId);
 	case 16:
 		if (ParseMsgHeader(msg, &seqId, &ch) != 0) return (int)0x80100D01;
 		sce_paf_memset(payload, 0, 20);
 		sce_paf_memcpy(payload, msg->payload, msg->payloadSize);
-		return musicCoreCtrlDbSuspend(seqId, payload[0] != 0);
+		return sce::MusicCore::ctrlDbSuspend((uint32_t)seqId, (payload[0] != 0) ? 1 : 0);
 	case 17:
 	case 18:
 		if (ParseMsgHeader(msg, &seqId, &ch) != 0) return (int)0x80100D01;
-		return musicCoreCtrlDbClose(seqId);
+		return sce::MusicCore::ctrlDbClose((uint32_t)seqId);
 	case 19: return HandleDbQuery(msg);
 	case 20: {
 		int ret = ParseMsgHeader(msg, &seqId, &ch);
@@ -1407,7 +1450,9 @@ int MusicCoreMain::DispatchMsg(const MusicCoreQueueMsg *msg)
 		sce_paf_memcpy(payload, msg->payload, msg->payloadSize);
 		sce_paf_memcpy(s_exOpenParam, payload, 20);
 		SceUInt8 exSlot = 0xFF;
-		ret = musicCoreCtrlOpenExChannel(seqId, 2, 0x7FFFFFFF, &exSlot, s_exOpenParam);
+		ret = sce::MusicCore::ctrlOpenWithParams(
+			(uint32_t)seqId, 2, 0x7FFFFFFF, &exSlot,
+			reinterpret_cast<const sce::MusicCore::OpenParams *>(s_exOpenParam));
 		if (ret == 0) {
 			s_exAppId = payload[6];
 			s_exSlotId = exSlot;
@@ -1421,21 +1466,21 @@ int MusicCoreMain::DispatchMsg(const MusicCoreQueueMsg *msg)
 		sce_paf_memcpy(payload, msg->payload, msg->payloadSize);
 		ret = ResolveSlot(ch, payload[6], &slot);
 		if (ret == 0)
-			return musicCoreCtrlCloseChannel(seqId);
+			return sce::MusicCore::ctrlClose((uint32_t)seqId, slot);
 		return ret;
 	}
 	case 24: return HandleAppFocusChange(msg);
-	case 25: return musicCoreCtrlSuspendAudio(512, 1);
+	case 25: return sce::MusicCore::ctrlSuspendAudio(512, 1);
 	case 26: return HandleSystemPause(msg);
 	case 27: return HandlePowerSuspend(msg);
 	case 28: return HandlePowerResume(msg);
-	case 29: return musicCoreCtrlResumeAudio(512, 1);
+	case 29: return sce::MusicCore::ctrlResumeAudio(512, 1);
 	case 30:
 		if (paf::system::Model::GetType() == 1 ||
 		    (SceUInt64)s_rawStatusCh1.trackId >= 0xFFFFFFFFFFFFFFFEULL)
 			return HandleControl(msg);
 		return 0;
-	case 31: return musicCoreCtrlClearAudio(512, 1);
+	case 31: return sce::MusicCore::ctrlClearAudio(512, 1);
 	default: return 0;
 	}
 }
@@ -1482,7 +1527,7 @@ int MusicCoreMain::MainLoop()
 		} while (m_stopping != 1);
 	}
 	m_initialized = 0;
-	musicCoreCtrlFini();
+	sce::MusicCore::ctrlTerm();
 	m_initResult = (int)0x8FFF0002;
 	return 0;
 }
@@ -1553,9 +1598,9 @@ int musicCoreConvertEq(int raw, int *outVal)
 }
 
 /* 0x811D1298 */
-int musicCoreConvertAvls(int raw, int unused2, int unused3, int unused4, int *outVal)
+int musicCoreConvertAvls(int raw, int unusedMode, int unusedRate, int unusedFlags, int *outVal)
 {
-	(void)unused2; (void)unused3; (void)unused4;
+	(void)unusedMode; (void)unusedRate; (void)unusedFlags;
 	if (raw < 0 || raw > 4)
 		return (int)0x80100D01;
 	*outVal = raw;
@@ -1809,7 +1854,9 @@ static int musicCoreOnStatusCb(const void *rawPtr, SceUInt16 eventId, SceUInt32 
 			s_metaDesc.titleSize = 2048;
 			s_metaDesc.albumBuf = s_metaAlbum;
 			s_metaDesc.albumSize = 2048;
-			int ret = musicCoreCtrlGetMeta((SceUInt8)chType, &s_metaDesc);
+			int ret = sce::MusicCore::ctrlGetContentInfo(
+				(SceUInt8)chType,
+				reinterpret_cast<sce::MusicCore::ContentInfoBuffers *>(&s_metaDesc));
 			if (ret != 0)
 				return ret;
 			s_titleDirty = 1;
@@ -1925,109 +1972,4 @@ static int musicCoreOnMediaCb(int kind, const void *rawStatusPtr, const void *da
 		return 0;
 	}
 	return (int)0x80100D01;
-}
-
-/* Global C-style bridge wrappers for musiccore_plugin.cpp */
-void *musicCoreMainCtor(void *mem, int *outErr)
-{
-	return new (mem) MusicCoreMain(outErr);
-}
-
-void *musicCoreMainDtor(void *mainObj)
-{
-	if (mainObj != NULL)
-		static_cast<MusicCoreMain *>(mainObj)->~MusicCoreMain();
-	return mainObj;
-}
-
-int musicCoreMainSendCmd(void *mainObj, SceUInt32 cmdTag, int seqId,
-			 SceUInt32 packedCmd, const void *payload, SceSize payloadSize)
-{
-	return static_cast<MusicCoreMain *>(mainObj)->SendCmd(cmdTag, seqId, packedCmd, payload, payloadSize);
-}
-
-int musicCoreMainSetCallback(void *mainObj, void *cb)
-{
-	return static_cast<MusicCoreMain *>(mainObj)->SetCallback(reinterpret_cast<MusicCoreNotifyCb>(cb));
-}
-
-int musicCoreMainClearCallback(void *mainObj, void *cb)
-{
-	return static_cast<MusicCoreMain *>(mainObj)->ClearCallback(reinterpret_cast<MusicCoreNotifyCb>(cb));
-}
-
-int musicCoreMainGetStatus(void *mainObj, const void *ctx, void *outRaw)
-{
-	return static_cast<MusicCoreMain *>(mainObj)->GetStatus(
-		static_cast<const MusicCoreClientReq *>(ctx), outRaw);
-}
-
-int musicCoreMainGetError(void *mainObj, const void *ctx, int *outErr)
-{
-	return static_cast<MusicCoreMain *>(mainObj)->GetError(
-		static_cast<const MusicCoreClientReq *>(ctx), outErr);
-}
-
-int musicCoreMainGetTrackInfo(void *mainObj, const void *ctx, void *outTrack, void *outRaw)
-{
-	return static_cast<MusicCoreMain *>(mainObj)->GetTrackInfo(
-		static_cast<const MusicCoreClientReq *>(ctx), outTrack, outRaw);
-}
-
-int musicCoreMainGetUri(void *mainObj, const void *ctx, char *outUri)
-{
-	return static_cast<MusicCoreMain *>(mainObj)->GetUri(
-		static_cast<const MusicCoreClientReq *>(ctx), outUri);
-}
-
-int musicCoreMainGetFlag(void *mainObj, const void *ctx, int *outFlag)
-{
-	return static_cast<MusicCoreMain *>(mainObj)->GetPlayTimeFlag(
-		static_cast<const MusicCoreClientReq *>(ctx), outFlag);
-}
-
-int musicCoreMainGetCap(void *mainObj, const void *ctx, void *outCap)
-{
-	return static_cast<MusicCoreMain *>(mainObj)->GetCap(
-		static_cast<const MusicCoreClientReq *>(ctx), outCap);
-}
-
-int musicCoreMainGetMeta(void *mainObj, const void *ctx, void *outMeta)
-{
-	return static_cast<MusicCoreMain *>(mainObj)->GetMeta(
-		static_cast<const MusicCoreClientReq *>(ctx), static_cast<char *>(outMeta));
-}
-
-int musicCoreMainGetPlayTime(void *mainObj, const void *ctx, void *outTime)
-{
-	return static_cast<MusicCoreMain *>(mainObj)->GetPlayTimeEntry(
-		static_cast<const MusicCoreClientReq *>(ctx), outTime);
-}
-
-int musicCoreMainSetBgmMute(void *mainObj, int mode, int enable)
-{
-	return static_cast<MusicCoreMain *>(mainObj)->GetAllAppSlots(mode, reinterpret_cast<void *>(enable));
-}
-
-int musicCoreMainGetBgmMute(void *mainObj, int mode, void *outState)
-{
-	return static_cast<MusicCoreMain *>(mainObj)->GetBgmSlot(mode, outState);
-}
-
-int musicCoreMainSetAvrcpActive(void *mainObj, const void *ctx, int active)
-{
-	return static_cast<MusicCoreMain *>(mainObj)->SetAvrcpActive(
-		static_cast<const MusicCoreClientReq *>(ctx), static_cast<SceUInt8>(active));
-}
-
-int musicCoreMainSetNoticeSuppress(void *mainObj, const void *ctx, int suppressMode)
-{
-	return static_cast<MusicCoreMain *>(mainObj)->SetErrorSuppression(
-		static_cast<const MusicCoreClientReq *>(ctx), static_cast<SceUInt8>(suppressMode));
-}
-
-int musicCoreMainClearNoticeSuppress(void *mainObj, const void *ctx, int suppressMode)
-{
-	return static_cast<MusicCoreMain *>(mainObj)->ClearErrorSuppression(
-		static_cast<const MusicCoreClientReq *>(ctx), static_cast<SceUInt8>(suppressMode));
 }

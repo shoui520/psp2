@@ -15,6 +15,7 @@
 #include <thread/thread.h>
 
 #include "musiccore_player_base.h"
+#include "musiccore_db_manager.h"
 
 extern "C" {
 void *sce_paf_memset(void *dst, int val, size_t size);
@@ -147,24 +148,6 @@ static void onDbConnectionError(void *userArg, int sqliteErr)
     if (sqliteErr != 5)
         reportDbFileError(sqliteErr, kMusicDbPath, 1u);
 }
-
-class DbConnection {
-public:
-    DbConnection();
-    virtual ~DbConnection();
-
-    int close();
-    int open(const char *dbPath, unsigned char *outOpenedNew);
-    int beginTransaction(int writeMode, dbutil::Connection **outConn);
-    void endTransaction(int mode);
-
-private:
-    int m_padAlign;
-    dbutil::Connection m_conn;
-    paf::thread::Mutex m_mutex;
-    unsigned char m_isOpen;
-    unsigned char m_padTail[7];
-};
 
 DbConnection::DbConnection()
     : m_padAlign(0),
@@ -305,26 +288,6 @@ struct RegKeyEntry {
     int value;
 };
 
-struct RegCacheSlot {
-    int keyIndex;
-    unsigned char dirty;
-    unsigned char padDirty[3];
-    uint64_t timestampUs;
-    int value;
-    int padValue;
-};
-
-struct MusicRegSnapshot {
-    int headerFields[19];
-    int repeatMode;
-    int shuffleMode;
-    int audioModeFields[3];
-    int audioBalance;
-    int eqType;
-    int eqBandFields[3];
-    int audioNormalizer;
-};
-
 static void reportRegistryError(int regErr)
 {
     if (sceRegMgrIsBlueScreen(regErr) == 1)
@@ -332,23 +295,6 @@ static void reportRegistryError(int regErr)
     else
         SceShellUtil_BB54D049(5, regErr, 0);
 }
-
-class MusicRegCache {
-public:
-    MusicRegCache();
-    virtual ~MusicRegCache();
-    virtual void initialize() {}
-
-    int loadAllSettings(MusicRegSnapshot *outSnap);
-    int scheduleWrite(int keyIndex, int value);
-    int flushPendingWrites();
-    int getSuspendInterval(int *outInterval);
-    int setImposeAudioBalance(int index, int value);
-
-public:
-    int m_padAlign;
-    RegCacheSlot m_slots[5];
-};
 
 MusicRegCache::MusicRegCache()
     : m_padAlign(0)
@@ -470,84 +416,12 @@ int MusicRegCache::setImposeAudioBalance(int index, int value)
  * DbManager (0x811E050A - 0x811E20A8)
  * ========================================================================= */
 
-struct MediaListSlot {
-    virtual ~MediaListSlot() {}
-    virtual unsigned int getSlotStride() { return 9008u; }
-
-    unsigned char inUse;
-    unsigned char padInUse[3];
-    unsigned int payloadCap;
-    void *payloadPtr;
-    unsigned char payloadArena[8992];
-};
-
-struct DbCallbacks {
-    void (*onResult)(const void *result, void *userData);
-    void (*onNotify)(const void *notify, void *userData);
-    void *userData;
-};
-
 struct DbCmdQueueNode {
     void *vtable;
     int padAlign;
     uint64_t cmdHdr;
     void *inBuf;
     unsigned int inSize;
-};
-
-struct DbMediaTrackInfo {
-    void *vtable;
-    int codecSubType;
-    int contentKind;
-    int padAlign;
-    int64_t playlistId;
-    int64_t trackId;
-    int64_t trackItemId;
-    char titlePath[2048];
-    int codecFlags;
-    int sampleRate;
-    int codecType;
-    int bitRate;
-    int channels;
-    int durationMs;
-    int playAttemptCount;
-    int fileSizeHigh;
-    int resumePositionMs;
-    int playCount;
-    int sourceType;
-    int slotSerial;
-    void *ownerList;
-    void *mediaInfo;
-    unsigned char isValid;
-};
-
-struct DbResultEvent {
-    uint64_t cmdHdr;
-    int errCode;
-    int padErr;
-    uint32_t origParam;
-    uint32_t origCmdHi;
-    void *mediaHandle;
-    void *workBuf;
-    unsigned char dbChanged;
-    unsigned char padChanged[7];
-    DbMediaTrackInfo trackInfo;
-    int seekStep;
-    int trackIndex;
-    int64_t savedPlaylistId;
-    int64_t savedTrackItemId;
-    int seekCmd;
-    int repeatMode;
-    unsigned char isNewMedia;
-    unsigned char padNewMedia[3];
-    int seekStepParam;
-    int shuffleMode;
-    int playMode;
-    int audioNormalizer;
-    int eqType;
-    int eqBands[3];
-    int audioBalance;
-    int dbStatus;
 };
 
 struct DbOpenMediaReq {
@@ -638,72 +512,6 @@ struct LsdbAppEntry {
         extraAttrs[2] = 0;
         extraAttrs[3] = 0;
     }
-};
-
-class DbManager {
-public:
-    DbManager(int capacity);
-    virtual ~DbManager();
-
-    int start(const DbCallbacks *cbs);
-    int stop();
-    int enqueueCmd(uint64_t cmdHdr, const void *inBuf, SceSize inSize);
-
-    int requestOpenMedia(int mode, void *workBuf, int shuffleSeed, uint32_t origParam,
-                         uint32_t origCmdHi, unsigned char isAsync, int playMode, void *mediaQueue);
-    int requestCloseMedia(void *mediaHandle, uint32_t origParam, uint32_t origCmdHi,
-                          unsigned char isAsync);
-    int requestSeekMedia(void *mediaHandle, int seekCmd, int64_t playlistId, int64_t trackItemId,
-                         int targetIndex, int seekStep, unsigned char isNewMedia,
-                         int seekStepOut, int shuffleSeed, uint32_t origParam,
-                         uint32_t origCmdHi, unsigned char isAsync);
-    int requestSyncDb(uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
-    int requestRefreshDb(uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
-    int requestQueryTracks(const uint64_t *trackIds, int trackCount, int trackOpt,
-                           uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
-    int requestQueryDbId(char *outBuf, size_t outSize, uint32_t origParam,
-                         uint32_t origCmdHi, unsigned char isAsync);
-    int requestSetRepeatMode(int repeatMode, uint32_t origParam, uint32_t origCmdHi,
-                             unsigned char isAsync);
-    int requestSetShuffleMode(int shuffleMode, uint32_t origParam, uint32_t origCmdHi,
-                              unsigned char isAsync);
-    int requestSetNormalizer(int normalizerMode, uint32_t origParam, uint32_t origCmdHi,
-                             unsigned char isAsync);
-    int requestSetEqualizer(int eqType, int bandLow, int bandMid, int bandHigh,
-                            uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
-    int requestSetAudioBalance(int balance, unsigned char alsoSaveBalance, uint32_t origParam,
-                               uint32_t origCmdHi, unsigned char isAsync);
-    int requestSetPowerSave(int mode, uint32_t origParam, uint32_t origCmdHi,
-                            unsigned char isAsync);
-    int requestLoadSettings(uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
-
-    int handleSetAudioBalance(const DbSimpleValueReq *req);
-    int handleQueryDbId(const DbQueryIdReq *req);
-    int handleRefreshAllMedia(DbResultEvent *outEv);
-    void refreshMediaTrackIds(void *mediaHandle);
-    int openDbAndRefresh(const char *dbPath, unsigned char *outOpenedNew);
-    int handleSeekMedia(const DbSeekMediaReq *req, DbResultEvent *outEv);
-    int handleCloseMedia(const DbCloseMediaReq *req, DbResultEvent *outEv);
-    int handleOpenMedia(const DbOpenMediaReq *req, DbResultEvent *outEv);
-    int dispatchCmd(uint16_t cmdCode, const void *inBuf, DbResultEvent *outEv);
-    int ensureDirectoryExists(const paf::string &path);
-    int runThreadLoop();
-    static int threadEntry(SceSize args, void *argp);
-
-private:
-    MediaListSlot *findActiveSlotByIndex(int activeIdx);
-
-    SceUID m_initSema;
-    SceUID m_threadId;
-    int m_initResult;
-    void *m_cmdQueue;
-    DbCallbacks m_cbs;
-    MediaListSlot *m_slots;
-    int m_activeSlotCount;
-    unsigned int m_capacity;
-    const char *m_dbPath;
-    DbConnection m_dbConn;
-    MusicRegCache m_regCache;
 };
 
 static uint64_t makeDbCmdHeader(uint16_t cmdCode, uint32_t origCmdHi, unsigned char isAsync)
@@ -1526,148 +1334,6 @@ BaseObject *constructMusicPlayer(void *mem, void *factory, int maxTracks,
 {
     return reinterpret_cast<BaseObject *>(
         new (mem) MusicPlayer(factory, maxTracks, outErr, slotSize, hdrSize));
-}
-
-int dbManagerOpenSession(void *dbMgr)
-{
-    return static_cast<DbManager *>(dbMgr)->requestSyncDb(0, 0, 0);
-}
-
-int dbManagerReleaseList(void *dbMgr, void *mediaList, uint32_t origParam,
-                         uint32_t origCmdHi, int isAsync)
-{
-    return static_cast<DbManager *>(dbMgr)->requestCloseMedia(
-        mediaList, origParam, origCmdHi, static_cast<unsigned char>(isAsync));
-}
-
-int dbManagerNotifySeek(void *dbMgr, int handleId, uint32_t origParam,
-                        uint32_t origCmdHi, int isAsync)
-{
-    return static_cast<DbManager *>(dbMgr)->requestSeekMedia(
-        reinterpret_cast<void *>(handleId), 0, 0, 0, 0, 0, 0, 0, 0, origParam, origCmdHi,
-        static_cast<unsigned char>(isAsync));
-}
-
-int dbManagerNotifyNext(void *dbMgr, int handleId, uint32_t origParam,
-                        uint32_t origCmdHi, int isAsync)
-{
-    return static_cast<DbManager *>(dbMgr)->requestSeekMedia(
-        reinterpret_cast<void *>(handleId), 1, 0, 0, 0, 0, 0, 0, 0, origParam, origCmdHi,
-        static_cast<unsigned char>(isAsync));
-}
-
-int dbManagerNotifyShuffle(void *dbMgr, int handleId, uint32_t origParam,
-                           uint32_t origCmdHi, int isAsync)
-{
-    return static_cast<DbManager *>(dbMgr)->requestSetShuffleMode(
-        handleId, origParam, origCmdHi, static_cast<unsigned char>(isAsync));
-}
-
-int dbManagerNotifyRepeat(void *dbMgr)
-{
-    return static_cast<DbManager *>(dbMgr)->requestRefreshDb(0, 0, 0);
-}
-
-int dbManagerNotifyPrev(void *dbMgr, int handleId, int commitFlag)
-{
-    return static_cast<DbManager *>(dbMgr)->requestSetRepeatMode(
-        handleId, static_cast<uint32_t>(commitFlag), 0, 0);
-}
-
-int dbManagerFlushRecord(void *dbMgr)
-{
-    return static_cast<DbManager *>(dbMgr)->requestLoadSettings(0, 0, 0);
-}
-
-void initDbManager(void *mgr, int capacity)
-{
-    new (mgr) DbManager(capacity);
-}
-
-void stopDbManager(void *mgr)
-{
-    if (mgr != NULL)
-        static_cast<DbManager *>(mgr)->stop();
-}
-
-void termDbManager(void *mgr)
-{
-    if (mgr != NULL)
-        static_cast<DbManager *>(mgr)->~DbManager();
-}
-
-int startDbManager(void *mgr, const DbCallbacks *cbs)
-{
-    return (mgr != NULL) ? static_cast<DbManager *>(mgr)->start(cbs) : -1;
-}
-
-int dbManagerOpen(void *mgr, int openMode, uint32_t param, uint32_t cmdHi, int openFlags)
-{
-    return (mgr != NULL)
-        ? static_cast<DbManager *>(mgr)->requestOpenMedia(openMode, NULL, 0, param, cmdHi,
-                                                          static_cast<unsigned char>(openFlags),
-                                                          0, NULL)
-        : -1;
-}
-
-int dbManagerClose(void *mgr)
-{
-    return (mgr != NULL) ? static_cast<DbManager *>(mgr)->requestCloseMedia(NULL, 0, 0, 0) : -1;
-}
-
-int dbManagerQuery(void *mgr, int queryData, int queryCount, int queryOpt,
-                   uint32_t param, uint32_t cmdHi, int queryFlags)
-{
-    return (mgr != NULL)
-        ? static_cast<DbManager *>(mgr)->requestQueryTracks(
-              reinterpret_cast<const uint64_t *>(queryData), queryCount, queryOpt,
-              param, cmdHi, static_cast<unsigned char>(queryFlags))
-        : -1;
-}
-
-int dbManagerRequestUri(void *dbMgr, int mode, void *workBuf, int shuffleSeed,
-                        uint32_t origParam, uint32_t origCmdHi, int isAsync,
-                        int extraOpt, void *extraPtr)
-{
-    return (dbMgr != NULL)
-        ? static_cast<DbManager *>(dbMgr)->requestOpenMedia(
-              mode, workBuf, shuffleSeed, origParam, origCmdHi, static_cast<unsigned char>(isAsync),
-              extraOpt, extraPtr)
-        : -1;
-}
-
-int dbManagerReleaseMedia(void *dbMgr, void *media, uint64_t cmdHdr)
-{
-    return (dbMgr != NULL)
-        ? static_cast<DbManager *>(dbMgr)->requestCloseMedia(
-              media, static_cast<uint32_t>(cmdHdr), static_cast<uint32_t>(cmdHdr >> 32), 0)
-        : -1;
-}
-
-int dbManagerSeekMedia(void *dbMgr, void *media, int target)
-{
-    return (dbMgr != NULL)
-        ? static_cast<DbManager *>(dbMgr)->requestSeekMedia(
-              media, target, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-        : -1;
-}
-
-int dbManagerQueryDbId(void *dbMgr, void *outBuf, size_t bufSize)
-{
-    return (dbMgr != NULL)
-        ? static_cast<DbManager *>(dbMgr)->requestQueryDbId(
-              static_cast<char *>(outBuf), bufSize, 0, 0, 0)
-        : -1;
-}
-
-int dbManagerSync(void *dbMgr)
-{
-    return (dbMgr != NULL) ? static_cast<DbManager *>(dbMgr)->requestSyncDb(0, 0, 0) : -1;
-}
-
-int dbManagerRefresh(void *dbMgr)
-{
-    return (dbMgr != NULL) ? static_cast<DbManager *>(dbMgr)->requestRefreshDb(0, 0, 0) : -1;
 }
 
 } /* namespace MusicCore */

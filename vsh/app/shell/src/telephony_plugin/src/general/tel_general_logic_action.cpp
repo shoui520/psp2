@@ -342,7 +342,10 @@ TelephonyResult TelGeneralLogicAction::LoadImsiAndProfiles()
 	TelMccMncUtil mccUtil;
 	res = mccUtil.ResolveFromImsi(&m_imsiPlmn, imsiInfo.GetValue());
 	if (!res.IsSuccess()) {
-		m_bbmcAdapter->GetHomePlmn(&m_imsiPlmn);
+		if (m_bbmcAdapter->GetHomePlmn(&m_imsiPlmn).IsSuccess()) {
+			mccUtil.ResolveFromNumeric(&m_imsiPlmn, m_imsiPlmn.GetMcc(),
+						   m_imsiPlmn.GetMnc());
+		}
 	}
 
 	int targetOperator = TEL_OPERATOR_DEFAULT;

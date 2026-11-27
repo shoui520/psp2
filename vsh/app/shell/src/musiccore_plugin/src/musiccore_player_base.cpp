@@ -10,6 +10,7 @@
 #include <thread/thread.h>
 
 #include "musiccore_player_base.h"
+#include "musiccore_db_manager.h"
 
 extern "C" {
 char *sce_paf_strncpy(char *dst, const char *src, size_t maxLen);
@@ -68,13 +69,6 @@ extern int64_t decoderGetCurrentTrackId(void *decoderState);
 extern void *workBufGetRegion(void *workBuf, int index);
 extern void computePlaybackRange(int repeatMode, int shuffleMode, int step, int totalTracks,
                                  int speedMode, int *outPrev, int *outNext, int *outCur);
-extern int dbManagerRequestUri(void *dbMgr, int mode, void *workBuf, int shuffleSeed,
-                               uint32_t param, uint32_t cmdHi, int reqFlags, int playMode, void *extra);
-extern int dbManagerReleaseMedia(void *dbMgr, void *media, uint64_t cmdHdr);
-extern int dbManagerSeekMedia(void *dbMgr, void *media, int target);
-extern int dbManagerQueryDbId(void *dbMgr, void *outBuf, size_t bufSize);
-extern int dbManagerSync(void *dbMgr);
-extern int dbManagerRefresh(void *dbMgr);
 extern int factoryDestroyWorkBuf(void *factory, void *workBuf);
 
 static unsigned char g_playlistDbIdBuf[1028];
@@ -291,7 +285,8 @@ int BasePlayer::setSuspended(char suspend)
 
     MediaItemHandle *media = (MediaItemHandle *)m_offlineState.mediaHandle;
     media->setTrackPosition(m_offlineState.trackOrderIndex, &m_offlineState.trackId);
-    int ret = dbManagerSeekMedia(m_dbMgr, media, -262143);
+    int ret = static_cast<DbManager *>(m_dbMgr)->requestSeekMedia(
+        media, -262143, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     if (ret != 0) {
         m_isSuspended = 0;
     } else {
@@ -752,7 +747,8 @@ int BasePlayer::applyOfflineSeek(const int *seekParams, unsigned char *flags)
         return 0;
     }
 
-    int ret = dbManagerSeekMedia(m_dbMgr, m_offlineState.mediaHandle, seekParams[0]);
+    int ret = static_cast<DbManager *>(m_dbMgr)->requestSeekMedia(
+        m_offlineState.mediaHandle, seekParams[0], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     if (ret == 0) {
         *flags &= ~0x10u;
         ++m_pendingSeekCount;
@@ -845,7 +841,8 @@ int BasePlayer::cmdSetShuffle(CmdNode *node, unsigned char *flags)
 
     *flags |= 0x10u;
     if (m_offlineState.mediaHandle != NULL) {
-        int ret = dbManagerSeekMedia(m_dbMgr, m_offlineState.mediaHandle, -1);
+        int ret = static_cast<DbManager *>(m_dbMgr)->requestSeekMedia(
+            m_offlineState.mediaHandle, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         if (ret == 0) {
             *flags &= ~0x10u;
             ++m_pendingSeekCount;
@@ -867,7 +864,7 @@ int BasePlayer::cmdSetUriData(CmdNode *node, unsigned char *flags)
     } else {
         if (m_playerKind == 1 && g_playlistDbIdState == 0) {
             g_playlistDbIdState = 1;
-            dbManagerQueryDbId(m_dbMgr, g_playlistDbIdBuf, 1025);
+            static_cast<DbManager *>(m_dbMgr)->requestQueryDbId(reinterpret_cast<char *>(g_playlistDbIdBuf), 1025, 0, 0, 0);
         }
 
         int seedMode = payload[8];
@@ -886,7 +883,7 @@ int BasePlayer::cmdSetUriData(CmdNode *node, unsigned char *flags)
             m_shuffleSeed = 0;
         }
 
-        ret = dbManagerSync(m_dbMgr);
+        ret = static_cast<DbManager *>(m_dbMgr)->requestSyncDb(0, 0, 0);
         if (ret == 0) {
             uint32_t cmdHi = (uint32_t)node->targetChannel | ((uint32_t)node->flagsByte << 8) |
                              ((uint32_t)node->cmdCode << 16);
@@ -894,8 +891,8 @@ int BasePlayer::cmdSetUriData(CmdNode *node, unsigned char *flags)
             if (m_decoder != NULL && payload[9] != 1)
                 ret = m_decoder->setMedia(NULL, node->param, cmdHi, m_shuffleSeed, 0, 1, 0);
             if (ret == 0) {
-                ret = dbManagerRequestUri(m_dbMgr, 2, workBuf, m_shuffleSeed,
-                                          node->param, cmdHi, 0, payload[9], m_mediaQueue);
+                ret = static_cast<DbManager *>(m_dbMgr)->requestOpenMedia(
+                    2, workBuf, m_shuffleSeed, node->param, cmdHi, 0, payload[9], m_mediaQueue);
             }
             if (ret != 0) {
                 factoryDestroyWorkBuf(m_factory, workBuf);
@@ -927,7 +924,7 @@ int BasePlayer::cmdSetUriString(CmdNode *node, unsigned char *flags)
     } else {
         if (m_playerKind == 1 && g_playlistDbIdState == 0) {
             g_playlistDbIdState = 1;
-            dbManagerQueryDbId(m_dbMgr, g_playlistDbIdBuf, 1025);
+            static_cast<DbManager *>(m_dbMgr)->requestQueryDbId(reinterpret_cast<char *>(g_playlistDbIdBuf), 1025, 0, 0, 0);
         }
 
         void *workBuf = (void *)(uintptr_t)payload[1];
@@ -946,8 +943,8 @@ int BasePlayer::cmdSetUriString(CmdNode *node, unsigned char *flags)
             *flags |= 0x10u;
         }
 
-        ret = dbManagerRequestUri(m_dbMgr, 1, workBuf, m_offlineState.shuffleMode,
-                                  node->param, cmdHi, 0, -1, m_mediaQueue);
+        ret = static_cast<DbManager *>(m_dbMgr)->requestOpenMedia(
+            1, workBuf, m_offlineState.shuffleMode, node->param, cmdHi, 0, -1, m_mediaQueue);
         if (ret != 0) {
             factoryDestroyWorkBuf(m_factory, workBuf);
         } else {
@@ -970,7 +967,7 @@ int BasePlayer::cmdPrepareDb(CmdNode *node, unsigned char *flags)
 
     if (m_playerKind == 1 && g_playlistDbIdState == 0) {
         g_playlistDbIdState = 1;
-        dbManagerQueryDbId(m_dbMgr, g_playlistDbIdBuf, 1025);
+        static_cast<DbManager *>(m_dbMgr)->requestQueryDbId(reinterpret_cast<char *>(g_playlistDbIdBuf), 1025, 0, 0, 0);
     }
     *flags &= ~0x10u;
     return 0;
@@ -1090,7 +1087,7 @@ int BasePlayer::cmdRefreshDbId(CmdNode *node)
 
     if (m_playerKind == 1) {
         g_playlistDbIdState = 1;
-        dbManagerQueryDbId(m_dbMgr, g_playlistDbIdBuf, 1025);
+        static_cast<DbManager *>(m_dbMgr)->requestQueryDbId(reinterpret_cast<char *>(g_playlistDbIdBuf), 1025, 0, 0, 0);
     }
     return 0;
 }
@@ -1150,7 +1147,8 @@ int BasePlayer::onDecoderEvent(CmdNode *node, unsigned char *flags)
                                           ((uint32_t)node->flagsByte << 8) |
                                           ((uint32_t)node->cmdCode << 16)) << 32) |
                               node->param;
-            ret = dbManagerReleaseMedia(m_dbMgr, oldMedia, cmdHdr);
+            ret = static_cast<DbManager *>(m_dbMgr)->requestCloseMedia(
+                oldMedia, static_cast<uint32_t>(cmdHdr), static_cast<uint32_t>(cmdHdr >> 32), 0);
         }
 
         m_offlineState = m_activeState;
@@ -1161,7 +1159,8 @@ int BasePlayer::onDecoderEvent(CmdNode *node, unsigned char *flags)
                 MediaItemHandle *oldMedia = (MediaItemHandle *)m_offlineState.mediaHandle;
                 clearPendingUriIfMatches(oldMedia);
                 m_offlineState.mediaHandle = NULL;
-                ret = dbManagerReleaseMedia(m_dbMgr, oldMedia, node->param);
+                ret = static_cast<DbManager *>(m_dbMgr)->requestCloseMedia(
+                    oldMedia, node->param, 0, 0);
             }
             resetMediaState(&m_offlineState);
             m_targetState = 7;
@@ -1392,7 +1391,8 @@ int BasePlayer::onDecoderMediaChanged(CmdNode *node)
                                       ((uint32_t)node->flagsByte << 8) |
                                       ((uint32_t)node->cmdCode << 16)) << 32) |
                           node->param;
-        ret = dbManagerReleaseMedia(m_dbMgr, upd->oldMedia, cmdHdr);
+        ret = static_cast<DbManager *>(m_dbMgr)->requestCloseMedia(
+            upd->oldMedia, static_cast<uint32_t>(cmdHdr), static_cast<uint32_t>(cmdHdr >> 32), 0);
     }
 
     if (upd->hasNewMedia == 1) {
@@ -1542,7 +1542,7 @@ int BasePlayer::onDbEvent(CmdNode *node, unsigned char *flags)
             m_offlineState.audioNormalizer = ev->audioNormalizer;
             m_offlineState.eqType = ev->eqType;
             m_offlineState.audioBalance = ev->audioBalance;
-            ret = dbManagerRefresh(m_dbMgr);
+            ret = static_cast<DbManager *>(m_dbMgr)->requestRefreshDb(0, 0, 0);
         }
     } else if (subCode == 0x2180) {
         if (ev->errCode == 0)
@@ -1586,7 +1586,8 @@ int BasePlayer::onDbEvent(CmdNode *node, unsigned char *flags)
                     clearPendingUriIfMatches(ev->media);
                     if (m_offlineState.mediaHandle == ev->media)
                         m_offlineState.mediaHandle = NULL;
-                    dbManagerReleaseMedia(m_dbMgr, ev->media, node->param);
+                    static_cast<DbManager *>(m_dbMgr)->requestCloseMedia(
+                        ev->media, node->param, 0, 0);
                 }
                 if (m_pendingUriCount > 0)
                     --m_pendingUriCount;
@@ -1597,12 +1598,14 @@ int BasePlayer::onDbEvent(CmdNode *node, unsigned char *flags)
             ret = ev->errCode;
             if (ret == 0 && ev->media != NULL) {
                 (void)ev->media->getTrackKey();
-                ret = dbManagerSeekMedia(m_dbMgr, ev->media, -2);
+                ret = static_cast<DbManager *>(m_dbMgr)->requestSeekMedia(
+                    ev->media, -2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
                 if (ret != 0) {
                     clearPendingUriIfMatches(ev->media);
                     if (m_offlineState.mediaHandle == ev->media)
                         m_offlineState.mediaHandle = NULL;
-                    dbManagerReleaseMedia(m_dbMgr, ev->media, node->param);
+                    static_cast<DbManager *>(m_dbMgr)->requestCloseMedia(
+                        ev->media, node->param, 0, 0);
                 } else {
                     *flags &= ~0x10u;
                     ++m_pendingSeekCount;
@@ -1714,7 +1717,9 @@ int BasePlayer::onDbEvent(CmdNode *node, unsigned char *flags)
                                                       ((uint32_t)node->flagsByte << 8) |
                                                       ((uint32_t)node->cmdCode << 16)) << 32) |
                                           node->param;
-                        if (dbManagerReleaseMedia(m_dbMgr, toRelease, cmdHdr) != 0)
+                        if (static_cast<DbManager *>(m_dbMgr)->requestCloseMedia(
+                                toRelease, static_cast<uint32_t>(cmdHdr),
+                                static_cast<uint32_t>(cmdHdr >> 32), 0) != 0)
                             releaseFailed = true;
                     }
                     if (releaseFailed) {
@@ -1728,7 +1733,9 @@ int BasePlayer::onDbEvent(CmdNode *node, unsigned char *flags)
                                                       ((uint32_t)node->flagsByte << 8) |
                                                       ((uint32_t)node->cmdCode << 16)) << 32) |
                                           node->param;
-                        ret = dbManagerReleaseMedia(m_dbMgr, ev->media, cmdHdr);
+                        ret = static_cast<DbManager *>(m_dbMgr)->requestCloseMedia(
+                            ev->media, static_cast<uint32_t>(cmdHdr),
+                            static_cast<uint32_t>(cmdHdr >> 32), 0);
                         resetMediaState(&m_offlineState);
                         getContentInfo(&m_metaBufs);
                     } else if (ev->dbStatus == 0) {
@@ -1754,7 +1761,8 @@ int BasePlayer::onDbEvent(CmdNode *node, unsigned char *flags)
                     }
                 }
             } else if (m_offlineState.mediaHandle != NULL) {
-                ret = dbManagerSeekMedia(m_dbMgr, m_offlineState.mediaHandle, (int)ev->seekTarget);
+                ret = static_cast<DbManager *>(m_dbMgr)->requestSeekMedia(
+                    m_offlineState.mediaHandle, (int)ev->seekTarget, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
                 if (ret != 0) {
                     if (ev->isNewMedia == 1 && m_pendingDbOps != 0)
                         --m_pendingDbOps;

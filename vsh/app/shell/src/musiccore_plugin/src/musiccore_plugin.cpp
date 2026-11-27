@@ -12,6 +12,8 @@
 #include <plugin.h>
 #include <inputdevice/inputdevice.h>
 
+#include "musiccore_main_thread.h"
+
 extern "C" {
 extern int sceAppMgrGetStatusByName(const char *name, void *status);
 extern void SceShell_83D16CA8(void);
@@ -27,44 +29,10 @@ extern int shellAppEventServerRemoveListener(int event, ShellEventCallback callb
 extern void musicCoreHeapInit(void);				/* 0x811D34C0 */
 extern void musicCoreHeapFini(void);				/* 0x811D3552 */
 extern void *musicCoreHeapAlloc(SceSize size);			/* 0x811D3490 */
-extern void *musicCoreMainCtor(void *mem, int *outErr);		/* 0x811CE626 */
-extern void *musicCoreMainDtor(void *mainObj);			/* 0x811CE882 */
-extern int musicCoreMainSendCmd(void *mainObj, SceUInt32 cmdTag, int seqId,
-	SceUInt32 packedCmd, const void *payload, SceSize payloadSize); /* 0x811CE796 */
-extern int musicCoreMainSetCallback(void *mainObj, void *cb);	/* 0x811CEB88 */
-extern int musicCoreMainClearCallback(void *mainObj, void *cb);	/* 0x811CEB9A */
-extern int musicCoreMainGetStatus(void *mainObj, const void *ctx, void *outRaw); /* 0x811D02D2 */
-extern int musicCoreMainGetError(void *mainObj, const void *ctx, int *outErr); /* 0x811D038A */
-extern int musicCoreMainGetTrackInfo(void *mainObj, const void *ctx, void *outTrack, void *outRaw); /* 0x811D04AC */
-extern int musicCoreMainGetUri(void *mainObj, const void *ctx, char *outUri); /* 0x811D04FA */
-extern int musicCoreMainGetFlag(void *mainObj, const void *ctx, int *outFlag); /* 0x811D05CE */
-extern int musicCoreMainGetCap(void *mainObj, const void *ctx, void *outCap); /* 0x811D068A */
-extern int musicCoreMainGetMeta(void *mainObj, const void *ctx, void *outMeta); /* 0x811D06A0 */
-extern int musicCoreMainGetPlayTime(void *mainObj, const void *ctx, void *outTime); /* 0x811D06FE */
-extern int musicCoreMainSetBgmMute(void *mainObj, int mode, int enable); /* 0x811D07D6 */
-extern int musicCoreMainGetBgmMute(void *mainObj, int mode, void *outState); /* 0x811D07EE */
-extern int musicCoreMainSetAvrcpActive(void *mainObj, const void *ctx, int active); /* 0x811D0804 */
-extern int musicCoreMainSetNoticeSuppress(void *mainObj, const void *ctx, int suppressMode); /* 0x811D082E */
-extern int musicCoreMainClearNoticeSuppress(void *mainObj, const void *ctx, int suppressMode); /* 0x811D087C */
-extern int musicCoreConvertRepeat(int raw, int *outVal);	/* 0x811D1214 */
-extern int musicCoreConvertShuffle(SceUInt32 raw, int *outVal);	/* 0x811D1248 */
-extern int musicCoreConvertEq(int raw, int *outVal);		/* 0x811D126C */
-extern int musicCoreConvertAvls(int raw, int unusedMode, int unusedRate, int unusedFlags, int *outVal); /* 0x811D1298 */
-extern int musicCoreConvertStatus(const void *raw, void *outStatus, int flag, const SceUInt8 *cap); /* 0x811D1320 */
-extern int musicCoreConvertTrackInfo(const char *rawTrack, const void *rawStatus, char *outInfo); /* 0x811D1608 */
-extern int musicCoreConvertUri(const char *rawUri, char *outUri); /* 0x811D16B2 */
-extern int musicCoreConvertCapFlag(SceInt8 capByte, int *outVal); /* 0x811D16C6 */
 
 typedef void (*MusicCoreEventCb)(int eventId, int eventData, int eventDetail, int eventFlags);
 
-struct MusicCoreClientCtx {
-	int seqId;						/* +0 */
-	SceUInt8 channel;					/* +4 */
-	SceUInt8 subMode;					/* +5 */
-	SceUInt8 reserved[2];					/* +6 */
-	int pid;						/* +8 */
-	int appId;						/* +12 */
-};
+typedef MusicCoreClientReq MusicCoreClientCtx;
 
 struct MusicCoreRawStatus {
 	int channelType;					/* +0 */
@@ -155,7 +123,7 @@ static const int kMusicCoreVolumeTable[17] = {
 };
 
 static paf::Plugin *s_musicCorePlugin = NULL;			/* 0x81544E30 */
-static void *s_musicCoreMain = NULL;				/* 0x81544E34 */
+static MusicCoreMain *s_musicCoreMain = NULL;			/* 0x81544E34 */
 static MusicCoreClientCtx s_bgmCtx;				/* 0x8156B8C8 */
 static SceUInt8 s_bgmOpened = 0;				/* 0x8156B8D8 */
 static SceUInt8 s_bgmLoaded = 0;				/* 0x8156B8D9 */
@@ -183,16 +151,16 @@ void musiccorePluginInit(paf::Plugin *plugin)
 
 	void *mem = musicCoreHeapAlloc(0x68);
 	int err = 0;
-	s_musicCoreMain = (mem != NULL) ? musicCoreMainCtor(mem, &err) : NULL;
+	s_musicCoreMain = (mem != NULL) ? new (mem) MusicCoreMain(&err) : NULL;
 	if (s_musicCoreMain != NULL) {
-		err = musicCoreMainSetCallback(s_musicCoreMain, (void *)musicCoreDispatchEventCb);
+		err = s_musicCoreMain->SetCallback(reinterpret_cast<MusicCoreNotifyCb>(musicCoreDispatchEventCb));
 		if (err == 0)
 			return;
 	}
 	if (s_musicCoreMain != NULL) {
-		musicCoreMainClearCallback(s_musicCoreMain, (void *)musicCoreDispatchEventCb);
+		s_musicCoreMain->ClearCallback(reinterpret_cast<MusicCoreNotifyCb>(musicCoreDispatchEventCb));
 		if (s_musicCoreMain != NULL) {
-			musicCoreMainDtor(s_musicCoreMain);
+			s_musicCoreMain->~MusicCoreMain();
 			operator delete(s_musicCoreMain);
 		}
 		s_musicCoreMain = NULL;
@@ -236,9 +204,9 @@ void musiccorePluginStop(paf::Plugin *plugin)
 void musicCorePluginFini(void)
 {
 	if (s_musicCoreMain != NULL) {
-		musicCoreMainClearCallback(s_musicCoreMain, (void *)musicCoreDispatchEventCb);
+		s_musicCoreMain->ClearCallback(reinterpret_cast<MusicCoreNotifyCb>(musicCoreDispatchEventCb));
 		if (s_musicCoreMain != NULL) {
-			musicCoreMainDtor(s_musicCoreMain);
+			s_musicCoreMain->~MusicCoreMain();
 			operator delete(s_musicCoreMain);
 		}
 		s_musicCoreMain = NULL;
@@ -289,7 +257,7 @@ int musicCoreBgmOpen(SceUInt8 mode)
 
 	if (s_musicCoreMain != NULL) {
 		SceUInt32 packed = ((SceUInt32)10 << 16) | s_bgmCtx.channel;
-		ret = musicCoreMainSendCmd(s_musicCoreMain, packed, s_bgmCtx.seqId, packed,
+		ret = s_musicCoreMain->SendCmd(packed, s_bgmCtx.seqId, packed,
 			payload, sizeof(payload));
 		if (ret != 0)
 			return ret;
@@ -317,7 +285,7 @@ int musicCoreSendOpenUri(const MusicCoreClientCtx *ctx, const void *uriBuf, cons
 	if (s_musicCoreMain == NULL)
 		return 0;
 	SceUInt32 packed = ((SceUInt32)12 << 16) | ctx->channel;
-	return musicCoreMainSendCmd(s_musicCoreMain, packed, ctx->seqId, packed,
+	return s_musicCoreMain->SendCmd(packed, ctx->seqId, packed,
 		&payload, sizeof(payload));
 }
 
@@ -364,7 +332,7 @@ int musicCoreSendControlCmd(const MusicCoreClientCtx *ctx, SceUInt32 ctrlCode, i
 	payload[3] = (SceUInt32)ctx->pid;
 	payload[4] = (SceUInt32)ctx->appId;
 	SceUInt32 packed = ((SceUInt32)2 << 16) | ctx->channel;
-	return musicCoreMainSendCmd(s_musicCoreMain, 20, ctx->seqId, packed,
+	return s_musicCoreMain->SendCmd(20, ctx->seqId, packed,
 		payload, sizeof(payload));
 }
 
@@ -404,11 +372,11 @@ int musicCoreQueryConvertedStatus(const MusicCoreClientCtx *ctx, MusicCoreRawSta
 	sce_paf_memset(capBuf, 0, sizeof(capBuf));
 	if (s_musicCoreMain == NULL)
 		return 0;
-	int ret = musicCoreMainGetStatus(s_musicCoreMain, ctx, rawBuf);
+	int ret = s_musicCoreMain->GetStatus(ctx, rawBuf);
 	if (ret == 0) {
-		ret = musicCoreMainGetFlag(s_musicCoreMain, ctx, &flag);
+		ret = s_musicCoreMain->GetPlayTimeFlag(ctx, &flag);
 		if (ret == 0) {
-			ret = musicCoreMainGetCap(s_musicCoreMain, ctx, capBuf);
+			ret = s_musicCoreMain->GetCap(ctx, capBuf);
 			if (ret == 0)
 				return musicCoreConvertStatus(rawBuf, outStatus, flag, capBuf);
 		}
@@ -545,7 +513,7 @@ int musicCoreSetParam(const MusicCoreClientCtx *ctx, int paramId, const int *val
 		payload[2] = (SceUInt32)values[2];
 		payload[3] = (SceUInt32)ctx->pid;
 		payload[4] = (SceUInt32)ctx->appId;
-		return musicCoreMainSendCmd(s_musicCoreMain, (SceUInt32)values[2], ctx->seqId,
+		return s_musicCoreMain->SendCmd((SceUInt32)values[2], ctx->seqId,
 			((SceUInt32)14 << 16) | ctx->channel, payload, sizeof(payload));
 	default:
 		return (int)0x80100D01;
@@ -556,7 +524,7 @@ int musicCoreSetParam(const MusicCoreClientCtx *ctx, int paramId, const int *val
 	payload[0] = (SceUInt32)values[0];
 	payload[3] = (SceUInt32)ctx->pid;
 	payload[4] = (SceUInt32)ctx->appId;
-	return musicCoreMainSendCmd(s_musicCoreMain, (SceUInt32)values[0], ctx->seqId,
+	return s_musicCoreMain->SendCmd((SceUInt32)values[0], ctx->seqId,
 		(cmdHi << 16) | ctx->channel, payload, sizeof(payload));
 }
 
@@ -624,7 +592,7 @@ int musicCoreGetImposeInfo(MusicCoreImposeInfo *outInfo)
 	char metaBuf[3 * 2048];
 	sce_paf_memset(metaBuf, 0, sizeof(metaBuf));
 	if (s_musicCoreMain != NULL) {
-		ret = musicCoreMainGetMeta(s_musicCoreMain, &ctx, metaBuf);
+		ret = s_musicCoreMain->GetMeta(&ctx, metaBuf);
 		if (ret != 0)
 			return ret;
 	}
@@ -681,7 +649,7 @@ int musicCoreGetLastError(int *outErr)
 
 	int rawErr = 0;
 	if (s_musicCoreMain != NULL) {
-		int ret = musicCoreMainGetError(s_musicCoreMain, &ctx, &rawErr);
+		int ret = s_musicCoreMain->GetError(&ctx, &rawErr);
 		if (ret != 0)
 			return ret;
 	}
@@ -725,7 +693,7 @@ int musicCoreExOpen(const int *openParam)
 
 	if (s_musicCoreMain != NULL) {
 		SceUInt32 packed = ((SceUInt32)22 << 16) | 2;
-		int ret = musicCoreMainSendCmd(s_musicCoreMain, packed, 53, packed,
+		int ret = s_musicCoreMain->SendCmd(packed, 53, packed,
 			payload, sizeof(payload));
 		if (ret != 0)
 			return ret;
@@ -754,7 +722,7 @@ int musicCoreExClose(void)
 
 	if (s_musicCoreMain != NULL) {
 		SceUInt32 packed = ((SceUInt32)23 << 16) | 2;
-		int ret = musicCoreMainSendCmd(s_musicCoreMain, packed, 54, packed,
+		int ret = s_musicCoreMain->SendCmd(packed, 54, packed,
 			payload, sizeof(payload));
 		if (ret != 0)
 			return ret;
@@ -912,7 +880,7 @@ int musicCoreEnableAvrcp(void)
 		return (int)0x80101301;
 	MusicCoreClientCtx ctx;
 	sce_paf_memset(&ctx, 0, sizeof(ctx));
-	return (s_musicCoreMain != NULL) ? musicCoreMainSetAvrcpActive(s_musicCoreMain, &ctx, 1) : 0;
+	return (s_musicCoreMain != NULL) ? s_musicCoreMain->SetAvrcpActive(&ctx, 1) : 0;
 }
 
 /* 0x811CCBD8 */
@@ -922,7 +890,7 @@ int musicCoreDisableAvrcp(void)
 		return (int)0x80101301;
 	MusicCoreClientCtx ctx;
 	sce_paf_memset(&ctx, 0, sizeof(ctx));
-	return (s_musicCoreMain != NULL) ? musicCoreMainSetAvrcpActive(s_musicCoreMain, &ctx, 0) : 0;
+	return (s_musicCoreMain != NULL) ? s_musicCoreMain->SetAvrcpActive(&ctx, 0) : 0;
 }
 
 /* 0x811CCC40 */
@@ -938,9 +906,9 @@ int musicCoreSetMute1(SceUInt8 mute)
 	sce_paf_memset(payload, 0, sizeof(payload));
 	if (s_musicCoreMain == NULL)
 		return 0;
-	int ret = musicCoreMainSetNoticeSuppress(s_musicCoreMain, &ctx, mute);
+	int ret = s_musicCoreMain->SetErrorSuppression(&ctx, mute);
 	if (ret == 0)
-		return musicCoreMainSendCmd(s_musicCoreMain, ctx.seqId, ctx.seqId, 0x190000,
+		return s_musicCoreMain->SendCmd(ctx.seqId, ctx.seqId, 0x190000,
 			payload, sizeof(payload));
 	return ret;
 }
@@ -958,9 +926,9 @@ int musicCoreSetMute2(SceUInt8 mute)
 	sce_paf_memset(payload, 0, sizeof(payload));
 	if (s_musicCoreMain == NULL)
 		return 0;
-	int ret = musicCoreMainClearNoticeSuppress(s_musicCoreMain, &ctx, mute);
+	int ret = s_musicCoreMain->ClearErrorSuppression(&ctx, mute);
 	if (ret == 0)
-		return musicCoreMainSendCmd(s_musicCoreMain, ctx.seqId, ctx.seqId, 0x190000,
+		return s_musicCoreMain->SendCmd(ctx.seqId, ctx.seqId, 0x190000,
 			payload, sizeof(payload));
 	return ret;
 }
@@ -991,7 +959,7 @@ int musicCoreSetAudioFocus(SceUInt8 mode)
 	}
 	if (s_musicCoreMain == NULL)
 		return 0;
-	return musicCoreMainSendCmd(s_musicCoreMain, (SceUInt32)(SceUIntPtr)payload, ctx.seqId,
+	return s_musicCoreMain->SendCmd((SceUInt32)(SceUIntPtr)payload, ctx.seqId,
 		packed, payload, sizeof(payload));
 }
 
@@ -1014,7 +982,7 @@ int musicCoreSetSystemPause(SceUInt8 pause)
 	if (s_musicCoreMain == NULL)
 		return 0;
 	payload[0] = pause;
-	return musicCoreMainSendCmd(s_musicCoreMain, 0x1A0001, ctx.seqId, 0x1A0001,
+	return s_musicCoreMain->SendCmd(0x1A0001, ctx.seqId, 0x1A0001,
 		payload, sizeof(payload));
 }
 
@@ -1039,7 +1007,7 @@ static int musicCoreSendSimpleCmd(const MusicCoreClientCtx *ctx, SceUInt16 cmdId
 	payload[3] = (SceUInt32)ctx->pid;
 	payload[4] = (SceUInt32)ctx->appId;
 	SceUInt32 packed = ((SceUInt32)cmdId << 16) | ctx->channel;
-	return musicCoreMainSendCmd(s_musicCoreMain, packed, ctx->seqId, packed,
+	return s_musicCoreMain->SendCmd(packed, ctx->seqId, packed,
 		payload, sizeof(payload));
 }
 
@@ -1055,7 +1023,7 @@ int musicCoreGetCurrentUri(const MusicCoreClientCtx *ctx, char *outUri)
 	sce_paf_memset(rawUri, 0, 0x401);
 	if (s_musicCoreMain == NULL)
 		return 0;
-	int ret = musicCoreMainGetUri(s_musicCoreMain, ctx, rawUri);
+	int ret = s_musicCoreMain->GetUri(ctx, rawUri);
 	if (ret == 0)
 		return musicCoreConvertUri(rawUri, outUri);
 	return ret;
@@ -1069,7 +1037,7 @@ int musicCoreGetChannelError(const MusicCoreClientCtx *ctx, int *outErr)
 	if (s_musicCoreMain == NULL)
 		return 0;
 	int rawErr = 0;
-	int ret = musicCoreMainGetError(s_musicCoreMain, ctx, &rawErr);
+	int ret = s_musicCoreMain->GetError(ctx, &rawErr);
 	if (ret == 0) {
 		outErr[0] = ctx->channel;
 		outErr[1] = rawErr;
@@ -1087,7 +1055,7 @@ int musicCoreGetPlayTime(const MusicCoreClientCtx *ctx, int *outTime)
 	sce_paf_memset(buf, 0, sizeof(buf));
 	if (s_musicCoreMain == NULL)
 		return 0;
-	int ret = musicCoreMainGetPlayTime(s_musicCoreMain, ctx, buf);
+	int ret = s_musicCoreMain->GetPlayTimeEntry(ctx, buf);
 	if (ret == 0) {
 		outTime[0] = buf[0];
 		outTime[1] = buf[1];
@@ -1103,7 +1071,7 @@ int musicCoreGetMetadata(const MusicCoreClientCtx *ctx, void *outMeta)
 		return (int)0x80100D01;
 	if (s_musicCoreMain == NULL)
 		return 0;
-	return musicCoreMainGetMeta(s_musicCoreMain, ctx, outMeta);
+	return s_musicCoreMain->GetMeta(ctx, static_cast<char *>(outMeta));
 }
 
 /* 0x811CD3B8 */
@@ -1119,7 +1087,7 @@ int musicCoreCmdExOpen(const MusicCoreClientCtx *ctx, const void *openParam)
 	if (s_musicCoreMain == NULL)
 		return 0;
 	SceUInt32 packed = ((SceUInt32)22 << 16) | ctx->channel;
-	return musicCoreMainSendCmd(s_musicCoreMain, packed, ctx->seqId, packed,
+	return s_musicCoreMain->SendCmd(packed, ctx->seqId, packed,
 		payload, sizeof(payload));
 }
 
@@ -1131,7 +1099,7 @@ int musicCoreCmdSetAvrcp(const MusicCoreClientCtx *ctx, SceUInt8 enable)
 {
 	if (s_musicCoreMain == NULL)
 		return 0;
-	return musicCoreMainSetAvrcpActive(s_musicCoreMain, ctx, (enable == 1));
+	return s_musicCoreMain->SetAvrcpActive(ctx, (enable == 1));
 }
 
 /* 0x811CD556 */
@@ -1143,9 +1111,9 @@ int musicCoreCmdSetNoticeSuppress(const MusicCoreClientCtx *ctx, SceUInt8 mute)
 	sce_paf_memset(payload, 0, sizeof(payload));
 	if (s_musicCoreMain == NULL)
 		return 0;
-	int ret = musicCoreMainSetNoticeSuppress(s_musicCoreMain, ctx, mute);
+	int ret = s_musicCoreMain->SetErrorSuppression(ctx, mute);
 	if (ret == 0)
-		return musicCoreMainSendCmd(s_musicCoreMain, ctx->seqId, ctx->seqId, 0x190000,
+		return s_musicCoreMain->SendCmd(ctx->seqId, ctx->seqId, 0x190000,
 			payload, sizeof(payload));
 	return ret;
 }
@@ -1159,9 +1127,9 @@ int musicCoreCmdClearNoticeSuppress(const MusicCoreClientCtx *ctx, SceUInt8 mute
 	sce_paf_memset(payload, 0, sizeof(payload));
 	if (s_musicCoreMain == NULL)
 		return 0;
-	int ret = musicCoreMainClearNoticeSuppress(s_musicCoreMain, ctx, mute);
+	int ret = s_musicCoreMain->ClearErrorSuppression(ctx, mute);
 	if (ret == 0)
-		return musicCoreMainSendCmd(s_musicCoreMain, ctx->seqId, ctx->seqId, 0x190000,
+		return s_musicCoreMain->SendCmd(ctx->seqId, ctx->seqId, 0x190000,
 			payload, sizeof(payload));
 	return ret;
 }
@@ -1188,7 +1156,7 @@ int musicCoreCmdSetAudioFocus(const MusicCoreClientCtx *ctx, SceUInt8 mode)
 	}
 	if (s_musicCoreMain == NULL)
 		return 0;
-	return musicCoreMainSendCmd(s_musicCoreMain, (SceUInt32)(SceUIntPtr)payload, ctx->seqId,
+	return s_musicCoreMain->SendCmd((SceUInt32)(SceUIntPtr)payload, ctx->seqId,
 		packed, payload, sizeof(payload));
 }
 
@@ -1202,7 +1170,7 @@ int musicCoreCmdSetSystemPause(const MusicCoreClientCtx *ctx, SceUInt8 pause)
 	if (s_musicCoreMain == NULL)
 		return 0;
 	payload[0] = pause;
-	return musicCoreMainSendCmd(s_musicCoreMain, 0x1A0001, ctx->seqId, 0x1A0001,
+	return s_musicCoreMain->SendCmd(0x1A0001, ctx->seqId, 0x1A0001,
 		payload, sizeof(payload));
 }
 
@@ -1257,7 +1225,7 @@ int musicCoreCmdSetContent(const MusicCoreClientCtx *ctx, const void *content)
 	if (s_musicCoreMain == NULL)
 		return 0;
 	SceUInt32 packed = ((SceUInt32)1 << 16) | ctx->channel;
-	return musicCoreMainSendCmd(s_musicCoreMain, packed, ctx->seqId, packed,
+	return s_musicCoreMain->SendCmd(packed, ctx->seqId, packed,
 		&payload, sizeof(payload));
 }
 
@@ -1270,7 +1238,7 @@ int musicCoreGetTrackInfo(const MusicCoreClientCtx *ctx, char *outInfo)
 	sce_paf_memset(rawStatus, 0, 144);
 	if (s_musicCoreMain == NULL)
 		return 0;
-	int ret = musicCoreMainGetTrackInfo(s_musicCoreMain, ctx, rawTrack, rawStatus);
+	int ret = s_musicCoreMain->GetTrackInfo(ctx, rawTrack, rawStatus);
 	if (ret == 0)
 		return musicCoreConvertTrackInfo(rawTrack, rawStatus, outInfo);
 	return ret;
@@ -1286,12 +1254,12 @@ int musicCoreGetParam(const MusicCoreClientCtx *ctx, int paramId, int *outVal)
 	int ret = 0;
 	switch (paramId) {
 	case 0:
-		ret = musicCoreMainGetStatus(s_musicCoreMain, ctx, &raw);
+		ret = s_musicCoreMain->GetStatus(ctx, &raw);
 		if (ret == 0)
 			*outVal = raw.volume;
 		break;
 	case 1:
-		ret = musicCoreMainGetStatus(s_musicCoreMain, ctx, &raw);
+		ret = s_musicCoreMain->GetStatus(ctx, &raw);
 		if (ret == 0) {
 			int mapped = 0;
 			ret = musicCoreConvertRepeat((int)raw.shuffleMode, &mapped);
@@ -1300,7 +1268,7 @@ int musicCoreGetParam(const MusicCoreClientCtx *ctx, int paramId, int *outVal)
 		}
 		break;
 	case 2:
-		ret = musicCoreMainGetStatus(s_musicCoreMain, ctx, &raw);
+		ret = s_musicCoreMain->GetStatus(ctx, &raw);
 		if (ret == 0) {
 			int mapped = 0;
 			ret = musicCoreConvertShuffle(raw.repeatMode, &mapped);
@@ -1309,7 +1277,7 @@ int musicCoreGetParam(const MusicCoreClientCtx *ctx, int paramId, int *outVal)
 		}
 		break;
 	case 3:
-		ret = musicCoreMainGetStatus(s_musicCoreMain, ctx, &raw);
+		ret = s_musicCoreMain->GetStatus(ctx, &raw);
 		if (ret == 0) {
 			int mapped = 0;
 			ret = musicCoreConvertEq((int)(raw.playlistId >> 32), &mapped);
@@ -1318,7 +1286,7 @@ int musicCoreGetParam(const MusicCoreClientCtx *ctx, int paramId, int *outVal)
 		}
 		break;
 	case 4:
-		ret = musicCoreMainGetStatus(s_musicCoreMain, ctx, &raw);
+		ret = s_musicCoreMain->GetStatus(ctx, &raw);
 		if (ret == 0) {
 			int mapped = 0;
 			ret = musicCoreConvertAvls((int)raw.avlsMode, 0, 0, 0, &mapped);
@@ -1350,7 +1318,7 @@ int musicCoreDbSuspend(const MusicCoreClientCtx *ctx, SceUInt8 flag)
 	payload[3] = (SceUInt32)ctx->pid;
 	payload[4] = (SceUInt32)ctx->appId;
 	SceUInt32 packed = ((SceUInt32)16 << 16) | ctx->channel;
-	return musicCoreMainSendCmd(s_musicCoreMain, packed, ctx->seqId, packed,
+	return s_musicCoreMain->SendCmd(packed, ctx->seqId, packed,
 		payload, sizeof(payload));
 }
 
@@ -1376,7 +1344,7 @@ int musicCoreDbQuery(const MusicCoreClientCtx *ctx, const void *data)
 	if (s_musicCoreMain == NULL)
 		return 0;
 	SceUInt32 packed = ((SceUInt32)19 << 16) | ctx->channel;
-	return musicCoreMainSendCmd(s_musicCoreMain, packed, ctx->seqId, packed,
+	return s_musicCoreMain->SendCmd(packed, ctx->seqId, packed,
 		&payload, sizeof(payload));
 }
 
@@ -1389,7 +1357,7 @@ int musicCoreGetCapability(const MusicCoreClientCtx *ctx, void *outCap)
 	sce_paf_memset(capBuf, 0, sizeof(capBuf));
 	if (s_musicCoreMain == NULL)
 		return 0;
-	int ret = musicCoreMainGetCap(s_musicCoreMain, ctx, capBuf);
+	int ret = s_musicCoreMain->GetCap(ctx, capBuf);
 	if (ret == 0)
 		return musicCoreConvertCapFlag(static_cast<SceInt8>(capBuf[8]),
 					       static_cast<int *>(outCap));
@@ -1399,13 +1367,13 @@ int musicCoreGetCapability(const MusicCoreClientCtx *ctx, void *outCap)
 /* 0x811CE1A2 */
 int musicCoreGetBgmMute(int mode, void *outState)
 {
-	return musicCoreMainGetBgmMute(s_musicCoreMain, mode, outState);
+	return s_musicCoreMain->GetBgmSlot(mode, outState);
 }
 
 /* 0x811CE1BA */
 int musicCoreSetBgmMute(int mode, int enable)
 {
-	return musicCoreMainSetBgmMute(s_musicCoreMain, mode, enable);
+	return s_musicCoreMain->GetAllAppSlots(mode, reinterpret_cast<void *>(enable));
 }
 
 /* 0x811CE1D2 */
@@ -1446,7 +1414,7 @@ static void musicCoreOnShellEvent(int eventId, const void *info)
 	const ShellAppEventInfo *appInfo = static_cast<const ShellAppEventInfo *>(info);
 	sce_paf_memcpy(payload.titleId, appInfo->titleIdPtr, 32);
 	if (s_musicCoreMain != NULL)
-		musicCoreMainSendCmd(s_musicCoreMain, 36, 0, 24u << 16, &payload, sizeof(payload));
+		s_musicCoreMain->SendCmd(36, 0, 24u << 16, &payload, sizeof(payload));
 }
 
 /* 0x811CE3AE */
@@ -1459,7 +1427,7 @@ static void musicCoreOnAppEvent(int eventType, const void *titleId)
 		payload.type = 0;
 		sce_paf_memcpy(payload.titleId, titleId, 32);
 		if (s_musicCoreMain != NULL)
-			musicCoreMainSendCmd(s_musicCoreMain, 0x180000, 0, 0x180000,
+			s_musicCoreMain->SendCmd(0x180000, 0, 0x180000,
 				&payload, sizeof(payload));
 	}
 }
@@ -1471,7 +1439,7 @@ static void musicCoreOnPowerEvent2(int eventId)
 		SceUInt8 payload[20];
 		sce_paf_memset(payload, 0, sizeof(payload));
 		if (s_musicCoreMain != NULL)
-			musicCoreMainSendCmd(s_musicCoreMain, 0x1B0001, 0, 0x1B0001,
+			s_musicCoreMain->SendCmd(0x1B0001, 0, 0x1B0001,
 				payload, sizeof(payload));
 	}
 }
@@ -1483,7 +1451,7 @@ static void musicCoreOnPowerEvent3(int eventId)
 		SceUInt8 payload[20];
 		sce_paf_memset(payload, 0, sizeof(payload));
 		if (s_musicCoreMain != NULL)
-			musicCoreMainSendCmd(s_musicCoreMain, 0x1C0001, 0, 0x1C0001,
+			s_musicCoreMain->SendCmd(0x1C0001, 0, 0x1C0001,
 				payload, sizeof(payload));
 	}
 }

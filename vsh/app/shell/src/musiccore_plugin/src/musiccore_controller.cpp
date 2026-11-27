@@ -12,6 +12,7 @@
 #include <thread/thread.h>
 
 #include "musiccore_player_base.h"
+#include "musiccore_db_manager.h"
 
 extern "C" {
 void *sce_paf_memset(void *dst, int val, size_t size);
@@ -110,12 +111,6 @@ struct DecoderCallbacks {
     void *userData;
 };
 
-struct DbCallbacks {
-    int (*onEvent)(const void *ev, void *ctrl);
-    int (*onMessage)(const void *msg, void *ctrl);
-    void *userData;
-};
-
 struct ExclusivePlayer : public BasePlayer {
     SoundOutExclusiveParam exclusiveParam;
 };
@@ -150,14 +145,6 @@ extern void stopDecoderManager(void *mgr);
 extern void termDecoderManager(void *mgr);
 extern int startDecoderManager(void *mgr, const DecoderCallbacks *cbs, void *audioOut);
 extern void notifyDecoderAudioEvent(void *mgr, int eventType, int eventVal);
-
-extern void initDbManager(void *mgr, int capacity);
-extern void stopDbManager(void *mgr);
-extern void termDbManager(void *mgr);
-extern int startDbManager(void *mgr, const DbCallbacks *cbs);
-extern int dbManagerOpen(void *mgr, int openMode, uint32_t param, uint32_t cmdHi, int openFlags);
-extern int dbManagerClose(void *mgr);
-extern int dbManagerQuery(void *mgr, int queryData, int queryCount, int queryOpt, uint32_t param, uint32_t cmdHi, int queryFlags);
 
 extern void initAudioOutput(void *audioOut);
 extern void stopAudioOutput(void *audioOut);
@@ -408,7 +395,7 @@ Controller::Controller(ObjFactory *factory, int *outErr, unsigned int totalBytes
     m_ackWaiter.signalCount = 0;
 
     initDecoderManager(m_decoderMgrArena);
-    initDbManager(m_dbMgrArena, 36);
+    new (m_dbMgrArena) DbManager(36);
     initAudioOutput(m_audioOutArena);
 
     initDefaultPriorityInfo(&m_lastSystemReport.musicInfo);
@@ -589,7 +576,7 @@ Controller::~Controller()
     if (m_threadId != -1) {
         stopDecoderManager(m_decoderMgrArena);
         stopAudioOutput(m_audioOutArena);
-        stopDbManager(m_dbMgrArena);
+        reinterpret_cast<DbManager *>(m_dbMgrArena)->stop();
 
         unsigned char exitPayload = 0;
         sendCommand(makeCmdHeader(0, 0x81008000u), &exitPayload, 1, NULL, NULL);
@@ -627,7 +614,7 @@ Controller::~Controller()
     m_idleTracker.pausedSinceUs = 0;
 
     termAudioOutput(m_audioOutArena);
-    termDbManager(m_dbMgrArena);
+    reinterpret_cast<DbManager *>(m_dbMgrArena)->~DbManager();
     termDecoderManager(m_decoderMgrArena);
 }
 
@@ -1102,7 +1089,8 @@ int Controller::handleDbOpen(CmdNode *node, unsigned char *flags)
 
     if (m_dbState == 4) {
         m_dbState = 0;
-        int ret = dbManagerOpen(m_dbMgrArena, 0, node->param, cmdHi, 0);
+        int ret = reinterpret_cast<DbManager *>(m_dbMgrArena)->requestOpenMedia(
+            0, NULL, 0, node->param, cmdHi, 0, 0, NULL);
         if (ret != 0) {
             m_dbState = 4;
             return ret;
@@ -1146,8 +1134,9 @@ int Controller::handleDbQuery(CmdNode *node)
     m_dbState = 2;
     uint32_t cmdHi = (uint32_t)node->targetChannel | ((uint32_t)node->flagsByte << 8) |
                      ((uint32_t)node->cmdCode << 16);
-    int ret = dbManagerQuery(m_dbMgrArena, payload[1], payload[2], payload[3],
-                             node->param, cmdHi, 0);
+    int ret = reinterpret_cast<DbManager *>(m_dbMgrArena)->requestQueryTracks(
+        reinterpret_cast<const uint64_t *>(payload[1]), payload[2], payload[3],
+        node->param, cmdHi, 0);
     if (ret != 0)
         m_dbState = prevState;
     return ret;
@@ -1570,7 +1559,7 @@ int Controller::handleControllerCmd(CmdNode *node, void *outResult, unsigned cha
             return MUSICCORE_ERR_BUSY;
         if (m_dbState == 4)
             return 0;
-        return dbManagerClose(m_dbMgrArena);
+        return reinterpret_cast<DbManager *>(m_dbMgrArena)->requestCloseMedia(NULL, 0, 0, 0);
     case 0x8109:
         return handleDbQuery(node);
     case 0x810A:
@@ -1776,10 +1765,10 @@ int Controller::runMainLoop()
     }
     if (initErr == 0) {
         DbCallbacks dbCbs;
-        dbCbs.onEvent = onDbEvent;
-        dbCbs.onMessage = onDbMessage;
+        dbCbs.onResult = onDbEvent;
+        dbCbs.onNotify = onDbMessage;
         dbCbs.userData = this;
-        initErr = startDbManager(m_dbMgrArena, &dbCbs);
+        initErr = reinterpret_cast<DbManager *>(m_dbMgrArena)->start(&dbCbs);
     }
     if (initErr == 0) {
         PlayerCallbacks plCbs;
@@ -1818,7 +1807,7 @@ int Controller::runMainLoop()
         SceShell_D4C7D2B7(3, (void *)onShellResumeEvent, NULL);
         stopDecoderManager(m_decoderMgrArena);
         stopAudioOutput(m_audioOutArena);
-        stopDbManager(m_dbMgrArena);
+        reinterpret_cast<DbManager *>(m_dbMgrArena)->stop();
         for (int i = 0; i < 8; ++i) {
             BasePlayer *p = findPlayerByKindSlot(0, (unsigned char)i, 0);
             if (p != NULL)

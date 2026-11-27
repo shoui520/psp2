@@ -6,6 +6,7 @@
  */
 #include <std/string.h>
 #include <scetypes.h>
+#include <kernel/processmgr.h>
 #include "shell.h"
 #include "tel_general_internal.h"
 
@@ -276,6 +277,34 @@ void TelGeneralLogicMediator::LivespaceCallback(int code, const void *eventData,
 
 void TelGeneralLogicMediator::OnNotify(const TelEventInfo &event)
 {
+	int eventId = event.GetEventId();
+	if (eventId == TEL_EV_INTERNAL_POWER_TICK_EXPIRED) {
+		if (m_powerTickActive) {
+			sceKernelPowerTick(SCE_KERNEL_POWER_TICK_DEFAULT);
+			TelTimerManager *timerMgr = TelTimerManager::GetInstance();
+			if (timerMgr != NULL) {
+				TelEventInfo tickEv(TEL_EV_INTERNAL_POWER_TICK_EXPIRED, -1, -1);
+				SceUID timerId = -1;
+				timerMgr->StartTimer(1000, this, &timerId, tickEv);
+			}
+			m_powerTickActive = true;
+		}
+		return;
+	}
+	if (eventId == TEL_EV_INTERNAL_POWER_TICK_START) {
+		TelTimerManager *timerMgr = TelTimerManager::GetInstance();
+		if (timerMgr != NULL) {
+			TelEventInfo tickEv(TEL_EV_INTERNAL_POWER_TICK_EXPIRED, -1, -1);
+			SceUID timerId = -1;
+			timerMgr->StartTimer(1000, this, &timerId, tickEv);
+		}
+		m_powerTickActive = true;
+		return;
+	}
+	if (eventId == TEL_EV_INTERNAL_POWER_TICK_STOP) {
+		m_powerTickActive = false;
+		return;
+	}
 	PostMessage(event);
 }
 

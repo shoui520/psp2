@@ -16,6 +16,7 @@
 #include <thread/thread.h>
 
 #include "musiccore_player_base.h"
+#include "musiccore_db_manager.h"
 
 extern "C" {
 void *sce_paf_memset(void *dst, int ch, SceSize len);
@@ -71,47 +72,18 @@ struct PowerManagePluginInterface {
     void (*releaseAutoSuspendHold)();
 };
 
-struct AutoSuspendSettingProvider {
-    virtual ~AutoSuspendSettingProvider() {}
-    virtual void initialize() = 0;
-    virtual void finalize() = 0;
-    virtual void reloadSettings() = 0;
-    virtual int getAutoSuspendTimeoutSec(int *outSeconds) = 0;
-};
-
-struct DbManagerRuntime {
-    SceUID initSema;
-    SceUID threadId;
-    int initResult;
-    void *cmdQueue;
-    void *onResultCb;
-    void *onNotifyCb;
-    void *callbackUserData;
-    void *slots;
-    int activeSlotCount;
-    unsigned int capacity;
-    const char *dbPath;
-    uint8_t dbConnMembers[236];
-    AutoSuspendSettingProvider *settingProvider;
-};
-
 struct PlaybackDbCommandTarget {
     uint32_t reservedHeader;
     int handleId;
 };
 
-extern int dbManagerOpenSession(void *dbMgr);
-extern int dbManagerReleaseList(void *dbMgr, void *mediaList, uint32_t origParam,
-                                uint32_t origCmdHi, int commitFlag);
-extern int dbManagerNotifySeek(void *dbMgr, int handleId, uint32_t origParam,
-                               uint32_t origCmdHi, int commitFlag);
-extern int dbManagerNotifyNext(void *dbMgr, int handleId, uint32_t origParam,
-                               uint32_t origCmdHi, int commitFlag);
-extern int dbManagerNotifyShuffle(void *dbMgr, int handleId, uint32_t origParam,
-                                  uint32_t origCmdHi, int commitFlag);
-extern int dbManagerNotifyRepeat(void *dbMgr);
-extern int dbManagerNotifyPrev(void *dbMgr, int handleId, int commitFlag);
-extern int dbManagerFlushRecord(void *dbMgr);
+struct EqualizerDbCommand {
+    uint32_t reservedHeader;
+    int eqType;
+    int bandLow;
+    int bandMid;
+    int bandHigh;
+};
 
 extern size_t orderListFactoryCalcSize(void *heap, int maxLists, int listSlots, int entrySize);
 extern void *orderListFactoryConstruct(void *mem, void *heap, int maxLists, int listSlots,
@@ -379,7 +351,7 @@ int MusicAppPlayer::open(const void *param, unsigned char *flags)
     }
     m_priority = priority;
 
-    int ret = dbManagerOpenSession(m_dbMgr);
+    int ret = static_cast<DbManager *>(m_dbMgr)->requestLoadSettings(0, m_channelId, 0);
     if (ret == 0) {
         int prevWant = wantsAudio();
         m_isOpen = 1;
@@ -427,7 +399,8 @@ int MusicAppPlayer::cmdClearPlaylist(CmdNode *node, unsigned char *flags)
         clearPendingUriIfMatches(static_cast<MediaItemHandle *>(m_offlineState.mediaHandle));
         void *prevList = m_offlineState.mediaHandle;
         m_offlineState.mediaHandle = NULL;
-        ret = dbManagerReleaseList(m_dbMgr, prevList, node->param, packCmdNodeHi(node), 1);
+        ret = static_cast<DbManager *>(m_dbMgr)->requestCloseMedia(
+            prevList, node->param, packCmdNodeHi(node), 1);
 
         m_offlineState.stateId = 0;
         m_offlineState.playState = 0;
@@ -467,7 +440,8 @@ int MusicAppPlayer::cmdSetRepeat(CmdNode *node, unsigned char *flags)
     if (m_dbMgr == NULL) {
         return MC_ERR_INTERNAL;
     }
-    return dbManagerNotifySeek(m_dbMgr, target->handleId, node->param, packCmdNodeHi(node), 1);
+    return static_cast<DbManager *>(m_dbMgr)->requestSetRepeatMode(
+        target->handleId, node->param, packCmdNodeHi(node), 1);
 }
 
 /* 0x811F57F8 */
@@ -485,7 +459,8 @@ int MusicAppPlayer::cmdSetShuffle(CmdNode *node, unsigned char *flags)
     if (m_dbMgr == NULL) {
         return MC_ERR_INTERNAL;
     }
-    return dbManagerNotifyNext(m_dbMgr, target->handleId, node->param, packCmdNodeHi(node), 1);
+    return static_cast<DbManager *>(m_dbMgr)->requestSetShuffleMode(
+        target->handleId, node->param, packCmdNodeHi(node), 1);
 }
 
 /* 0x811F5856 */
@@ -503,7 +478,8 @@ int MusicAppPlayer::cmdSetAudioBalance(CmdNode *node, unsigned char *flags)
     if (m_dbMgr == NULL) {
         return MC_ERR_INTERNAL;
     }
-    return dbManagerNotifyPrev(m_dbMgr, target->handleId, 1);
+    return static_cast<DbManager *>(m_dbMgr)->requestSetAudioBalance(
+        target->handleId, 1, node->param, packCmdNodeHi(node), 1);
 }
 
 /* 0x811F5896 */
@@ -513,13 +489,17 @@ int MusicAppPlayer::cmdSetEqualizer(CmdNode *node, unsigned char *flags)
     if (ret != 0) {
         return ret;
     }
-    if (node->inBuf == NULL) {
+    const EqualizerDbCommand *eqCmd =
+        static_cast<const EqualizerDbCommand *>(node->inBuf);
+    if (eqCmd == NULL) {
         return MC_ERR_INVALID_ARG;
     }
     if (m_dbMgr == NULL) {
         return MC_ERR_INTERNAL;
     }
-    return dbManagerNotifyRepeat(m_dbMgr);
+    return static_cast<DbManager *>(m_dbMgr)->requestSetEqualizer(
+        eqCmd->eqType, eqCmd->bandLow, eqCmd->bandMid, eqCmd->bandHigh,
+        node->param, packCmdNodeHi(node), 1);
 }
 
 /* 0x811F590A */
@@ -537,7 +517,8 @@ int MusicAppPlayer::cmdSetAudioNormalizer(CmdNode *node, unsigned char *flags)
     if (m_dbMgr == NULL) {
         return MC_ERR_INTERNAL;
     }
-    return dbManagerNotifyShuffle(m_dbMgr, target->handleId, node->param, packCmdNodeHi(node), 1);
+    return static_cast<DbManager *>(m_dbMgr)->requestSetNormalizer(
+        target->handleId, node->param, packCmdNodeHi(node), 1);
 }
 
 void MusicAppPlayer::clearAutoSuspendCountdown()
@@ -575,7 +556,7 @@ int MusicAppPlayer::onDecoderEvent(CmdNode *node, unsigned char *flags)
 
         m_playPowerTickUs = 0;
         if (getSystemSuspended() != 0) {
-            DbManagerRuntime *dbMgr = static_cast<DbManagerRuntime *>(m_dbMgr);
+            DbManager *dbMgr = static_cast<DbManager *>(m_dbMgr);
             if (dbMgr == NULL) {
                 return MC_ERR_INTERNAL;
             }
@@ -583,7 +564,7 @@ int MusicAppPlayer::onDecoderEvent(CmdNode *node, unsigned char *flags)
                 m_autoSuspendTimeoutSec = 600;
                 ret = 0;
             } else {
-                ret = dbMgr->settingProvider->getAutoSuspendTimeoutSec(&m_autoSuspendTimeoutSec);
+                ret = dbMgr->regCache().getSuspendInterval(&m_autoSuspendTimeoutSec);
                 if (ret != 0) {
                     return ret;
                 }
@@ -637,7 +618,8 @@ int MusicAppPlayer::onDecoderStreamEnd(CmdNode *node, unsigned char *flags)
 {
     const TrackNotifyPayload *payload = static_cast<const TrackNotifyPayload *>(node->inBuf);
     if (payload != NULL && payload->dbSyncRequired != 0) {
-        dbManagerFlushRecord(m_dbMgr);
+        static_cast<DbManager *>(m_dbMgr)->requestSetPowerSave(
+            payload->dbSyncRequired, node->param, packCmdNodeHi(node), 1);
     }
     return BasePlayer::onDecoderStreamEnd(node, flags);
 }

@@ -56,6 +56,7 @@ TelGeneralLogicMediator::TelGeneralLogicMediator(TelBbmcAdapterInterface *bbmcAd
 	  m_telRegAppId(-1),
 	  m_operatorAppId(-1),
 	  m_scanActive(false),
+	  m_powerTickActive(false),
 	  m_debugLogStage(0),
 	  m_debugLogEnabled(false),
 	  m_networkReportCache(""),

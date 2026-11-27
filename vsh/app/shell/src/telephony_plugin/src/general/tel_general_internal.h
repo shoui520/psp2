@@ -137,6 +137,9 @@ enum TelGeneralEventId {
 	TEL_EV_INTERNAL_CAN_NOT_USE_SIM = 814,
 	TEL_EV_INTERNAL_SHUTDOWN = 815,
 	TEL_EV_INTERNAL_SIM_LOCK_ERROR = 816,
+	TEL_EV_INTERNAL_POWER_TICK_EXPIRED = 818,
+	TEL_EV_INTERNAL_POWER_TICK_START = 819,
+	TEL_EV_INTERNAL_POWER_TICK_STOP = 820,
 	TEL_EV_INTERNAL_RESUME = 821,
 	TEL_EV_INTERNAL_RE_TURN_ON = 822,
 	TEL_EV_INTERNAL_TURN_OFF_SOFT = 823,
@@ -890,110 +893,110 @@ public:
 		return *static_cast<TelGeneralLogicStateMachineState *>(m_state);
 	}
 
-	void AbortNetworkScan();
-	void ChangePinCode();
-	void CheckImsiForOperatorCode();
-	void CheckSimCondition();
-	void DeactivateSimLock();
-	void GetFlightMode();
-	void GetApnInfoListCount();
-	void GetApnInfoListItem();
-	void GetConditionError();
-	void GetGeneralLogicState();
-	void GetIccid();
-	void GetMccMncOfImsi();
-	void GetMccMncOfNetwork();
-	void GetNetRegistrationInfo();
-	void GetNetworkInfo();
-	void GetNetworkScanInfo();
-	void GetNetworkScanInfoCount();
-	void GetOperatorProfile();
-	void GetOperatorProfileCount();
-	void GetPhoneNumber();
-	void GetPinProtection();
-	void GetPinRemain();
-	void GetPinStatus();
-	void GetRoamingInfo();
-	void GetSignalLevel();
-	void GetSimLockDeactivateRemain();
-	void GetSimLockUnblockRemain();
-	void IsOpenSimModel();
-	void OnEventAttributeError();
-	void OnEventBbmcChangePinCodeFailed();
-	void OnEventBbmcChangePinCodeFin();
-	void OnEventBbmcComBootNg();
-	void OnEventBbmcComBootOk();
-	void OnEventBbmcComDownAtSuspend();
-	void OnEventBbmcComFailure();
-	void OnEventBbmcEnterLowBatt();
-	void OnEventBbmcExceedHiTemp();
-	void OnEventBbmcExitLowBatt();
-	void OnEventBbmcFallDownLowTemp();
-	void OnEventBbmcLpmFromNetworkReady();
-	void OnEventBbmcNeedUpdatingDeviceInfo();
-	void OnEventBbmcNetProfileSettingFailed();
-	void OnEventBbmcNetProfileSettingFin();
-	void OnEventBbmcNetRegisterSettingFailed();
-	void OnEventBbmcNetRegisterSettingFin();
-	void OnEventBbmcNetScanFailed();
-	void OnEventBbmcNetScanFin();
-	void OnEventBbmcNetinfo();
-	void OnEventBbmcNetworkReady();
-	void OnEventBbmcPacketCallEndReasonUpdate();
-	void OnEventBbmcPinNotRequired();
-	void OnEventBbmcPinPermanentlyBlocked();
-	void OnEventBbmcPinProtectionFailed();
-	void OnEventBbmcPinProtectionFin();
-	void OnEventBbmcPinRequired();
-	void OnEventBbmcPinStatusReady();
-	void OnEventBbmcPlmnModeBit();
-	void OnEventBbmcPukRequired();
-	void OnEventBbmcRegistrationReject();
-	void OnEventBbmcSetupReady();
-	void OnEventBbmcSimBlockedNormalOperation();
-	void OnEventBbmcSimLockInfo();
-	void OnEventBbmcSimPermanentlyBlocked();
-	void OnEventBbmcStatusUpdate();
-	void OnEventMediatorComFailure();
-	void OnEventMediatorInternalBbmcError();
-	void OnEventMediatorInternalCanNotUseSim();
-	void OnEventMediatorInternalChangePinCode();
-	void OnEventMediatorInternalDeactivateSimLock();
-	void OnEventMediatorInternalDeactivateTelReg();
-	void OnEventMediatorInternalEnableWwan();
-	void OnEventMediatorInternalExitFromErrorState();
-	void OnEventMediatorInternalLivespaceReady();
-	void OnEventMediatorInternalReTurnOn();
-	void OnEventMediatorInternalRemoveCurrentApnInfo();
-	void OnEventMediatorInternalRestoreApnInfo();
-	void OnEventMediatorInternalResume();
-	void OnEventMediatorInternalSetApnInfo();
-	void OnEventMediatorInternalSetApnInfoWithBillingPlan();
-	void OnEventMediatorInternalSetDataRoamingPermission();
-	void OnEventMediatorInternalSetPinProtection();
-	void OnEventMediatorInternalShutdown();
-	void OnEventMediatorInternalSimLockError();
-	void OnEventMediatorInternalStartNetworkScan();
-	void OnEventMediatorInternalUnblockPin();
-	void OnEventMediatorInternalUnblockSimLock();
-	void OnEventMediatorInternalVerifyPin();
-	void OnEventNotifyCallback();
-	void OnEventSimDisabled();
-	void OnEventSimEnabled();
-	void RemoveCurrentApnInfo();
-	void RestoreApnInfo();
-	void SetApnInfo();
-	void SetDataRoamingDefinition();
-	void SetDataRoamingPermission();
-	void SetFlightMode();
-	void SetNetRegisterAuto();
-	void SetNetRegisterInfo();
-	void SetPinProtection();
-	void StartNetworkScan();
-	void TurnOn();
-	void UnblockPin();
-	void UnblockSimLock();
-	void VerifyPin();
+	void AbortNetworkScan() { setTransition("AbortNetworkScan"); getState().AbortNetworkScan(*this); setTransition(NULL); }
+	void ChangePinCode() { setTransition("ChangePinCode"); getState().ChangePinCode(*this); setTransition(NULL); }
+	void CheckImsiForOperatorCode() { setTransition("CheckImsiForOperatorCode"); getState().CheckImsiForOperatorCode(*this); setTransition(NULL); }
+	void CheckSimCondition() { setTransition("CheckSimCondition"); getState().CheckSimCondition(*this); setTransition(NULL); }
+	void DeactivateSimLock() { setTransition("DeactivateSimLock"); getState().DeactivateSimLock(*this); setTransition(NULL); }
+	void GetFlightMode() { setTransition("GetFlightMode"); getState().GetFlightMode(*this); setTransition(NULL); }
+	void GetApnInfoListCount() { setTransition("GetApnInfoListCount"); getState().GetApnInfoListCount(*this); setTransition(NULL); }
+	void GetApnInfoListItem() { setTransition("GetApnInfoListItem"); getState().GetApnInfoListItem(*this); setTransition(NULL); }
+	void GetConditionError() { setTransition("GetConditionError"); getState().GetConditionError(*this); setTransition(NULL); }
+	void GetGeneralLogicState() { setTransition("GetGeneralLogicState"); getState().GetGeneralLogicState(*this); setTransition(NULL); }
+	void GetIccid() { setTransition("GetIccid"); getState().GetIccid(*this); setTransition(NULL); }
+	void GetMccMncOfImsi() { setTransition("GetMccMncOfImsi"); getState().GetMccMncOfImsi(*this); setTransition(NULL); }
+	void GetMccMncOfNetwork() { setTransition("GetMccMncOfNetwork"); getState().GetMccMncOfNetwork(*this); setTransition(NULL); }
+	void GetNetRegistrationInfo() { setTransition("GetNetRegistrationInfo"); getState().GetNetRegistrationInfo(*this); setTransition(NULL); }
+	void GetNetworkInfo() { setTransition("GetNetworkInfo"); getState().GetNetworkInfo(*this); setTransition(NULL); }
+	void GetNetworkScanInfo() { setTransition("GetNetworkScanInfo"); getState().GetNetworkScanInfo(*this); setTransition(NULL); }
+	void GetNetworkScanInfoCount() { setTransition("GetNetworkScanInfoCount"); getState().GetNetworkScanInfoCount(*this); setTransition(NULL); }
+	void GetOperatorProfile() { setTransition("GetOperatorProfile"); getState().GetOperatorProfile(*this); setTransition(NULL); }
+	void GetOperatorProfileCount() { setTransition("GetOperatorProfileCount"); getState().GetOperatorProfileCount(*this); setTransition(NULL); }
+	void GetPhoneNumber() { setTransition("GetPhoneNumber"); getState().GetPhoneNumber(*this); setTransition(NULL); }
+	void GetPinProtection() { setTransition("GetPinProtection"); getState().GetPinProtection(*this); setTransition(NULL); }
+	void GetPinRemain() { setTransition("GetPinRemain"); getState().GetPinRemain(*this); setTransition(NULL); }
+	void GetPinStatus() { setTransition("GetPinStatus"); getState().GetPinStatus(*this); setTransition(NULL); }
+	void GetRoamingInfo() { setTransition("GetRoamingInfo"); getState().GetRoamingInfo(*this); setTransition(NULL); }
+	void GetSignalLevel() { setTransition("GetSignalLevel"); getState().GetSignalLevel(*this); setTransition(NULL); }
+	void GetSimLockDeactivateRemain() { setTransition("GetSimLockDeactivateRemain"); getState().GetSimLockDeactivateRemain(*this); setTransition(NULL); }
+	void GetSimLockUnblockRemain() { setTransition("GetSimLockUnblockRemain"); getState().GetSimLockUnblockRemain(*this); setTransition(NULL); }
+	void IsOpenSimModel() { setTransition("IsOpenSimModel"); getState().IsOpenSimModel(*this); setTransition(NULL); }
+	void OnEventAttributeError() { setTransition("OnEventAttributeError"); getState().OnEventAttributeError(*this); setTransition(NULL); }
+	void OnEventBbmcChangePinCodeFailed() { setTransition("OnEventBbmcChangePinCodeFailed"); getState().OnEventBbmcChangePinCodeFailed(*this); setTransition(NULL); }
+	void OnEventBbmcChangePinCodeFin() { setTransition("OnEventBbmcChangePinCodeFin"); getState().OnEventBbmcChangePinCodeFin(*this); setTransition(NULL); }
+	void OnEventBbmcComBootNg() { setTransition("OnEventBbmcComBootNg"); getState().OnEventBbmcComBootNg(*this); setTransition(NULL); }
+	void OnEventBbmcComBootOk() { setTransition("OnEventBbmcComBootOk"); getState().OnEventBbmcComBootOk(*this); setTransition(NULL); }
+	void OnEventBbmcComDownAtSuspend() { setTransition("OnEventBbmcComDownAtSuspend"); getState().OnEventBbmcComDownAtSuspend(*this); setTransition(NULL); }
+	void OnEventBbmcComFailure() { setTransition("OnEventBbmcComFailure"); getState().OnEventBbmcComFailure(*this); setTransition(NULL); }
+	void OnEventBbmcEnterLowBatt() { setTransition("OnEventBbmcEnterLowBatt"); getState().OnEventBbmcEnterLowBatt(*this); setTransition(NULL); }
+	void OnEventBbmcExceedHiTemp() { setTransition("OnEventBbmcExceedHiTemp"); getState().OnEventBbmcExceedHiTemp(*this); setTransition(NULL); }
+	void OnEventBbmcExitLowBatt() { setTransition("OnEventBbmcExitLowBatt"); getState().OnEventBbmcExitLowBatt(*this); setTransition(NULL); }
+	void OnEventBbmcFallDownLowTemp() { setTransition("OnEventBbmcFallDownLowTemp"); getState().OnEventBbmcFallDownLowTemp(*this); setTransition(NULL); }
+	void OnEventBbmcLpmFromNetworkReady() { setTransition("OnEventBbmcLpmFromNetworkReady"); getState().OnEventBbmcLpmFromNetworkReady(*this); setTransition(NULL); }
+	void OnEventBbmcNeedUpdatingDeviceInfo() { setTransition("OnEventBbmcNeedUpdatingDeviceInfo"); getState().OnEventBbmcNeedUpdatingDeviceInfo(*this); setTransition(NULL); }
+	void OnEventBbmcNetProfileSettingFailed() { setTransition("OnEventBbmcNetProfileSettingFailed"); getState().OnEventBbmcNetProfileSettingFailed(*this); setTransition(NULL); }
+	void OnEventBbmcNetProfileSettingFin() { setTransition("OnEventBbmcNetProfileSettingFin"); getState().OnEventBbmcNetProfileSettingFin(*this); setTransition(NULL); }
+	void OnEventBbmcNetRegisterSettingFailed() { setTransition("OnEventBbmcNetRegisterSettingFailed"); getState().OnEventBbmcNetRegisterSettingFailed(*this); setTransition(NULL); }
+	void OnEventBbmcNetRegisterSettingFin() { setTransition("OnEventBbmcNetRegisterSettingFin"); getState().OnEventBbmcNetRegisterSettingFin(*this); setTransition(NULL); }
+	void OnEventBbmcNetScanFailed() { setTransition("OnEventBbmcNetScanFailed"); getState().OnEventBbmcNetScanFailed(*this); setTransition(NULL); }
+	void OnEventBbmcNetScanFin() { setTransition("OnEventBbmcNetScanFin"); getState().OnEventBbmcNetScanFin(*this); setTransition(NULL); }
+	void OnEventBbmcNetinfo() { setTransition("OnEventBbmcNetinfo"); getState().OnEventBbmcNetinfo(*this); setTransition(NULL); }
+	void OnEventBbmcNetworkReady() { setTransition("OnEventBbmcNetworkReady"); getState().OnEventBbmcNetworkReady(*this); setTransition(NULL); }
+	void OnEventBbmcPacketCallEndReasonUpdate() { setTransition("OnEventBbmcPacketCallEndReasonUpdate"); getState().OnEventBbmcPacketCallEndReasonUpdate(*this); setTransition(NULL); }
+	void OnEventBbmcPinNotRequired() { setTransition("OnEventBbmcPinNotRequired"); getState().OnEventBbmcPinNotRequired(*this); setTransition(NULL); }
+	void OnEventBbmcPinPermanentlyBlocked() { setTransition("OnEventBbmcPinPermanentlyBlocked"); getState().OnEventBbmcPinPermanentlyBlocked(*this); setTransition(NULL); }
+	void OnEventBbmcPinProtectionFailed() { setTransition("OnEventBbmcPinProtectionFailed"); getState().OnEventBbmcPinProtectionFailed(*this); setTransition(NULL); }
+	void OnEventBbmcPinProtectionFin() { setTransition("OnEventBbmcPinProtectionFin"); getState().OnEventBbmcPinProtectionFin(*this); setTransition(NULL); }
+	void OnEventBbmcPinRequired() { setTransition("OnEventBbmcPinRequired"); getState().OnEventBbmcPinRequired(*this); setTransition(NULL); }
+	void OnEventBbmcPinStatusReady() { setTransition("OnEventBbmcPinStatusReady"); getState().OnEventBbmcPinStatusReady(*this); setTransition(NULL); }
+	void OnEventBbmcPlmnModeBit() { setTransition("OnEventBbmcPlmnModeBit"); getState().OnEventBbmcPlmnModeBit(*this); setTransition(NULL); }
+	void OnEventBbmcPukRequired() { setTransition("OnEventBbmcPukRequired"); getState().OnEventBbmcPukRequired(*this); setTransition(NULL); }
+	void OnEventBbmcRegistrationReject() { setTransition("OnEventBbmcRegistrationReject"); getState().OnEventBbmcRegistrationReject(*this); setTransition(NULL); }
+	void OnEventBbmcSetupReady() { setTransition("OnEventBbmcSetupReady"); getState().OnEventBbmcSetupReady(*this); setTransition(NULL); }
+	void OnEventBbmcSimBlockedNormalOperation() { setTransition("OnEventBbmcSimBlockedNormalOperation"); getState().OnEventBbmcSimBlockedNormalOperation(*this); setTransition(NULL); }
+	void OnEventBbmcSimLockInfo() { setTransition("OnEventBbmcSimLockInfo"); getState().OnEventBbmcSimLockInfo(*this); setTransition(NULL); }
+	void OnEventBbmcSimPermanentlyBlocked() { setTransition("OnEventBbmcSimPermanentlyBlocked"); getState().OnEventBbmcSimPermanentlyBlocked(*this); setTransition(NULL); }
+	void OnEventBbmcStatusUpdate() { setTransition("OnEventBbmcStatusUpdate"); getState().OnEventBbmcStatusUpdate(*this); setTransition(NULL); }
+	void OnEventMediatorComFailure() { setTransition("OnEventMediatorComFailure"); getState().OnEventMediatorComFailure(*this); setTransition(NULL); }
+	void OnEventMediatorInternalBbmcError() { setTransition("OnEventMediatorInternalBbmcError"); getState().OnEventMediatorInternalBbmcError(*this); setTransition(NULL); }
+	void OnEventMediatorInternalCanNotUseSim() { setTransition("OnEventMediatorInternalCanNotUseSim"); getState().OnEventMediatorInternalCanNotUseSim(*this); setTransition(NULL); }
+	void OnEventMediatorInternalChangePinCode() { setTransition("OnEventMediatorInternalChangePinCode"); getState().OnEventMediatorInternalChangePinCode(*this); setTransition(NULL); }
+	void OnEventMediatorInternalDeactivateSimLock() { setTransition("OnEventMediatorInternalDeactivateSimLock"); getState().OnEventMediatorInternalDeactivateSimLock(*this); setTransition(NULL); }
+	void OnEventMediatorInternalDeactivateTelReg() { setTransition("OnEventMediatorInternalDeactivateTelReg"); getState().OnEventMediatorInternalDeactivateTelReg(*this); setTransition(NULL); }
+	void OnEventMediatorInternalEnableWwan() { setTransition("OnEventMediatorInternalEnableWwan"); getState().OnEventMediatorInternalEnableWwan(*this); setTransition(NULL); }
+	void OnEventMediatorInternalExitFromErrorState() { setTransition("OnEventMediatorInternalExitFromErrorState"); getState().OnEventMediatorInternalExitFromErrorState(*this); setTransition(NULL); }
+	void OnEventMediatorInternalLivespaceReady() { setTransition("OnEventMediatorInternalLivespaceReady"); getState().OnEventMediatorInternalLivespaceReady(*this); setTransition(NULL); }
+	void OnEventMediatorInternalReTurnOn() { setTransition("OnEventMediatorInternalReTurnOn"); getState().OnEventMediatorInternalReTurnOn(*this); setTransition(NULL); }
+	void OnEventMediatorInternalRemoveCurrentApnInfo() { setTransition("OnEventMediatorInternalRemoveCurrentApnInfo"); getState().OnEventMediatorInternalRemoveCurrentApnInfo(*this); setTransition(NULL); }
+	void OnEventMediatorInternalRestoreApnInfo() { setTransition("OnEventMediatorInternalRestoreApnInfo"); getState().OnEventMediatorInternalRestoreApnInfo(*this); setTransition(NULL); }
+	void OnEventMediatorInternalResume() { setTransition("OnEventMediatorInternalResume"); getState().OnEventMediatorInternalResume(*this); setTransition(NULL); }
+	void OnEventMediatorInternalSetApnInfo() { setTransition("OnEventMediatorInternalSetApnInfo"); getState().OnEventMediatorInternalSetApnInfo(*this); setTransition(NULL); }
+	void OnEventMediatorInternalSetApnInfoWithBillingPlan() { setTransition("OnEventMediatorInternalSetApnInfoWithBillingPlan"); getState().OnEventMediatorInternalSetApnInfoWithBillingPlan(*this); setTransition(NULL); }
+	void OnEventMediatorInternalSetDataRoamingPermission() { setTransition("OnEventMediatorInternalSetDataRoamingPermission"); getState().OnEventMediatorInternalSetDataRoamingPermission(*this); setTransition(NULL); }
+	void OnEventMediatorInternalSetPinProtection() { setTransition("OnEventMediatorInternalSetPinProtection"); getState().OnEventMediatorInternalSetPinProtection(*this); setTransition(NULL); }
+	void OnEventMediatorInternalShutdown() { setTransition("OnEventMediatorInternalShutdown"); getState().OnEventMediatorInternalShutdown(*this); setTransition(NULL); }
+	void OnEventMediatorInternalSimLockError() { setTransition("OnEventMediatorInternalSimLockError"); getState().OnEventMediatorInternalSimLockError(*this); setTransition(NULL); }
+	void OnEventMediatorInternalStartNetworkScan() { setTransition("OnEventMediatorInternalStartNetworkScan"); getState().OnEventMediatorInternalStartNetworkScan(*this); setTransition(NULL); }
+	void OnEventMediatorInternalUnblockPin() { setTransition("OnEventMediatorInternalUnblockPin"); getState().OnEventMediatorInternalUnblockPin(*this); setTransition(NULL); }
+	void OnEventMediatorInternalUnblockSimLock() { setTransition("OnEventMediatorInternalUnblockSimLock"); getState().OnEventMediatorInternalUnblockSimLock(*this); setTransition(NULL); }
+	void OnEventMediatorInternalVerifyPin() { setTransition("OnEventMediatorInternalVerifyPin"); getState().OnEventMediatorInternalVerifyPin(*this); setTransition(NULL); }
+	void OnEventNotifyCallback() { setTransition("OnEventNotifyCallback"); getState().OnEventNotifyCallback(*this); setTransition(NULL); }
+	void OnEventSimDisabled() { setTransition("OnEventSimDisabled"); getState().OnEventSimDisabled(*this); setTransition(NULL); }
+	void OnEventSimEnabled() { setTransition("OnEventSimEnabled"); getState().OnEventSimEnabled(*this); setTransition(NULL); }
+	void RemoveCurrentApnInfo() { setTransition("RemoveCurrentApnInfo"); getState().RemoveCurrentApnInfo(*this); setTransition(NULL); }
+	void RestoreApnInfo() { setTransition("RestoreApnInfo"); getState().RestoreApnInfo(*this); setTransition(NULL); }
+	void SetApnInfo() { setTransition("SetApnInfo"); getState().SetApnInfo(*this); setTransition(NULL); }
+	void SetDataRoamingDefinition() { setTransition("SetDataRoamingDefinition"); getState().SetDataRoamingDefinition(*this); setTransition(NULL); }
+	void SetDataRoamingPermission() { setTransition("SetDataRoamingPermission"); getState().SetDataRoamingPermission(*this); setTransition(NULL); }
+	void SetFlightMode() { setTransition("SetFlightMode"); getState().SetFlightMode(*this); setTransition(NULL); }
+	void SetNetRegisterAuto() { setTransition("SetNetRegisterAuto"); getState().SetNetRegisterAuto(*this); setTransition(NULL); }
+	void SetNetRegisterInfo() { setTransition("SetNetRegisterInfo"); getState().SetNetRegisterInfo(*this); setTransition(NULL); }
+	void SetPinProtection() { setTransition("SetPinProtection"); getState().SetPinProtection(*this); setTransition(NULL); }
+	void StartNetworkScan() { setTransition("StartNetworkScan"); getState().StartNetworkScan(*this); setTransition(NULL); }
+	void TurnOn() { setTransition("TurnOn"); getState().TurnOn(*this); setTransition(NULL); }
+	void UnblockPin() { setTransition("UnblockPin"); getState().UnblockPin(*this); setTransition(NULL); }
+	void UnblockSimLock() { setTransition("UnblockSimLock"); getState().UnblockSimLock(*this); setTransition(NULL); }
+	void VerifyPin() { setTransition("VerifyPin"); getState().VerifyPin(*this); setTransition(NULL); }
 
 private:
 	TelGeneralLogicAction &m_owner;
@@ -1202,6 +1205,7 @@ private:
 	int m_telRegAppId;
 	int m_operatorAppId;
 	bool m_scanActive;
+	bool m_powerTickActive;
 	int m_debugLogStage;
 	bool m_debugLogEnabled;
 	paf::string m_networkReportCache;
