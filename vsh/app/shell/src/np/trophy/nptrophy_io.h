@@ -228,8 +228,11 @@ private:
 };
 
 /* File abstraction, disk file, memory file & icon file (0x812E8E8C..0x812E925A, 0x812EF7B4..0x812F0207) */
-class TrophyFileBase : public TrophyInputStream, public TrophyOutputStream {
+class TrophyFileBase : public TrophyHeapObject, public TrophyInputStream, public TrophyOutputStream {
 public:
+	using TrophyHeapObject::operator new;
+	using TrophyHeapObject::operator delete;
+
 	virtual ~TrophyFileBase() {}
 	virtual int Close() = 0;
 	virtual bool IsOpen() const = 0;

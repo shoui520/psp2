@@ -17,6 +17,7 @@
 #include <kernel/threadmgr.h>
 #include <libkernel/libkernel.h>
 #include <libmd5.h>
+#include <json.h>
 
 #include "np_party_vsh_internal.h"
 #include "../../../imps/np_imps_svc.h"
@@ -437,95 +438,59 @@ static void onPartyPushNotification(const void *pushContext,
 	notifyFriendJoinedParty(sender->onlineId);
 }
 
-/* Minimal JSON scanner for sessions list response (0x813875A6) */
-static const char *skipJsonWhitespace(const char *cursor, const char *limit)
-{
-	while (cursor < limit && (*cursor == ' ' || *cursor == '\t' || *cursor == '\r' || *cursor == '\n'))
-		++cursor;
-	return cursor;
-}
-
-static bool extractJsonIntField(const char *json, SceSize jsonSize, const char *fieldName,
-				int *outValue)
-{
-	char needle[64];
-	sce_paf_snprintf(needle, sizeof(needle), "\"%s\"", fieldName);
-	size_t needleLen = sce_paf_strlen(needle);
-	const char *limit = json + jsonSize;
-
-	for (const char *cursor = json; cursor + needleLen < limit; ++cursor) {
-		if (sce_paf_strncmp(cursor, needle, needleLen) != 0)
-			continue;
-		const char *scan = skipJsonWhitespace(cursor + needleLen, limit);
-		if (scan >= limit || *scan != ':')
-			continue;
-		scan = skipJsonWhitespace(scan + 1, limit);
-		if (scan >= limit)
-			return false;
-		char numBuf[32];
-		size_t digits = 0;
-		while (scan < limit && digits + 1 < sizeof(numBuf) &&
-		       ((*scan >= '0' && *scan <= '9') || (*scan == '-' && digits == 0))) {
-			numBuf[digits++] = *scan++;
-		}
-		if (digits == 0)
-			return false;
-		numBuf[digits] = '\0';
-		*outValue = sce_paf_atoi(numBuf);
-		return true;
+/* Custom allocator for sce::Json in PartyGetFriendsInPartyJob (vtable 0x8153E048) */
+class PartyJsonAllocator : public sce::Json::MemAllocator {
+public:
+	virtual void *allocate(size_t size, void *userData)
+	{
+		(void)userData;
+		return sce_paf_malloc(size);
 	}
-	return false;
-}
 
-static const char *findJsonMatchingBracket(const char *openBracket, const char *limit,
-					   char openCh, char closeCh)
-{
-	int depth = 0;
-	bool inString = false;
-	for (const char *cursor = openBracket; cursor < limit; ++cursor) {
-		if (*cursor == '"' && (cursor == openBracket || cursor[-1] != '\\')) {
-			inString = !inString;
-			continue;
-		}
-		if (inString)
-			continue;
-		if (*cursor == openCh)
-			++depth;
-		else if (*cursor == closeCh) {
-			--depth;
-			if (depth == 0)
-				return cursor;
-		}
+	virtual void deallocate(void *ptr, void *userData)
+	{
+		(void)userData;
+		sce_paf_free(ptr);
 	}
-	return NULL;
-}
 
-static bool extractJsonStringField(const char *begin, const char *limit, const char *fieldName,
-				   paf::string *outText)
-{
-	char needle[64];
-	sce_paf_snprintf(needle, sizeof(needle), "\"%s\"", fieldName);
-	size_t needleLen = sce_paf_strlen(needle);
-
-	for (const char *cursor = begin; cursor + needleLen < limit; ++cursor) {
-		if (sce_paf_strncmp(cursor, needle, needleLen) != 0)
-			continue;
-		const char *scan = skipJsonWhitespace(cursor + needleLen, limit);
-		if (scan >= limit || *scan != ':')
-			continue;
-		scan = skipJsonWhitespace(scan + 1, limit);
-		if (scan >= limit || *scan != '"')
-			continue;
-		const char *strStart = scan + 1;
-		const char *strEnd = strStart;
-		while (strEnd < limit && !(*strEnd == '"' && strEnd[-1] != '\\'))
-			++strEnd;
-		if (strEnd >= limit)
-			return false;
-		outText->assign(strStart, static_cast<size_t>(strEnd - strStart));
-		return true;
+	virtual void notifyError(int error, size_t size, void *userData)
+	{
+		(void)error;
+		(void)size;
+		(void)userData;
 	}
-	return false;
+};
+
+struct PartyJsonNullDefaults {
+	sce::Json::Value booleanValue;
+	sce::Json::Value integerValue;
+	sce::Json::Value uintegerValue;
+	sce::Json::Value realValue;
+	sce::Json::Value stringValue;
+	sce::Json::Value nullValue;
+};
+
+/* Null-access fallback for sce::Json lookups (0x8144AAC0) */
+static const sce::Json::Value &partyJsonNullAccessCallback(
+	sce::Json::ValueType accessType, const sce::Json::Value *parent, void *context)
+{
+	(void)parent;
+	const PartyJsonNullDefaults *defaults =
+		static_cast<const PartyJsonNullDefaults *>(context);
+	switch (accessType) {
+	case sce::Json::kValueTypeBoolean:
+		return defaults->booleanValue;
+	case sce::Json::kValueTypeInteger:
+		return defaults->integerValue;
+	case sce::Json::kValueTypeUInteger:
+		return defaults->uintegerValue;
+	case sce::Json::kValueTypeReal:
+		return defaults->realValue;
+	case sce::Json::kValueTypeString:
+		return defaults->stringValue;
+	default:
+		return defaults->nullValue;
+	}
 }
 
 /* Job: fetch friends currently in a party via NP WebAPI (0x81384E12..0x81387F7D) */
@@ -611,101 +576,57 @@ private:
 	/* 0x813875A6 */
 	int ParseResponseJson(const char *json, SceSize jsonSize)
 	{
-		if (json == NULL || jsonSize == 0)
-			return -1;
+		PartyJsonAllocator allocator;
+		sce::Json::Initializer initializer;
+		sce::Json::InitParameter initParam(&allocator, NULL, 1024);
+		initializer.initialize(&initParam);
 
-		int pageSize = 0;
-		int totalResults = 0;
-		extractJsonIntField(json, jsonSize, "size", &pageSize);
-		extractJsonIntField(json, jsonSize, "totalResults", &totalResults);
+		PartyJsonNullDefaults nullDefaults;
+		nullDefaults.booleanValue.set(false);
+		nullDefaults.integerValue.set(static_cast<int64_t>(-99));
+		nullDefaults.uintegerValue.set(static_cast<uint64_t>(99));
+		nullDefaults.realValue.set(-0.99);
+		nullDefaults.stringValue.set(sce::Json::String("invalid string"));
+		nullDefaults.nullValue.set(sce::Json::kValueTypeNull);
+
+		sce::Json::Value root;
+		sce::Json::Array sessions;
+		sce::Json::Array friends;
+
+		root.clear();
+		root.setNullAccessCallBack(partyJsonNullAccessCallback, &nullDefaults);
+		int ret = sce::Json::Parser::parse(root, json, jsonSize);
+		if (ret != 0)
+			return ret;
+
+		(void)root["start"].getInteger();
+		int pageSize = static_cast<int>(root["size"].getInteger());
+		int totalResults = static_cast<int>(root["totalResults"].getInteger());
 		if (m_totalResults == 0)
 			m_totalResults = totalResults;
 		m_pageSize = pageSize;
 		m_accumulatedCount += pageSize;
 
-		const char *limit = json + jsonSize;
-		const char *sessionsKey = NULL;
-		for (const char *scan = json; scan + 10 <= limit && *scan != '\0'; ++scan) {
-			if (sce_paf_strncmp(scan, "\"sessions\"", 10) == 0) {
-				sessionsKey = scan;
-				break;
-			}
-		}
-		if (sessionsKey == NULL || sessionsKey >= limit)
-			return 0;
-
-		const char *sessionsOpen = sce_paf_strchr(sessionsKey, '[');
-		if (sessionsOpen == NULL || sessionsOpen >= limit)
-			return 0;
-		const char *sessionsClose = findJsonMatchingBracket(sessionsOpen, limit, '[', ']');
-		if (sessionsClose == NULL)
-			return 0;
-
+		sessions = root["sessions"].getArray();
 		int sessionIndex = 0;
-		const char *cursor = sessionsOpen + 1;
-		while (cursor < sessionsClose) {
-			cursor = skipJsonWhitespace(cursor, sessionsClose);
-			if (cursor >= sessionsClose)
-				break;
-			if (*cursor != '{') {
-				++cursor;
-				continue;
-			}
-			const char *sessionEnd = findJsonMatchingBracket(cursor, sessionsClose, '{', '}');
-			if (sessionEnd == NULL)
-				break;
-
-			const char *friendsKey = NULL;
-			for (const char *scan = cursor; scan + 9 <= sessionEnd && *scan != '\0'; ++scan) {
-				if (sce_paf_strncmp(scan, "\"friends\"", 9) == 0) {
-					friendsKey = scan;
-					break;
+		for (sce::Json::Array::iterator it = sessions.begin();
+		     it != sessions.end(); ++it, ++sessionIndex) {
+			friends = (*it)["friends"].getArray();
+			int friendsInSession = static_cast<int>(friends.size());
+			m_friendsInPartyCount += friendsInSession;
+			if (m_totalResults == 1 && friendsInSession == 1 && sessionIndex == 0) {
+				sce::Json::Array::iterator friendIt = friends.begin();
+				if (friendIt->getType() == sce::Json::kValueTypeObject) {
+					const char *onlineId =
+						(*friendIt)["onlineId"].getString().c_str();
+					SceSize onlineIdLen =
+						(onlineId != NULL) ? sce_paf_strlen(onlineId) : 0;
+					m_singleFriendOnlineId.assign(onlineId, onlineIdLen);
 				}
 			}
-			if (friendsKey != NULL && friendsKey < sessionEnd) {
-				const char *friendsOpen = sce_paf_strchr(friendsKey, '[');
-				const char *friendsClose = (friendsOpen != NULL && friendsOpen < sessionEnd)
-					? findJsonMatchingBracket(friendsOpen, sessionEnd, '[', ']')
-					: NULL;
-				if (friendsOpen != NULL && friendsClose != NULL) {
-					int friendsInSession = 0;
-					const char *firstFriendBegin = NULL;
-					const char *firstFriendEnd = NULL;
-
-					const char *friendCursor = friendsOpen + 1;
-					while (friendCursor < friendsClose) {
-						friendCursor = skipJsonWhitespace(friendCursor, friendsClose);
-						if (friendCursor >= friendsClose)
-							break;
-						if (*friendCursor != '{') {
-							++friendCursor;
-							continue;
-						}
-						const char *friendObjEnd = findJsonMatchingBracket(
-							friendCursor, friendsClose, '{', '}');
-						if (friendObjEnd == NULL)
-							break;
-						if (friendsInSession == 0) {
-							firstFriendBegin = friendCursor;
-							firstFriendEnd = friendObjEnd;
-						}
-						++friendsInSession;
-						friendCursor = friendObjEnd + 1;
-					}
-
-					m_friendsInPartyCount += friendsInSession;
-					if (m_totalResults == 1 && friendsInSession == 1 &&
-					    sessionIndex == 0 && firstFriendBegin != NULL) {
-						extractJsonStringField(firstFriendBegin, firstFriendEnd,
-								       "onlineId",
-								       &m_singleFriendOnlineId);
-					}
-				}
-			}
-
-			++sessionIndex;
-			cursor = sessionEnd + 1;
 		}
+
+		initializer.terminate();
 		return 0;
 	}
 

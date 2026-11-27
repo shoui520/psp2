@@ -5,6 +5,7 @@
 
 #include "json_internal.h"
 
+#ifndef SCE_JSON_STATIC
 void *operator new(size_t size)
 {
 	return sce::Json::Malloc(size);
@@ -19,6 +20,7 @@ extern "C" void __cxa_pure_virtual(void)
 {
 	sceClibAbort();
 }
+#endif
 
 namespace sce {
 namespace Json {

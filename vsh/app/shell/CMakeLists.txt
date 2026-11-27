@@ -650,6 +650,7 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc SOURCES
 	src/remotedownload/remote_download_lib.cpp
 	src/liblocation/src/location_service/gps_emulator.cpp
 	console_info/console_info_store.cpp
+	console_info/console_info_file.cpp
 	${PSP2_SRC}/sys/internal/kernel/src/gcauthmgr/rsa_verify.c
 	${PSP2_SRC}/sys/internal/kernel/src/gcauthmgr/rsa_digest.c
 	${PSP2_SRC}/sys/internal/driver/src/marlin_hci/rsa_exponent.c
@@ -682,6 +683,10 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc SOURCES
 	src/npdrm_package/npdrm_install_api.cpp
 	src/host_collabo/account_link_checker/bind_job.cpp
 	src/np/asm/np_asm_client_vsh.cpp
+	${PSP2_SRC}/sys/internal/usermode/src/libSceJson/json_value.cpp
+	${PSP2_SRC}/sys/internal/usermode/src/libSceJson/json_container.cpp
+	${PSP2_SRC}/sys/internal/usermode/src/libSceJson/json_libc.cpp
+	${PSP2_SRC}/sys/internal/usermode/src/libSceJson/json_runtime.cpp
 	src/applauncher_plugin/src/icon_capture_manager.cpp
 	src/bgapputil/bgapputil_server.cpp
 	exclusive_func_auth_reset.cpp
@@ -852,6 +857,7 @@ set_source_files_properties(
 	src/np/sns_fb/np_sns_fb_server.cpp
 	src/np/sns_fb/np_sns_fb_util.cpp
 	src/nsx/nsx_whats_new.cpp
+	promoter_util_server.cpp
 	src/patch_chk_plugin/bgdl_patch_client.cpp
 	src/patch_chk_plugin/game_update.cpp
 	src/shell_svc/src/shell_svc_activity_client.cpp
@@ -904,6 +910,13 @@ set_source_files_properties(
 	${PSP2_SRC}/sys/internal/kernel/src/appmgr/fat_format.c
 	${PSP2_SRC}/sys/internal/kernel/src/appmgr/fat_format_storage.c
 	PROPERTIES COMPILE_OPTIONS "-include;${CMAKE_CURRENT_SOURCE_DIR}/src/fsutil/fat_format_user_compat.h")
+# Statically linked libSceJson uses SceShell's global new/delete
+set_source_files_properties(
+	${PSP2_SRC}/sys/internal/usermode/src/libSceJson/json_value.cpp
+	${PSP2_SRC}/sys/internal/usermode/src/libSceJson/json_container.cpp
+	${PSP2_SRC}/sys/internal/usermode/src/libSceJson/json_libc.cpp
+	${PSP2_SRC}/sys/internal/usermode/src/libSceJson/json_runtime.cpp
+	PROPERTIES COMPILE_DEFINITIONS SCE_JSON_STATIC)
 # Shared stubs/sources whose user-mode import names differ in SceShell
 set_source_files_properties(
 	${PSP2_SRC}/sys/sdk/target/src/libSceSblSsUpdateMgr_stub/update_mgr_stub.c

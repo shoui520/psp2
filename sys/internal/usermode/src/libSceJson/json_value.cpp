@@ -11,7 +11,11 @@
  * SCE_JSON_ERROR_NOMEM.
  */
 
+#ifdef __SNC__
+#include <kernel/iofilemgr.h>
+#else
 #include <psp2/io/fcntl.h>
+#endif
 #include <kernel/error.h>
 #include "json_internal.h"
 
