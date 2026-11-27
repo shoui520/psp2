@@ -535,10 +535,10 @@ int iocacheFileClose(SceUID fd);
 int pspemuLockLwMutexOrFatal(SceKernelLwMutexWork *work);
 int pspemuUnlockLwMutexOrFatal(SceKernelLwMutexWork *work);
 int remoteNetIsThrottleActive(void);
+int remoteNetNotifyGuestEvent(uint32_t eventBit);
 int remotePeripheralIsKernelOpenAllowed(void);
 int remoteLowPriorityIsPromotablePath(const char *path);
 int remoteLowPriorityEnqueuePromote(const char *path);
-int pspemuCompatIsRestrictedTitle(void);
 int pspemuSettingsIsClearMediaEnabled(void);
 int pspemuSettingsGetEmuListFlag(void);
 int pspemuSettingsSetEmuListFlag(void);
@@ -843,17 +843,126 @@ int sceGxmDisplayQueueAddEntry(SceGxmSyncObject *oldBuffer, SceGxmSyncObject *ne
                                const void *callbackData);
 int sceCommonDialogUpdate(const SceCommonDialogUpdateParam *updateParam);
 
-/* SceCommonDialog internal PSP/PS1 settings dialog imports */
+/* SceCommonDialog internal PSP/PS1/PocketStation dialog imports */
 int SceCommonDialog_9FA21E09(const void *param);
 int SceCommonDialog_FA26EB30(void);
 int SceCommonDialog_64F65B8D(void *result);
 int SceCommonDialog_C2D6F7F2(void);
+int SceCommonDialog_631DC45C(const void *param);
+int SceCommonDialog_396D7B68(void *result);
+int SceCommonDialog_675248CA(void);
+int scePhotoImportDialogInit(const void *param);
+int scePhotoImportDialogGetResult(void *result);
+int scePhotoImportDialogTerm(void);
+int sceNetCheckDialogGetStatus(void);
+int SceNetCtl_E8E8DF18(int *outState);
+int sceNetCtlInit(void);
+
+/* SceTouch / SceRegMgr / SceAppUtil / SceHttp imports used by compat_list, settings, pocs_dlg */
+typedef enum SceTouchSamplingState {
+	SCE_TOUCH_SAMPLING_STATE_STOP = 0,
+	SCE_TOUCH_SAMPLING_STATE_START = 1
+} SceTouchSamplingState;
+
+typedef struct SceTouchReport {
+	uint8_t id;
+	uint8_t force;
+	int16_t x;
+	int16_t y;
+	uint8_t reserved[8];
+	uint16_t info;
+} SceTouchReport;
+
+typedef struct SceTouchData {
+	uint64_t timeStamp;
+	uint32_t status;
+	uint32_t reportNum;
+	SceTouchReport report[8];
+} SceTouchData;
+
+typedef struct SceTouchPanelInfo {
+	int16_t minAaX;
+	int16_t minAaY;
+	int16_t maxAaX;
+	int16_t maxAaY;
+	int16_t minDispX;
+	int16_t minDispY;
+	int16_t maxDispX;
+	int16_t maxDispY;
+	uint8_t minForce;
+	uint8_t maxForce;
+	uint8_t reserved[30];
+} SceTouchPanelInfo;
+
+int sceTouchGetPanelInfo(uint32_t port, SceTouchPanelInfo *panelInfo);
+int sceTouchSetSamplingState(uint32_t port, SceTouchSamplingState state);
+int sceTouchPeek(uint32_t port, SceTouchData *data, uint32_t maxBufs);
+int sceTouchPeek2(int port, uint32_t panel, SceTouchData *data, uint32_t maxBufs);
+
+int sceRegMgrSrvGetRegion(void);
+int sceRegMgrGetKeyInt(const char *category, const char *name, int *outValue);
+int sceRegMgrSetKeyInt(const char *category, const char *name, int value);
+int sceRegMgrGetKeyStr(const char *category, const char *name, char *outBuf, SceSize bufSize);
+int sceRegMgrGetKeys(const char *category, void *keys, int count);
+int sceRegMgrSetKeys(const char *category, const void *keys, int count);
+
+typedef int (*SceHttpRedirectCallback)(int tmplId, int statusCode, int method,
+                                       const char *location, void *userArg);
+int sceHttpInit(uint32_t poolSize);
+int sceHttpTerm(void);
+int sceHttpCreateTemplate(const char *userAgent, int httpVer, int autoProxyConf);
+int sceHttpDeleteTemplate(int tmplId);
+int sceHttpSetResolveTimeOut(int id, uint32_t usec);
+int sceHttpSetResolveRetry(int id, int retry);
+int sceHttpSetConnectTimeOut(int id, uint32_t usec);
+int sceHttpSetSendTimeOut(int id, uint32_t usec);
+int sceHttpSetRecvTimeOut(int id, uint32_t usec);
+int sceHttpCreateConnectionWithURL(int tmplId, const char *url, int enableKeepalive);
+int sceHttpDeleteConnection(int connId);
+int sceHttpCreateRequestWithURL(int connId, int method, const char *url, uint64_t contentLength);
+int sceHttpDeleteRequest(int reqId);
+int sceHttpSetRedirectCallback(int id, SceHttpRedirectCallback cb, void *userArg);
+int sceHttpSendRequest(int reqId, const void *postData, SceSize size);
+int sceHttpGetStatusCode(int reqId, int *statusCode);
+int sceHttpGetResponseContentLength(int reqId, uint64_t *contentLength);
+int sceHttpReadData(int reqId, void *data, SceSize size);
 
 /* menu_dlg.c */
 typedef struct PspemuMenuSettings {
-	uint32_t words[16];
+	uint8_t dispFilter;
+	uint8_t cameraDirection;
+	uint8_t rightAnalogMode;
+	uint8_t colorSpace;
+	uint8_t controllerMode;
+	uint8_t resetRequest;
+	uint8_t discSelect;
+	uint8_t padModeFlags;
+	uint8_t controllerPort;
+	uint8_t multiTapEnabled;
+	uint8_t volumeLevel;
+	uint8_t screenMode;
+	uint8_t dpadAssign;
+	uint8_t screenLeftUp;
+	uint8_t screenRightUp;
+	uint8_t screenLeftDown;
+	uint8_t screenRightDown;
+	uint8_t discLoadSpeed;
+	uint8_t reservedConfig;
+	uint8_t customScreenActive;
+	uint8_t analogStickAssign;
+	uint8_t rearTouchLeftUp;
+	uint8_t rearTouchRightUp;
+	uint8_t rearTouchLeftDown;
+	uint8_t rearTouchRightDown;
+	uint8_t deleteContents;
+	uint8_t customScreenMeta[3];
+	uint8_t customButtonMap[24];
+	uint8_t trailingPad[11];
 } PspemuMenuSettings;
 
+_Static_assert(sizeof(PspemuMenuSettings) == 64U, "PspemuMenuSettings size");
+
+int menuDlgTriggerScreenshot(void (*doneCb)(void));
 int pspemuMenuRunDialog(PspemuMenuSettings *settings);
 int pspemuMenuPreparePhotoExport(void);
 int pspemuMenuDialogSetup(void);
@@ -917,16 +1026,22 @@ int remoteLowPriorityWaitIdle(void);
 /* compat_list.c */
 int pspemuCompatHasFlag(uint32_t flagMask);
 int pspemuCompatGetParam(int index);
-int pspemuCompatIsListOverrideActive(void);
+int pspemuCompatEnsureListDir(void);
 int pspemuTitleInfoThread(SceSize args, void *argp);
-int pspemuCompatLoadTitleEntry(const char *discId);
+int pspemuCompatLoadTitleEntry(const char *discId, SceUID titleInfoThid);
 const char *pspemuCompatGetTitleId(void);
 int pspemuCompatIsRestrictedBootTitle(void);
 int pspemuCompatGetDefaultCameraDevice(void);
 
 /* settings.c */
+int pspemuSettingsApplyStickFilter(SceCtrlData *padData);
+int pspemuSettingsReadDs4TouchPad(int portOffset);
 int pspemuSettingsUpdateController(SceCtrlData *padData);
 int pspemuSettingsGetDialogActive(void);
+int pspemuSettingsAbortPocsDialog(void);
+int pspemuSettingsRunPocsMenuFlow(int dialogMode);
+int pspemuSettingsIsMenuEnabled(void);
+int pspemuSettingsWaitMenuEnabled(void);
 int pspemuSettingsSetMenuEnabled(int enable);
 int pspemuSettingsApplyDisplay(void);
 int pspemuSettingsNotifyPopsReady(void);
@@ -934,14 +1049,24 @@ int pspemuSettingsDialogInit(void);
 int pspemuSettingsShowGuideDialog(int dialogId);
 int pspemuSettingsShowErrorDialog(int errorCode);
 int pspemuSettingsShowFatalNotice(int errorCode);
-int pspemuSettingsIsGuideDialogIdle(void);
+int pspemuSettingsIsFatalNoticeActive(void);
+int pspemuSettingsShowFirstBootConfirm(uint8_t *outCheck, int *outResult);
+int pspemuSettingsShowPocsConfirmDialog(uint8_t *outCheck, int *outResult);
+int pspemuSettingsGetStoreStartControl(void);
 int pspemuSettingsGetPocsFirstBootDone(void);
 int pspemuSettingsMarkPocsFirstBootDone(void);
 int pspemuSettingsGetFirstBootDone(void);
 int pspemuSettingsMarkFirstBootDone(void);
 int pspemuSettingsRefreshDynamic(PspemuSystemSettings *settings);
 int pspemuSettingsLoadAll(PspemuSystemSettings *settings);
+
+/* pocs_dlg.c */
+int bgDialogMapBgTypeToMode(int bgType);
+int pspemuBgDialogShowMenu(int mode, int hasMedia, int *inOutBgType, int *outAction);
 int pspemuSettingsShowPocsFirstBootDialog(int *outButton);
+int pspemuBgDialogShowAlert(int *outAction);
+int pspemuBgDialogNotifyPocsEvent(int eventArg);
+int pspemuBgImageImportPhotoDialog(int32_t *outResult);
 int pspemuBgImageInit(void);
 
 /* remote_pocs.c */
@@ -955,6 +1080,27 @@ int remotePocsExitMode(void);
 int remotePocsHasMountedMedia(void);
 int remotePocsIsActive(void);
 int remotePocsInstallAppSupport(void);
+int remotePocsSetEmulationPaused(int resume);
+int remotePocsIsAudioActive(void);
+int remotePocsRunConnectDialog(uint32_t *outResult);
+int remotePocsGetDialogStatus(void);
+int remotePocsQueryDialogState(int mode, uint32_t *outVal);
+int remotePocsNotifyDialogModeChanged(void);
+int remotePocsResumeAfterDialog(void);
+int remotePocsSetSoundSetting(int arg);
+int remotePocsResetSession(void);
+int remotePocsSyncFlashState(void);
+int remotePocsSetClockSync(int arg);
+int remotePocsGetAudioState(void);
+int remotePocsToggleAudioState(void);
+int remotePocsGetBatteryLevel(void);
+int remotePocsGetClockState(void);
+int remotePocsGetActiveFrameIndex(void);
+void *remotePocsGetDefaultFrameBuffer(void);
+void *remotePocsGetCustomFrameBuffer(int index);
+void *remotePocsGetBgTextureBuffer(void);
+void remotePocsCommitBgTexture(void);
+void remotePocsClearBgPreviewCache(void);
 
 /* pops_host.c */
 SceBool popsHostIsOverlayActive(void);
@@ -965,6 +1111,22 @@ int popsHostSetDisplayMode(int pocsMode);
 int popsHostSuspend(void);
 int popsHostSetCdramOffset(int offset);
 int popsHostInit(void);
+int popsHostInitForTitle(const char *titleId);
+int popsHostInitSettings(PspemuMenuSettings *settings);
+int popsHostApplyMenuSettings(PspemuMenuSettings settings);
+int popsHostFinishPocsTransition(void);
+int popsHostSetPauseState(int paused);
+int popsHostGetDiscLoadSpeed(const void *popsConfig);
+int popsHostIsCustomScreenActive(void);
+int popsHostIsMultiTapEnabled(void);
+int popsHostSetVibrationEnabled(int enabled);
+int popsHostGetPendingError(void);
+int popsHostClearPendingError(void);
+uint32_t popsHostMapButtons(uint32_t buttons);
+uint32_t popsHostGetAnalogButtonMask(int index);
+int popsHostGetPocsBgType(void);
+int popsHostSetPocsBgType(uint8_t bgType);
+int popsHostIsPocsOverlayEnabled(void);
 
 /* vmc_manager.c */
 int vmcManagerInitWork(void *workBuf, int workSize);

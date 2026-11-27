@@ -1169,7 +1169,7 @@ SceSSize pspemuRecordTitleListFlags(unsigned int flagBits)
 		int index;
 		int found = 0;
 
-		if (pspemuCompatIsListOverrideActive() != 0)
+		if (pspemuCompatEnsureListDir() != 0)
 			return 0;
 
 		if (sceCompatGetTitleList(g_titleListBuf, sizeof(g_titleListBuf)) != 0) {
@@ -1437,7 +1437,8 @@ int sceCompatMain(SceSize argLen, void *argp)
 	g_bootLockState = 0;
 	pspemuUnlockOrDie(PSPEMU_LOCK_BOOT);
 
-	res = pspemuCompatLoadTitleEntry(guestGameInfo->sfoProductString);
+	res = pspemuCompatLoadTitleEntry(guestGameInfo->sfoProductString,
+	                                 ((const PspemuMainThreadArg *)argp)->titleInfoThreadId);
 	if (res != 0)
 		return res;
 

@@ -1770,7 +1770,7 @@ int remoteMsfsInit(void)
 
 	int maxFileParam = pspemuCompatGetParam(31);
 	if (maxFileParam == -1) {
-		if (pspemuCompatIsRestrictedTitle() != 0)
+		if (pspemuCompatIsRestrictedBootTitle() != 0)
 			g_msfsMaxOpenFileSize = 0x01800000;
 		else if (pspemuIsPs1Mode() == 1)
 			g_msfsMaxOpenFileSize = 0x00040000;

@@ -118,7 +118,7 @@ static SceUID g_menuGxmFbMemBlock;
 static uint64_t g_menuImeDeadline;
 static unsigned int g_menuGxmFrontIndex;
 
-static int menuDlgTriggerScreenshot(void (*doneCb)(void))
+int menuDlgTriggerScreenshot(void (*doneCb)(void))
 {
 	SceDateTime localTime;
 	int ret = sceRtcGetCurrentClockLocalTime(&localTime);

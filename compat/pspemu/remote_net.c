@@ -399,7 +399,7 @@ static int NET_NOINLINE remoteNetInetSend(SceNetId s, const void *buf, uint32_t 
                                           const SceNetSockaddr *to, int tolen, int *outLen);
 static int NET_NOINLINE remoteNetInetIoctl(SceNetId s, unsigned int cmd, void *arg);
 static int NET_NOINLINE remoteNetAdhocLeaveCmd(void);
-static int NET_NOINLINE remoteNetNotifyGuestEvent(uint32_t eventBit);
+int NET_NOINLINE remoteNetNotifyGuestEvent(uint32_t eventBit);
 static int NET_NOINLINE remoteNetIsSuspended(void);
 static int NET_NOINLINE remoteNetCtlSwitchAdhocMode(int restoreInet);
 static PspemuAdhocBssOut *NET_NOINLINE remoteNetCopyBssToOut(PspemuAdhocBssOut *out, const PspemuWlanBssRaw *src);
@@ -570,7 +570,7 @@ int remoteNetInit(void)
 	return ret;
 }
 
-static int remoteNetNotifyGuestEvent(uint32_t eventBit)
+int remoteNetNotifyGuestEvent(uint32_t eventBit)
 {
 	int ret;
 
@@ -1769,7 +1769,7 @@ int remoteNetIsAdhocActive(void)
 int remoteNetSetThrottle(int enabled)
 {
 	if (enabled == 1) {
-		if (!pspemuSettingsIsGuideDialogIdle())
+		if (pspemuSettingsGetStoreStartControl() == 0)
 			return 0;
 		sceKernelSetEventFlag(g_inetMsgDlgEvf, 1U);
 	}

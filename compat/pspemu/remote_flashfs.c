@@ -652,7 +652,7 @@ int remoteFlashfsInit(void *workBuf)
 	if (pspemuIsPs1Mode() != 1)
 		flashfsRevokeAllowedIndex(98);
 
-	if (pspemuCompatIsRestrictedTitle() != 0) {
+	if (pspemuCompatIsRestrictedBootTitle() != 0) {
 		size_t revIdx;
 
 		for (revIdx = 0; revIdx < sizeof(restrictedIndices); revIdx++)
