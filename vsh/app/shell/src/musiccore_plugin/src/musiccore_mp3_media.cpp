@@ -273,6 +273,8 @@ struct StreamIoInterface {
     virtual void *mapRangeSimple(int offset, int size, int unusedFlag, int *outErr, int *outMapped) = 0;
     virtual void *mapRangePinned(int offset, uint32_t size, int pinFlag, int *outPinToken,
                                  int *outErr, uint32_t *outMapped) = 0;
+    virtual int unpinRange(int pinToken, int *outErr) = 0;
+    virtual int getCacheGeometry(int *outBlockCount, uint32_t *outChunkSize) = 0;
     virtual int checkRangeReadable(int sizeBytes, int *outErr) = 0;
 };
 
