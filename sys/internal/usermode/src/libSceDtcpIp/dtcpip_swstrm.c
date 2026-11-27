@@ -92,14 +92,18 @@ int dtcpIpStrmInit(struct SwStrmClient **outClient, struct SceDtcpIpIpcObject *c
 	message.command = SW_STRM_CONNECT;
 	message.channel = 0;
 	message.size = 0;
-	if (dtcpIpIpcRequest(connection->stream, &message) == 0 && message.result == 0) {
+	ret = dtcpIpIpcRequest(connection->stream, &message);
+	if (ret != 0) {
+		ret = dtcpIpMapIpcStatus3(ret);
+	} else if (message.result != 0) {
+		ret = dtcpIpMapIpcStatus3(message.result);
+	} else {
 		client->session = message.out0;
 		client->pending = 0;
 		client->ipc = connection;
 		*outClient = client;
 		return 0;
 	}
-	ret = dtcpIpMapIpcStatus3(message.result);
 	sceKernelDeleteLwMutex(&client->mutex);
 	dtcpIpFree(client);
 	*outClient = NULL;
