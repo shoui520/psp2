@@ -20,6 +20,10 @@
 
 #include "shell.h"
 
+#if !defined(FW_TYPE_CEX)
+extern "C" SceUInt32 vshMemoryCardEnableSlowMode(void);
+#endif
+
 using namespace paf;
 
 /* the id storage leaf of the home screen settings, and its flags */
@@ -195,6 +199,17 @@ int shellStartupInit(void)
 	err = shellRtcUtilSync(false);
 	if (err != 0)
 		ret = err;
+#if !defined(FW_TYPE_CEX)
+	{
+		int slowCardMode;
+
+		err = sceRegMgrGetKeyInt("/DEVENV/TOOL", "slow_card_mode", &slowCardMode);
+		if (err == 0 && slowCardMode == 1)
+			err = (int)vshMemoryCardEnableSlowMode();
+		if (err != 0)
+			ret = err;
+	}
+#endif
 
 	if ((int)vshIdStorageLookup(SHELL_STARTUP_IDS_LEAF, 0, &ids, sizeof(ids)) >= 0 &&
 	    ids.flags != 0) {

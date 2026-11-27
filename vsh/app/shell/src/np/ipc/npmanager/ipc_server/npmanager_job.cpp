@@ -16,8 +16,16 @@ extern void *sceNpCommonMallocNpServerName(SceSize size);
 extern void sceNpCommonFreeNpServerName(void *ptr);
 }
 
+#if defined(FW_TYPE_CEX)
+#define NPMANAGER_JOB_BUILD_ID "J01509657"
+#elif FW_VERSION == 0x03630011
+#define NPMANAGER_JOB_BUILD_ID "J01508051"
+#else
+#define NPMANAGER_JOB_BUILD_ID "J01509658"
+#endif
+
 static const char s_npManagerJobSourcePath[] =
-	"W:\\Build\\J01509657\\vsh\\app\\shell\\src\\np\\ipc\\npmanager\\ipc_server\\npmanager_job.cpp";
+	"W:\\Build\\" NPMANAGER_JOB_BUILD_ID "\\vsh\\app\\shell\\src\\np\\ipc\\npmanager\\ipc_server\\npmanager_job.cpp";
 
 /*
  * Base class for all SceNpManager IPC worker jobs (48 bytes).

@@ -4,6 +4,10 @@
  */
 #include "livearea_internal.h"
 
+#if !defined(FW_TYPE_CEX)
+extern "C" void ScePafAutoTestTty_9E10E873(int32_t type, const char *format, ...);
+#endif
+
 static void liveareaStatusDlgTimerCb(int eventId, int eventArg, int eventData, int dlgId); /* 0x811A122E */
 
 /* 0x811A078C */
@@ -49,6 +53,11 @@ void LiveAreaStatusDlg::UnlockFeed()
 		page->m_feed->UnlockListView();
 		m_locked = false;
 	}
+#if !defined(FW_TYPE_CEX)
+	if (page != NULL && page->m_isActive)
+		ScePafAutoTestTty_9E10E873(1, "/livespace/livearea_%s/activity",
+					   page->m_titleId.c_str());
+#endif
 }
 
 /* 0x811A0A14 / 0x811A0B4C */

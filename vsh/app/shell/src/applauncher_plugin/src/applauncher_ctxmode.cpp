@@ -8,6 +8,10 @@
 #include "applauncher_mode.h"
 #include "../../../../game/game_plugin/game_plugin.h"
 
+#if !defined(FW_TYPE_CEX)
+extern "C" void ScePafAutoTestTty_9E10E873(int32_t type, const char *format, ...);
+#endif
+
 /* (0x815442B8) */
 const char *AppTabContextMenuMode::s_className = "AppTabContextMenuMode";
 
@@ -33,6 +37,12 @@ AppTabContextMenuMode::AppTabContextMenuMode()
 
 	if (game != NULL)
 		((void (*)(bool))game->func[GAME_PLUGIN_FUNC_SET_DIALOG_HOLD])(true);
+#if !defined(FW_TYPE_CEX)
+	if (s_contextMenuIcon.get() != NULL)
+		ScePafAutoTestTty_9E10E873(1, "/livespace/home_page%d/contextmenu_%s",
+					   applauncherInterfaceGetFocusedPage(),
+					   s_contextMenuIcon->m_data->titleId.c_str());
+#endif
 }
 
 /* closed with it, the icon let go of and the hold ended unless asked to stay (0x810C8B6A,
@@ -47,6 +57,10 @@ AppTabContextMenuMode::~AppTabContextMenuMode()
 
 	if (game != NULL && !s_keepHold)
 		((void (*)(bool))game->func[GAME_PLUGIN_FUNC_SET_DIALOG_HOLD])(false);
+#if !defined(FW_TYPE_CEX)
+	ScePafAutoTestTty_9E10E873(1, "/livespace/home_page%d",
+				   applauncherInterfaceGetFocusedPage());
+#endif
 }
 
 /* (0x810C8C3E) */

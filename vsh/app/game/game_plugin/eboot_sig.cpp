@@ -5,6 +5,7 @@
  * the strings are Sony's.
  */
 
+#if defined(FW_TYPE_CEX)
 #include <stddef.h>
 #include <scetypes.h>
 #include <kernel/iofilemgr.h>
@@ -304,3 +305,4 @@ int gameEbootSigCheck(const string &titleId, const string &ebootPath, const stri
 
 	return 0;
 }
+#endif /* FW_TYPE_CEX */

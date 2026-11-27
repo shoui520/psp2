@@ -106,6 +106,36 @@ public:
 	int m_reserved;			/* PLACEHOLDER: -1 from the constructor, not read */
 };
 
+#if !defined(FW_TYPE_CEX)
+/*
+ * DevKit/Debugger savedata slot list item (1040 bytes, constructor 0x810DD974 in TOOL):
+ * mounts the title's savedata via vshAppMgrCloudDataSrcMount and parses sce_sys/sdslot.dat.
+ */
+class ApplauncherIconInfoSaveDataSlotItem : public paf::ui::ListItem {
+public:
+	ApplauncherIconInfoSaveDataSlotItem(const paf::string &path, const paf::string &dir,
+					    int attr, paf::ui::Widget *parent,
+					    paf::ui::ListItem::CreateParam *param);
+	virtual ~ApplauncherIconInfoSaveDataSlotItem();
+
+	void SetValue(paf::ui::Widget *valueText);
+	void Setup(const paf::wstring &label, SceUInt8 *cache);
+	int ReadSlotChunk(char *buf, SceUID fd, SceUInt32 offset, int *outInChunkOffset,
+			  SceUInt32 *cachedChunk);
+	int ParseSaveDataSlots(const char *mountPoint, char *buf);
+
+	paf::string m_path;
+	paf::string m_dir;
+	int m_attr;
+	paf::common::SharedPtr<paf::job::JobItem> m_job;
+	SceUInt32 m_padding[4];
+	SceUInt8 m_slotStates[256];
+	SceUInt8 m_loaded;
+	int m_error;
+	SceUInt8 *m_cache;
+};
+#endif
+
 /*
  * PLACEHOLDER: the item of a check box, bit 0x800 of the application's #appconf cleared while it
  * is checked (constructor 0x810DE684): read by one job, written by another as it changes.
@@ -211,7 +241,8 @@ public:
 	GameFttInfo *m_ftt;
 	SceUInt64 m_startTime;		/* the license's period, 0 and INT64_MAX without one */
 	SceUInt64 m_expireTime;
-	SceUInt8 m_reserved[264];	/* nothing in the shell reads or writes them */
+	SceUInt8 m_saveDataSlotCache[257];	/* DevKit/Debugger cached sdslot.dat slot states */
+	SceUInt8 m_reserved[7];
 };
 
 /* the text in UTF-16 */

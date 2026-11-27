@@ -46,12 +46,14 @@ static SceUInt32 g_hashUpStatus;
 static SceUInt32 g_hashLibLocation;
 static SceUInt32 g_hashAppConf;
 
+#if FW_SINCE(0x03650000)
 static const char *const g_topmenuBlockedTitles[4] = {
 	"PCSA00044",
 	"PCSC80009",
 	"PCSD00025",
 	"PCSF00124",
 };
+#endif
 
 /* Resource / template / timer IDs used across TopWindow */
 static const SceUInt32 TOP_WINDOW_PAGE_ID		= 0x5E95B7F3u;	/* 1586836915 */
@@ -1513,6 +1515,7 @@ static bool checkKeypadEnablePrompt(TopWindow *window)
 	return true;
 }
 
+#if FW_SINCE(0x03650000)
 /* 0x812728CE */
 static bool checkBlockedTitlePrompt(TopWindow *window)
 {
@@ -1545,6 +1548,7 @@ static bool checkBlockedTitlePrompt(TopWindow *window)
 	}
 	return true;
 }
+#endif
 
 /* 0x81272AEE */
 static void detachSystemAppProcess(TopWindow *window)
@@ -2018,6 +2022,7 @@ bool topmenuIsLaunchSeqActive(const TopmenuLaunchSeq *seq)
 	return true;
 }
 
+#if FW_SINCE(0x03650000)
 /* 0x8127289E */
 bool topmenuIsBlockedLaunchTitle(const char *titleId)
 {
@@ -2027,6 +2032,7 @@ bool topmenuIsBlockedLaunchTitle(const char *titleId)
 	}
 	return false;
 }
+#endif
 
 /* 0x81272BAE */
 void topmenuSwitchToProcess(TopWindow *window, TopmenuAppProcess *proc, bool checkBgdl)
@@ -2064,7 +2070,10 @@ void topmenuSwitchToProcess(TopWindow *window, TopmenuAppProcess *proc, bool che
 
 	window->m_foregroundApp = proc;
 
-	if (checkBlockedTitlePrompt(window) ||
+	if (
+#if FW_SINCE(0x03650000)
+	    checkBlockedTitlePrompt(window) ||
+#endif
 	    checkKeypadEnablePrompt(window) ||
 	    checkBgAppConflictPrompt(window) ||
 	    checkConflictingAttributeApp(window, 0x40000ULL, true, true) ||

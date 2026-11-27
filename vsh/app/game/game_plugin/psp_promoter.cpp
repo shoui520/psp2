@@ -84,6 +84,7 @@ int GamePspPromoter::CreateSource(GamePromoteSource **source)
 	if (it == m_info->end())
 		return GAME_ERROR_BAD_DATA;
 
+#if defined(FW_TYPE_CEX)
 	if (gameCategoryIsEgMe(string(LsdbValueText(it->second)))) {
 		LocalFileStat stat;
 
@@ -95,6 +96,7 @@ int GamePspPromoter::CreateSource(GamePromoteSource **source)
 				return GAME_ERROR_EBOOT;
 		}
 	}
+#endif
 
 	if (loaded)
 		m_info->clear();

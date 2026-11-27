@@ -9,6 +9,11 @@
 #include <scetypes.h>
 #include <sceerror.h>
 #include <appmgr.h>
+#if !defined(FW_TYPE_CEX)
+#include <kernel/iofilemgr.h>
+#include <libkernel/libkernel.h>
+extern "C" int sceAppMgrUmount(const char *mountPoint);
+#endif
 #include <plugin.h>
 #include <std/string>
 #include <versatileparam/idparam.h>
@@ -760,6 +765,265 @@ ApplauncherIconInfoSaveDataItem::~ApplauncherIconInfoSaveDataItem()
 		m_job.reset();
 	}
 }
+
+#if !defined(FW_TYPE_CEX)
+extern "C" int vshAppMgrCloudDataSrcMount(int mountType, const void *titleId, void *mountPoint);
+
+/* SaveData slot chunk reader constants (TOOL/DEBUGGER) */
+#define APPLAUNCHER_SDSLOT_CHUNK_SHIFT		15
+#define APPLAUNCHER_SDSLOT_CHUNK_SIZE		0x8000u
+#define APPLAUNCHER_SDSLOT_CHUNK_MASK		0x7FFFu
+#define APPLAUNCHER_SDSLOT_HEADER_SIZE		0x400u
+#define APPLAUNCHER_SDSLOT_FLAG_OFFSET		0x200u
+#define APPLAUNCHER_SDSLOT_COUNT		256u
+#define APPLAUNCHER_SDSLOT_CACHE_SIZE		257u
+#define APPLAUNCHER_SDSLOT_MOUNT_GRO_RW		1
+#define APPLAUNCHER_SDSLOT_MOUNT_GRO_RO		2
+#define APPLAUNCHER_SDSLOT_MOUNT_UX		3
+
+static int applauncherIconInfoSaveDataSlotRun(ApplauncherIconInfoItemJob *job, void *arg);
+static void applauncherIconInfoSaveDataSlotFinish(int result, void *arg);
+
+ApplauncherIconInfoSaveDataSlotItem::ApplauncherIconInfoSaveDataSlotItem(const string &path,
+	const string &dir, int attr, ui::Widget *parent, ui::ListItem::CreateParam *param)
+	: ui::ListItem(parent, param), m_path(path), m_dir(dir), m_attr(attr), m_error(0)
+{
+}
+
+ApplauncherIconInfoSaveDataSlotItem::~ApplauncherIconInfoSaveDataSlotItem()
+{
+	if (m_job.get() != NULL) {
+		m_job->Cancel();
+		m_job.reset();
+	}
+}
+
+void ApplauncherIconInfoSaveDataSlotItem::SetValue(ui::Widget *valueText)
+{
+	wstring text;
+	string numStr;
+
+	if (valueText == NULL)
+		return;
+
+	if (m_error != 0) {
+		text = wstring(L"-");
+	} else {
+		int foundCount = 0;
+
+		for (SceUInt32 idx = 0; idx < APPLAUNCHER_SDSLOT_COUNT; ++idx) {
+			SceUInt8 state = m_slotStates[idx];
+			char numBuf[64];
+
+			if (state == 1) {
+				if (foundCount != 0)
+					text.append(L", ");
+				sce_paf_snprintf(numBuf, sizeof(numBuf), "%d", (int)idx);
+				numStr = string(numBuf);
+				text.append(applauncherIconInfoUtf16(numStr));
+				++foundCount;
+			} else if (state == 2) {
+				if (foundCount != 0)
+					text.append(L", ");
+				sce_paf_snprintf(numBuf, sizeof(numBuf), "%d", (int)idx);
+				numStr = string(numBuf);
+				text.append(applauncherIconInfoUtf16(numStr));
+				text.append(L"*");
+				++foundCount;
+			}
+		}
+		if (foundCount == 0)
+			text = wstring(L"-");
+	}
+
+	valueText->SetString(text);
+}
+
+void ApplauncherIconInfoSaveDataSlotItem::Setup(const wstring &label, SceUInt8 *cache)
+{
+	Plugin *plugin = Plugin::Find("applauncher_plugin");
+
+	if (plugin == NULL)
+		return;
+
+	plugin->TemplateOpen(this, IDParam(s_empty_name, APPLAUNCHER_INFO_ITEM_TEMPLATE),
+			     Plugin::TemplateOpenParam());
+
+	ui::Widget *box = APPLAUNCHER_INFO_FIND(this, ui::ListItem, APPLAUNCHER_INFO_ITEM_BOX);
+
+	if (box == NULL)
+		return;
+
+	ui::Widget *labelText = box->FindChild(IDParam(s_empty_name, APPLAUNCHER_INFO_ITEM_LABEL), 0);
+
+	if (labelText != NULL) {
+		HideWidget(labelText, NULL);
+		labelText->SetString(label);
+		labelText->AddEventListener(ui::Handler::CB_STATE_READY,
+			new ui::EventCBListener(applauncherIconInfoItemOnReady, this));
+	}
+
+	m_cache = cache;
+	sceClibMemcpy_safe(m_slotStates, cache, APPLAUNCHER_SDSLOT_CACHE_SIZE);
+
+	ui::Widget *valueText = box->FindChild(IDParam(s_empty_name, APPLAUNCHER_INFO_ITEM_VALUE), 0);
+
+	if (m_loaded != 0) {
+		if (valueText != NULL) {
+			SetValue(valueText);
+			valueText->AddEventListener(ui::Handler::CB_STATE_READY,
+				new ui::EventCBListener(applauncherIconInfoItemOnReady, this));
+		}
+		return;
+	}
+
+	m_job = common::SharedPtr<job::JobItem>(new ApplauncherIconInfoItemJob("InfoApp", this,
+		applauncherIconInfoSaveDataSlotRun, applauncherIconInfoSaveDataSlotFinish));
+	if (m_job.get() != NULL && job::JobQueue::default_queue->Enqueue(m_job) >= 0) {
+		if (valueText != NULL)
+			valueText->AddEventListener(ui::Handler::CB_STATE_READY,
+				new ui::EventCBListener(applauncherIconInfoItemOnReady, this));
+	}
+}
+
+int ApplauncherIconInfoSaveDataSlotItem::ReadSlotChunk(char *buf, SceUID fd, SceUInt32 offset,
+						       int *outInChunkOffset,
+						       SceUInt32 *cachedChunk)
+{
+	if (buf == NULL)
+		return APPLAUNCHER_ERROR_INVALID_ARG;
+
+	SceUInt32 chunkIndex = 0;
+	int inChunkOffset = 0;
+
+	if (offset != 0) {
+		chunkIndex = offset >> APPLAUNCHER_SDSLOT_CHUNK_SHIFT;
+		inChunkOffset = (int)(offset & APPLAUNCHER_SDSLOT_CHUNK_MASK);
+	}
+
+	if (*cachedChunk != chunkIndex) {
+		SceOff seekPos = (SceOff)(chunkIndex << APPLAUNCHER_SDSLOT_CHUNK_SHIFT);
+		SceOff seekRet = sceIoLseek(fd, seekPos, SCE_SEEK_SET);
+
+		if (seekRet < 0)
+			return (int)seekRet;
+
+		int readBytes = sceIoRead(fd, buf, APPLAUNCHER_SDSLOT_CHUNK_SIZE);
+
+		if (readBytes < 0)
+			return readBytes;
+		if ((SceUInt32)readBytes < APPLAUNCHER_SDSLOT_CHUNK_SIZE) {
+			for (SceUInt32 pos = (SceUInt32)readBytes;
+			     pos < APPLAUNCHER_SDSLOT_CHUNK_SIZE; ++pos) {
+				buf[pos] = 0;
+			}
+		}
+	}
+
+	*cachedChunk = chunkIndex;
+	*outInChunkOffset = inChunkOffset;
+	return 0;
+}
+
+int ApplauncherIconInfoSaveDataSlotItem::ParseSaveDataSlots(const char *mountPoint, char *buf)
+{
+	if (buf == NULL || mountPoint == NULL)
+		return APPLAUNCHER_ERROR_INVALID_ARG;
+
+	int slotStatus = 0;
+	int chunkOffset = 0;
+	SceUInt32 cachedChunk = 0xFFFFFFFFu;
+	char slotPath[256];
+
+	sceClibMemset(slotPath, 0, sizeof(slotPath));
+	sce_paf_snprintf(slotPath, sizeof(slotPath), "%s%s/%s", mountPoint, "sce_sys", "sdslot.dat");
+
+	SceUID fd = sceIoOpen(slotPath, SCE_O_RDONLY, 0);
+
+	if (fd < 0)
+		return fd;
+
+	int ret = ReadSlotChunk(buf, fd, 0, &chunkOffset, &cachedChunk);
+
+	if (ret == 0) {
+		SceUInt8 header[APPLAUNCHER_SDSLOT_HEADER_SIZE];
+
+		sceClibMemcpy_safe(header, buf + chunkOffset, sizeof(header));
+		sce_paf_memset(m_slotStates, 0, APPLAUNCHER_SDSLOT_CACHE_SIZE);
+
+		for (SceUInt32 idx = 0; idx < APPLAUNCHER_SDSLOT_COUNT; ++idx) {
+			if (header[APPLAUNCHER_SDSLOT_FLAG_OFFSET + idx] == 1) {
+				ret = ReadSlotChunk(buf, fd,
+					APPLAUNCHER_SDSLOT_HEADER_SIZE + (idx << 10),
+					&chunkOffset, &cachedChunk);
+				if (ret != 0)
+					break;
+				sceClibMemcpy_safe(&slotStatus, buf + chunkOffset, sizeof(slotStatus));
+				m_slotStates[idx] = (slotStatus != 0) ? 2 : 1;
+			}
+		}
+
+		m_loaded = 0xFFu;
+		sceClibMemcpy_safe(m_cache, m_slotStates, APPLAUNCHER_SDSLOT_CACHE_SIZE);
+	}
+
+	sceIoClose(fd);
+	return ret;
+}
+
+static int applauncherIconInfoSaveDataSlotRun(ApplauncherIconInfoItemJob *job, void *arg)
+{
+	ApplauncherIconInfoSaveDataSlotItem *item = (ApplauncherIconInfoSaveDataSlotItem *)arg;
+
+	if (job->IsCanceled())
+		return APPLAUNCHER_ERROR_CANCELED;
+
+	int mountType = APPLAUNCHER_SDSLOT_MOUNT_UX;
+
+	if (sce_paf_strncmp(item->m_path.c_str(), "gro0:", sce_paf_strlen("gro0:")) == 0)
+		mountType = (item->m_attr & 1) != 0 ?
+			    APPLAUNCHER_SDSLOT_MOUNT_GRO_RO : APPLAUNCHER_SDSLOT_MOUNT_GRO_RW;
+
+	char titleId[16];
+	char mountPoint[16];
+
+	sce_paf_memset(titleId, 0, sizeof(titleId));
+	sce_paf_strncpy(titleId, item->m_dir.c_str(), 9);
+	sce_paf_memset(mountPoint, 0, sizeof(mountPoint));
+
+	int ret = vshAppMgrCloudDataSrcMount(mountType, titleId, mountPoint);
+
+	if (ret == 0) {
+		char *buf = (char *)sce_paf_malloc(APPLAUNCHER_SDSLOT_CHUNK_SIZE);
+
+		if (buf != NULL)
+			ret = item->ParseSaveDataSlots(mountPoint, buf);
+		else
+			ret = APPLAUNCHER_ERROR_NO_MEMORY;
+
+		sceAppMgrUmount(mountPoint);
+		if (buf != NULL)
+			sce_paf_free(buf);
+	}
+
+	item->m_error = ret;
+	return ret;
+}
+
+static void applauncherIconInfoSaveDataSlotFinish(int result, void *arg)
+{
+	ApplauncherIconInfoSaveDataSlotItem *item = (ApplauncherIconInfoSaveDataSlotItem *)arg;
+
+	if (result == APPLAUNCHER_ERROR_CANCELED)
+		return;
+
+	item->m_job.reset();
+
+	ui::Widget *valueText = item->FindChild(IDParam(s_empty_name, APPLAUNCHER_INFO_ITEM_VALUE), 0);
+
+	item->SetValue(valueText);
+}
+#endif /* !FW_TYPE_CEX */
 
 /* the auto-start check's item: its template, label and check box */
 #define APPLAUNCHER_INFO_CHECK_TEMPLATE		0x3947CB9E

@@ -6,6 +6,10 @@
 #include "applauncher_home.h"
 #include "applauncher_mode.h"
 
+#if !defined(FW_TYPE_CEX)
+extern "C" void ScePafAutoTestTty_9E10E873(int32_t type, const char *format, ...);
+#endif
+
 /* (0x815442CC) */
 const char *AppTabIconInfoMode::s_className = "AppTabIconInfoMode";
 
@@ -25,6 +29,12 @@ AppTabIconInfoMode::AppTabIconInfoMode()
 {
 	reserved = 0;
 	applauncherIconInfoOpen(s_infoIcon, s_context);
+#if !defined(FW_TYPE_CEX)
+	if (s_infoIcon.get() != NULL)
+		ScePafAutoTestTty_9E10E873(1, "/livespace/home_page%d/information_%s",
+					   applauncherInterfaceGetFocusedPage(),
+					   s_infoIcon->m_data->titleId.c_str());
+#endif
 }
 
 /* closed with it, and what it was opened with let go of (0x810C92C4, 0x810C936C) */

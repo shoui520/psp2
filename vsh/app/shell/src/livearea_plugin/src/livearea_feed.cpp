@@ -11,6 +11,10 @@
 #include "../../../sysupchk.h"
 #include "livearea_internal.h"
 
+#if !defined(FW_TYPE_CEX)
+extern "C" void ScePafAutoTestTty_9E10E873(int32_t type, const char *format, ...);
+#endif
+
 extern "C" {
 int sceAppMgrLaunchAppByName(unsigned int flags, const char *name, const char *param);
 int sce_paf_rand(void);
@@ -390,6 +394,11 @@ void LiveAreaFeed::SetVisible(bool visible)
 	if (visible) {
 		paf::vector<ActivityDbStatus> empty;
 		UpdateNewsList(empty, false);
+#if !defined(FW_TYPE_CEX)
+		if (m_page != NULL && m_page->m_isActive)
+			ScePafAutoTestTty_9E10E873(1, "/livespace/livearea_%s/activity",
+						   m_page->m_titleId.c_str());
+#endif
 	} else {
 		if (m_latestActivityTime > *m_lastReadTime.get()) {
 			*m_lastReadTime.get() = m_latestActivityTime;
@@ -401,6 +410,11 @@ void LiveAreaFeed::SetVisible(bool visible)
 		}
 		m_lockCount = 0;
 		ScePafWidget_FF5BC957(m_page->m_fileList, NULL, 2, 0.0f, NULL);
+#if !defined(FW_TYPE_CEX)
+		if (m_page != NULL && m_page->m_isActive)
+			ScePafAutoTestTty_9E10E873(1, "/livespace/livearea_%s",
+						   m_page->m_titleId.c_str());
+#endif
 	}
 }
 

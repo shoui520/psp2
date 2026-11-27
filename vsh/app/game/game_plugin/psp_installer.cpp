@@ -200,6 +200,7 @@ int GamePspInstaller::Finish(GameAppRegistration *reg, GameCancelFunc cancel, vo
 
 	delete writer;
 
+#if defined(FW_TYPE_CEX)
 	if (gameTypeIsSpecial(m_info->info.contentType) &&
 	    ((GamePspInstallSource *)m_source)->m_ebootSig) {
 		LocalFileStat stat;
@@ -217,6 +218,7 @@ int GamePspInstaller::Finish(GameAppRegistration *reg, GameCancelFunc cancel, vo
 				return ret;
 		}
 	}
+#endif
 
 	if (m_info->info.contentType == GAME_CONTENT_TYPE_PS1 && param->copySavedata == true) {
 		GamePs1SavedataCopier *copier =

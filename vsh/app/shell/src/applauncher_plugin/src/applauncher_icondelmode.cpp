@@ -7,6 +7,10 @@
 #include "applauncher_mode.h"
 #include "../../../plugins.h"
 
+#if !defined(FW_TYPE_CEX)
+extern "C" void ScePafAutoTestTty_9E10E873(int32_t type, const char *format, ...);
+#endif
+
 /* (0x815442C4) */
 const char *AppTabIconDelMode::s_className = "AppTabIconDelMode";
 
@@ -31,6 +35,12 @@ AppTabIconDelMode::AppTabIconDelMode()
 	((void (*)(void))g_applauncherHome->m_topmenu->func[TOPMENU_PLUGIN_FUNC_GAME_HOLD])();
 	((void (*)(void))g_applauncherHome->m_topmenu->func[TOPMENU_PLUGIN_FUNC_HOLD_BEGIN])();
 	applauncherEditModeHold();
+#if !defined(FW_TYPE_CEX)
+	if (s_deleteIcon.get() != NULL)
+		ScePafAutoTestTty_9E10E873(1, "/livespace/home_page%d/delete_%s",
+					   applauncherInterfaceGetFocusedPage(),
+					   s_deleteIcon->m_data->titleId.c_str());
+#endif
 }
 
 /* all of it undone with the mode, and what it was opened with let go of (0x810C903C,

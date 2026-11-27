@@ -531,7 +531,7 @@ extern int npOAuthGetAuthorizationCodeWithRedirect(int reqHandle,
 						   SceNpAuthorizationCode *outCode, int *outIssuerId);	/* 0x813A96E6 */
 
 /* Crypto helpers for device token & account hash (0x81417F9C, 0x8144A2C0..0x8144A482) */
-extern "C" int sceSha256Digest(const void *input, SceSize inputSize, void *outDigest);			/* 0x81417F9C */
+#include <libsha256.h>
 extern int shellDesSetKey(SceUInt32 *subkeys, SceUInt32 reserved, SceUInt32 keyLo, SceUInt32 keyHi);	/* 0x8144A482 */
 extern SceUInt64 shellDesEncryptBlock(const SceUInt32 *subkeys, SceUInt32 reserved,
 				      SceUInt32 blockLo, SceUInt32 blockHi);				/* 0x8144A2C0 */

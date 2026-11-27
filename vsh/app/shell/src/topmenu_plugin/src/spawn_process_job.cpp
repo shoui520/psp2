@@ -342,8 +342,10 @@ static SceInt32 launchAppWithLsdbInfo(SceInt32 *outAppId, const LsdbAppInfoPtr *
 			return TOPMENU_ERROR_INVALID_SELF_PATH;
 	}
 
+#if FW_SINCE(0x03650000)
 	if (titleName != NULL && topmenuIsBlockedLaunchTitle(titleName))
 		return TOPMENU_ERROR_BLOCKED_TITLE;
+#endif
 
 	bool alreadyRunning = false;
 	SceAppMgrAppStatus existingStatus;

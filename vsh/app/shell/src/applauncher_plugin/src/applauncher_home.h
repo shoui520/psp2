@@ -1642,6 +1642,7 @@ enum {
 
 /* PLACEHOLDER: livearea_plugin (or the game plugin) did not come (0x80103301), a job could not be made
    (0x80103302), and without a title in focus or the theme's titles (0x80103303) */
+#define APPLAUNCHER_ERROR_INVALID_ARG		((int)0x80103300)
 #define APPLAUNCHER_ERROR_NO_LIVEAREA		((int)0x80103301)
 #define APPLAUNCHER_ERROR_NO_MEMORY		((int)0x80103302)
 #define APPLAUNCHER_ERROR_NO_TITLE		((int)0x80103303)

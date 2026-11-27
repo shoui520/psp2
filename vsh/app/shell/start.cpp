@@ -116,7 +116,13 @@ __attribute__((noinline)) static int shellSvcStart(void)
 int main(int argc, char *argv[])
 {
 	s_startTime = SceThreadmgr_47F6DE49();
+#if defined(FW_TYPE_CEX)
 	sceClibPrintf("[Shell]: vsh/release_branches/release_03.650 r142704 (build#757166)\n");
+#elif FW_VERSION == 0x03630011
+	sceClibPrintf("[Shell]: vsh/release_branches/release_03.630 r142609 (build#756499)\n");
+#else
+	sceClibPrintf("[Shell]: vsh/release_branches/release_03.650 r142704 (build#757167)\n");
+#endif
 	sceKernelPowerLock(SCE_KERNEL_POWER_TICK_DEFAULT);
 	s_startupError = shellStartupInit();
 	shellFrameworkCreate();

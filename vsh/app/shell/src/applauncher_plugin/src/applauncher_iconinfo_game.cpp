@@ -38,7 +38,10 @@ enum {
 	APPLAUNCHER_INFO_GAME_EXPIRE_TIME	= 7,
 	APPLAUNCHER_INFO_GAME_REMAINING		= 8,
 	APPLAUNCHER_INFO_GAME_CHECK		= 9,
-	APPLAUNCHER_INFO_GAME_UP_STATUS		= 10
+	APPLAUNCHER_INFO_GAME_UP_STATUS		= 10,
+#if !defined(FW_TYPE_CEX)
+	APPLAUNCHER_INFO_GAME_SAVEDATA_SLOT	= 15
+#endif
 };
 
 /* PLACEHOLDER: the items' labels */
@@ -185,6 +188,9 @@ ApplauncherIconInfoGameFactory::ApplauncherIconInfoGameFactory(Plugin *plugin,
 		m_itemCount = 0;
 		break;
 	}
+#if !defined(FW_TYPE_CEX)
+	sce_paf_memset(m_saveDataSlotCache, 0, sizeof(m_saveDataSlotCache));
+#endif
 }
 
 /* (0x810E030A, 0x810E03F6) */
@@ -432,6 +438,33 @@ ui::ListItem *ApplauncherIconInfoGameFactory::CreateItem(int type, CreateParam &
 			item->Set(wstring(L"★ Upgradable App"), text);
 		return item;
 	}
+#if !defined(FW_TYPE_CEX)
+	case APPLAUNCHER_INFO_GAME_SAVEDATA_SLOT: {
+		LsdbAppInfo::iterator it = appInfo->find(LSDB_KEY_ORG_PATH);
+		if (it == end)
+			return NULL;
+
+		string path(LsdbValueText(it->second));
+
+		it = applauncherIconInfoRow(m_appInfo)->find(LSDB_KEY_INSTALL_DIR_SAVEDATA);
+		if (it == end)
+			return NULL;
+
+		string dir(LsdbValueText(it->second));
+		int attr = 0;
+
+		it = applauncherIconInfoRow(m_appInfo)->find(LSDB_KEY_ATTRIBUTE);
+		if (it != end)
+			attr = it->second.type == LSDB_VALUE_INTEGER ? (int)it->second.integer : 0;
+
+		ApplauncherIconInfoSaveDataSlotItem *item =
+			new ApplauncherIconInfoSaveDataSlotItem(path, dir, attr, param.m_parent, NULL);
+
+		if (item != NULL)
+			item->Setup(wstring(L"★ Save Data Slot"), m_saveDataSlotCache);
+		return item;
+	}
+#endif
 	default:
 		return NULL;
 	}

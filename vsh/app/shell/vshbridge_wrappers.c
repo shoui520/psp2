@@ -40,6 +40,7 @@ int _vshSysconLogReadData(int id, void *buf, const SyscallSizeArgs *args);
 int _vshSysconGetTemperatureLog(SceUInt8 *log);
 int _vshSblSsGetNvsData(int area, void *buf, const SyscallSizeArgs *args);
 int _vshSblSsDecryptWithPortability(int keyType, const void *iv, const void *inBuf, void *outBuf);
+#if defined(FW_TYPE_CEX)
 int _vshNpDrmEbootSigGenPsp(const char *ebootPath, const void *sha256, void *signature,
 			    const VshEbootSigGenArgs *args);
 int _vshNpDrmEbootSigGenPs1(const char *ebootPath, const void *sha256, void *signature,
@@ -50,6 +51,9 @@ int _vshNpDrmEbootSigVerify(const char *ebootPath, const void *signature,
 			    VshVerifyOutArgs *args);
 int _vshNpDrmPspEbootVerify(const char *ebootPath, const void *signature,
 			    VshVerifyOutArgs *args);
+#else
+int _vshAppMgrCloudDataSrcMount(int mountType, const void *titleId, void *mountPoint);
+#endif
 int _vshSblAuthMgrVerifySpsfo(const char *path, void *sfo, SceSize size,
 			      VshVerifyOutArgs *args);
 int _vshKernelGetCompiledSdkVersionByPid(SceUID pid, SceUInt32 *outSdkVersion);
@@ -133,6 +137,7 @@ int vshSblSsDecryptWithPortability(int keyType, const void *iv, const void *inBu
 	return _vshSblSsDecryptWithPortability(keyType, iv, inBuf, outBuf);
 }
 
+#if defined(FW_TYPE_CEX)
 /* 0x81417D28 */
 int vshNpDrmEbootSigGenPsp(const char *ebootPath, const void *sha256, void *signature,
 			   int swVersion)
@@ -178,6 +183,13 @@ int vshNpDrmPspEbootVerify(const char *ebootPath, const void *signature)
 
 	return _vshNpDrmPspEbootVerify(ebootPath, signature, &args);
 }
+#else
+/* 0x81409650 (TOOL) */
+int vshAppMgrCloudDataSrcMount(int mountType, const void *titleId, void *mountPoint)
+{
+	return _vshAppMgrCloudDataSrcMount(mountType, titleId, mountPoint);
+}
+#endif
 
 /* 0x81417D84 */
 int vshSblAuthMgrVerifySpsfo(const char *path, void *sfo, SceSize size)

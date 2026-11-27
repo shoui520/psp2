@@ -4,6 +4,7 @@
  * ours (no record names them); the pool's name is Sony's.
  */
 
+#if defined(FW_TYPE_CEX)
 #include <stddef.h>
 #include <scetypes.h>
 #include <kernel/iofilemgr.h>
@@ -118,3 +119,4 @@ int GamePs1DiscInfoParser::Generate(const SceNpDrmInstallInfo *info, const strin
 
 	return GAME_ERROR_NO_DISC_INFO;
 }
+#endif /* FW_TYPE_CEX */

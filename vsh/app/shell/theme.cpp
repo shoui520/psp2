@@ -58,6 +58,9 @@ using namespace paf;
    of the current one */
 #define SHELL_THEME_DEFAULT		"vs0:data/internal/theme"
 #define SHELL_THEME_PRESET		"pd0:theme"
+#if !defined(FW_TYPE_CEX)
+#define SHELL_THEME_HOST		"host0:theme"
+#endif
 #define SHELL_THEME_INSTALLED		"ux0:theme/"
 #define SHELL_THEME_CACHE		"ur0:shell/theme"
 #define SHELL_THEME_LICENSE		"ux0:license/theme/"
@@ -141,6 +144,13 @@ static inline string shellThemeGetCurrent(void)
 int shellThemeLoad(void)
 {
 	int ret = 0;
+#if !defined(FW_TYPE_CEX)
+	ret = shellThemeSet(SHELL_THEME_HOST);
+	if (ret == 0) {
+		s_themeIconsEnabled = true;
+		return 0;
+	}
+#endif
 	string current = shellThemeGetCurrent();
 
 	if (current.size() != 0 && (ret = shellThemeSet(current.c_str())) == 0) {
@@ -377,7 +387,12 @@ int shellThemeChange(const char *path)
 			shellThemeSet(path);
 		}
 		if (ret == 0) {
+#if !defined(FW_TYPE_CEX)
+			if (sce_paf_strncmp(path, SHELL_THEME_HOST, sizeof(SHELL_THEME_HOST)) != 0)
+				s_themeIconsEnabled = false;
+#else
 			s_themeIconsEnabled = false;
+#endif
 			ret = shellThemeApply(path, false, true);
 		}
 	}

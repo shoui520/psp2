@@ -8,6 +8,10 @@
 #include "applauncher_mode.h"
 #include "../../../shell.h"
 
+#if !defined(FW_TYPE_CEX)
+extern "C" void ScePafAutoTestTty_9E10E873(int32_t type, const char *format, ...);
+#endif
+
 /* PLACEHOLDER: the deletions under way (0x815442BC) */
 static int s_holdCount = 0;
 
@@ -38,6 +42,9 @@ AppTabEditMode::AppTabEditMode()
 		((int (*)(void (*)(void *), void *))power->func[POWER_MANAGE_PLUGIN_FUNC_ADD_CALLBACK])(
 			onEditPowerEvent, NULL);
 	SceShell_7FE4E732(10, (ShellEventCallback)applauncherInterfaceClearRequest, NULL);
+#if !defined(FW_TYPE_CEX)
+	ScePafAutoTestTty_9E10E873(3, "begin_editmode");
+#endif
 }
 
 /* and all of it undone in the other order (0x810C8E20, 0x810C8E88) */
@@ -54,6 +61,9 @@ AppTabEditMode::~AppTabEditMode()
 	((void (*)(ModeBase *, int))
 		g_applauncherHome->m_topmenu->func[TOPMENU_PLUGIN_FUNC_MODE_LEAVE])(this, 230);
 	g_applauncherHome->ExitEditMode();
+#if !defined(FW_TYPE_CEX)
+	ScePafAutoTestTty_9E10E873(3, "end_editmode");
+#endif
 }
 
 /* (0x810C8EF4) */

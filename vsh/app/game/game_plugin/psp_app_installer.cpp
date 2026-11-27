@@ -256,6 +256,7 @@ __attribute__((noinline)) int GamePspAppInstaller::PrepareEboot(void)
 	if (it == sfo->end())
 		return GAME_ERROR_BAD_DATA;
 
+#if defined(FW_TYPE_CEX)
 	if (gameCategoryIsEgMe(string(LsdbValueText(it->second)))) {
 		string sigPath = string(m_param->path) + string("/PSP/GAME/") +
 				 string(m_param->titleId) + string("/__sce_ebootpbp");
@@ -263,6 +264,7 @@ __attribute__((noinline)) int GamePspAppInstaller::PrepareEboot(void)
 		if (gameEbootSigCheck(m_titleId, ebootPath, sigPath, false, m_errorTitleId) < 0)
 			return GAME_ERROR_EBOOT;
 	}
+#endif
 
 	return 0;
 }

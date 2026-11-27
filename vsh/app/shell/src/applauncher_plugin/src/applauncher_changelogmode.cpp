@@ -6,6 +6,10 @@
 #include "applauncher_home.h"
 #include "applauncher_mode.h"
 
+#if !defined(FW_TYPE_CEX)
+extern "C" void ScePafAutoTestTty_9E10E873(int32_t type, const char *format, ...);
+#endif
+
 /* (0x815442B4) */
 const char *AppTabChangeLogMode::s_className = "AppTabChangeLogMode";
 
@@ -23,6 +27,12 @@ AppTabChangeLogMode::AppTabChangeLogMode()
 {
 	reserved = 0;
 	applauncherChangeLogOpenIcon(s_changeLogIcon);
+#if !defined(FW_TYPE_CEX)
+	if (s_changeLogIcon.get() != NULL)
+		ScePafAutoTestTty_9E10E873(1, "/livespace/home_page%d/history_%s",
+					   applauncherInterfaceGetFocusedPage(),
+					   s_changeLogIcon->m_data->titleId.c_str());
+#endif
 }
 
 /* and closed with it (0x810C88F0, 0x810C8910) */

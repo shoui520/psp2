@@ -5,6 +5,9 @@
  */
 #include <scetypes.h>
 #include <libkernel/libkernel.h>
+extern "C" {
+#include <kernel/openpsid.h>
+}
 #include <libhttp.h>
 #include <libsha1.h>
 #include <rtc.h>
@@ -1783,8 +1786,8 @@ void npCommunityCompactLanguages(SceInt32 *languages)
 /* 0x813F800A */
 int npCommunityFormatOpenPsId(char *outHex)
 {
-	SceUInt8 openPsId[16];
-	int ret = sceKernelGetOpenPsId(openPsId);
+	SceKernelOpenPsId openPsId;
+	int ret = sceKernelGetOpenPsId(&openPsId);
 	if (ret < 0)
 		return ret;
 
@@ -1792,7 +1795,7 @@ int npCommunityFormatOpenPsId(char *outHex)
 	char *cursor = outHex;
 	SceSize remaining = 33U;
 	for (SceSize idx = 0U; idx < 16U; ++idx) {
-		sceClibSnprintf(cursor, remaining, "%02x", openPsId[idx]);
+		sceClibSnprintf(cursor, remaining, "%02x", openPsId.id[idx]);
 		cursor += 2;
 		remaining -= 2U;
 	}

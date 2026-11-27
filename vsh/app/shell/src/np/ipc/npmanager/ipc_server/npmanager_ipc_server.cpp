@@ -1926,7 +1926,7 @@ int npGenerateAccountIdHash(void *outDigest)
 	if (npAccountReadRegistryCredentials(NULL, NULL, &accountId) < 0)
 		accountId = 0;
 	SceUInt64 accountIdBe = sceNetHtonll(accountId);
-	return sceSha256Digest(&accountIdBe, sizeof(accountIdBe), outDigest);
+	return sceSha256Digest(&accountIdBe, sizeof(accountIdBe), (SceUChar8 *)outDigest);
 }
 
 /* 0x812218F8: show formatted NP debug notice via impose_plugin when debug enabled */

@@ -41,6 +41,10 @@
 
 using namespace paf;
 
+#if !defined(FW_TYPE_CEX)
+extern "C" void ScePafAutoTestTty_9E10E873(int32_t type, const char *format, ...);
+#endif
+
 /* the wave the home shows behind its pages */
 #define APPLAUNCHER_HOME_WAVE		11
 
@@ -2679,6 +2683,9 @@ void applauncherHomeOnSnapped(int32_t type, ui::Handler *self, ui::Event *e, voi
 	g_applauncherHome->UpdateBackground(page);
 	if (snapId != -1)
 		Framework::Instance()->PlayCommonSE(33, 1.0f, false);
+#if !defined(FW_TYPE_CEX)
+	ScePafAutoTestTty_9E10E873(1, "/livespace/home_page%d", page->m_index);
+#endif
 }
 
 /* the background's change waited out: the background cleared unless the page in view has the

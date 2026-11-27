@@ -794,9 +794,14 @@ set_source_files_properties(boot.cpp lsdb_start.cpp net.cpp event_server.cpp app
 # the application's row's find (0x8140cc54) stays out of line in the game factory's CreateItem
 set_source_files_properties(src/applauncher_plugin/src/applauncher_iconinfo_game.cpp
 	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=20)
-# the 3.65 SDK's start code
+# the SDK's start code
+if(FW_VERSION STREQUAL "0x03630011")
+	set(SHELL_CRT0_SDK_VERSION 0x03630011)
+else()
+	set(SHELL_CRT0_SDK_VERSION 0x03650011)
+endif()
 set_source_files_properties(${PSP2_SRC}/sys/sdk/target/src/crt0/crt0_main.c PROPERTIES
-	COMPILE_DEFINITIONS SCE_CRT0_SDK_VERSION=0x03650011)
+	COMPILE_DEFINITIONS SCE_CRT0_SDK_VERSION=${SHELL_CRT0_SDK_VERSION})
 # SNC C mode does not implement C11 _Static_assert used in marlin_hci/rsa.h
 set_source_files_properties(
 	${PSP2_SRC}/sys/internal/kernel/src/gcauthmgr/rsa_verify.c

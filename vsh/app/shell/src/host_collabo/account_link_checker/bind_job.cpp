@@ -95,8 +95,16 @@ struct AccountLinkCheckResult {
 
 typedef void (*AccountLinkFinishedCallback)(const AccountLinkCheckResult *result, void *userData);
 
+#if defined(FW_TYPE_CEX)
+#define BIND_JOB_BUILD_ID "J01509657"
+#elif FW_VERSION == 0x03630011
+#define BIND_JOB_BUILD_ID "J01508051"
+#else
+#define BIND_JOB_BUILD_ID "J01509658"
+#endif
+
 static const char kBindJobSourcePath[] =
-	"W:\\Build\\J01509657\\vsh\\app\\common\\src\\host_collabo\\account_link_checker\\bind_job.cpp";
+	"W:\\Build\\" BIND_JOB_BUILD_ID "\\vsh\\app\\common\\src\\host_collabo\\account_link_checker\\bind_job.cpp";
 
 static paf::job::JobQueue *s_bindJobQueue = NULL;		/* 0x815492E8 */
 

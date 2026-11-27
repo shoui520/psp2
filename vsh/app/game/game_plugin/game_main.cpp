@@ -1040,8 +1040,10 @@ int gamePluginLicenseCheck(const LsdbAppInfoPtr *info, GameLicenseStatus *status
 	if (ret < 0)
 		return ret;
 
+#if defined(FW_TYPE_CEX)
 	if (gameCategoryIsEgMe(category) && gameEbootCheck(path.c_str(), NULL) < 0)
 		return GAME_ERROR_EBOOT;
+#endif
 
 	return 0;
 }
