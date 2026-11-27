@@ -49,8 +49,12 @@ typedef struct PocsMachineState {
 	/* +0x000: ARM7TDMI core register file and banked state */
 	uint32_t       regs[16];
 	uint32_t       cpsr;
-	uint32_t       bankedRegs[18];
-	uint32_t       spsrBanked[2];
+	uint32_t       fiqRegs[7];
+	uint32_t       irqRegs[2];
+	uint32_t       modeRegs[3][2];
+	uint32_t       spsrModes[3];
+	uint32_t       spsrIrq;
+	uint32_t       spsrFiq;
 	uint32_t       nibbleMaskTable[16];
 
 	/* +0x0D4: 3 hardware timers */
@@ -141,6 +145,12 @@ typedef struct PocsMachineState {
 	uint8_t        internalRam[POCS_INTERNAL_RAM_SIZE];
 } PocsMachineState;
 
+_Static_assert(offsetof(PocsMachineState, fiqRegs) == 0x044U, "fiqRegs offset");
+_Static_assert(offsetof(PocsMachineState, irqRegs) == 0x060U, "irqRegs offset");
+_Static_assert(offsetof(PocsMachineState, modeRegs) == 0x068U, "modeRegs offset");
+_Static_assert(offsetof(PocsMachineState, spsrModes) == 0x080U, "spsrModes offset");
+_Static_assert(offsetof(PocsMachineState, spsrIrq) == 0x08CU, "spsrIrq offset");
+_Static_assert(offsetof(PocsMachineState, spsrFiq) == 0x090U, "spsrFiq offset");
 _Static_assert(offsetof(PocsMachineState, nibbleMaskTable) == 0x094U, "nibbleMaskTable offset");
 _Static_assert(offsetof(PocsMachineState, timers) == 0x0D4U, "timers offset");
 _Static_assert(offsetof(PocsMachineState, schedHead) == 0x134U, "schedHead offset");
@@ -241,6 +251,8 @@ int pocsBatteryWrite(int regOffset, uint8_t value);
 void pocsBatteryReset(void);
 
 /* pocs_periph.c */
+extern int g_pocsCpuBreakRequested;
+
 int pocsIrdaOnIrqEnabled(void);
 int pocsIrdaBeginFrame(int32_t currentCycle);
 int pocsIrdaSignalConnected(void);
@@ -248,22 +260,38 @@ int pocsIrdaWaitSendReady(void);
 int pocsIrdaCancelSession(void);
 int pocsIrdaEndFrame(int32_t currentCycle);
 int pocsIrdaReceivePacket(unsigned int packetLen, const uint8_t *packetData);
+int pocsIrdaRead(int regOffset);
+int pocsIrdaWrite(int regOffset, int value);
 int pocsIrdaInit(void);
 int pocsIrdaReset(void);
 int pocsIrdaSetRole(int isAcceptor);
 int pocsLcdNotifyDirty(int mode);
 int pocsInputPollAndUpdate(void *gxmFramebufferState);
 void *pocsLcdGetFlickerOverlay(void);
+int pocsLcdRead(int regOffset);
+void *pocsLcdWrite(int regOffset, int value);
 void *pocsLcdReset(void);
 int pocsSpiLock(void);
 int pocsSpiUnlock(void);
 int pocsSpiExchange(int portMode, uint8_t txByte);
+int pocsSpiRead(int regOffset);
+int pocsSpiWrite(int regOffset, int value);
 int pocsSpiInit(void);
 int pocsSpiReset(void);
 int pocsSpiAbortPending(void);
 int pocsSpiSyncHost(void);
+uint32_t pocsCpuAluOp(int op, int setFlags, uint32_t lhs, uint32_t rhs, int carryIn);
+uint32_t pocsCpuLogicOp(int op, int setFlags, uint32_t lhs, uint32_t rhs);
+uint32_t pocsCpuMemAccess(uint32_t instr, int accessMode, int baseReg, int dstReg, int offset);
+uint32_t pocsCpuHalfwordAccess(uint32_t instr, int shOp, int baseReg, int dstReg);
+uint32_t pocsCpuBarrelShift(int rmReg, int shiftType, int shiftAmountOrReg, int isRegShift, int updateCarry);
 int pocsCpuCheckPendingIrq(void);
+void pocsCpuSwitchMode(int saveOrRestoreSpsr, int targetMode);
+int pocsCpuBlockTransfer(uint32_t instr, int preIndex);
+uint32_t pocsCpuExceptionSwi(void);
 int pocsCpuExceptionUndef(void);
+int pocsCpuFinishPcWrite(int dstReg, int restoreSpsr, uint32_t instrPc);
+void pocsCpuPsrTransfer(uint32_t instr, int dstReg, uint32_t value);
 
 /* pocs_cpu.c */
 uint32_t pocsCpuRunCycles(uint32_t pc, int32_t cycleBudget);
