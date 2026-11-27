@@ -1,548 +1,411 @@
 /*
- * SSL-C memory pool allocator, crypto lock hooks, EVP_PKEY, and ASN.1 time helpers.
+ * SceSsl / sceSsl_Module (ePSP 6.61) - Embedded pool allocator and CRYPTO_* mem hooks.
  *
- * Corresponds to Sony's crypto/e_malloc.c and common/evp/p_lib.c in libssl.prx.
+ * Implements functions [277..286] (0x0126e8..0x012d97, crypto/e_malloc.c)
+ * and [301..308] (0x013788..0x0138e3, crypto/mem.c).
  */
-#include "libssl_internal.h"
+#include "../libssl_internal.h"
 
-static void sslLockMem(void)
+typedef struct SslPoolBlock {
+    struct SslPoolBlock *selfPayload;
+    u32 size;
+    struct SslPoolBlock *prev;
+    struct SslPoolBlock *next;
+} SslPoolBlock;
+
+typedef struct SslPoolHeader {
+    void *selfPayload;
+    u32 size;
+} SslPoolHeader;
+
+static u8 *g_poolBase = NULL;
+static u32 g_poolSize = 0;
+static u32 g_poolAllocCount = 0;
+static u32 g_poolFreeCount = 0;
+static u32 g_poolErrorCount = 0;
+static u32 g_poolUsedCurrent = 0;
+static u32 g_poolUsedPeak = 0;
+static u32 g_poolUsableTotal = 0;
+static SslPoolBlock *g_poolFreeHead = NULL;
+
+/* Default CRYPTO_* memory function pointers (0x02f1b8..0x02f1c8) */
+SslMallocFn g_lockedMallocFn = sslPoolAlloc;
+SslFreeFn g_lockedFreeFn = sslPoolFree;
+SslMallocFn g_mallocFn = sslPoolAlloc;
+SslReallocFn g_reallocFn = sslPoolRealloc;
+SslFreeFn g_freeFn = sslPoolFree;
+
+/* -------------------------------------------------------------------------
+ * crypto/e_malloc.c [277..286]
+ * ------------------------------------------------------------------------- */
+
+/* [277] 0x0126e8 */
+LIBSSL_NOINLINE void sceSsl_lib_9A789D37(void *poolMem, u32 poolSize)
 {
-    if (g_ssl.lockCallback != NULL) {
-        g_ssl.lockCallback(1, 0, "crypto/e_malloc.c", 0);
+    g_poolBase = (u8 *)poolMem;
+    g_poolSize = poolSize;
+}
+
+/* [278] 0x0126fc */
+LIBSSL_NOINLINE u32 sslPoolInit(void)
+{
+    u32 alignPad = ((u32)g_poolBase) & 3U;
+    u32 lostBytes;
+    SslPoolBlock *firstBlock;
+
+    if (alignPad != 0) {
+        alignPad = 4U - alignPad;
     }
+    firstBlock = (SslPoolBlock *)(g_poolBase + alignPad);
+    lostBytes = (alignPad != 0) ? 4U : 0U;
+
+    firstBlock->size = g_poolSize - lostBytes - sizeof(SslPoolHeader);
+    firstBlock->selfPayload = (SslPoolBlock *)((SslPoolHeader *)firstBlock + 1);
+    firstBlock->prev = NULL;
+    firstBlock->next = NULL;
+
+    g_poolAllocCount = 0;
+    g_poolFreeCount = 0;
+    g_poolErrorCount = 0;
+    g_poolUsedCurrent = 0;
+    g_poolUsedPeak = 0;
+    g_poolFreeHead = firstBlock;
+    g_poolUsableTotal = firstBlock->size + sizeof(SslPoolHeader);
+    return g_poolUsableTotal;
 }
 
-static void sslUnlockMem(void)
+/* [279] 0x012778 */
+LIBSSL_NOINLINE void *sslPoolAlloc(u32 reqSize)
 {
-    if (g_ssl.lockCallback != NULL) {
-        g_ssl.lockCallback(2, 0, "crypto/e_malloc.c", 0);
-    }
-}
+    void *result = NULL;
 
-void sslSetTimeCallback(SslTimeCb cb)
-{
-    g_ssl.timeCallback = cb;
-}
-
-SceSslTimeSpec *sslGetCurrentTimeSpec(SceSslTimeSpec *outTime)
-{
-    if (g_ssl.timeCallback != NULL) {
-        return g_ssl.timeCallback(outTime);
-    }
-    return NULL;
-}
-
-void sslPoolReset(void)
-{
-    g_ssl.pool.base = NULL;
-    g_ssl.pool.totalSize = 0;
-    g_ssl.pool.usedCurrent = 0;
-    g_ssl.pool.usedMax = 0;
-    g_ssl.pool.head = NULL;
-    g_ssl.pool.initialized = 0;
-}
-
-u32 sslPoolGetUsedCurrent(void)
-{
-    return g_ssl.pool.usedCurrent;
-}
-
-u32 sslPoolGetUsedMax(void)
-{
-    return g_ssl.pool.usedMax;
-}
-
-void *sslPoolAlloc(u32 size)
-{
-    SslPoolBlock *blk;
-    u32 alignedSize;
-    u32 hdrSize;
-
-    if (!g_ssl.pool.initialized || size == 0) {
-        return NULL;
+    sceSsl_lib_D84E2411(9, 17, "crypto/e_malloc.c", 129);
+    if (g_poolFreeHead == NULL) {
+        sslPoolInit();
     }
 
-    hdrSize = (u32)sizeof(SslPoolBlock);
-    alignedSize = (size + 7U) & ~7U;
+    if (sslPoolVerify() == 0) {
+        SslPoolBlock *cur = g_poolFreeHead;
+        SslPoolBlock *best = NULL;
+        u32 bestSize = 0x0fffffffU;
+        u32 alignedSize;
 
-    sslLockMem();
-    blk = g_ssl.pool.head;
-    while (blk != NULL) {
-        if (!blk->inUse && blk->size >= alignedSize) {
-            if (blk->size >= alignedSize + hdrSize + 16U) {
-                SslPoolBlock *split = (SslPoolBlock *)((u8 *)blk + hdrSize + alignedSize);
-                split->size = blk->size - alignedSize - hdrSize;
-                split->inUse = 0;
-                split->next = blk->next;
-                split->prev = blk;
-                if (blk->next != NULL) {
-                    blk->next->prev = split;
+        if (reqSize < 8U) {
+            reqSize = 8U;
+        }
+        alignedSize = (reqSize + 3U) & ~3U;
+
+        while (cur != NULL) {
+            if (cur->size >= alignedSize && cur->size < bestSize) {
+                best = cur;
+                bestSize = cur->size;
+                if (cur->size == alignedSize) {
+                    break;
                 }
-                blk->next = split;
-                blk->size = alignedSize;
             }
-            blk->inUse = 1;
-            g_ssl.pool.usedCurrent += blk->size + hdrSize;
-            if (g_ssl.pool.usedCurrent > g_ssl.pool.usedMax) {
-                g_ssl.pool.usedMax = g_ssl.pool.usedCurrent;
-            }
-            sslUnlockMem();
-            return (void *)((u8 *)blk + hdrSize);
+            cur = cur->next;
         }
-        blk = blk->next;
-    }
-    sslUnlockMem();
-    return NULL;
-}
 
-void sslPoolFree(void *ptr)
-{
-    SslPoolBlock *blk;
-    u32 hdrSize;
+        if (best != NULL) {
+            u32 oldSize = best->size;
+            u32 remain = oldSize - alignedSize;
+            u8 *payload = (u8 *)best->selfPayload;
 
-    if (!g_ssl.pool.initialized || ptr == NULL) {
-        return;
-    }
+            result = payload;
+            if (remain >= 16U) {
+                SslPoolBlock *splitBlk = (SslPoolBlock *)(payload + alignedSize);
+                splitBlk->selfPayload = (SslPoolBlock *)((SslPoolHeader *)splitBlk + 1);
+                splitBlk->size = remain - sizeof(SslPoolHeader);
+                splitBlk->prev = best->prev;
+                splitBlk->next = best->next;
 
-    hdrSize = (u32)sizeof(SslPoolBlock);
-    blk = (SslPoolBlock *)((u8 *)ptr - hdrSize);
+                best->size = alignedSize;
+                if (best->prev != NULL) {
+                    best->prev->next = splitBlk;
+                }
+                if (best->next != NULL) {
+                    best->next->prev = splitBlk;
+                }
+                if (best == g_poolFreeHead) {
+                    g_poolFreeHead = splitBlk;
+                }
+                g_poolUsedCurrent += best->size + sizeof(SslPoolHeader);
+            } else {
+                if (best == g_poolFreeHead) {
+                    g_poolFreeHead = best->next;
+                    if (g_poolFreeHead != NULL) {
+                        g_poolFreeHead->prev = NULL;
+                    }
+                } else {
+                    best->prev->next = best->next;
+                    if (best->next != NULL) {
+                        best->next->prev = best->prev;
+                    }
+                }
+                g_poolUsedCurrent += oldSize + sizeof(SslPoolHeader);
+            }
 
-    sslLockMem();
-    if (blk->inUse) {
-        blk->inUse = 0;
-        if (g_ssl.pool.usedCurrent >= blk->size + hdrSize) {
-            g_ssl.pool.usedCurrent -= blk->size + hdrSize;
+            g_poolAllocCount++;
+            if (g_poolUsedPeak < g_poolUsedCurrent) {
+                g_poolUsedPeak = g_poolUsedCurrent;
+            }
         } else {
-            g_ssl.pool.usedCurrent = 0;
+            sslPoolErrorHook();
         }
+    }
 
-        /* Coalesce with next free block */
-        if (blk->next != NULL && !blk->next->inUse) {
-            SslPoolBlock *nextBlk = blk->next;
-            blk->size += hdrSize + nextBlk->size;
-            blk->next = nextBlk->next;
-            if (nextBlk->next != NULL) {
-                nextBlk->next->prev = blk;
+    sceSsl_lib_D84E2411(10, 17, "crypto/e_malloc.c", 248);
+    return result;
+}
+
+/* [280] 0x012964 */
+LIBSSL_NOINLINE void *sslPoolRealloc(void *ptr, u32 newSize)
+{
+    void *result = NULL;
+
+    sceSsl_lib_D84E2411(9, 17, "crypto/e_malloc.c", 260);
+    if (sslPoolVerify() == 0) {
+        if ((((u32)ptr) & 3U) != 0) {
+            g_poolErrorCount++;
+            sslPoolErrorHook();
+        } else {
+            SslPoolHeader *hdr = ((SslPoolHeader *)ptr) - 1;
+            if (hdr->selfPayload != ptr || (hdr->size & 3U) != 0) {
+                g_poolErrorCount++;
+                sslPoolErrorHook();
+            } else {
+                u32 copyLen = (hdr->size < newSize) ? hdr->size : newSize;
+                void *fresh = sslPoolAlloc(newSize);
+                if (fresh != NULL) {
+                    result = fresh;
+                    sslMemcpy(fresh, ptr, copyLen);
+                    sslPoolFree(ptr);
+                }
             }
         }
-        /* Coalesce with previous free block */
-        if (blk->prev != NULL && !blk->prev->inUse) {
-            SslPoolBlock *prevBlk = blk->prev;
-            prevBlk->size += hdrSize + blk->size;
-            prevBlk->next = blk->next;
-            if (blk->next != NULL) {
-                blk->next->prev = prevBlk;
+    }
+
+    sceSsl_lib_D84E2411(10, 17, "crypto/e_malloc.c", 322);
+    return result;
+}
+
+/* [281] 0x012a78 */
+LIBSSL_NOINLINE void sslPoolFree(void *ptr)
+{
+    sceSsl_lib_D84E2411(9, 17, "crypto/e_malloc.c", 331);
+    if (sslPoolVerify() == 0 && ptr != NULL) {
+        if ((((u32)ptr) & 3U) != 0) {
+            g_poolErrorCount++;
+            sslPoolErrorHook();
+        } else {
+            SslPoolBlock *blk = (SslPoolBlock *)(((SslPoolHeader *)ptr) - 1);
+            if ((void *)blk->selfPayload != ptr || (blk->size & 3U) != 0) {
+                g_poolErrorCount++;
+                sslPoolErrorHook();
+            } else {
+                SslPoolBlock *cur = g_poolFreeHead;
+                SslPoolBlock *prev = NULL;
+                int ok = 1;
+
+                g_poolUsedCurrent -= blk->size + sizeof(SslPoolHeader);
+
+                while (cur != NULL && (u32)blk >= (u32)cur) {
+                    prev = cur;
+                    cur = cur->next;
+                }
+
+                if (cur != NULL) {
+                    SslPoolBlock *curPrev = cur->prev;
+                    if (curPrev != NULL) {
+                        curPrev->next = blk;
+                    }
+                    blk->prev = curPrev;
+                    blk->next = cur;
+                    cur->prev = blk;
+                    if (g_poolFreeHead == cur) {
+                        g_poolFreeHead = blk;
+                    }
+                } else if (prev != NULL) {
+                    blk->prev = prev;
+                    blk->next = prev->next;
+                    prev->next = blk;
+                } else {
+                    g_poolErrorCount++;
+                    ok = 0;
+                }
+
+                if (ok) {
+                    /* Coalesce with following contiguous free blocks */
+                    while (blk->next != NULL &&
+                           ((u8 *)blk->selfPayload + blk->size) == (u8 *)blk->next) {
+                        SslPoolBlock *merged = blk->next;
+                        blk->next = merged->next;
+                        if (blk->next != NULL) {
+                            blk->next->prev = blk;
+                        }
+                        blk->size += merged->size + sizeof(SslPoolHeader);
+                    }
+
+                    /* Coalesce with preceding contiguous free blocks */
+                    while (blk->prev != NULL &&
+                           ((u8 *)blk->prev->selfPayload + blk->prev->size) == (u8 *)blk) {
+                        SslPoolBlock *left = blk->prev;
+                        left->next = blk->next;
+                        if (blk->next != NULL) {
+                            blk->next->prev = left;
+                        }
+                        left->size += blk->size + sizeof(SslPoolHeader);
+                        blk = left;
+                    }
+
+                    g_poolFreeCount++;
+                }
             }
         }
     }
-    sslUnlockMem();
+
+    sceSsl_lib_D84E2411(10, 17, "crypto/e_malloc.c", 473);
 }
 
-void *sslPoolRealloc(void *ptr, u32 size)
+/* [282] 0x012c8c */
+LIBSSL_NOINLINE void sslPoolErrorHook(void)
 {
-    SslPoolBlock *blk;
-    void *newPtr;
-    u32 copyLen;
-
-    if (ptr == NULL) {
-        return sslPoolAlloc(size);
-    }
-    if (size == 0) {
-        sslPoolFree(ptr);
-        return NULL;
-    }
-
-    blk = (SslPoolBlock *)((u8 *)ptr - sizeof(SslPoolBlock));
-    if (blk->size >= size) {
-        return ptr;
-    }
-
-    newPtr = sslPoolAlloc(size);
-    if (newPtr == NULL) {
-        return NULL;
-    }
-    copyLen = (blk->size < size) ? blk->size : size;
-    sceKernelMemcpy(newPtr, ptr, copyLen);
-    sslPoolFree(ptr);
-    return newPtr;
 }
 
-/* Pool initialization export (sceSsl_lib_9A789D37) */
-void *sceSsl_lib_9A789D37(void *poolMem, u32 poolSize)
+/* [283] 0x012c94 */
+LIBSSL_NOINLINE int sslPoolVerify(void)
 {
-    SslPoolBlock *initial;
+    SslPoolBlock *cur = g_poolFreeHead;
+    u32 freeTotal = 0;
+    int errCode = 0;
 
-    if (poolMem == NULL || poolSize <= sizeof(SslPoolBlock) + 16U) {
-        return NULL;
+    while (cur != NULL) {
+        SslPoolBlock *next = cur->next;
+        if (next != NULL && next->prev != cur) {
+            errCode = 1;
+            break;
+        }
+        if ((((u32)cur->selfPayload) & 3U) != 0) {
+            errCode = 2;
+            break;
+        }
+        if ((void *)cur->selfPayload != (void *)((SslPoolHeader *)cur + 1)) {
+            errCode = 3;
+            break;
+        }
+        freeTotal += cur->size + sizeof(SslPoolHeader);
+        if ((cur->size & 3U) != 0) {
+            errCode = 4;
+            break;
+        }
+        if (cur->size < 8U) {
+            errCode = 5;
+            break;
+        }
+        cur = next;
     }
 
-    g_ssl.pool.base = (u8 *)poolMem;
-    g_ssl.pool.totalSize = poolSize;
-    g_ssl.pool.usedCurrent = 0;
-    g_ssl.pool.usedMax = 0;
-    initial = (SslPoolBlock *)poolMem;
-    initial->size = poolSize - (u32)sizeof(SslPoolBlock);
-    initial->inUse = 0;
-    initial->next = NULL;
-    initial->prev = NULL;
-    g_ssl.pool.head = initial;
-    g_ssl.pool.initialized = 1;
+    if (errCode == 0) {
+        if (g_poolUsableTotal == freeTotal + g_poolUsedCurrent) {
+            return 0;
+        }
+        errCode = 6;
+    }
 
-    g_ssl.mallocFn = sslPoolAlloc;
-    g_ssl.reallocFn = sslPoolRealloc;
-    g_ssl.freeFn = sslPoolFree;
-    g_ssl.lockedMallocFn = sslPoolAlloc;
-    g_ssl.lockedFreeFn = sslPoolFree;
-    return poolMem;
+    sslPoolErrorHook();
+    return errCode;
 }
 
-/* Peak memory usage query (sceSsl_lib_9266C0D5) */
-u32 sceSsl_lib_9266C0D5(void)
+/* [284] 0x012d50 */
+LIBSSL_NOINLINE u32 sceSsl_lib_9266C0D5(void)
 {
-    return g_ssl.pool.usedMax;
+    return g_poolUsedPeak;
 }
 
-/* CRYPTO_set_mem_functions */
-int sceSsl_lib_A2619268(SslMallocFn mfn, SslReallocFn rfn, SslFreeFn ffn)
+/* [285] 0x012d5c */
+LIBSSL_NOINLINE u32 sslPoolGetUsedCurrent(void)
 {
-    if (mfn == NULL || rfn == NULL || ffn == NULL) {
+    return g_poolUsedCurrent;
+}
+
+/* [286] 0x012d68 */
+LIBSSL_NOINLINE void sslPoolReset(void)
+{
+    g_poolFreeHead = NULL;
+    sslMemset(g_poolBase, 0, 4);
+}
+
+/* -------------------------------------------------------------------------
+ * crypto/mem.c [301..308]
+ * ------------------------------------------------------------------------- */
+
+/* [301] 0x013788 */
+LIBSSL_NOINLINE int sceSsl_lib_A2619268(SslMallocFn mallocFn, SslReallocFn reallocFn,
+                                        SslFreeFn freeFn)
+{
+    if (mallocFn == NULL || reallocFn == NULL || freeFn == NULL) {
         return 0;
     }
-    g_ssl.mallocFn = mfn;
-    g_ssl.reallocFn = rfn;
-    g_ssl.freeFn = ffn;
-    g_ssl.lockedMallocFn = mfn;
-    g_ssl.lockedFreeFn = ffn;
+    g_mallocFn = mallocFn;
+    g_reallocFn = reallocFn;
+    g_freeFn = freeFn;
+    g_lockedMallocFn = mallocFn;
+    g_lockedFreeFn = freeFn;
     return 1;
 }
 
-/* CRYPTO_get_mem_functions */
-void sceSsl_lib_B0B90785(SslMallocFn *mfn, SslReallocFn *rfn, SslFreeFn *ffn)
+/* [302] 0x0137d0 */
+LIBSSL_NOINLINE void sceSsl_lib_B0B90785(SslMallocFn *mallocOut, SslReallocFn *reallocOut,
+                                         SslFreeFn *freeOut)
 {
-    if (mfn != NULL) {
-        *mfn = g_ssl.mallocFn;
+    if (mallocOut != NULL) {
+        *mallocOut = g_mallocFn;
     }
-    if (rfn != NULL) {
-        *rfn = g_ssl.reallocFn;
+    if (reallocOut != NULL) {
+        *reallocOut = g_reallocFn;
     }
-    if (ffn != NULL) {
-        *ffn = g_ssl.freeFn;
+    if (freeOut != NULL) {
+        *freeOut = g_freeFn;
     }
 }
 
-/* CRYPTO_get_locked_mem_functions */
-void sceSsl_lib_064F5DF3(SslMallocFn *mfn, SslFreeFn *ffn)
+/* [303] 0x013808 */
+LIBSSL_NOINLINE void sceSsl_lib_064F5DF3(SslMallocFn *mallocOut, SslFreeFn *freeOut)
 {
-    if (mfn != NULL) {
-        *mfn = g_ssl.lockedMallocFn;
+    if (mallocOut != NULL) {
+        *mallocOut = g_lockedMallocFn;
     }
-    if (ffn != NULL) {
-        *ffn = g_ssl.lockedFreeFn;
-    }
-}
-
-/* CRYPTO_malloc_locked */
-void *sceSsl_lib_6053B79C(u32 size)
-{
-    return (g_ssl.lockedMallocFn != NULL) ? g_ssl.lockedMallocFn(size) : sslPoolAlloc(size);
-}
-
-/* CRYPTO_free_locked */
-void sceSsl_lib_E5FC4992(void *ptr)
-{
-    if (g_ssl.lockedFreeFn != NULL) {
-        g_ssl.lockedFreeFn(ptr);
-    } else {
-        sslPoolFree(ptr);
+    if (freeOut != NULL) {
+        *freeOut = g_lockedFreeFn;
     }
 }
 
-/* CRYPTO_malloc */
-void *sceSsl_lib_0861D934(u32 size)
+/* [304] 0x013830 */
+LIBSSL_NOINLINE void *sceSsl_lib_6053B79C(u32 size)
 {
-    return (g_ssl.mallocFn != NULL) ? g_ssl.mallocFn(size) : sslPoolAlloc(size);
+    return g_lockedMallocFn(size);
 }
 
-/* CRYPTO_free */
-void sceSsl_lib_5E5C873A(void *ptr)
+/* [305] 0x013854 */
+LIBSSL_NOINLINE void sceSsl_lib_E5FC4992(void *ptr)
 {
-    if (g_ssl.freeFn != NULL) {
-        g_ssl.freeFn(ptr);
-    } else {
-        sslPoolFree(ptr);
-    }
+    g_lockedFreeFn(ptr);
 }
 
-/* CRYPTO_set_locking_callback and lock helpers */
-void *sceSsl_lib_A9191C17(SslLockCb cb)
+/* [306] 0x013878 */
+LIBSSL_NOINLINE void *sceSsl_lib_0861D934(u32 size)
 {
-    g_ssl.lockCallback = cb;
-    return (void *)cb;
+    return g_mallocFn(size);
 }
 
-void *sceSsl_lib_64AA4ED6(int lockId)
+/* [307] 0x01389c */
+LIBSSL_NOINLINE void *sslCryptoRealloc(void *ptr, u32 newSize)
 {
-    (void)lockId;
-    return (void *)g_ssl.lockCallback;
+    return g_reallocFn(ptr, newSize);
 }
 
-int sceSsl_lib_6CDEB823(void)
+/* [308] 0x0138c0 */
+LIBSSL_NOINLINE void sceSsl_lib_5E5C873A(void *ptr)
 {
-    return 32;
-}
-
-void *sceSsl_lib_5AD14F0B(int mode)
-{
-    (void)mode;
-    return (void *)g_ssl.lockCallback;
-}
-
-int sceSsl_lib_9D8A385E(void)
-{
-    return 1;
-}
-
-SslLockCb sceSsl_lib_D84E2411(void)
-{
-    return g_ssl.lockCallback;
-}
-
-int sceSsl_lib_6BA650E4(void)
-{
-    return 1;
-}
-
-int sceSsl_lib_69105335(void)
-{
-    return 1;
-}
-
-/* EVP_PKEY_new / EVP_PKEY_size / EVP_PKEY_free (common/evp/p_lib.c) */
-SslEvpPkey *sceSsl_lib_09C45275(void)
-{
-    SslEvpPkey *pkey = (SslEvpPkey *)sceSsl_lib_0861D934(sizeof(SslEvpPkey));
-    if (pkey == NULL) {
-        return NULL;
-    }
-    sceKernelMemset(pkey, 0, sizeof(SslEvpPkey));
-    pkey->refCount = 1;
-    return pkey;
-}
-
-int sceSsl_lib_FAF333D1(SslEvpPkey *pkey)
-{
-    if (pkey == NULL || pkey->rsa == NULL) {
-        return 0;
-    }
-    return (int)pkey->rsa->modulusLen;
-}
-
-void sceSsl_lib_7317C1BC(SslEvpPkey *pkey)
-{
-    if (pkey == NULL) {
-        return;
-    }
-    pkey->refCount--;
-    if (pkey->refCount > 0) {
-        return;
-    }
-    if (pkey->rsa != NULL) {
-        if (pkey->rsa->modulus != NULL) {
-            sceSsl_lib_5E5C873A(pkey->rsa->modulus);
-        }
-        if (pkey->rsa->exponent != NULL) {
-            sceSsl_lib_5E5C873A(pkey->rsa->exponent);
-        }
-        if (pkey->rsa->privExponent != NULL) {
-            sceSsl_lib_5E5C873A(pkey->rsa->privExponent);
-        }
-        sceSsl_lib_5E5C873A(pkey->rsa);
-    }
-    sceSsl_lib_5E5C873A(pkey);
-}
-
-/* Base64 / hex / digest helper exported at 0x028d4 */
-int sceSsl_lib_C85F6FCE(int mode, u8 *outBuf, u32 outLen)
-{
-    u32 idx;
-
-    if (outBuf == NULL || outLen == 0) {
-        return 0;
-    }
-    for (idx = 0; idx < outLen; idx++) {
-        g_ssl.randSeed = g_ssl.randSeed * 1103515245U + 12345U + (u32)mode;
-        outBuf[idx] = (u8)((g_ssl.randSeed >> 16) & 0xFFU);
-    }
-    return 1;
-}
-
-/* ASN.1 time parsing helper */
-static int sslReadTwoDigits(const u8 *ptr, int *outVal)
-{
-    if (ptr[0] < '0' || ptr[0] > '9' || ptr[1] < '0' || ptr[1] > '9') {
-        return -1;
-    }
-    *outVal = (int)(ptr[0] - '0') * 10 + (int)(ptr[1] - '0');
-    return 0;
-}
-
-static int sslIsLeapYear(int year)
-{
-    return ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0));
-}
-
-int sslParseAsn1TimeToEpoch(const u8 *str, u32 len, int isGeneralized, u64 *outEpoch)
-{
-    static const int monthDays[12] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
-    int year, month, day, hour, minute, second;
-    int yrHi, yrLo;
-    u32 pos;
-    u64 totalDays;
-    int yr, mo;
-
-    if (str == NULL || outEpoch == NULL) {
-        return -1;
-    }
-
-    pos = 0;
-    if (isGeneralized) {
-        if (len < 14) {
-            return -1;
-        }
-        if (sslReadTwoDigits(str + 0, &yrHi) < 0 || sslReadTwoDigits(str + 2, &yrLo) < 0) {
-            return -1;
-        }
-        year = yrHi * 100 + yrLo;
-        pos = 4;
-    } else {
-        if (len < 12) {
-            return -1;
-        }
-        if (sslReadTwoDigits(str + 0, &yrLo) < 0) {
-            return -1;
-        }
-        year = (yrLo >= 50) ? (1900 + yrLo) : (2000 + yrLo);
-        pos = 2;
-    }
-
-    if (sslReadTwoDigits(str + pos + 0, &month) < 0 ||
-        sslReadTwoDigits(str + pos + 2, &day) < 0 ||
-        sslReadTwoDigits(str + pos + 4, &hour) < 0 ||
-        sslReadTwoDigits(str + pos + 6, &minute) < 0 ||
-        sslReadTwoDigits(str + pos + 8, &second) < 0) {
-        return -1;
-    }
-
-    if (month < 1 || month > 12 || day < 1 || day > 31 ||
-        hour > 23 || minute > 59 || second > 60) {
-        return -1;
-    }
-
-    totalDays = 0;
-    if (year >= 1970) {
-        for (yr = 1970; yr < year; yr++) {
-            totalDays += sslIsLeapYear(yr) ? 366ULL : 365ULL;
-        }
-    }
-    for (mo = 1; mo < month; mo++) {
-        totalDays += (u64)monthDays[mo - 1];
-        if (mo == 2 && sslIsLeapYear(year)) {
-            totalDays += 1ULL;
-        }
-    }
-    totalDays += (u64)(day - 1);
-
-    *outEpoch = totalDays * 86400ULL + (u64)hour * 3600ULL + (u64)minute * 60ULL + (u64)second;
-    return 0;
-}
-
-/* ASN.1 time / generalized time conversion exports */
-int sceSsl_lib_2FE7BB42(void)
-{
-    return 1;
-}
-
-SceSslTimeSpec *sceSsl_lib_A7BED83B(SceSslTimeSpec *outTime)
-{
-    return sslGetCurrentTimeSpec(outTime);
-}
-
-int *sceSsl_lib_665D02F6(int *dst, const int *src, int cmpMode, int flags)
-{
-    (void)cmpMode;
-    (void)flags;
-    if (dst != NULL && src != NULL) {
-        dst[0] = src[0];
-        dst[1] = src[1];
-    }
-    return dst;
-}
-
-int sceSsl_lib_9EF66756(const int *lhs, int rhs, int cmpMode, int flags)
-{
-    (void)cmpMode;
-    (void)flags;
-    if (lhs == NULL) {
-        return -1;
-    }
-    if (*lhs < rhs) {
-        return -1;
-    }
-    return (*lhs > rhs) ? 1 : 0;
-}
-
-int sceSsl_lib_E7BFC0EF(const u8 *str, u32 len, int formatType, u32 *outEpochPair)
-{
-    u64 epochSec;
-
-    if (outEpochPair == NULL) {
-        return -1;
-    }
-    if (sslParseAsn1TimeToEpoch(str, len, (formatType == 2), &epochSec) < 0) {
-        return -1;
-    }
-    outEpochPair[0] = (u32)(epochSec >> 32);
-    outEpochPair[1] = (u32)(epochSec & 0xFFFFFFFFU);
-    return 0;
-}
-
-int sceSsl_lib_047AB6BB(const u32 *timeA, const u32 *timeB)
-{
-    u64 valA, valB;
-
-    if (timeA == NULL || timeB == NULL) {
-        return 0;
-    }
-    valA = ((u64)timeA[0] << 32) | (u64)timeA[1];
-    valB = ((u64)timeB[0] << 32) | (u64)timeB[1];
-    if (valA < valB) {
-        return -1;
-    }
-    return (valA > valB) ? 1 : 0;
-}
-
-void *sceSsl_lib_A920B39E(int type, void **outPtr, int len, int flags)
-{
-    void *buf;
-
-    (void)type;
-    (void)flags;
-    if (len <= 0) {
-        return NULL;
-    }
-    buf = sceSsl_lib_0861D934((u32)len);
-    if (buf != NULL) {
-        sceKernelMemset(buf, 0, (u32)len);
-        if (outPtr != NULL) {
-            *outPtr = buf;
-        }
-    }
-    return buf;
-}
-
-int sceSsl_lib_3454E622(int mode, int arg, ...)
-{
-    (void)mode;
-    (void)arg;
-    return 0;
+    g_freeFn(ptr);
 }
