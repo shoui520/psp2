@@ -75,7 +75,11 @@ public:
 		       uint32_t flags);
 	/* the part of the surface drawn and GXM's region clip, from x0, y0 to x1, y1 (not
 	   included), the scene begun again or the clip set when update says */
+#ifdef PAF_BUILD_2014
+	void SetScissor(int32_t left, int32_t top, uint32_t right, uint32_t bottom, bool update);
+#else
 	void SetScissor(float x0, float y0, float x1, float y1, bool update);
+#endif
 	void SetClip(float x0, float y0, float x1, float y1, bool update);
 	int32_t DestroyRenderTarget(SceGxmRenderTarget *render_target);
 	SceGxmColorSurface *GetRawColorSurface(int32_t page);
@@ -102,6 +106,7 @@ public:
 	SceGxmDepthStencilSurface *m_depth_stencil_surface;
 	/* the render target is the surface's own, destroyed with it */
 	bool m_own_render_target;
+#ifndef PAF_BUILD_2014
 	/* the YUV profile each scene sets (and the scene's copies: SceneData) */
 	uint32_t m_yuv_csc_index;
 	SceGxmYuvProfile m_yuv_profile;
@@ -112,6 +117,7 @@ public:
 	/* 2: the scene is drawn at half the surface's size, unless m_full_size */
 	int32_t m_scale_mode;
 	bool m_full_size;
+#endif
 	void *m_memory;
 	uint32_t m_depth_offset;
 	/* SetScissor's: the part of the surface drawn, by any two corners */

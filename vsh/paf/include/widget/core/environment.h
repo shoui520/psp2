@@ -91,12 +91,26 @@ public:
 	int32_t OnTarget();
 	void OnClear();
 	void OnFinish();
+#ifndef PAF_BUILD_2014
 	/* whether the surface is the size of the viewport (0x81147d50; name ours) */
 	bool IsFullSize();
+#endif
 	/* the rectangle in the surface's coordinates, in its pixels (0x81147baa) and in the
 	   pixels it shows at (0x81147c68) (names ours) */
+#ifdef PAF_BUILD_2014
+	__attribute__((always_inline)) math::rect ToSurfaceRect(const math::rect &rect)
+	{
+		math::v2 origin(vp.width() * -0.5f, vp.height() * 0.5f);
+		math::v2 direction(1.0f, -1.0f);
+		math::v2 scale(sce::Vectormath::Simd::Aos::divPerElem(
+			m_surface_size.getImpl(), vp.size().getImpl()));
+
+		return rect.convert(origin, direction, scale);
+	}
+#else
 	math::rect ToSurfaceRect(const math::rect &rect);
 	math::rect ToPixelRect(const math::rect &rect);
+#endif
 
 	intrusive_ptr<graph::Surface> GetSurface()
 	{

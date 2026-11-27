@@ -388,8 +388,10 @@ void WaveRenderer::draw_color(WaveInstance *instance)
 	gl->m_model.PushTop();
 	gl->m_model.LoadIdentity();
 	gl->m_model.MultMatrix(instance->GetModelMatrix());
+#ifndef PAF_BUILD_2014
 	gl->m_projection_changed = true;
 	gl->m_view_changed = true;
+#endif
 	m_wave_vert.m_interface.m_vp.Set(gl->m_projection.Top().m_matrix *
 					 gl->m_view.Top().m_matrix);
 	m_wave_vert.m_interface.m_model_matrix.Set(gl->m_model.Top().m_matrix);

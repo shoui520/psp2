@@ -91,9 +91,13 @@ void Camera::LoadMatrices()
 {
 	arl::ArlInstance *gl = arl::Gl();
 
+#ifndef PAF_BUILD_2014
 	gl->m_projection_changed = true;
+#endif
 	gl->m_projection.Load(m_projection.m_matrix);
+#ifndef PAF_BUILD_2014
 	gl->m_view_changed = true;
+#endif
 	gl->m_view.LoadKeepInverse(m_transform.m_inverse);
 	gl->m_model.LoadIdentity();
 }
@@ -110,9 +114,13 @@ void Camera::PushMatrices()
 {
 	arl::ArlInstance *gl = arl::Gl();
 
+#ifndef PAF_BUILD_2014
 	gl->m_projection_changed = true;
+#endif
 	gl->m_projection.PushTop();
+#ifndef PAF_BUILD_2014
 	gl->m_view_changed = true;
+#endif
 	gl->m_view.PushTop();
 	gl->m_model.PushTop();
 	UpdateAspect();
@@ -123,8 +131,10 @@ void Camera::PopMatrices()
 {
 	arl::ArlInstance *gl = arl::Gl();
 
+#ifndef PAF_BUILD_2014
 	gl->m_view_changed = true;
 	gl->m_projection_changed = true;
+#endif
 	gl->m_projection.Pop();
 	gl->m_view.Pop();
 	gl->m_model.Pop();

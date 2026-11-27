@@ -70,8 +70,10 @@ void Skydome::Draw(const DrawParam &param, const SkyParamSet::Values &values)
 	}
 	gl->Disable(arl::DEPTH_TEST);
 	gl->CullMode(arl::CULL_CW);
+#ifndef PAF_BUILD_2014
 	gl->m_projection_changed = true;
 	gl->m_view_changed = true;
+#endif
 	m_vert.m_interface.m_vp.Set(gl->m_projection.Top().m_matrix * gl->m_view.Top().m_matrix);
 	m_vert.m_object.begin();
 	m_frag.m_object.begin();

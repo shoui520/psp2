@@ -67,7 +67,11 @@ int32_t SurfaceBase::GetPixelBits(ImageMode format)
 SurfaceBase::SurfaceBase(ImageMode format, bool reserved)
 {
 	m_format = format;
+#ifndef PAF_BUILD_2014
 	m_reserved = reserved;
+#else
+	(void)reserved;
+#endif
 	m_pixel_bits = GetPixelBits(format);
 }
 

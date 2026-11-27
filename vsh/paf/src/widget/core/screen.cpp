@@ -103,17 +103,13 @@ Screen::~Screen()
 	m_surface.clear();
 }
 
+#ifndef PAF_BUILD_2014
 math::rect Screen::ToSurfaceRect(const math::rect &rect)
 {
 	math::v2 origin(vp.width() * -0.5f, vp.height() * 0.5f);
 	math::v2 direction(1.0f, -1.0f);
-#ifdef PAF_BUILD_2014
-	math::v2 scale(sce::Vectormath::Simd::Aos::divPerElem(m_surface_size.getImpl(),
-							      vp.size().getImpl()));
-#else
 	math::v2 size((float)m_surface->GetWidth(), (float)m_surface->GetHeight());
 	math::v2 scale(sce::Vectormath::Simd::Aos::divPerElem(size.getImpl(), vp.size().getImpl()));
-#endif
 
 	return rect.convert(origin, direction, scale);
 }
@@ -155,6 +151,7 @@ bool Screen::IsFullSize()
 		full = size == vp.size();
 	return full;
 }
+#endif
 
 int32_t Screen::PushTarget(Screen *screen)
 {
@@ -178,7 +175,12 @@ int32_t Screen::PushTarget(Screen *screen)
 		graph::ScreenSurface *surface = (graph::ScreenSurface *)screen->GetSurface().get();
 		math::rect rect = screen->ToSurfaceRect(screen->sp);
 
+#ifdef PAF_BUILD_2014
+		surface->SetScissor((int32_t)rect.left(), (int32_t)rect.bottom(),
+				    (uint32_t)rect.right(), (uint32_t)rect.top(), false);
+#else
 		surface->SetScissor(rect.left(), rect.bottom(), rect.right(), rect.top(), false);
+#endif
 #ifndef PAF_BUILD_2014
 		if (screen->m_yuv_csc_index < 2) {
 			surface->m_yuv_csc_index = screen->m_yuv_csc_index;
@@ -230,7 +232,12 @@ int32_t Screen::PopTarget(Screen *screen)
 		graph::ScreenSurface *surface = (graph::ScreenSurface *)top->GetSurface().get();
 		math::rect rect = top->ToSurfaceRect(top->sp);
 
+#ifdef PAF_BUILD_2014
+		surface->SetScissor((int32_t)rect.left(), (int32_t)rect.bottom(),
+				    (uint32_t)rect.right(), (uint32_t)rect.top(), false);
+#else
 		surface->SetScissor(rect.left(), rect.bottom(), rect.right(), rect.top(), false);
+#endif
 		surface->BeginScene();
 	}
 	return result;

@@ -518,17 +518,21 @@ public:
 	bool begin();
 	void end();
 
+#ifndef PAF_BUILD_2014
 	/* the program bound last unbound, when a scene ends */
 	static void UnbindCurrent();
+#endif
 
 	VertCreateDependency m_dependency;
 
 private:
 	/* unbinds the program, and that of the shader object bound last */
 	void Unbind();
+#ifndef PAF_BUILD_2014
 	static void UnbindProgram();
 
 	static VertShaderObject *s_current;
+#endif
 };
 
 class FragShaderObject : public ShaderObject<FragProgram> {
@@ -545,17 +549,21 @@ public:
 	bool begin();
 	void end();
 
+#ifndef PAF_BUILD_2014
 	/* the program bound last unbound, when a scene ends */
 	static void UnbindCurrent();
+#endif
 
 	FragCreateDependency m_dependency;
 
 private:
 	/* unbinds the program, and that of the shader object bound last */
 	void Unbind();
+#ifndef PAF_BUILD_2014
 	static void UnbindProgram();
 
 	static FragShaderObject *s_current;
+#endif
 };
 
 /* a shader's interface and the shader object over it, kept together by the classes that draw

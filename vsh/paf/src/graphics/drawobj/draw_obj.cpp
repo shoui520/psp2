@@ -39,8 +39,10 @@ extern "C" const uint32_t ScePafGraphics_560A9546 = 0x11;
 bool DrawObj::s_safety;
 uint32_t DrawObj::s_dirty_count = 1;
 
+#ifndef PAF_BUILD_2014
 /* the style bound last, which the next bind with the same style skips (name ours) */
 DrawStyle s_draw_style(0);
+#endif
 common::SharedPtr<DrawEnv> s_draw_calls;
 GlobalPtr<Renderer> s_renderer(NULL);
 GlobalPtr<DrawLayer> g_scene_draw_layer(NULL);
@@ -80,6 +82,13 @@ DrawObj::~DrawObj()
 	if (m_rot != NULL)
 		delete m_rot;
 }
+
+#ifdef PAF_BUILD_2014
+void DrawObj::SetDrawStyle(const DrawStyle &style)
+{
+	m_draw_style = style;
+}
+#endif
 
 }
 }
@@ -193,6 +202,77 @@ void DrawObj::CalcWorldMatrix(math::matrix &world_mat, const math::matrix &paren
 	}
 }
 
+#ifdef PAF_BUILD_2014
+void DrawObj::BindDrawStyle()
+{
+	switch (m_draw_style.blend) {
+	case 0:
+		Gl()->Disable(BLEND);
+		break;
+	case 1:
+		Gl()->Enable(BLEND);
+		Gl()->BlendEquation(FUNC_ADD, FUNC_ADD);
+		Gl()->BlendFunc(SRC_ALPHA, ONE_MINUS_SRC_ALPHA, ONE, ONE_MINUS_SRC_ALPHA);
+		break;
+	case 2:
+		Gl()->Enable(BLEND);
+		Gl()->BlendEquation(FUNC_ADD, FUNC_ADD);
+		Gl()->BlendFunc(SRC_ALPHA, ONE, ZERO, ONE);
+		break;
+	case 3:
+		Gl()->Enable(BLEND);
+		Gl()->BlendEquation(FUNC_REVERSE_SUBTRACT, FUNC_ADD);
+		Gl()->BlendFunc(SRC_ALPHA, ONE, ZERO, ONE);
+		break;
+	case 15:
+		Gl()->Enable(BLEND);
+		Gl()->BlendEquation(FUNC_ADD, FUNC_ADD);
+		Gl()->BlendFunc(ONE, ONE_MINUS_SRC_ALPHA, ONE, ONE_MINUS_SRC_ALPHA);
+		break;
+	default:
+		break;
+	}
+
+	switch (m_draw_style.depth) {
+	case 2:
+		Gl()->DepthFunc(DEPTH_NEVER, FRONT_AND_BACK);
+		break;
+	case 3:
+		Gl()->DepthFunc(DEPTH_LESS, FRONT_AND_BACK);
+		break;
+	case 4:
+		Gl()->DepthFunc(DEPTH_LEQUAL, FRONT_AND_BACK);
+		break;
+	case 5:
+		Gl()->DepthFunc(DEPTH_EQUAL, FRONT_AND_BACK);
+		break;
+	case 6:
+		Gl()->DepthFunc(DEPTH_NOTEQUAL, FRONT_AND_BACK);
+		break;
+	case 7:
+		Gl()->DepthFunc(DEPTH_GEQUAL, FRONT_AND_BACK);
+		break;
+	case 8:
+		Gl()->DepthFunc(DEPTH_GREATER, FRONT_AND_BACK);
+		break;
+	default:
+		Gl()->DepthFunc(DEPTH_ALWAYS, FRONT_AND_BACK);
+		break;
+	}
+
+	switch (m_draw_style.face_cull) {
+	case 0:
+		Gl()->CullMode(CULL_NONE);
+		break;
+	case 1:
+		Gl()->CullMode(CULL_CW);
+		break;
+	case 2:
+		Gl()->CullMode(CULL_CCW);
+		break;
+	}
+}
+#else
 void BindDrawStyle(DrawStyle style)
 {
 	ArlInstance &gl = *Gl();
@@ -296,6 +376,7 @@ void DrawObj::BindDrawStyle()
 {
 	graph::BindDrawStyle(m_draw_style);
 }
+#endif
 
 common::SharedPtr<DrawEnv> &DrawCalls()
 {

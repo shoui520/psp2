@@ -46,8 +46,10 @@ vector<FragProgramEntry>::push_back(const FragProgramEntry &val)
 namespace graph {
 namespace arl {
 
+#ifndef PAF_BUILD_2014
 VertShaderObject *VertShaderObject::s_current;
 FragShaderObject *FragShaderObject::s_current;
+#endif
 
 void ShaderProgram::unregister_program()
 {
@@ -374,6 +376,29 @@ inline void VertShaderObject::Unbind()
 	program->Unbind(gl->m_context);
 }
 
+#ifdef PAF_BUILD_2014
+bool VertShaderObject::begin()
+{
+	get_prog();
+
+	ProgramState *state = m_arl;
+
+	state->m_vert_program = m_current.get();
+	m_current->Bind(m_arl->m_context);
+	m_arl->m_dirty_uniforms |= ProgramState::DIRTY_VERTEX_UNIFORMS;
+	m_interface->m_setup.m_uniform_buffer = NULL;
+	m_interface->m_setup.m_object = this;
+	return SetupUniforms();
+}
+
+void VertShaderObject::end()
+{
+	Unbind();
+	m_current.reset();
+	m_interface->m_setup.m_uniform_buffer = NULL;
+	m_interface->m_setup.m_object = NULL;
+}
+#else
 inline void VertShaderObject::UnbindProgram()
 {
 	s_current->Unbind();
@@ -412,6 +437,7 @@ void VertShaderObject::UnbindCurrent()
 		s_current = NULL;
 	}
 }
+#endif
 
 FragShaderObject::FragShaderObject(ShaderInterfaceBase *shader_interface)
 	: ShaderObject<FragProgram>(shader_interface)
@@ -457,8 +483,18 @@ void FragShaderObject::get_prog(VertProgram *vert_program)
 {
 	ArlInstance *gl = m_arl;
 
+#ifdef PAF_BUILD_2014
+	SceGxmBlendInfo blend = gl->m_blend_info;
+
+	if (!gl->m_blend_enabled) {
+		blend.colorFunc = SCE_GXM_BLEND_FUNC_NONE;
+		blend.alphaFunc = SCE_GXM_BLEND_FUNC_NONE;
+	}
+	m_dependency.m_blend_info = blend;
+#else
 	m_dependency.m_blend_info = gl->m_blend_enabled ? gl->m_blend_info : gl->m_default_blend_info;
 	gl->m_blend_changed = false;
+#endif
 	m_dependency.m_vert_program = vert_program;
 
 	SceGxmFragmentProgram *program = NULL;
@@ -487,6 +523,29 @@ inline void FragShaderObject::Unbind()
 	program->Unbind(gl->m_context);
 }
 
+#ifdef PAF_BUILD_2014
+bool FragShaderObject::begin()
+{
+	get_prog(m_arl->m_vert_program);
+
+	ProgramState *state = m_arl;
+
+	state->m_frag_program = m_current.get();
+	m_current->Bind(m_arl->m_context);
+	m_arl->m_dirty_uniforms |= ProgramState::DIRTY_FRAGMENT_UNIFORMS;
+	m_interface->m_setup.m_uniform_buffer = NULL;
+	m_interface->m_setup.m_object = this;
+	return SetupUniforms();
+}
+
+void FragShaderObject::end()
+{
+	Unbind();
+	m_current.reset();
+	m_interface->m_setup.m_uniform_buffer = NULL;
+	m_interface->m_setup.m_object = NULL;
+}
+#else
 inline void FragShaderObject::UnbindProgram()
 {
 	s_current->Unbind();
@@ -526,6 +585,7 @@ void FragShaderObject::UnbindCurrent()
 		s_current = NULL;
 	}
 }
+#endif
 
 }
 }

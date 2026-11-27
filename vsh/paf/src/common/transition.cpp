@@ -301,9 +301,7 @@ static void Slide3D(ui::Widget *widget, int32_t from, int32_t to, bool animate,
 {
 	float half_width = 0.0f;
 #ifdef PAF_BUILD_2014
-	ui::SceneResolution *resolution = widget->m_env->FindResolution(
-		widget->m_env->m_resolutions, widget->m_env->m_resolution_num,
-		widget->m_scene->m_resolution_id);
+	ui::SceneResolution *resolution = widget->m_env->m_cur_resolution;
 #else
 	ui::SceneResolution *resolution = ScePafWidget_CDC90BA2(
 		widget->m_scene->m_env_param, widget->m_scene->m_resolution_id);

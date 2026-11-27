@@ -140,7 +140,7 @@ set(swu_sas_SOURCES
 )
 set_source_files_properties(${swu_sas_SOURCES} PROPERTIES
 	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;SCE_SAS_STATIC_RUNTIME"
-	COMPILE_OPTIONS "-O3;-fno-stack-protector;-fdelete-null-pointer-checks;-mfloat-abi=hard;-fsigned-char")
+	COMPILE_OPTIONS "-O3;-fno-stack-protector;-fdelete-null-pointer-checks;-mfloat-abi=hard;-fsigned-char;-ffunction-sections;-fdata-sections")
 
 set(swu_libgcc "${PSP2_SRC}/toolchains/libgcc")
 set(swu_libgcc_SOURCES
@@ -182,11 +182,11 @@ set(swu_ft2_SOURCES
 )
 set_source_files_properties(${swu_ft2_SOURCES} PROPERTIES
 	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;FT2_BUILD_LIBRARY;FT_CONFIG_NO_OTVALID"
-	COMPILE_OPTIONS "-O3;-fno-stack-protector;-fhosted;-fbuiltin;-fdelete-null-pointer-checks;-fsigned-char"
+	COMPILE_OPTIONS "-O3;-fno-stack-protector;-fhosted;-fbuiltin;-fdelete-null-pointer-checks;-ffunction-sections;-fdata-sections;-fsigned-char"
 	INCLUDE_DIRECTORIES "${FT2_DIR}/include;${FT2_SCE}/include;${FT2}/include;${FT2}/src;${FT2}/src/base")
 set_source_files_properties(${FT2_DIR}/libc.c PROPERTIES
 	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;FT2_BUILD_LIBRARY;PAF_STATIC_BUILD"
-	COMPILE_OPTIONS "-ffreestanding;-fno-builtin;-fsigned-char")
+	COMPILE_OPTIONS "-ffreestanding;-fno-builtin;-ffunction-sections;-fdata-sections;-fsigned-char")
 set_source_files_properties(${FT2_DIR}/setjmp.S PROPERTIES
 	COMPILE_DEFINITIONS PSP2_COMPILER_GCC48)
 
@@ -197,7 +197,7 @@ set(swu_pvf_SOURCES
 )
 set_source_files_properties(${swu_pvf_SOURCES} PROPERTIES
 	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;SCE_PVF_2014"
-	COMPILE_OPTIONS "-fno-stack-protector;-fno-ipa-cp-clone;-mfloat-abi=hard"
+	COMPILE_OPTIONS "-fno-stack-protector;-fno-ipa-cp-clone;-mfloat-abi=hard;-ffunction-sections;-fdata-sections"
 	INCLUDE_DIRECTORIES "${FT2}/include")
 
 set(swu_updater_SOURCES

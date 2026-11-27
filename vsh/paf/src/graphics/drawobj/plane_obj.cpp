@@ -360,6 +360,7 @@ void PlaneObj::Draw(const math::matrix &world, uint32_t color, float alpha)
 							VertexArraySpec::ATTRIB0_F3_ATTRIB3_F2,
 							SCE_GXM_INDEX_SOURCE_INDEX_16BIT),
 						  s_quad_vertex_data, 4);
+#ifndef PAF_BUILD_2014
 	if (s_nine_vertices == NULL)
 		s_nine_vertices = new VertexArray(gl->m_default_allocator,
 						  ScePafGraphics_4D1E289A(gl,
@@ -372,6 +373,7 @@ void PlaneObj::Draw(const math::matrix &world, uint32_t color, float alpha)
 
 	if (m_tex_surface[0].get() == NULL && m_draw_style.blend == 1 && alpha == 1.0f)
 		graph::BindDrawStyle(DrawStyle(m_draw_style.m_value & ~0xF));
+#endif
 
 	math::matrix world_mat;
 	PlaneObjDrawParams params(m_tex_surface, m_tex_region);
@@ -388,6 +390,11 @@ void PlaneObj::Draw(const math::matrix &world, uint32_t color, float alpha)
 	Shader *shader = m_shader.get();
 
 	if (m_div_vertices == NULL) {
+#ifdef PAF_BUILD_2014
+		params.m_vertices = s_quad_vertices;
+		params.m_count = 4;
+		params.m_instances = 1;
+#else
 		if (!m_plane_flags.m_nine_patch) {
 			params.m_vertices = s_quad_vertices;
 			params.m_count = 4;
@@ -398,6 +405,7 @@ void PlaneObj::Draw(const math::matrix &world, uint32_t color, float alpha)
 			params.m_count = s_nine_mesh.m_num_indices;
 			params.m_instances = 1;
 		}
+#endif
 	} else {
 		params.m_vertices = m_div_vertices;
 		params.m_indices = s_div_indices[m_div_index].m_front;
@@ -406,6 +414,7 @@ void PlaneObj::Draw(const math::matrix &world, uint32_t color, float alpha)
 	}
 	shader->Draw(params);
 
+#ifndef PAF_BUILD_2014
 	if (m_div_vertices != NULL && s_div_indices[m_div_index].m_back != NULL) {
 		int32_t mode = m_div_index + 1;
 
@@ -421,6 +430,7 @@ void PlaneObj::Draw(const math::matrix &world, uint32_t color, float alpha)
 			m_draw_style = style;
 		}
 	}
+#endif
 }
 
 void PlaneObj::CheckTextureDivide(const intrusive_ptr<Surface> &current,

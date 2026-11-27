@@ -84,8 +84,10 @@ void ScreenSurface::GetParam(Param *param)
 			param->depth_format = m_depth->m_format;
 			param->depth_order = m_depth->GetOrder();
 		}
+#ifndef PAF_BUILD_2014
 		param->scale_mode = m_scale_mode;
 		param->full_size = m_full_size;
+#endif
 	}
 }
 
@@ -305,7 +307,11 @@ int32_t DisplaySurface::End(const SceGxmNotification *vertex_notification,
 }
 #endif
 
+#ifdef PAF_BUILD_2014
+void DisplaySurface::SetDirty()
+#else
 void DisplaySurface::SetDirty(bool dirty)
+#endif
 {
 	if (m_page_dirty != NULL)
 		m_page_dirty[m_page_counter] = true;
@@ -889,7 +895,11 @@ int32_t DisplaySurface::OnStartFrame()
 				ScePafGraphics_E7B32741(arl::Gl());
 			for (int32_t i = 0; i < (int32_t)count; i++) {
 				if (sceSharedFbUpdateProcess() >= 0)
+#ifdef PAF_BUILD_2014
+					SetDirty();
+#else
 					SetDirty(false);
+#endif
 			}
 		}
 		sceSharedFbUpdateProcessEnd();

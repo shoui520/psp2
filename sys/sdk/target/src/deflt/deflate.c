@@ -99,43 +99,43 @@ int sceDeflateDecompress(void *pDst, unsigned int uiBufSize,
 		header = DeflateWindow(&input);
 		DeflateAdvance(&input, 3);
 		type = (header >> 18) & 3;
-		if (type == 3)
-			return SCE_DEFLATE_ERROR_INVALID_FORMAT;
-		if (!type) {
-			uint32_t lenWord, nlenWord, storedLen;
-			uint32_t nextWord;
-
-			input.position = (input.position + 8) & ~7;
-			DeflateRefill(&input);
-			lenWord = DeflateWindow(&input);
-			nextWord = DeflateLoadWord(input.next);
-			input.next += 2;
-			input.word = nextWord;
-			nlenWord = DeflateWindow(&input);
-			input.word = DeflateLoadWord(input.next);
-			input.next += 2;
-			if (((int32_t)(nlenWord ^ lenWord) >> 16) != -1)
-				return SCE_DEFLATE_ERROR_INVALID_FORMAT;
-			storedLen = lenWord >> 16;
-			if (storedLen != 0) {
-				uint32_t nextDst = dst + storedLen;
-
-				if (nextDst > end)
-					return SCE_DEFLATE_ERROR_INVALID_SIZE;
-				do {
-					uint32_t byteWord = DeflateWindow(&input);
-
-					DeflateAdvance(&input, 8);
-					*(uint8_t *)(uintptr_t)dst++ = (uint8_t)(byteWord >> 16);
-				} while (dst != nextDst);
-			}
-			input.position--;
-			continue;
-		}
-
 		int minlen;
 
-		if (type == 1) {
+		if (type != 2) {
+			if (type >= 2)
+				return SCE_DEFLATE_ERROR_INVALID_FORMAT;
+			if (type == 0) {
+				uint32_t lenWord, nlenWord, storedLen;
+				uint32_t nextWord;
+
+				input.position = (input.position + 8) & ~7;
+				DeflateRefill(&input);
+				lenWord = DeflateWindow(&input);
+				nextWord = DeflateLoadWord(input.next);
+				input.next += 2;
+				input.word = nextWord;
+				nlenWord = DeflateWindow(&input);
+				input.word = DeflateLoadWord(input.next);
+				input.next += 2;
+				if (((int32_t)(nlenWord ^ lenWord) >> 16) != -1)
+					return SCE_DEFLATE_ERROR_INVALID_FORMAT;
+				storedLen = lenWord >> 16;
+				if (storedLen != 0) {
+					uint32_t nextDst = dst + storedLen;
+
+					if (nextDst > end)
+						return SCE_DEFLATE_ERROR_INVALID_SIZE;
+					do {
+						uint32_t byteWord = DeflateWindow(&input);
+
+						DeflateAdvance(&input, 8);
+						*(uint8_t *)(uintptr_t)dst++ =
+							(uint8_t)(byteWord >> 16);
+					} while (dst != nextDst);
+				}
+				input.position--;
+				continue;
+			}
 			minlen = _sceDeflateMakeHuffmanFixcode(&work);
 		} else {
 			uint32_t *clearWords = (uint32_t *)&work;

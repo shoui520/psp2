@@ -84,7 +84,11 @@ public:
 #endif
 	virtual ~DisplaySurface();
 	/* told of each draw into the surface: the page drawn has changed */
+#ifdef PAF_BUILD_2014
+	virtual void SetDirty();
+#else
 	virtual void SetDirty(bool dirty);
+#endif
 
 #ifndef PAF_BUILD_2014
 	virtual bool IsDirty()

@@ -134,7 +134,12 @@ void ScePafWidget_72F479CA(Camera *camera)
 	    camera->m_screen_height <= 0.0001f || camera->m_distance <= 0.0001f)
 		return;
 
+#ifdef PAF_BUILD_2014
+	float fov = camera->m_fov_axis != 0 ? camera->m_view_fov :
+		sce_paf_atanf(camera->m_view_height * 0.5f / camera->m_distance) * 2.0f;
+#else
 	float fov = sce_paf_atanf(camera->m_view_height * 0.5f / camera->m_distance) * 2.0f;
+#endif
 	float aspect = camera->m_view_width / camera->m_view_height;
 	float near_z = camera->m_near_z;
 	float far_z = camera->m_far_z;
@@ -158,10 +163,17 @@ Camera::Camera(Widget *parent, CreateParam *param)
 	: Widget(parent, param), m_projection_dirty(true), m_screen(NULL), m_roll(0.0f),
 	  m_roll_abs_sin(0.0f), m_screen_width(640.0f), m_screen_height(480.0f),
 	  m_distance(10.0f), m_fov(0.87266469f), m_view_width(640.0f), m_view_height(480.0f),
+#ifdef PAF_BUILD_2014
+	  m_view_fov(0.87266469f),
+#endif
 	  m_fov_axis(0), m_near_z(100.0f), m_far_z(10000.0f), m_view(math::matrix::Identity()),
 	  m_inv_view(math::matrix::Identity()), m_projection(math::matrix::Identity()),
 	  m_inv_scale(1.0f, 1.0f), m_draw_order(DRAW_ORDER_TABLE), m_update_zlist(true),
+#ifdef PAF_BUILD_2014
+	  m_mipbase(10), m_mipoffs(0)
+#else
 	  m_mipbase(10), m_mipoffs(0), m_pixel_snap(true)
+#endif
 {
 	if ((m_event_enable & 0x400) != 0)
 		EnableFocusEvent(false);
@@ -193,6 +205,39 @@ Camera::~Camera()
 
 const math::rect &Camera::PushScissor(math::rect rect, int32_t mode)
 {
+#ifdef PAF_BUILD_2014
+	if (s_scissor_tile >= 2 && m_scene != NULL) {
+		math::rect vp = m_scene->m_screen->vp;
+		math::v2 vsize = vp.size();
+		math::v2 offset(0.0f, 0.0f);
+
+		if (((int32_t)vsize.extract_x() / (int32_t)s_scissor_tile) & 1)
+			offset.set_x((float)s_scissor_tile * 0.5f);
+		if (((int32_t)vsize.extract_y() / (int32_t)s_scissor_tile) & 1)
+			offset.set_y((float)s_scissor_tile * 0.5f);
+
+		math::v2 min_pt = rect.center() - rect.size() * 0.5f;
+		math::v2 max_pt = rect.center() + rect.size() * 0.5f;
+		math::v2 min_off = min_pt + offset;
+		math::v2 max_off = max_pt + offset;
+		float tile = (float)s_scissor_tile;
+		float inv = 1.0f / (float)s_scissor_tile;
+
+		if (mode == 0) {
+			min_pt = Floor(min_off * inv) * tile - offset;
+			max_pt = Ceil(max_off * inv) * tile - offset;
+		} else if (mode == 1) {
+			min_pt = Ceil(min_off * inv) * tile - offset;
+			max_pt = Floor(max_off * inv) * tile - offset;
+		} else if (mode == 2) {
+			math::v2 half = math::v2(tile, tile) * 0.5f;
+
+			min_pt = Ceil((min_off - half) * inv) * tile - offset;
+			max_pt = Floor((max_off + half) * inv) * tile - offset;
+		}
+		rect.set((min_pt + max_pt) * 0.5f, max_pt - min_pt);
+	}
+#else
 	if (s_scissor_tile >= 2 && m_scene != NULL && m_pixel_snap) {
 		math::rect vp = m_scene->m_screen->vp;
 		math::v2 origin = FlipY(vp.left_top());
@@ -220,6 +265,7 @@ const math::rect &Camera::PushScissor(math::rect rect, int32_t mode)
 
 		rect.set(center, size);
 	}
+#endif
 	if (s_scissor_stack.size() != 0) {
 		math::rect top = s_scissor_stack.back();
 
@@ -289,8 +335,8 @@ int32_t Camera::Setup(Screen *scr)
 		return -1;
 
 	ScePafWidget_72F479CA(this);
-	m_pixel_snap = true;
 #ifndef PAF_BUILD_2014
+	m_pixel_snap = true;
 	if (SceLibKernel_9F793F84() >= CAMERA_SNAP_CHECK_VERSION) {
 		if (!scr->IsFullSize())
 			m_pixel_snap = false;
@@ -364,6 +410,17 @@ void Camera::SetScreenSize(Timer *t, float width, float height, float distance)
 		distance = half / sce_paf_tanf(m_fov * 0.5f);
 		m_distance = distance;
 	}
+#ifdef PAF_BUILD_2014
+	float view_fov = m_fov;
+
+	if (m_view_width != m_screen_width || m_view_height != m_screen_height) {
+		float view_half = (m_fov_axis != 0 ? m_view_height : m_view_width) * 0.5f;
+
+		view_fov = sce_paf_atanf(view_half / distance) * 2.0f;
+		distance = m_distance;
+	}
+	m_view_fov = view_fov;
+#endif
 	SetPos(math::v4(0.0f, 0.0f, distance, 0.0f), t, ANIM_MOVE, 0, 0.0f, NULL, NULL);
 	LookAt(m_scene, math::v4(0.0f, 0.0f, 0.0f, 0.0f), NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
 	m_projection_dirty = true;
@@ -541,6 +598,10 @@ void Camera::DrawBegin(Camera *const &camera)
 	graph::arl::ArlInstance *gl = graph::arl::Gl();
 	Camera *cam = camera;
 
+#ifdef PAF_BUILD_2014
+	if (cam == NULL)
+		return;
+#else
 	if (cam == NULL || cam->m_scene == NULL)
 		return;
 
@@ -550,6 +611,7 @@ void Camera::DrawBegin(Camera *const &camera)
 		return;
 	if (scr->OnTarget() == 0)
 		scr->OnClear();
+#endif
 	if (cam->m_draw_order == DRAW_ORDER_ZSORT)
 		gl->Enable(graph::arl::DEPTH_TEST);
 	else
@@ -565,6 +627,7 @@ void Camera::DrawBegin(Camera *const &camera)
 
 void Camera::DrawEnd(Camera *const &camera)
 {
+#ifndef PAF_BUILD_2014
 	Camera *cam = camera;
 
 	if (cam == NULL || cam->m_scene == NULL)
@@ -575,6 +638,7 @@ void Camera::DrawEnd(Camera *const &camera)
 	if (scr == NULL)
 		return;
 	scr->OnFinish();
+#endif
 
 	graph::arl::ArlInstance *gl = graph::arl::Gl();
 
@@ -603,6 +667,11 @@ void ScePafWidget_EFED66D2(Camera *camera, const math::rect &rect, graph::DrawIn
 
 	if (surface == NULL)
 		return;
+#ifdef PAF_BUILD_2014
+	Camera::DrawScissorArg arg(scr->ToSurfaceRect(rect), (graph::ScreenSurface *)surface);
+
+	graph::g_scene_draw_layer.m_ptr->Push(key & 0x7fffffff, ScePafWidget_C14CCBD4, arg);
+#else
 	if (camera->m_pixel_snap) {
 		Camera::DrawScissorArg arg(scr->ToPixelRect(rect), (graph::ScreenSurface *)surface);
 
@@ -612,14 +681,12 @@ void ScePafWidget_EFED66D2(Camera *camera, const math::rect &rect, graph::DrawIn
 
 		graph::g_scene_draw_layer.m_ptr->Push(key & 0x7fffffff, Camera::DrawScissor, arg);
 	}
+#endif
 }
 
 void ScePafWidget_4D02799A(Camera *camera, const math::rect &rect, graph::DrawInfo &info)
 {
-#ifdef PAF_BUILD_2014
-	if (!camera->m_pixel_snap)
-		return;
-#else
+#ifndef PAF_BUILD_2014
 	if (camera->m_env->IsDrawSkipped() || !camera->m_pixel_snap)
 		return;
 #endif
@@ -739,7 +806,12 @@ void Camera::DrawScissor(const DrawScissorArg &arg)
 	math::rect rect = arg.rect;
 	graph::ScreenSurface *surface = arg.surface;
 
+#ifdef PAF_BUILD_2014
+	surface->SetScissor((int32_t)rect.left(), (int32_t)rect.bottom(),
+			    (uint32_t)rect.right(), (uint32_t)rect.top(), true);
+#else
 	surface->SetScissor(rect.left(), rect.bottom(), rect.right(), rect.top(), true);
+#endif
 }
 
 /* the widget's draw objects queued where it draws: into its scene's surface entry for it, or
@@ -804,22 +876,18 @@ int32_t Camera::add_obj(Widget *root, graph::DrawInfo &info)
 
 		if (!(out.extract_x() < 0.0f) || !(out.extract_y() < 0.0f)) {
 			root->m_culled = true;
-#ifndef PAF_BUILD_2014
 			root->SetFitToScene(true);
-#endif
 		} else {
 			root->m_culled = false;
 			if (!root->m_draw_always)
 				ret = DrawWidget(this, root, info);
 
-#ifndef PAF_BUILD_2014
 			math::v2 inner = offs - s_scissor_size * 0.5f;
 
 			if (!(inner.extract_x() < 0.0f) || !(inner.extract_y() < 0.0f))
 				root->SetFitToScene(true);
 			else
 				root->SetFitToScene(false);
-#endif
 		}
 		if (root->m_draw_always)
 			return DrawWidget(this, root, info);
@@ -827,9 +895,7 @@ int32_t Camera::add_obj(Widget *root, graph::DrawInfo &info)
 	}
 culled:
 	root->m_culled = true;
-#ifndef PAF_BUILD_2014
 	root->SetFitToScene(true);
-#endif
 	return 0;
 }
 

@@ -188,10 +188,12 @@ extern "C" void ScePafGraphics_38161BF3(ArlInstance *gl)
 	gl->m_scene = SceneData();
 	gl->DefaultTextures::Term();
 	s_init_check_flag.m_value &= ~2;
+#ifndef PAF_BUILD_2014
 	if (gl->m_render_target_pool != NULL) {
 		delete gl->m_render_target_pool;
 		gl->m_render_target_pool = NULL;
 	}
+#endif
 	if (gl->m_quad_indices != NULL) {
 		delete gl->m_quad_indices;
 		gl->m_quad_indices = NULL;
@@ -250,9 +252,13 @@ ArlInstance::ArlInstance()
 	m_back_point_line_width = 0;
 	m_scissor_enabled = false;
 	m_depth_test_enabled = true;
+#ifndef PAF_BUILD_2014
 	m_blend_changed = true;
+#endif
 	m_blend_enabled = false;
+#ifndef PAF_BUILD_2014
 	m_default_blend_info.colorMask = SCE_GXM_COLOR_MASK_ALL;
+#endif
 	m_blend_info.colorMask = SCE_GXM_COLOR_MASK_ALL;
 	m_blend_info.colorFunc = SCE_GXM_BLEND_FUNC_ADD;
 	m_blend_info.alphaFunc = SCE_GXM_BLEND_FUNC_ADD;
@@ -260,6 +266,7 @@ ArlInstance::ArlInstance()
 	m_blend_info.colorDst = SCE_GXM_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 	m_blend_info.alphaSrc = SCE_GXM_BLEND_FACTOR_ONE;
 	m_blend_info.alphaDst = SCE_GXM_BLEND_FACTOR_ZERO;
+#ifndef PAF_BUILD_2014
 	m_default_blend_info.colorSrc = SCE_GXM_BLEND_FACTOR_SRC_ALPHA;
 	m_default_blend_info.colorDst = SCE_GXM_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 	m_debug_color_shift = false;
@@ -269,9 +276,12 @@ ArlInstance::ArlInstance()
 	m_debug_surface_draw = false;
 	m_default_blend_info.colorFunc = SCE_GXM_BLEND_FUNC_NONE;
 	m_default_blend_info.alphaFunc = SCE_GXM_BLEND_FUNC_NONE;
+#endif
 	m_frame_start = get_time_internal();
+#ifndef PAF_BUILD_2014
 	m_marker_depth = 0;
 	m_marker = NULL;
+#endif
 }
 
 ArlInstance::~ArlInstance()
@@ -353,6 +363,35 @@ void ScePafGraphics_93CBC733(ArlInstance *gl, const Rect &viewport)
 		ScePafGraphics_AA7B8DB5(gl, gl->m_viewport.Top().m_viewport, gl->m_surface_height);
 }
 
+#ifdef PAF_BUILD_2014
+static inline void EndSceneInternal(ArlInstance *gl, SceGxmNotification *notification)
+{
+	gl->m_in_scene = false;
+
+	SceGxmNotification *vertex_notification = NULL;
+	SceGxmNotification *fragment_notification = NULL;
+
+	if (notification != NULL) {
+		vertex_notification = notification;
+		fragment_notification = notification + 1;
+	}
+	if (gl->m_scene.m_fbo != NULL)
+		sceGxmEndScene(gl->m_context, vertex_notification, fragment_notification);
+	else if (gl->m_scene.m_surface != NULL)
+		static_cast<ScreenSurface *>(gl->m_scene.m_surface)
+			->End(vertex_notification, fragment_notification);
+	gl->m_scene = SceneData();
+	gl->m_surface_width = 0;
+	gl->m_surface_height = 0;
+	gl->m_color_surface = NULL;
+}
+
+void ScePafGraphics_E7B32741(ArlInstance *gl)
+{
+	if (gl->m_scene.IsSet())
+		EndSceneInternal(gl, NULL);
+}
+#else
 void ScePafGraphics_4581906A(ArlInstance *gl, SceGxmNotification *notification)
 {
 	if (gl->m_in_scene) {
@@ -387,6 +426,7 @@ void ScePafGraphics_E7B32741(ArlInstance *gl)
 	if (gl->m_scene.IsSet())
 		ScePafGraphics_4581906A(gl, NULL);
 }
+#endif
 
 namespace paf {
 namespace graph {
@@ -398,6 +438,11 @@ void ArlInstance::SetSceneData(intrusive_ptr<Surface> surface)
 	ScreenSurface *screen = static_cast<ScreenSurface *>(surface.get());
 
 	m_next_scene.m_surface = screen;
+#ifdef PAF_BUILD_2014
+	if (screen != NULL)
+		m_next_scene.m_bounds = Rect(screen->m_scissor_x0, screen->m_scissor_y0,
+					     screen->m_scissor_x1, screen->m_scissor_y1);
+#else
 	if (screen == NULL) {
 		m_next_scene.m_memory = NULL;
 	} else {
@@ -414,6 +459,7 @@ void ArlInstance::SetSceneData(intrusive_ptr<Surface> surface)
 		m_next_scene.m_scale_mode = screen->m_scale_mode;
 		m_next_scene.m_full_size = screen->m_full_size;
 	}
+#endif
 	if (m_scene.IsSet() && old != m_next_scene)
 		ScePafGraphics_E7B32741(this);
 }
@@ -433,6 +479,36 @@ void ArlInstance::SetSceneData(FrameBufferObject *fbo)
 
 void ScePafGraphics_01CA92B7(ArlInstance *gl, uint32_t flags)
 {
+#ifdef PAF_BUILD_2014
+	gl->m_in_scene = true;
+	if (gl->m_scene.m_fbo != NULL) {
+		ScePafGraphics_EA8C8FA0(gl, gl->m_scene.m_fbo->GetSize(),
+					gl->m_scene.m_fbo->GetColorSurface());
+
+		SceGxmRenderTarget *target = gl->m_scene.m_fbo->GetRenderTarget();
+
+		sceGxmBeginScene(gl->m_context, flags, target, NULL, NULL, NULL,
+				 gl->m_scene.m_fbo->GetColorSurface(),
+				 gl->m_scene.m_fbo->GetDepthStencilSurface());
+	} else {
+		ScreenSurface *screen = static_cast<ScreenSurface *>(gl->m_scene.m_surface);
+
+		if (screen != NULL) {
+			SceGxmColorSurface *surface =
+				screen->GetRawColorSurface(screen->GetPageCounter());
+			Vector2 size((float)screen->GetWidth(), (float)screen->GetHeight());
+
+			ScePafGraphics_EA8C8FA0(gl, SurfaceSize((int32_t)size.getX(),
+								(int32_t)size.getY()),
+						surface);
+			screen->Begin(flags);
+		} else {
+			gl->m_surface_width = 0;
+			gl->m_surface_height = 0;
+			gl->m_color_surface = NULL;
+		}
+	}
+#else
 	if (gl->m_scene.m_fbo != NULL) {
 		ScePafGraphics_EA8C8FA0(gl, gl->m_scene.m_fbo->GetSize(),
 					gl->m_scene.m_fbo->GetColorSurface());
@@ -467,6 +543,7 @@ void ScePafGraphics_01CA92B7(ArlInstance *gl, uint32_t flags)
 			gl->m_color_surface = NULL;
 		}
 	}
+#endif
 }
 
 void ScePafGraphics_199BD5F2(ArlInstance *gl, uint32_t flags)
@@ -484,17 +561,21 @@ void ScePafGraphics_29F5AA8B(ArlInstance *gl, SceGxmNotification *notification, 
 {
 	gl->m_scene_requested = false;
 	if (end)
+#ifdef PAF_BUILD_2014
+		EndSceneInternal(gl, notification);
+#else
 		ScePafGraphics_4581906A(gl, notification);
+#endif
 }
 
 namespace paf {
 namespace graph {
 namespace arl {
 
+#ifndef PAF_BUILD_2014
 void ArlInstance::Color(math::v4 color)
 {
 	m_color = color;
-#ifndef PAF_BUILD_2014
 	if (ScePafMisc_C51EF81D() & 4) {
 		if (m_debug_color_shift) {
 			math::v4 shift(0.2f, 0.2f, 0.2f, 0.0f);
@@ -507,15 +588,17 @@ void ArlInstance::Color(math::v4 color)
 		if (m_debug_alpha_double)
 			m_color = mulPerElem(m_color.getImpl(), Vector4(1.0f, 1.0f, 1.0f, 2.0f));
 	}
-#endif
 }
+#endif
 
 void ArlInstance::Enable(EnableCap cap)
 {
 	switch (cap) {
 	case BLEND:
+#ifndef PAF_BUILD_2014
 		if (!m_blend_enabled)
 			m_blend_changed = true;
+#endif
 		m_blend_enabled = true;
 		break;
 	case DEPTH_TEST:
@@ -539,6 +622,7 @@ void ArlInstance::Enable(EnableCap cap)
 		sceGxmSetTwoSidedEnable(m_context, SCE_GXM_TWO_SIDED_ENABLED);
 		m_two_sided_enabled = true;
 		break;
+#ifndef PAF_BUILD_2014
 	case DEBUG_COLOR_SHIFT:
 		m_debug_color_shift = true;
 		break;
@@ -548,6 +632,7 @@ void ArlInstance::Enable(EnableCap cap)
 	case DEBUG_SURFACE_DRAW:
 		m_debug_surface_draw = true;
 		break;
+#endif
 	}
 }
 
@@ -555,8 +640,10 @@ void ArlInstance::Disable(EnableCap cap)
 {
 	switch (cap) {
 	case BLEND:
+#ifndef PAF_BUILD_2014
 		if (m_blend_enabled)
 			m_blend_changed = true;
+#endif
 		m_blend_enabled = false;
 		break;
 	case DEPTH_TEST:
@@ -579,6 +666,7 @@ void ArlInstance::Disable(EnableCap cap)
 		sceGxmSetTwoSidedEnable(m_context, SCE_GXM_TWO_SIDED_DISABLED);
 		m_two_sided_enabled = false;
 		break;
+#ifndef PAF_BUILD_2014
 	case DEBUG_COLOR_SHIFT:
 		m_debug_color_shift = false;
 		break;
@@ -588,6 +676,7 @@ void ArlInstance::Disable(EnableCap cap)
 	case DEBUG_SURFACE_DRAW:
 		m_debug_surface_draw = false;
 		break;
+#endif
 	}
 }
 
@@ -612,10 +701,14 @@ void ArlInstance::ColorMask(bool r, bool g, bool b, bool a)
 	uint8_t mask = (r ? SCE_GXM_COLOR_MASK_R : 0) | (g ? SCE_GXM_COLOR_MASK_G : 0) |
 		       (b ? SCE_GXM_COLOR_MASK_B : 0) | (a ? SCE_GXM_COLOR_MASK_A : 0);
 
+#ifdef PAF_BUILD_2014
+	m_blend_info.colorMask = mask;
+#else
 	if (m_blend_info.colorMask != mask) {
 		m_blend_info.colorMask = mask;
 		m_blend_changed = true;
 	}
+#endif
 }
 
 /* Sony's: the back face's function set on the front */
@@ -642,6 +735,12 @@ void ArlInstance::CullMode(CullModeEnum mode)
 void ArlInstance::BlendFunc(BlendingFactor src_rgb, BlendingFactor dst_rgb, BlendingFactor src_a,
 			    BlendingFactor dst_a)
 {
+#ifdef PAF_BUILD_2014
+	m_blend_info.colorSrc = src_rgb;
+	m_blend_info.colorDst = dst_rgb;
+	m_blend_info.alphaSrc = src_a;
+	m_blend_info.alphaDst = dst_a;
+#else
 	if (m_blend_info.colorSrc != src_rgb || m_blend_info.alphaSrc != src_a ||
 	    m_blend_info.colorDst != dst_rgb || m_blend_info.alphaDst != dst_a) {
 		m_blend_changed = true;
@@ -650,15 +749,21 @@ void ArlInstance::BlendFunc(BlendingFactor src_rgb, BlendingFactor dst_rgb, Blen
 		m_blend_info.alphaSrc = src_a;
 		m_blend_info.alphaDst = dst_a;
 	}
+#endif
 }
 
 void ArlInstance::BlendEquation(BlendEquationEnum rgb, BlendEquationEnum a)
 {
+#ifdef PAF_BUILD_2014
+	m_blend_info.colorFunc = rgb;
+	m_blend_info.alphaFunc = a;
+#else
 	if (m_blend_info.colorFunc != rgb || m_blend_info.alphaFunc != a) {
 		m_blend_changed = true;
 		m_blend_info.colorFunc = rgb;
 		m_blend_info.alphaFunc = a;
 	}
+#endif
 }
 
 }

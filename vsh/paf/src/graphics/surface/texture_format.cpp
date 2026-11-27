@@ -113,7 +113,11 @@ SceGxmTextureFormat GetTextureFormat(ImageMode format, bool reserved)
 
 SceGxmTextureFormat GetTextureFormat(const SurfaceBase *surface)
 {
+#ifdef PAF_BUILD_2014
+	return TextureFormat(surface->m_format, false);
+#else
 	return TextureFormat(surface->m_format, surface->m_reserved);
+#endif
 }
 
 }

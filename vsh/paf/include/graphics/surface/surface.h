@@ -71,7 +71,9 @@ public:
 	int32_t PixelsToBytes(int32_t pixels) const;
 
 	ImageMode m_format;
+#ifndef PAF_BUILD_2014
 	bool m_reserved;
+#endif
 	/* log2 of the bits per pixel */
 	int32_t m_pixel_bits;
 };
@@ -278,7 +280,11 @@ public:
 	Surface(SceGxmTexture *texture, int32_t width, int32_t height);
 	virtual ~Surface();
 	/* told of each draw into the surface, with the front end's third debug cap: nothing */
+#ifdef PAF_BUILD_2014
+	virtual void SetDirty() {}
+#else
 	virtual void SetDirty(bool dirty) {}
+#endif
 #ifndef PAF_BUILD_2014
 	/* whether the page drawn into has been drawn to: a plain surface never says so */
 	virtual bool IsDirty() { return false; }

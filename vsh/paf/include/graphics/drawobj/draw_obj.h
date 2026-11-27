@@ -218,6 +218,9 @@ public:
 #endif
 
 	void BindDrawStyle();
+#ifdef PAF_BUILD_2014
+	void SetDrawStyle(const DrawStyle &style);
+#endif
 	void SetShader(const common::SharedPtr<Shader> &shader);
 
 	bool IsDirty()
@@ -281,8 +284,10 @@ protected:
 	}
 };
 
+#ifndef PAF_BUILD_2014
 /* the style bound with the default marker: what it already is is not bound again */
 void BindDrawStyle(DrawStyle style);
+#endif
 
 /* the draw calls the renderer draws */
 common::SharedPtr<DrawEnv> &DrawCalls();
@@ -335,9 +340,11 @@ public:
 	list<DrawObj *> m_drawobj_list;
 	math::v4 m_color;
 	int32_t m_blend;
+#ifndef PAF_BUILD_2014
 	/* -1: leave the draw object's bit as it is */
 	int8_t m_deepen_color;
 	int8_t m_reduce_transparency;
+#endif
 };
 
 /* the style draw objects are made with (blend 1, depth 1), exported as its word as the plane and

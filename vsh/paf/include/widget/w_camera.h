@@ -136,6 +136,9 @@ public:
 	/* the size the projection is made for, and the axis the field of view is taken on */
 	float m_view_width;
 	float m_view_height;
+#ifdef PAF_BUILD_2014
+	float m_view_fov;
+#endif
 	int32_t m_fov_axis;
 	float m_near_z;
 	float m_far_z;
@@ -148,8 +151,10 @@ public:
 	bool m_update_zlist;
 	int32_t m_mipbase;
 	int32_t m_mipoffs;
+#ifndef PAF_BUILD_2014
 	/* the scissor rectangles are snapped to the screen's pixels */
 	bool m_pixel_snap;
+#endif
 };
 
 /* animates the camera's roll from m_anim_data[0] to m_anim_data[1] (Sony's name from its

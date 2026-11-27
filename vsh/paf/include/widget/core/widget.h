@@ -929,7 +929,14 @@ public:
 	virtual int32_t SetSize_core_force(const math::v4 &v, uint32_t notify_layout,
 					   bool force);
 	virtual void UpdateSize();
-#ifndef PAF_BUILD_2014
+#ifdef PAF_BUILD_2014
+	/* 2014 sets m_focus_hidden (same bit position as 3.65's m_fit_to_scene) inline without a
+	   vtable slot */
+	void SetFitToScene(bool on_off)
+	{
+		m_focus_hidden = on_off;
+	}
+#else
 	/* Text keeps the flag only while it fits in its scene */
 	virtual void SetFitToScene(bool on_off)
 	{
@@ -1406,9 +1413,7 @@ public:
 	void SetCulled(bool culled)
 	{
 		m_culled = culled;
-#ifndef PAF_BUILD_2014
 		SetFitToScene(culled);
-#endif
 		for (list<Widget *>::iterator it = m_children.begin(); it != m_children.end(); ++it)
 			(*it)->SetCulled(culled);
 	}
@@ -1987,7 +1992,11 @@ public:
 	ResolutionData *m_pos_array;
 	ResolutionData *m_size_array;
 	ResolutionData *m_rot_array;
+#ifdef PAF_BUILD_2014
+	int8_t m_resolution_id;
+#else
 	uint8_t m_resolution_id;
+#endif
 	uint8_t m_resolution_id_pre;
 	/* the resolution it changes to over m_resolution_timer_next, 0xff for none (name ours) */
 	uint8_t m_resolution_id_next;

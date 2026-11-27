@@ -31,20 +31,26 @@ static inline __attribute__((always_inline)) math::v3 Range3(float x, float y, f
 	return math::v3(x, y, z);
 }
 
+#ifndef PAF_BUILD_2014
 static inline __attribute__((always_inline)) math::v4 Range4(float x, float y, float z, float w)
 {
 	return math::v4(x, y, z, w);
 }
+#endif
 
 static const math::v3 s_pos_min = Range3(-500.0f, -500.0f, -500.0f);
 static const math::v3 s_pos_max = Range3(500.0f, 500.0f, 500.0f);
 static const math::v3 s_size_min = Range3(20.0f, 20.0f, 0.0f);
 static const math::v3 s_size_max = Range3(1000.0f, 1000.0f, 1000.0f);
+#ifndef PAF_BUILD_2014
 static const math::v4 s_size_max4 = Range4(20.0f, 20.0f, 1000.0f, 1000.0f);
+#endif
 static const math::v3 s_rot_min = Range3(-3.14159265f, -3.14159265f, -3.14159265f);
 static const math::v3 s_rot_max = Range3(3.14159265f, 3.14159265f, 3.14159265f);
+#ifndef PAF_BUILD_2014
 static const math::v4 s_rect_min = Range4(-500.0f, -500.0f, 0.0f, 0.0f);
 static const math::v4 s_rect_max = Range4(500.0f, 500.0f, 1000.0f, 1000.0f);
+#endif
 
 const char VersatileParam::m_param_name[] = "resource_base";
 
@@ -70,7 +76,10 @@ VersatileParam::~VersatileParam()
 }
 
 /* the subclasses' Create call it whole */
-__attribute__((noinline)) int32_t VersatileParam::Create(int32_t mode)
+#ifndef PAF_BUILD_2014
+__attribute__((noinline))
+#endif
+int32_t VersatileParam::Create(int32_t mode)
 {
 	ResourceParam *serial = m_serial;
 
@@ -155,8 +164,10 @@ const char DrawObjParam::m_param_name[] = "drawobj";
 const char *DrawObjParam::s_names[] = {
 	"color",
 	"blend",
+#ifndef PAF_BUILD_2014
 	"deepen_color",
 	"reduce_transparency",
+#endif
 };
 
 const char *DrawObjParam::GetParamName() const
@@ -173,8 +184,10 @@ int32_t DrawObjParam::Init()
 {
 	m_color = math::v4(1.0f, 1.0f, 1.0f, 1.0f);
 	m_blend = 1;
+#ifndef PAF_BUILD_2014
 	m_deepen_color = -1;
 	m_reduce_transparency = -1;
+#endif
 	return 0;
 }
 
@@ -207,10 +220,12 @@ int32_t DrawObjParam::Create(int32_t mode)
 		m_serial->AddParam(s_names[0], &m_color, ResourceParam::SEMANTIC_VEC4);
 	if (m_serial != NULL)
 		m_serial->AddParam(s_names[1], &m_blend, ResourceParam::SEMANTIC_INT);
+#ifndef PAF_BUILD_2014
 	if (m_serial != NULL)
 		m_serial->AddParam(s_names[2], &m_deepen_color, ResourceParam::SEMANTIC_BOOL);
 	if (m_serial != NULL)
 		m_serial->AddParam(s_names[3], &m_reduce_transparency, ResourceParam::SEMANTIC_BOOL);
+#endif
 	return 0;
 }
 
@@ -224,11 +239,15 @@ int32_t DrawObjParam::SetEach(DrawObj *obj)
 	DrawStyle style = obj->m_draw_style;
 
 	style.blend = m_blend;
+#ifdef PAF_BUILD_2014
+	obj->SetDrawStyle(style);
+#else
 	if (m_deepen_color != -1)
 		style.deepen_color = m_deepen_color;
 	if (m_reduce_transparency != -1)
 		style.reduce_transparency = m_reduce_transparency;
 	obj->m_draw_style = style;
+#endif
 	return 0;
 }
 
@@ -242,8 +261,10 @@ int32_t DrawObjParam::GetEach(DrawObj *obj)
 	DrawStyle style = obj->m_draw_style;
 
 	m_blend = style.blend;
+#ifndef PAF_BUILD_2014
 	m_deepen_color = style.deepen_color;
 	m_reduce_transparency = style.reduce_transparency;
+#endif
 	return 0;
 }
 
@@ -624,27 +645,35 @@ int32_t WidgetLayoutParam::GetEach(Widget *widget)
 	if (m_resolution_num >= widget->m_rot_num)
 		sce_paf_memcpy(m_rot_array, widget->m_rot_array,
 			       widget->m_rot_num * sizeof(ResolutionData));
-	uint32_t resolution_id = widget->m_resolution_id;
-	Scene *scene = m_widget->m_scene;
-
-	m_resolution_id = resolution_id;
-	if (scene != NULL) {
 #ifdef PAF_BUILD_2014
-		SceneResolution *resolution = scene->m_env != NULL
-			? scene->m_env->FindResolution(scene->m_env->m_resolutions,
-						       scene->m_env->m_resolution_num,
-						       resolution_id)
-			: NULL;
-#else
-		SceneResolution *resolution =
-			ScePafWidget_CDC90BA2(scene->m_env_param, resolution_id);
-#endif
+	int32_t resolution_id = widget->m_resolution_id;
+	Environment *env = m_widget->m_env;
+
+	m_resolution_id = (uint32_t)resolution_id;
+	if (env != NULL) {
+		SceneResolution *resolution = env->FindResolution(
+			env->m_resolutions, env->m_resolution_num, resolution_id);
 
 		if (resolution != NULL)
 			m_base_resolution_id = resolution->m_base_id;
 		else
 			m_base_resolution_id = -1;
 	}
+#else
+	uint32_t resolution_id = widget->m_resolution_id;
+	Scene *scene = m_widget->m_scene;
+
+	m_resolution_id = resolution_id;
+	if (scene != NULL) {
+		SceneResolution *resolution =
+			ScePafWidget_CDC90BA2(scene->m_env_param, resolution_id);
+
+		if (resolution != NULL)
+			m_base_resolution_id = resolution->m_base_id;
+		else
+			m_base_resolution_id = -1;
+	}
+#endif
 	return 0;
 }
 

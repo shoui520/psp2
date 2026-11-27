@@ -170,10 +170,14 @@ int32_t ScreenSurface::CreateRenderTarget(SceGxmRenderTarget **render_target,
 
 	math::v2 scene_size;
 
+#ifdef PAF_BUILD_2014
+	scene_size = math::v2((float)m_width, (float)m_height);
+#else
 	if (m_scale_mode == 2 && !m_full_size)
 		scene_size = math::v2((float)m_width, (float)m_height) / 2.0f;
 	else
 		scene_size = math::v2((float)m_width, (float)m_height);
+#endif
 	sce_paf_memset(&params, 0, sizeof(params));
 	params.flags = 0;
 	params.width = (int32_t)scene_size.extract_x();
@@ -182,6 +186,9 @@ int32_t ScreenSurface::CreateRenderTarget(SceGxmRenderTarget **render_target,
 
 	SceGxmMultisampleMode multisample_mode;
 
+#ifdef PAF_BUILD_2014
+	multisample_mode = SCE_GXM_MULTISAMPLE_NONE;
+#else
 	if (m_scale_mode == 0)
 		multisample_mode = SCE_GXM_MULTISAMPLE_NONE;
 	else if (m_scale_mode == 1)
@@ -190,6 +197,7 @@ int32_t ScreenSurface::CreateRenderTarget(SceGxmRenderTarget **render_target,
 		multisample_mode = SCE_GXM_MULTISAMPLE_4X;
 	else
 		multisample_mode = SCE_GXM_MULTISAMPLE_NONE;
+#endif
 	params.multisampleMode = multisample_mode;
 	params.multisampleLocations = 0;
 	params.driverMemBlock = -1;
@@ -229,9 +237,16 @@ int32_t ScreenSurface::SetColorSurface(int32_t page, SceGxmColorFormat format,
 {
 	if (m_color_surfaces == NULL)
 		return SCE_PAF_ERROR_GRAPHICS_INVALID_POINTER;
+#ifdef PAF_BUILD_2014
+	return sceGxmColorSurfaceInit(&m_color_surfaces[page], format, type,
+				      SCE_GXM_COLOR_SURFACE_SCALE_NONE,
+				      SCE_GXM_OUTPUT_REGISTER_SIZE_32BIT, m_width, m_height,
+				      stride, data);
+#else
 	return sceGxmColorSurfaceInit(&m_color_surfaces[page], format, type,
 				      (SceGxmColorSurfaceScaleMode)(m_full_size != 0),
 				      m_output_register_size, m_width, m_height, stride, data);
+#endif
 }
 
 SceGxmColorSurfaceType ScreenSurface::ConvertColorSurfaceOrder(ImageOrder order)
@@ -280,6 +295,30 @@ int32_t ScreenSurface::InitColorSurface()
 	return 0;
 }
 
+#ifdef PAF_BUILD_2014
+void ScreenSurface::SetScissor(int32_t left, int32_t top, uint32_t right, uint32_t bottom,
+			       bool update)
+{
+	m_scissor_x0 = left;
+	m_scissor_y0 = top;
+	m_scissor_x1 = (int32_t)right;
+	m_scissor_y1 = (int32_t)bottom;
+	if (update) {
+		bool drawn = false;
+
+		if (arl::Gl()->m_in_scene) {
+			intrusive_ptr<Surface> surface(arl::Gl()->m_next_scene.m_surface);
+
+			if (surface.get() == this)
+				drawn = true;
+		}
+		if (drawn) {
+			EndScene();
+			BeginScene();
+		}
+	}
+}
+#else
 void ScreenSurface::SetScissor(float x0, float y0, float x1, float y1, bool update)
 {
 	int32_t scissor_x0 = ClampToSize((int32_t)sce_paf_roundf(x0), m_width);
@@ -309,6 +348,7 @@ void ScreenSurface::SetScissor(float x0, float y0, float x1, float y1, bool upda
 		}
 	}
 }
+#endif
 
 int32_t ScreenSurface::Initialize(int32_t width, int32_t height, ImageMode format,
 				  ImageOrder order, int32_t num_page, ImageMode depth_format,
@@ -335,7 +375,11 @@ int32_t ScreenSurface::Initialize(int32_t width, int32_t height, ImageMode forma
 	}
 	if (m_num_page > 1)
 		ActivatePage(1);
+#ifdef PAF_BUILD_2014
+	SetScissor(0, 0, (uint32_t)width, (uint32_t)height, false);
+#else
 	SetScissor(0.0f, 0.0f, (float)width, (float)height, false);
+#endif
 	return 0;
 }
 
@@ -343,19 +387,24 @@ ScreenSurface::ScreenSurface(const Param *param, void *bp, SurfaceType surf_type
 	: Surface(param->width, param->height, param->format, param->order, surf_type,
 		  param->num_page, bp, 0, 1, false),
 	  m_color_surfaces(NULL), m_render_target(NULL), m_depth_stencil_surface(NULL),
-	  m_own_render_target(false), m_yuv_csc_index(0),
-	  m_yuv_profile(SCE_GXM_YUV_PROFILE_BT601_STANDARD),
+	  m_own_render_target(false),
+#ifndef PAF_BUILD_2014
+	  m_yuv_csc_index(0), m_yuv_profile(SCE_GXM_YUV_PROFILE_BT601_STANDARD),
 	  m_output_register_size(SCE_GXM_OUTPUT_REGISTER_SIZE_32BIT), m_max_width(0),
-	  m_max_height(0), m_scale_mode(0), m_full_size(false), m_memory(NULL), m_depth_offset(0)
+	  m_max_height(0), m_scale_mode(0), m_full_size(false),
+#endif
+	  m_memory(NULL), m_depth_offset(0)
 {
 	Initialize(param->width, param->height, param->format, param->order, param->num_page,
 		   param->depth_format, param->depth_order, bp);
+#ifndef PAF_BUILD_2014
 	m_full_size = param->full_size;
 	m_scale_mode = param->scale_mode;
 	if (bp != NULL) {
 		m_max_width = param->width;
 		m_max_height = param->height;
 	}
+#endif
 	if (surf_type == TypeRenderTarget) {
 		if (InitColorSurface() >= 0)
 			CreateRenderTarget(&m_render_target, 0);
@@ -368,16 +417,21 @@ ScreenSurface::ScreenSurface(int32_t width, int32_t height, ImageMode format, Im
 			     void *bp, SurfaceType surf_type)
 	: Surface(width, height, format, order, surf_type, num_page, bp, 0, 1, false),
 	  m_color_surfaces(NULL), m_render_target(NULL), m_depth_stencil_surface(NULL),
-	  m_own_render_target(false), m_yuv_csc_index(0),
-	  m_yuv_profile(SCE_GXM_YUV_PROFILE_BT601_STANDARD),
+	  m_own_render_target(false),
+#ifndef PAF_BUILD_2014
+	  m_yuv_csc_index(0), m_yuv_profile(SCE_GXM_YUV_PROFILE_BT601_STANDARD),
 	  m_output_register_size(SCE_GXM_OUTPUT_REGISTER_SIZE_32BIT), m_max_width(0),
-	  m_max_height(0), m_scale_mode(0), m_full_size(false), m_memory(NULL), m_depth_offset(0)
+	  m_max_height(0), m_scale_mode(0), m_full_size(false),
+#endif
+	  m_memory(NULL), m_depth_offset(0)
 {
 	Initialize(width, height, format, order, num_page, depth_format, depth_order, bp);
+#ifndef PAF_BUILD_2014
 	if (bp != NULL) {
 		m_max_width = width;
 		m_max_height = height;
 	}
+#endif
 	if (surf_type == TypeRenderTarget) {
 		if (InitColorSurface() >= 0)
 			CreateRenderTarget(&m_render_target, 0);
@@ -390,10 +444,13 @@ ScreenSurface::ScreenSurface(SurfacePool *pool, int32_t width, int32_t height, I
 			     ImageOrder depth_order, SurfaceType surf_type)
 	: Surface(pool, width, height, format, order, surf_type, num_page, 1, false),
 	  m_color_surfaces(NULL), m_render_target(NULL), m_depth_stencil_surface(NULL),
-	  m_own_render_target(false), m_yuv_csc_index(0),
-	  m_yuv_profile(SCE_GXM_YUV_PROFILE_BT601_STANDARD),
+	  m_own_render_target(false),
+#ifndef PAF_BUILD_2014
+	  m_yuv_csc_index(0), m_yuv_profile(SCE_GXM_YUV_PROFILE_BT601_STANDARD),
 	  m_output_register_size(SCE_GXM_OUTPUT_REGISTER_SIZE_32BIT), m_max_width(0),
-	  m_max_height(0), m_scale_mode(0), m_full_size(false), m_memory(NULL), m_depth_offset(0)
+	  m_max_height(0), m_scale_mode(0), m_full_size(false),
+#endif
+	  m_memory(NULL), m_depth_offset(0)
 {
 	Initialize(width, height, format, order, num_page, depth_format, depth_order, NULL);
 	if (surf_type == TypeRenderTarget) {
@@ -408,10 +465,13 @@ ScreenSurface::ScreenSurface(SceGxmRenderTarget *render_target, SurfacePool *poo
 			     int32_t num_page, ImageMode depth_format, ImageOrder depth_order)
 	: Surface(pool, width, height, format, order, TypeRenderTarget, num_page, 1, false),
 	  m_color_surfaces(NULL), m_render_target(NULL), m_depth_stencil_surface(NULL),
-	  m_own_render_target(false), m_yuv_csc_index(0),
-	  m_yuv_profile(SCE_GXM_YUV_PROFILE_BT601_STANDARD),
+	  m_own_render_target(false),
+#ifndef PAF_BUILD_2014
+	  m_yuv_csc_index(0), m_yuv_profile(SCE_GXM_YUV_PROFILE_BT601_STANDARD),
 	  m_output_register_size(SCE_GXM_OUTPUT_REGISTER_SIZE_32BIT), m_max_width(0),
-	  m_max_height(0), m_scale_mode(0), m_full_size(false), m_memory(NULL), m_depth_offset(0)
+	  m_max_height(0), m_scale_mode(0), m_full_size(false),
+#endif
+	  m_memory(NULL), m_depth_offset(0)
 {
 	Initialize(width, height, format, order, num_page, depth_format, depth_order, NULL);
 	if (InitColorSurface() >= 0) {
@@ -438,10 +498,14 @@ int32_t ScreenSurface::Begin_(SceGxmRenderTarget *render_target, SceGxmSyncObjec
 
 	math::v2 scene_size;
 
+#ifdef PAF_BUILD_2014
+	scene_size = math::v2((float)m_width, (float)m_height);
+#else
 	if (m_scale_mode == 2 && !m_full_size)
 		scene_size = math::v2((float)m_width, (float)m_height) / 2.0f;
 	else
 		scene_size = math::v2((float)m_width, (float)m_height);
+#endif
 
 	arl::ArlInstance *gl = arl::Gl();
 	arl::Rect viewport;
@@ -464,7 +528,9 @@ int32_t ScreenSurface::Begin_(SceGxmRenderTarget *render_target, SceGxmSyncObjec
 	if (y1 > m_height - 1)
 		y1 = m_height - 1;
 	sceGxmColorSurfaceSetClip(color_surface, x0, y0, x1, y1);
+#ifndef PAF_BUILD_2014
 	sceGxmSetYuvProfile(arl::Gl()->m_context, m_yuv_csc_index, m_yuv_profile);
+#endif
 
 	int32_t ret = sceGxmBeginScene(context, flags, render_target, NULL, NULL, sync_object,
 				       color_surface, depth_stencil);
@@ -551,10 +617,12 @@ int32_t ScreenSurface::Resize(int32_t width, int32_t height)
 		return SCE_PAF_ERROR_NOT_PERMITTED;
 	if (m_width == width && m_height == height)
 		return ret;
+#ifndef PAF_BUILD_2014
 	if (m_max_width != 0 && width > m_max_width)
 		return SCE_PAF_ERROR_INVALID_ARGUMENT;
 	if (m_max_height != 0 && height > m_max_height)
 		return SCE_PAF_ERROR_INVALID_ARGUMENT;
+#endif
 	ret = Surface::Resize(width, height);
 	if (ret == 0) {
 		ret = InitColorSurface();

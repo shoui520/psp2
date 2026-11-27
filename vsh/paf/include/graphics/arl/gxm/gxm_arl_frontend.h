@@ -278,14 +278,18 @@ public:
 	/* the projection stack, marked changed for whoever may load it (name ours) */
 	MatrixStack &Projection()
 	{
+#ifndef PAF_BUILD_2014
 		m_projection_changed = true;
+#endif
 		return m_projection;
 	}
 
 	/* the view stack, marked changed the same way (name ours) */
 	MatrixStack &View()
 	{
+#ifndef PAF_BUILD_2014
 		m_view_changed = true;
+#endif
 		return m_view;
 	}
 
@@ -293,24 +297,30 @@ public:
 	   (names ours) */
 	math::matrix GetModelViewProjection()
 	{
+#ifdef PAF_BUILD_2014
+		return m_projection.Top().m_matrix * m_view.Top().m_matrix * m_model.Top().m_matrix;
+#else
 		if (m_projection_changed || m_view_changed) {
 			m_view_projection = Projection().Top().m_matrix * View().Top().m_matrix;
 			m_projection_changed = false;
 			m_view_changed = false;
 		}
 		return m_view_projection * m_model.Top().m_matrix;
+#endif
 	}
 
 	MatrixStack m_projection;
 	MatrixStack m_model;
 	MatrixStack m_view;
 	MatrixStack m_texture;
+#ifndef PAF_BUILD_2014
 	/* the projection times the view, as GetModelViewProjection last worked it out */
 	math::matrix m_view_projection;
 	/* set by a camera that loads the view or the projection stack */
 	bool m_view_changed;
 	bool m_projection_changed;
 	uint8_t m_reserved2[2];
+#endif
 	ViewportStack m_viewport;
 };
 
@@ -320,7 +330,11 @@ class ShaderState {
 public:
 	enum {
 		/* one for each VertexArraySpec::Predefined layout */
+#ifdef PAF_BUILD_2014
+		MAX_SLOTS = 34,
+#else
 		MAX_SLOTS = 36,
+#endif
 		/* a spec for each GXM index source, kept 16-bit index, instance, then 32-bit */
 		MAX_SPEC_MODES = 4
 	};
@@ -339,6 +353,20 @@ public:
 /* the frame buffer object or surface a scene draws into, and the part of it drawn */
 class SceneData {
 public:
+#ifdef PAF_BUILD_2014
+	SceneData() : m_fbo(NULL), m_surface(NULL)
+	{
+	}
+
+	bool operator!=(const SceneData &other) const
+	{
+		return m_fbo != other.m_fbo || m_surface != other.m_surface ||
+		       m_bounds.m_x0 != other.m_bounds.m_x0 ||
+		       m_bounds.m_y0 != other.m_bounds.m_y0 ||
+		       m_bounds.m_x1 != other.m_bounds.m_x1 ||
+		       m_bounds.m_y1 != other.m_bounds.m_y1;
+	}
+#else
 	SceneData()
 		: m_fbo(NULL), m_surface(NULL), m_memory(NULL), m_yuv_csc_index(0),
 		  m_yuv_profile(SCE_GXM_YUV_PROFILE_BT601_STANDARD)
@@ -359,6 +387,7 @@ public:
 		       (m_memory == other.m_memory &&
 			(m_scale_mode != other.m_scale_mode || m_full_size != other.m_full_size));
 	}
+#endif
 
 	bool IsSet() const
 	{
@@ -368,6 +397,7 @@ public:
 	FrameBufferObject *m_fbo;
 	Surface *m_surface;
 	Rect m_bounds;
+#ifndef PAF_BUILD_2014
 	/* the memory of the surface's page drawn into */
 	void *m_memory;
 	/* the screen surface's YUV profile */
@@ -375,6 +405,7 @@ public:
 	SceGxmYuvProfile m_yuv_profile;
 	int32_t m_scale_mode;
 	bool m_full_size;
+#endif
 };
 
 /* the scenes drawn into, innermost last: the bottom one stays */
@@ -445,7 +476,14 @@ public:
 	void BlendFunc(BlendingFactor src_rgb, BlendingFactor dst_rgb, BlendingFactor src_a,
 		       BlendingFactor dst_a);
 	void BlendEquation(BlendEquationEnum rgb, BlendEquationEnum a);
+#ifdef PAF_BUILD_2014
+	void Color(math::v4 color)
+	{
+		m_color = color;
+	}
+#else
 	void Color(math::v4 color);
+#endif
 	void PointSize(float value, FaceEnum face);
 	void LineWidth(float value, FaceEnum face);
 	void SetSceneData(intrusive_ptr<Surface> surface);
@@ -475,18 +513,24 @@ public:
 	   popped (names ours) */
 	void PushMarker(const char *marker)
 	{
+#ifndef PAF_BUILD_2014
 		++m_marker_depth;
 		m_markers.push_back(marker);
 		m_marker = marker;
+#else
+		(void)marker;
+#endif
 	}
 
 	void PopMarker()
 	{
+#ifndef PAF_BUILD_2014
 		if (m_marker_depth != 0) {
 			m_marker = m_markers.back();
 			m_markers.pop_back();
 			--m_marker_depth;
 		}
+#endif
 	}
 
 	SceGxmContextParams m_context_params;
@@ -507,6 +551,9 @@ public:
 	uint8_t m_sequence[64];
 	bool m_reserved_flag;
 	int32_t m_reserved_value;
+#ifdef PAF_BUILD_2014
+	uint32_t m_reserved;
+#endif
 	PolygonModeEnum m_back_polygon_mode;
 	PolygonModeEnum m_front_polygon_mode;
 	bool m_wclamp_enabled;
@@ -521,22 +568,30 @@ public:
 	uint32_t m_back_point_line_width;
 	bool m_scissor_enabled;
 	math::v4 m_color;
+#ifndef PAF_BUILD_2014
 	bool m_blend_changed;
+#endif
 	bool m_blend_enabled;
 	SceGxmBlendInfo m_blend_info;
+#ifndef PAF_BUILD_2014
 	SceGxmBlendInfo m_default_blend_info;
+#endif
 	bool m_depth_test_enabled;
+#ifndef PAF_BUILD_2014
 	/* the debug colour caps: the colour pushed off grey, the alpha doubled, and one each draw
 	   hands the surface */
 	bool m_debug_color_shift;
 	bool m_debug_alpha_double;
 	bool m_debug_surface_draw;
+#endif
 	uint64_t m_frame_start;
 	float m_frame_time;
+#ifndef PAF_BUILD_2014
 	/* the markers of what the GPU is doing, innermost last */
 	uint32_t m_marker_depth;
 	vector<const char *> m_markers;
 	const char *m_marker;
+#endif
 	common::SharedPtr<VramAllocator> m_default_allocator;
 	common::SharedPtr<VramAllocator> m_debug_allocator;
 };
@@ -572,8 +627,10 @@ void ScePafGraphics_56C831A9(paf::graph::arl::ArlInstance *gl,
 void ScePafGraphics_93CBC733(paf::graph::arl::ArlInstance *gl,
 			     const paf::graph::arl::Rect &viewport);
 /* the scene ended, the notifications given to GXM */
+#ifndef PAF_BUILD_2014
 void ScePafGraphics_4581906A(paf::graph::arl::ArlInstance *gl,
 			     SceGxmNotification *notification);
+#endif
 void ScePafGraphics_E7B32741(paf::graph::arl::ArlInstance *gl);
 /* the spec of a predefined layout for an index source, made the first time it is asked for */
 paf::common::SharedPtr<paf::graph::arl::VertexArraySpec>
