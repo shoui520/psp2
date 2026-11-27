@@ -219,8 +219,8 @@ int dtcpIpStrmOpenStream(struct SwStrmStream **outStream, struct SwStrmClient *c
 				  config[1] + config[2], 1, config[5]);
 	if (ret != 0) {
 		ret = dtcpIpMapIpcStatus3(ret);
-	} else if (dtcpIpIpcInitShared(stream->channel, shared) != 0) {
-		ret = dtcpIpMapIpcStatus3(0);
+	} else if ((ret = dtcpIpIpcInitShared(stream->channel, shared)) != 0) {
+		ret = dtcpIpMapIpcStatus3(ret);
 	} else {
 		stream->buffer = shared[1];
 		stream->buffer2 = (char *)shared[1] + config[1];
@@ -229,13 +229,17 @@ int dtcpIpStrmOpenStream(struct SwStrmStream **outStream, struct SwStrmClient *c
 		message.size = 24;
 		message.payload = config;
 		message.value0 = client->session;
-		if (dtcpIpIpcRequest(stream->channel, &message) == 0 && message.result == 0) {
+		ret = dtcpIpIpcRequest(stream->channel, &message);
+		if (ret != 0) {
+			ret = dtcpIpMapIpcStatus3(ret);
+		} else if (message.result != 0) {
+			ret = dtcpIpMapIpcStatus3(message.result);
+		} else {
 			stream->id = message.out0;
 			stream->status = 0;
 			*outStream = stream;
 			return 0;
 		}
-		ret = dtcpIpMapIpcStatus3(message.result);
 	}
 	sceKernelDeleteLwMutex(&stream->mutex);
 	dtcpIpFree(stream);
