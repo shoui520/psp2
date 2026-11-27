@@ -19,7 +19,7 @@ typedef struct SceNetAdhocctlScanInfo {
     s32 mode;                            /* 0x18 */
 } SceNetAdhocctlScanInfo;
 
-s32 _sceKernelCheckThreadStack(void);
+s32 sceKernelCheckThreadStack(void);
 void *sceKernelMemcpy(void *dst, const void *src, u32 size);
 s64 sceKernelGetSystemTimeWide(void);
 s32 sceNetAdhocctlScan(void);
@@ -57,9 +57,9 @@ static s32 checkPeerConnected(void);
 static s32 selectBestScanTarget(void);
 static s32 handleCreateWaitState(void);
 
-s32 sceNetAdhocDiscover_941B3877(SceNetAdhocDiscoverParam *param)
+s32 sceNetAdhocDiscoverInitStart(SceNetAdhocDiscoverParam *param)
 {
-    if (_sceKernelCheckThreadStack() < 0xFE0)
+    if (sceKernelCheckThreadStack() < 0xFE0)
         return 0x80410005;
     if (g_state != 0)
         return 0x80411301;
@@ -105,10 +105,10 @@ s32 sceNetAdhocDiscover_941B3877(SceNetAdhocDiscoverParam *param)
     return 0;
 }
 
-s32 sceNetAdhocDiscover_52DE1B97(void)
+s32 sceNetAdhocDiscoverUpdate(void)
 {
     u32 delay = 0;
-    if (_sceKernelCheckThreadStack() < 0xFF0)
+    if (sceKernelCheckThreadStack() < 0xFF0)
         return 0x80410005;
     if ((u32)g_state >= 19)
         return 0;
@@ -295,9 +295,9 @@ s32 sceNetAdhocDiscover_52DE1B97(void)
     return 0;
 }
 
-s32 sceNetAdhocDiscover_944DDBC6(void)
+s32 sceNetAdhocDiscoverGetStatus(void)
 {
-    if (_sceKernelCheckThreadStack() < 0xFF0)
+    if (sceKernelCheckThreadStack() < 0xFF0)
         return 0x80410005;
     s32 st = g_state;
     if (st <= 0)
@@ -309,9 +309,9 @@ s32 sceNetAdhocDiscover_944DDBC6(void)
     return 0;
 }
 
-s32 sceNetAdhocDiscover_F7D13214(void)
+s32 sceNetAdhocDiscoverStop(void)
 {
-    if (_sceKernelCheckThreadStack() < 0xFF0)
+    if (sceKernelCheckThreadStack() < 0xFF0)
         return 0x80410005;
     u32 st = (u32)g_state;
     if ((st != 0) & (st != 19)) {
@@ -321,9 +321,9 @@ s32 sceNetAdhocDiscover_F7D13214(void)
     return 0;
 }
 
-s32 sceNetAdhocDiscover_A2246614(void)
+s32 sceNetAdhocDiscoverTerm(void)
 {
-    if (_sceKernelCheckThreadStack() < 0xFF0)
+    if (sceKernelCheckThreadStack() < 0xFF0)
         return 0x80410005;
     u32 st = (u32)g_state;
     if ((st != 0) & (st != 19))
@@ -337,9 +337,9 @@ s32 sceNetAdhocDiscover_A2246614(void)
     return 0;
 }
 
-s32 sceNetAdhocDiscover_A423A21B(void)
+s32 sceNetAdhocDiscoverRequestSuspend(void)
 {
-    if (_sceKernelCheckThreadStack() < 0xFF0)
+    if (sceKernelCheckThreadStack() < 0xFF0)
         return 0x80410005;
     if (g_canSkip == 0 || g_state != 0)
         return 0x80411303;

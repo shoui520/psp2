@@ -101,7 +101,7 @@ s32 sceNetAdhocPtpOpen(const u8 *self_mac, u16 self_port, const u8 *peer_mac, u1
     s32 ret;
     AdhocSocket *sock = NULL;
 
-    if (_sceKernelCheckThreadStack() < 1968)
+    if (sceKernelCheckThreadStack() < 1968)
         return ADHOC_ERR_STACK_SMALL;
     if (self_mac == NULL || peer_mac == NULL || flags != 0)
         return ADHOC_ERR_INVALID_ARG;
@@ -142,7 +142,7 @@ s32 sceNetAdhocPtpConnect(s32 id, u32 timeout, s32 flags)
     if (delay != 0)
         sceKernelDelayThread(delay);
 
-    if (_sceKernelCheckThreadStack() < 2000)
+    if (sceKernelCheckThreadStack() < 2000)
         return ADHOC_ERR_STACK_SMALL;
     if ((flags & ~1) != 0)
         return ADHOC_ERR_INVALID_ARG;
@@ -187,7 +187,7 @@ s32 sceNetAdhocPtpListen(const u8 *self_mac, u16 self_port, u32 bufsize, u32 rex
     s32 ret;
     AdhocSocket *sock = NULL;
 
-    if (_sceKernelCheckThreadStack() < 1968)
+    if (sceKernelCheckThreadStack() < 1968)
         return ADHOC_ERR_STACK_SMALL;
     if (self_mac == NULL || flags != 0)
         return ADHOC_ERR_INVALID_ARG;
@@ -219,7 +219,7 @@ s32 sceNetAdhocPtpAccept(s32 id, u8 *peer_mac, u16 *peer_port, u32 timeout, s32 
     AdhocWaiter *waiter;
     s32 intr;
 
-    if (_sceKernelCheckThreadStack() < 2000)
+    if (sceKernelCheckThreadStack() < 2000)
         return ADHOC_ERR_STACK_SMALL;
     if ((flags & ~1) != 0)
         return ADHOC_ERR_INVALID_ARG;
@@ -267,7 +267,7 @@ s32 sceNetAdhocPtpSend(s32 id, const void *buf, s32 *len, u32 timeout, s32 flags
     AdhocWaiter *waiter;
     s32 intr;
 
-    if (_sceKernelCheckThreadStack() < 2000)
+    if (sceKernelCheckThreadStack() < 2000)
         return ADHOC_ERR_STACK_SMALL;
     if (len == NULL || (flags & ~1) != 0)
         return ADHOC_ERR_INVALID_ARG;
@@ -314,7 +314,7 @@ s32 sceNetAdhocPtpRecv(s32 id, void *buf, s32 *len, u32 timeout, s32 flags)
     AdhocWaiter *waiter;
     s32 intr;
 
-    if (_sceKernelCheckThreadStack() < 2000)
+    if (sceKernelCheckThreadStack() < 2000)
         return ADHOC_ERR_STACK_SMALL;
     if (buf == NULL || len == NULL || (flags & ~1) != 0)
         return ADHOC_ERR_INVALID_ARG;
@@ -361,7 +361,7 @@ s32 sceNetAdhocPtpFlush(s32 id, u32 timeout, s32 flags)
     AdhocWaiter *waiter;
     s32 intr;
 
-    if (_sceKernelCheckThreadStack() < 2000)
+    if (sceKernelCheckThreadStack() < 2000)
         return ADHOC_ERR_STACK_SMALL;
     if ((flags & ~1) != 0)
         return ADHOC_ERR_INVALID_ARG;
@@ -407,7 +407,7 @@ s32 sceNetAdhocPtpClose(s32 id, s32 flags)
     s32 ret = 0;
     s32 intr;
 
-    if (_sceKernelCheckThreadStack() < 2016)
+    if (sceKernelCheckThreadStack() < 2016)
         return ADHOC_ERR_STACK_SMALL;
     if (flags != 0)
         return ADHOC_ERR_INVALID_ARG;
@@ -1191,7 +1191,7 @@ s32 sceNetAdhocGetPtpStat(s32 *buflen, ScePtpStatOut *buf)
     s32 written = 0;
     ScePtpStatOut *prev = NULL;
 
-    if (_sceKernelCheckThreadStack() < 2000)
+    if (sceKernelCheckThreadStack() < 2000)
         return ADHOC_ERR_STACK_SMALL;
     if (buflen == NULL)
         return ADHOC_ERR_INVALID_ARG;

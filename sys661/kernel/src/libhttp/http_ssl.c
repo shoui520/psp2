@@ -525,7 +525,7 @@ s32 http_ssl_verify_callback(void *ssl, void **certs, s32 cert_count, HttpConnec
 
         if (conn->cfg.ssl_cb != NULL) {
             typedef s32 (*SslCb)(u32, void **, s32, void *);
-            _sceKernelCheckThreadStack();
+            sceKernelCheckThreadStack();
             cb_ret = ((SslCb)conn->cfg.ssl_cb)(cert_flags, certs, cert_count, conn->cfg.ssl_cb_arg);
             if (cb_ret >= 0) {
                 conn->ssl_err = 0;
@@ -675,7 +675,7 @@ s32 sceHttpsInit(s32 ca_count, HttpCertSlot **ca_list, HttpCertSlot *client_cert
     u8 *der_buf = NULL;
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 1968)
+    if (sceKernelCheckThreadStack() < 1968)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (g_https_inited != 0)
         return SCE_HTTP_ERROR_ALREADY_INITED;
@@ -789,11 +789,11 @@ s32 sceHttpsInit(s32 ca_count, HttpCertSlot **ca_list, HttpCertSlot *client_cert
     return ret;
 }
 
-s32 sceHttp_68AB0F86(s32 ca_count, s32 ca_list, s32 client_cert)
+s32 sceHttpsInitWithPath(s32 ca_count, s32 ca_list, s32 client_cert)
 {
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 1968)
+    if (sceKernelCheckThreadStack() < 1968)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (g_https_inited != 0)
         return SCE_HTTP_ERROR_ALREADY_INITED;
@@ -820,7 +820,7 @@ s32 sceHttpsLoadDefaultCert(u32 group, u32 bit)
     u32 out_size = 0;
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 1984)
+    if (sceKernelCheckThreadStack() < 1984)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (http_is_inited() != 1) {
         http_ssl_end_internal();
@@ -944,7 +944,7 @@ HTTP_ALWAYS_INLINE s32 http_ssl_modify_flags(s32 id, u32 flags, s32 enable)
     s32 intr;
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 2000)
+    if (sceKernelCheckThreadStack() < 2000)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (http_is_inited() != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;
@@ -1164,7 +1164,7 @@ s32 sceHttpsGetSslError(s32 req_id, s32 *ssl_err_out, u32 *cert_flags_out)
     HttpRequest *req = NULL;
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 2016)
+    if (sceKernelCheckThreadStack() < 2016)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (g_https_inited != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;
@@ -1191,7 +1191,7 @@ s32 sceHttpsSetSslCallback(s32 id, void *cb, void *arg)
     s32 intr;
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 2000)
+    if (sceKernelCheckThreadStack() < 2000)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (http_is_inited() != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;
@@ -1227,7 +1227,7 @@ s32 sceHttpsSetSslCallback(s32 id, void *cb, void *arg)
 
 s32 sceHttpsGetCaList(void ***list_out, s32 *count_out)
 {
-    if (_sceKernelCheckThreadStack() < 2032)
+    if (sceKernelCheckThreadStack() < 2032)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (g_https_inited != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;
@@ -1246,14 +1246,14 @@ s32 http_ssl_is_inited(void)
 
 s32 sceHttpsEnd(void)
 {
-    if (_sceKernelCheckThreadStack() < 2032)
+    if (sceKernelCheckThreadStack() < 2032)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     return http_ssl_end_internal();
 }
 
 s32 sceHttpsEnableOption(u32 flags)
 {
-    if (_sceKernelCheckThreadStack() < 2032)
+    if (sceKernelCheckThreadStack() < 2032)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     g_https_options |= flags;
     return 0;
@@ -1261,7 +1261,7 @@ s32 sceHttpsEnableOption(u32 flags)
 
 s32 sceHttpsDisableOption(u32 flags)
 {
-    if (_sceKernelCheckThreadStack() < 2032)
+    if (sceKernelCheckThreadStack() < 2032)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     g_https_options &= ~flags;
     return 0;
@@ -1562,7 +1562,7 @@ s32 http_handle_auth_response(HttpRequest *req)
                 if (req->cfg.auth_cb != NULL) {
                     typedef s32 (*AuthCb)(s32, s32, const char *, char *, char *, s32,
                                           const void **, u32 *, s32 *, void *);
-                    _sceKernelCheckThreadStack();
+                    sceKernelCheckThreadStack();
                     cb_ret = ((AuthCb)req->cfg.auth_cb)(req->id, chal.type, realm_buf,
                                                         user_ptr, pass_ptr, 0,
                                                         &entity, &entity_len, &save_flag,
@@ -1570,7 +1570,7 @@ s32 http_handle_auth_response(HttpRequest *req)
                 } else {
                     typedef s32 (*LegacyAuthCb)(s32, s32, const char *, char *, char *, s32,
                                                 const void **, u32 *, s32 *);
-                    _sceKernelCheckThreadStack();
+                    sceKernelCheckThreadStack();
                     cb_ret = ((LegacyAuthCb)req->cfg.auth_cb_legacy)(req->id, chal.type, realm_buf,
                                                                      user_ptr, pass_ptr, 0,
                                                                      &entity, &entity_len, &save_flag);
@@ -1700,7 +1700,7 @@ s32 http_handle_redirect(HttpRequest *req)
     do {
         if (req->cfg.redirect_cb != NULL) {
             typedef s32 (*RedirCb)(s32, s32, s32 *, const char *, void *);
-            _sceKernelCheckThreadStack();
+            sceKernelCheckThreadStack();
             if (((RedirCb)req->cfg.redirect_cb)(req->id, status, &req->method,
                                                 location_str, req->cfg.redirect_cb_arg) < 0) {
                 ret = 0;

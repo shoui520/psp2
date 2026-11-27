@@ -37,7 +37,7 @@ exports:
       - scePowerGetBatteryTemp: 0x28e12023
       - scePower_2B51FE2F: 0x2b51fe2f
       - scePowerRequestStandby: 0x2b7c7cf4
-      - scePower_34F9C463: 0x34f9c463
+      - scePowerGetPllClockFrequencyInt: 0x34f9c463
       - scePower_3951AF53: 0x3951af53
       - scePower_442BFBAC: 0x442bfbac
       - scePower_469989AD: 0x469989ad
@@ -56,7 +56,7 @@ exports:
       - scePowerIdleTimerDisable: 0x972ce941
       - scePowerGetBusClockFrequencyFloat: 0x9badb3eb
       - scePower_A4E93389: 0xa4e93389
-      - scePower_A85880D0: 0xa85880d0
+      - scePowerCheckWlanCoexistenceClock: 0xa85880d0
       - scePower_A9D22232: 0xa9d22232
       - scePowerRequestSuspend: 0xac32c9cc
       - scePowerGetCpuClockFrequencyFloat: 0xb1a52c83
@@ -74,7 +74,7 @@ exports:
       - scePowerUnregisterCallback: 0xdb9d28dd
       - scePowerUnregisterCallback: 0xdfa8baf8
       - scePower_E8E4E204: 0xe8e4e204
-      - scePower_EA382A27: 0xea382a27
+      - scePowerGetPllClockFrequencyFloat: 0xea382a27
       - scePower_EBD177D6: 0xebd177d6
       - scePowerGetIdleTimer: 0xedc13fe5
       - scePowerTick: 0xefd3c963
@@ -124,8 +124,8 @@ exports:
       - scePowerRequestSuspend: 0x5c1333b7
       - scePower_driver_5F5006D2: 0x5f5006d2
       - scePowerGetBatteryChargingStatus: 0x67492c52
-      - scePower_34F9C463: 0x67bd889b
-      - scePower_A85880D0: 0x693f6cf0
+      - scePowerGetPllClockFrequencyInt: 0x67bd889b
+      - scePowerCheckWlanCoexistenceClock: 0x693f6cf0
       - scePower_driver_6CF50928: 0x6cf50928
       - scePower_23C31FFE: 0x70f42744
       - scePower_driver_72D1B53A: 0x72d1b53a
@@ -153,7 +153,7 @@ exports:
       - scePower_driver_B7000C75: 0xb7000c75
       - scePowerSetBusClockFrequency: 0xb71a8b2f
       - scePower_driver_BA566CD0: 0xba566cd0
-      - scePower_EA382A27: 0xba8cbcbf
+      - scePowerGetPllClockFrequencyFloat: 0xba8cbcbf
       - scePower_driver_BADA8332: 0xbada8332
       - scePower_driver_C3024FE6: 0xc3024fe6
       - scePower_driver_C463E7F2: 0xc463e7f2

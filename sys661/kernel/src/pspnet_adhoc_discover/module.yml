@@ -14,12 +14,12 @@ exports:
     version: [0, 17]
     attributes: 0x0001
     functions:
-      - sceNetAdhocDiscover_52DE1B97: 0x52de1b97
-      - sceNetAdhocDiscover_941B3877: 0x941b3877
-      - sceNetAdhocDiscover_944DDBC6: 0x944ddbc6
-      - sceNetAdhocDiscover_A2246614: 0xa2246614
-      - sceNetAdhocDiscover_A423A21B: 0xa423a21b
-      - sceNetAdhocDiscover_F7D13214: 0xf7d13214
+      - sceNetAdhocDiscoverUpdate: 0x52de1b97
+      - sceNetAdhocDiscoverInitStart: 0x941b3877
+      - sceNetAdhocDiscoverGetStatus: 0x944ddbc6
+      - sceNetAdhocDiscoverTerm: 0xa2246614
+      - sceNetAdhocDiscoverRequestSuspend: 0xa423a21b
+      - sceNetAdhocDiscoverStop: 0xf7d13214
 imports:
   - name: sceUtility
     version: [0, 17]
@@ -67,7 +67,7 @@ imports:
     attributes: 0x0001
     pad: 5
     functions:
-      - _sceKernelCheckThreadStack: 0xd13bde95
+      - sceKernelCheckThreadStack: 0xd13bde95
       - sceKernelMemcpy: 0x1839852a
   - name: ThreadManForUser
     version: [0, 17]

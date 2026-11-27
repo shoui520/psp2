@@ -137,9 +137,9 @@ imports:
     functions:
       - sceNetInetConnect: 0x410b34aa
       - sceNetInetSend: 0x7aa671bc
-      - sceNetInet_80A21ABD: 0x80a21abd
+      - sceNetInetSocketAbort: 0x80a21abd
       - sceNetInetSocket: 0x8b7b220f
-      - sceNetInet_8CA3A97E: 0x8ca3a97e
+      - sceNetInetGetPspError: 0x8ca3a97e
       - sceNetInetClose: 0x8d7284ea
       - sceNetInetInetAddr: 0xb75d5b0a
       - sceNetInetRecv: 0xcda85c99

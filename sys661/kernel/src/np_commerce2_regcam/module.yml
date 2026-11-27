@@ -282,5 +282,5 @@ imports:
     pad: 1
     functions:
       - sceKernelMemset: 0xa089eca4
-      - _sceKernelCheckThreadStack: 0xd13bde95
+      - sceKernelCheckThreadStack: 0xd13bde95
       - sceKernelMemcpy: 0x1839852a

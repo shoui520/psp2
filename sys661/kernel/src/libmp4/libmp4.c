@@ -34,7 +34,7 @@ extern s32 sceKernelCpuSuspendIntr(void);
 extern void sceKernelCpuResumeIntr(s32 state);
 extern void *sceKernelMemset(void *dst, s32 c, u32 size);
 extern void *sceKernelMemcpy(void *dst, const void *src, u32 size);
-extern s32 _sceKernelCheckThreadStack(void);
+extern s32 sceKernelCheckThreadStack(void);
 extern s32 sceKernelLockLwMutex(void *work, s32 count, u32 *timeout);
 extern s32 sceKernelUnlockLwMutex(void *work, s32 count);
 extern s32 sceKernelGetModuleGPByAddress(const void *addr, u32 *gp);
@@ -1293,11 +1293,11 @@ static NOINLINE s32 mp4InitCallbackBundle(u32 *dst, const u32 *src)
 }
 
 /* 0x2928: sceMp4Init */
-s32 sceMp4_68651CBC(s32 mode, s32 version)
+s32 sceMp4Init(s32 mode, s32 version)
 {
     u32 heapSizes[2] = { 0x10000U, 0x40000U };
 
-    if (_sceKernelCheckThreadStack() < 4080)
+    if (sceKernelCheckThreadStack() < 4080)
         return SCE_MP4_ERROR_STACK_OVERFLOW;
     if ((u32)(mode - 1) >= 2U || version != 1)
         return SCE_MP4_ERROR_INVALID_VALUE;
@@ -1395,9 +1395,9 @@ static NOINLINE s32 mp4Free(void *ptr)
 }
 
 /* 0x2c78: sceMp4Finish */
-s32 sceMp4_9042B257(void)
+s32 sceMp4Finish(void)
 {
-    if (_sceKernelCheckThreadStack() < 4080)
+    if (sceKernelCheckThreadStack() < 4080)
         return SCE_MP4_ERROR_STACK_OVERFLOW;
     if (mp4IsInitialized() != 0)
         return SCE_MP4_ERROR_NOT_INITIALIZED;
@@ -2228,9 +2228,9 @@ static NOINLINE void *mp4HeapAllocWrap(u32 *heap, u32 size) { return mp4UserHeap
 static NOINLINE s32 mp4HeapFreeWrap(u32 *heap, void *ptr) { return mp4UserHeapFree(heap, ptr); }
 
 /* Public sceMp4 exports */
-s32 sceMp4_B1221EE7(u32 **mp4, const u32 *cbs, u32 buf, s32 buf_size)
+s32 sceMp4Create(u32 **mp4, const u32 *cbs, u32 buf, s32 buf_size)
 {
-    if (_sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     if (mp4 == NULL) return SCE_MP4_ERROR_INVALID_VALUE;
@@ -2241,9 +2241,9 @@ s32 sceMp4_B1221EE7(u32 **mp4, const u32 *cbs, u32 buf, s32 buf_size)
     return ret;
 }
 
-s32 sceMp4_538C2057(u32 **mp4)
+s32 sceMp4Delete(u32 **mp4)
 {
-    if (_sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     ret = mp4ValidateHandle(mp4);
@@ -2256,9 +2256,9 @@ s32 sceMp4_538C2057(u32 **mp4)
     return ret;
 }
 
-s32 sceMp4_131BDE57(u32 **mp4, u32 buf, u32 *au)
+s32 sceMp4InitAu(u32 **mp4, u32 buf, u32 *au)
 {
-    if (_sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     ret = mp4ValidateHandle(mp4);
@@ -2269,9 +2269,9 @@ s32 sceMp4_131BDE57(u32 **mp4, u32 buf, u32 *au)
     return ret;
 }
 
-s32 sceMp4_7443AF1D(u32 **mp4, u32 *out_info)
+s32 sceMp4GetMovieInfo(u32 **mp4, u32 *out_info)
 {
-    if (_sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     ret = mp4ValidateHandle(mp4);
@@ -2282,9 +2282,9 @@ s32 sceMp4_7443AF1D(u32 **mp4, u32 *out_info)
     return ret;
 }
 
-s32 sceMp4_5EB65F26(u32 **mp4, u32 type)
+s32 sceMp4GetNumberOfSpecificTrack(u32 **mp4, u32 type)
 {
-    if (_sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     ret = mp4ValidateHandle(mp4);
@@ -2295,9 +2295,9 @@ s32 sceMp4_5EB65F26(u32 **mp4, u32 type)
     return ret;
 }
 
-s32 sceMp4_7ADFD01C(u32 **mp4, u32 type, s32 idx, const u32 *cbs, u32 *track)
+s32 sceMp4RegistTrack(u32 **mp4, u32 type, s32 idx, const u32 *cbs, u32 *track)
 {
-    if (_sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     ret = mp4ValidateHandle(mp4);
@@ -2308,9 +2308,9 @@ s32 sceMp4_7ADFD01C(u32 **mp4, u32 type, s32 idx, const u32 *cbs, u32 *track)
     return ret;
 }
 
-s32 sceMp4_6710FE77(u32 **mp4, u32 *track)
+s32 sceMp4UnregistTrack(u32 **mp4, u32 *track)
 {
-    if (_sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     ret = mp4ValidateHandle(mp4);
@@ -2321,9 +2321,9 @@ s32 sceMp4_6710FE77(u32 **mp4, u32 *track)
     return ret;
 }
 
-s32 sceMp4_0F0187D2(u32 **mp4, u32 *track, u32 *out_info)
+s32 sceMp4GetAvcTrackInfoData(u32 **mp4, u32 *track, u32 *out_info)
 {
-    if (_sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     ret = mp4ValidateHandle(mp4);
@@ -2334,9 +2334,9 @@ s32 sceMp4_0F0187D2(u32 **mp4, u32 *track, u32 *out_info)
     return ret;
 }
 
-s32 sceMp4_9CE6F5CF(u32 **mp4, u32 *track, u32 *out_info)
+s32 sceMp4GetAacTrackInfoData(u32 **mp4, u32 *track, u32 *out_info)
 {
-    if (_sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     ret = mp4ValidateHandle(mp4);
@@ -2347,9 +2347,9 @@ s32 sceMp4_9CE6F5CF(u32 **mp4, u32 *track, u32 *out_info)
     return ret;
 }
 
-s32 sceMp4_427BEF7F(u32 **mp4, u32 *track)
+s32 sceMp4GetTrackNumOfEditList(u32 **mp4, u32 *track)
 {
-    if (_sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     ret = mp4ValidateHandle(mp4);
@@ -2360,9 +2360,9 @@ s32 sceMp4_427BEF7F(u32 **mp4, u32 *track)
     return ret;
 }
 
-s32 sceMp4_28CCB940(u32 **mp4, u32 *track, u32 *out_list, s32 max_entries)
+s32 sceMp4GetTrackEditList(u32 **mp4, u32 *track, u32 *out_list, s32 max_entries)
 {
-    if (_sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     ret = mp4ValidateHandle(mp4);
@@ -2373,9 +2373,9 @@ s32 sceMp4_28CCB940(u32 **mp4, u32 *track, u32 *out_list, s32 max_entries)
     return ret;
 }
 
-s32 sceMp4_113E9E7B(u32 **mp4, const u32 *track)
+s32 sceMp4GetNumberOfMetaData(u32 **mp4, const u32 *track)
 {
-    if (_sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     ret = mp4ValidateHandle(mp4);
@@ -2386,10 +2386,10 @@ s32 sceMp4_113E9E7B(u32 **mp4, const u32 *track)
     return ret;
 }
 
-s32 sceMp4_4FB5B756(u32 **mp4, const u32 *track, s32 idx, SceMp4MetaInfo *out_info)
+s32 sceMp4GetMetaDataInfo(u32 **mp4, const u32 *track, s32 idx, SceMp4MetaInfo *out_info)
 {
     u32 handle = 0;
-    if (_sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     ret = mp4ValidateHandle(mp4);
@@ -2400,9 +2400,9 @@ s32 sceMp4_4FB5B756(u32 **mp4, const u32 *track, s32 idx, SceMp4MetaInfo *out_in
     return ret;
 }
 
-s32 sceMp4_D2AC9A7E(u32 **mp4, const u32 *track, s32 idx, void *out_buf, s32 buf_size)
+s32 sceMp4GetMetaData(u32 **mp4, const u32 *track, s32 idx, void *out_buf, s32 buf_size)
 {
-    if (_sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     ret = mp4ValidateHandle(mp4);
@@ -2413,9 +2413,9 @@ s32 sceMp4_D2AC9A7E(u32 **mp4, const u32 *track, s32 idx, void *out_buf, s32 buf
     return ret;
 }
 
-s32 sceMp4_B4B400D1(u32 **mp4, u32 *track, const u32 *ts)
+s32 sceMp4GetSampleNumWithTimeStamp(u32 **mp4, u32 *track, const u32 *ts)
 {
-    if (_sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     ret = mp4ValidateHandle(mp4);
@@ -2426,9 +2426,9 @@ s32 sceMp4_B4B400D1(u32 **mp4, u32 *track, const u32 *ts)
     return ret;
 }
 
-s32 sceMp4_74A1CA3E(u32 **mp4, u32 *track, s32 dir, s32 sample)
+s32 sceMp4SearchSyncSampleNum(u32 **mp4, u32 *track, s32 dir, s32 sample)
 {
-    if (_sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     ret = mp4ValidateHandle(mp4);
@@ -2439,9 +2439,9 @@ s32 sceMp4_74A1CA3E(u32 **mp4, u32 *track, s32 dir, s32 sample)
     return ret;
 }
 
-s32 sceMp4_9C8F4FC1(u32 **mp4, u32 *track, u32 buf, s32 buf_size, s32 max_samples, s32 avg_size, s32 max_size, s32 cache_size)
+s32 sceMp4TrackSampleBufConstruct(u32 **mp4, u32 *track, u32 buf, s32 buf_size, s32 max_samples, s32 avg_size, s32 max_size, s32 cache_size)
 {
-    if (_sceKernelCheckThreadStack() < 4048) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4048) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     ret = mp4ValidateHandle(mp4);
@@ -2452,9 +2452,9 @@ s32 sceMp4_9C8F4FC1(u32 **mp4, u32 *track, u32 buf, s32 buf_size, s32 max_sample
     return ret;
 }
 
-s32 sceMp4_01C76489(u32 **mp4, u32 *track)
+s32 sceMp4TrackSampleBufDestruct(u32 **mp4, u32 *track)
 {
-    if (_sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     ret = mp4ValidateHandle(mp4);
@@ -2465,9 +2465,9 @@ s32 sceMp4_01C76489(u32 **mp4, u32 *track)
     return ret;
 }
 
-s32 sceMp4_496E8A65(u32 **mp4, u32 *track)
+s32 sceMp4TrackSampleBufFlush(u32 **mp4, u32 *track)
 {
-    if (_sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     ret = mp4ValidateHandle(mp4);
@@ -2478,9 +2478,9 @@ s32 sceMp4_496E8A65(u32 **mp4, u32 *track)
     return ret;
 }
 
-s32 sceMp4_8754ECB8(u32 **mp4, u32 *track, s32 *out_samples, s32 *out_bytes)
+s32 sceMp4TrackSampleBufAvailableSize(u32 **mp4, u32 *track, s32 *out_samples, s32 *out_bytes)
 {
-    if (_sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     ret = mp4ValidateHandle(mp4);
@@ -2491,9 +2491,9 @@ s32 sceMp4_8754ECB8(u32 **mp4, u32 *track, s32 *out_samples, s32 *out_bytes)
     return ret;
 }
 
-s32 sceMp4_31BCD7E0(u32 **mp4, u32 *track, s32 max_samples)
+s32 sceMp4TrackSampleBufPut(u32 **mp4, u32 *track, s32 max_samples)
 {
-    if (_sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     ret = mp4ValidateHandle(mp4);
@@ -2506,9 +2506,9 @@ s32 sceMp4_31BCD7E0(u32 **mp4, u32 *track, s32 max_samples)
     return ret;
 }
 
-s32 sceMp4_503A3CBA(u32 **mp4, u32 *track, u32 *au, u32 *out_info)
+s32 sceMp4GetAvcAu(u32 **mp4, u32 *track, u32 *au, u32 *out_info)
 {
-    if (_sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     ret = mp4ValidateHandle(mp4);
@@ -2519,9 +2519,9 @@ s32 sceMp4_503A3CBA(u32 **mp4, u32 *track, u32 *au, u32 *out_info)
     return ret;
 }
 
-s32 sceMp4_5601A6F0(u32 **mp4, u32 *track, u32 *au, u32 *out_info)
+s32 sceMp4GetAacAu(u32 **mp4, u32 *track, u32 *au, u32 *out_info)
 {
-    if (_sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     ret = mp4ValidateHandle(mp4);
@@ -2532,9 +2532,9 @@ s32 sceMp4_5601A6F0(u32 **mp4, u32 *track, u32 *au, u32 *out_info)
     return ret;
 }
 
-s32 sceMp4_D8250B75(u32 **mp4, u32 *track, u32 sample)
+s32 sceMp4PutSampleNum(u32 **mp4, u32 *track, u32 sample)
 {
-    if (_sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     ret = mp4ValidateHandle(mp4);
@@ -2545,9 +2545,9 @@ s32 sceMp4_D8250B75(u32 **mp4, u32 *track, u32 sample)
     return ret;
 }
 
-s32 sceMp4_A6C724DC(u32 **mp4, u32 *track)
+s32 sceMp4GetSampleNum(u32 **mp4, u32 *track)
 {
-    if (_sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     ret = mp4ValidateHandle(mp4);
@@ -2558,9 +2558,9 @@ s32 sceMp4_A6C724DC(u32 **mp4, u32 *track)
     return ret;
 }
 
-s32 sceMp4_F7C51EC1(u32 **mp4, u32 *track, s32 sample, u32 *out_info)
+s32 sceMp4GetSampleInfo(u32 **mp4, u32 *track, s32 sample, u32 *out_info)
 {
-    if (_sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     ret = mp4ValidateHandle(mp4);
@@ -2571,9 +2571,9 @@ s32 sceMp4_F7C51EC1(u32 **mp4, u32 *track, s32 sample, u32 *out_info)
     return ret;
 }
 
-s32 sceMp4_3069C2B5(u32 **mp4, u32 *track, s32 sample, u32 *out_param)
+s32 sceMp4GetAvcParamSet(u32 **mp4, u32 *track, s32 sample, u32 *out_param)
 {
-    if (_sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     ret = mp4ValidateHandle(mp4);
@@ -2584,9 +2584,9 @@ s32 sceMp4_3069C2B5(u32 **mp4, u32 *track, s32 sample, u32 *out_param)
     return ret;
 }
 
-s32 sceMp4_17EAA97D(u32 **mp4, u32 *track, s32 sample, u32 es_buf, u32 es_size, u32 *au)
+s32 sceMp4GetAvcAuWithoutSampleBuf(u32 **mp4, u32 *track, s32 sample, u32 es_buf, u32 es_size, u32 *au)
 {
-    if (_sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     ret = mp4ValidateHandle(mp4);
@@ -2597,9 +2597,9 @@ s32 sceMp4_17EAA97D(u32 **mp4, u32 *track, s32 sample, u32 es_buf, u32 es_size, 
     return ret;
 }
 
-s32 sceMp4_532029B8(u32 **mp4, u32 *track, s32 sample, u32 es_buf, u32 es_size, u32 *au)
+s32 sceMp4GetAacAuWithoutSampleBuf(u32 **mp4, u32 *track, s32 sample, u32 es_buf, u32 es_size, u32 *au)
 {
-    if (_sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     ret = mp4ValidateHandle(mp4);
@@ -2610,9 +2610,9 @@ s32 sceMp4_532029B8(u32 **mp4, u32 *track, s32 sample, u32 es_buf, u32 es_size, 
     return ret;
 }
 
-s32 sceMp4_4ED4AB1E(s32 count)
+s32 sceMp4AacDecodeInitResource(s32 count)
 {
-    if (_sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     mp4LockLwMutex(g_mp4State.aacMutex);
@@ -2621,9 +2621,9 @@ s32 sceMp4_4ED4AB1E(s32 count)
     return ret;
 }
 
-s32 sceMp4_7D332394(void)
+s32 sceMp4AacDecodeTermResource(void)
 {
-    if (_sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     mp4LockLwMutex(g_mp4State.aacMutex);
@@ -2632,9 +2632,9 @@ s32 sceMp4_7D332394(void)
     return ret;
 }
 
-s32 sceMp4_10EE0D2C(s32 *out_slot)
+s32 sceMp4AacDecodeInit(s32 *out_slot)
 {
-    if (_sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     mp4LockLwMutex(g_mp4State.aacMutex);
@@ -2643,9 +2643,9 @@ s32 sceMp4_10EE0D2C(s32 *out_slot)
     return ret;
 }
 
-s32 sceMp4_5D72B333(const s32 *slot)
+s32 sceMp4AacDecodeExit(const s32 *slot)
 {
-    if (_sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     mp4LockLwMutex(g_mp4State.aacMutex);
@@ -2654,9 +2654,9 @@ s32 sceMp4_5D72B333(const s32 *slot)
     return ret;
 }
 
-s32 sceMp4_7663CB5C(s32 *slot, const u32 *au, u32 pcm_out, s32 reinit, s32 sample_rate)
+s32 sceMp4AacDecode(s32 *slot, const u32 *au, u32 pcm_out, s32 reinit, s32 sample_rate)
 {
-    if (_sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     mp4LockLwMutex(g_mp4State.aacMutex);
@@ -2665,9 +2665,9 @@ s32 sceMp4_7663CB5C(s32 *slot, const u32 *au, u32 pcm_out, s32 reinit, s32 sampl
     return ret;
 }
 
-s32 sceMp4_BCA9389C(u32 **mp4, s32 max_samples, s32 avg_size, s32 max_size, s32 cache_size)
+s32 sceMp4TrackSampleBufQueryMemSize(u32 **mp4, s32 max_samples, s32 avg_size, s32 max_size, s32 cache_size)
 {
-    if (_sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
+    if (sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
     return mp4QuerySampleBufSizeInternal(mp4, max_samples, avg_size, max_size, cache_size);

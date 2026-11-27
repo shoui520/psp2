@@ -19,7 +19,7 @@ exports:
     pad: 3
     functions:
       - sceVaudioChReserve: 0x03b6807d
-      - sceVaudio_driver_27ACC20B: 0x27acc20b
+      - sceVaudioChReserveBuffering: 0x27acc20b
       - sceVaudioSetEffectType: 0x346fbe94
       - sceVaudioChRelease: 0x67585dfd
       - sceVaudioOutputBlocking: 0x8986295e
@@ -32,7 +32,7 @@ exports:
     pad: 2
     functions:
       - sceVaudioChReserve: 0x03b6807d
-      - sceVaudio_driver_27ACC20B: 0x27acc20b
+      - sceVaudioChReserveBuffering: 0x27acc20b
       - sceVaudioSetEffectType: 0x346fbe94
       - sceVaudio_504E4745: 0x504e4745
       - sceVaudioChRelease: 0x67585dfd

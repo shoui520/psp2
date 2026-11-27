@@ -291,7 +291,7 @@ static void apctl_stop_btdun(void);
 int sceNetApctlInit(u32 stackSize, int initPriority)
 {
     int ret;
-    if (_sceKernelCheckThreadStack() < 5104)
+    if (sceKernelCheckThreadStack() < 5104)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited > 0)
         return APCTL_ERR_ALREADY_INIT;
@@ -307,7 +307,7 @@ int sceNetApctlInit(u32 stackSize, int initPriority)
 int sceNetApctlTerm(void)
 {
     int ret;
-    if (_sceKernelCheckThreadStack() < 5104)
+    if (sceKernelCheckThreadStack() < 5104)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return 0;
@@ -321,7 +321,7 @@ int sceNetApctlAddHandler(void *handler, void *arg)
 {
     int id = 0;
     int ret;
-    if (_sceKernelCheckThreadStack() < 5088)
+    if (sceKernelCheckThreadStack() < 5088)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
@@ -331,7 +331,7 @@ int sceNetApctlAddHandler(void *handler, void *arg)
 
 int sceNetApctlDelHandler(int handlerId)
 {
-    if (_sceKernelCheckThreadStack() < 5104)
+    if (sceKernelCheckThreadStack() < 5104)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
@@ -340,7 +340,7 @@ int sceNetApctlDelHandler(int handlerId)
 
 int sceNetApctlConnect(int connIndex)
 {
-    if (_sceKernelCheckThreadStack() < 5104)
+    if (sceKernelCheckThreadStack() < 5104)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
@@ -349,7 +349,7 @@ int sceNetApctlConnect(int connIndex)
 
 int sceNetApctlDisconnect(void)
 {
-    if (_sceKernelCheckThreadStack() < 5104)
+    if (sceKernelCheckThreadStack() < 5104)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
@@ -358,7 +358,7 @@ int sceNetApctlDisconnect(void)
 
 int sceNetApctl_lib_B3CF6849(void)
 {
-    if (_sceKernelCheckThreadStack() < 5104)
+    if (sceKernelCheckThreadStack() < 5104)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
@@ -368,7 +368,7 @@ int sceNetApctl_lib_B3CF6849(void)
 int sceNetApctl_lib_A9721D11(const char *ssid)
 {
     u32 len;
-    if (_sceKernelCheckThreadStack() < 5104)
+    if (sceKernelCheckThreadStack() < 5104)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
@@ -379,7 +379,7 @@ int sceNetApctl_lib_A9721D11(const char *ssid)
 int sceNetApctlScanSSID2(const char *ssid)
 {
     u32 len;
-    if (_sceKernelCheckThreadStack() < 5104)
+    if (sceKernelCheckThreadStack() < 5104)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
@@ -389,7 +389,7 @@ int sceNetApctlScanSSID2(const char *ssid)
 
 int sceNetApctl_lib_0C7FFA5C(u32 *size_inout, void *buf)
 {
-    if (_sceKernelCheckThreadStack() < 5104)
+    if (sceKernelCheckThreadStack() < 5104)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
@@ -400,7 +400,7 @@ int sceNetApctl_lib_0C7FFA5C(u32 *size_inout, void *buf)
 
 int sceNetApctlGetBSSDescIDList2(u32 *size_inout, void *buf)
 {
-    if (_sceKernelCheckThreadStack() < 5104)
+    if (sceKernelCheckThreadStack() < 5104)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
@@ -411,7 +411,7 @@ int sceNetApctlGetBSSDescIDList2(u32 *size_inout, void *buf)
 
 int sceNetApctl_lib_96BEB231(int id, int code, void *out)
 {
-    if (_sceKernelCheckThreadStack() < 5104)
+    if (sceKernelCheckThreadStack() < 5104)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
@@ -422,7 +422,7 @@ int sceNetApctl_lib_96BEB231(int id, int code, void *out)
 
 int sceNetApctlGetBSSDescEntry2(int id, int code, void *out)
 {
-    if (_sceKernelCheckThreadStack() < 5104)
+    if (sceKernelCheckThreadStack() < 5104)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
@@ -433,7 +433,7 @@ int sceNetApctlGetBSSDescEntry2(int id, int code, void *out)
 
 int sceNetApctlGetInfo(int code, void *info)
 {
-    if (_sceKernelCheckThreadStack() < 5104)
+    if (sceKernelCheckThreadStack() < 5104)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
@@ -444,7 +444,7 @@ int sceNetApctlGetInfo(int code, void *info)
 
 int sceNetApctl_lib2_4C19731F(int code, void *info)
 {
-    if (_sceKernelCheckThreadStack() < 5104)
+    if (sceKernelCheckThreadStack() < 5104)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
@@ -455,7 +455,7 @@ int sceNetApctl_lib2_4C19731F(int code, void *info)
 
 int sceNetApctl_lib2_6D802E3F(int bt_id, const char *bt_init, void *bt_cb)
 {
-    if (_sceKernelCheckThreadStack() < 5104)
+    if (sceKernelCheckThreadStack() < 5104)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
@@ -466,7 +466,7 @@ int sceNetApctl_lib2_6D802E3F(int bt_id, const char *bt_init, void *bt_cb)
 
 int sceNetApctlGetState(int *state)
 {
-    if (_sceKernelCheckThreadStack() < 5104)
+    if (sceKernelCheckThreadStack() < 5104)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
@@ -479,7 +479,7 @@ int sceNetApctl_lib_7CFAB990(void *handler, void *arg)
 {
     int id = 0;
     int ret;
-    if (_sceKernelCheckThreadStack() < 5088)
+    if (sceKernelCheckThreadStack() < 5088)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
@@ -489,7 +489,7 @@ int sceNetApctl_lib_7CFAB990(void *handler, void *arg)
 
 int sceNetApctl_lib_E11BAFAB(int handlerId)
 {
-    if (_sceKernelCheckThreadStack() < 5104)
+    if (sceKernelCheckThreadStack() < 5104)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
@@ -498,7 +498,7 @@ int sceNetApctl_lib_E11BAFAB(int handlerId)
 
 int sceNetApctl_E9B2E5E6(void)
 {
-    if (_sceKernelCheckThreadStack() < 5104)
+    if (sceKernelCheckThreadStack() < 5104)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
@@ -507,7 +507,7 @@ int sceNetApctl_E9B2E5E6(void)
 
 int sceNetApctl_6BDDCB8C(u32 *size_inout, void *buf)
 {
-    if (_sceKernelCheckThreadStack() < 5104)
+    if (sceKernelCheckThreadStack() < 5104)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
@@ -518,7 +518,7 @@ int sceNetApctl_6BDDCB8C(u32 *size_inout, void *buf)
 
 int sceNetApctl_04776994(int id, int code, void *out)
 {
-    if (_sceKernelCheckThreadStack() < 5104)
+    if (sceKernelCheckThreadStack() < 5104)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
@@ -531,7 +531,7 @@ int sceNetApctl_A7BB73DF(void *handler, void *arg)
 {
     int id = 0;
     int ret;
-    if (_sceKernelCheckThreadStack() < 5088)
+    if (sceKernelCheckThreadStack() < 5088)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
@@ -541,7 +541,7 @@ int sceNetApctl_A7BB73DF(void *handler, void *arg)
 
 int sceNetApctl_6F5D2981(int handlerId)
 {
-    if (_sceKernelCheckThreadStack() < 5104)
+    if (sceKernelCheckThreadStack() < 5104)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
@@ -550,14 +550,14 @@ int sceNetApctl_6F5D2981(int handlerId)
 
 int sceNetApctl_lib_C519EDCD(int enable)
 {
-    if (_sceKernelCheckThreadStack() < 5104)
+    if (sceKernelCheckThreadStack() < 5104)
         return APCTL_ERR_STACK_SMALL;
     return apctl_set_roam_enabled(enable);
 }
 
 int sceNetApctl_lib2_C20A144C(int connIndex, int extra_flag)
 {
-    if (_sceKernelCheckThreadStack() < 5088)
+    if (sceKernelCheckThreadStack() < 5088)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
@@ -566,7 +566,7 @@ int sceNetApctl_lib2_C20A144C(int connIndex, int extra_flag)
 
 int sceNetApctl_lib2_9D352B37(int connIndex)
 {
-    if (_sceKernelCheckThreadStack() < 5104)
+    if (sceKernelCheckThreadStack() < 5104)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
@@ -575,7 +575,7 @@ int sceNetApctl_lib2_9D352B37(int connIndex)
 
 int sceNetApctl_lib2_69745F0A(char **out_ptr)
 {
-    if (_sceKernelCheckThreadStack() < 5104)
+    if (sceKernelCheckThreadStack() < 5104)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
@@ -584,7 +584,7 @@ int sceNetApctl_lib2_69745F0A(char **out_ptr)
 
 int sceNetApctl_lib2_3895B348(const char *str)
 {
-    if (_sceKernelCheckThreadStack() < 5104)
+    if (sceKernelCheckThreadStack() < 5104)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
@@ -1684,19 +1684,19 @@ static int apctl_notify_all(ApctlCtx *ctx, int old_s, int new_s, int ev, int err
     sceKernelLockLwMutex(ctx->mtx, 1, NULL);
     for (i = 0; i < 2; i++) {
         if (g_handlers_pub[i].fn != NULL) {
-            _sceKernelCheckThreadStack();
+            sceKernelCheckThreadStack();
             g_handlers_pub[i].fn(old_s, new_s, ev, err, g_handlers_pub[i].arg);
         }
     }
     for (i = 0; i < 2; i++) {
         if (g_handlers_lib[i].fn != NULL) {
-            _sceKernelCheckThreadStack();
+            sceKernelCheckThreadStack();
             g_handlers_lib[i].fn(old_s, new_s, ev, err, g_handlers_lib[i].arg);
         }
     }
     for (i = 0; i < 2; i++) {
         if (g_handlers_ext[i].fn != NULL) {
-            _sceKernelCheckThreadStack();
+            sceKernelCheckThreadStack();
             g_handlers_ext[i].fn(old_s, new_s, ev, err, g_handlers_ext[i].arg);
         }
     }
@@ -1710,7 +1710,7 @@ static int apctl_notify_lib(ApctlCtx *ctx, int old_s, int new_s, int ev, int err
     sceKernelLockLwMutex(ctx->mtx, 1, NULL);
     for (i = 0; i < 2; i++) {
         if (g_handlers_lib[i].fn != NULL) {
-            _sceKernelCheckThreadStack();
+            sceKernelCheckThreadStack();
             g_handlers_lib[i].fn(old_s, new_s, ev, err, g_handlers_lib[i].arg);
         }
     }

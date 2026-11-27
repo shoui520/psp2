@@ -1453,8 +1453,8 @@ INET_STATIC_ASSERT(rijndael_tables_size, sizeof(RijndaelTables) == 2816);
 
 /* Kernel_Library */
 extern void *sceKernelMemset(void *dst, int ch, SceSize len);
-extern int _sceKernelCheckThreadStack(void);
-#define sceKernelCheckThreadStack _sceKernelCheckThreadStack
+extern int sceKernelCheckThreadStack(void);
+#define sceKernelCheckThreadStack sceKernelCheckThreadStack
 extern void *sceKernelMemcpy(void *dst, const void *src, SceSize len);
 extern SceUID sceKernelGetThreadId(void);
 

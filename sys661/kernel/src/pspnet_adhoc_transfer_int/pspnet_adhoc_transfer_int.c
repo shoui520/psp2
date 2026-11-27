@@ -12,7 +12,7 @@ extern int sceNetAdhocPtpSend(int id, const void *data, int *datasize, u32 timeo
 extern int sceNetAdhocPtpRecv(int id, void *data, int *datasize, u32 timeout, int flag);
 extern int sceNetAdhocPtpFlush(int id, u32 timeout, int flag);
 extern int sceNetAdhocPtpClose(int id, int flag);
-extern int sceNetAdhoc_73BFD52D(int id, int flags);
+extern int sceNetAdhocSetSocketAlert(int id, int flags);
 
 extern int sceNetAdhocMatchingCreate(int mode, int maxpeers, u16 port, int bufsize, u32 hellodelay, u32 pingdelay, int initcount, u32 msgdelay, void *callback);
 extern int sceNetAdhocMatchingDelete(int matchingid);
@@ -239,7 +239,7 @@ __attribute__((noinline))
 static int ptpAbortTransfer(int ptp_id)
 {
     g_abort_flag = 1;
-    return sceNetAdhoc_73BFD52D(ptp_id, 0x3f0);
+    return sceNetAdhocSetSocketAlert(ptp_id, 0x3f0);
 }
 
 __attribute__((noinline))

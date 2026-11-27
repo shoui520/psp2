@@ -63,7 +63,7 @@ imports:
     functions:
       - sceNetAdhocPtpClose: 0x157e6225
       - sceNetAdhocPtpSend: 0x4da4c788
-      - sceNetAdhoc_73BFD52D: 0x73bfd52d
+      - sceNetAdhocSetSocketAlert: 0x73bfd52d
       - sceNetAdhocPtpOpen: 0x877f6d66
       - sceNetAdhocPtpRecv: 0x8bea2b3e
       - sceNetAdhocPtpFlush: 0x9ac2eeac

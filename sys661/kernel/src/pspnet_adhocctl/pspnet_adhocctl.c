@@ -4,7 +4,7 @@ extern void *sceKernelMemset(void *dst, int val, u32 len);
 extern void *sceKernelMemcpy(void *dst, const void *src, u32 len);
 extern int sceKernelLockLwMutex(void *workarea, int count, u32 *timeout);
 extern int sceKernelUnlockLwMutex(void *workarea, int count);
-extern int _sceKernelCheckThreadStack(void);
+extern int sceKernelCheckThreadStack(void);
 extern int sceKernelGetModuleGPByAddress(void *addr, void *gp_out);
 extern void KprintfForUser(const char *fmt, ...);
 extern int sceKernelGetCompiledSdkVersion(void);
@@ -325,7 +325,7 @@ static void adhocctlUnlock(int lock_res);
 /* 0x0000 */
 int sceNetAdhocctlInit(int stackSize, int priority, const void *adhoc_id)
 {
-    if (_sceKernelCheckThreadStack() < 0xbe0)
+    if (sceKernelCheckThreadStack() < 0xbe0)
         return 0x80410005;
     if (g_initialized > 0)
         return 0x80410b07;
@@ -377,7 +377,7 @@ int sceNetAdhocctlInit(int stackSize, int priority, const void *adhoc_id)
 /* 0x0174 */
 int sceNetAdhocctlJoin(const void *scan_info)
 {
-    if (_sceKernelCheckThreadStack() < 0xbf0)
+    if (sceKernelCheckThreadStack() < 0xbf0)
         return 0x80410005;
     if (g_initialized == 0)
         return 0x80410b08;
@@ -403,7 +403,7 @@ int sceNetAdhocctlJoin(const void *scan_info)
 /* 0x0238 */
 int sceNetAdhocctlGetPeerList(int *buflen, void *buf)
 {
-    if (_sceKernelCheckThreadStack() < 0xbf0)
+    if (sceKernelCheckThreadStack() < 0xbf0)
         return 0x80410005;
     if (g_initialized == 0)
         return 0x80410b08;
@@ -429,7 +429,7 @@ int sceNetAdhocctlGetPeerList(int *buflen, void *buf)
 /* 0x0304 */
 int sceNetAdhocctlGetPeerInfo(const u8 *mac, int size, void *peer_info)
 {
-    if (_sceKernelCheckThreadStack() < 0xbf0)
+    if (sceKernelCheckThreadStack() < 0xbf0)
         return 0x80410005;
     if (g_initialized == 0)
         return 0x80410b08;
@@ -441,7 +441,7 @@ int sceNetAdhocctlGetPeerInfo(const u8 *mac, int size, void *peer_info)
 /* 0x03a8 */
 int sceNetAdhocctlGetAddrByName(const char *name, int *buflen, void *buf)
 {
-    if (_sceKernelCheckThreadStack() < 0xbf0)
+    if (sceKernelCheckThreadStack() < 0xbf0)
         return 0x80410005;
     if (g_initialized == 0)
         return 0x80410b08;
@@ -473,7 +473,7 @@ static void adhocctlCopySsidPrefix(char *dst)
 /* 0x04b4 */
 int sceNetAdhocctlTerm(void)
 {
-    if (_sceKernelCheckThreadStack() < 0xbf0)
+    if (sceKernelCheckThreadStack() < 0xbf0)
         return 0x80410005;
     if (g_initialized == 0)
         return 0;
@@ -487,7 +487,7 @@ int sceNetAdhocctlTerm(void)
 /* 0x0518 */
 int sceNetAdhocctlConnect(const char *name)
 {
-    if (_sceKernelCheckThreadStack() < 0xbf0)
+    if (sceKernelCheckThreadStack() < 0xbf0)
         return 0x80410005;
     if (g_initialized == 0)
         return 0x80410b08;
@@ -508,7 +508,7 @@ int sceNetAdhocctlConnect(const char *name)
 /* 0x05c0 */
 int sceNetAdhocctlCreate(const char *name)
 {
-    if (_sceKernelCheckThreadStack() < 0xbf0)
+    if (sceKernelCheckThreadStack() < 0xbf0)
         return 0x80410005;
     if (g_initialized == 0)
         return 0x80410b08;
@@ -554,7 +554,7 @@ static int adhocctlCreateGameModeInternal(const char *name, int game_type, int n
 /* 0x07d0 */
 int sceNetAdhocctlCreateEnterGameMode(const char *name, int game_type, int num_peers, const u8 *macs, u32 timeout, int flag)
 {
-    if (_sceKernelCheckThreadStack() < 0xbe0)
+    if (sceKernelCheckThreadStack() < 0xbe0)
         return 0x80410005;
     return adhocctlCreateGameModeInternal(name, game_type, num_peers, macs, timeout, flag, num_peers);
 }
@@ -562,7 +562,7 @@ int sceNetAdhocctlCreateEnterGameMode(const char *name, int game_type, int num_p
 /* 0x086c */
 int sceNetAdhocctl_B0B80E80(const char *name, int game_type, int min_peers, int num_peers, const u8 *macs, u32 timeout, int flag)
 {
-    if (_sceKernelCheckThreadStack() < 0xbe0)
+    if (sceKernelCheckThreadStack() < 0xbe0)
         return 0x80410005;
     return adhocctlCreateGameModeInternal(name, game_type, num_peers, macs, timeout, flag, min_peers);
 }
@@ -570,7 +570,7 @@ int sceNetAdhocctl_B0B80E80(const char *name, int game_type, int min_peers, int 
 /* 0x0914 */
 int sceNetAdhocctlJoinEnterGameMode(const char *name, const u8 *gc_mac, u32 timeout, int flag)
 {
-    if (_sceKernelCheckThreadStack() < 0xbe0)
+    if (sceKernelCheckThreadStack() < 0xbe0)
         return 0x80410005;
     if (g_initialized == 0)
         return 0x80410b08;
@@ -593,7 +593,7 @@ int sceNetAdhocctlJoinEnterGameMode(const char *name, const u8 *gc_mac, u32 time
 /* 0x0a08 */
 int sceNetAdhocctlScan(void)
 {
-    if (_sceKernelCheckThreadStack() < 0xbf0)
+    if (sceKernelCheckThreadStack() < 0xbf0)
         return 0x80410005;
     if (g_initialized == 0)
         return 0x80410b08;
@@ -603,7 +603,7 @@ int sceNetAdhocctlScan(void)
 /* 0x0a5c */
 int sceNetAdhocctlDisconnect(void)
 {
-    if (_sceKernelCheckThreadStack() < 0xbf0)
+    if (sceKernelCheckThreadStack() < 0xbf0)
         return 0x80410005;
     if (g_initialized == 0)
         return 0x80410b08;
@@ -613,7 +613,7 @@ int sceNetAdhocctlDisconnect(void)
 /* 0x0ab0 */
 int sceNetAdhocctlExitGameMode(void)
 {
-    if (_sceKernelCheckThreadStack() < 0xbf0)
+    if (sceKernelCheckThreadStack() < 0xbf0)
         return 0x80410005;
     if (g_initialized == 0)
         return 0x80410b08;
@@ -624,7 +624,7 @@ int sceNetAdhocctlExitGameMode(void)
 int sceNetAdhocctlAddHandler(void (*func)(int, int, void *), void *arg)
 {
     int id;
-    if (_sceKernelCheckThreadStack() < 0xbe0)
+    if (sceKernelCheckThreadStack() < 0xbe0)
         return 0x80410005;
     if (g_initialized == 0)
         return 0x80410b08;
@@ -637,7 +637,7 @@ int sceNetAdhocctlAddHandler(void (*func)(int, int, void *), void *arg)
 /* 0x0b90 */
 int sceNetAdhocctlDelHandler(int id)
 {
-    if (_sceKernelCheckThreadStack() < 0xbf0)
+    if (sceKernelCheckThreadStack() < 0xbf0)
         return 0x80410005;
     if (g_initialized == 0)
         return 0x80410b08;
@@ -647,7 +647,7 @@ int sceNetAdhocctlDelHandler(int id)
 /* 0x0bf0 */
 int sceNetAdhocctlGetState(int *state)
 {
-    if (_sceKernelCheckThreadStack() < 0xbf0)
+    if (sceKernelCheckThreadStack() < 0xbf0)
         return 0x80410005;
     if (g_initialized == 0)
         return 0x80410b08;
@@ -659,7 +659,7 @@ int sceNetAdhocctlGetState(int *state)
 /* 0x0c5c */
 int sceNetAdhocctlGetAdhocId(void *adhoc_id)
 {
-    if (_sceKernelCheckThreadStack() < 0xbf0)
+    if (sceKernelCheckThreadStack() < 0xbf0)
         return 0x80410005;
     if (g_initialized == 0)
         return 0x80410b08;
@@ -671,7 +671,7 @@ int sceNetAdhocctlGetAdhocId(void *adhoc_id)
 /* 0x0cc8 */
 int sceNetAdhocctlGetNameByAddr(const u8 *mac, char *name)
 {
-    if (_sceKernelCheckThreadStack() < 0xbf0)
+    if (sceKernelCheckThreadStack() < 0xbf0)
         return 0x80410005;
     if (g_initialized == 0)
         return 0x80410b08;
@@ -683,7 +683,7 @@ int sceNetAdhocctlGetNameByAddr(const u8 *mac, char *name)
 /* 0x0d50 */
 int sceNetAdhocctlGetParameter(void *param)
 {
-    if (_sceKernelCheckThreadStack() < 0xbf0)
+    if (sceKernelCheckThreadStack() < 0xbf0)
         return 0x80410005;
     if (g_initialized == 0)
         return 0x80410b08;
@@ -695,7 +695,7 @@ int sceNetAdhocctlGetParameter(void *param)
 /* 0x0dbc */
 int sceNetAdhocctlGetScanInfo(int *buflen, void *buf)
 {
-    if (_sceKernelCheckThreadStack() < 0xbf0)
+    if (sceKernelCheckThreadStack() < 0xbf0)
         return 0x80410005;
     if (g_initialized == 0)
         return 0x80410b08;
@@ -707,7 +707,7 @@ int sceNetAdhocctlGetScanInfo(int *buflen, void *buf)
 /* 0x0e3c */
 int sceNetAdhocctlGetGameModeInfo(void *info)
 {
-    if (_sceKernelCheckThreadStack() < 0xbf0)
+    if (sceKernelCheckThreadStack() < 0xbf0)
         return 0x80410005;
     if (g_initialized == 0)
         return 0x80410b08;
@@ -771,7 +771,7 @@ int sceNetAdhocctl_lib_CDEA7ACB(void *param)
 /* 0x1044 */
 int sceNetAdhocctl_lib_1A2B6D03(const char *name)
 {
-    if (_sceKernelCheckThreadStack() < 0xbf0)
+    if (sceKernelCheckThreadStack() < 0xbf0)
         return 0x80410005;
     if (g_initialized == 0)
         return 0x80410b08;
@@ -798,7 +798,7 @@ int sceNetAdhocctl_lib_1572422C(void)
 /* 0x1104 */
 int sceNetAdhocctl_lib_F6057CC4(const char *name)
 {
-    if (_sceKernelCheckThreadStack() < 0xbf0)
+    if (sceKernelCheckThreadStack() < 0xbf0)
         return 0x80410005;
     if (g_initialized == 0)
         return 0x80410b08;
@@ -1527,7 +1527,7 @@ static int adhocctlNotifyHandlers(int event, int error)
                 u32 saved_gp;
                 __asm__ volatile ("move %0, $gp" : "=r"(saved_gp));
                 __asm__ volatile ("move $gp, %0" : : "r"(g_handlers[i].gp));
-                int rem = _sceKernelCheckThreadStack() - g_ctx.min_stack;
+                int rem = sceKernelCheckThreadStack() - g_ctx.min_stack;
                 if (rem > 0) {
                     u32 alloc = (rem + 15) & ~15;
                     void * volatile stack_pad = __builtin_alloca(alloc);

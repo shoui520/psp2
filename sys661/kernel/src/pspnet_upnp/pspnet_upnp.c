@@ -120,10 +120,10 @@ s32 sceNetStun_40971567(s32 id, void *arg);
  * sceNetUpnp exports (0x0fa0..0x1394)
  * ========================================================================= */
 
-s32 sceNetUpnp_E24220B5(s32 stack_size, s32 prio)
+s32 sceNetUpnpInit(s32 stack_size, s32 prio)
 {
 	s32 ret;
-	if (_sceKernelCheckThreadStack() < 0x7f0)
+	if (sceKernelCheckThreadStack() < 0x7f0)
 		return (s32)0x80410005;
 	if (g_upnp_initialized > 0)
 		return (s32)0x80411602;
@@ -134,9 +134,9 @@ s32 sceNetUpnp_E24220B5(s32 stack_size, s32 prio)
 	return ret;
 }
 
-s32 sceNetUpnp_540491EF(void)
+s32 sceNetUpnpTerm(void)
 {
-	if (_sceKernelCheckThreadStack() < 0x7f0)
+	if (sceKernelCheckThreadStack() < 0x7f0)
 		return (s32)0x80410005;
 	if (!g_upnp_initialized)
 		return 0;
@@ -147,21 +147,21 @@ s32 sceNetUpnp_540491EF(void)
 
 s32 sceNetUpnp_8513C6D1(UpnpHandlerCb cb, void *arg, s32 *out_id)
 {
-	if (_sceKernelCheckThreadStack() < 0x7f0)
+	if (sceKernelCheckThreadStack() < 0x7f0)
 		return (s32)0x80410005;
 	return upnpAddHandlerInternal(cb, arg, out_id);
 }
 
 s32 sceNetUpnp_74A51211(s32 id)
 {
-	if (_sceKernelCheckThreadStack() < 0x7f0)
+	if (sceKernelCheckThreadStack() < 0x7f0)
 		return (s32)0x80410005;
 	return upnpDelHandlerInternal(id);
 }
 
-s32 sceNetUpnp_3432B2E5(void)
+s32 sceNetUpnpStart(void)
 {
-	if (_sceKernelCheckThreadStack() < 0x7f0)
+	if (sceKernelCheckThreadStack() < 0x7f0)
 		return (s32)0x80410005;
 	if (!g_upnp_initialized)
 		return (s32)0x80411601;
@@ -170,16 +170,16 @@ s32 sceNetUpnp_3432B2E5(void)
 
 s32 sceNetUpnp_FDA78483(void)
 {
-	if (_sceKernelCheckThreadStack() < 0x7f0)
+	if (sceKernelCheckThreadStack() < 0x7f0)
 		return (s32)0x80410005;
 	if (!g_upnp_initialized)
 		return (s32)0x80411601;
 	return upnpStartInternal(1);
 }
 
-s32 sceNetUpnp_3E32ED9E(void)
+s32 sceNetUpnpStop(void)
 {
-	if (_sceKernelCheckThreadStack() < 0x7f0)
+	if (sceKernelCheckThreadStack() < 0x7f0)
 		return (s32)0x80410005;
 	if (!g_upnp_initialized)
 		return (s32)0x80411601;
@@ -188,16 +188,16 @@ s32 sceNetUpnp_3E32ED9E(void)
 
 s32 sceNetUpnp_C3A35217(s32 *out_state)
 {
-	if (_sceKernelCheckThreadStack() < 0x7f0)
+	if (sceKernelCheckThreadStack() < 0x7f0)
 		return (s32)0x80410005;
 	if (!g_upnp_initialized)
 		return (s32)0x80411601;
 	return upnpGetStateInternal(out_state);
 }
 
-s32 sceNetUpnp_27045362(UpnpNatInfo *info)
+s32 sceNetUpnpGetNatInfo(UpnpNatInfo *info)
 {
-	if (_sceKernelCheckThreadStack() < 0x7f0)
+	if (sceKernelCheckThreadStack() < 0x7f0)
 		return (s32)0x80410005;
 	if (!g_upnp_initialized)
 		return (s32)0x80411601;
@@ -206,7 +206,7 @@ s32 sceNetUpnp_27045362(UpnpNatInfo *info)
 
 s32 sceNetUpnp_1038E77A(UpnpNatInfoEx *info)
 {
-	if (_sceKernelCheckThreadStack() < 0x7f0)
+	if (sceKernelCheckThreadStack() < 0x7f0)
 		return (s32)0x80410005;
 	if (!g_upnp_initialized)
 		return (s32)0x80411601;
@@ -215,7 +215,7 @@ s32 sceNetUpnp_1038E77A(UpnpNatInfoEx *info)
 
 s32 sceNetUpnp_EAF1C841(s32 *out_err)
 {
-	if (_sceKernelCheckThreadStack() < 0x7f0)
+	if (sceKernelCheckThreadStack() < 0x7f0)
 		return (s32)0x80410005;
 	if (!g_upnp_initialized)
 		return (s32)0x80411601;

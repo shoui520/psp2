@@ -54,7 +54,7 @@ imports:
     pad: 4
     functions:
       - sceNetAdhocPdpCreate: 0x6f92741b
-      - sceNetAdhoc_73BFD52D: 0x73bfd52d
+      - sceNetAdhocSetSocketAlert: 0x73bfd52d
       - sceNetAdhocPdpDelete: 0x7f27bb5e
       - sceNetAdhocPdpSend: 0xabed3790
       - sceNetAdhocPdpRecv: 0xdfe53e03
@@ -78,7 +78,7 @@ imports:
       - sceKernelCpuSuspendIntr: 0x092968f4
       - sceKernelMemset: 0xa089eca4
       - sceKernelLockLwMutex: 0xbea46419
-      - _sceKernelCheckThreadStack: 0xd13bde95
+      - sceKernelCheckThreadStack: 0xd13bde95
       - sceKernelUnlockLwMutex: 0x15b6446b
       - sceKernelMemcpy: 0x1839852a
       - sceKernelCpuResumeIntr: 0x5f10d406

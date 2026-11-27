@@ -24,11 +24,11 @@ exports:
       - sceHprm_3953DE6B: 0x3953de6b
       - sceHprm_396FD885: 0x396fd885
       - sceHprmReadLatch: 0x40d2f9f0
-      - sceHprm_444ED0B7: 0x444ed0b7
+      - sceHprmUnregisterCallback: 0x444ed0b7
       - sceHprm_71B5FB67: 0x71b5fb67
       - sceHprmIsHeadphoneExist: 0x7e69eda4
-      - sceHprm_C7154136: 0xc7154136
-      - sceHprm_444ED0B7: 0xfd7de6cd
+      - sceHprmRegisterCallback: 0xc7154136
+      - sceHprmUnregisterCallback: 0xfd7de6cd
   - name: sceHprm_driver
     version: [0, 17]
     attributes: 0x0001
@@ -62,10 +62,10 @@ exports:
       - sceHprm_driver_C00DE13F: 0xc00de13f
       - sceHprm_driver_D3F17366: 0xd3f17366
       - sceHprm_driver_DC895B2B: 0xdc895b2b
-      - sceHprm_C7154136: 0xdfc57c88
+      - sceHprmRegisterCallback: 0xdfc57c88
       - sceHprm_driver_DFE72E99: 0xdfe72e99
       - sceHprmReadLatch: 0xe9b776be
-      - sceHprm_444ED0B7: 0xeb0cfccc
+      - sceHprmUnregisterCallback: 0xeb0cfccc
       - sceHprmIsRemoteExist: 0xefcfd0c5
       - sceHprmIsHeadphoneExist: 0xfa4a25a7
 imports:

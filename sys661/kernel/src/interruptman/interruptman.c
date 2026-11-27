@@ -40,7 +40,7 @@ SceResidentLibraryEntryTable intrEntry = {
         (s32)sceKernelReleaseSubIntrHandler,
         (s32)sceKernelRegisterUserSpaceIntrStack,
         (s32)sceKernelEnableSubIntr,
-        (s32)sceKernelIsSubInterruptOccured
+        (s32)sceKernelIsSubInterruptOccurred
     },
     .vStubCount16 = 0,
     .nidTableInfo = 0,
@@ -770,7 +770,7 @@ s32 sceKernelResumeSubIntr(s32 intrNum, s32 subIntrNum, s32 prevState)
     return ret;
 }
 
-s32 sceKernelIsSubInterruptOccured(s32 intrNum, s32 subIntrNum)
+s32 sceKernelIsSubInterruptOccurred(s32 intrNum, s32 subIntrNum)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
     if ((u32)intrNum >= 68)

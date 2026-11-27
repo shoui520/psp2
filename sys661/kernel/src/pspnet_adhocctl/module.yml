@@ -172,7 +172,7 @@ imports:
     functions:
       - sceKernelMemset: 0xa089eca4
       - sceKernelLockLwMutex: 0xbea46419
-      - _sceKernelCheckThreadStack: 0xd13bde95
+      - sceKernelCheckThreadStack: 0xd13bde95
       - sceKernelUnlockLwMutex: 0x15b6446b
       - sceKernelMemcpy: 0x1839852a
   - name: ModuleMgrForUser

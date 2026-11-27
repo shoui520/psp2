@@ -30,7 +30,7 @@ int sceNetInetBind(int sock, const void *addr, u32 addrLen)
     InetThreadInfo *ti;
     InetSocket *so;
 
-    if (_sceKernelCheckThreadStack() < 4048) {
+    if (sceKernelCheckThreadStack() < 4048) {
         return -1;
     }
     ti = sceNet_lib_CA3CF5EB(&error);
@@ -70,7 +70,7 @@ int sceNetInetAccept(int sock, void *addr, u32 *addrLen)
     InetSocket *accepted = NULL;
     s32 kermitNewId = 0;
 
-    if (_sceKernelCheckThreadStack() < 4032) {
+    if (sceKernelCheckThreadStack() < 4032) {
         return -1;
     }
     ti = sceNet_lib_CA3CF5EB(&error);
@@ -181,7 +181,7 @@ int sceNetInetConnect(int sock, const void *addr, u32 addrLen)
     InetThreadInfo *ti;
     InetSocket *so;
 
-    if (_sceKernelCheckThreadStack() < 4048) {
+    if (sceKernelCheckThreadStack() < 4048) {
         return -1;
     }
     ti = sceNet_lib_CA3CF5EB(&error);
@@ -281,7 +281,7 @@ int sceNetInetSend(int sock, const void *buf, s32 len, u32 flags)
     s32 sent;
     InetThreadInfo *ti;
 
-    if (_sceKernelCheckThreadStack() < 4000) {
+    if (sceKernelCheckThreadStack() < 4000) {
         return -1;
     }
     ti = sceNet_lib_CA3CF5EB(&error);
@@ -317,7 +317,7 @@ int sceNetInetSendto(int sock, const void *buf, s32 len, u32 flags, const void *
     s32 sent;
     InetThreadInfo *ti;
 
-    if (_sceKernelCheckThreadStack() < 4000) {
+    if (sceKernelCheckThreadStack() < 4000) {
         return -1;
     }
     ti = sceNet_lib_CA3CF5EB(&error);
@@ -356,7 +356,7 @@ int sceNetInetSendmsg(int sock, const InetMsghdr *msg, u32 flags)
     InetIovec stackIov[8];
     InetIovec *iov = stackIov;
 
-    if (_sceKernelCheckThreadStack() < 3952) {
+    if (sceKernelCheckThreadStack() < 3952) {
         return -1;
     }
     ti = sceNet_lib_CA3CF5EB(&error);
@@ -479,7 +479,7 @@ int sceNetInetRecv(int sock, void *buf, s32 len, u32 flags)
     s32 recvd;
     InetThreadInfo *ti;
 
-    if (_sceKernelCheckThreadStack() < 4000) {
+    if (sceKernelCheckThreadStack() < 4000) {
         return -1;
     }
     ti = sceNet_lib_CA3CF5EB(&error);
@@ -515,7 +515,7 @@ int sceNetInetRecvfrom(int sock, void *buf, s32 len, u32 flags, void *from, u32 
     s32 recvd;
     InetThreadInfo *ti;
 
-    if (_sceKernelCheckThreadStack() < 4000) {
+    if (sceKernelCheckThreadStack() < 4000) {
         return -1;
     }
     ti = sceNet_lib_CA3CF5EB(&error);
@@ -554,7 +554,7 @@ int sceNetInetRecvmsg(int sock, InetMsghdr *msg, u32 flags)
     InetIovec stackIov[8];
     InetIovec *iov = stackIov;
 
-    if (_sceKernelCheckThreadStack() < 3952) {
+    if (sceKernelCheckThreadStack() < 3952) {
         return -1;
     }
     ti = sceNet_lib_CA3CF5EB(&error);
@@ -700,7 +700,7 @@ int sceNetInetSetsockopt(int sock, int level, int optname, const void *optval, u
     InetThreadInfo *ti;
     InetSocket *so;
 
-    if (_sceKernelCheckThreadStack() < 4048) {
+    if (sceKernelCheckThreadStack() < 4048) {
         return -1;
     }
     ti = sceNet_lib_CA3CF5EB(&error);
@@ -745,7 +745,7 @@ int sceNetInetGetsockopt(int sock, int level, int optname, void *optval, u32 *op
     InetThreadInfo *ti;
     InetSocket *so;
 
-    if (_sceKernelCheckThreadStack() < 4032) {
+    if (sceKernelCheckThreadStack() < 4032) {
         return -1;
     }
     ti = sceNet_lib_CA3CF5EB(&error);
@@ -795,7 +795,7 @@ int sceNetInetGetsockname(int sock, void *name, u32 *nameLen)
     InetThreadInfo *ti;
     InetSocket *so;
 
-    if (_sceKernelCheckThreadStack() < 4048) {
+    if (sceKernelCheckThreadStack() < 4048) {
         return -1;
     }
     ti = sceNet_lib_CA3CF5EB(&error);
@@ -840,7 +840,7 @@ int sceNetInetGetpeername(int sock, void *name, u32 *nameLen)
     InetThreadInfo *ti;
     InetSocket *so;
 
-    if (_sceKernelCheckThreadStack() < 4048) {
+    if (sceKernelCheckThreadStack() < 4048) {
         return -1;
     }
     ti = sceNet_lib_CA3CF5EB(&error);
@@ -929,7 +929,7 @@ int sceNetInetSelect(s32 maxSock, void *readSet, void *writeSet, void *exceptSet
     InetThreadInfo *ti;
     u32 bits[48];
 
-    if (_sceKernelCheckThreadStack() < 3824) {
+    if (sceKernelCheckThreadStack() < 3824) {
         return -1;
     }
     ti = sceNet_lib_CA3CF5EB(&error);
@@ -1094,7 +1094,7 @@ int sceNetInetPoll(InetPollfd *fds, s32 nfds, s32 timeoutMs)
     u32 byteLen;
     int useStack;
 
-    if (_sceKernelCheckThreadStack() < 3760) {
+    if (sceKernelCheckThreadStack() < 3760) {
         return -1;
     }
     ti = sceNet_lib_CA3CF5EB(&error);
@@ -1318,7 +1318,7 @@ int sceNetInet_lib_B3FF98EB(const int *name, int nameLen, void *oldp, u32 *oldLe
 
 int sceNetInetSocket(int domain, int type, int protocol)
 {
-    if (_sceKernelCheckThreadStack() < 4048) {
+    if (sceKernelCheckThreadStack() < 4048) {
         return -1;
     }
     return inetSockCreateInternal(domain, type, protocol);
@@ -1330,7 +1330,7 @@ int sceNetInetListen(int sock, s32 backlog)
     InetThreadInfo *ti;
     InetSocket *so;
 
-    if (_sceKernelCheckThreadStack() < 4064) {
+    if (sceKernelCheckThreadStack() < 4064) {
         return -1;
     }
     ti = sceNet_lib_CA3CF5EB(&error);
@@ -1356,7 +1356,7 @@ int sceNetInetShutdown(int sock, u32 how)
     InetThreadInfo *ti;
     InetSocket *so;
 
-    if (_sceKernelCheckThreadStack() < 4064) {
+    if (sceKernelCheckThreadStack() < 4064) {
         return -1;
     }
     ti = sceNet_lib_CA3CF5EB(&error);
@@ -1397,7 +1397,7 @@ int sceNetInetClose(int sock)
     InetThreadInfo *ti;
     InetSocket *so;
 
-    if (_sceKernelCheckThreadStack() < 4064) {
+    if (sceKernelCheckThreadStack() < 4064) {
         return -1;
     }
     ti = sceNet_lib_CA3CF5EB(&error);
@@ -1415,7 +1415,7 @@ int sceNetInetCloseWithRST(int sock)
     InetThreadInfo *ti;
     InetSocket *so;
 
-    if (_sceKernelCheckThreadStack() < 4064) {
+    if (sceKernelCheckThreadStack() < 4064) {
         return -1;
     }
     ti = sceNet_lib_CA3CF5EB(&error);
@@ -1439,7 +1439,7 @@ int sceNetInetSocketAbort(int sock)
     InetSocket *so;
     int spl;
 
-    if (_sceKernelCheckThreadStack() < 4064) {
+    if (sceKernelCheckThreadStack() < 4064) {
         return SCE_NET_INET_ERROR_INSUFFICIENT_STACK;
     }
     ti = sceNet_lib_CA3CF5EB(&error);

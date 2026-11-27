@@ -53,8 +53,8 @@ extern int sceNetInetConnect(int s, const void *name, unsigned int namelen);
 extern int sceNetInetSend(int s, const void *buf, unsigned int len, int flags);
 extern int sceNetInetRecv(int s, void *buf, unsigned int len, int flags);
 extern int sceNetInetClose(int s);
-extern int sceNetInet_80A21ABD(int s);
-extern int sceNetInet_8CA3A97E(void);
+extern int sceNetInetSocketAbort(int s);
+extern int sceNetInetGetPspError(void);
 extern int sceNetInetInetAddr(const char *cp);
 
 extern int sceNetResolverCreate(int *rid, void *buf, SceSize buflen);
@@ -329,7 +329,7 @@ int sceDNAS_lib_9FF48DD3(void)
         sceNetResolverStop(g_ctx.rid);
     }
     if (g_ctx.sock >= 0) {
-        sceNetInet_80A21ABD(g_ctx.sock);
+        sceNetInetSocketAbort(g_ctx.sock);
     }
     return 0;
 }
@@ -359,7 +359,7 @@ int sceDNAS_lib_BE0998D7(void)
         sceNetResolverStop(g_ctx.rid);
     }
     if (g_ctx.sock >= 0) {
-        sceNetInet_80A21ABD(g_ctx.sock);
+        sceNetInetSocketAbort(g_ctx.sock);
     }
 
     if (g_ctx.thid >= 0) {
@@ -724,7 +724,7 @@ static int dnasTcpConnect(DnasContext *ctx)
             if (sceNetInetConnect(ctx->sock, ctx->sin, 16) == 0) {
                 return 0;
             }
-            ret = sceNetInet_8CA3A97E();
+            ret = sceNetInetGetPspError();
             dnasCloseSocket(ctx);
             if (ret != (int)0x8001006f) {
                 break;
@@ -1291,7 +1291,7 @@ static int dnasProxyConnect(DnasContext *ctx)
         }
         ret = sceNetInetSend(ctx->sock, g_io_buf, (unsigned int)ret, 0);
         if (ret < 0) {
-            return sceNetInet_8CA3A97E();
+            return sceNetInetGetPspError();
         }
     }
 
@@ -1299,7 +1299,7 @@ static int dnasProxyConnect(DnasContext *ctx)
     do {
         ret = sceNetInetRecv(ctx->sock, g_io_buf, 1, 0);
         if (ret < 0) {
-            return sceNetInet_8CA3A97E();
+            return sceNetInetGetPspError();
         }
         total += ret;
         ret = sceDNASCore_lib_C54657B7(g_io_buf, ret);

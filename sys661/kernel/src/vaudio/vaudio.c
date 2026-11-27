@@ -277,7 +277,7 @@ int sceVaudioChReserve(int samplecount, int freq, int channels)
     return vaudioChReserveInternal(samplecount, freq, channels, 0, -1);
 }
 
-int sceVaudio_driver_27ACC20B(int samplecount, int freq, int channels)
+int sceVaudioChReserveBuffering(int samplecount, int freq, int channels)
 {
     return vaudioChReserveInternal(samplecount, freq, channels, 1, -1);
 }

@@ -368,7 +368,7 @@ int sceUsbCamGetReverseMode(int *out)
     return ret;
 }
 
-int sceUsbCam_D293A100(int cbid)
+int sceUsbCamRegisterLensRotationCallback(int cbid)
 {
     u32 k1 = pspShiftK1();
     int ret = 0;
@@ -390,7 +390,7 @@ int sceUsbCam_D293A100(int cbid)
     return ret;
 }
 
-int sceUsbCam_driver_D293A100(int cbid) __attribute__((alias("sceUsbCam_D293A100")));
+int sceUsbCam_driver_D293A100(int cbid) __attribute__((alias("sceUsbCamRegisterLensRotationCallback")));
 
 int module_stop(SceSize args, void *argp)
 {
@@ -593,7 +593,7 @@ int sceUsbCamGetZoom(int *out)
     return ret;
 }
 
-int sceUsbCam_6784E6A8(int val)
+int sceUsbCamSetAntiFlicker(int val)
 {
     u32 k1 = pspShiftK1();
     int ret = usbCamSetParam(0x15e, val, &g_anti_flicker);
@@ -601,9 +601,9 @@ int sceUsbCam_6784E6A8(int val)
     return ret;
 }
 
-int sceUsbCam_driver_6784E6A8(int val) __attribute__((alias("sceUsbCam_6784E6A8")));
+int sceUsbCam_driver_6784E6A8(int val) __attribute__((alias("sceUsbCamSetAntiFlicker")));
 
-int sceUsbCam_AA7D94BA(int *out)
+int sceUsbCamGetAntiFlicker(int *out)
 {
     u32 k1 = pspShiftK1();
     int ret = usbCamGetParam(out, g_anti_flicker);
@@ -611,7 +611,7 @@ int sceUsbCam_AA7D94BA(int *out)
     return ret;
 }
 
-int sceUsbCam_driver_AA7D94BA(int *out) __attribute__((alias("sceUsbCam_AA7D94BA")));
+int sceUsbCam_driver_AA7D94BA(int *out) __attribute__((alias("sceUsbCamGetAntiFlicker")));
 
 int sceUsbCamSetReverseMode(int val)
 {
@@ -691,7 +691,7 @@ int sceUsbCamGetLensDirection(void)
     return ret;
 }
 
-int sceUsbCam_41EE8797(void)
+int sceUsbCamUnregisterLensRotationCallback(void)
 {
     u32 k1 = pspShiftK1();
     int intr = sceKernelCpuSuspendIntr();
@@ -705,7 +705,7 @@ int sceUsbCam_41EE8797(void)
     return ret;
 }
 
-int sceUsbCam_driver_41EE8797(void) __attribute__((alias("sceUsbCam_41EE8797")));
+int sceUsbCam_driver_41EE8797(void) __attribute__((alias("sceUsbCamUnregisterLensRotationCallback")));
 
 __attribute__((noinline))
 static int usbCamFrameThread(u32 args, void *argp)
@@ -811,7 +811,7 @@ int sceUsbCamSetupMic(SceUsbCamMicParam *param, void *workarea, int wasize)
     return ret;
 }
 
-int sceUsbCam_3DC0088E(void *buf, u32 size)
+int sceUsbCamReadMic(void *buf, u32 size)
 {
     u32 k1 = pspShiftK1();
     SceUsbCamMicArgs micArgs;
@@ -837,9 +837,9 @@ int sceUsbCam_3DC0088E(void *buf, u32 size)
     return ret;
 }
 
-int sceUsbCam_driver_3DC0088E(void *buf, u32 size) __attribute__((alias("sceUsbCam_3DC0088E")));
+int sceUsbCam_driver_3DC0088E(void *buf, u32 size) __attribute__((alias("sceUsbCamReadMic")));
 
-int sceUsbCam_36636925(void *buf, u32 size)
+int sceUsbCamReadMicBlocking(void *buf, u32 size)
 {
     u32 k1 = pspShiftK1();
     int ret;
@@ -858,9 +858,9 @@ int sceUsbCam_36636925(void *buf, u32 size)
     return ret;
 }
 
-int sceUsbCam_driver_36636925(void *buf, u32 size) __attribute__((alias("sceUsbCam_36636925")));
+int sceUsbCam_driver_36636925(void *buf, u32 size) __attribute__((alias("sceUsbCamReadMicBlocking")));
 
-int sceUsbCam_B048A67D(void)
+int sceUsbCamWaitReadMicEnd(void)
 {
     u32 k1 = pspShiftK1();
     u32 timeout = 0x2dc6c0;
@@ -892,9 +892,9 @@ int sceUsbCam_B048A67D(void)
     return ret;
 }
 
-int sceUsbCam_driver_B048A67D(void) __attribute__((alias("sceUsbCam_B048A67D")));
+int sceUsbCam_driver_B048A67D(void) __attribute__((alias("sceUsbCamWaitReadMicEnd")));
 
-int sceUsbCam_F8847F60(void)
+int sceUsbCamPollReadMicEnd(void)
 {
     u32 k1 = pspShiftK1();
     int ret;
@@ -917,7 +917,7 @@ int sceUsbCam_F8847F60(void)
     return ret;
 }
 
-int sceUsbCam_driver_F8847F60(void) __attribute__((alias("sceUsbCam_F8847F60")));
+int sceUsbCam_driver_F8847F60(void) __attribute__((alias("sceUsbCamPollReadMicEnd")));
 
 int sceUsbCam_2E930264(void)
 {
@@ -926,7 +926,7 @@ int sceUsbCam_2E930264(void)
 
 int sceUsbCam_driver_2E930264(void) __attribute__((alias("sceUsbCam_2E930264")));
 
-int sceUsbCam_82A64030(void)
+int sceUsbCamStartMic(void)
 {
     u32 k1 = pspShiftK1();
     int ret = (sceUsb_driver_D9EE03ED() != 0) ? sceUsb_driver_1159202A() : SCE_USBCAM_ERROR_NOT_STARTED;
@@ -934,9 +934,9 @@ int sceUsbCam_82A64030(void)
     return ret;
 }
 
-int sceUsbCam_driver_82A64030(void) __attribute__((alias("sceUsbCam_82A64030")));
+int sceUsbCam_driver_82A64030(void) __attribute__((alias("sceUsbCamStartMic")));
 
-int sceUsbCam_5145868A(void)
+int sceUsbCamStopMic(void)
 {
     u32 k1 = pspShiftK1();
     int ret = sceUsb_driver_469C73EB();
@@ -944,9 +944,9 @@ int sceUsbCam_5145868A(void)
     return ret;
 }
 
-int sceUsbCam_driver_5145868A(void) __attribute__((alias("sceUsbCam_5145868A")));
+int sceUsbCam_driver_5145868A(void) __attribute__((alias("sceUsbCamStopMic")));
 
-int sceUsbCam_5778B452(void)
+int sceUsbCamGetMicDataLength(void)
 {
     u32 k1 = pspShiftK1();
     int ret = (sceUsb_driver_D9EE03ED() != 0) ? sceUsb_driver_96A32FBC() : SCE_USBCAM_ERROR_NOT_STARTED;
@@ -954,9 +954,9 @@ int sceUsbCam_5778B452(void)
     return ret;
 }
 
-int sceUsbCam_driver_5778B452(void) __attribute__((alias("sceUsbCam_5778B452")));
+int sceUsbCam_driver_5778B452(void) __attribute__((alias("sceUsbCamGetMicDataLength")));
 
-int sceUsbCam_08AEE98A(int gain)
+int sceUsbCamSetMicGain(int gain)
 {
     u32 k1 = pspShiftK1();
     int ret = (sceUsb_driver_D9EE03ED() != 0) ? sceUsb_driver_D27EDB31(gain) : SCE_USBCAM_ERROR_NOT_STARTED;
@@ -964,7 +964,7 @@ int sceUsbCam_08AEE98A(int gain)
     return ret;
 }
 
-int sceUsbCam_driver_08AEE98A(int gain) __attribute__((alias("sceUsbCam_08AEE98A")));
+int sceUsbCam_driver_08AEE98A(int gain) __attribute__((alias("sceUsbCamSetMicGain")));
 
 static int usbCamInitMic(void)
 {

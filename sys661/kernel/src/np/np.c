@@ -6,7 +6,7 @@
 #include <common_imp.h>
 
 /* Imports */
-extern int _sceKernelCheckThreadStack(void);
+extern int sceKernelCheckThreadStack(void);
 extern int sceKernelCreateMutex(const char *name, u32 attr, int init_count, void *opt);
 extern int sceKernelDeleteMutex(int mutexId);
 extern int sceKernelLockMutex(int mutexId, int count, u32 *timeout);
@@ -210,12 +210,12 @@ static int npResidentInit(void)
     return ret;
 }
 
-/* sceNp_A0BE3C4B @ 0x013c */
-int sceNp_A0BE3C4B(char *country, u32 *age)
+/* sceNpGetAccountRegion @ 0x013c */
+int sceNpGetAccountRegion(char *country, u32 *age)
 {
     int ret;
 
-    if (_sceKernelCheckThreadStack() < 0x7f0)
+    if (sceKernelCheckThreadStack() < 0x7f0)
         return 0x80550004;
     if (g_resident_init <= 0)
         return 0x80550002;
@@ -326,12 +326,12 @@ static int npResidentTerm(void)
     return 0;
 }
 
-/* sceNp_633B5F71 @ 0x0508 */
-int sceNp_633B5F71(void *out_npid)
+/* sceNpGetNpId @ 0x0508 */
+int sceNpGetNpId(void *out_npid)
 {
     int ret;
 
-    if (_sceKernelCheckThreadStack() < 0x7f0)
+    if (sceKernelCheckThreadStack() < 0x7f0)
         return 0x80550004;
     if (g_resident_init <= 0)
         return 0x80550002;
@@ -352,12 +352,12 @@ int sceNp_633B5F71(void *out_npid)
     return 0;
 }
 
-/* sceNp_4B5C71C8 @ 0x05d4 */
-int sceNp_4B5C71C8(void *out_online_id)
+/* sceNpGetOnlineId @ 0x05d4 */
+int sceNpGetOnlineId(void *out_online_id)
 {
     int ret;
 
-    if (_sceKernelCheckThreadStack() < 0x7f0)
+    if (sceKernelCheckThreadStack() < 0x7f0)
         return 0x80550004;
     if (g_resident_init <= 0)
         return 0x80550002;
@@ -380,12 +380,12 @@ int sceNp_4B5C71C8(void *out_online_id)
     return 0;
 }
 
-/* sceNp_7E0864DF @ 0x06b8 */
-int sceNp_7E0864DF(void *out_profile)
+/* sceNpGetUserProfile @ 0x06b8 */
+int sceNpGetUserProfile(void *out_profile)
 {
     int ret;
 
-    if (_sceKernelCheckThreadStack() < 0x7f0)
+    if (sceKernelCheckThreadStack() < 0x7f0)
         return 0x80550004;
     if (g_resident_init <= 0)
         return 0x80550002;
@@ -406,12 +406,12 @@ int sceNp_7E0864DF(void *out_profile)
     return 0;
 }
 
-/* sceNp_CDCC21D3 @ 0x0784 */
-int sceNp_CDCC21D3(void *out_buf)
+/* sceNpGetMyLanguages @ 0x0784 */
+int sceNpGetMyLanguages(void *out_buf)
 {
     int ret;
 
-    if (_sceKernelCheckThreadStack() < 0x7f0)
+    if (sceKernelCheckThreadStack() < 0x7f0)
         return 0x80550004;
     if (g_resident_init <= 0)
         return 0x80550002;
@@ -432,12 +432,12 @@ int sceNp_CDCC21D3(void *out_buf)
     return 0;
 }
 
-/* sceNp_BB069A87 @ 0x0854 */
-int sceNp_BB069A87(u32 *out_chat, u32 *out_parental)
+/* sceNpGetContentRatingFlag @ 0x0854 */
+int sceNpGetContentRatingFlag(u32 *out_chat, u32 *out_parental)
 {
     int ret;
 
-    if (_sceKernelCheckThreadStack() < 0x7f0)
+    if (sceKernelCheckThreadStack() < 0x7f0)
         return 0x80550004;
     if (g_resident_init <= 0)
         return 0x80550002;
@@ -460,12 +460,12 @@ int sceNp_BB069A87(u32 *out_chat, u32 *out_parental)
     return 0;
 }
 
-/* sceNp_1D60AE4B @ 0x0938 */
-int sceNp_1D60AE4B(u32 *out_subaccount)
+/* sceNpGetChatRestrictionFlag @ 0x0938 */
+int sceNpGetChatRestrictionFlag(u32 *out_subaccount)
 {
     int ret;
 
-    if (_sceKernelCheckThreadStack() < 0x7f0)
+    if (sceKernelCheckThreadStack() < 0x7f0)
         return 0x80550004;
     if (g_resident_init <= 0)
         return 0x80550002;
@@ -2304,10 +2304,10 @@ static int npReadRegU32(const char *cat, const char *key, u32 *out_val)
     return 0;
 }
 
-/* sceNp_857B47D3 @ 0x44a0 */
-int sceNp_857B47D3(void)
+/* sceNpInit @ 0x44a0 */
+int sceNpInit(void)
 {
-    if (_sceKernelCheckThreadStack() < 0x7f0)
+    if (sceKernelCheckThreadStack() < 0x7f0)
         return 0x80550004;
 
     int ret = sceNpCore_57E15796();
@@ -2330,10 +2330,10 @@ int sceNp_857B47D3(void)
     return 0;
 }
 
-/* sceNp_37E1E274 @ 0x4580 */
-int sceNp_37E1E274(void)
+/* sceNpTerm @ 0x4580 */
+int sceNpTerm(void)
 {
-    int ret = _sceKernelCheckThreadStack();
+    int ret = sceKernelCheckThreadStack();
     if (ret >= 0x7f0 && g_np_inited != 0) {
         ret = npResidentTerm();
         g_np_inited = 0;

@@ -6,7 +6,7 @@ extern s32 sceUsb_driver_D9EE03ED(void);
 extern s32 sceUsb_driver_C99E1766(s32 id, void *arg);
 extern s32 sceUsb_driver_6C68EE25(s32 id, void *arg);
 
-s32 sceUsbMic_45310F07(void *param)
+s32 sceUsbMicInputInitEx(void *param)
 {
     s32 oldK1 = pspShiftK1();
     s32 ret;
@@ -24,7 +24,7 @@ s32 sceUsbMic_45310F07(void *param)
     return ret;
 }
 
-s32 sceUsbMic_2E6DCDCD(s32 maxSamples, s32 frequency, void *buf)
+s32 sceUsbMicInputBlocking(s32 maxSamples, s32 frequency, void *buf)
 {
     s32 oldK1 = pspShiftK1();
     s32 ret;
@@ -72,7 +72,7 @@ s32 module_stop(SceSize args, void *argp)
     return 0;
 }
 
-s32 sceUsbMic_B8E536EB(void)
+s32 sceUsbMicInputInit(void)
 {
     s32 oldK1 = pspShiftK1();
     sceKernelDelayThread(1000);
@@ -80,7 +80,7 @@ s32 sceUsbMic_B8E536EB(void)
     return 0;
 }
 
-s32 sceUsbMic_5F7F368D(void)
+s32 sceUsbMicInput(void)
 {
     s32 oldK1 = pspShiftK1();
     sceKernelDelayThread(1000);
@@ -88,7 +88,7 @@ s32 sceUsbMic_5F7F368D(void)
     return 0;
 }
 
-s32 sceUsbMic_63400E20(void)
+s32 sceUsbMicGetInputLength(void)
 {
     s32 oldK1 = pspShiftK1();
     sceKernelDelayThread(1000);
@@ -96,14 +96,14 @@ s32 sceUsbMic_63400E20(void)
     return 0;
 }
 
-s32 sceUsbMic_F899001C(void)
+s32 sceUsbMicWaitInputEnd(void)
 {
     s32 oldK1 = pspShiftK1();
     pspSetK1(oldK1);
     return 0;
 }
 
-s32 sceUsbMic_06128E42(void)
+s32 sceUsbMicPollInputEnd(void)
 {
     s32 oldK1 = pspShiftK1();
     pspSetK1(oldK1);

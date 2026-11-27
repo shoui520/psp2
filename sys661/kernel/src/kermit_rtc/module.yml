@@ -21,53 +21,53 @@ exports:
     extra_words: [0x00020000]
     bucket_words: [0x00040000, 0x000b0005, 0x0014000f, 0x00190016, 0x001f001e, 0x00200020, 0x00250020, 0x002b0027]
     functions:
-      - sceRtc_driver_C0F36B91: 0x011f03c1
-      - sceRtc_driver_C0F36B91: 0x029ca3b3
-      - sceRtc_driver_1FCE9E23: 0x0498fb3c
-      - sceRtc_driver_1DAB3CF3: 0x05ef322c
-      - sceRtc_driver_CF4E0EE0: 0x1909c99b
-      - sceRtc_driver_7C6E9610: 0x203ceb0d
-      - sceRtc_driver_B84AC7D7: 0x26d25a5d
-      - sceRtc_driver_8413CADC: 0x26d7a24a
-      - sceRtc_driver_E86D8FC0: 0x27c4594c
-      - sceRtc_driver_8DED141A: 0x27f98543
-      - sceRtc_driver_BDA60897: 0x28e1e988
-      - sceRtc_driver_4E267E02: 0x34885e0d
-      - sceRtc_driver_A4A5BF1B: 0x36075567
-      - sceRtc_driver_40B07E72: 0x3a807cc8
+      - sceRtcGetAccumulativeTime: 0x011f03c1
+      - sceRtcGetAccumulativeTime: 0x029ca3b3
+      - sceRtcFormatRFC3339: 0x0498fb3c
+      - sceRtcGetDaysInMonth: 0x05ef322c
+      - sceRtcSetTime64_t: 0x1909c99b
+      - sceRtcGetLastReincarnatedTime: 0x203ceb0d
+      - sceRtcTickAddMicroseconds: 0x26d25a5d
+      - sceRtcTickAddHours: 0x26d7a24a
+      - sceRtcGetTime_t: 0x27c4594c
+      - sceRtcFormatRFC3339LocalTime: 0x27f98543
+      - sceRtcParseRFC3339: 0x28e1e988
+      - sceRtcConvertUtcToLocalTime: 0x34885e0d
+      - sceRtcGetDosTime: 0x36075567
+      - sceRtcSetTime_t: 0x3a807cc8
       - sceRtcGetCurrentTick: 0x3f7ad767
-      - sceRtc_driver_00F66D06: 0x42307a17
-      - sceRtc_driver_AAAE90FF: 0x42842c77
+      - sceRtcIsLeapYear: 0x42307a17
+      - sceRtcTickAddYears: 0x42842c77
       - sceRtcTickAddTicks: 0x44f45e05
       - sceRtcCheckValid: 0x4b1b5e82
       - sceRtcGetCurrentClock: 0x4cfa57b0
       - sceRtc_driver_508BA64B: 0x508ba64b
-      - sceRtc_driver_321A839A: 0x57726bc1
-      - sceRtc_driver_E98FEC46: 0x62685e98
-      - sceRtc_driver_7D8E37E1: 0x6a676d2d
+      - sceRtcGetDayOfWeek: 0x57726bc1
+      - sceRtcGetLastAdjustedTime: 0x62685e98
+      - sceRtcUnregisterCallback: 0x6a676d2d
       - sceRtcGetTick: 0x6ff40acc
-      - sceRtc_driver_3E66CB7E: 0x779242a2
-      - sceRtc_driver_CEF8FE8E: 0x7ace4c04
-      - sceRtc_driver_E09880CF: 0x7d1fbed3
-      - sceRtc_driver_27FAEC90: 0x7de6711b
+      - sceRtcConvertLocalTimeToUTC: 0x779242a2
+      - sceRtcSetWin32FileTime: 0x7ace4c04
+      - sceRtcSetAlarmTick: 0x7d1fbed3
+      - sceRtcFormatRFC2822LocalTime: 0x7de6711b
       - sceRtcSetTick: 0x7ed29e40
-      - sceRtc_driver_CF76CFE5: 0x81fcda34
-      - sceRtc_driver_281144FE: 0x9ed0ae87
-      - sceRtc_driver_366669D6: 0xc2ddbeb5
-      - sceRtc_driver_C66D9686: 0xc41c2853
-      - sceRtc_driver_1A86F5FD: 0xc663b3b9
-      - sceRtc_driver_80F21937: 0xcf3a2ca8
-      - sceRtc_driver_B2B6578C: 0xcf561893
-      - sceRtc_driver_E45726F6: 0xdbf74f1b
-      - sceRtc_driver_C3A806EE: 0xdfbc5f16
-      - sceRtc_driver_94225550: 0xe1c93e47
-      - sceRtc_driver_CB0538FD: 0xe51b4b7a
-      - sceRtc_driver_77138347: 0xe6605bca
-      - sceRtc_driver_9012B140: 0xe7c27d1b
-      - sceRtc_driver_74772CCC: 0xf006f264
+      - sceRtcIsAlarmed: 0x81fcda34
+      - sceRtcCompareTick: 0x9ed0ae87
+      - sceRtcGetAlarmTick: 0xc2ddbeb5
+      - sceRtcGetTickResolution: 0xc41c2853
+      - sceRtcFormatRFC2822: 0xc663b3b9
+      - sceRtcTickAddWeeks: 0xcf3a2ca8
+      - sceRtcGetWin32FileTime: 0xcf561893
+      - sceRtcTickAddMonths: 0xdbf74f1b
+      - sceRtcParseDateTime: 0xdfbc5f16
+      - sceRtcGetTime64_t: 0xe1c93e47
+      - sceRtcTickAddDays: 0xe51b4b7a
+      - sceRtcTickAddMinutes: 0xe6605bca
+      - sceRtcGetCurrentClockLocalTime: 0xe7c27d1b
+      - sceRtcSetDosTime: 0xf006f264
       - sceRtcTickAddSeconds: 0xf2a4afe5
-      - sceRtc_driver_ED15334F: 0xf5fcc995
-      - sceRtc_driver_530A903E: 0xfb3b18cd
+      - sceRtcGetCurrentNetworkTick: 0xf5fcc995
+      - sceRtcRegisterCallback: 0xfb3b18cd
   - name: sceRtc_driver
     version: [0, 17]
     attributes: 0x0001
@@ -76,68 +76,68 @@ exports:
     extra_words: [0x00020000]
     bucket_words: [0x00020000, 0x00090007, 0x0013000d, 0x00170015, 0x0021001c, 0x00290027, 0x0037002d, 0x003e0038]
     functions:
-      - sceRtc_driver_00F66D06: 0x00f66d06
-      - sceRtc_driver_C0F36B91: 0x011f03c1
+      - sceRtcIsLeapYear: 0x00f66d06
+      - sceRtcGetAccumulativeTime: 0x011f03c1
       - sceRtc_driver_66054C2A: 0x17c26c00
-      - sceRtc_driver_1A86F5FD: 0x1a86f5fd
+      - sceRtcFormatRFC2822: 0x1a86f5fd
       - sceRtc_driver_1C1859DF: 0x1c1859df
-      - sceRtc_driver_1DAB3CF3: 0x1dab3cf3
-      - sceRtc_driver_1FCE9E23: 0x1fce9e23
-      - sceRtc_driver_27FAEC90: 0x27faec90
-      - sceRtc_driver_281144FE: 0x281144fe
-      - sceRtc_driver_321A839A: 0x321a839a
-      - sceRtc_driver_366669D6: 0x366669d6
-      - sceRtc_driver_3E66CB7E: 0x3e66cb7e
+      - sceRtcGetDaysInMonth: 0x1dab3cf3
+      - sceRtcFormatRFC3339: 0x1fce9e23
+      - sceRtcFormatRFC2822LocalTime: 0x27faec90
+      - sceRtcCompareTick: 0x281144fe
+      - sceRtcGetDayOfWeek: 0x321a839a
+      - sceRtcGetAlarmTick: 0x366669d6
+      - sceRtcConvertLocalTimeToUTC: 0x3e66cb7e
       - sceRtcGetCurrentTick: 0x3f7ad767
-      - sceRtc_driver_40B07E72: 0x40b07e72
+      - sceRtcSetTime_t: 0x40b07e72
       - sceRtcTickAddTicks: 0x44f45e05
       - sceRtcResume: 0x48d07d70
       - sceRtcCheckValid: 0x4b1b5e82
       - sceRtcGetCurrentClock: 0x4cfa57b0
-      - sceRtc_driver_4E267E02: 0x4e267e02
+      - sceRtcConvertUtcToLocalTime: 0x4e267e02
       - sceRtc_driver_508BA64B: 0x508ba64b
-      - sceRtc_driver_530A903E: 0x530a903e
+      - sceRtcRegisterCallback: 0x530a903e
       - sceRtc_driver_66054C2A: 0x66054c2a
       - sceRtcGetTick: 0x6ff40acc
-      - sceRtc_driver_74772CCC: 0x74772ccc
-      - sceRtc_driver_77138347: 0x77138347
-      - sceRtc_driver_7C6E9610: 0x7c6e9610
-      - sceRtc_driver_7D8E37E1: 0x7d8e37e1
+      - sceRtcSetDosTime: 0x74772ccc
+      - sceRtcTickAddMinutes: 0x77138347
+      - sceRtcGetLastReincarnatedTime: 0x7c6e9610
+      - sceRtcUnregisterCallback: 0x7d8e37e1
       - sceRtcSetTick: 0x7ed29e40
-      - sceRtc_driver_80F21937: 0x80f21937
-      - sceRtc_driver_8413CADC: 0x8413cadc
+      - sceRtcTickAddWeeks: 0x80f21937
+      - sceRtcTickAddHours: 0x8413cadc
       - sceRtc_driver_852255B8: 0x852255b8
       - sceRtcTickAddSeconds: 0x89fa4262
-      - sceRtc_driver_8DED141A: 0x8ded141a
-      - sceRtc_driver_9012B140: 0x9012b140
+      - sceRtcFormatRFC3339LocalTime: 0x8ded141a
+      - sceRtcGetCurrentClockLocalTime: 0x9012b140
       - sceRtcInit: 0x912bee56
       - sceRtcSetCurrentTick: 0x929620ce
-      - sceRtc_driver_94225550: 0x94225550
+      - sceRtcGetTime64_t: 0x94225550
       - sceRtcSetCurrentTick: 0x9763c138
       - sceRtcSuspend: 0x9cc2797e
-      - sceRtc_driver_A4A5BF1B: 0xa4a5bf1b
-      - sceRtc_driver_AAAE90FF: 0xaaae90ff
-      - sceRtc_driver_B2B6578C: 0xb2b6578c
+      - sceRtcGetDosTime: 0xa4a5bf1b
+      - sceRtcTickAddYears: 0xaaae90ff
+      - sceRtcGetWin32FileTime: 0xb2b6578c
       - sceRtc_driver_CEEF238F: 0xb44bdaed
-      - sceRtc_driver_B84AC7D7: 0xb84ac7d7
-      - sceRtc_driver_BDA60897: 0xbda60897
-      - sceRtc_driver_C0F36B91: 0xc0f36b91
-      - sceRtc_driver_C3A806EE: 0xc3a806ee
-      - sceRtc_driver_C66D9686: 0xc41c2853
-      - sceRtc_driver_C66D9686: 0xc66d9686
-      - sceRtc_driver_CB0538FD: 0xcb0538fd
+      - sceRtcTickAddMicroseconds: 0xb84ac7d7
+      - sceRtcParseRFC3339: 0xbda60897
+      - sceRtcGetAccumulativeTime: 0xc0f36b91
+      - sceRtcParseDateTime: 0xc3a806ee
+      - sceRtcGetTickResolution: 0xc41c2853
+      - sceRtcGetTickResolution: 0xc66d9686
+      - sceRtcTickAddDays: 0xcb0538fd
       - sceRtcEnd: 0xce27de2f
       - sceRtc_driver_CEEF238F: 0xceef238f
-      - sceRtc_driver_CEF8FE8E: 0xcef8fe8e
-      - sceRtc_driver_CF4E0EE0: 0xcf4e0ee0
-      - sceRtc_driver_CF76CFE5: 0xcf76cfe5
+      - sceRtcSetWin32FileTime: 0xcef8fe8e
+      - sceRtcSetTime64_t: 0xcf4e0ee0
+      - sceRtcIsAlarmed: 0xcf76cfe5
       - sceRtc_driver_DFF30673: 0xdff30673
-      - sceRtc_driver_E09880CF: 0xe09880cf
-      - sceRtc_driver_E45726F6: 0xe45726f6
+      - sceRtcSetAlarmTick: 0xe09880cf
+      - sceRtcTickAddMonths: 0xe45726f6
       - sceRtcSetTick: 0xe7b3abf4
-      - sceRtc_driver_E86D8FC0: 0xe86d8fc0
-      - sceRtc_driver_E98FEC46: 0xe98fec46
-      - sceRtc_driver_ED15334F: 0xed15334f
+      - sceRtcGetTime_t: 0xe86d8fc0
+      - sceRtcGetLastAdjustedTime: 0xe98fec46
+      - sceRtcGetCurrentNetworkTick: 0xed15334f
       - sceRtcTickAddSeconds: 0xf2a4afe5
     variables:
       - sceRtc_driver_var_5A64FA55: 0x5a64fa55

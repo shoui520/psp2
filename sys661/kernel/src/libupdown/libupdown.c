@@ -41,7 +41,7 @@ extern int sceNet_lib_9CFBC7E3(const char *lhs, const char *rhs);/* strcmp */
 extern char *sceNet_lib_BCBE14CF(const char *s, int c);        /* strchr */
 extern size_t sceNet_lib_D8722983(const char *s);              /* strlen */
 
-extern int sceParseHttp_AD7BFDEF(const char *hdr, uint32_t hdrLen, const char *fieldName, char **val, uint32_t *valLen);
+extern int sceParseHttpResponseHeader(const char *hdr, uint32_t hdrLen, const char *fieldName, char **val, uint32_t *valLen);
 
 typedef struct MtState {
 	uint32_t index;
@@ -1423,7 +1423,7 @@ static int updownGetContentLength(int req, uint64_t *out_len)
 		return res;
 	}
 
-	sceParseHttp_AD7BFDEF(hdr, hdr_len, "Content-Range", &val, &val_len);
+	sceParseHttpResponseHeader(hdr, hdr_len, "Content-Range", &val, &val_len);
 	if (val_len + 1 >= 0x41) {
 		return -1;
 	}

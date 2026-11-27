@@ -266,7 +266,7 @@ s32 scePower_driver_2638EF48(void);
 s32 scePower_442BFBAC(void);
 s32 scePower_driver_AD5BB433(void);
 s32 scePower_driver_23BDDD8B(void);
-s32 scePower_A85880D0(void);
+s32 scePowerCheckWlanCoexistenceClock(void);
 s32 scePower_driver_114B75AB(u8 val);
 s32 scePower_driver_E52B4362(int freq);
 s32 scePower_driver_8C6BEFD9(void);
@@ -320,8 +320,8 @@ s32 scePowerGetCpuClockFrequencyInt(void);
 float scePowerGetCpuClockFrequencyFloat(void);
 s32 scePowerGetBusClockFrequencyInt(void);
 float scePowerGetBusClockFrequencyFloat(void);
-s32 scePower_34F9C463(void);
-float scePower_EA382A27(void);
+s32 scePowerGetPllClockFrequencyInt(void);
+float scePowerGetPllClockFrequencyFloat(void);
 s32 scePowerSetClockFrequency(int pllfreq, int cpufreq, int busfreq);
 s32 scePower_A4E93389(int pllfreq, int cpufreq, int busfreq);
 s32 scePower_545A7F3C(int pllfreq, int cpufreq, int busfreq);
@@ -723,7 +723,7 @@ s32 scePower_driver_2638EF48(void)
 	s32 pllFreq;
 
 	lockClockMutex();
-	pllFreq = scePower_34F9C463();
+	pllFreq = scePowerGetPllClockFrequencyInt();
 	scePowerGetCpuClockFrequencyInt();
 	scePowerGetBusClockFrequencyInt();
 	if (((g_cb_ctx.cpuBoostMode == 1) & (pllFreq >= 223)) ||
@@ -810,7 +810,7 @@ s32 scePower_driver_23BDDD8B(void)
 	return 0;
 }
 
-s32 scePower_A85880D0(void)
+s32 scePowerCheckWlanCoexistenceClock(void)
 {
 	return 1;
 }
@@ -1195,7 +1195,7 @@ static s32 __attribute__((noipa)) executePowerTransition(int transMode)
 
 	scePower_driver_C463E7F2();
 	if (g_kermitPeriphStatus != 0) {
-		savedPll = scePower_34F9C463();
+		savedPll = scePowerGetPllClockFrequencyInt();
 		savedCpu = scePowerGetCpuClockFrequencyInt();
 		if (savedPll - savedCpu == 1)
 			savedCpu = savedPll;
@@ -2307,12 +2307,12 @@ float scePowerGetBusClockFrequencyFloat(void)
 	return g_clock_ctx.busFreqFloat;
 }
 
-s32 scePower_34F9C463(void)
+s32 scePowerGetPllClockFrequencyInt(void)
 {
 	return g_clock_ctx.pllFreqInt;
 }
 
-float scePower_EA382A27(void)
+float scePowerGetPllClockFrequencyFloat(void)
 {
 	return g_clock_ctx.pllFreqFloat;
 }

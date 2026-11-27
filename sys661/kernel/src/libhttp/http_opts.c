@@ -126,7 +126,7 @@ s32 sceHttpSetMallocFunction(void *(*alloc_fn)(u32), void (*free_fn)(void *), vo
 {
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 2016)
+    if (sceKernelCheckThreadStack() < 2016)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (alloc_fn == NULL || free_fn == NULL || realloc_fn == NULL)
         return SCE_HTTP_ERROR_INVALID_VALUE;
@@ -195,7 +195,7 @@ s32 sceHttpSetResolveRetry(s32 id, s32 retry)
     HttpTemplate *tmpl = NULL;
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 2016)
+    if (sceKernelCheckThreadStack() < 2016)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (http_is_inited() != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;
@@ -213,7 +213,7 @@ s32 sceHttpSetResolveTimeOut(s32 id, u32 usec)
     HttpTemplate *tmpl = NULL;
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 2016)
+    if (sceKernelCheckThreadStack() < 2016)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (http_is_inited() != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;
@@ -231,7 +231,7 @@ HTTP_ALWAYS_INLINE s32 http_set_tmpl_or_conn_u32(s32 id, u32 val, u32 tmpl_off)
     s32 type;
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 2016)
+    if (sceKernelCheckThreadStack() < 2016)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (http_is_inited() != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;
@@ -297,7 +297,7 @@ s32 sceHttpSetRecvBlockSize(s32 id, u32 size)
     s32 ret;
     HttpTemplate *tmpl = NULL;
 
-    if (_sceKernelCheckThreadStack() < 2016)
+    if (sceKernelCheckThreadStack() < 2016)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (http_is_inited() != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;
@@ -321,7 +321,7 @@ s32 sceHttpSetCacheContentLengthMaxSize(s32 id, u32 size)
     s32 type;
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 2016)
+    if (sceKernelCheckThreadStack() < 2016)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (http_is_inited() != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;
@@ -376,7 +376,7 @@ HTTP_ALWAYS_INLINE s32 http_set_any_u32_locked(s32 id, u32 val, u32 tmpl_off)
     s32 intr;
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 2016)
+    if (sceKernelCheckThreadStack() < 2016)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (http_is_inited() != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;
@@ -422,7 +422,7 @@ HTTP_ALWAYS_INLINE s32 http_set_any_u16_locked(s32 id, u16 val, u32 tmpl_off)
     s32 intr;
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 2016)
+    if (sceKernelCheckThreadStack() < 2016)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (http_is_inited() != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;
@@ -517,7 +517,7 @@ s32 sceHttpChangeHttpVersion(s32 id, s32 version)
     s32 type;
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 2016)
+    if (sceKernelCheckThreadStack() < 2016)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (http_is_inited() != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;
@@ -558,7 +558,7 @@ s32 sceHttpChangeHttpVersion(s32 id, s32 version)
 
 s32 sceHttpDisableCache(s32 id)
 {
-    if (_sceKernelCheckThreadStack() < 2016)
+    if (sceKernelCheckThreadStack() < 2016)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (http_is_inited() != 1 || http_cache_mem_is_inited() != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;
@@ -571,7 +571,7 @@ HTTP_ALWAYS_INLINE s32 http_set_callback_pair(s32 id, void *cb, void *arg, u32 c
     s32 intr;
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 2000)
+    if (sceKernelCheckThreadStack() < 2000)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (http_is_inited() != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;
@@ -810,7 +810,7 @@ s32 sceHttpSetProxy(s32 id, s32 use_proxy, s32 proxy_mode, const char *server, u
     s32 ret;
     s32 intr;
 
-    if (_sceKernelCheckThreadStack() < 10192)
+    if (sceKernelCheckThreadStack() < 10192)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (http_is_inited() != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;
@@ -899,7 +899,7 @@ s32 sceHttpGetProxy(s32 id, s32 *use_proxy, s32 *proxy_mode, char *server, u32 s
     s32 ret;
     s32 intr;
 
-    if (_sceKernelCheckThreadStack() < 2000)
+    if (sceKernelCheckThreadStack() < 2000)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (http_is_inited() != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;
@@ -954,7 +954,7 @@ s32 sceHttpGetProxy(s32 id, s32 *use_proxy, s32 *proxy_mode, char *server, u32 s
 
 s32 sceHttpEnableCache(s32 id)
 {
-    if (_sceKernelCheckThreadStack() < 2032)
+    if (sceKernelCheckThreadStack() < 2032)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (http_is_inited() != 1 || http_cache_mem_is_inited() != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;
@@ -963,7 +963,7 @@ s32 sceHttpEnableCache(s32 id)
 
 s32 sceHttp_8046E250(s32 id)
 {
-    if (_sceKernelCheckThreadStack() < 2032)
+    if (sceKernelCheckThreadStack() < 2032)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (http_is_inited() != 1 || http_cache_pool_is_inited() != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;
@@ -972,14 +972,14 @@ s32 sceHttp_8046E250(s32 id)
 
 s32 sceHttpAddExtraHeader(s32 id, const char *name, const char *value, s32 mode)
 {
-    if (_sceKernelCheckThreadStack() < 2016)
+    if (sceKernelCheckThreadStack() < 2016)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     return http_add_header_internal(id, name, value, mode);
 }
 
 s32 sceHttpDeleteHeader(s32 id, const char *name)
 {
-    if (_sceKernelCheckThreadStack() < 2032)
+    if (sceKernelCheckThreadStack() < 2032)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     return http_delete_header_internal(id, name);
 }
@@ -1305,7 +1305,7 @@ s32 sceHttpInit(u32 pool_size)
 {
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 2032)
+    if (sceKernelCheckThreadStack() < 2032)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (g_http_inited == 1)
         return SCE_HTTP_ERROR_ALREADY_INITED;
@@ -1327,7 +1327,7 @@ s32 sceHttpInit(u32 pool_size)
 
 s32 sceHttpEnd(void)
 {
-    if (_sceKernelCheckThreadStack() < 2032)
+    if (sceKernelCheckThreadStack() < 2032)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (g_http_inited != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;

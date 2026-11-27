@@ -13,12 +13,12 @@ exports:
     version: [0, 17]
     attributes: 0x0001
     functions:
-      - sceParseUri_062BB07E: 0x062bb07e
-      - sceParseUri_49E950EC: 0x49e950ec
-      - sceParseUri_568518C9: 0x568518c9
-      - sceParseUri_7EE318AF: 0x7ee318af
-      - sceParseUri_8885A782: 0x8885a782
-      - sceParseUri_8AA55D17: 0x8aa55d17
+      - sceUriUnescape: 0x062bb07e
+      - sceUriEscape: 0x49e950ec
+      - sceUriParse: 0x568518c9
+      - sceUriBuild: 0x7ee318af
+      - sceUriSweepPath: 0x8885a782
+      - sceUriMerge: 0x8aa55d17
 imports:
   - name: Kernel_Library
     version: [0, 17]
@@ -26,5 +26,5 @@ imports:
     pad: 1
     functions:
       - sceKernelMemset: 0xa089eca4
-      - _sceKernelCheckThreadStack: 0xd13bde95
+      - sceKernelCheckThreadStack: 0xd13bde95
       - sceKernelMemcpy: 0x1839852a

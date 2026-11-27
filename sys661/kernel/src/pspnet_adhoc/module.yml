@@ -20,12 +20,12 @@ exports:
       - sceNetAdhocGameModeDeleteReplica: 0x0b2228e9
       - sceNetAdhocPtpClose: 0x157e6225
       - sceNetAdhocGameModeCreateReplica: 0x3278ab0c
-      - sceNetAdhoc_4D2CE199: 0x4d2ce199
+      - sceNetAdhocGetSocketAlert: 0x4d2ce199
       - sceNetAdhocPtpSend: 0x4da4c788
       - sceNetAdhoc_67346A2A: 0x67346a2a
       - sceNetAdhocPdpCreate: 0x6f92741b
-      - sceNetAdhoc_73BFD52D: 0x73bfd52d
-      - sceNetAdhoc_7A662D6B: 0x7a662d6b
+      - sceNetAdhocSetSocketAlert: 0x73bfd52d
+      - sceNetAdhocPollSocket: 0x7a662d6b
       - sceNetAdhocPdpDelete: 0x7f27bb5e
       - sceNetAdhocGameModeCreateMaster: 0x7f75c338
       - sceNetAdhocPtpOpen: 0x877f6d66
@@ -121,7 +121,7 @@ imports:
     pad: 5
     functions:
       - sceKernelMemset: 0xa089eca4
-      - _sceKernelCheckThreadStack: 0xd13bde95
+      - sceKernelCheckThreadStack: 0xd13bde95
       - sceKernelMemcpy: 0x1839852a
   - name: ThreadManForUser
     version: [0, 17]

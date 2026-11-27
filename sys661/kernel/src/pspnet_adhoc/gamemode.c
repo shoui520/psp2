@@ -17,7 +17,7 @@ s32 sceNetAdhocGameModeCreateMaster(void *buf, u32 size)
     s32 intr;
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 0x7d0)
+    if (sceKernelCheckThreadStack() < 0x7d0)
         return ADHOC_ERR_STACK_SMALL;
     if (buf == NULL)
         return ADHOC_ERR_INVALID_ARG;
@@ -53,7 +53,7 @@ s32 sceNetAdhocGameModeCreateReplica(const u8 *mac, void *buf, u32 size)
     s32 intr;
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 0x7e0)
+    if (sceKernelCheckThreadStack() < 0x7e0)
         return ADHOC_ERR_STACK_SMALL;
     if (mac == NULL || buf == NULL)
         return ADHOC_ERR_INVALID_ARG;
@@ -83,7 +83,7 @@ s32 sceNetAdhocGameModeUpdateMaster(void)
     s32 ret;
     GameModeNode *gm;
 
-    if (_sceKernelCheckThreadStack() < 0x7f0)
+    if (sceKernelCheckThreadStack() < 0x7f0)
         return ADHOC_ERR_STACK_SMALL;
 
     intr = sceNet_lib_94B44F26();
@@ -122,7 +122,7 @@ s32 sceNetAdhocGameModeDeleteMaster(void)
     s32 ret;
     GameModeNode *gm;
 
-    if (_sceKernelCheckThreadStack() < 0x7f0)
+    if (sceKernelCheckThreadStack() < 0x7f0)
         return ADHOC_ERR_STACK_SMALL;
 
     intr = sceNet_lib_94B44F26();
@@ -184,7 +184,7 @@ gameModeTerm(void)
 /* 0x007084 */
 s32 sceNetAdhocGameModeUpdateReplica(s32 id, void *opt_buf)
 {
-    if (_sceKernelCheckThreadStack() < 0x7f0)
+    if (sceKernelCheckThreadStack() < 0x7f0)
         return ADHOC_ERR_STACK_SMALL;
     return gameModeUpdateBuffer(id, opt_buf, 0);
 }
@@ -201,7 +201,7 @@ s32 sceNetAdhocGameModeDeleteReplica(s32 id)
     s32 intr;
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 0x7f0)
+    if (sceKernelCheckThreadStack() < 0x7f0)
         return ADHOC_ERR_STACK_SMALL;
 
     intr = sceNet_lib_94B44F26();

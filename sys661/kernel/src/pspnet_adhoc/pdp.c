@@ -47,7 +47,7 @@ s32 sceNetAdhocPdpCreate(const u8 *mac, u16 port, u32 bufsize, s32 flags)
     s32 id;
     AdhocSocket *sock = NULL;
 
-    if (_sceKernelCheckThreadStack() < 2000)
+    if (sceKernelCheckThreadStack() < 2000)
         return ADHOC_ERR_STACK_SMALL;
     if (mac == NULL || flags != 0)
         return ADHOC_ERR_INVALID_ARG;
@@ -97,7 +97,7 @@ s32 sceNetAdhocPdpSend(s32 id, const u8 *dst_mac, u16 dport, const void *buf, s3
     AdhocWaiter *waiter;
     s32 intr;
 
-    if (_sceKernelCheckThreadStack() < 1984)
+    if (sceKernelCheckThreadStack() < 1984)
         return ADHOC_ERR_STACK_SMALL;
     if (dst_mac == NULL || (flags & ~1) != 0)
         return ADHOC_ERR_INVALID_ARG;
@@ -141,7 +141,7 @@ s32 sceNetAdhocPdpDelete(s32 id, s32 flags)
     s32 ret = 0;
     s32 intr;
 
-    if (_sceKernelCheckThreadStack() < 2016)
+    if (sceKernelCheckThreadStack() < 2016)
         return ADHOC_ERR_STACK_SMALL;
     if (flags != 0)
         return ADHOC_ERR_INVALID_ARG;
@@ -492,7 +492,7 @@ pdpRecvInternal(AdhocSocket *sock, u8 *src_mac, u16 *sport, void *buf, s32 *len,
 /* 0x001f30 */
 s32 sceNetAdhocPdpRecv(s32 id, u8 *src_mac, u16 *sport, void *buf, s32 *len, u32 timeout, s32 flags)
 {
-    if (_sceKernelCheckThreadStack() < 2016)
+    if (sceKernelCheckThreadStack() < 2016)
         return ADHOC_ERR_STACK_SMALL;
     if (buf == NULL || len == NULL || (flags & ~1) != 0)
         return ADHOC_ERR_INVALID_ARG;
@@ -781,7 +781,7 @@ s32 sceNetAdhocGetPdpStat(s32 *buflen, ScePdpStatOut *buf)
     s32 written = 0;
     ScePdpStatOut *prev = NULL;
 
-    if (_sceKernelCheckThreadStack() < 2000)
+    if (sceKernelCheckThreadStack() < 2000)
         return ADHOC_ERR_STACK_SMALL;
     if (buflen == NULL)
         return ADHOC_ERR_INVALID_ARG;

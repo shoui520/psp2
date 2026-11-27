@@ -262,7 +262,7 @@ typedef struct {
 
 /* Imported library functions */
 extern int sceKernelGetCompiledSdkVersion(void);
-extern int _sceKernelCheckThreadStack(void);
+extern int sceKernelCheckThreadStack(void);
 extern void *sceKernelMemset(void *dst, int ch, size_t n);
 extern void *sceKernelMemcpy(void *dst, const void *src, size_t n);
 

@@ -244,7 +244,7 @@ extern u32 g_store_mgr;
 
 /* Imported library functions */
 extern int   KprintfForUser(const char *fmt, ...);
-extern int   _sceKernelCheckThreadStack(void);
+extern int   sceKernelCheckThreadStack(void);
 extern int   sceKernelGetCompiledSdkVersion(void);
 extern void *sceKernelMemcpy(void *dst, const void *src, size_t len);
 extern void *sceKernelMemset(void *dst, int ch, size_t len);

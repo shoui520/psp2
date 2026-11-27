@@ -15,34 +15,34 @@ exports:
     attributes: 0x0001
     pad: 1
     functions:
-      - sceG729_driver_13F1028A: 0x13f1028a
-      - sceG729_driver_17C11696: 0x17c11696
-      - sceG729_driver_3489D1F3: 0x3489d1f3
-      - sceG729_driver_55E14F75: 0x55e14f75
-      - sceG729_driver_5A409D1B: 0x5a409d1b
-      - sceG729_driver_74804D93: 0x74804d93
-      - sceG729_driver_890B86AE: 0x890b86ae
-      - sceG729_driver_8C87A2CA: 0x8c87a2ca
-      - sceG729_driver_94714D50: 0x94714d50
-      - sceG729_driver_AA1E5462: 0xaa1e5462
-      - sceG729_driver_CFCD367C: 0xcfcd367c
-      - sceG729_driver_DB7259D5: 0xdb7259d5
+      - sceG729DecodeExit: 0x13f1028a
+      - sceG729DecodeInitResource: 0x17c11696
+      - sceG729DecodeCore: 0x3489d1f3
+      - sceG729DecodeInit: 0x55e14f75
+      - sceG729EncodeExit: 0x5a409d1b
+      - sceG729DecodeReset: 0x74804d93
+      - sceG729DecodeTermResource: 0x890b86ae
+      - sceG729EncodeReset: 0x8c87a2ca
+      - sceG729EncodeTermResource: 0x94714d50
+      - sceG729EncodeInitResource: 0xaa1e5462
+      - sceG729EncodeInit: 0xcfcd367c
+      - sceG729EncodeCore: 0xdb7259d5
   - name: sceG729
     version: [0, 17]
     attributes: 0x4001
     functions:
-      - sceG729_driver_13F1028A: 0x13f1028a
-      - sceG729_driver_17C11696: 0x17c11696
-      - sceG729_driver_3489D1F3: 0x3489d1f3
-      - sceG729_driver_55E14F75: 0x55e14f75
-      - sceG729_driver_5A409D1B: 0x5a409d1b
-      - sceG729_driver_74804D93: 0x74804d93
-      - sceG729_driver_890B86AE: 0x890b86ae
-      - sceG729_driver_8C87A2CA: 0x8c87a2ca
-      - sceG729_driver_94714D50: 0x94714d50
-      - sceG729_driver_AA1E5462: 0xaa1e5462
-      - sceG729_driver_CFCD367C: 0xcfcd367c
-      - sceG729_driver_DB7259D5: 0xdb7259d5
+      - sceG729DecodeExit: 0x13f1028a
+      - sceG729DecodeInitResource: 0x17c11696
+      - sceG729DecodeCore: 0x3489d1f3
+      - sceG729DecodeInit: 0x55e14f75
+      - sceG729EncodeExit: 0x5a409d1b
+      - sceG729DecodeReset: 0x74804d93
+      - sceG729DecodeTermResource: 0x890b86ae
+      - sceG729EncodeReset: 0x8c87a2ca
+      - sceG729EncodeTermResource: 0x94714d50
+      - sceG729EncodeInitResource: 0xaa1e5462
+      - sceG729EncodeInit: 0xcfcd367c
+      - sceG729EncodeCore: 0xdb7259d5
 imports:
   - name: sceMeCore_driver
     version: [0, 17]

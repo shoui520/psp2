@@ -3728,65 +3728,65 @@ int sceUtility_0F3EEAAC(void)         { u32 old_k1 = utilityEnterKernel(); int r
 int sceUtility_147F7C85(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(8, speed); utilityLeaveKernel(old_k1); return r; }
 int sceUtility_16A1A8D8(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(8); utilityLeaveKernel(old_k1); return r; }
 
-int sceUtility_1281DA8E(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(9, params); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_5EF1C24A(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(9); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_A03D29BA(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(9, speed); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_C4700FA3(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(9); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityInstallInitStart(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(9, params); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityInstallShutdownStart(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(9); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityInstallUpdate(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(9, speed); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityInstallGetStatus(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(9); utilityLeaveKernel(old_k1); return r; }
 
-int sceUtility_24AC31EB(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(17, params); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_32E32DCB(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(17); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_4AECD179(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(17, speed); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_B57E95D9(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(17); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_180F7B62(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogAbort(17); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityGamedataInstallInitStart(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(17, params); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityGamedataInstallShutdownStart(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(17); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityGamedataInstallUpdate(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(17, speed); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityGamedataInstallGetStatus(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(17); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityGamedataInstallAbort(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogAbort(17); utilityLeaveKernel(old_k1); return r; }
 
 int sceUtility_private_756A93B3(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(10, params); utilityLeaveKernel(old_k1); return r; }
 int sceUtility_private_26D0B065(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(10); utilityLeaveKernel(old_k1); return r; }
 int sceUtility_private_CE484145(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(10, speed); utilityLeaveKernel(old_k1); return r; }
 int sceUtility_private_981FFD72(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(10); utilityLeaveKernel(old_k1); return r; }
 
-int sceUtility_0251B134(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(11, params); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_F9E0008C(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(11); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_AB083EA9(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(11, speed); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_D81957B7(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(11); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityScreenshotInitStart(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(11, params); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityScreenshotShutdownStart(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(11); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityScreenshotUpdate(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(11, speed); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityScreenshotGetStatus(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(11); utilityLeaveKernel(old_k1); return r; }
 
-int sceUtility_16D02AF0(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(12, params); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_E19C97D6(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(12); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_F3FBC572(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(12, speed); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_86ABDB1B(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(12); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityNpSigninInitStart(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(12, params); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityNpSigninShutdownStart(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(12); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityNpSigninUpdate(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(12, speed); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityNpSigninGetStatus(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(12); utilityLeaveKernel(old_k1); return r; }
 
-int sceUtility_42071A83(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(13, params); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_D17A0573(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(13); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_D852CDCE(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(13, speed); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_89317C8F(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(13); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityPS3ScanInitStart(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(13, params); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityPS3ScanShutdownStart(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(13); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityPS3ScanUpdate(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(13, speed); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityPS3ScanGetStatus(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(13); utilityLeaveKernel(old_k1); return r; }
 
-int sceUtility_4B0A8FE5(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(14, params); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_06A48659(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(14); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_A084E056(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(14, speed); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_2B96173B(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(14); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityRssSubscriberInitStart(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(14, params); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityRssSubscriberShutdownStart(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(14); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityRssSubscriberUpdate(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(14, speed); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityRssSubscriberGetStatus(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(14); utilityLeaveKernel(old_k1); return r; }
 
-int sceUtility_81C44706(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(15, params); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_E7B778D8(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(15); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_6F56F9CF(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(15, speed); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_8326AB05(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(15); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityRssReaderInitStart(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(15, params); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityRssReaderShutdownStart(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(15); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityRssReaderUpdate(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(15, speed); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityRssReaderGetStatus(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(15); utilityLeaveKernel(old_k1); return r; }
 
-int sceUtility_DA97F1AA(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(16, params); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_54A5C62F(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(16); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_B8592D5F(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(16, speed); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_3AAD51DC(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(16); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityStoreCheckoutInitStart(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(16, params); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityStoreCheckoutShutdownStart(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(16); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityStoreCheckoutUpdate(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(16, speed); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityStoreCheckoutGetStatus(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(16); utilityLeaveKernel(old_k1); return r; }
 
-int sceUtility_A7BB7C67(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(18, params); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_C130D441(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(18); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_0940A1B9(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(18, speed); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_094198B8(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(18); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityPsnInitStart(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(18, params); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityPsnShutdownStart(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(18); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityPsnUpdate(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(18, speed); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityPsnGetStatus(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(18); utilityLeaveKernel(old_k1); return r; }
 
-int sceUtility_3A15CD0A(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(19, params); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_9F313D14(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(19); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_D23665F4(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(19, speed); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_D4C2BD73(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(19); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_0E0C27AF(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogAbort(19); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityAutoConnectInitStart(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(19, params); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityAutoConnectShutdownStart(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(19); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityAutoConnectUpdate(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(19, speed); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityAutoConnectGetStatus(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(19); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityAutoConnectAbort(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogAbort(19); utilityLeaveKernel(old_k1); return r; }
 
-int sceUtility_B0FB7FF5(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogResume(15, params); utilityLeaveKernel(old_k1); return r; }
-int sceUtility_86A03A27(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogResume(11, params); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityRssReaderContStart(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogResume(15, params); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityScreenshotContStart(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogResume(11, params); utilityLeaveKernel(old_k1); return r; }
 
 int sceUtilityHtmlViewerInitStart(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityAppletInitStart(1, params); utilityLeaveKernel(old_k1); return r; }
 int sceUtilityHtmlViewerShutdownStart(void)     { u32 old_k1 = utilityEnterKernel(); int r = utilityAppletShutdownStart(1); utilityLeaveKernel(old_k1); return r; }
@@ -3797,10 +3797,10 @@ void sceUtility_3AD50AE7(void) {}
 void sceUtility_BC6B6296(void) {}
 void sceUtility_417BED54(void) {}
 void sceUtility_B6CEE597(void) {}
-void sceUtility_2995D020(void) {}
-void sceUtility_B62A4061(void) {}
-void sceUtility_ED0FAD38(void) {}
-void sceUtility_88BC7406(void) {}
+void sceUtilitySavedataErrInitStart(void) {}
+void sceUtilitySavedataErrShutdownStart(void) {}
+void sceUtilitySavedataErrUpdate(void) {}
+void sceUtilitySavedataErrGetStatus(void) {}
 
 static UTILITY_NOINLINE int utilityKermitOskStartItem(SceUtilityOskParams *params, int item_index)
 {
@@ -4635,7 +4635,7 @@ int sceUtility_netparam_internal_6D77B975(s32 latest_id)
 	return ret;
 }
 
-int sceUtility_4FED24D8(s32 *out_latest_id)
+int sceUtilityGetNetParamLatestID(s32 *out_latest_id)
 {
 	u32 old_k1 = utilityEnterKernel();
 	int ret = utilityRegGetNetInt("/CONFIG/NETWORK/INFRASTRUCTURE", "latest_id", out_latest_id);

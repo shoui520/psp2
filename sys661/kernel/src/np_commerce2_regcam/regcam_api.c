@@ -12,7 +12,7 @@ u32 g_quick_abort_flag = 0;
 static inline int regcam_check_stack_and_init(void)
 {
     if (sceKernelGetCompiledSdkVersion() > REGCAM_STACK_CHECK_SDK_VER) {
-        if (_sceKernelCheckThreadStack() < REGCAM_MIN_THREAD_STACK)
+        if (sceKernelCheckThreadStack() < REGCAM_MIN_THREAD_STACK)
             return REGCAM_ERR_STACK_OVERFLOW;
     }
     if (!g_regcam_init)

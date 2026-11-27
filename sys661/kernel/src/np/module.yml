@@ -21,34 +21,34 @@ exports:
       - sceNp_02CA8CAA: 0x02ca8caa
       - sceNp_0B8BEE48: 0x0b8bee48
       - sceNp_1916432C: 0x1916432c
-      - sceNp_1D60AE4B: 0x1d60ae4b
+      - sceNpGetChatRestrictionFlag: 0x1d60ae4b
       - sceNp_2D8E93D2: 0x2d8e93d2
       - sceNp_2E4769C3: 0x2e4769c3
-      - sceNp_37E1E274: 0x37e1e274
+      - sceNpTerm: 0x37e1e274
       - sceNp_4556A257: 0x4556a257
       - sceNp_4B09907A: 0x4b09907a
-      - sceNp_4B5C71C8: 0x4b5c71c8
+      - sceNpGetOnlineId: 0x4b5c71c8
       - sceNp_5FA879D8: 0x5fa879d8
       - sceNp_60A4791A: 0x60a4791a
-      - sceNp_633B5F71: 0x633b5f71
+      - sceNpGetNpId: 0x633b5f71
       - sceNp_64F72B22: 0x64f72b22
       - sceNp_66B86876: 0x66b86876
       - sceNp_67BCF9E3: 0x67bcf9e3
       - sceNp_6999EDC4: 0x6999edc4
       - sceNp_6CBB0614: 0x6cbb0614
-      - sceNp_7E0864DF: 0x7e0864df
-      - sceNp_857B47D3: 0x857b47d3
+      - sceNpGetUserProfile: 0x7e0864df
+      - sceNpInit: 0x857b47d3
       - sceNp_9A264EF2: 0x9a264ef2
       - sceNp_9B87B19B: 0x9b87b19b
-      - sceNp_A0BE3C4B: 0xa0be3c4b
+      - sceNpGetAccountRegion: 0xa0be3c4b
       - sceNp_B2BFADB2: 0xb2bfadb2
       - sceNp_B4063F7A: 0xb4063f7a
       - sceNp_B819A0C8: 0xb819a0c8
-      - sceNp_BB069A87: 0xbb069a87
+      - sceNpGetContentRatingFlag: 0xbb069a87
       - sceNp_C0B3616C: 0xc0b3616c
       - sceNp_C250A650: 0xc250a650
       - sceNp_C48F2847: 0xc48f2847
-      - sceNp_CDCC21D3: 0xcdcc21d3
+      - sceNpGetMyLanguages: 0xcdcc21d3
       - sceNp_CF83CC3B: 0xcf83cc3b
       - sceNp_E24DA399: 0xe24da399
       - sceNp_E41288E7: 0xe41288e7
@@ -84,7 +84,7 @@ imports:
     attributes: 0x0001
     pad: 5
     functions:
-      - _sceKernelCheckThreadStack: 0xd13bde95
+      - sceKernelCheckThreadStack: 0xd13bde95
   - name: ThreadManForUser
     version: [0, 17]
     attributes: 0x4001

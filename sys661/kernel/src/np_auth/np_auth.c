@@ -71,8 +71,8 @@ extern int sceNet_lib_CF705E46(char *dst, const char *fmt, ...);
 extern uint32_t sceNet_lib_D8722983(const char *str);
 extern int sceNet_lib_E0A81C7C(const char *lhs, const char *rhs, uint32_t n);
 
-extern int sceParseUri_49E950EC(char *dst, uint32_t *outLen, uint32_t maxLen, const char *src);
-extern int sceParseHttp_AD7BFDEF(const char *headers, uint32_t headersLen, const char *name, const char **outVal, uint32_t *outLen);
+extern int sceUriEscape(char *dst, uint32_t *outLen, uint32_t maxLen, const char *src);
+extern int sceParseHttpResponseHeader(const char *headers, uint32_t headersLen, const char *name, const char **outVal, uint32_t *outLen);
 
 extern int sceHttpGetContentLength(int reqId, uint64_t *len);
 extern int sceHttpSetRecvTimeOut(int tmplId, uint32_t timeout);
@@ -83,7 +83,7 @@ extern int sceHttpSetConnectTimeOut(int tmplId, uint32_t timeout);
 extern int sceHttpSetSendTimeOut(int tmplId, uint32_t timeout);
 extern int sceHttpCreateTemplate(const char *agent, int httpVer, int autoProxy);
 extern int sceHttpDeleteRequest(int reqId);
-extern int sceHttp_AB1540D5(int reqId, int *sslErr, int *certErr);
+extern int sceHttpsGetSslError(int reqId, int *sslErr, int *certErr);
 extern int sceHttpCreateRequestWithURL(int connId, int method, const char *url, uint64_t contentLen);
 extern int sceHttpSendRequest(int reqId, const void *data, uint32_t dataSize);
 extern int sceHttpAbortRequest(int reqId);
@@ -100,7 +100,7 @@ extern int sceNp_E24DA399(void);
 
 extern int sceKernelCpuSuspendIntr(void);
 extern void *sceKernelMemset(void *dst, int c, SceSize n);
-extern int _sceKernelCheckThreadStack(void);
+extern int sceKernelCheckThreadStack(void);
 extern void *sceKernelMemcpy(void *dst, const void *src, SceSize n);
 extern void sceKernelCpuResumeIntr(int intr);
 
@@ -283,10 +283,10 @@ static int npAuthOpenHttpConnection(int *outTmpl, int *outConn, char *agentBuf, 
 static int npAuthTranslateHttpError(int httpReqId, int err);
 
 int sceNpAuth_61BB18B3(int reqId);
-int sceNpAuth_72BB0467(int reqId);
+int sceNpAuthDestroyRequest(int reqId);
 int sceNpAuth_B714FBDD(int reqId, const char *user, const char *pass);
 int sceNpAuth_CE85B3B8(int *outId, const SceNpTicketVersion *ver, const char *serviceId, int useCid);
-int sceNpAuth_D99455DD(int reqId);
+int sceNpAuthAbortRequest(int reqId);
 int sceNpAuth_DAD65284(int reqId, SceNpAuthCallback preCb, SceNpAuthCallback doneCb, void *arg);
 
 /* .rodata tables */
@@ -454,14 +454,14 @@ static __inline__ __attribute__((always_inline)) void npAuthShutdownWorker(void)
 	}
 }
 
-/* === sceNpAuth_A1DE86F8 (sceNpAuthInit) @ 0x01a0 === */
-int sceNpAuth_A1DE86F8(uint32_t poolSize, uint32_t stackSize, int prio)
+/* === sceNpAuthInit (sceNpAuthInit) @ 0x01a0 === */
+int sceNpAuthInit(uint32_t poolSize, uint32_t stackSize, int prio)
 {
 	SceKernelThreadOptParam threadOpt;
 	uint32_t partitionId;
 	int res;
 
-	if (_sceKernelCheckThreadStack() < 0xfd0) {
+	if (sceKernelCheckThreadStack() < 0xfd0) {
 		return SCE_NP_ERROR_STACK_TOO_SHORT;
 	}
 	if (stackSize < 0x3800) {
@@ -500,14 +500,14 @@ int sceNpAuth_A1DE86F8(uint32_t poolSize, uint32_t stackSize, int prio)
 	return res;
 }
 
-/* === sceNpAuth_CD86A656 (sceNpAuthCreateStartRequest) @ 0x03a8 === */
-int sceNpAuth_CD86A656(const SceNpAuthRequestParameter *reqParam)
+/* === sceNpAuthCreateStartRequest (sceNpAuthCreateStartRequest) @ 0x03a8 === */
+int sceNpAuthCreateStartRequest(const SceNpAuthRequestParameter *reqParam)
 {
 	char user[80];
 	char pass[48];
 	int reqId = 0;
 
-	if (_sceKernelCheckThreadStack() < 0xf70) {
+	if (sceKernelCheckThreadStack() < 0xf70) {
 		return SCE_NP_ERROR_STACK_TOO_SHORT;
 	}
 	if (reqParam == NULL || reqParam->size != sizeof(SceNpAuthRequestParameter)) {
@@ -553,17 +553,17 @@ int sceNpAuth_CD86A656(const SceNpAuthRequestParameter *reqParam)
 	}
 	if (res < 0) {
 		if (reqId != 0) {
-			sceNpAuth_72BB0467(reqId);
+			sceNpAuthDestroyRequest(reqId);
 		}
 		return res;
 	}
 	return reqId;
 }
 
-/* === sceNpAuth_72BB0467 (sceNpAuthDestroyRequest) @ 0x0568 === */
-int sceNpAuth_72BB0467(int reqId)
+/* === sceNpAuthDestroyRequest (sceNpAuthDestroyRequest) @ 0x0568 === */
+int sceNpAuthDestroyRequest(int reqId)
 {
-	if (_sceKernelCheckThreadStack() < 0xfe0) {
+	if (sceKernelCheckThreadStack() < 0xfe0) {
 		return SCE_NP_ERROR_STACK_TOO_SHORT;
 	}
 	if (g_initialized == 0) {
@@ -572,10 +572,10 @@ int sceNpAuth_72BB0467(int reqId)
 	return npAuthDestroyRequestInternal(reqId);
 }
 
-/* === sceNpAuth_D99455DD (sceNpAuthAbortRequest) @ 0x05c4 === */
-int sceNpAuth_D99455DD(int reqId)
+/* === sceNpAuthAbortRequest (sceNpAuthAbortRequest) @ 0x05c4 === */
+int sceNpAuthAbortRequest(int reqId)
 {
-	if (_sceKernelCheckThreadStack() < 0xff0) {
+	if (sceKernelCheckThreadStack() < 0xff0) {
 		return SCE_NP_ERROR_STACK_TOO_SHORT;
 	}
 	if (g_initialized == 0) {
@@ -703,27 +703,27 @@ static __attribute__((noinline)) uint32_t npAuthGetStackSize(void)
 	return g_stackSize;
 }
 
-/* === sceNpAuth_4EC1F667 (sceNpAuthTerm) @ 0x096c === */
-void sceNpAuth_4EC1F667(void)
+/* === sceNpAuthTerm (sceNpAuthTerm) @ 0x096c === */
+void sceNpAuthTerm(void)
 {
-	if (_sceKernelCheckThreadStack() < 0xff0) {
+	if (sceKernelCheckThreadStack() < 0xff0) {
 		return;
 	}
 	if (g_initialized == 0) {
 		return;
 	}
 	while (g_reqList != NULL) {
-		sceNpAuth_D99455DD(g_reqList->reqId);
+		sceNpAuthAbortRequest(g_reqList->reqId);
 		npAuthDestroyRequestInternal(g_reqList->reqId);
 	}
 	npAuthShutdownWorker();
 	g_initialized = 0;
 }
 
-/* === sceNpAuth_3F1C1F70 (sceNpAuthGetTicket) @ 0x0a84 === */
-int sceNpAuth_3F1C1F70(int reqId, void *buf, uint32_t size)
+/* === sceNpAuthGetTicket (sceNpAuthGetTicket) @ 0x0a84 === */
+int sceNpAuthGetTicket(int reqId, void *buf, uint32_t size)
 {
-	if (_sceKernelCheckThreadStack() < 0xff0) {
+	if (sceKernelCheckThreadStack() < 0xff0) {
 		return SCE_NP_ERROR_STACK_TOO_SHORT;
 	}
 	if (g_initialized == 0) {
@@ -739,10 +739,10 @@ int sceNpAuth_3F1C1F70(int reqId, void *buf, uint32_t size)
 	return npAuthReadHttpBody(req, buf, size);
 }
 
-/* === sceNpAuth_F4531ADC @ 0x0b3c === */
-int sceNpAuth_F4531ADC(SceNpAuthMemStat *outStat)
+/* === sceNpAuthGetMemoryStat @ 0x0b3c === */
+int sceNpAuthGetMemoryStat(SceNpAuthMemStat *outStat)
 {
-	if (_sceKernelCheckThreadStack() < 0xff0) {
+	if (sceKernelCheckThreadStack() < 0xff0) {
 		return SCE_NP_ERROR_STACK_TOO_SHORT;
 	}
 	if (g_initialized == 0) {
@@ -952,7 +952,7 @@ static __attribute__((noinline)) int npAuthBuildPostBody(SceNpAuthRequest *req, 
 			bufSize -= encLen;
 			total += encLen;
 
-			res = sceParseUri_49E950EC(buf, &encLen, bufSize, node->data);
+			res = sceUriEscape(buf, &encLen, bufSize, node->data);
 			uint32_t added = encLen - 1u;
 			total += added;
 			buf += added;
@@ -1132,7 +1132,7 @@ static __attribute__((noinline)) int npAuthExecuteRequest(SceNpAuthRequest *req)
 					register uint32_t gpReg asm("gp");
 					uint32_t savedGp = gpReg;
 					gpReg = req->preGp;
-					int stk = _sceKernelCheckThreadStack();
+					int stk = sceKernelCheckThreadStack();
 					int maxStk = (int)npAuthGetStackSize();
 					if (stk - maxStk > 0) {
 						uint32_t padSize = ((uint32_t)(stk - (int)npAuthGetStackSize()) + 15u) & ~15u;
@@ -1169,7 +1169,7 @@ static __attribute__((noinline)) int npAuthExecuteRequest(SceNpAuthRequest *req)
 	}
 
 	if (req->doneCb != NULL) {
-		int stk = _sceKernelCheckThreadStack();
+		int stk = sceKernelCheckThreadStack();
 		register uint32_t gpReg asm("gp");
 		uint32_t savedGp = gpReg;
 		gpReg = req->doneGp;
@@ -1283,7 +1283,7 @@ static __attribute__((noinline)) int npAuthParseHttpResponse(SceNpAuthRequest *r
 		if (res < 0) {
 			return res;
 		}
-		res = sceParseHttp_AD7BFDEF(allHdr, allHdrLen, hdrName, &valPtr, &valLen);
+		res = sceParseHttpResponseHeader(allHdr, allHdrLen, hdrName, &valPtr, &valLen);
 		if (res < 0) {
 			return res;
 		}
@@ -1391,7 +1391,7 @@ static __attribute__((noinline)) int npAuthTranslateHttpError(int httpReqId, int
 	if (err != SCE_HTTP_ERROR_SSL) {
 		return err;
 	}
-	int res = sceHttp_AB1540D5(httpReqId, &sslErr, &certErr);
+	int res = sceHttpsGetSslError(httpReqId, &sslErr, &certErr);
 	if (res < 0) {
 		return res;
 	}
@@ -1413,8 +1413,8 @@ static __attribute__((noinline)) int npAuthTranslateHttpError(int httpReqId, int
 	return SCE_NP_AUTH_ERROR_SSL_CERT_OTHER;
 }
 
-/* === sceNpAuth_5A3CB57A (sceNpAuthGetTicketParam) @ 0x1eb4 === */
-int sceNpAuth_5A3CB57A(const void *buf, uint32_t len, int ticketParamId, void *outTicketParam)
+/* === sceNpAuthGetTicketParam (sceNpAuthGetTicketParam) @ 0x1eb4 === */
+int sceNpAuthGetTicketParam(const void *buf, uint32_t len, int ticketParamId, void *outTicketParam)
 {
 	SceNpAuthTicketBuf tbuf;
 	sceKernelMemset(outTicketParam, 0, SCE_NP_TICKET_PARAM_DATA_LEN);
@@ -1446,8 +1446,8 @@ int sceNpAuth_5A3CB57A(const void *buf, uint32_t len, int ticketParamId, void *o
 	return ((SceNpAuthTicketParamFn)g_curParamHandler->handler)(&tbuf, ticketParamId, outTicketParam);
 }
 
-/* === sceNpAuth_75FB0AE3 (sceNpAuthGetEntitlementIdList) @ 0x2000 === */
-int sceNpAuth_75FB0AE3(const void *buf, uint32_t len, uint8_t *outBuf, uint32_t maxCount)
+/* === sceNpAuthGetEntitlementIdList (sceNpAuthGetEntitlementIdList) @ 0x2000 === */
+int sceNpAuthGetEntitlementIdList(const void *buf, uint32_t len, uint8_t *outBuf, uint32_t maxCount)
 {
 	SceNpAuthTicketBuf tbuf;
 	if (buf == NULL) {
@@ -1475,8 +1475,8 @@ int sceNpAuth_75FB0AE3(const void *buf, uint32_t len, uint8_t *outBuf, uint32_t 
 	return ((SceNpAuthEntListFn)g_curEntListHandler->handler)(&tbuf, outBuf, maxCount);
 }
 
-/* === sceNpAuth_6900F084 (sceNpAuthGetEntitlementById) @ 0x2114 === */
-int sceNpAuth_6900F084(const void *buf, uint32_t len, const char *entId, SceNpEntitlement *outEnt)
+/* === sceNpAuthGetEntitlementById (sceNpAuthGetEntitlementById) @ 0x2114 === */
+int sceNpAuthGetEntitlementById(const void *buf, uint32_t len, const char *entId, SceNpEntitlement *outEnt)
 {
 	SceNpEntitlement entBuf;
 	int res = npAuthGetEntitlementById(buf, len, entId, &entBuf);

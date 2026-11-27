@@ -23,7 +23,7 @@ exports:
     functions:
       - sceUsbCam_00631D06: 0x00631d06
       - sceUsbCamSetupMic: 0x03ed7a82
-      - sceUsbCam_08AEE98A: 0x08aee98a
+      - sceUsbCamSetMicGain: 0x08aee98a
       - sceUsbCamSetContrast: 0x09c26c7e
       - sceUsbCamSetupStillEx: 0x0a41a298
       - sceUsbCamGetAutoImageReverseState: 0x11a1f128
@@ -32,43 +32,43 @@ exports:
       - sceUsbCamSetEvLevel: 0x1d686870
       - sceUsbCamGetEvLevel: 0x2bcd50c0
       - sceUsbCam_2E930264: 0x2e930264
-      - sceUsbCam_36636925: 0x36636925
+      - sceUsbCamReadMicBlocking: 0x36636925
       - sceUsbCamGetSaturation: 0x383e9fa8
-      - sceUsbCam_3DC0088E: 0x3dc0088e
+      - sceUsbCamReadMic: 0x3dc0088e
       - sceUsbCamSetupStill: 0x3f0cf289
       - sceUsbCamPollReadVideoFrameEnd: 0x41e73e95
-      - sceUsbCam_41EE8797: 0x41ee8797
+      - sceUsbCamUnregisterLensRotationCallback: 0x41ee8797
       - sceUsbCamGetLensDirection: 0x4c34f553
       - sceUsbCamSetBrightness: 0x4f3d84d5
-      - sceUsbCam_5145868A: 0x5145868a
+      - sceUsbCamStopMic: 0x5145868a
       - sceUsbCamStartVideo: 0x574a8c3f
-      - sceUsbCam_5778B452: 0x5778b452
+      - sceUsbCamGetMicDataLength: 0x5778b452
       - sceUsbCamStillInputBlocking: 0x61be5cac
       - sceUsbCamSetSharpness: 0x622f83cc
-      - sceUsbCam_6784E6A8: 0x6784e6a8
+      - sceUsbCamSetAntiFlicker: 0x6784e6a8
       - sceUsbCamStopVideo: 0x6cf32cb9
       - sceUsbCamSetSaturation: 0x6e205974
       - sceUsbCamGetBrightness: 0x70f522c5
       - sceUsbCamStillWaitInputEnd: 0x7563afa1
       - sceUsbCamReadVideoFrameBlocking: 0x7dac0c71
-      - sceUsbCam_82A64030: 0x82a64030
+      - sceUsbCamStartMic: 0x82a64030
       - sceUsbCamSetReverseMode: 0x951bedf5
       - sceUsbCamGetImageEffectMode: 0x994471e0
       - sceUsbCamReadVideoFrame: 0x99d86281
       - sceUsbCamGetZoom: 0x9e8aaf8d
       - sceUsbCamGetContrast: 0xa063a957
       - sceUsbCamStillCancelInput: 0xa720937c
-      - sceUsbCam_AA7D94BA: 0xaa7d94ba
-      - sceUsbCam_B048A67D: 0xb048a67d
+      - sceUsbCamGetAntiFlicker: 0xaa7d94ba
+      - sceUsbCamWaitReadMicEnd: 0xb048a67d
       - sceUsbCamSetZoom: 0xc484901f
       - sceUsbCamSetupVideoEx: 0xcfe9e999
-      - sceUsbCam_D293A100: 0xd293a100
+      - sceUsbCamRegisterLensRotationCallback: 0xd293a100
       - sceUsbCamSetImageEffectMode: 0xd4876173
       - sceUsbCamGetReverseMode: 0xd5279339
       - sceUsbCam_D865997B: 0xd865997b
       - sceUsbCamGetReadVideoFrameSize: 0xdf9d0c92
       - sceUsbCamStillGetInputLength: 0xe5959c36
-      - sceUsbCam_F8847F60: 0xf8847f60
+      - sceUsbCamPollReadMicEnd: 0xf8847f60
       - sceUsbCamWaitReadVideoFrameEnd: 0xf90b2293
       - sceUsbCamAutoImageReverseSW: 0xf93c4669
       - sceUsbCamStillInput: 0xfb0a6c5d
@@ -83,7 +83,7 @@ exports:
     functions:
       - sceUsbCam_00631D06: 0x00631d06
       - sceUsbCamSetupMic: 0x03ed7a82
-      - sceUsbCam_08AEE98A: 0x08aee98a
+      - sceUsbCamSetMicGain: 0x08aee98a
       - sceUsbCamSetContrast: 0x09c26c7e
       - sceUsbCamSetupStillEx: 0x0a41a298
       - sceUsbCamGetAutoImageReverseState: 0x11a1f128
@@ -92,42 +92,42 @@ exports:
       - sceUsbCamSetEvLevel: 0x1d686870
       - sceUsbCamGetEvLevel: 0x2bcd50c0
       - sceUsbCam_2E930264: 0x2e930264
-      - sceUsbCam_36636925: 0x36636925
+      - sceUsbCamReadMicBlocking: 0x36636925
       - sceUsbCamGetSaturation: 0x383e9fa8
-      - sceUsbCam_3DC0088E: 0x3dc0088e
+      - sceUsbCamReadMic: 0x3dc0088e
       - sceUsbCamSetupStill: 0x3f0cf289
-      - sceUsbCam_41EE8797: 0x41ee8797
+      - sceUsbCamUnregisterLensRotationCallback: 0x41ee8797
       - sceUsbCamGetLensDirection: 0x4c34f553
       - sceUsbCamSetBrightness: 0x4f3d84d5
-      - sceUsbCam_5145868A: 0x5145868a
+      - sceUsbCamStopMic: 0x5145868a
       - sceUsbCamStartVideo: 0x574a8c3f
-      - sceUsbCam_5778B452: 0x5778b452
+      - sceUsbCamGetMicDataLength: 0x5778b452
       - sceUsbCamStillInputBlocking: 0x61be5cac
       - sceUsbCamSetSharpness: 0x622f83cc
-      - sceUsbCam_6784E6A8: 0x6784e6a8
+      - sceUsbCamSetAntiFlicker: 0x6784e6a8
       - sceUsbCamStopVideo: 0x6cf32cb9
       - sceUsbCamSetSaturation: 0x6e205974
       - sceUsbCamGetBrightness: 0x70f522c5
       - sceUsbCamStillWaitInputEnd: 0x7563afa1
       - sceUsbCamReadVideoFrameBlocking: 0x7dac0c71
-      - sceUsbCam_82A64030: 0x82a64030
+      - sceUsbCamStartMic: 0x82a64030
       - sceUsbCamSetReverseMode: 0x951bedf5
       - sceUsbCamGetImageEffectMode: 0x994471e0
       - sceUsbCamReadVideoFrame: 0x99d86281
       - sceUsbCamGetZoom: 0x9e8aaf8d
       - sceUsbCamGetContrast: 0xa063a957
       - sceUsbCamStillCancelInput: 0xa720937c
-      - sceUsbCam_AA7D94BA: 0xaa7d94ba
-      - sceUsbCam_B048A67D: 0xb048a67d
+      - sceUsbCamGetAntiFlicker: 0xaa7d94ba
+      - sceUsbCamWaitReadMicEnd: 0xb048a67d
       - sceUsbCamSetZoom: 0xc484901f
       - sceUsbCamSetupVideoEx: 0xcfe9e999
-      - sceUsbCam_D293A100: 0xd293a100
+      - sceUsbCamRegisterLensRotationCallback: 0xd293a100
       - sceUsbCamSetImageEffectMode: 0xd4876173
       - sceUsbCamGetReverseMode: 0xd5279339
       - sceUsbCam_D865997B: 0xd865997b
       - sceUsbCamGetReadVideoFrameSize: 0xdf9d0c92
       - sceUsbCamStillGetInputLength: 0xe5959c36
-      - sceUsbCam_F8847F60: 0xf8847f60
+      - sceUsbCamPollReadMicEnd: 0xf8847f60
       - sceUsbCamWaitReadVideoFrameEnd: 0xf90b2293
       - sceUsbCamAutoImageReverseSW: 0xf93c4669
       - sceUsbCamStillInput: 0xfb0a6c5d

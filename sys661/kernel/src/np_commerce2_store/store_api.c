@@ -1851,7 +1851,7 @@ int sceNpCommerce2Store_5C15E8DA(u32 req_id, u8 *resp, u32 buf_size, u32 *recv_s
 
 int sceNpCommerce2Store_C2A7C748(u32 ctx_id, u32 *req_id_out)
 {
-    if (_sceKernelCheckThreadStack() < STORE_MIN_STACK_STD)
+    if (sceKernelCheckThreadStack() < STORE_MIN_STACK_STD)
         return STORE_ERR_STACK_OVERFLOW;
     if (!g_store_init)
         return STORE_ERR_NOT_INITIALIZED;
@@ -1872,7 +1872,7 @@ int sceNpCommerce2Store_85F7B364(u32 req_id, const char * const *prod_ids, u32 p
 
 int sceNpCommerce2Store_C9652539(u32 req_id, u8 *resp, u32 buf_size, u32 *recv_size_out)
 {
-    if (_sceKernelCheckThreadStack() < STORE_MIN_STACK_STD)
+    if (sceKernelCheckThreadStack() < STORE_MIN_STACK_STD)
         return STORE_ERR_STACK_OVERFLOW;
     if (!g_store_init)
         return STORE_ERR_NOT_INITIALIZED;
@@ -1883,7 +1883,7 @@ int sceNpCommerce2Store_C9652539(u32 req_id, u8 *resp, u32 buf_size, u32 *recv_s
 
 int sceNpCommerce2Store_B9108E1C(u32 req_id, u8 *resp, u32 buf_size, u32 *recv_size_out)
 {
-    if (_sceKernelCheckThreadStack() < STORE_MIN_STACK_STD)
+    if (sceKernelCheckThreadStack() < STORE_MIN_STACK_STD)
         return STORE_ERR_STACK_OVERFLOW;
     if (!g_store_init)
         return STORE_ERR_NOT_INITIALIZED;
@@ -1892,7 +1892,7 @@ int sceNpCommerce2Store_B9108E1C(u32 req_id, u8 *resp, u32 buf_size, u32 *recv_s
 
 int sceNpCommerce2Store_20A1FDAD(u32 *out, const u8 *resp, u32 resp_size)
 {
-    if (_sceKernelCheckThreadStack() < STORE_MIN_STACK_STD)
+    if (sceKernelCheckThreadStack() < STORE_MIN_STACK_STD)
         return STORE_ERR_STACK_OVERFLOW;
     if (!g_store_init)
         return STORE_ERR_NOT_INITIALIZED;
@@ -1906,11 +1906,11 @@ int sceNpCommerce2Store_7BBE5E6F(const u32 *parent, u32 index, u32 *out)
     u32 elem[12];
     int ret;
 
-    if (_sceKernelCheckThreadStack() < STORE_MIN_STACK_INNER)
+    if (sceKernelCheckThreadStack() < STORE_MIN_STACK_INNER)
         return STORE_ERR_STACK_OVERFLOW;
     if (!g_store_init)
         return STORE_ERR_NOT_INITIALIZED;
-    if (_sceKernelCheckThreadStack() < STORE_MIN_STACK_STD)
+    if (sceKernelCheckThreadStack() < STORE_MIN_STACK_STD)
         return STORE_ERR_STACK_OVERFLOW;
     if (!g_store_init)
         return STORE_ERR_NOT_INITIALIZED;
@@ -2346,7 +2346,7 @@ static inline __attribute__((always_inline)) int
 store_checked_recv_impl(u32 req_id, u8 *resp, u32 buf_size, u32 *recv_size_out, int strict_size)
 {
     if ((u32)sceKernelGetCompiledSdkVersion() > STORE_SDK_VER_550) {
-        if (_sceKernelCheckThreadStack() < STORE_MIN_STACK_LARGE)
+        if (sceKernelCheckThreadStack() < STORE_MIN_STACK_LARGE)
             return STORE_ERR_STACK_OVERFLOW;
     }
     if (!g_store_init)
@@ -2370,7 +2370,7 @@ static int store_checked_get_cat(u32 req_id, const char *cat_id, const char * co
     char prefix[32];
 
     if ((u32)sceKernelGetCompiledSdkVersion() > STORE_SDK_VER_550) {
-        if (_sceKernelCheckThreadStack() < STORE_MIN_STACK_LARGE)
+        if (sceKernelCheckThreadStack() < STORE_MIN_STACK_LARGE)
             return STORE_ERR_STACK_OVERFLOW;
     }
     if (!g_store_init)
@@ -2399,7 +2399,7 @@ static int store_checked_get_prod(u32 req_id, const char *cat_id, const char *pr
     char prefix[32];
 
     if ((u32)sceKernelGetCompiledSdkVersion() > STORE_SDK_VER_550) {
-        if (_sceKernelCheckThreadStack() < STORE_MIN_STACK_LARGE)
+        if (sceKernelCheckThreadStack() < STORE_MIN_STACK_LARGE)
             return STORE_ERR_STACK_OVERFLOW;
     }
     if (!g_store_init)
@@ -2424,7 +2424,7 @@ static int store_checked_get_prod_list(u32 req_id, const char * const *prod_ids,
 {
     char prefix[32];
 
-    if (_sceKernelCheckThreadStack() < STORE_MIN_STACK_STD)
+    if (sceKernelCheckThreadStack() < STORE_MIN_STACK_STD)
         return STORE_ERR_STACK_OVERFLOW;
     if (!g_store_init)
         return STORE_ERR_NOT_INITIALIZED;

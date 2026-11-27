@@ -24,7 +24,7 @@ int LIBSSL_NOINLINE sceSslInit(u32 poolSize)
     int fplId;
     int ret;
 
-    if (_sceKernelCheckThreadStack() < 976) {
+    if (sceKernelCheckThreadStack() < 976) {
         return SCE_SSL_ERROR_INSUFFICIENT_STACK;
     }
     if (g_sslState.initialized == 1) {
@@ -69,7 +69,7 @@ int LIBSSL_NOINLINE sceSslInit(u32 poolSize)
 /* 0x027F30 */
 int LIBSSL_NOINLINE sceSslEnd(void)
 {
-    if (_sceKernelCheckThreadStack() < 992) {
+    if (sceKernelCheckThreadStack() < 992) {
         return SCE_SSL_ERROR_INSUFFICIENT_STACK;
     }
     if (g_sslState.initialized != 1) {
@@ -94,7 +94,7 @@ int LIBSSL_NOINLINE sceSslEnd(void)
 /* 0x028004 */
 int LIBSSL_NOINLINE sceSslGetUsedMemoryMax(u32 *maxMem)
 {
-    if (_sceKernelCheckThreadStack() < 1008) {
+    if (sceKernelCheckThreadStack() < 1008) {
         return SCE_SSL_ERROR_INSUFFICIENT_STACK;
     }
     if (g_sslState.initialized != 1) {
@@ -110,7 +110,7 @@ int LIBSSL_NOINLINE sceSslGetUsedMemoryMax(u32 *maxMem)
 /* 0x028078 */
 int LIBSSL_NOINLINE sceSslGetUsedMemoryCurrent(u32 *currentMem)
 {
-    if (_sceKernelCheckThreadStack() < 1008) {
+    if (sceKernelCheckThreadStack() < 1008) {
         return SCE_SSL_ERROR_INSUFFICIENT_STACK;
     }
     if (g_sslState.initialized != 1) {
@@ -130,7 +130,7 @@ int LIBSSL_NOINLINE sceSslGetSerialNumber(void *cert, const u8 **serialBuf, u32 
     const u8 *serialPtr;
     int ret;
 
-    if (_sceKernelCheckThreadStack() < 992) {
+    if (sceKernelCheckThreadStack() < 992) {
         return SCE_SSL_ERROR_INSUFFICIENT_STACK;
     }
     if (g_sslState.initialized != 1) {
@@ -156,7 +156,7 @@ int LIBSSL_NOINLINE sceSslGetNameEntryCount(void *certName)
 {
     int count;
 
-    if (_sceKernelCheckThreadStack() < 1008) {
+    if (sceKernelCheckThreadStack() < 1008) {
         return SCE_SSL_ERROR_INSUFFICIENT_STACK;
     }
     if (g_sslState.initialized != 1) {
@@ -183,7 +183,7 @@ int LIBSSL_NOINLINE sceSslGetNameEntryInfo(void *certName, int entryNum, const c
     int valueTag;
     const u8 *valPtr;
 
-    if (_sceKernelCheckThreadStack() < 976) {
+    if (sceKernelCheckThreadStack() < 976) {
         return SCE_SSL_ERROR_INSUFFICIENT_STACK;
     }
     if (g_sslState.initialized != 1) {
@@ -215,7 +215,7 @@ int LIBSSL_NOINLINE sceSslGetNotAfter(void *cert, SceSslRtcTick *limitTick)
     u32 timeLen;
     int ret;
 
-    if (_sceKernelCheckThreadStack() < 864) {
+    if (sceKernelCheckThreadStack() < 864) {
         return SCE_SSL_ERROR_INSUFFICIENT_STACK;
     }
     if (g_sslState.initialized != 1) {
@@ -243,7 +243,7 @@ int LIBSSL_NOINLINE sceSslGetNotBefore(void *cert, SceSslRtcTick *limitTick)
     u32 timeLen;
     int ret;
 
-    if (_sceKernelCheckThreadStack() < 864) {
+    if (sceKernelCheckThreadStack() < 864) {
         return SCE_SSL_ERROR_INSUFFICIENT_STACK;
     }
     if (g_sslState.initialized != 1) {
@@ -267,7 +267,7 @@ int LIBSSL_NOINLINE sceSslGetKeyUsage(void *cert, int *critical, u32 *usage)
 {
     int ret;
 
-    if (_sceKernelCheckThreadStack() < 864) {
+    if (sceKernelCheckThreadStack() < 864) {
         return SCE_SSL_ERROR_INSUFFICIENT_STACK;
     }
     if (g_sslState.initialized != 1) {
@@ -290,7 +290,7 @@ int LIBSSL_NOINLINE sceSslGetKeyUsage(void *cert, int *critical, u32 *usage)
 /* 0x0285EC */
 void *LIBSSL_NOINLINE sceSslGetSubjectName(void *cert)
 {
-    if (_sceKernelCheckThreadStack() < 1008) {
+    if (sceKernelCheckThreadStack() < 1008) {
         return NULL;
     }
     if (g_sslState.initialized != 1 || cert == NULL) {
@@ -302,7 +302,7 @@ void *LIBSSL_NOINLINE sceSslGetSubjectName(void *cert)
 /* 0x02864C */
 void *LIBSSL_NOINLINE sceSslGetIssuerName(void *cert)
 {
-    if (_sceKernelCheckThreadStack() < 1008) {
+    if (sceKernelCheckThreadStack() < 1008) {
         return NULL;
     }
     if (g_sslState.initialized != 1 || cert == NULL) {

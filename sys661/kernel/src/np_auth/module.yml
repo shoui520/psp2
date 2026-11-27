@@ -15,20 +15,20 @@ exports:
     attributes: 0x0001
     pad: 2
     functions:
-      - sceNpAuth_3F1C1F70: 0x3f1c1f70
-      - sceNpAuth_4EC1F667: 0x4ec1f667
-      - sceNpAuth_5A3CB57A: 0x5a3cb57a
+      - sceNpAuthGetTicket: 0x3f1c1f70
+      - sceNpAuthTerm: 0x4ec1f667
+      - sceNpAuthGetTicketParam: 0x5a3cb57a
       - sceNpAuth_61BB18B3: 0x61bb18b3
-      - sceNpAuth_6900F084: 0x6900f084
-      - sceNpAuth_72BB0467: 0x72bb0467
-      - sceNpAuth_75FB0AE3: 0x75fb0ae3
-      - sceNpAuth_A1DE86F8: 0xa1de86f8
+      - sceNpAuthGetEntitlementById: 0x6900f084
+      - sceNpAuthDestroyRequest: 0x72bb0467
+      - sceNpAuthGetEntitlementIdList: 0x75fb0ae3
+      - sceNpAuthInit: 0xa1de86f8
       - sceNpAuth_B714FBDD: 0xb714fbdd
-      - sceNpAuth_CD86A656: 0xcd86a656
+      - sceNpAuthCreateStartRequest: 0xcd86a656
       - sceNpAuth_CE85B3B8: 0xce85b3b8
-      - sceNpAuth_D99455DD: 0xd99455dd
+      - sceNpAuthAbortRequest: 0xd99455dd
       - sceNpAuth_DAD65284: 0xdad65284
-      - sceNpAuth_F4531ADC: 0xf4531adc
+      - sceNpAuthGetMemoryStat: 0xf4531adc
 imports:
   - name: sceNpCore
     version: [0, 17]
@@ -70,13 +70,13 @@ imports:
     attributes: 0x0009
     pad: 4
     functions:
-      - sceParseUri_49E950EC: 0x49e950ec
+      - sceUriEscape: 0x49e950ec
   - name: sceParseHttp
     version: [0, 17]
     attributes: 0x0009
     pad: 7
     functions:
-      - sceParseHttp_AD7BFDEF: 0xad7bfdef
+      - sceParseHttpResponseHeader: 0xad7bfdef
   - name: sceHttp
     version: [0, 17]
     attributes: 0x0009
@@ -91,7 +91,7 @@ imports:
       - sceHttpSetSendTimeOut: 0x9988172d
       - sceHttpCreateTemplate: 0x9b1f1f36
       - sceHttpDeleteRequest: 0xa5512e01
-      - sceHttp_AB1540D5: 0xab1540d5
+      - sceHttpsGetSslError: 0xab1540d5
       - sceHttpCreateRequestWithURL: 0xb509b09e
       - sceHttpSendRequest: 0xbb70706f
       - sceHttpAbortRequest: 0xc10b6bd9
@@ -116,7 +116,7 @@ imports:
     functions:
       - sceKernelCpuSuspendIntr: 0x092968f4
       - sceKernelMemset: 0xa089eca4
-      - _sceKernelCheckThreadStack: 0xd13bde95
+      - sceKernelCheckThreadStack: 0xd13bde95
       - sceKernelMemcpy: 0x1839852a
       - sceKernelCpuResumeIntr: 0x5f10d406
   - name: ModuleMgrForUser

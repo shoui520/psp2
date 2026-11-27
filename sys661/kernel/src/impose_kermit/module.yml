@@ -30,7 +30,7 @@ exports:
       - sceImposeSetHomePopup: 0x5595a71a
       - sceImpose_7084E72C: 0x7084e72c
       - sceImposeSetUMDPopup: 0x72189c48
-      - sceImpose_8C943191: 0x8c943191
+      - sceImposeGetBatteryIconStatus: 0x8c943191
       - sceImposeGetBacklightOffTime: 0x8f6e3518
       - sceImposeSetBacklightOffTime: 0x967f6d4a
       - sceImpose_9BA61B49: 0x9ba61b49
@@ -55,7 +55,7 @@ exports:
       - sceImpose_driver_28B97035: 0x28b97035
       - sceImposeSetBacklightOffTime: 0x37f3f1d2
       - sceImpose_FCD44963: 0x3c318569
-      - sceImpose_8C943191: 0x5557f4e2
+      - sceImposeGetBatteryIconStatus: 0x5557f4e2
       - sceImpose_driver_686B040E: 0x686b040e
       - sceImposeGetLanguageMode: 0x842309dd
       - sceImpose_driver_9E921836: 0x9e921836
@@ -222,7 +222,7 @@ imports:
     len: 6
     pad: 6
     functions:
-      - sceRtc_driver_9012B140: 0x9012b140
+      - sceRtcGetCurrentClockLocalTime: 0x9012b140
       - sceRtc_driver_DFF30673: 0xdff30673
   - name: scePower_driver
     version: [0, 17]

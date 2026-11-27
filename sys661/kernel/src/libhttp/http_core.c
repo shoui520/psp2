@@ -297,7 +297,7 @@ s32 sceHttpIsRequestInCache(s32 req_id)
     HttpRedirEntry *redir = NULL;
     s32 in_cache = 0;
 
-    if (_sceKernelCheckThreadStack() < 2000)
+    if (sceKernelCheckThreadStack() < 2000)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
 
     if (http_is_inited() == 1 && http_lock_request(req_id, &req) >= 0) {
@@ -345,7 +345,7 @@ s32 sceHttpSendRequestInCacheFirstMode(s32 req_id, const void *data, u32 size)
     HttpRedirEntry *redir = NULL;
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 10192)
+    if (sceKernelCheckThreadStack() < 10192)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (http_is_inited() != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;
@@ -406,7 +406,7 @@ s32 sceHttpAbortRequest(s32 req_id)
     HttpRequest *req = NULL;
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 10208)
+    if (sceKernelCheckThreadStack() < 10208)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
 
     if (http_is_inited() != 1) {
@@ -450,7 +450,7 @@ s32 sceHttpReadData(s32 req_id, void *data, u32 size)
     s32 hit_eof = 0;
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 10176)
+    if (sceKernelCheckThreadStack() < 10176)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (http_is_inited() != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;
@@ -609,70 +609,70 @@ s32 sceHttpReadData(s32 req_id, void *data, u32 size)
 
 s32 sceHttpSendRequest(s32 req_id, const void *data, u32 size)
 {
-    if (_sceKernelCheckThreadStack() < 10224)
+    if (sceKernelCheckThreadStack() < 10224)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     return http_send_request_internal(req_id, data, size);
 }
 
 s32 sceHttpCreateTemplate(const char *user_agent, s32 http_ver, s32 auto_proxy)
 {
-    if (_sceKernelCheckThreadStack() < 2032)
+    if (sceKernelCheckThreadStack() < 2032)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     return http_create_template_internal(user_agent, (u32)http_ver, auto_proxy);
 }
 
 s32 sceHttpDeleteTemplate(s32 tmpl_id)
 {
-    if (_sceKernelCheckThreadStack() < 2032)
+    if (sceKernelCheckThreadStack() < 2032)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     return http_delete_template_internal(tmpl_id);
 }
 
 s32 sceHttpCreateConnection(s32 tmpl_id, const char *host, const char *scheme, u16 port, s32 keep_alive)
 {
-    if (_sceKernelCheckThreadStack() < 2000)
+    if (sceKernelCheckThreadStack() < 2000)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     return http_create_connection_internal(tmpl_id, host, scheme, NULL, NULL, port, keep_alive, 0, NULL);
 }
 
 s32 sceHttpCreateConnectionWithURL(s32 tmpl_id, const char *url, s32 keep_alive)
 {
-    if (_sceKernelCheckThreadStack() < 2032)
+    if (sceKernelCheckThreadStack() < 2032)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     return http_create_connection_with_url_internal(tmpl_id, url, keep_alive, 0, NULL);
 }
 
 s32 sceHttpDeleteConnection(s32 conn_id)
 {
-    if (_sceKernelCheckThreadStack() < 10224)
+    if (sceKernelCheckThreadStack() < 10224)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     return http_delete_connection_internal(conn_id);
 }
 
 s32 sceHttpCreateRequest(s32 conn_id, s32 method, const char *path, u64 content_len)
 {
-    if (_sceKernelCheckThreadStack() < 2016)
+    if (sceKernelCheckThreadStack() < 2016)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     return http_create_request_internal(conn_id, method, path, content_len);
 }
 
 s32 sceHttpCreateRequestWithURL(s32 conn_id, s32 method, const char *url, u64 content_len)
 {
-    if (_sceKernelCheckThreadStack() < 2016)
+    if (sceKernelCheckThreadStack() < 2016)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     return http_create_request_with_url_internal(conn_id, method, url, content_len);
 }
 
 s32 sceHttpDeleteRequest(s32 req_id)
 {
-    if (_sceKernelCheckThreadStack() < 10224)
+    if (sceKernelCheckThreadStack() < 10224)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     return http_delete_request_internal(req_id);
 }
 
 s32 sceHttp_4E4A284A(s32 tmpl_id)
 {
-    if (_sceKernelCheckThreadStack() < 2032)
+    if (sceKernelCheckThreadStack() < 2032)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     return http_clone_template_internal(tmpl_id);
 }
@@ -697,7 +697,7 @@ HttpRedirEntry *http_follow_cached_redirects(HttpRequest *req)
         }
         if (req->cfg.redirect_cb != NULL) {
             typedef s32 (*RedirCb)(s32, s32, s32 *, const char *, void *);
-            _sceKernelCheckThreadStack();
+            sceKernelCheckThreadStack();
             if (((RedirCb)req->cfg.redirect_cb)(req->id, 301, &req->method,
                                                 cur->dst_url, req->cfg.redirect_cb_arg) < 0) {
                 req->cfg.auto_redirect = 0;
@@ -1308,7 +1308,7 @@ s32 sceHttpFlushAuthList(void)
     s32 intr;
     HttpAuthEntry *cur;
 
-    if (_sceKernelCheckThreadStack() < 2032)
+    if (sceKernelCheckThreadStack() < 2032)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (g_auth_inited != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;

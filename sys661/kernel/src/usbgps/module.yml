@@ -21,16 +21,16 @@ exports:
       - sceUsbGps_268F95CA: 0x268f95ca
       - sceUsbGps_31F95CDE: 0x31f95cde
       - sceUsbGps_54D26AA4: 0x54d26aa4
-      - sceUsbGps_5881C826: 0x5881c826
+      - sceUsbGpsGetStaticNavMode: 0x5881c826
       - sceUsbGps_63D1F89D: 0x63d1f89d
       - sceUsbGps_69E4AAA8: 0x69e4aaa8
-      - sceUsbGps_6EED4811: 0x6eed4811
-      - sceUsbGps_7C16AC3A: 0x7c16ac3a
-      - sceUsbGps_934EC2B2: 0x934ec2b2
+      - sceUsbGpsClose: 0x6eed4811
+      - sceUsbGpsGetState: 0x7c16ac3a
+      - sceUsbGpsGetData: 0x934ec2b2
       - sceUsbGps_9D8F99E8: 0x9d8f99e8
-      - sceUsbGps_9F267D34: 0x9f267d34
+      - sceUsbGpsOpen: 0x9f267d34
       - sceUsbGps_A259CD67: 0xa259cd67
-      - sceUsbGps_A8ED0BC2: 0xa8ed0bc2
+      - sceUsbGpsSetStaticNavMode: 0xa8ed0bc2
   - name: sceUsbGps_driver
     version: [0, 17]
     attributes: 0x0001
@@ -39,15 +39,15 @@ exports:
       - sceUsbGps_268F95CA: 0x268f95ca
       - sceUsbGps_31F95CDE: 0x31f95cde
       - sceUsbGps_54D26AA4: 0x54d26aa4
-      - sceUsbGps_5881C826: 0x5881c826
+      - sceUsbGpsGetStaticNavMode: 0x5881c826
       - sceUsbGps_69E4AAA8: 0x69e4aaa8
-      - sceUsbGps_6EED4811: 0x6eed4811
-      - sceUsbGps_7C16AC3A: 0x7c16ac3a
-      - sceUsbGps_934EC2B2: 0x934ec2b2
+      - sceUsbGpsClose: 0x6eed4811
+      - sceUsbGpsGetState: 0x7c16ac3a
+      - sceUsbGpsGetData: 0x934ec2b2
       - sceUsbGps_9D8F99E8: 0x9d8f99e8
-      - sceUsbGps_9F267D34: 0x9f267d34
+      - sceUsbGpsOpen: 0x9f267d34
       - sceUsbGps_A259CD67: 0xa259cd67
-      - sceUsbGps_A8ED0BC2: 0xa8ed0bc2
+      - sceUsbGpsSetStaticNavMode: 0xa8ed0bc2
 imports:
   - name: sceUsb_driver
     version: [0, 17]

@@ -1678,7 +1678,7 @@ HTTP_ALWAYS_INLINE s32 http_is_pool_ptr(const void *ptr)
 
 s32 sceHttpInitCache(u32 max_size)
 {
-    if (_sceKernelCheckThreadStack() < 2016)
+    if (sceKernelCheckThreadStack() < 2016)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (g_cache_mem_inited == 1)
         return SCE_HTTP_ERROR_ALREADY_INITED;
@@ -1697,7 +1697,7 @@ s32 sceHttpFlushCache(void)
     HttpCacheEntry *cur;
     s32 intr;
 
-    if (_sceKernelCheckThreadStack() < 2032)
+    if (sceKernelCheckThreadStack() < 2032)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (g_cache_mem_inited != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;
@@ -1717,7 +1717,7 @@ s32 sceHttpEndCache(void)
 {
     HttpCacheEntry *cur;
 
-    if (_sceKernelCheckThreadStack() < 2016)
+    if (sceKernelCheckThreadStack() < 2016)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (g_cache_mem_inited != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;
@@ -1744,7 +1744,7 @@ s32 sceHttp_739C2D79(void *pool_mem, u32 pool_size)
 {
     u32 off;
 
-    if (_sceKernelCheckThreadStack() < 2016)
+    if (sceKernelCheckThreadStack() < 2016)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (g_cache_pool_inited == 1)
         return SCE_HTTP_ERROR_ALREADY_INITED;
@@ -1772,7 +1772,7 @@ s32 sceHttp_B0257723(void)
     HttpCacheEntry *cur;
     s32 intr;
 
-    if (_sceKernelCheckThreadStack() < 2032)
+    if (sceKernelCheckThreadStack() < 2032)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (g_cache_pool_inited != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;
@@ -1790,7 +1790,7 @@ s32 sceHttp_B0257723(void)
 
 s32 sceHttp_A461A167(void)
 {
-    if (_sceKernelCheckThreadStack() < 2032)
+    if (sceKernelCheckThreadStack() < 2032)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (g_cache_pool_inited != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;
@@ -2387,7 +2387,7 @@ s32 sceHttpGetContentLength(s32 req_id, u64 *len_out)
     HttpRequest *req = NULL;
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 10208)
+    if (sceKernelCheckThreadStack() < 10208)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (http_is_inited() != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;
@@ -2419,7 +2419,7 @@ s32 sceHttpGetStatusCode(s32 req_id, s32 *code_out)
     HttpRequest *req = NULL;
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 10208)
+    if (sceKernelCheckThreadStack() < 10208)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (http_is_inited() != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;
@@ -2446,7 +2446,7 @@ s32 sceHttpGetNetworkErrno(s32 req_id, s32 *errno_out)
     HttpRequest *req = NULL;
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 2016)
+    if (sceKernelCheckThreadStack() < 2016)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (http_is_inited() != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;
@@ -2470,7 +2470,7 @@ s32 sceHttpGetNetworkPspError(s32 req_id, s32 *err_out)
     HttpRequest *req = NULL;
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 2016)
+    if (sceKernelCheckThreadStack() < 2016)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (http_is_inited() != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;
@@ -2494,7 +2494,7 @@ s32 sceHttpGetAllHeader(s32 req_id, char **hdr_out, u32 *len_out)
     HttpRequest *req = NULL;
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 10208)
+    if (sceKernelCheckThreadStack() < 10208)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (http_is_inited() != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;
@@ -2585,7 +2585,7 @@ s32 http_attach_request_cookies(HttpRequest *req)
                     if (req->cfg.cookie_send_cb != NULL) {
                         typedef s32 (*CookieSendCb)(s32, const char *, const char *, void *);
                         url_str = http_build_request_url(req);
-                        _sceKernelCheckThreadStack();
+                        sceKernelCheckThreadStack();
                         ret = ((CookieSendCb)req->cfg.cookie_send_cb)(req->id, url_str,
                                                                       (const char *)cookie_buf,
                                                                       req->cfg.cookie_send_cb_arg);

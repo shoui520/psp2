@@ -18,43 +18,43 @@ exports:
     extra_words: [0x00020000]
     bucket_words: [0x00020000, 0x00070006, 0x000d0009, 0x00150013, 0x001b001a, 0x001f001e, 0x00220022, 0x00240024]
     functions:
-      - sceMp4_01C76489: 0x01c76489
-      - sceMp4_0F0187D2: 0x0f0187d2
-      - sceMp4_10EE0D2C: 0x10ee0d2c
-      - sceMp4_113E9E7B: 0x113e9e7b
-      - sceMp4_131BDE57: 0x131bde57
-      - sceMp4_17EAA97D: 0x17eaa97d
-      - sceMp4_28CCB940: 0x28ccb940
-      - sceMp4_3069C2B5: 0x3069c2b5
-      - sceMp4_31BCD7E0: 0x31bcd7e0
-      - sceMp4_427BEF7F: 0x427bef7f
-      - sceMp4_496E8A65: 0x496e8a65
-      - sceMp4_4ED4AB1E: 0x4ed4ab1e
-      - sceMp4_4FB5B756: 0x4fb5b756
-      - sceMp4_503A3CBA: 0x503a3cba
-      - sceMp4_532029B8: 0x532029b8
-      - sceMp4_538C2057: 0x538c2057
-      - sceMp4_5601A6F0: 0x5601a6f0
-      - sceMp4_5D72B333: 0x5d72b333
-      - sceMp4_5EB65F26: 0x5eb65f26
-      - sceMp4_6710FE77: 0x6710fe77
-      - sceMp4_68651CBC: 0x68651cbc
-      - sceMp4_7443AF1D: 0x7443af1d
-      - sceMp4_74A1CA3E: 0x74a1ca3e
-      - sceMp4_7663CB5C: 0x7663cb5c
-      - sceMp4_7ADFD01C: 0x7adfd01c
-      - sceMp4_7D332394: 0x7d332394
-      - sceMp4_8754ECB8: 0x8754ecb8
-      - sceMp4_9042B257: 0x9042b257
-      - sceMp4_9C8F4FC1: 0x9c8f4fc1
-      - sceMp4_9CE6F5CF: 0x9ce6f5cf
-      - sceMp4_A6C724DC: 0xa6c724dc
-      - sceMp4_B1221EE7: 0xb1221ee7
-      - sceMp4_B4B400D1: 0xb4b400d1
-      - sceMp4_BCA9389C: 0xbca9389c
-      - sceMp4_D2AC9A7E: 0xd2ac9a7e
-      - sceMp4_D8250B75: 0xd8250b75
-      - sceMp4_F7C51EC1: 0xf7c51ec1
+      - sceMp4TrackSampleBufDestruct: 0x01c76489
+      - sceMp4GetAvcTrackInfoData: 0x0f0187d2
+      - sceMp4AacDecodeInit: 0x10ee0d2c
+      - sceMp4GetNumberOfMetaData: 0x113e9e7b
+      - sceMp4InitAu: 0x131bde57
+      - sceMp4GetAvcAuWithoutSampleBuf: 0x17eaa97d
+      - sceMp4GetTrackEditList: 0x28ccb940
+      - sceMp4GetAvcParamSet: 0x3069c2b5
+      - sceMp4TrackSampleBufPut: 0x31bcd7e0
+      - sceMp4GetTrackNumOfEditList: 0x427bef7f
+      - sceMp4TrackSampleBufFlush: 0x496e8a65
+      - sceMp4AacDecodeInitResource: 0x4ed4ab1e
+      - sceMp4GetMetaDataInfo: 0x4fb5b756
+      - sceMp4GetAvcAu: 0x503a3cba
+      - sceMp4GetAacAuWithoutSampleBuf: 0x532029b8
+      - sceMp4Delete: 0x538c2057
+      - sceMp4GetAacAu: 0x5601a6f0
+      - sceMp4AacDecodeExit: 0x5d72b333
+      - sceMp4GetNumberOfSpecificTrack: 0x5eb65f26
+      - sceMp4UnregistTrack: 0x6710fe77
+      - sceMp4Init: 0x68651cbc
+      - sceMp4GetMovieInfo: 0x7443af1d
+      - sceMp4SearchSyncSampleNum: 0x74a1ca3e
+      - sceMp4AacDecode: 0x7663cb5c
+      - sceMp4RegistTrack: 0x7adfd01c
+      - sceMp4AacDecodeTermResource: 0x7d332394
+      - sceMp4TrackSampleBufAvailableSize: 0x8754ecb8
+      - sceMp4Finish: 0x9042b257
+      - sceMp4TrackSampleBufConstruct: 0x9c8f4fc1
+      - sceMp4GetAacTrackInfoData: 0x9ce6f5cf
+      - sceMp4GetSampleNum: 0xa6c724dc
+      - sceMp4Create: 0xb1221ee7
+      - sceMp4GetSampleNumWithTimeStamp: 0xb4b400d1
+      - sceMp4TrackSampleBufQueryMemSize: 0xbca9389c
+      - sceMp4GetMetaData: 0xd2ac9a7e
+      - sceMp4PutSampleNum: 0xd8250b75
+      - sceMp4GetSampleInfo: 0xf7c51ec1
 imports:
   - name: mp4msv
     version: [0, 17]
@@ -123,7 +123,7 @@ imports:
       - sceKernelCpuSuspendIntr: 0x092968f4
       - sceKernelMemset: 0xa089eca4
       - sceKernelLockLwMutex: 0xbea46419
-      - _sceKernelCheckThreadStack: 0xd13bde95
+      - sceKernelCheckThreadStack: 0xd13bde95
       - sceKernelUnlockLwMutex: 0x15b6446b
       - sceKernelMemcpy: 0x1839852a
       - sceKernelCpuResumeIntr: 0x5f10d406

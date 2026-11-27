@@ -36,7 +36,7 @@ static s32 __attribute__((noinline)) parse_reason_phrase(const char *buf, u32 le
 static u32 __attribute__((noinline)) parse_strlen(const char *s);
 static s32 __attribute__((noinline)) parse_strncmp(const char *lhs, const char *rhs, s32 n);
 
-s32 sceParseHttp_8077A433(const char *buf, u32 len, s32 *ver_major, s32 *ver_minor,
+s32 sceParseHttpStatusLine(const char *buf, u32 len, s32 *ver_major, s32 *ver_minor,
                           s32 *status_code, const char **reason_phrase, u32 *reason_len)
 {
     if (sceKernelCheckThreadStack() < 0x3e0)
@@ -66,7 +66,7 @@ s32 sceParseHttp_8077A433(const char *buf, u32 len, s32 *ver_major, s32 *ver_min
     return (p + res) - buf;
 }
 
-s32 sceParseHttp_AD7BFDEF(const char *buf, u32 len, const char *field_name,
+s32 sceParseHttpResponseHeader(const char *buf, u32 len, const char *field_name,
                           const char **value_out, u32 *value_len_out)
 {
     volatile s32 has_cr = 0;

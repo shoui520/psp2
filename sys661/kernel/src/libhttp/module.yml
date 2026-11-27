@@ -45,7 +45,7 @@ exports:
       - sceHttpIsRequestInCache: 0x54e7df75
       - sceHttpsSetSslCallback: 0x569a1481
       - sceHttpEnableCache: 0x59e6d16f
-      - sceHttp_68AB0F86: 0x68ab0f86
+      - sceHttpsInitWithPath: 0x68ab0f86
       - sceHttp_739C2D79: 0x739c2d79
       - sceHttpSaveSystemCookie: 0x76d1363b
       - sceHttpAddCookie: 0x7774bf4c
@@ -233,7 +233,7 @@ imports:
     functions:
       - sceKernelCpuSuspendIntr: 0x092968f4
       - sceKernelMemset: 0xa089eca4
-      - _sceKernelCheckThreadStack: 0xd13bde95
+      - sceKernelCheckThreadStack: 0xd13bde95
       - sceKernelMemcpy: 0x1839852a
       - sceKernelCpuResumeIntr: 0x5f10d406
   - name: ThreadManForUser

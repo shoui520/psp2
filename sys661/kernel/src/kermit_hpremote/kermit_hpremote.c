@@ -24,7 +24,7 @@ static inline u32 hprmShiftK1(void)
 	return old;
 }
 
-int sceHprm_C7154136(int slot, SceUID cbid)
+int sceHprmRegisterCallback(int slot, SceUID cbid)
 {
 	u32 old_k1 = hprmShiftK1();
 
@@ -84,7 +84,7 @@ int sceHprm_C7154136(int slot, SceUID cbid)
 	return res;
 }
 
-int sceHprm_444ED0B7(u32 slot)
+int sceHprmUnregisterCallback(u32 slot)
 {
 	u32 old_k1 = hprmShiftK1();
 

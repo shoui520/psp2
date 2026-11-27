@@ -128,7 +128,7 @@ extern void *sceKernelMemset(void *dst, s32 fillByte, u32 size);
 extern void *sceKernelMemcpy(void *dst, const void *src, u32 size);
 extern s32 sceKernelLockLwMutex(SceLwMutexWorkarea *workarea, s32 count, u32 *timeout);
 extern s32 sceKernelUnlockLwMutex(SceLwMutexWorkarea *workarea, s32 count);
-extern s32 _sceKernelCheckThreadStack(void);
+extern s32 sceKernelCheckThreadStack(void);
 extern s32 sceKernelGetThreadId(void);
 
 /* SysMemUserForUser */

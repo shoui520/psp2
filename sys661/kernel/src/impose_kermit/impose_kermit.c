@@ -109,7 +109,7 @@ extern s32 sceKermitPeripheral_driver_76BE2E28(s32 speaker_mode, s32 headphone_m
 extern s32 sceLcdc_driver_451FE1A1(s32 aspect_mode);
 
 /* sceRtc_driver */
-extern s32 sceRtc_driver_9012B140(void *date_time);
+extern s32 sceRtcGetCurrentClockLocalTime(void *date_time);
 extern s32 sceRtc_driver_DFF30673(s32 date_fmt, s32 time_fmt, s32 tz_offset, s32 dst_minutes);
 
 /* sceReg_driver */
@@ -2080,7 +2080,7 @@ static void imposeRefreshRegistryValues(s32 mode)
         tz_offset = 0;
     }
     sceRtc_driver_DFF30673(g_impose->date_format, g_impose->time_format, tz_offset, summer_time * 60);
-    sceRtc_driver_9012B140(&g_impose->rtc_time);
+    sceRtcGetCurrentClockLocalTime(&g_impose->rtc_time);
 
     if (mode == -1) {
         if ((u32)g_impose->language >= 12u) {
@@ -3668,7 +3668,7 @@ s32 sceImpose_FCD44963(s32 id, u32 val)
 
 s32 sceImpose_driver_3C318569(s32 id, u32 val) __attribute__((alias("sceImpose_FCD44963")));
 
-s32 sceImpose_8C943191(s32 *is_charging, s32 *icon_status)
+s32 sceImposeGetBatteryIconStatus(s32 *is_charging, s32 *icon_status)
 {
     u32 old_k1 = pspGetK1();
     u32 shifted = old_k1 << 11;
@@ -3716,7 +3716,7 @@ s32 sceImpose_8C943191(s32 *is_charging, s32 *icon_status)
     return 0;
 }
 
-s32 sceImpose_driver_FF2D7FD2(s32 *is_charging, s32 *icon_status) __attribute__((alias("sceImpose_8C943191")));
+s32 sceImpose_driver_FF2D7FD2(s32 *is_charging, s32 *icon_status) __attribute__((alias("sceImposeGetBatteryIconStatus")));
 
 s32 sceImpose_381BD9E7(s32 open_flag)
 {

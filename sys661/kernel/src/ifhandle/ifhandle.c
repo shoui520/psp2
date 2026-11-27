@@ -1096,7 +1096,7 @@ int sceNetIfhandle_driver_C5623112(SceNetIfHandle *ifh, uint8_t *mac)
 	return (int)0x80000025;
 }
 
-int sceNetIfhandle_C80181A2(void *inBuf, void *outBuf)
+int sceNetGetDropRate(void *inBuf, void *outBuf)
 {
 	uint32_t old_k1 = pspGetK1();
 	uint32_t k1_shifted = old_k1 << 11;
@@ -1111,7 +1111,7 @@ int sceNetIfhandle_C80181A2(void *inBuf, void *outBuf)
 	return res;
 }
 
-int sceNetIfhandle_FD8585E1(int wlanMode)
+int sceNetSetDropRate(int wlanMode)
 {
 	uint32_t old_k1 = pspGetK1();
 	pspSetK1(old_k1 << 11);

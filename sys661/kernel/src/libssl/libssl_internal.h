@@ -873,7 +873,7 @@ extern SslTimeCb g_sslTimeCallback;
 /* External imports matching module.yml */
 extern void *sceKernelMemcpy(void *dst, const void *src, u32 len);
 extern void *sceKernelMemset(void *dst, int val, u32 len);
-extern int _sceKernelCheckThreadStack(void);
+extern int sceKernelCheckThreadStack(void);
 extern int sceKernelLockLwMutex(SceSslLwMutexWorkarea *workarea, int lockCount, u32 *timeout);
 extern int sceKernelUnlockLwMutex(SceSslLwMutexWorkarea *workarea, int unlockCount);
 

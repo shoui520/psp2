@@ -10,7 +10,7 @@ int sceKernelCpuSuspendIntr(void);
 void sceKernelCpuResumeIntr(int state);
 void *sceKernelMemset(void *s, int c, size_t n);
 void *sceKernelMemcpy(void *dst, const void *src, size_t n);
-int _sceKernelCheckThreadStack(void);
+int sceKernelCheckThreadStack(void);
 int sceKernelLockLwMutex(void *workarea, int count, uint32_t *timeout);
 int sceKernelUnlockLwMutex(void *workarea, int count);
 
@@ -58,7 +58,7 @@ int sceNetAdhocPtpSend(int id, const void *data, int *datasize, uint32_t timeout
 int sceNetAdhocPtpRecv(int id, void *data, int *datasize, uint32_t timeout, int nonblock);
 int sceNetAdhocPtpFlush(int id, uint32_t timeout, int nonblock);
 int sceNetAdhocPtpClose(int id, int flags);
-int sceNetAdhoc_73BFD52D(int id, int flags);
+int sceNetAdhocSetSocketAlert(int id, int flags);
 
 /* Imports from sceNetAdhocMatching */
 int sceNetAdhocMatchingCreate(int mode, int maxpeers, uint16_t port, int bufsize,
@@ -239,7 +239,7 @@ int sceNetAdhocDownload_13DAB550(uint32_t data_len, void *data_ptr, void *extra_
 {
     char nickname[0x80];
 
-    if (_sceKernelCheckThreadStack() < 0xf40) {
+    if (sceKernelCheckThreadStack() < 0xf40) {
         return 0x80410005;
     }
     if (!g_server_inited) {
@@ -305,7 +305,7 @@ int sceNetAdhocDownload_F8FC359E(uint8_t *mac, int reply_mode)
 {
     uint32_t out_bits;
 
-    if (_sceKernelCheckThreadStack() < 0xfd0) {
+    if (sceKernelCheckThreadStack() < 0xfd0) {
         return 0x80410005;
     }
     if (!g_server_inited) {
@@ -396,7 +396,7 @@ int sceNetAdhocDownload_D0189004(int total_len, void *cb_arg,
     void *chunk_ptr;
     int chunk_total;
 
-    if (_sceKernelCheckThreadStack() < 0xfa0) {
+    if (sceKernelCheckThreadStack() < 0xfa0) {
         return 0x80410005;
     }
     if (!g_server_inited) {
@@ -526,7 +526,7 @@ sceNetAdhocDownload_A70FDFBE(void)
 {
     int res;
 
-    if (_sceKernelCheckThreadStack() < 0xff0) {
+    if (sceKernelCheckThreadStack() < 0xff0) {
         res = 0x80410005;
     } else if (!g_server_inited) {
         res = 0x80410c01;
@@ -536,7 +536,7 @@ sceNetAdhocDownload_A70FDFBE(void)
         res = 0x80410c07;
     } else {
         if (g_server_ctx->ptp_id > 0) {
-            sceNetAdhoc_73BFD52D(g_server_ctx->ptp_id, 0x3f0);
+            sceNetAdhocSetSocketAlert(g_server_ctx->ptp_id, 0x3f0);
         }
         if (g_server_ctx->evf_id >= 0) {
             sceKernelSetEventFlag(g_server_ctx->evf_id, 2);
@@ -615,7 +615,7 @@ static void __attribute__((noinline)) adhocDownloadServerMatchingCb(int matching
 /* 0x0b84 */
 int sceNetAdhocDownload_A21FEF45(uint32_t pool_size)
 {
-    if (_sceKernelCheckThreadStack() < 0xff0) {
+    if (sceKernelCheckThreadStack() < 0xff0) {
         return 0x80410005;
     }
     if (g_server_inited) {
@@ -632,7 +632,7 @@ int sceNetAdhocDownload_A21FEF45(uint32_t pool_size)
 /* 0x0c04 */
 int sceNetAdhocDownload_04077014(uint32_t pool_size, int part)
 {
-    if (_sceKernelCheckThreadStack() < 0xff0) {
+    if (sceKernelCheckThreadStack() < 0xff0) {
         return 0x80410005;
     }
     if (g_server_inited) {
@@ -652,7 +652,7 @@ int sceNetAdhocDownload_04077014(uint32_t pool_size, int part)
 /* 0x0cb0 */
 int sceNetAdhocDownload_2B6FB0DA(int evth_pri, int evth_stack, int inth_pri, int inth_stack)
 {
-    if (_sceKernelCheckThreadStack() < 0xfd0) {
+    if (sceKernelCheckThreadStack() < 0xfd0) {
         return 0x80410005;
     }
     return adhocDownloadServerStartMatching(evth_pri, evth_stack, 2, inth_pri, inth_stack, 2);
@@ -662,7 +662,7 @@ int sceNetAdhocDownload_2B6FB0DA(int evth_pri, int evth_stack, int inth_pri, int
 int sceNetAdhocDownload_7CAC6934(int evth_pri, int evth_stack, int evth_part,
                                  int inth_pri, int inth_stack, int inth_part)
 {
-    if (_sceKernelCheckThreadStack() < 0xfd0) {
+    if (sceKernelCheckThreadStack() < 0xfd0) {
         return 0x80410005;
     }
     return adhocDownloadServerStartMatching(evth_pri, evth_stack, evth_part, inth_pri, inth_stack, inth_part);
@@ -671,7 +671,7 @@ int sceNetAdhocDownload_7CAC6934(int evth_pri, int evth_stack, int evth_part,
 /* 0x0dc8 */
 int sceNetAdhocDownload_C421875C(void)
 {
-    if (_sceKernelCheckThreadStack() < 0xff0) {
+    if (sceKernelCheckThreadStack() < 0xff0) {
         return 0x80410005;
     }
     if (!g_server_inited) {
@@ -694,7 +694,7 @@ int sceNetAdhocDownload_C421875C(void)
 /* 0x0e80 */
 int sceNetAdhocDownload_F76147B1(void)
 {
-    if (_sceKernelCheckThreadStack() < 0xff0) {
+    if (sceKernelCheckThreadStack() < 0xff0) {
         return 0x80410005;
     }
     if (!g_server_inited) {
@@ -717,7 +717,7 @@ int sceNetAdhocDownload_F76147B1(void)
 /* 0x0f38 */
 int sceNetAdhocDownload_7A483F9E(void)
 {
-    if (_sceKernelCheckThreadStack() < 0xff0) {
+    if (sceKernelCheckThreadStack() < 0xff0) {
         return 0x80410005;
     }
     if (!g_server_inited) {
@@ -738,7 +738,7 @@ int sceNetAdhocDownload_7A483F9E(void)
 /* 0x0fc0 */
 int sceNetAdhocDownload_117CA01A(void)
 {
-    if (_sceKernelCheckThreadStack() < 0xff0) {
+    if (sceKernelCheckThreadStack() < 0xff0) {
         return 0x80410005;
     }
     if (!g_server_inited) {
@@ -786,7 +786,7 @@ int sceNetAdhocDownload_57A51DD0(void (*hello_cb)(void *, uint8_t *, char *, uin
 {
     char nickname[0x80];
 
-    if (_sceKernelCheckThreadStack() < 0xf50) {
+    if (sceKernelCheckThreadStack() < 0xf50) {
         return 0x80410005;
     }
     if (!g_client_inited) {
@@ -830,7 +830,7 @@ int sceNetAdhocDownload_57A51DD0(void (*hello_cb)(void *, uint8_t *, char *, uin
 /* 0x1284 */
 int sceNetAdhocDownload_22C2BCC6(uint32_t *buflen, uint8_t *buf)
 {
-    if (_sceKernelCheckThreadStack() < 0xfd0) {
+    if (sceKernelCheckThreadStack() < 0xfd0) {
         return 0x80410005;
     }
     if (!g_client_inited) {
@@ -894,7 +894,7 @@ int sceNetAdhocDownload_4E6029F1(const uint8_t *mac)
 {
     uint32_t out_bits;
 
-    if (_sceKernelCheckThreadStack() < 0xfe0) {
+    if (sceKernelCheckThreadStack() < 0xfe0) {
         return 0x80410005;
     }
     if (!g_client_inited) {
@@ -944,7 +944,7 @@ int sceNetAdhocDownload_8846D2B0(void *buf, int bufsize, void *cb_arg,
     int hdr_len;
     int chunk_len;
 
-    if (_sceKernelCheckThreadStack() < 0xfb0) {
+    if (sceKernelCheckThreadStack() < 0xfb0) {
         return 0x80410005;
     }
     if (!g_client_inited) {
@@ -1039,7 +1039,7 @@ sceNetAdhocDownload_469F6B83(void)
 {
     int res;
 
-    if (_sceKernelCheckThreadStack() < 0xfe0) {
+    if (sceKernelCheckThreadStack() < 0xfe0) {
         res = 0x80410005;
     } else if (!g_client_inited) {
         res = 0x80410c01;
@@ -1233,7 +1233,7 @@ static void __attribute__((noinline)) adhocDownloadClientRemovePeer(SceNetAdhocD
 /* 0x1dd8 */
 int sceNetAdhocDownload_3082F4E2(uint32_t pool_size)
 {
-    if (_sceKernelCheckThreadStack() < 0xff0) {
+    if (sceKernelCheckThreadStack() < 0xff0) {
         return 0x80410005;
     }
     if (g_client_inited) {
@@ -1256,7 +1256,7 @@ int sceNetAdhocDownload_3082F4E2(uint32_t pool_size)
 /* 0x1ea0 */
 int sceNetAdhocDownload_C8402ACD(uint32_t pool_size, int part)
 {
-    if (_sceKernelCheckThreadStack() < 0xff0) {
+    if (sceKernelCheckThreadStack() < 0xff0) {
         return 0x80410005;
     }
     if (g_client_inited) {
@@ -1282,7 +1282,7 @@ int sceNetAdhocDownload_C8402ACD(uint32_t pool_size, int part)
 /* 0x1f90 */
 int sceNetAdhocDownload_314ED31E(int evth_pri, int evth_stack, int inth_pri, int inth_stack)
 {
-    if (_sceKernelCheckThreadStack() < 0xfd0) {
+    if (sceKernelCheckThreadStack() < 0xfd0) {
         return 0x80410005;
     }
     if (!g_client_inited) {
@@ -1308,7 +1308,7 @@ int sceNetAdhocDownload_314ED31E(int evth_pri, int evth_stack, int inth_pri, int
 int sceNetAdhocDownload_24FD9B7A(int evth_pri, int evth_stack, int evth_part,
                                  int inth_pri, int inth_stack, int inth_part)
 {
-    if (_sceKernelCheckThreadStack() < 0xfd0) {
+    if (sceKernelCheckThreadStack() < 0xfd0) {
         return 0x80410005;
     }
     if (!g_client_inited) {
@@ -1333,7 +1333,7 @@ int sceNetAdhocDownload_24FD9B7A(int evth_pri, int evth_stack, int evth_part,
 /* 0x2178 */
 int sceNetAdhocDownload_8A5500E0(void)
 {
-    if (_sceKernelCheckThreadStack() < 0xff0) {
+    if (sceKernelCheckThreadStack() < 0xff0) {
         return 0x80410005;
     }
     if (!g_client_inited) {
@@ -1356,7 +1356,7 @@ int sceNetAdhocDownload_8A5500E0(void)
 /* 0x2230 */
 int sceNetAdhocDownload_1AD5CC88(void)
 {
-    if (_sceKernelCheckThreadStack() < 0xff0) {
+    if (sceKernelCheckThreadStack() < 0xff0) {
         return 0x80410005;
     }
     if (!g_client_inited) {
@@ -1372,14 +1372,14 @@ int sceNetAdhocDownload_1AD5CC88(void)
         return 0x80410c07;
     }
     g_client_abort_flag = 1;
-    sceNetAdhoc_73BFD52D(g_client_ctx->ptp_id, 0x3f0);
+    sceNetAdhocSetSocketAlert(g_client_ctx->ptp_id, 0x3f0);
     return 0;
 }
 
 /* 0x22c0 */
 int sceNetAdhocDownload_378D4311(void)
 {
-    if (_sceKernelCheckThreadStack() < 0xff0) {
+    if (sceKernelCheckThreadStack() < 0xff0) {
         return 0x80410005;
     }
     if (!g_client_inited) {
@@ -1399,7 +1399,7 @@ int sceNetAdhocDownload_378D4311(void)
 /* 0x233c */
 int sceNetAdhocDownload_BF1433F0(void)
 {
-    if (_sceKernelCheckThreadStack() < 0xff0) {
+    if (sceKernelCheckThreadStack() < 0xff0) {
         return 0x80410005;
     }
     if (!g_client_inited) {
@@ -1568,7 +1568,7 @@ int sceNetAdhocDownload_4C542FD1(void)
 {
     int num_wait;
 
-    if (_sceKernelCheckThreadStack() < 0xfe0) {
+    if (sceKernelCheckThreadStack() < 0xfe0) {
         return 0x80410005;
     }
     if (!g_distribute_inited) {
@@ -1589,7 +1589,7 @@ int sceNetAdhocDownload_4C542FD1(void)
         SceNetAdhocDistributeWorker *w = &g_distribute_ctx->workers[i];
         sceKernelSetEventFlag(w->evf_id, 2);
         if (w->ptp_id >= 0) {
-            sceNetAdhoc_73BFD52D(w->ptp_id, 0x3f0);
+            sceNetAdhocSetSocketAlert(w->ptp_id, 0x3f0);
         }
         if (w->thid >= 0) {
             sceKernelWaitThreadEnd(w->thid, NULL);
@@ -1606,7 +1606,7 @@ int sceNetAdhocDownload_4C542FD1(void)
 /* 0x2840 */
 int sceNetAdhocDownload_A45230D9(void)
 {
-    if (_sceKernelCheckThreadStack() < 0xff0) {
+    if (sceKernelCheckThreadStack() < 0xff0) {
         return 0x80410005;
     }
     if (!g_distribute_inited) {
@@ -1643,7 +1643,7 @@ int sceNetAdhocDownload_A45230D9(void)
 /* 0x2960 */
 int sceNetAdhocDownload_48F87AB1(int worker_idx)
 {
-    if (_sceKernelCheckThreadStack() < 0xff0) {
+    if (sceKernelCheckThreadStack() < 0xff0) {
         return 0x80410005;
     }
     if (!g_distribute_inited) {
@@ -1673,7 +1673,7 @@ sceNetAdhocDownload_0A531FBE(int worker_idx, uint8_t *info_out)
 {
     int res;
 
-    if (_sceKernelCheckThreadStack() < 0xff0) {
+    if (sceKernelCheckThreadStack() < 0xff0) {
         res = 0x80410005;
     } else if (!g_distribute_inited) {
         res = 0x80410c01;
@@ -1978,7 +1978,7 @@ static int __attribute__((noinline)) adhocDistributeSendToClient(int worker_idx)
 /* 0x334c */
 int sceNetAdhocDownload_48252AF0(uint32_t pool_size)
 {
-    if (_sceKernelCheckThreadStack() < 0xff0) {
+    if (sceKernelCheckThreadStack() < 0xff0) {
         return 0x80410005;
     }
     if (g_distribute_inited) {
@@ -1995,7 +1995,7 @@ int sceNetAdhocDownload_48252AF0(uint32_t pool_size)
 /* 0x33cc */
 int sceNetAdhocDownload_E01A6429(uint32_t pool_size, int part)
 {
-    if (_sceKernelCheckThreadStack() < 0xff0) {
+    if (sceKernelCheckThreadStack() < 0xff0) {
         return 0x80410005;
     }
     if (g_distribute_inited) {
@@ -2019,7 +2019,7 @@ int sceNetAdhocDownload_3B6A7B35(int max_workers, int worker_pri, int worker_sta
                                  int (*send_cb)(int, void *, int, void **, int *),
                                  int max_concurrent)
 {
-    if (_sceKernelCheckThreadStack() < 0xfc0) {
+    if (sceKernelCheckThreadStack() < 0xfc0) {
         return 0x80410005;
     }
     return adhocDistributeCreateContext(max_workers, worker_pri, worker_stack, 2,
@@ -2034,7 +2034,7 @@ int sceNetAdhocDownload_90B616A4(int max_workers, int worker_pri, int worker_sta
                                  int (*send_cb)(int, void *, int, void **, int *),
                                  int max_concurrent)
 {
-    if (_sceKernelCheckThreadStack() < 0xfc0) {
+    if (sceKernelCheckThreadStack() < 0xfc0) {
         return 0x80410005;
     }
     return adhocDistributeCreateContext(max_workers, worker_pri, worker_stack, worker_part,
@@ -2045,7 +2045,7 @@ int sceNetAdhocDownload_90B616A4(int max_workers, int worker_pri, int worker_sta
 /* 0x360c */
 int sceNetAdhocDownload_8A987F07(int evth_pri, int evth_stack, int inth_pri, int inth_stack)
 {
-    if (_sceKernelCheckThreadStack() < 0xfd0) {
+    if (sceKernelCheckThreadStack() < 0xfd0) {
         return 0x80410005;
     }
     return adhocDistributeStartMatching(evth_pri, evth_stack, 2, inth_pri, inth_stack, 2);
@@ -2055,7 +2055,7 @@ int sceNetAdhocDownload_8A987F07(int evth_pri, int evth_stack, int inth_pri, int
 int sceNetAdhocDownload_3E91D2DC(int evth_pri, int evth_stack, int evth_part,
                                  int inth_pri, int inth_stack, int inth_part)
 {
-    if (_sceKernelCheckThreadStack() < 0xfd0) {
+    if (sceKernelCheckThreadStack() < 0xfd0) {
         return 0x80410005;
     }
     return adhocDistributeStartMatching(evth_pri, evth_stack, evth_part, inth_pri, inth_stack, inth_part);
@@ -2064,7 +2064,7 @@ int sceNetAdhocDownload_3E91D2DC(int evth_pri, int evth_stack, int evth_part,
 /* 0x3724 */
 int sceNetAdhocDownload_827157E2(void)
 {
-    if (_sceKernelCheckThreadStack() < 0xff0) {
+    if (sceKernelCheckThreadStack() < 0xff0) {
         return 0x80410005;
     }
     if (!g_distribute_inited) {

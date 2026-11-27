@@ -242,7 +242,7 @@ static int xmlUnescapeString(char *dst, uint32_t dst_size, const char *src, uint
 static int xmlDecodeCharOrEntity(char *dst, uint32_t dst_size, const char *src, uint32_t src_len,
                                  uint32_t *out_written, uint32_t *out_consumed);
 
-int sceGameUpdate_BB4B68DE(void)
+int sceGameUpdateTerm(void)
 {
 	if (g_ctx.state == 0) {
 		return SCE_GAMEUPDATE_ERROR_NOT_INITIALIZED;
@@ -297,7 +297,7 @@ int sceGameUpdate_BB4B68DE(void)
 	return ret;
 }
 
-int sceGameUpdate_5F5D98A6(void)
+int sceGameUpdateAbort(void)
 {
 	if (g_ctx.state == 0) {
 		return SCE_GAMEUPDATE_ERROR_NOT_INITIALIZED;
@@ -357,7 +357,7 @@ int sceGameUpdate_D92F50CA(uint32_t index, GameUpdatePkgInfo *info)
 	return ret;
 }
 
-int sceGameUpdate_CBE69FB3(int mode)
+int sceGameUpdateInit(int mode)
 {
 	if (g_ctx.state != 0) {
 		return SCE_GAMEUPDATE_ERROR_ALREADY_INITIALIZED;
@@ -368,7 +368,7 @@ int sceGameUpdate_CBE69FB3(int mode)
 	return gameUpdateInitInternal(0, NULL);
 }
 
-int sceGameUpdate_596AD78C(SceGameUpdateResult *res)
+int sceGameUpdateRun(SceGameUpdateResult *res)
 {
 	if (g_ctx.state == 0) {
 		return SCE_GAMEUPDATE_ERROR_NOT_INITIALIZED;

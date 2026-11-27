@@ -53,7 +53,7 @@ static inline u32 adhocSwap32(u32 value)
 
 /* Imports */
 extern void *sceKernelMemset(void *dst, int c, u32 n);
-extern s32 _sceKernelCheckThreadStack(void);
+extern s32 sceKernelCheckThreadStack(void);
 extern void *sceKernelMemcpy(void *dst, const void *src, u32 n);
 extern s32 sceKernelDelayThread(u32 delay);
 extern s32 sceKernelSignalSema(s32 semaid, s32 signal);

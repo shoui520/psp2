@@ -1198,7 +1198,7 @@ static inline __attribute__((always_inline)) s32 dmacplusSc128CopyImpl(void *dst
 	return res;
 }
 
-s32 sceDmacplus_driver_2C5FC1E3(void *dst, const void *src, u32 size)
+s32 sceDmacMemcpy(void *dst, const void *src, u32 size)
 {
 	return dmacplusSc128CopyImpl(dst, src, size, 0);
 }
@@ -1497,7 +1497,7 @@ int sceKermitMemory_driver_80E1240A(const void *addr, u32 size)
 	}
 	u32 body = size - (size & 0x3FU);
 	sceKernelDcacheWritebackRange(src, body);
-	sceDmacplus_driver_2C5FC1E3(dst, src, body);
+	sceDmacMemcpy(dst, src, body);
 	if ((size & 0x3FU) != 0) {
 		sceKernelMemcpy(dst + body, src + body, size & 0x3FU);
 		sceKernelDcacheWritebackInvalidateRange(dst + body, size & 0x3FU);
@@ -1537,7 +1537,7 @@ int sceKermitMemory_driver_90B662D0(void *addr, u32 size)
 		size -= head;
 	}
 	u32 body = size - (size & 0x3FU);
-	sceDmacplus_driver_2C5FC1E3(dst, src, body);
+	sceDmacMemcpy(dst, src, body);
 	sceKernelDcacheInvalidateRange(dst, body);
 	if ((size & 0x3FU) != 0) {
 		sceKernelMemcpy(dst + body, src + body, size & 0x3FU);

@@ -95,9 +95,9 @@ extern int sceKernelUnregisterSysEventHandler(SceSysEventHandler *handler);
 extern int sceRtcGetCurrentTick(u64 *tick);
 extern int sceRtc_driver_66054C2A(const u64 *tick);
 extern int sceRtcGetTick(const void *time, u64 *tick);
-extern int sceRtc_driver_8413CADC(u64 *dst, const u64 *src, int hours);
-extern u64 sceRtc_driver_C0F36B91(void);
-extern u32 sceRtc_driver_C66D9686(void);
+extern int sceRtcTickAddHours(u64 *dst, const u64 *src, int hours);
+extern u64 sceRtcGetAccumulativeTime(void);
+extern u32 sceRtcGetTickResolution(void);
 extern int sceRtc_driver_CEEF238F(u64 *tick);
 extern int sceRtcSetTick(void *time, const u64 *tick);
 
@@ -766,7 +766,7 @@ static NOINLINE int addHoursToBcdTime(u8 *bcd, int hours) {
     ScePspDateTime dt;
     if (bcdTimeToTick(&tick, bcd) < 0)
         return -2;
-    int ret = sceRtc_driver_8413CADC(&tick, &tick, hours);
+    int ret = sceRtcTickAddHours(&tick, &tick, hours);
     if (ret < 0) return ret;
     ret = sceRtcSetTick(&dt, &tick);
     if (ret < 0) return ret;
@@ -2841,7 +2841,7 @@ static int buildClockChallenge(MgvMediaCtx *ctx, const MgvBufDesc *outDesc) {
     memset(hdr->reserved, 0, 15);
     int ret = generateChallengeNonce(ctx, dst + 32);
     if (ret < 0) return ret;
-    ctx->challengeTick = sceRtc_driver_C0F36B91();
+    ctx->challengeTick = sceRtcGetAccumulativeTime();
     return 48;
 }
 
@@ -2851,9 +2851,9 @@ static int applyClockResponse(MgvMediaCtx *ctx, const u8 *payload) {
         return MGV_ERR_MSG_FORMAT;
     if (ctx->challengeTick == 0)
         return MGV_ERR_MSG_SESSION;
-    u64 now = sceRtc_driver_C0F36B91();
+    u64 now = sceRtcGetAccumulativeTime();
     u64 timeoutMs = bswap32(clk->timeoutMsBe);
-    u64 maxDelta = timeoutMs * (u64)(sceRtc_driver_C66D9686() / 1000u);
+    u64 maxDelta = timeoutMs * (u64)(sceRtcGetTickResolution() / 1000u);
     if (now - ctx->challengeTick > maxDelta)
         return MGV_ERR_MSG_TIMEOUT;
     if (setSecureClockFromBcd(clk->bcdTime) < 0)

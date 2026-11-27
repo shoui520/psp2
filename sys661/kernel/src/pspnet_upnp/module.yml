@@ -27,14 +27,14 @@ exports:
     pad: 1
     functions:
       - sceNetUpnp_1038E77A: 0x1038e77a
-      - sceNetUpnp_27045362: 0x27045362
-      - sceNetUpnp_3432B2E5: 0x3432b2e5
-      - sceNetUpnp_3E32ED9E: 0x3e32ed9e
-      - sceNetUpnp_540491EF: 0x540491ef
+      - sceNetUpnpGetNatInfo: 0x27045362
+      - sceNetUpnpStart: 0x3432b2e5
+      - sceNetUpnpStop: 0x3e32ed9e
+      - sceNetUpnpTerm: 0x540491ef
       - sceNetUpnp_74A51211: 0x74a51211
       - sceNetUpnp_8513C6D1: 0x8513c6d1
       - sceNetUpnp_C3A35217: 0xc3a35217
-      - sceNetUpnp_E24220B5: 0xe24220b5
+      - sceNetUpnpInit: 0xe24220b5
       - sceNetUpnp_EAF1C841: 0xeaf1c841
       - sceNetUpnp_FDA78483: 0xfda78483
 imports:
@@ -125,7 +125,7 @@ imports:
     pad: 5
     functions:
       - sceKernelMemset: 0xa089eca4
-      - _sceKernelCheckThreadStack: 0xd13bde95
+      - sceKernelCheckThreadStack: 0xd13bde95
       - sceKernelMemcpy: 0x1839852a
       - sceKernelGetThreadId: 0x293b45b8
   - name: ThreadManForUser

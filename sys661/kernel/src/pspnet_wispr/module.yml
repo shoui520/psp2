@@ -70,8 +70,8 @@ imports:
       - sceHttpDeleteConnection: 0x5152773b
       - sceHttpCreateTemplate: 0x9b1f1f36
       - sceHttpDeleteRequest: 0xa5512e01
-      - sceHttp_AB1540D5: 0xab1540d5
-      - sceHttp_B3FAF831: 0xb3faf831
+      - sceHttpsGetSslError: 0xab1540d5
+      - sceHttpsDisableOption: 0xb3faf831
       - sceHttpCreateRequestWithURL: 0xb509b09e
       - sceHttpSendRequest: 0xbb70706f
       - sceHttpAbortRequest: 0xc10b6bd9
@@ -85,13 +85,13 @@ imports:
     attributes: 0x0009
     pad: 7
     functions:
-      - sceParseHttp_AD7BFDEF: 0xad7bfdef
+      - sceParseHttpResponseHeader: 0xad7bfdef
   - name: sceParseUri
     version: [0, 17]
     attributes: 0x0009
     pad: 4
     functions:
-      - sceParseUri_49E950EC: 0x49e950ec
+      - sceUriEscape: 0x49e950ec
   - name: sceNetApctl
     version: [0, 17]
     attributes: 0x0009

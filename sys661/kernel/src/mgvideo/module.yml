@@ -158,8 +158,8 @@ imports:
       - sceRtcGetCurrentTick: 0x3f7ad767
       - sceRtc_driver_66054C2A: 0x66054c2a
       - sceRtcGetTick: 0x6ff40acc
-      - sceRtc_driver_8413CADC: 0x8413cadc
-      - sceRtc_driver_C0F36B91: 0xc0f36b91
-      - sceRtc_driver_C66D9686: 0xc66d9686
+      - sceRtcTickAddHours: 0x8413cadc
+      - sceRtcGetAccumulativeTime: 0xc0f36b91
+      - sceRtcGetTickResolution: 0xc66d9686
       - sceRtc_driver_CEEF238F: 0xceef238f
       - sceRtcSetTick: 0xe7b3abf4

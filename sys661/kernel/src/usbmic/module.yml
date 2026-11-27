@@ -18,25 +18,25 @@ exports:
     attributes: 0x4001
     pad: 2
     functions:
-      - sceUsbMic_06128E42: 0x06128e42
-      - sceUsbMic_2E6DCDCD: 0x2e6dcdcd
-      - sceUsbMic_45310F07: 0x45310f07
-      - sceUsbMic_5F7F368D: 0x5f7f368d
-      - sceUsbMic_63400E20: 0x63400e20
-      - sceUsbMic_B8E536EB: 0xb8e536eb
-      - sceUsbMic_F899001C: 0xf899001c
+      - sceUsbMicPollInputEnd: 0x06128e42
+      - sceUsbMicInputBlocking: 0x2e6dcdcd
+      - sceUsbMicInputInitEx: 0x45310f07
+      - sceUsbMicInput: 0x5f7f368d
+      - sceUsbMicGetInputLength: 0x63400e20
+      - sceUsbMicInputInit: 0xb8e536eb
+      - sceUsbMicWaitInputEnd: 0xf899001c
   - name: sceUsbMic_driver
     version: [0, 17]
     attributes: 0x0001
     pad: 3
     functions:
-      - sceUsbMic_06128E42: 0x06128e42
-      - sceUsbMic_2E6DCDCD: 0x2e6dcdcd
-      - sceUsbMic_45310F07: 0x45310f07
-      - sceUsbMic_5F7F368D: 0x5f7f368d
-      - sceUsbMic_63400E20: 0x63400e20
-      - sceUsbMic_B8E536EB: 0xb8e536eb
-      - sceUsbMic_F899001C: 0xf899001c
+      - sceUsbMicPollInputEnd: 0x06128e42
+      - sceUsbMicInputBlocking: 0x2e6dcdcd
+      - sceUsbMicInputInitEx: 0x45310f07
+      - sceUsbMicInput: 0x5f7f368d
+      - sceUsbMicGetInputLength: 0x63400e20
+      - sceUsbMicInputInit: 0xb8e536eb
+      - sceUsbMicWaitInputEnd: 0xf899001c
 imports:
   - name: sceUsb_driver
     version: [0, 17]

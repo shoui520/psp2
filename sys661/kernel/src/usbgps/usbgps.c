@@ -60,7 +60,7 @@ s32 sceUsbGps_driver_9F267D34(void)
     pspSetK1(savedK1);
     return res;
 }
-s32 sceUsbGps_9F267D34(void) __attribute__((alias("sceUsbGps_driver_9F267D34")));
+s32 sceUsbGpsOpen(void) __attribute__((alias("sceUsbGps_driver_9F267D34")));
 
 s32 sceUsbGps_driver_A8ED0BC2(u8 flag)
 {
@@ -76,7 +76,7 @@ s32 sceUsbGps_driver_A8ED0BC2(u8 flag)
     pspSetK1(savedK1);
     return res;
 }
-s32 sceUsbGps_A8ED0BC2(u8 flag) __attribute__((alias("sceUsbGps_driver_A8ED0BC2")));
+s32 sceUsbGpsSetStaticNavMode(u8 flag) __attribute__((alias("sceUsbGps_driver_A8ED0BC2")));
 
 s32 sceUsbGps_driver_5881C826(u8 *out_flag)
 {
@@ -96,7 +96,7 @@ s32 sceUsbGps_driver_5881C826(u8 *out_flag)
     pspSetK1(savedK1);
     return res;
 }
-s32 sceUsbGps_5881C826(u8 *out_flag) __attribute__((alias("sceUsbGps_driver_5881C826")));
+s32 sceUsbGpsGetStaticNavMode(u8 *out_flag) __attribute__((alias("sceUsbGps_driver_5881C826")));
 
 s32 sceUsbGps_driver_7C16AC3A(s32 *out_state)
 {
@@ -154,7 +154,7 @@ s32 sceUsbGps_driver_7C16AC3A(s32 *out_state)
     pspSetK1(savedK1);
     return res;
 }
-s32 sceUsbGps_7C16AC3A(s32 *out_state) __attribute__((alias("sceUsbGps_driver_7C16AC3A")));
+s32 sceUsbGpsGetState(s32 *out_state) __attribute__((alias("sceUsbGps_driver_7C16AC3A")));
 
 s32 sceUsbGps_driver_934EC2B2(void *gps_data, void *sat_data)
 {
@@ -201,7 +201,7 @@ s32 sceUsbGps_driver_934EC2B2(void *gps_data, void *sat_data)
     pspSetK1(savedK1);
     return res;
 }
-s32 sceUsbGps_934EC2B2(void *gps_data, void *sat_data) __attribute__((alias("sceUsbGps_driver_934EC2B2")));
+s32 sceUsbGpsGetData(void *gps_data, void *sat_data) __attribute__((alias("sceUsbGps_driver_934EC2B2")));
 
 s32 module_stop(SceSize args, void *argp)
 {
@@ -222,7 +222,7 @@ s32 sceUsbGps_driver_6EED4811(void)
     g_state = 0;
     return res;
 }
-s32 sceUsbGps_6EED4811(void) __attribute__((alias("sceUsbGps_driver_6EED4811")));
+s32 sceUsbGpsClose(void) __attribute__((alias("sceUsbGps_driver_6EED4811")));
 
 s32 sceUsbGps_63D1F89D(void)
 {

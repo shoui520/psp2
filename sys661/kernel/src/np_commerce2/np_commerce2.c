@@ -125,7 +125,7 @@ extern int   sceKernelCpuSuspendIntr(void);
 extern void  sceKernelCpuResumeIntr(int intr);
 extern void *sceKernelMemset(void *dst, int val, u32 size);
 extern void *sceKernelMemcpy(void *dst, const void *src, u32 size);
-extern int   _sceKernelCheckThreadStack(void);
+extern int   sceKernelCheckThreadStack(void);
 extern u64   sceKernelGetSystemTimeWide(void);
 
 /* =========================================================================
@@ -3354,7 +3354,7 @@ int sceNpCommerce2_22CEC5E2(char *out, int outSize, u64 val, int isDecimal) {
 #define CHECK_STACK(minStack) \
     do { \
         if (sceKernelGetCompiledSdkVersion() > SCE_NP_COMMERCE2_SDK_VER_STACK_CHECK && \
-            _sceKernelCheckThreadStack() < (minStack)) \
+            sceKernelCheckThreadStack() < (minStack)) \
             return SCE_NP_ERROR_OUT_OF_STACK; \
     } while (0)
 
@@ -3811,7 +3811,7 @@ int sceNpCommerce2GetPrice(const SceNpCommerce2SessionInfo *sessionInfo, char *o
     char *end = formatted + sizeof(formatted);
     int ret = 0;
 
-    if (_sceKernelCheckThreadStack() < 4080)
+    if (sceKernelCheckThreadStack() < 4080)
         return SCE_NP_ERROR_OUT_OF_STACK;
     if (g_apiInitialized == 0)
         return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;

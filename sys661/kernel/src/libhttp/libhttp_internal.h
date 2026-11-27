@@ -531,7 +531,7 @@ extern HttpCacheEntry *g_cache_pool_tail;
 /* -------------------------------------------------------------------------
  * Imported library functions
  * ------------------------------------------------------------------------- */
-extern s32   _sceKernelCheckThreadStack(void);
+extern s32   sceKernelCheckThreadStack(void);
 extern s32   sceCertLoader_DD629A24(u32 group, u32 bit, void *out_list, void *buf, u32 buf_size, u32 *out_size);
 extern s32   sceHttpStorage_driver_24AA94F4(s32 id, const void *buf, s32 size);
 extern s32   sceHttpStorage_driver_2D8DAE58(s32 id, void *stat_buf);
@@ -994,7 +994,7 @@ s32 sceHttp_739C2D79(void *pool_mem, u32 pool_size);
 s32 sceHttp_B0257723(void);
 s32 sceHttp_A461A167(void);
 s32 sceHttpsInit(s32 ca_count, HttpCertSlot **ca_list, HttpCertSlot *client_cert, HttpCertSlot *client_key);
-s32 sceHttp_68AB0F86(s32 ca_count, s32 ca_list, s32 client_cert);
+s32 sceHttpsInitWithPath(s32 ca_count, s32 ca_list, s32 client_cert);
 s32 sceHttpsLoadDefaultCert(u32 group, u32 bit);
 s32 sceHttp_87F1E666(s32 id, u32 flags);
 s32 sceHttp_3C478044(s32 id, u32 flags);

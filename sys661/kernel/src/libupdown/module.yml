@@ -69,7 +69,7 @@ imports:
     attributes: 0x0001
     pad: 7
     functions:
-      - sceParseHttp_AD7BFDEF: 0xad7bfdef
+      - sceParseHttpResponseHeader: 0xad7bfdef
   - name: sceNetApctl
     version: [0, 17]
     attributes: 0x0009

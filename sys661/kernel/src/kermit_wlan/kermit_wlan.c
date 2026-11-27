@@ -1630,8 +1630,8 @@ int module_reboot_before(SceSize args, void *argp)
 	return 0;
 }
 
-/* 0x23dc: sceWlanDevIsPowerOn / sceWlanDrv_driver_0387523A */
-int sceWlanDrv_driver_0387523A(void)
+/* 0x23dc: sceWlanDevIsPowerOn / sceWlanDevIsPowerOn */
+int sceWlanDevIsPowerOn(void)
 {
 	return 1;
 }

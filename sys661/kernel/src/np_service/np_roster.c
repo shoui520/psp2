@@ -1035,7 +1035,7 @@ static int __attribute__((noinline)) roster_op_del_block(NpRosterReq *req, const
 
 int np_roster_init(void)
 {
-    if (_sceKernelCheckThreadStack() < 4080)
+    if (sceKernelCheckThreadStack() < 4080)
         return (int)0x80550004;
     if (g_roster_init > 0)
         return (int)0x80550A01;
@@ -1046,7 +1046,7 @@ int np_roster_init(void)
 
 int np_roster_term(void)
 {
-    int ret = _sceKernelCheckThreadStack();
+    int ret = sceKernelCheckThreadStack();
     if (ret >= 4080 && g_roster_init > 0) {
         ret = roster_term_all();
         g_roster_init = 0;
@@ -1056,7 +1056,7 @@ int np_roster_term(void)
 
 int sceNpRosterCreateRequest(void)
 {
-    if (_sceKernelCheckThreadStack() < 4080)
+    if (sceKernelCheckThreadStack() < 4080)
         return (int)0x80550004;
     return roster_create_req_obj();
 }
@@ -1064,7 +1064,7 @@ int sceNpRosterCreateRequest(void)
 int sceNpRosterDeleteRequest(int req_id)
 {
     NpRosterReq *req;
-    if (_sceKernelCheckThreadStack() < 4080)
+    if (sceKernelCheckThreadStack() < 4080)
         return (int)0x80550004;
     req = roster_find_req(req_id);
     if (req == NULL)
@@ -1076,7 +1076,7 @@ int sceNpRosterDeleteRequest(int req_id)
 int sceNpRosterAbort(int req_id)
 {
     NpRosterReq *req;
-    if (_sceKernelCheckThreadStack() < 4080)
+    if (sceKernelCheckThreadStack() < 4080)
         return (int)0x80550004;
     if (g_roster_init <= 0)
         return (int)0x80550A02;
@@ -1095,7 +1095,7 @@ int sceNpRosterGetFriendListEntryCount(int req_id, const u32 *opt)
     int total = 0;
     int ret;
 
-    if (_sceKernelCheckThreadStack() < 14304) return (int)0x80550004;
+    if (sceKernelCheckThreadStack() < 14304) return (int)0x80550004;
     if (g_roster_init <= 0) return (int)0x80550A02;
     if (opt != NULL && *opt != 4u) return (int)0x80550A04;
     req = roster_find_req(req_id);
@@ -1117,7 +1117,7 @@ int sceNpRosterGetFriendListEntry(int req_id, u8 count, int start,
     NpRosterReq *req;
     int ret;
 
-    if (_sceKernelCheckThreadStack() < 14304) return (int)0x80550004;
+    if (sceKernelCheckThreadStack() < 14304) return (int)0x80550004;
     if (g_roster_init <= 0) return (int)0x80550A02;
     if (opt != NULL && *opt != 4u) return (int)0x80550A04;
     req = roster_find_req(req_id);
@@ -1137,7 +1137,7 @@ int sceNpRosterAddFriendListEntry(int req_id, const NpId *npid, const char *msg,
     NpRosterReq *req;
     int ret;
 
-    if (_sceKernelCheckThreadStack() < 14304) return (int)0x80550004;
+    if (sceKernelCheckThreadStack() < 14304) return (int)0x80550004;
     if (g_roster_init <= 0) return (int)0x80550A02;
     if (opt != NULL && *opt != 4u) return (int)0x80550A04;
     req = roster_find_req(req_id);
@@ -1155,7 +1155,7 @@ int sceNpRosterDeleteFriendListEntry(int req_id, const NpId *npid, const u32 *op
     NpRosterReq *req;
     int ret;
 
-    if (_sceKernelCheckThreadStack() < 14320) return (int)0x80550004;
+    if (sceKernelCheckThreadStack() < 14320) return (int)0x80550004;
     if (g_roster_init <= 0) return (int)0x80550A02;
     if (opt != NULL && *opt != 4u) return (int)0x80550A04;
     req = roster_find_req(req_id);
@@ -1173,7 +1173,7 @@ int sceNpRosterAcceptFriendListEntry(int req_id, const NpId *npid, const u32 *op
     NpRosterReq *req;
     int ret;
 
-    if (_sceKernelCheckThreadStack() < 14320) return (int)0x80550004;
+    if (sceKernelCheckThreadStack() < 14320) return (int)0x80550004;
     if (g_roster_init <= 0) return (int)0x80550A02;
     if (opt != NULL && *opt != 4u) return (int)0x80550A04;
     req = roster_find_req(req_id);
@@ -1192,7 +1192,7 @@ int sceNpRosterGetFriendListMessage(int req_id, const NpId *npid, void *msg_out,
     int got;
     int ret;
 
-    if (_sceKernelCheckThreadStack() < 14288) return (int)0x80550004;
+    if (sceKernelCheckThreadStack() < 14288) return (int)0x80550004;
     if (g_roster_init <= 0) return (int)0x80550A02;
     if (opt != NULL && *opt != 4u) return (int)0x80550A04;
     if (npid == NULL || msg_out == NULL) return (int)0x80550A04;
@@ -1215,7 +1215,7 @@ int sceNpRosterGetBlockListEntryCount(int req_id, const u32 *opt)
     int total = 0;
     int ret;
 
-    if (_sceKernelCheckThreadStack() < 14304) return (int)0x80550004;
+    if (sceKernelCheckThreadStack() < 14304) return (int)0x80550004;
     if (g_roster_init <= 0) return (int)0x80550A02;
     if (opt != NULL && *opt != 4u) return (int)0x80550A04;
     req = roster_find_req(req_id);
@@ -1237,7 +1237,7 @@ int sceNpRosterGetBlockListEntry(int req_id, u8 count, int start,
     NpRosterReq *req;
     int ret;
 
-    if (_sceKernelCheckThreadStack() < 14304) return (int)0x80550004;
+    if (sceKernelCheckThreadStack() < 14304) return (int)0x80550004;
     if (g_roster_init <= 0) return (int)0x80550A02;
     if (opt != NULL && *opt != 4u) return (int)0x80550A04;
     req = roster_find_req(req_id);
@@ -1257,7 +1257,7 @@ int sceNpRosterAddBlockListEntry(int req_id, const NpId *npid, const u32 *opt)
     NpRosterReq *req;
     int ret;
 
-    if (_sceKernelCheckThreadStack() < 14320) return (int)0x80550004;
+    if (sceKernelCheckThreadStack() < 14320) return (int)0x80550004;
     if (g_roster_init <= 0) return (int)0x80550A02;
     if (opt != NULL && *opt != 4u) return (int)0x80550A04;
     req = roster_find_req(req_id);
@@ -1275,7 +1275,7 @@ int sceNpRosterDeleteBlockListEntry(int req_id, const NpId *npid, const u32 *opt
     NpRosterReq *req;
     int ret;
 
-    if (_sceKernelCheckThreadStack() < 14320) return (int)0x80550004;
+    if (sceKernelCheckThreadStack() < 14320) return (int)0x80550004;
     if (g_roster_init <= 0) return (int)0x80550A02;
     if (opt != NULL && *opt != 4u) return (int)0x80550A04;
     req = roster_find_req(req_id);

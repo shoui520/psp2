@@ -33,7 +33,7 @@ exports:
       - sceKernelGetCpuClockCounter: 0x30c08374
       - sceKernelCpuResumeIntrWithSync: 0x3b84732d
       - sceKernelDisableSubIntr: 0x4023e1a7
-      - sceKernelIsSubInterruptOccured: 0x4351dd4e
+      - sceKernelIsSubInterruptOccurred: 0x4351dd4e
       - sceKernelEnableIntr: 0x4d6e7305
       - InterruptManagerForKernel_551097F2: 0x551097f2
       - sceKernelSetPrimarySyscallHandler: 0x55d18836
@@ -85,7 +85,7 @@ exports:
       - sceKernelReleaseSubIntrHandler: 0xd61e6961
       - sceKernelRegisterUserSpaceIntrStack: 0xeee43f47
       - sceKernelEnableSubIntr: 0xfb8e22ec
-      - sceKernelIsSubInterruptOccured: 0xfc4374b8
+      - sceKernelIsSubInterruptOccurred: 0xfc4374b8
 imports:
   - name: ExceptionManagerForKernel
     version: [0, 17]

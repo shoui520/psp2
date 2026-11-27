@@ -81,7 +81,7 @@ s32 sceNpMatching2SignalingGetConnectionStatus(SceNpMatching2ContextId ctxId, Sc
                                                SceNpMatching2RoomMemberId memberId, s32 *connStatus,
                                                u32 *peerAddr, u16 *peerPort)
 {
-    if (_sceKernelCheckThreadStack() < 4080) {
+    if (sceKernelCheckThreadStack() < 4080) {
         return SCE_NP_ERROR_STACK_OVERFLOW;
     }
     if (g_npSignalingInitialized == 0) {
@@ -94,7 +94,7 @@ s32 sceNpMatching2SignalingGetConnectionStatus(SceNpMatching2ContextId ctxId, Sc
 s32 sceNpMatching2SignalingGetConnectionInfo(SceNpMatching2ContextId ctxId, SceNpMatching2RoomId roomId,
                                              SceNpMatching2RoomMemberId memberId, s32 code, void *info)
 {
-    if (_sceKernelCheckThreadStack() < 4080) {
+    if (sceKernelCheckThreadStack() < 4080) {
         return SCE_NP_ERROR_STACK_OVERFLOW;
     }
     if (g_npSignalingInitialized == 0) {
@@ -106,7 +106,7 @@ s32 sceNpMatching2SignalingGetConnectionInfo(SceNpMatching2ContextId ctxId, SceN
 /* 0x0225C8 */
 s32 sceNpMatching2SignalingGetLocalNetInfo(NpSigLocalNetInfo *netInfo)
 {
-    if (_sceKernelCheckThreadStack() < 4080) {
+    if (sceKernelCheckThreadStack() < 4080) {
         return SCE_NP_ERROR_STACK_OVERFLOW;
     }
     if (g_npSignalingInitialized == 0) {
@@ -119,7 +119,7 @@ s32 sceNpMatching2SignalingGetLocalNetInfo(NpSigLocalNetInfo *netInfo)
 s32 sceNpMatching2SignalingGetPeerNetInfo(SceNpMatching2ContextId ctxId, SceNpMatching2RoomId roomId,
                                           SceNpMatching2RoomMemberId memberId, u32 *reqId)
 {
-    if (_sceKernelCheckThreadStack() < 4080) {
+    if (sceKernelCheckThreadStack() < 4080) {
         return SCE_NP_ERROR_STACK_OVERFLOW;
     }
     if (g_npSignalingInitialized == 0) {
@@ -134,7 +134,7 @@ s32 sceNpMatching2SignalingGetPeerNetInfo(SceNpMatching2ContextId ctxId, SceNpMa
 /* 0x0226D0 */
 s32 sceNpMatching2SignalingCancelPeerNetInfo(SceNpMatching2ContextId ctxId, u32 reqId)
 {
-    if (_sceKernelCheckThreadStack() < 4080) {
+    if (sceKernelCheckThreadStack() < 4080) {
         return SCE_NP_ERROR_STACK_OVERFLOW;
     }
     if (g_npSignalingInitialized == 0) {
@@ -146,7 +146,7 @@ s32 sceNpMatching2SignalingCancelPeerNetInfo(SceNpMatching2ContextId ctxId, u32 
 /* 0x022740 */
 s32 sceNpMatching2SignalingGetPeerNetInfoResult(SceNpMatching2ContextId ctxId, u32 reqId, void *result)
 {
-    if (_sceKernelCheckThreadStack() < 4080) {
+    if (sceKernelCheckThreadStack() < 4080) {
         return SCE_NP_ERROR_STACK_OVERFLOW;
     }
     if (g_npSignalingInitialized == 0) {

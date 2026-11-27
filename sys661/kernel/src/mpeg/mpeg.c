@@ -54,7 +54,7 @@ typedef struct SceMpegEsDesc {
 /* Imports from Kernel_Library */
 extern void *sceKernelMemset(void *dst, int val, u32 size);
 extern s32 sceKernelLockLwMutex(void *work, int count, u32 *timeout);
-extern s32 _sceKernelCheckThreadStack(void);
+extern s32 sceKernelCheckThreadStack(void);
 extern s32 sceKernelUnlockLwMutex(void *work, int count);
 extern void *sceKernelMemcpy(void *dst, const void *src, u32 size);
 
@@ -3009,8 +3009,8 @@ s32 sceMpegQueryAtracEsSize(u32 *mp_ptr, u32 *esSize, u32 *outSize)
 	return mpegQueryAtracEsSizeInternal(mp_ptr, esSize, outSize);
 }
 
-/* 101: 0x5aa8 (104B) - sceMpeg_C02CF6B5 (0xc02cf6b5) */
-s32 sceMpeg_C02CF6B5(u32 *mp_ptr, u32 *esSize, u32 *outSize)
+/* 101: 0x5aa8 (104B) - sceMpegQueryPcmEsSize (0xc02cf6b5) */
+s32 sceMpegQueryPcmEsSize(u32 *mp_ptr, u32 *esSize, u32 *outSize)
 {
 	if (mpegCheckThreadStack() < 0x3f0)
 		return 0x80618008;
@@ -3025,24 +3025,24 @@ s32 sceMpegInitAu(u32 *mp_ptr, u32 esBuf, u32 *au)
 	return mpegInitAuInternal(mp_ptr, esBuf, au);
 }
 
-/* 103: 0x5b78 (104B) - sceMpeg_234586AE (0x234586ae) */
-s32 sceMpeg_234586AE(u32 *mp_ptr, u32 *stream, s32 mode)
+/* 103: 0x5b78 (104B) - sceMpegChangeGetAvcAuMode (0x234586ae) */
+s32 sceMpegChangeGetAvcAuMode(u32 *mp_ptr, u32 *stream, s32 mode)
 {
 	if (mpegCheckThreadStack() < 0x3f0)
 		return 0x80618008;
 	return mpegChangeGetAuModeInternal(mp_ptr, stream, mode);
 }
 
-/* 104: 0x5be0 (104B) - sceMpeg_9DCFB7EA (0x9dcfb7ea) */
-s32 sceMpeg_9DCFB7EA(u32 *mp_ptr, u32 *stream, s32 mode)
+/* 104: 0x5be0 (104B) - sceMpegChangeGetAuMode (0x9dcfb7ea) */
+s32 sceMpegChangeGetAuMode(u32 *mp_ptr, u32 *stream, s32 mode)
 {
 	if (mpegCheckThreadStack() < 0x3f0)
 		return 0x80618008;
 	return mpegSetStreamModeInternal(mp_ptr, stream, mode);
 }
 
-/* 105: 0x5c48 (88B) - sceMpeg_3C37A7A6 (0x3c37a7a6) */
-s32 sceMpeg_3C37A7A6(u32 *mp_ptr, u32 *stream)
+/* 105: 0x5c48 (88B) - sceMpegNextAvcRpAu (0x3c37a7a6) */
+s32 sceMpegNextAvcRpAu(u32 *mp_ptr, u32 *stream)
 {
 	if (mpegCheckThreadStack() < 0x3f0)
 		return 0x80618008;
@@ -3057,8 +3057,8 @@ s32 sceMpegGetAvcAu(u32 *mp_ptr, u32 *stream, u32 *au, u32 *attrOut)
 	return mpegGetPcmAuInternal(mp_ptr, stream, au, attrOut);
 }
 
-/* 107: 0x5d18 (120B) - sceMpeg_8C1E027D (0x8c1e027d) */
-s32 sceMpeg_8C1E027D(u32 *mp_ptr, u32 *stream, u32 *au, u32 *attrOut)
+/* 107: 0x5d18 (120B) - sceMpegGetPcmAu (0x8c1e027d) */
+s32 sceMpegGetPcmAu(u32 *mp_ptr, u32 *stream, u32 *au, u32 *attrOut)
 {
 	if (mpegCheckThreadStack() < 0x3e0)
 		return 0x80618008;
@@ -3073,8 +3073,8 @@ s32 sceMpegGetAtracAu(u32 *mp_ptr, u32 *stream, u32 *au, void **esOut)
 	return mpegGetUserdataAuInternal(mp_ptr, stream, au, esOut);
 }
 
-/* 109: 0x5e08 (88B) - sceMpeg_500F0429 (0x500f0429) */
-s32 sceMpeg_500F0429(u32 *mp_ptr, u32 *stream)
+/* 109: 0x5e08 (88B) - sceMpegFlushStream (0x500f0429) */
+s32 sceMpegFlushStream(u32 *mp_ptr, u32 *stream)
 {
 	if (mpegCheckThreadStack() < 0x3f0)
 		return 0x80618008;
@@ -3097,16 +3097,16 @@ s32 sceMpegAvcDecode(u32 *mp_ptr, u32 *au, s32 frameWidth, u32 *bufList, u32 *nu
 	return mpegAvcDecodeInternal(mp_ptr, au, frameWidth, bufList, numPic);
 }
 
-/* 112: 0x5f30 (88B) - sceMpeg_0F6C18D7 (0x0f6c18d7) */
-s32 sceMpeg_0F6C18D7(u32 *mp_ptr, u32 *outDetail)
+/* 112: 0x5f30 (88B) - sceMpegAvcDecodeDetail (0x0f6c18d7) */
+s32 sceMpegAvcDecodeDetail(u32 *mp_ptr, u32 *outDetail)
 {
 	if (mpegCheckThreadStack() < 0x3f0)
 		return 0x80618008;
 	return mpegAvcQueryYCbCrSizeDefault(mp_ptr, outDetail);
 }
 
-/* 113: 0x5f88 (104B) - sceMpeg_AB0E9556 (0xab0e9556) */
-s32 sceMpeg_AB0E9556(u32 *mp_ptr, s32 frameIdx, u32 *outDetail)
+/* 113: 0x5f88 (104B) - sceMpegAvcDecodeDetailIndex (0xab0e9556) */
+s32 sceMpegAvcDecodeDetailIndex(u32 *mp_ptr, s32 frameIdx, u32 *outDetail)
 {
 	if (mpegCheckThreadStack() < 0x3f0)
 		return 0x80618008;
@@ -3129,64 +3129,64 @@ s32 sceMpegAvcDecodeStop(u32 *mp_ptr, s32 frameWidth, u32 *bufList, u32 *numPic)
 	return mpegAvcDecodeStopInternal(mp_ptr, frameWidth, bufList, numPic);
 }
 
-/* 116: 0x60c0 (72B) - sceMpeg_4571CC64 (0x4571cc64) */
-s32 sceMpeg_4571CC64(u32 *mp_ptr)
+/* 116: 0x60c0 (72B) - sceMpegAvcDecodeFlush (0x4571cc64) */
+s32 sceMpegAvcDecodeFlush(u32 *mp_ptr)
 {
 	if (mpegCheckThreadStack() < 0x3f0)
 		return 0x80618008;
 	return mpegAvcFlushInternal(mp_ptr);
 }
 
-/* 117: 0x6108 (136B) - sceMpeg_211A057C (0x211a057c) */
-s32 sceMpeg_211A057C(u32 *mp_ptr, s32 mode, s32 width, s32 height, s32 *outSize)
+/* 117: 0x6108 (136B) - sceMpegAvcQueryYCbCrSize (0x211a057c) */
+s32 sceMpegAvcQueryYCbCrSize(u32 *mp_ptr, s32 mode, s32 width, s32 height, s32 *outSize)
 {
 	if (mpegCheckThreadStack() < 0x3e0)
 		return 0x80618008;
 	return mpegAvcQueryYCbCrMemSize(mp_ptr, mode, width, height, outSize);
 }
 
-/* 118: 0x6190 (136B) - sceMpeg_67179B1B (0x67179b1b) */
-s32 sceMpeg_67179B1B(u32 *mp_ptr, s32 mode, s32 width, s32 height, u32 *ycbcrBuf)
+/* 118: 0x6190 (136B) - sceMpegAvcInitYCbCr (0x67179b1b) */
+s32 sceMpegAvcInitYCbCr(u32 *mp_ptr, s32 mode, s32 width, s32 height, u32 *ycbcrBuf)
 {
 	if (mpegCheckThreadStack() < 0x3e0)
 		return 0x80618008;
 	return mpegAvcInitYCbCrWithDims(mp_ptr, mode, width, height, ycbcrBuf);
 }
 
-/* 119: 0x6218 (120B) - sceMpeg_F0EB1125 (0xf0eb1125) */
-s32 sceMpeg_F0EB1125(u32 *mp_ptr, u32 *au, u32 *bufList, u32 *numPic)
+/* 119: 0x6218 (120B) - sceMpegAvcDecodeYCbCr (0xf0eb1125) */
+s32 sceMpegAvcDecodeYCbCr(u32 *mp_ptr, u32 *au, u32 *bufList, u32 *numPic)
 {
 	if (mpegCheckThreadStack() < 0x3e0)
 		return 0x80618008;
 	return mpegAvcDecodeYCbCrInternal(mp_ptr, au, bufList, numPic);
 }
 
-/* 120: 0x6290 (104B) - sceMpeg_F2930C9C (0xf2930c9c) */
-s32 sceMpeg_F2930C9C(u32 *mp_ptr, u32 *bufList, u32 *numPic)
+/* 120: 0x6290 (104B) - sceMpegAvcDecodeStopYCbCr (0xf2930c9c) */
+s32 sceMpegAvcDecodeStopYCbCr(u32 *mp_ptr, u32 *bufList, u32 *numPic)
 {
 	if (mpegCheckThreadStack() < 0x3f0)
 		return 0x80618008;
 	return mpegAvcDecodeStopYCbCrInternal(mp_ptr, bufList, numPic);
 }
 
-/* 121: 0x62f8 (136B) - sceMpeg_31BD0272 (0x31bd0272) */
-s32 sceMpeg_31BD0272(u32 *mp_ptr, u32 *srcYcbcr, const u32 *range, s32 frameWidth, void *dstRgb)
+/* 121: 0x62f8 (136B) - sceMpegAvcCsc (0x31bd0272) */
+s32 sceMpegAvcCsc(u32 *mp_ptr, u32 *srcYcbcr, const u32 *range, s32 frameWidth, void *dstRgb)
 {
 	if (mpegCheckThreadStack() < 0x3e0)
 		return 0x80618008;
 	return mpegAvcCscRangeInternal(mp_ptr, srcYcbcr, range, frameWidth, dstRgb);
 }
 
-/* 122: 0x6380 (104B) - sceMpeg_0558B075 (0x0558b075) */
-s32 sceMpeg_0558B075(u32 *mp_ptr, u32 *dstYcbcr, u32 *srcYcbcr)
+/* 122: 0x6380 (104B) - sceMpegAvcCopyYCbCr (0x0558b075) */
+s32 sceMpegAvcCopyYCbCr(u32 *mp_ptr, u32 *dstYcbcr, u32 *srcYcbcr)
 {
 	if (mpegCheckThreadStack() < 0x3f0)
 		return 0x80618008;
 	return mpegAvcCopyYCbCrInternal(mp_ptr, dstYcbcr, srcYcbcr);
 }
 
-/* 123: 0x63e8 (120B) - sceMpeg_F5E7EA31 (0xf5e7ea31) */
-s32 sceMpeg_F5E7EA31(u32 *mp_ptr, void *dstYuv, u32 *srcYcbcr, s32 flags)
+/* 123: 0x63e8 (120B) - sceMpegAvcConvertToYuv420 (0xf5e7ea31) */
+s32 sceMpegAvcConvertToYuv420(u32 *mp_ptr, void *dstYuv, u32 *srcYcbcr, s32 flags)
 {
 	if (mpegCheckThreadStack() < 0x3e0)
 		return 0x80618008;
@@ -3203,24 +3203,24 @@ s32 sceMpegAtracDecode(u32 *mp_ptr, u32 *au, void *pcmBuf, s32 initFlag)
 	return mpegAtracDecodeInternal(mp_ptr, au, pcmBuf, initFlag);
 }
 
-/* 125: 0x64f0 (56B) - sceMpeg_AF26BB01 (0xaf26bb01) */
-u32 sceMpeg_AF26BB01(void)
+/* 125: 0x64f0 (56B) - sceMpegAvcResourceGetAvcEsBuf (0xaf26bb01) */
+u32 sceMpegAvcResourceGetAvcEsBuf(void)
 {
 	if (mpegCheckThreadStack() >= 0x3f0)
 		return mpegAvcResAcquire();
 	return 0;
 }
 
-/* 126: 0x6528 (56B) - sceMpeg_63B9536A (0x63b9536a) */
-u32 sceMpeg_63B9536A(void)
+/* 126: 0x6528 (56B) - sceMpegAvcResourceGetAvcDecTopAddr (0x63b9536a) */
+u32 sceMpegAvcResourceGetAvcDecTopAddr(void)
 {
 	if (mpegCheckThreadStack() >= 0x3f0)
 		return mpegAvcResRelease();
 	return 0;
 }
 
-/* 127: 0x6560 (84B) - sceMpeg_FCBDB5AD (0xfcbdb5ad) */
-s32 sceMpeg_FCBDB5AD(u32 flags)
+/* 127: 0x6560 (84B) - sceMpegAvcResourceInit (0xfcbdb5ad) */
+s32 sceMpegAvcResourceInit(u32 flags)
 {
 	if (mpegCheckThreadStack() < 0x3f0)
 		return 0x80618008;
@@ -3229,40 +3229,40 @@ s32 sceMpeg_FCBDB5AD(u32 flags)
 	return 0x806101fe;
 }
 
-/* 128: 0x65b4 (60B) - sceMpeg_8160A2FE (0x8160a2fe) */
-s32 sceMpeg_8160A2FE(void)
+/* 128: 0x65b4 (60B) - sceMpegAvcResourceFinish (0x8160a2fe) */
+s32 sceMpegAvcResourceFinish(void)
 {
 	if (mpegCheckThreadStack() < 0x3f0)
 		return 0x80618008;
 	return mpegAvcResTerm();
 }
 
-/* 129: 0x65f0 (104B) - sceMpeg_C45C99CC (0xc45c99cc) */
-s32 sceMpeg_C45C99CC(u32 *mp_ptr, u32 *esSize, u32 *outSize)
+/* 129: 0x65f0 (104B) - sceMpegQueryUserdataEsSize (0xc45c99cc) */
+s32 sceMpegQueryUserdataEsSize(u32 *mp_ptr, u32 *esSize, u32 *outSize)
 {
 	if (mpegCheckThreadStack() < 0x3f0)
 		return 0x80618008;
 	return mpegQueryUserdataEsSizeInternal(mp_ptr, esSize, outSize);
 }
 
-/* 130: 0x6658 (120B) - sceMpeg_01977054 (0x01977054) */
-s32 sceMpeg_01977054(u32 *mp_ptr, u32 *stream, u32 *au, void *headerOut)
+/* 130: 0x6658 (120B) - sceMpegGetUserdataAu (0x01977054) */
+s32 sceMpegGetUserdataAu(u32 *mp_ptr, u32 *stream, u32 *au, void *headerOut)
 {
 	if (mpegCheckThreadStack() < 0x3e0)
 		return 0x80618008;
 	return mpegGetAvcNalAuInternal(mp_ptr, stream, au, headerOut);
 }
 
-/* 131: 0x66d0 (120B) - sceMpeg_921FCCCF (0x921fcccf) */
-s32 sceMpeg_921FCCCF(u32 *mp_ptr, const void *src, s32 len, u32 *au)
+/* 131: 0x66d0 (120B) - sceMpegGetAvcEsAu (0x921fcccf) */
+s32 sceMpegGetAvcEsAu(u32 *mp_ptr, const void *src, s32 len, u32 *au)
 {
 	if (mpegCheckThreadStack() < 0x3e0)
 		return 0x80618008;
 	return mpegAvcCopyEsData(mp_ptr, src, len, au);
 }
 
-/* 132: 0x6748 (104B) - sceMpeg_11F95CF1 (0x11f95cf1) */
-s32 sceMpeg_11F95CF1(u32 *mp_ptr, u32 *nal, u32 *au)
+/* 132: 0x6748 (104B) - sceMpegGetAvcNalAu (0x11f95cf1) */
+s32 sceMpegGetAvcNalAu(u32 *mp_ptr, u32 *nal, u32 *au)
 {
 	if (mpegCheckThreadStack() < 0x3f0)
 		return 0x80618008;
@@ -3277,8 +3277,8 @@ s32 sceMpegRingbufferQueryMemSize(s32 packets)
 	return mpegRingbufferQueryMemSizeInternal(packets);
 }
 
-/* 134: 0x67f8 (72B) - sceMpeg_769BEBB6 (0x769bebb6) */
-s32 sceMpeg_769BEBB6(s32 memSize)
+/* 134: 0x67f8 (72B) - sceMpegRingbufferQueryPackNum (0x769bebb6) */
+s32 sceMpegRingbufferQueryPackNum(s32 memSize)
 {
 	if (mpegCheckThreadStack() < 0x3f0)
 		return 0x80618008;
@@ -3344,7 +3344,7 @@ static s32 mpegUnlockLwMutex(void *work)
 /* 143: 0x6a50 (28B) */
 static s32 mpegCheckThreadStack(void)
 {
-	return _sceKernelCheckThreadStack();
+	return sceKernelCheckThreadStack();
 }
 
 /* 144: 0x6a6c (248B) */

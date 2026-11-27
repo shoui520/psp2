@@ -18,8 +18,8 @@ exports:
     attributes: 0x4001
     pad: 1
     functions:
-      - sceNetIfhandle_C80181A2: 0xc80181a2
-      - sceNetIfhandle_FD8585E1: 0xfd8585e1
+      - sceNetGetDropRate: 0xc80181a2
+      - sceNetSetDropRate: 0xfd8585e1
   - name: sceNetIfhandle_lib
     version: [0, 17]
     attributes: 0x4001
@@ -123,7 +123,7 @@ exports:
       - sceNetIfhandle_lib_C3325FDC: 0xc3325fdc
       - sceNetIfhandle_driver_C5623112: 0xc5623112
       - sceNetIfhandle_driver_C6D14282: 0xc6d14282
-      - sceNetIfhandle_C80181A2: 0xc80181a2
+      - sceNetGetDropRate: 0xc80181a2
       - sceNetIfhandle_driver_C9344A59: 0xc9344a59
       - sceNetIfhandle_driver_D5AD6DEA: 0xd5ad6dea
       - sceNetIfhandle_lib_D5DA7B3C: 0xd5da7b3c
@@ -135,7 +135,7 @@ exports:
       - sceNetIfhandle_lib_F56FAC82: 0xf56fac82
       - sceNetIfhandle_lib_F8825DC4: 0xf8825dc4
       - sceNetIfhandle_driver_F94BAF52: 0xf94baf52
-      - sceNetIfhandle_FD8585E1: 0xfd8585e1
+      - sceNetSetDropRate: 0xfd8585e1
 imports:
   - name: sceWlanDrv_driver
     version: [0, 17]

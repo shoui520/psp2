@@ -18,7 +18,7 @@ extern int sceKernelDeleteThread(int thid);
 
 extern int sceHttpCreateTemplate(const char *agent, int ver, int autoProxy);
 extern int sceHttpDeleteTemplate(int tmplId);
-extern int sceHttp_B3FAF831(int opt);
+extern int sceHttpsDisableOption(int opt);
 extern int sceHttpCreateConnectionWithURL(int tmplId, const char *url, int enableKeepalive);
 extern int sceHttpDeleteConnection(int connId);
 extern int sceHttpCreateRequestWithURL(int connId, int method, const char *url, u64 contentLength);
@@ -30,7 +30,7 @@ extern int sceHttpGetStatusCode(int reqId, int *statusCode);
 extern int sceHttpGetAllHeader(int reqId, char **header, u32 *headerSize);
 extern int sceHttpReadData(int reqId, void *data, u32 size);
 extern int sceHttpGetNetworkErrno(int reqId, int *errNum);
-extern int sceHttp_AB1540D5(int reqId, int *sslErr, int *httpErr);
+extern int sceHttpsGetSslError(int reqId, int *sslErr, int *httpErr);
 extern int sceHttpEnableRedirect(int id);
 extern int sceHttpDisableRedirect(int id);
 
@@ -44,8 +44,8 @@ extern char *sceNet_lib_BCBE14CF(const char *s, int c);
 extern int sceNet_lib_CF705E46(char *buf, const char *fmt, ...);
 extern u32 sceNet_lib_D8722983(const char *s);
 
-extern int sceParseHttp_AD7BFDEF(const char *header, u32 headerLen, const char *fieldName, const char **valPtr, u32 *valLen);
-extern int sceParseUri_49E950EC(char *dst, const char *escapedLenOut, u32 dstSize, const char *src);
+extern int sceParseHttpResponseHeader(const char *header, u32 headerLen, const char *fieldName, const char **valPtr, u32 *valLen);
+extern int sceUriEscape(char *dst, const char *escapedLenOut, u32 dstSize, const char *src);
 extern int sceUtilityCheckNetParam(int id);
 extern int sceUtility_28D35634(char *buf);
 extern int sceUtility_EF3582B2(char *buf);
@@ -593,7 +593,7 @@ static int wisprDoInitRequest(WisprCtx *ctx, int *next_sub)
                     ret = 0x80431063;
             } else if (ret == (int)0x80431075) {
                 int sslErr, httpErr;
-                int errRes = sceHttp_AB1540D5(g_http_req_id, &sslErr, &httpErr);
+                int errRes = sceHttpsGetSslError(g_http_req_id, &sslErr, &httpErr);
                 ret = (errRes >= 0) ? sslErr : errRes;
             }
             break;
@@ -695,7 +695,7 @@ static int wisprDoLoginRequest(WisprCtx *ctx, int *next_sub)
                     ret = 0x80431063;
             } else if (ret == (int)0x80431075) {
                 int sslErr, httpErr;
-                int errRes = sceHttp_AB1540D5(g_http_req_id, &sslErr, &httpErr);
+                int errRes = sceHttpsGetSslError(g_http_req_id, &sslErr, &httpErr);
                 ret = (errRes >= 0) ? sslErr : errRes;
             }
             break;
@@ -792,7 +792,7 @@ static int wisprDoLogoffRequest(WisprCtx *ctx, int *next_sub)
                     ret = 0x80431063;
             } else if (ret == (int)0x80431075) {
                 int sslErr, httpErr;
-                int errRes = sceHttp_AB1540D5(g_http_req_id, &sslErr, &httpErr);
+                int errRes = sceHttpsGetSslError(g_http_req_id, &sslErr, &httpErr);
                 ret = (errRes >= 0) ? sslErr : errRes;
             }
             break;
@@ -822,7 +822,7 @@ static int wisprHttpInit(WisprCtx *ctx)
     int ret = sceHttpCreateTemplate("WISPr/0.1 (PSP (PlayStation Portable); 3.00)", 0, 0);
     if (ret >= 0) {
         g_http_tmpl_id = ret;
-        ret = sceHttp_B3FAF831(0x3a);
+        ret = sceHttpsDisableOption(0x3a);
     }
     return ret;
 }
@@ -867,7 +867,7 @@ static int wisprHttpReadXml(WisprCtx *ctx, int req_id, char *buf, u32 buf_size)
                 }
             } else if (n == (int)0x80431075) {
                 int sslErr, httpErr;
-                int errRes = sceHttp_AB1540D5(req_id, &sslErr, &httpErr);
+                int errRes = sceHttpsGetSslError(req_id, &sslErr, &httpErr);
                 n = (errRes >= 0) ? sslErr : errRes;
             }
             return n;
@@ -1206,7 +1206,7 @@ static int tmobileParseInitReply(WisprCtx *ctx, int req_id, int *next_sub, const
         u32 hdr_len;
         ret = sceHttpGetAllHeader(req_id, &hdr, &hdr_len);
         if (ret >= 0) {
-            ret = sceParseHttp_AD7BFDEF(hdr, hdr_len, "Location", locationPtr, locationLen);
+            ret = sceParseHttpResponseHeader(hdr, hdr_len, "Location", locationPtr, locationLen);
         }
         if (ret >= 0) {
             *next_sub = 2;
@@ -1315,7 +1315,7 @@ static int tmobileParseLoginReply(WisprCtx *ctx, int req_id, int *next_sub, void
     u32 hdr_len;
     ret = sceHttpGetAllHeader(req_id, &hdr, &hdr_len);
     if (ret >= 0) {
-        ret = sceParseHttp_AD7BFDEF(hdr, hdr_len, "Location", locationPtr, locationLen);
+        ret = sceParseHttpResponseHeader(hdr, hdr_len, "Location", locationPtr, locationLen);
     }
     return ret;
 }
@@ -1354,7 +1354,7 @@ static int genericBuildLoginBody(WisprCtx *ctx, char *buf, int max_len)
     if (ret < 0) {
         return ret;
     }
-    ret = sceParseUri_49E950EC(enc_buf, NULL, 0x180, user_buf);
+    ret = sceUriEscape(enc_buf, NULL, 0x180, user_buf);
     if (ret < 0) {
         return ret;
     }
@@ -1365,14 +1365,14 @@ static int genericBuildLoginBody(WisprCtx *ctx, char *buf, int max_len)
     if (ret < 0) {
         return ret;
     }
-    ret = sceParseUri_49E950EC(enc_buf, NULL, 0x180, pass_buf);
+    ret = sceUriEscape(enc_buf, NULL, 0x180, pass_buf);
     if (ret < 0) {
         return ret;
     }
     int passLen = sceNet_lib_CF705E46(p, "Password=%s&", enc_buf);
     p += passLen;
 
-    ret = sceParseUri_49E950EC(enc_buf, NULL, 0x180, "http://www.playstation.com/");
+    ret = sceUriEscape(enc_buf, NULL, 0x180, "http://www.playstation.com/");
     if (ret < 0) {
         return ret;
     }

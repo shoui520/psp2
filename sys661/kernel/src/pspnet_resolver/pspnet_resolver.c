@@ -46,7 +46,7 @@ extern int sceKernelCpuSuspendIntr(void);
 extern int sceKernelCpuResumeIntr(int intr);
 extern void *sceKernelMemset(void *dst, int c, SceSize n);
 extern void *sceKernelMemcpy(void *dst, const void *src, SceSize n);
-extern int _sceKernelCheckThreadStack(void);
+extern int sceKernelCheckThreadStack(void);
 extern SceUID sceKernelGetThreadId(void);
 extern int sceKernelGetSystemTime(void *time);
 extern u32 sceKernelGetSystemTimeLow(void);
@@ -60,7 +60,7 @@ extern int sceNetInetSetsockopt(int s, int level, int optname, const void *optva
 extern int sceNetInetSendto(int s, const void *buf, int len, int flags, const void *to, int tolen);
 extern int sceNetInetRecvfrom(int s, void *buf, int len, int flags, void *from, void *fromlen);
 extern int sceNetInetGetErrno(void);
-extern int sceNetInet_80A21ABD(int s);
+extern int sceNetInetSocketAbort(int s);
 extern int sceNetInet_lib_AC9D90A5(u32 *dns1, u32 *dns2);
 
 extern int sceNet_lib_750F705D(int c);
@@ -101,7 +101,7 @@ int sceNetResolverStartNtoA(int rid, const char *hostname, u32 *addr, unsigned i
     int intr;
     ResolverNode *node;
 
-    if (_sceKernelCheckThreadStack() < 0x13e0)
+    if (sceKernelCheckThreadStack() < 0x13e0)
         return 0x80410005;
     if (rid < 0)
         return 0x80410405;
@@ -131,12 +131,12 @@ int sceNetResolverStartNtoA(int rid, const char *hostname, u32 *addr, unsigned i
     return resolverQuery(node, 0, hostname, 0, addr, timeout, retry);
 }
 
-int sceNetResolver_14C17EF9(int rid, const char *hostname, u32 *addr, unsigned int timeout, int retry)
+int sceNetResolverStartNtoAAsync(int rid, const char *hostname, u32 *addr, unsigned int timeout, int retry)
 {
     int intr, ret = 0;
     ResolverNode *node;
 
-    if (_sceKernelCheckThreadStack() < 0x13e0)
+    if (sceKernelCheckThreadStack() < 0x13e0)
         return 0x80410005;
     if (rid < 0)
         return 0x80410405;
@@ -194,7 +194,7 @@ int sceNetResolverStartAtoN(int rid, const u32 *addr, char *hostname, SceSize ho
     int intr;
     ResolverNode *node;
 
-    if (_sceKernelCheckThreadStack() < 0x13e0)
+    if (sceKernelCheckThreadStack() < 0x13e0)
         return 0x80410005;
     if (rid < 0)
         return 0x80410405;
@@ -222,12 +222,12 @@ int sceNetResolverStartAtoN(int rid, const u32 *addr, char *hostname, SceSize ho
     return resolverQuery(node, 1, hostname, hostname_len, (void *)addr, timeout, retry);
 }
 
-int sceNetResolver_AAC09184(int rid, const u32 *addr, char *hostname, SceSize hostname_len, unsigned int timeout, int retry)
+int sceNetResolverStartAtoNAsync(int rid, const u32 *addr, char *hostname, SceSize hostname_len, unsigned int timeout, int retry)
 {
     int intr, ret = 0;
     ResolverNode *node;
 
-    if (_sceKernelCheckThreadStack() < 0x13e0)
+    if (sceKernelCheckThreadStack() < 0x13e0)
         return 0x80410005;
     if (rid < 0)
         return 0x80410405;
@@ -277,7 +277,7 @@ int sceNetResolverStop(int rid)
     int intr;
     ResolverNode *node;
 
-    if (_sceKernelCheckThreadStack() < 0x13f0)
+    if (sceKernelCheckThreadStack() < 0x13f0)
         return 0x80410005;
     if (rid < 0)
         return 0x80410405;
@@ -295,7 +295,7 @@ int sceNetResolverStop(int rid)
     node->flags |= 1;
     sceKernelCpuResumeIntr(intr);
     if (node->sock >= 0)
-        sceNetInet_80A21ABD(node->sock);
+        sceNetInetSocketAbort(node->sock);
     return 0;
 }
 
@@ -303,7 +303,7 @@ int sceNetResolverInit(void)
 {
     int ret;
 
-    if (_sceKernelCheckThreadStack() < 0x13f0)
+    if (sceKernelCheckThreadStack() < 0x13f0)
         return 0x80410005;
     if (g_initialized > 0) {
         resolverTermState();
@@ -320,7 +320,7 @@ int sceNetResolverInit(void)
 
 int sceNetResolverTerm(void)
 {
-    if (_sceKernelCheckThreadStack() < 0x13f0)
+    if (sceKernelCheckThreadStack() < 0x13f0)
         return 0x80410005;
     if (g_initialized != 0) {
         resolverTermState();
@@ -331,7 +331,7 @@ int sceNetResolverTerm(void)
 
 int sceNetResolverCreate(int *rid, void *buf, SceSize buflen)
 {
-    if (_sceKernelCheckThreadStack() < 0x13f0)
+    if (sceKernelCheckThreadStack() < 0x13f0)
         return 0x80410005;
     if ((rid == 0) | (buf == 0))
         return 0x80410403;
@@ -342,25 +342,25 @@ int sceNetResolverCreate(int *rid, void *buf, SceSize buflen)
 
 int sceNetResolverDelete(int rid)
 {
-    if (_sceKernelCheckThreadStack() < 0x13f0)
+    if (sceKernelCheckThreadStack() < 0x13f0)
         return 0x80410005;
     if (rid < 0)
         return 0x80410405;
     return resolverDeleteNode(rid);
 }
 
-int sceNetResolver_4EE99358(int rid, int *out)
+int sceNetResolverPollAsync(int rid, int *out)
 {
-    if (_sceKernelCheckThreadStack() < 0x13e0)
+    if (sceKernelCheckThreadStack() < 0x13e0)
         return 0x80410005;
     if (rid < 0)
         return 0x80410405;
     return resolverPollAsync(rid, out, 0);
 }
 
-int sceNetResolver_12748EB9(int rid, int *out)
+int sceNetResolverWaitAsync(int rid, int *out)
 {
-    if (_sceKernelCheckThreadStack() < 0x13e0)
+    if (sceKernelCheckThreadStack() < 0x13e0)
         return 0x80410005;
     if (rid < 0)
         return 0x80410405;

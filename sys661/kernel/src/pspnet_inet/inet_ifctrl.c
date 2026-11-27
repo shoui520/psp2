@@ -814,7 +814,7 @@ int sceNetInetGetTcpcbstat(s32 *bufLen, SceNetInetTcpcbstat *buf)
     SceNetInetTcpcbstat *outCur = buf;
     SceNetInetTcpcbstat *prev = NULL;
 
-    if (_sceKernelCheckThreadStack() < 4064) {
+    if (sceKernelCheckThreadStack() < 4064) {
         return SCE_NET_INET_ERROR_INSUFFICIENT_STACK;
     }
     if (bufLen == NULL && buf == NULL) {
@@ -865,7 +865,7 @@ int sceNetInetGetUdpcbstat(s32 *bufLen, SceNetInetUdpcbstat *buf)
     SceNetInetUdpcbstat *outCur = buf;
     SceNetInetUdpcbstat *prev = NULL;
 
-    if (_sceKernelCheckThreadStack() < 4064) {
+    if (sceKernelCheckThreadStack() < 4064) {
         return SCE_NET_INET_ERROR_INSUFFICIENT_STACK;
     }
     if (bufLen == NULL && buf == NULL) {

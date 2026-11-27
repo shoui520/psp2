@@ -28,52 +28,52 @@ exports:
     extra_words: [0x00020000]
     bucket_words: [0x00020000, 0x00040002, 0x00080005, 0x000b000a, 0x000f000f, 0x00150011, 0x00180017, 0x001e001b]
     functions:
-      - sceSasCore_019B25EB: 0x019b25eb
-      - sceSasCore_07F58C24: 0x07f58c24
-      - sceSasCore_267A6DD2: 0x267a6dd2
-      - sceSasCore_2C8E6AB3: 0x2c8e6ab3
-      - sceSasCore_33D4AB37: 0x33d4ab37
-      - sceSasCore_42778A9F: 0x42778a9f
-      - sceSasCore_440CA7D8: 0x440ca7d8
-      - sceSasCore_4AA9EAD6: 0x4aa9ead6
-      - sceSasCore_50A14DFC: 0x50a14dfc
-      - sceSasCore_5F9529F6: 0x5f9529f6
-      - sceSasCore_68A46B95: 0x68a46b95
-      - sceSasCore_7497EA85: 0x7497ea85
-      - sceSasCore_74AE582A: 0x74ae582a
-      - sceSasCore_76F01ACA: 0x76f01aca
-      - sceSasCore_787D04D5: 0x787d04d5
-      - sceSasCore_99944089: 0x99944089
-      - sceSasCore_9EC3676A: 0x9ec3676a
-      - sceSasCore_A0CF2FA4: 0xa0cf2fa4
-      - sceSasCore_A232CBE6: 0xa232cbe6
-      - sceSasCore_A3589D81: 0xa3589d81
-      - sceSasCore_AD84D37F: 0xad84d37f
-      - sceSasCore_B7660A23: 0xb7660a23
-      - sceSasCore_BD11B7C2: 0xbd11b7c2
-      - sceSasCore_CBCD4F79: 0xcbcd4f79
-      - sceSasCore_D1E0A01E: 0xd1e0a01e
-      - sceSasCore_D5A229C9: 0xd5a229c9
-      - sceSasCore_D5EBBBCD: 0xd5ebbbcd
-      - sceSasCore_E175EF66: 0xe175ef66
-      - sceSasCore_E1CD9561: 0xe1cd9561
-      - sceSasCore_E855BF76: 0xe855bf76
-      - sceSasCore_F6107F00: 0xf6107f00
-      - sceSasCore_F983B186: 0xf983b186
+      - __sceSasSetADSR: 0x019b25eb
+      - __sceSasGetAllEnvelopeHeights: 0x07f58c24
+      - __sceSasRevParam: 0x267a6dd2
+      - __sceSasGetPauseFlag: 0x2c8e6ab3
+      - __sceSasRevType: 0x33d4ab37
+      - __sceSasInit: 0x42778a9f
+      - __sceSasSetVolume: 0x440ca7d8
+      - __sceSasSetVoiceATRAC3: 0x4aa9ead6
+      - __sceSasCoreWithMix: 0x50a14dfc
+      - __sceSasSetSL: 0x5f9529f6
+      - __sceSasGetEndFlag: 0x68a46b95
+      - __sceSasConcatenateATRAC3: 0x7497ea85
+      - __sceSasGetEnvelopeHeight: 0x74ae582a
+      - __sceSasSetKeyOn: 0x76f01aca
+      - __sceSasSetPause: 0x787d04d5
+      - __sceSasSetVoice: 0x99944089
+      - __sceSasSetADSRmode: 0x9ec3676a
+      - __sceSasSetKeyOff: 0xa0cf2fa4
+      - __sceSasSetTrianglarWave: 0xa232cbe6
+      - __sceSasCore: 0xa3589d81
+      - __sceSasSetPitch: 0xad84d37f
+      - __sceSasSetNoise: 0xb7660a23
+      - __sceSasGetGrain: 0xbd11b7c2
+      - __sceSasSetSimpleADSR: 0xcbcd4f79
+      - __sceSasSetGrain: 0xd1e0a01e
+      - __sceSasRevEVOL: 0xd5a229c9
+      - __sceSasSetSteepWave: 0xd5ebbbcd
+      - __sceSasGetOutputmode: 0xe175ef66
+      - __sceSasSetVoicePCM: 0xe1cd9561
+      - __sceSasSetOutputmode: 0xe855bf76
+      - __sceSasUnsetATRAC3: 0xf6107f00
+      - __sceSasRevVON: 0xf983b186
   - name: sceP3da_driver
     version: [0, 17]
     attributes: 0x0001
     pad: 1
     functions:
-      - sceP3da_driver_374500A5: 0x374500a5
-      - sceP3da_driver_43F756A2: 0x43f756a2
+      - sceP3daBridgeInit: 0x374500a5
+      - sceP3daBridgeExit: 0x43f756a2
   - name: sceP3da
     version: [0, 17]
     attributes: 0x4001
     functions:
-      - sceP3da_013016F3: 0x013016f3
-      - sceP3da_driver_374500A5: 0x374500a5
-      - sceP3da_driver_43F756A2: 0x43f756a2
+      - sceP3daBridgeCore: 0x013016f3
+      - sceP3daBridgeInit: 0x374500a5
+      - sceP3daBridgeExit: 0x43f756a2
 imports:
   - name: sceMeCore_driver
     version: [0, 17]

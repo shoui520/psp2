@@ -15,16 +15,16 @@ exports:
     attributes: 0x0001
     pad: 1
     functions:
-      - sceNetResolver_12748EB9: 0x12748eb9
-      - sceNetResolver_14C17EF9: 0x14c17ef9
+      - sceNetResolverWaitAsync: 0x12748eb9
+      - sceNetResolverStartNtoAAsync: 0x14c17ef9
       - sceNetResolverStartNtoA: 0x224c5f44
       - sceNetResolverCreate: 0x244172af
-      - sceNetResolver_4EE99358: 0x4ee99358
+      - sceNetResolverPollAsync: 0x4ee99358
       - sceNetResolverTerm: 0x6138194a
       - sceNetResolverStartAtoN: 0x629e2fb7
       - sceNetResolverStop: 0x808f6063
       - sceNetResolverDelete: 0x94523e09
-      - sceNetResolver_AAC09184: 0xaac09184
+      - sceNetResolverStartAtoNAsync: 0xaac09184
       - sceNetResolverInit: 0xf3370e61
 imports:
   - name: sceNetIfhandle_lib
@@ -51,7 +51,7 @@ imports:
     functions:
       - sceNetInetSendto: 0x05038fc7
       - sceNetInetSetsockopt: 0x2fe71fe7
-      - sceNetInet_80A21ABD: 0x80a21abd
+      - sceNetInetSocketAbort: 0x80a21abd
       - sceNetInetSocket: 0x8b7b220f
       - sceNetInetClose: 0x8d7284ea
       - sceNetInetRecvfrom: 0xc91142e4
@@ -69,7 +69,7 @@ imports:
     functions:
       - sceKernelCpuSuspendIntr: 0x092968f4
       - sceKernelMemset: 0xa089eca4
-      - _sceKernelCheckThreadStack: 0xd13bde95
+      - sceKernelCheckThreadStack: 0xd13bde95
       - sceKernelMemcpy: 0x1839852a
       - sceKernelGetThreadId: 0x293b45b8
       - sceKernelCpuResumeIntr: 0x5f10d406

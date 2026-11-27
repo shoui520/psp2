@@ -14,8 +14,8 @@ exports:
     attributes: 0x0001
     pad: 3
     functions:
-      - sceParseHttp_8077A433: 0x8077a433
-      - sceParseHttp_AD7BFDEF: 0xad7bfdef
+      - sceParseHttpStatusLine: 0x8077a433
+      - sceParseHttpResponseHeader: 0xad7bfdef
 imports:
   - name: Kernel_Library
     version: [0, 17]

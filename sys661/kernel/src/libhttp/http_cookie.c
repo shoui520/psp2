@@ -186,7 +186,7 @@ s32 sceHttp_77EE5319(void)
     u32 rem_size = 0;
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 2000)
+    if (sceKernelCheckThreadStack() < 2000)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (http_is_inited() != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;
@@ -325,7 +325,7 @@ s32 sceHttp_DD6E7857(void)
     u32 total_written = 0;
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 2000)
+    if (sceKernelCheckThreadStack() < 2000)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (http_is_inited() != 1)
         return SCE_HTTP_ERROR_BEFORE_INIT;
@@ -502,7 +502,7 @@ s32 sceHttpLoadSystemCookie(void)
     s32 expired = 0;
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 1872)
+    if (sceKernelCheckThreadStack() < 1872)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
 
     sceKernelMemset(&tmp, 0, sizeof(tmp));
@@ -647,7 +647,7 @@ s32 sceHttpGetCookie(const char *url, u8 *cookie_buf, u32 *len_out, u32 buf_size
     u32 uri_work_size;
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 1952)
+    if (sceKernelCheckThreadStack() < 1952)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
 
     ret = sceUriParse(NULL, url, NULL, &uri_work_size, 0);
@@ -680,7 +680,7 @@ s32 sceHttpAddCookie(const char *url, const char *header_val, u32 header_len)
     u32 uri_work_size;
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 1952)
+    if (sceKernelCheckThreadStack() < 1952)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
 
     ret = sceUriParse(NULL, url, NULL, &uri_work_size, 0);
@@ -863,7 +863,7 @@ s32 sceHttp_457D221D(void)
     u32 idx;
     s32 intr;
 
-    if (_sceKernelCheckThreadStack() < 2000)
+    if (sceKernelCheckThreadStack() < 2000)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
     if (g_cookie_inited == 0)
         return SCE_HTTP_ERROR_BEFORE_INIT;
@@ -1197,7 +1197,7 @@ s32 http_cookie_process_response(const char *hdr, u32 hdr_len, const char *host,
 
             if (req->cfg.cookie_recv_cb != NULL) {
                 char *url = http_build_request_url(req);
-                _sceKernelCheckThreadStack();
+                sceKernelCheckThreadStack();
                 cb_ret = ((CookieRecvCb)req->cfg.cookie_recv_cb)(req->id, url, val, val_len,
                                                                  req->cfg.cookie_recv_cb_arg);
                 if (url != NULL)
@@ -1224,7 +1224,7 @@ s32 http_cookie_process_response(const char *hdr, u32 hdr_len, const char *host,
 
             if (req->cfg.cookie_recv_cb != NULL) {
                 char *url = http_build_request_url(req);
-                _sceKernelCheckThreadStack();
+                sceKernelCheckThreadStack();
                 cb_ret = ((CookieRecvCb)req->cfg.cookie_recv_cb)(req->id, url, val, val_len,
                                                                  req->cfg.cookie_recv_cb_arg);
                 if (url != NULL)

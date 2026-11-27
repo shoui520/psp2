@@ -12,7 +12,7 @@ extern void *sceKernelMemset(void *dst, int c, u32 n);
 extern void *sceKernelMemcpy(void *dst, const void *src, u32 n);
 extern int sceKernelLockLwMutex(void *workarea, int count, u32 *timeout);
 extern int sceKernelUnlockLwMutex(void *workarea, int count);
-extern int _sceKernelCheckThreadStack(void);
+extern int sceKernelCheckThreadStack(void);
 
 /* ModuleMgrForUser */
 extern int sceKernelGetModuleGPByAddress(void *addr, u32 *gp);
@@ -52,7 +52,7 @@ extern int sceNetAdhocPdpCreate(const u8 *mac, u16 port, u32 bufsize, int flag);
 extern int sceNetAdhocPdpDelete(int id, int flag);
 extern int sceNetAdhocPdpSend(int id, const u8 *dstmac, u16 port, const void *data, int len, u32 timeout, int flag);
 extern int sceNetAdhocPdpRecv(int id, u8 *srcmac, u16 *port, void *data, int *len, u32 timeout, int flag);
-extern int sceNetAdhoc_73BFD52D(int id, int flag);
+extern int sceNetAdhocSetSocketAlert(int id, int flag);
 
 /* sceWlanDrv */
 extern int sceWlanGetEtherAddr(u8 *mac);
@@ -259,7 +259,7 @@ static inline u32 matchingSwap32(u32 x)
 static inline __attribute__((always_inline))
 void matchingInvokeHandler(MatchingCtx *ctx, int event, const u8 *mac, int optlen, void *opt)
 {
-    int rem = _sceKernelCheckThreadStack() - ctx->min_stack;
+    int rem = sceKernelCheckThreadStack() - ctx->min_stack;
     SceNetAdhocMatchingHandler cb = ctx->handler;
     int pad = (rem > 0) ? rem : 0;
     if (cb != NULL) {
@@ -342,7 +342,7 @@ int sceNetAdhocMatchingInit(int poolsize)
     u8 mac[16];
     int ret;
 
-    if (_sceKernelCheckThreadStack() < 3040)
+    if (sceKernelCheckThreadStack() < 3040)
         return MATCHING_ERR_STACK_SMALL;
     if (g_initialized > 0)
         return MATCHING_ERR_ALREADY_INITIALIZED;
@@ -376,7 +376,7 @@ int sceNetAdhocMatchingCreate(int mode, int maxpeers, u16 port, int bufsize,
     int lock_res;
     int ret;
 
-    if (_sceKernelCheckThreadStack() < 3008)
+    if (sceKernelCheckThreadStack() < 3008)
         return MATCHING_ERR_STACK_SMALL;
     if (g_initialized == 0)
         return MATCHING_ERR_NOT_INITIALIZED;
@@ -445,7 +445,7 @@ int sceNetAdhocMatchingStop(int matchingid)
     int ret = 0;
     MatchingCtx *ctx;
 
-    if (_sceKernelCheckThreadStack() < 3040)
+    if (sceKernelCheckThreadStack() < 3040)
         return MATCHING_ERR_STACK_SMALL;
     if (g_initialized == 0)
         return MATCHING_ERR_NOT_INITIALIZED;
@@ -485,7 +485,7 @@ int sceNetAdhocMatchingDelete(int matchingid)
     int ret = 0;
     MatchingCtx *ctx;
 
-    if (_sceKernelCheckThreadStack() < 3056)
+    if (sceKernelCheckThreadStack() < 3056)
         return MATCHING_ERR_STACK_SMALL;
     if (g_initialized == 0)
         return MATCHING_ERR_NOT_INITIALIZED;
@@ -518,7 +518,7 @@ int sceNetAdhocMatchingSelectTarget(int matchingid, const u8 *target, int optlen
     int ret = 0;
     MatchingCtx *ctx;
 
-    if (_sceKernelCheckThreadStack() < 3040)
+    if (sceKernelCheckThreadStack() < 3040)
         return MATCHING_ERR_STACK_SMALL;
     if (g_initialized == 0)
         return MATCHING_ERR_NOT_INITIALIZED;
@@ -625,7 +625,7 @@ int sceNetAdhocMatchingSetHelloOpt(int matchingid, int optlen, const void *opt)
     int ret;
     MatchingCtx *ctx;
 
-    if (_sceKernelCheckThreadStack() < 3040)
+    if (sceKernelCheckThreadStack() < 3040)
         return MATCHING_ERR_STACK_SMALL;
     if (g_initialized == 0)
         return MATCHING_ERR_NOT_INITIALIZED;
@@ -656,7 +656,7 @@ int sceNetAdhocMatchingGetHelloOpt(int matchingid, int *optlen, void *opt)
     int ret = 0;
     MatchingCtx *ctx;
 
-    if (_sceKernelCheckThreadStack() < 3040)
+    if (sceKernelCheckThreadStack() < 3040)
         return MATCHING_ERR_STACK_SMALL;
     if (g_initialized == 0)
         return MATCHING_ERR_NOT_INITIALIZED;
@@ -697,7 +697,7 @@ int sceNetAdhocMatchingGetMembers(int matchingid, int *buflen, void *buf)
     int ret = 0;
     MatchingCtx *ctx;
 
-    if (_sceKernelCheckThreadStack() < 3040)
+    if (sceKernelCheckThreadStack() < 3040)
         return MATCHING_ERR_STACK_SMALL;
     if (g_initialized == 0)
         return MATCHING_ERR_NOT_INITIALIZED;
@@ -731,7 +731,7 @@ int sceNetAdhocMatchingSendData(int matchingid, const u8 *target, int datalen, c
     int ret = 0;
     MatchingCtx *ctx;
 
-    if (_sceKernelCheckThreadStack() < 3040)
+    if (sceKernelCheckThreadStack() < 3040)
         return MATCHING_ERR_STACK_SMALL;
     if (g_initialized == 0)
         return MATCHING_ERR_NOT_INITIALIZED;
@@ -801,7 +801,7 @@ int sceNetAdhocMatchingAbortSendData(int matchingid, const u8 *target)
     int ret = 0;
     MatchingCtx *ctx;
 
-    if (_sceKernelCheckThreadStack() < 3040)
+    if (sceKernelCheckThreadStack() < 3040)
         return MATCHING_ERR_STACK_SMALL;
     if (g_initialized == 0)
         return MATCHING_ERR_NOT_INITIALIZED;
@@ -838,7 +838,7 @@ int sceNetAdhocMatchingTerm(void)
 {
     int ret;
 
-    if (_sceKernelCheckThreadStack() < 3056)
+    if (sceKernelCheckThreadStack() < 3056)
         return MATCHING_ERR_STACK_SMALL;
     if (g_initialized == 0)
         return 0;
@@ -856,7 +856,7 @@ int sceNetAdhocMatchingTerm(void)
 /* 0x000e88 */
 int sceNetAdhocMatchingStart(int matchingid, int evthpri, int evthstack, int inthpri, int inthstack, int optlen, const void *opt)
 {
-    if (_sceKernelCheckThreadStack() < 3024)
+    if (sceKernelCheckThreadStack() < 3024)
         return MATCHING_ERR_STACK_SMALL;
     return matchingStartInternal(matchingid, evthpri, evthstack, 2, inthpri, inthstack, 2, optlen, opt);
 }
@@ -865,7 +865,7 @@ int sceNetAdhocMatchingStart(int matchingid, int evthpri, int evthstack, int int
 int sceNetAdhocMatching_E8454C65(int matchingid, int evthpri, int evthstack, int evthmpid,
                                  int inthpri, int inthstack, int inthmpid, int optlen, const void *opt)
 {
-    if (_sceKernelCheckThreadStack() < 3024)
+    if (sceKernelCheckThreadStack() < 3024)
         return MATCHING_ERR_STACK_SMALL;
     return matchingStartInternal(matchingid, evthpri, evthstack, evthmpid, inthpri, inthstack, inthmpid, optlen, opt);
 }
@@ -873,7 +873,7 @@ int sceNetAdhocMatching_E8454C65(int matchingid, int evthpri, int evthstack, int
 /* 0x000ff0 */
 int sceNetAdhocMatchingCancelTarget(int matchingid, const u8 *target)
 {
-    if (_sceKernelCheckThreadStack() < 3056)
+    if (sceKernelCheckThreadStack() < 3056)
         return MATCHING_ERR_STACK_SMALL;
     return matchingCancelTargetInternal(matchingid, target, 0, NULL);
 }
@@ -881,7 +881,7 @@ int sceNetAdhocMatchingCancelTarget(int matchingid, const u8 *target)
 /* 0x001050 */
 int sceNetAdhocMatchingCancelTargetWithOpt(int matchingid, const u8 *target, int optlen, const void *opt)
 {
-    if (_sceKernelCheckThreadStack() < 3040)
+    if (sceKernelCheckThreadStack() < 3040)
         return MATCHING_ERR_STACK_SMALL;
     return matchingCancelTargetInternal(matchingid, target, optlen, opt);
 }
@@ -889,7 +889,7 @@ int sceNetAdhocMatchingCancelTargetWithOpt(int matchingid, const u8 *target, int
 /* 0x0010c8 */
 int sceNetAdhocMatchingGetPoolMaxAlloc(void)
 {
-    if (_sceKernelCheckThreadStack() < 3056)
+    if (sceKernelCheckThreadStack() < 3056)
         return MATCHING_ERR_STACK_SMALL;
     return matchingGetPoolMaxAllocInternal();
 }
@@ -897,7 +897,7 @@ int sceNetAdhocMatchingGetPoolMaxAlloc(void)
 /* 0x001104 */
 int sceNetAdhocMatchingGetPoolStat(MatchingPoolStat *poolstat)
 {
-    if (_sceKernelCheckThreadStack() < 3056)
+    if (sceKernelCheckThreadStack() < 3056)
         return MATCHING_ERR_STACK_SMALL;
     if (g_initialized == 0)
         return MATCHING_ERR_NOT_INITIALIZED;
@@ -1733,7 +1733,7 @@ matchingStartInputThread(MatchingCtx *ctx, int prio, int stack, int mpid)
 static int __attribute__((noinline))
 matchingStopInputThread(MatchingCtx *ctx, int *lock_res)
 {
-    sceNetAdhoc_73BFD52D(ctx->pdp_id, 0x20);
+    sceNetAdhocSetSocketAlert(ctx->pdp_id, 0x20);
     matchingUnlock(*lock_res);
     sceKernelWaitThreadEnd(ctx->input_thid, NULL);
     *lock_res = matchingLock();

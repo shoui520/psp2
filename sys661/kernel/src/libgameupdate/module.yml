@@ -17,10 +17,10 @@ exports:
     functions:
       - sceGameUpdate_381CB9B3: 0x381cb9b3
       - sceGameUpdate_3EBB6055: 0x3ebb6055
-      - sceGameUpdate_596AD78C: 0x596ad78c
-      - sceGameUpdate_5F5D98A6: 0x5f5d98a6
-      - sceGameUpdate_BB4B68DE: 0xbb4b68de
-      - sceGameUpdate_CBE69FB3: 0xcbe69fb3
+      - sceGameUpdateRun: 0x596ad78c
+      - sceGameUpdateAbort: 0x5f5d98a6
+      - sceGameUpdateTerm: 0xbb4b68de
+      - sceGameUpdateInit: 0xcbe69fb3
       - sceGameUpdate_D92F50CA: 0xd92f50ca
 imports:
   - name: Kernel_Library

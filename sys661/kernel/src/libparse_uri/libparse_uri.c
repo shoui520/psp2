@@ -24,7 +24,7 @@ typedef struct SceParsedUri {
 
 /* Imports from Kernel_Library */
 extern void *sceKernelMemset(void *dst, int c, u32 size);
-extern int _sceKernelCheckThreadStack(void);
+extern int sceKernelCheckThreadStack(void);
 extern void *sceKernelMemcpy(void *dst, const void *src, u32 size);
 
 /* Character classification table at 0x2A80 (g_ctype_table[c + 1]) */
@@ -109,10 +109,10 @@ static int is_scheme_char(u8 c)
     return 0;
 }
 
-/* 0x0058: sceParseUri_49E950EC (sceUriEscape) */
-int sceParseUri_49E950EC(char *escaped, u32 *escapedLenOut, u32 escapedBufSize, const char *src)
+/* 0x0058: sceUriEscape (sceUriEscape) */
+int sceUriEscape(char *escaped, u32 *escapedLenOut, u32 escapedBufSize, const char *src)
 {
-    if (_sceKernelCheckThreadStack() < 0x3E0) {
+    if (sceKernelCheckThreadStack() < 0x3E0) {
         return 0x80410005;
     }
 
@@ -169,10 +169,10 @@ int sceParseUri_49E950EC(char *escaped, u32 *escapedLenOut, u32 escapedBufSize, 
     return err;
 }
 
-/* 0x01dc: sceParseUri_062BB07E (sceUriUnescape) */
-int sceParseUri_062BB07E(char *unescaped, u32 *unescapedLenOut, u32 unescapedBufSize, const char *src)
+/* 0x01dc: sceUriUnescape (sceUriUnescape) */
+int sceUriUnescape(char *unescaped, u32 *unescapedLenOut, u32 unescapedBufSize, const char *src)
 {
-    if (_sceKernelCheckThreadStack() < 0x3C0) {
+    if (sceKernelCheckThreadStack() < 0x3C0) {
         return 0x80410005;
     }
     if (src == NULL) {
@@ -229,8 +229,8 @@ int sceParseUri_062BB07E(char *unescaped, u32 *unescapedLenOut, u32 unescapedBuf
     return check;
 }
 
-/* 0x0374: sceParseUri_568518C9 (sceUriParse) */
-int sceParseUri_568518C9(SceParsedUri *parsedArea, const char *url, void *workArea, u32 *workAreaSizeOut, u32 workAreaSize)
+/* 0x0374: sceUriParse (sceUriParse) */
+int sceUriParse(SceParsedUri *parsedArea, const char *url, void *workArea, u32 *workAreaSizeOut, u32 workAreaSize)
 {
     u16 portVal = 0;
     u32 elemSize = 0;
@@ -238,7 +238,7 @@ int sceParseUri_568518C9(SceParsedUri *parsedArea, const char *url, void *workAr
     u32 passSize = 0;
     int zeroPort = 0;
 
-    if (_sceKernelCheckThreadStack() < 0x3B0) {
+    if (sceKernelCheckThreadStack() < 0x3B0) {
         return 0x80410005;
     }
     if (url == NULL) {
@@ -393,8 +393,8 @@ int sceParseUri_568518C9(SceParsedUri *parsedArea, const char *url, void *workAr
     return 0;
 }
 
-/* 0x06f0: sceParseUri_7EE318AF (sceUriBuild) */
-int sceParseUri_7EE318AF(char *url, u32 *urlLenOut, u32 urlBufSize, const SceParsedUri *parsedArea, u32 flags)
+/* 0x06f0: sceUriBuild (sceUriBuild) */
+int sceUriBuild(char *url, u32 *urlLenOut, u32 urlBufSize, const SceParsedUri *parsedArea, u32 flags)
 {
     u16 defaultPort = 0;
     char portBuf[16];
@@ -409,7 +409,7 @@ int sceParseUri_7EE318AF(char *url, u32 *urlLenOut, u32 urlBufSize, const ScePar
     int doCopy = 1;
     int hasUserOrPass = 0;
 
-    if (_sceKernelCheckThreadStack() < 0x370) {
+    if (sceKernelCheckThreadStack() < 0x370) {
         return 0x80410005;
     }
     if (parsedArea == NULL) {
@@ -554,25 +554,25 @@ int sceParseUri_7EE318AF(char *url, u32 *urlLenOut, u32 urlBufSize, const ScePar
     return 0;
 }
 
-/* 0x0c48: sceParseUri_8AA55D17 */
-int sceParseUri_8AA55D17(char *workArea, const char *baseUri, const char *relUri, u32 *workAreaSizeOut, u32 workAreaSize, u32 flags)
+/* 0x0c48: sceUriMerge */
+int sceUriMerge(char *workArea, const char *baseUri, const char *relUri, u32 *workAreaSizeOut, u32 workAreaSize, u32 flags)
 {
     SceParsedUri parsed;
     u32 baseWorkSize;
     u32 relWorkSize;
 
-    if (_sceKernelCheckThreadStack() < 0x390) {
+    if (sceKernelCheckThreadStack() < 0x390) {
         return 0x80410005;
     }
     if (flags != 0) {
         return 0x804331FE;
     }
 
-    int ret = sceParseUri_568518C9(NULL, baseUri, NULL, &baseWorkSize, 0);
+    int ret = sceUriParse(NULL, baseUri, NULL, &baseWorkSize, 0);
     if (ret < 0) {
         return ret;
     }
-    ret = sceParseUri_568518C9(NULL, relUri, NULL, &relWorkSize, 0);
+    ret = sceUriParse(NULL, relUri, NULL, &relWorkSize, 0);
     if (ret < 0) {
         return ret;
     }
@@ -597,7 +597,7 @@ int sceParseUri_8AA55D17(char *workArea, const char *baseUri, const char *relUri
     char *tempArea = workArea + tempOffset;
     u32 tempSize = workAreaSize - tempOffset;
 
-    ret = sceParseUri_568518C9(&parsed, relUri, tempArea, &relWorkSize, tempSize);
+    ret = sceUriParse(&parsed, relUri, tempArea, &relWorkSize, tempSize);
     if (ret < 0) {
         return ret;
     }
@@ -610,7 +610,7 @@ int sceParseUri_8AA55D17(char *workArea, const char *baseUri, const char *relUri
         return 0;
     }
 
-    ret = sceParseUri_568518C9(&parsed, baseUri, tempArea, &baseWorkSize, tempSize);
+    ret = sceUriParse(&parsed, baseUri, tempArea, &baseWorkSize, tempSize);
     if (ret < 0) {
         return ret;
     }
@@ -628,17 +628,17 @@ int sceParseUri_8AA55D17(char *workArea, const char *baseUri, const char *relUri
     u32 rLen = uri_strlen(relUri);
     u32 buildSize = workAreaSize - bLen - rLen - 1;
 
-    ret = sceParseUri_7EE318AF(workArea, NULL, buildSize, &parsed, 0x3F);
+    ret = sceUriBuild(workArea, NULL, buildSize, &parsed, 0x3F);
     if (ret < 0) {
         return ret;
     }
     return 0;
 }
 
-/* 0x0e60: sceParseUri_8885A782 */
-int sceParseUri_8885A782(char *dst, const char *src, u32 size)
+/* 0x0e60: sceUriSweepPath */
+int sceUriSweepPath(char *dst, const char *src, u32 size)
 {
-    if (_sceKernelCheckThreadStack() < 0x400) {
+    if (sceKernelCheckThreadStack() < 0x400) {
         return 0x80410005;
     }
     return normalize_path(dst, src, size);

@@ -46,7 +46,7 @@ static SceG729DecodeResource g_decRes;
 s32 sceMeCore_driver_635397BB(s32 cmd, ...);
 s32 sceMeCore_driver_FA398D71(s32 cmd, ...);
 
-s32 sceG729_driver_AA1E5462(u32 count)
+s32 sceG729EncodeInitResource(u32 count)
 {
     if (count >= 5)
         return 0x80680005;
@@ -78,7 +78,7 @@ s32 sceG729_driver_AA1E5462(u32 count)
     return 0;
 }
 
-s32 sceG729_driver_94714D50(void)
+s32 sceG729EncodeTermResource(void)
 {
     s32 oldK1 = pspShiftK1();
     if (g_encRes.rawBase == NULL || g_encRes.count == 0 || g_encRes.fplId <= 0) {
@@ -109,7 +109,7 @@ s32 sceG729_driver_94714D50(void)
     return 0;
 }
 
-s32 sceG729_driver_CFCD367C(s32 mode, u32 opt)
+s32 sceG729EncodeInit(s32 mode, u32 opt)
 {
     s32 outSize;
     if (mode == 0) {
@@ -154,7 +154,7 @@ s32 sceG729_driver_CFCD367C(s32 mode, u32 opt)
     return (ret < 0) ? ret : idx;
 }
 
-s32 sceG729_driver_8C87A2CA(s32 idx)
+s32 sceG729EncodeReset(s32 idx)
 {
     s32 oldK1 = pspShiftK1();
     if (idx < 0 || idx >= g_encRes.count) {
@@ -175,7 +175,7 @@ s32 sceG729_driver_8C87A2CA(s32 idx)
     return ret;
 }
 
-s32 sceG729_driver_5A409D1B(s32 idx)
+s32 sceG729EncodeExit(s32 idx)
 {
     s32 oldK1 = pspShiftK1();
     if (idx < 0 || idx >= g_encRes.count) {
@@ -193,7 +193,7 @@ s32 sceG729_driver_5A409D1B(s32 idx)
     return 0;
 }
 
-s32 sceG729_driver_DB7259D5(s32 idx, void *inBuf, void *outBuf)
+s32 sceG729EncodeCore(s32 idx, void *inBuf, void *outBuf)
 {
     if ((inBuf == NULL) | (outBuf == NULL))
         return 0x80680001;
@@ -230,7 +230,7 @@ s32 sceG729_driver_DB7259D5(s32 idx, void *inBuf, void *outBuf)
     return ret;
 }
 
-s32 sceG729_driver_17C11696(u32 count)
+s32 sceG729DecodeInitResource(u32 count)
 {
     if (count >= 5)
         return 0x80680005;
@@ -262,7 +262,7 @@ s32 sceG729_driver_17C11696(u32 count)
     return 0;
 }
 
-s32 sceG729_driver_890B86AE(void)
+s32 sceG729DecodeTermResource(void)
 {
     s32 oldK1 = pspShiftK1();
     if (g_decRes.rawBase == NULL || g_decRes.count == 0 || g_decRes.fplId <= 0) {
@@ -293,7 +293,7 @@ s32 sceG729_driver_890B86AE(void)
     return 0;
 }
 
-s32 sceG729_driver_55E14F75(void)
+s32 sceG729DecodeInit(void)
 {
     s32 oldK1 = pspShiftK1();
     if (g_decRes.rawBase == NULL || g_decRes.count == 0 || g_decRes.fplId <= 0) {
@@ -323,7 +323,7 @@ s32 sceG729_driver_55E14F75(void)
     return (ret < 0) ? ret : idx;
 }
 
-s32 sceG729_driver_74804D93(s32 idx)
+s32 sceG729DecodeReset(s32 idx)
 {
     s32 oldK1 = pspShiftK1();
     if (idx < 0 || idx >= g_decRes.count) {
@@ -344,7 +344,7 @@ s32 sceG729_driver_74804D93(s32 idx)
     return (ret >= 0) ? idx : ret;
 }
 
-s32 sceG729_driver_13F1028A(s32 idx)
+s32 sceG729DecodeExit(s32 idx)
 {
     s32 oldK1 = pspShiftK1();
     if (idx < 0 || idx >= g_decRes.count) {
@@ -366,7 +366,7 @@ s32 sceG729_driver_13F1028A(s32 idx)
     return 0;
 }
 
-s32 sceG729_driver_3489D1F3(s32 idx, u32 bitLen, u32 opt, void *inBuf, void *outBuf)
+s32 sceG729DecodeCore(s32 idx, u32 bitLen, u32 opt, void *inBuf, void *outBuf)
 {
     if (inBuf == NULL || outBuf == NULL)
         return 0x80680001;

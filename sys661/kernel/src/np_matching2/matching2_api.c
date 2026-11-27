@@ -156,7 +156,7 @@ s32 sceNpMatching2Init(u32 poolSize, s32 threadPriority, u32 threadStackSize, s3
 
     if (threadStackSize < 0x3800u)
         return SCE_NP_MATCHING2_ERROR_POOL_SIZE_TOO_SMALL;
-    if (_sceKernelCheckThreadStack() < 4064)
+    if (sceKernelCheckThreadStack() < 4064)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 1)
         return SCE_NP_MATCHING2_ERROR_ALREADY_INITIALIZED;
@@ -178,7 +178,7 @@ s32 sceNpMatching2Term(void)
 {
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 4080)
+    if (sceKernelCheckThreadStack() < 4080)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -195,7 +195,7 @@ s32 sceNpMatching2Term(void)
 /* 0x000930 */
 s32 sceNpMatching2GetMemoryStat(SceNpMatching2MemoryStat *statOut)
 {
-    if (_sceKernelCheckThreadStack() < 4080)
+    if (sceKernelCheckThreadStack() < 4080)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -210,7 +210,7 @@ s32 sceNpMatching2CreateContext(const SceNpCommId *commId, const SceNpCommPassph
     SceNpId npId;
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 4016)
+    if (sceKernelCheckThreadStack() < 4016)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -232,7 +232,7 @@ s32 sceNpMatching2DestroyContext(SceNpMatching2ContextId ctxId)
 {
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 4080)
+    if (sceKernelCheckThreadStack() < 4080)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -267,7 +267,7 @@ NP_MATCHING2_NOINLINE s32 npMatching2UnregisterInternalListener(u32 listenerId, 
 /* 0x000b40 */
 s32 sceNpMatching2SetDefaultRequestOptParam(SceNpMatching2ContextId ctxId, const SceNpMatching2RequestOptParam *optParam)
 {
-    if (_sceKernelCheckThreadStack() < 4080)
+    if (sceKernelCheckThreadStack() < 4080)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -280,7 +280,7 @@ s32 sceNpMatching2SetDefaultRequestOptParam(SceNpMatching2ContextId ctxId, const
 /* 0x000bb8 */
 s32 sceNpMatching2SetDefaultRoomEventOptParam(SceNpMatching2ContextId ctxId, const SceNpMatching2RoomEventOptParam *optParam)
 {
-    if (_sceKernelCheckThreadStack() < 4080)
+    if (sceKernelCheckThreadStack() < 4080)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -293,7 +293,7 @@ s32 sceNpMatching2SetDefaultRoomEventOptParam(SceNpMatching2ContextId ctxId, con
 /* 0x000c30 */
 s32 sceNpMatching2SetDefaultRoomMessageOptParam(SceNpMatching2ContextId ctxId, const SceNpMatching2RoomMessageOptParam *optParam)
 {
-    if (_sceKernelCheckThreadStack() < 4080)
+    if (sceKernelCheckThreadStack() < 4080)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -308,7 +308,7 @@ s32 sceNpMatching2ContextStart(SceNpMatching2ContextId ctxId)
 {
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 4080)
+    if (sceKernelCheckThreadStack() < 4080)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -324,7 +324,7 @@ s32 sceNpMatching2ContextStop(SceNpMatching2ContextId ctxId)
 {
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 4080)
+    if (sceKernelCheckThreadStack() < 4080)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -338,7 +338,7 @@ s32 sceNpMatching2ContextStop(SceNpMatching2ContextId ctxId)
 /* 0x000d8c */
 s32 sceNpMatching2AbortRequest(SceNpMatching2RequestId reqId)
 {
-    if (_sceKernelCheckThreadStack() < 4080)
+    if (sceKernelCheckThreadStack() < 4080)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -349,7 +349,7 @@ s32 sceNpMatching2AbortRequest(SceNpMatching2RequestId reqId)
 /* 0x000de8 */
 s32 sceNpMatching2GetServerIdListLocal(SceNpMatching2ContextId ctxId, SceNpMatching2ServerId *serverIdList, u32 listNum)
 {
-    if (_sceKernelCheckThreadStack() < 4080)
+    if (sceKernelCheckThreadStack() < 4080)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -363,7 +363,7 @@ s32 sceNpMatching2GetServerInfo(SceNpMatching2ContextId ctxId, const SceNpMatchi
 {
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 4064)
+    if (sceKernelCheckThreadStack() < 4064)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -380,7 +380,7 @@ s32 sceNpMatching2GetWorldInfoList(SceNpMatching2ContextId ctxId, const SceNpMat
 {
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 4064)
+    if (sceKernelCheckThreadStack() < 4064)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -397,7 +397,7 @@ s32 sceNpMatching2SetUserInfo(SceNpMatching2ContextId ctxId, const SceNpMatching
 {
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 4032)
+    if (sceKernelCheckThreadStack() < 4032)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -414,7 +414,7 @@ s32 sceNpMatching2GetUserInfoList(SceNpMatching2ContextId ctxId, const SceNpMatc
 {
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 4016)
+    if (sceKernelCheckThreadStack() < 4016)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -433,7 +433,7 @@ s32 sceNpMatching2GetRoomMemberDataExternalList(SceNpMatching2ContextId ctxId,
 {
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 4064)
+    if (sceKernelCheckThreadStack() < 4064)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -450,7 +450,7 @@ s32 sceNpMatching2SetRoomDataExternal(SceNpMatching2ContextId ctxId, const SceNp
 {
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 4080)
+    if (sceKernelCheckThreadStack() < 4080)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -469,7 +469,7 @@ s32 sceNpMatching2GetRoomDataExternalList(SceNpMatching2ContextId ctxId,
 {
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 4064)
+    if (sceKernelCheckThreadStack() < 4064)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -488,7 +488,7 @@ s32 sceNpMatching2SetSignalingOptParam(SceNpMatching2ContextId ctxId,
 {
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 4064)
+    if (sceKernelCheckThreadStack() < 4064)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -505,7 +505,7 @@ s32 sceNpMatching2GetSignalingOptParamLocal(SceNpMatching2ContextId ctxId, SceNp
 {
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 4064)
+    if (sceKernelCheckThreadStack() < 4064)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -525,7 +525,7 @@ s32 sceNpMatching2CreateJoinRoom(SceNpMatching2ContextId ctxId, const SceNpMatch
 {
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 4064)
+    if (sceKernelCheckThreadStack() < 4064)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -545,7 +545,7 @@ s32 sceNpMatching2JoinRoom(SceNpMatching2ContextId ctxId, const SceNpMatching2Jo
 {
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 4064)
+    if (sceKernelCheckThreadStack() < 4064)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -562,7 +562,7 @@ s32 sceNpMatching2LeaveRoom(SceNpMatching2ContextId ctxId, const SceNpMatching2L
 {
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 4064)
+    if (sceKernelCheckThreadStack() < 4064)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -579,7 +579,7 @@ s32 sceNpMatching2GrantRoomOwner(SceNpMatching2ContextId ctxId, const SceNpMatch
 {
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 4064)
+    if (sceKernelCheckThreadStack() < 4064)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -596,7 +596,7 @@ s32 sceNpMatching2KickoutRoomMember(SceNpMatching2ContextId ctxId, const SceNpMa
 {
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 4064)
+    if (sceKernelCheckThreadStack() < 4064)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -613,7 +613,7 @@ s32 sceNpMatching2SearchRoom(SceNpMatching2ContextId ctxId, const SceNpMatching2
 {
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 4064)
+    if (sceKernelCheckThreadStack() < 4064)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -632,7 +632,7 @@ s32 sceNpMatching2SendRoomChatMessage(SceNpMatching2ContextId ctxId,
 {
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 4064)
+    if (sceKernelCheckThreadStack() < 4064)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -649,7 +649,7 @@ s32 sceNpMatching2SendRoomMessage(SceNpMatching2ContextId ctxId, const SceNpMatc
 {
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 4064)
+    if (sceKernelCheckThreadStack() < 4064)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -686,7 +686,7 @@ s32 sceNpMatching2SetRoomDataInternal(SceNpMatching2ContextId ctxId,
 {
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 4064)
+    if (sceKernelCheckThreadStack() < 4064)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -705,7 +705,7 @@ s32 sceNpMatching2GetRoomDataInternal(SceNpMatching2ContextId ctxId,
 {
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 4064)
+    if (sceKernelCheckThreadStack() < 4064)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -724,7 +724,7 @@ s32 sceNpMatching2SetRoomMemberDataInternal(SceNpMatching2ContextId ctxId,
 {
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 4064)
+    if (sceKernelCheckThreadStack() < 4064)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -743,7 +743,7 @@ s32 sceNpMatching2GetRoomMemberDataInternal(SceNpMatching2ContextId ctxId,
 {
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 4064)
+    if (sceKernelCheckThreadStack() < 4064)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -762,7 +762,7 @@ s32 sceNpMatching2GetRoomMemberDataInternalList(SceNpMatching2ContextId ctxId,
 {
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 4064)
+    if (sceKernelCheckThreadStack() < 4064)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -778,7 +778,7 @@ s32 sceNpMatching2GetRoomDataInternalLocal(SceNpMatching2ContextId ctxId, SceNpM
                                            const SceNpMatching2AttributeId *attrId, u32 attrIdNum,
                                            void *roomDataOut, void *buf, u32 bufSize)
 {
-    if (_sceKernelCheckThreadStack() < 4048)
+    if (sceKernelCheckThreadStack() < 4048)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -792,7 +792,7 @@ s32 sceNpMatching2GetRoomMemberIdListLocal(SceNpMatching2ContextId ctxId, SceNpM
 {
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 4064)
+    if (sceKernelCheckThreadStack() < 4064)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -811,7 +811,7 @@ s32 sceNpMatching2GetRoomMemberDataInternalLocal(SceNpMatching2ContextId ctxId, 
 {
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 4048)
+    if (sceKernelCheckThreadStack() < 4048)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
@@ -835,7 +835,7 @@ s32 sceNpMatching2GetRoomPasswordLocal(SceNpMatching2ContextId ctxId, SceNpMatch
 /* 0x001fdc */
 s32 sceNpMatching2RegisterSignalingCallback(SceNpMatching2ContextId ctxId, void *cbFunc, void *cbArg)
 {
-    if (_sceKernelCheckThreadStack() < 4080)
+    if (sceKernelCheckThreadStack() < 4080)
         return SCE_NP_ERROR_STACK_OVERFLOW;
     if (g_npMatching2Initialized == 0)
         return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;

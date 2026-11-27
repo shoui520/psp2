@@ -49,7 +49,7 @@ s32 sceNetAdhocInit(void)
     s32 intr;
     s32 ret;
 
-    if (_sceKernelCheckThreadStack() < 2032)
+    if (sceKernelCheckThreadStack() < 2032)
         return ADHOC_ERR_STACK_SMALL;
 
     intr = sceNet_lib_94B44F26();
@@ -98,7 +98,7 @@ s32 sceNetAdhocTerm(void)
     s32 intr;
     s32 ret = 0;
 
-    if (_sceKernelCheckThreadStack() < 2016)
+    if (sceKernelCheckThreadStack() < 2016)
         return ADHOC_ERR_STACK_SMALL;
 
     intr = sceNet_lib_94B44F26();
@@ -218,7 +218,7 @@ adhocIfDetachNotify(AdhocIfnet *ifp)
 }
 
 /* 0x0004ac */
-s32 sceNetAdhoc_7A662D6B(SceNetAdhocPollSd *sds, s32 count, u32 timeout, s32 flags)
+s32 sceNetAdhocPollSocket(SceNetAdhocPollSd *sds, s32 count, u32 timeout, s32 flags)
 {
     s32 err = 0;
     s32 intr;
@@ -227,7 +227,7 @@ s32 sceNetAdhoc_7A662D6B(SceNetAdhocPollSd *sds, s32 count, u32 timeout, s32 fla
     s64 start_time;
     s32 i;
 
-    if (_sceKernelCheckThreadStack() < 1984)
+    if (sceKernelCheckThreadStack() < 1984)
         return ADHOC_ERR_STACK_SMALL;
     if (sds == NULL || count < 1 || (flags & ~1) != 0)
         return ADHOC_ERR_INVALID_ARG;
@@ -382,12 +382,12 @@ adhocPollSockets(AdhocPollEntry *entries, s32 count)
 }
 
 /* 0x000a2c */
-s32 sceNetAdhoc_73BFD52D(s32 id, s32 alert_mask)
+s32 sceNetAdhocSetSocketAlert(s32 id, s32 alert_mask)
 {
     s32 ret = 0;
     s32 intr;
 
-    if (_sceKernelCheckThreadStack() < 2016)
+    if (sceKernelCheckThreadStack() < 2016)
         return ADHOC_ERR_STACK_SMALL;
 
     intr = sceNet_lib_94B44F26();
@@ -463,12 +463,12 @@ s32 sceNetAdhoc_73BFD52D(s32 id, s32 alert_mask)
 }
 
 /* 0x000c58 */
-s32 sceNetAdhoc_4D2CE199(s32 id, s32 *out_alert)
+s32 sceNetAdhocGetSocketAlert(s32 id, s32 *out_alert)
 {
     s32 ret = 0;
     s32 intr;
 
-    if (_sceKernelCheckThreadStack() < 2032)
+    if (sceKernelCheckThreadStack() < 2032)
         return ADHOC_ERR_STACK_SMALL;
     if (out_alert == NULL)
         return ADHOC_ERR_INVALID_ARG;

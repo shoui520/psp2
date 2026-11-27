@@ -57,7 +57,7 @@ int sceNpLookupNpId(int trans_id, const char *online_id, NpId *npid_out, int opt
     char *copy = NULL;
     int ret;
 
-    if (_sceKernelCheckThreadStack() < 14288)
+    if (sceKernelCheckThreadStack() < 14288)
         return (int)0x80550004;
 
     if (online_id == NULL || npid_out == NULL) {
@@ -106,7 +106,7 @@ int sceNpLookupUserProfile(int trans_id, const NpId *npid, NpProfileBase *profil
     NpProfileRecord full_prof;
     int ret;
 
-    if (_sceKernelCheckThreadStack() < 13984)
+    if (sceKernelCheckThreadStack() < 13984)
         return (int)0x80550004;
 
     if (npid == NULL) {
@@ -148,7 +148,7 @@ int sceNpLookupCreateTransactionCtx(const void *title_id)
     u8 online_id[304];
     int ret;
 
-    if (_sceKernelCheckThreadStack() < 14016)
+    if (sceKernelCheckThreadStack() < 14016)
         return (int)0x80550004;
 
     ret = sceNp_F2B95034(online_id, NULL, NULL, NULL, NULL);
@@ -162,14 +162,14 @@ int sceNpLookupCreateTransactionCtx(const void *title_id)
 
 int sceNpLookupDestroyTransactionCtx(int trans_id)
 {
-    if (_sceKernelCheckThreadStack() < 14320)
+    if (sceKernelCheckThreadStack() < 14320)
         return (int)0x80550004;
     return np_trans_destroy_lookup(trans_id);
 }
 
 int sceNpLookupAbortTransaction(int trans_id)
 {
-    if (_sceKernelCheckThreadStack() < 14320)
+    if (sceKernelCheckThreadStack() < 14320)
         return (int)0x80550004;
     return sceNpService_43E635D2(trans_id);
 }
@@ -177,7 +177,7 @@ int sceNpLookupAbortTransaction(int trans_id)
 int sceNpService_68DE4402(int trans_id, int slot_id, void *out_buf, u32 buf_size,
                           u32 *total_out, int *read_out, int opt)
 {
-    if (_sceKernelCheckThreadStack() < 14304)
+    if (sceKernelCheckThreadStack() < 14304)
         return (int)0x80550004;
     if (buf_size > 0x10000u)
         return (int)0x80550704;
@@ -187,7 +187,7 @@ int sceNpService_68DE4402(int trans_id, int slot_id, void *out_buf, u32 buf_size
 int sceNpLookupTitleSmallStorage(int trans_id, void *out_buf, u32 buf_size,
                                  u32 *total_out, int opt)
 {
-    if (_sceKernelCheckThreadStack() < 14304)
+    if (sceKernelCheckThreadStack() < 14304)
         return (int)0x80550004;
     if (buf_size > 0x10000u)
         return (int)0x80550704;

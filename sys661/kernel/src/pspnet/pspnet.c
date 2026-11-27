@@ -845,7 +845,7 @@ int sceNet_lib_8D33C11D(const char *ifname, void *addr)
 
 int sceNetGetLocalEtherAddr(void *addr)
 {
-    if (_sceKernelCheckThreadStack() < 1008)
+    if (sceKernelCheckThreadStack() < 1008)
         return SCE_NET_ERROR_STACK_SMALL;
     NetIfnet *ifp = sceNet_lib_1D10419C("wlan");
     if (ifp == NULL)
@@ -928,7 +928,7 @@ int sceNetInit(int poolsize, int calloutprio, int calloutstack, int netintrprio,
     (void)calloutstack;
     (void)netintrstack;
 
-    if (_sceKernelCheckThreadStack() < 976)
+    if (sceKernelCheckThreadStack() < 976)
         return SCE_NET_ERROR_STACK_SMALL;
 
     net_prng_seed(sceKernelGetSystemTimeLow());
@@ -971,7 +971,7 @@ int sceNetInit(int poolsize, int calloutprio, int calloutstack, int netintrprio,
 
 int sceNetTerm(void)
 {
-    if (_sceKernelCheckThreadStack() < 1008)
+    if (sceKernelCheckThreadStack() < 1008)
         return SCE_NET_ERROR_STACK_SMALL;
     netintr_term();
     threadlist_term();
@@ -1276,7 +1276,7 @@ NetThreadInfo *sceNet_lib_CA3CF5EB(int *errp)
 int sceNetFreeThreadinfo(SceUID thid)
 {
     int ret = 0;
-    if (_sceKernelCheckThreadStack() < 992)
+    if (sceKernelCheckThreadStack() < 992)
         return SCE_NET_ERROR_STACK_SMALL;
 
     sceKernelLockLwMutex(&g_thread_mtx, 1, NULL);
@@ -1414,7 +1414,7 @@ int sceNetThreadAbort(SceUID thid)
 {
     int err = 0;
     int ret = 0;
-    if (_sceKernelCheckThreadStack() < 976)
+    if (sceKernelCheckThreadStack() < 976)
         return SCE_NET_ERROR_STACK_SMALL;
 
     NetThreadInfo *self = sceNet_lib_CA3CF5EB(&ret);
@@ -3134,7 +3134,7 @@ int sceNetEtherStrton(const char *str, u8 *mac)
 
 int sceNetGetMallocStat(void *stat)
 {
-    if (_sceKernelCheckThreadStack() < 1008)
+    if (sceKernelCheckThreadStack() < 1008)
         return SCE_NET_ERROR_STACK_SMALL;
     return sceNetIfhandle_lib_4C2886CB(stat);
 }

@@ -23,7 +23,7 @@ extern void *sceKernelMemset(void *dst, int c, SceSize len);
 extern void *sceKernelMemcpy(void *dst, const void *src, SceSize len);
 extern int sceKernelLockLwMutex(void *workarea, int count, u32 *timeout);
 extern int sceKernelUnlockLwMutex(void *workarea, int count);
-extern int _sceKernelCheckThreadStack(void);
+extern int sceKernelCheckThreadStack(void);
 
 /* ModuleMgrForUser */
 extern int sceKernelGetModuleGPByAddress(void *addr, u32 *gp);

@@ -162,7 +162,7 @@ s32 sceKernelEnableSubIntr(s32 intrNum, s32 subIntrNum);
 s32 sceKernelDisableSubIntr(s32 intrNum, s32 subIntrNum);
 s32 sceKernelSuspendSubIntr(s32 intrNum, s32 subIntrNum, s32 *prevState);
 s32 sceKernelResumeSubIntr(s32 intrNum, s32 subIntrNum, s32 prevState);
-s32 sceKernelIsSubInterruptOccured(s32 intrNum, s32 subIntrNum);
+s32 sceKernelIsSubInterruptOccurred(s32 intrNum, s32 subIntrNum);
 s32 sceKernelQueryIntrHandlerInfo(s32 intrNum, s32 subIntrNum, PspIntrHandlerOptionParam *out);
 s32 sceKernelSetPrimarySyscallHandler(s32 syscallId, void (*syscall)());
 void sceKernelCpuEnableIntr(void);

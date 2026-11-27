@@ -25,7 +25,7 @@ static inline __attribute__((always_inline)) u32 rotr32(u32 v, u32 n)
 
 /* Imports: Kernel_Library */
 extern void *sceKernelMemset(void *dst, int c, u32 n);
-extern s32 _sceKernelCheckThreadStack(void);
+extern s32 sceKernelCheckThreadStack(void);
 extern void *sceKernelMemcpy(void *dst, const void *src, u32 n);
 extern s32 sceKernelGetThreadId(void);
 

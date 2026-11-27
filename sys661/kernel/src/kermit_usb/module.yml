@@ -25,7 +25,7 @@ exports:
       - sceUsbGetDrvList: 0x4e537366
       - sceUsbActivate: 0x586db82c
       - sceUsbWaitState: 0x5be0e002
-      - sceUsb_616F2B61: 0x616f2b61
+      - sceUsbWaitStateCB: 0x616f2b61
       - sceUsb_89DE0DC5: 0x89de0dc5
       - sceUsb_8BFC3DE8: 0x8bfc3de8
       - sceUsbStart: 0xae5de6af

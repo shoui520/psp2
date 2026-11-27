@@ -20,7 +20,7 @@ exports:
     pad: 1
     functions:
       - sceWlanGetEtherAddr: 0x0c622081
-      - sceWlanDrv_driver_0387523A: 0x93440b11
+      - sceWlanDevIsPowerOn: 0x93440b11
       - sceWlanGetSwitchState: 0xd7763699
   - name: sceWlanDrv_lib
     version: [0, 17]
@@ -86,7 +86,7 @@ exports:
     bucket_words: [0x00050000, 0x00090008, 0x000b000a, 0x00120010, 0x00150014, 0x00180016, 0x001b001a, 0x001f001b]
     functions:
       - sceWlanDrv_driver_02E66C38: 0x02e66c38
-      - sceWlanDrv_driver_0387523A: 0x0387523a
+      - sceWlanDevIsPowerOn: 0x0387523a
       - sceWlanDrv_driver_041810C3: 0x041810c3
       - sceWlanDrv_driver_04DBA413: 0x04dba413
       - sceWlanDrv_driver_0CAB500F: 0x0cab500f

@@ -201,7 +201,7 @@ int sceUsbWaitState(u32 state, s32 waitmode, SceUInt *timeout)
 	return res;
 }
 
-int sceUsb_616F2B61(u32 state, s32 waitmode, SceUInt *timeout)
+int sceUsbWaitStateCB(u32 state, s32 waitmode, SceUInt *timeout)
 {
 	u32 oldK1 = pspGetK1();
 	u32 shiftedK1 = oldK1 << 11;

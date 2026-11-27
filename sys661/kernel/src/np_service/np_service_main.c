@@ -292,7 +292,7 @@ int sceNpServiceInit(SceSize pool_size, SceSize stack_size, int prio)
     char env[16];
     int ret;
 
-    if (_sceKernelCheckThreadStack() < 4048)
+    if (sceKernelCheckThreadStack() < 4048)
         return (int)0x80550004;
     if (g_np_service_init == 1)
         return (int)0x80550501;
@@ -329,7 +329,7 @@ int sceNpServiceInit(SceSize pool_size, SceSize stack_size, int prio)
 
 int sceNpServiceTerm(void)
 {
-    int ret = _sceKernelCheckThreadStack();
+    int ret = sceKernelCheckThreadStack();
     if (ret >= 4080 && g_np_service_init != 0) {
         np_roster_term();
         np_manager_term();
@@ -342,7 +342,7 @@ int sceNpServiceTerm(void)
 
 int sceNpServiceGetMemoryStat(int *stat)
 {
-    if (_sceKernelCheckThreadStack() < 4080)
+    if (sceKernelCheckThreadStack() < 4080)
         return (int)0x80550004;
     if (g_np_service_init == 0)
         return (int)0x80550502;
@@ -355,7 +355,7 @@ int sceNpService_63644C02(void)
 
     if (g_np_manager_init <= 0)
         return (int)0x80550502;
-    if (_sceKernelCheckThreadStack() < 4064)
+    if (sceKernelCheckThreadStack() < 4064)
         return (int)0x80550004;
 
     ret = sceKernelLockMutex(g_mgr.mutex, 1, NULL);
@@ -455,7 +455,7 @@ int sceNpManagerSigninUpdateInitStart(NpSigninUpdateArg *req_arg)
 
     if (g_signin_update_status != 0)
         return (int)0x80550506;
-    if (_sceKernelCheckThreadStack() < 3952)
+    if (sceKernelCheckThreadStack() < 3952)
         return (int)0x80550004;
     if (req_arg == NULL || req_arg->size != 16u)
         return (int)0x80550503;
@@ -482,7 +482,7 @@ int sceNpService_41E99DD1(const void *user, const void *pass, const void *acc_id
 
 int sceNpManagerSigninUpdateAbort(void)
 {
-    if (_sceKernelCheckThreadStack() < 4064)
+    if (sceKernelCheckThreadStack() < 4064)
         return (int)0x80550004;
     return np_manager_abort_signin();
 }
@@ -557,7 +557,7 @@ int sceNpService_CAF9E5FD(NpAltSigninArg *req_arg)
     char pass[48];
     int ret;
 
-    if (_sceKernelCheckThreadStack() < 3952)
+    if (sceKernelCheckThreadStack() < 3952)
         return (int)0x80550004;
     if (req_arg == NULL || req_arg->size != 8u)
         return (int)0x80550503;
@@ -591,7 +591,7 @@ int sceNpService_A88B932E(void)
 
 int sceNpService_D05205D6(void)
 {
-    if (_sceKernelCheckThreadStack() < 4064)
+    if (sceKernelCheckThreadStack() < 4064)
         return (int)0x80550004;
     return np_manager_abort_signin();
 }
@@ -602,7 +602,7 @@ static int np_manager_start_signin(const void *user, const void *pass, const voi
     NpManagerCtx *ctx_ref = &g_mgr;
     int ret;
 
-    if (_sceKernelCheckThreadStack() < 4064)
+    if (sceKernelCheckThreadStack() < 4064)
         return (int)0x80550004;
     if (g_np_manager_init <= 0)
         return (int)0x80550502;
@@ -1006,7 +1006,7 @@ static int np_manager_notify_cbs(NpManagerCtx *ctx, int state, int err)
                 int pad_bytes;
 
                 __asm__ volatile ("move %0, $gp\n\tmove $gp, %1" : "=&r"(saved_gp) : "r"(target_gp));
-                stack_avail = _sceKernelCheckThreadStack();
+                stack_avail = sceKernelCheckThreadStack();
                 pad_bytes = stack_avail - (int)ctx->extra_stack;
                 if (pad_bytes > 0) {
                     volatile void *pad_area = __builtin_alloca((SceSize)pad_bytes);

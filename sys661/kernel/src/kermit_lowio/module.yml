@@ -203,7 +203,7 @@ exports:
     version: [0, 17]
     attributes: 0x4001
     functions:
-      - sceDmacplus_driver_2C5FC1E3: 0x617f3fe6
+      - sceDmacMemcpy: 0x617f3fe6
       - sceDmacplus_driver_D57D5BC2: 0xd97f94d8
   - name: sceDmacplus_driver
     version: [0, 17]
@@ -214,7 +214,7 @@ exports:
     bucket_words: [0x00000000, 0x00020000, 0x00040003, 0x00060005, 0x00070006, 0x000a0009, 0x000e000d, 0x00130011]
     functions:
       - sceDmacplus_driver_282CA0D7: 0x282ca0d7
-      - sceDmacplus_driver_2C5FC1E3: 0x2c5fc1e3
+      - sceDmacMemcpy: 0x2c5fc1e3
       - sceDmacplus_driver_33CD36DD: 0x33cd36dd
       - sceDmacplus_driver_47D400CB: 0x47d400cb
       - sceDmacplus_driver_5FCF43BD: 0x5fcf43bd

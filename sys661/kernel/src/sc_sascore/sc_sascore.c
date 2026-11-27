@@ -87,7 +87,7 @@ static inline int check_valid_ram(u32 addr, u32 mask)
 }
 
 /* 0x0000: __sceSasCore */
-int sceSasCore_A3589D81(SceSasCore *sasCore, void *sasOut)
+int __sceSasCore(SceSasCore *sasCore, void *sasOut)
 {
 	if (((u32)sasCore | (u32)sasOut) & 0x3F) {
 		return 0x80420005;
@@ -198,7 +198,7 @@ int sceSasCore_A3589D81(SceSasCore *sasCore, void *sasOut)
 }
 
 /* 0x0368: __sceSasCoreWithMix */
-int sceSasCore_50A14DFC(SceSasCore *sasCore, void *sasInOut, int leftVol, int rightVol)
+int __sceSasCoreWithMix(SceSasCore *sasCore, void *sasInOut, int leftVol, int rightVol)
 {
 	if (((u32)sasCore | (u32)sasInOut) & 0x3F) {
 		return 0x80420005;
@@ -323,7 +323,7 @@ int sceSasCore_50A14DFC(SceSasCore *sasCore, void *sasInOut, int leftVol, int ri
 }
 
 /* 0x0758: __sceSasGetEndFlag */
-u32 sceSasCore_68A46B95(SceSasCore *sasCore)
+u32 __sceSasGetEndFlag(SceSasCore *sasCore)
 {
 	if ((s32)(((u32)sasCore | ((u32)sasCore + 0xE20)) & (pspGetK1() << 11)) < 0) {
 		return 0x80000023;
@@ -332,7 +332,7 @@ u32 sceSasCore_68A46B95(SceSasCore *sasCore)
 }
 
 /* 0x0780: __sceSasSetKeyOn */
-int sceSasCore_76F01ACA(SceSasCore *sasCore, int vnum)
+int __sceSasSetKeyOn(SceSasCore *sasCore, int vnum)
 {
 	u32 old_k1 = pspGetK1();
 	u32 k1_check = old_k1 << 11;
@@ -368,7 +368,7 @@ int sceSasCore_76F01ACA(SceSasCore *sasCore, int vnum)
 }
 
 /* 0x08A0: __sceSasSetKeyOff */
-int sceSasCore_A0CF2FA4(SceSasCore *sasCore, int vnum)
+int __sceSasSetKeyOff(SceSasCore *sasCore, int vnum)
 {
 	u32 old_k1 = pspGetK1();
 	u32 k1_check = old_k1 << 11;
@@ -404,7 +404,7 @@ int sceSasCore_A0CF2FA4(SceSasCore *sasCore, int vnum)
 }
 
 /* 0x09C0: __sceSasSetVolume */
-int sceSasCore_440CA7D8(SceSasCore *sasCore, int vnum, int l, int r, int wl, int wr)
+int __sceSasSetVolume(SceSasCore *sasCore, int vnum, int l, int r, int wl, int wr)
 {
 	u32 old_k1 = pspGetK1();
 	u32 k1_check = old_k1 << 11;
@@ -438,7 +438,7 @@ int sceSasCore_440CA7D8(SceSasCore *sasCore, int vnum, int l, int r, int wl, int
 }
 
 /* 0x0AD8: __sceSasSetPitch */
-int sceSasCore_AD84D37F(SceSasCore *sasCore, int vnum, int pitch)
+int __sceSasSetPitch(SceSasCore *sasCore, int vnum, int pitch)
 {
 	u32 old_k1 = pspGetK1();
 	u32 k1_check = old_k1 << 11;
@@ -473,7 +473,7 @@ int sceSasCore_AD84D37F(SceSasCore *sasCore, int vnum, int pitch)
 }
 
 /* 0x0BEC: __sceSasSetVoice */
-int sceSasCore_99944089(SceSasCore *sasCore, int vnum, void *vagAddr, int size, int loopmode)
+int __sceSasSetVoice(SceSasCore *sasCore, int vnum, void *vagAddr, int size, int loopmode)
 {
 	u32 old_k1 = pspGetK1();
 	u32 k1_check = old_k1 << 11;
@@ -521,7 +521,7 @@ int sceSasCore_99944089(SceSasCore *sasCore, int vnum, void *vagAddr, int size, 
 }
 
 /* 0x0D48: __sceSasSetVoicePCM */
-int sceSasCore_E1CD9561(SceSasCore *sasCore, int vnum, void *pcmBuf, int size, int loopsize)
+int __sceSasSetVoicePCM(SceSasCore *sasCore, int vnum, void *pcmBuf, int size, int loopsize)
 {
 	u32 old_k1 = pspGetK1();
 	u32 k1_check = old_k1 << 11;
@@ -574,7 +574,7 @@ int sceSasCore_E1CD9561(SceSasCore *sasCore, int vnum, void *pcmBuf, int size, i
 }
 
 /* 0x0EC0: __sceSasSetVoiceATRAC3 */
-int sceSasCore_4AA9EAD6(SceSasCore *sasCore, int vnum, void *atrac3Context)
+int __sceSasSetVoiceATRAC3(SceSasCore *sasCore, int vnum, void *atrac3Context)
 {
 	u32 old_k1 = pspGetK1();
 	u32 k1_check = old_k1 << 11;
@@ -609,7 +609,7 @@ int sceSasCore_4AA9EAD6(SceSasCore *sasCore, int vnum, void *atrac3Context)
 }
 
 /* 0x0FC8: __sceSasConcatenateATRAC3 */
-int sceSasCore_7497EA85(SceSasCore *sasCore, int vnum, void *buf, int len)
+int __sceSasConcatenateATRAC3(SceSasCore *sasCore, int vnum, void *buf, int len)
 {
 	u32 old_k1 = pspGetK1();
 	u32 k1_check = old_k1 << 11;
@@ -659,7 +659,7 @@ int sceSasCore_7497EA85(SceSasCore *sasCore, int vnum, void *buf, int len)
 }
 
 /* 0x1144: __sceSasUnsetATRAC3 */
-int sceSasCore_F6107F00(SceSasCore *sasCore, int vnum)
+int __sceSasUnsetATRAC3(SceSasCore *sasCore, int vnum)
 {
 	u32 old_k1 = pspGetK1();
 	u32 k1_check = old_k1 << 11;
@@ -695,7 +695,7 @@ int sceSasCore_F6107F00(SceSasCore *sasCore, int vnum)
 }
 
 /* 0x124C: __sceSasSetNoise */
-int sceSasCore_B7660A23(SceSasCore *sasCore, int vnum, int freq)
+int __sceSasSetNoise(SceSasCore *sasCore, int vnum, int freq)
 {
 	u32 old_k1 = pspGetK1();
 	u32 k1_check = old_k1 << 11;
@@ -735,7 +735,7 @@ int sceSasCore_B7660A23(SceSasCore *sasCore, int vnum, int freq)
 }
 
 /* 0x1378: __sceSasSetTriangularWave */
-int sceSasCore_A232CBE6(SceSasCore *sasCore, int vnum, u32 dutyPercent, u32 unused)
+int __sceSasSetTrianglarWave(SceSasCore *sasCore, int vnum, u32 dutyPercent, u32 unused)
 {
 	(void)unused;
 	u32 old_k1 = pspGetK1();
@@ -772,7 +772,7 @@ int sceSasCore_A232CBE6(SceSasCore *sasCore, int vnum, u32 dutyPercent, u32 unus
 }
 
 /* 0x148C: __sceSasSetSteepWave */
-int sceSasCore_D5EBBBCD(SceSasCore *sasCore, int vnum, u32 freq)
+int __sceSasSetSteepWave(SceSasCore *sasCore, int vnum, u32 freq)
 {
 	u32 old_k1 = pspGetK1();
 	u32 k1_check = old_k1 << 11;
@@ -805,7 +805,7 @@ int sceSasCore_D5EBBBCD(SceSasCore *sasCore, int vnum, u32 freq)
 }
 
 /* 0x15A0: __sceSasSetADSR */
-int sceSasCore_019B25EB(SceSasCore *sasCore, int vnum, int flag, int a, int d, int s, int r)
+int __sceSasSetADSR(SceSasCore *sasCore, int vnum, int flag, int a, int d, int s, int r)
 {
 	u32 old_k1 = pspGetK1();
 	u32 k1_check = old_k1 << 11;
@@ -844,7 +844,7 @@ int sceSasCore_019B25EB(SceSasCore *sasCore, int vnum, int flag, int a, int d, i
 }
 
 /* 0x1708: __sceSasSetADSRmode */
-int sceSasCore_9EC3676A(SceSasCore *sasCore, int vnum, int flag, int am, int dm, int sm, int rm)
+int __sceSasSetADSRmode(SceSasCore *sasCore, int vnum, int flag, int am, int dm, int sm, int rm)
 {
 	u32 old_k1 = pspGetK1();
 	u32 k1_check = old_k1 << 11;
@@ -903,7 +903,7 @@ int sceSasCore_9EC3676A(SceSasCore *sasCore, int vnum, int flag, int am, int dm,
 }
 
 /* 0x18C4: __sceSasSetSL */
-int sceSasCore_5F9529F6(SceSasCore *sasCore, int vnum, int sl)
+int __sceSasSetSL(SceSasCore *sasCore, int vnum, int sl)
 {
 	u32 old_k1 = pspGetK1();
 	u32 k1_check = old_k1 << 11;
@@ -932,7 +932,7 @@ int sceSasCore_5F9529F6(SceSasCore *sasCore, int vnum, int sl)
 }
 
 /* 0x19A8: __sceSasGetEnvelopeHeight */
-int sceSasCore_74AE582A(SceSasCore *sasCore, int vnum)
+int __sceSasGetEnvelopeHeight(SceSasCore *sasCore, int vnum)
 {
 	if ((s32)(((u32)sasCore | ((u32)sasCore + 0xE20)) & (pspGetK1() << 11)) < 0) {
 		return 0x80000023;
@@ -944,7 +944,7 @@ int sceSasCore_74AE582A(SceSasCore *sasCore, int vnum)
 }
 
 /* 0x19F4: __sceSasGetAllEnvelopeHeights */
-int sceSasCore_07F58C24(SceSasCore *sasCore, int *heights)
+int __sceSasGetAllEnvelopeHeights(SceSasCore *sasCore, int *heights)
 {
 	u32 old_k1 = pspGetK1();
 	u32 k1_check = old_k1 << 11;
@@ -960,7 +960,7 @@ int sceSasCore_07F58C24(SceSasCore *sasCore, int *heights)
 }
 
 /* 0x1A70: __sceSasSetSimpleADSR */
-int sceSasCore_CBCD4F79(SceSasCore *sasCore, int vnum, u32 env1, u32 env2)
+int __sceSasSetSimpleADSR(SceSasCore *sasCore, int vnum, u32 env1, u32 env2)
 {
 	u32 old_k1 = pspGetK1();
 	u32 k1_check = old_k1 << 11;
@@ -1066,7 +1066,7 @@ int sceSasCore_CBCD4F79(SceSasCore *sasCore, int vnum, u32 env1, u32 env2)
 }
 
 /* 0x1E38: __sceSasSetGrain */
-int sceSasCore_D1E0A01E(SceSasCore *sasCore, int grain)
+int __sceSasSetGrain(SceSasCore *sasCore, int grain)
 {
 	u32 old_k1 = pspGetK1();
 	u32 k1_check = old_k1 << 11;
@@ -1087,7 +1087,7 @@ int sceSasCore_D1E0A01E(SceSasCore *sasCore, int grain)
 }
 
 /* 0x1EA4: __sceSasGetGrain */
-int sceSasCore_BD11B7C2(SceSasCore *sasCore)
+int __sceSasGetGrain(SceSasCore *sasCore)
 {
 	if ((s32)(((u32)sasCore | ((u32)sasCore + 0xE20)) & (pspGetK1() << 11)) < 0) {
 		return 0x80000023;
@@ -1099,7 +1099,7 @@ int sceSasCore_BD11B7C2(SceSasCore *sasCore)
 }
 
 /* 0x1EE0: __sceSasSetOutputmode */
-int sceSasCore_E855BF76(SceSasCore *sasCore, int outputmode)
+int __sceSasSetOutputmode(SceSasCore *sasCore, int outputmode)
 {
 	if ((s32)(((u32)sasCore | ((u32)sasCore + 0xE20)) & (pspGetK1() << 11)) < 0) {
 		return 0x80000023;
@@ -1118,7 +1118,7 @@ int sceSasCore_E855BF76(SceSasCore *sasCore, int outputmode)
 }
 
 /* 0x1F44: __sceSasGetOutputmode */
-int sceSasCore_E175EF66(SceSasCore *sasCore)
+int __sceSasGetOutputmode(SceSasCore *sasCore)
 {
 	if ((s32)(((u32)sasCore | ((u32)sasCore + 0xE20)) & (pspGetK1() << 11)) < 0) {
 		return 0x80000023;
@@ -1130,7 +1130,7 @@ int sceSasCore_E175EF66(SceSasCore *sasCore)
 }
 
 /* 0x1F7C: __sceSasInit */
-int sceSasCore_42778A9F(SceSasCore *sasCore, int grainSamples, int maxVoices, int outMode, int sampleRate)
+int __sceSasInit(SceSasCore *sasCore, int grainSamples, int maxVoices, int outMode, int sampleRate)
 {
 	if (((u32)sasCore & 0x3F) != 0 || !check_valid_ram((u32)sasCore, 0x00220202)) {
 		return 0x80420005;
@@ -1225,7 +1225,7 @@ int sceSasCore_42778A9F(SceSasCore *sasCore, int grainSamples, int maxVoices, in
 }
 
 /* 0x2220: __sceSasRevVON */
-int sceSasCore_F983B186(SceSasCore *sasCore, int dry, int wet)
+int __sceSasRevVON(SceSasCore *sasCore, int dry, int wet)
 {
 	u32 old_k1 = pspGetK1();
 	u32 k1_check = old_k1 << 11;
@@ -1245,7 +1245,7 @@ int sceSasCore_F983B186(SceSasCore *sasCore, int dry, int wet)
 }
 
 /* 0x22EC: __sceSasRevEVOL */
-int sceSasCore_D5A229C9(SceSasCore *sasCore, int lv, int rv)
+int __sceSasRevEVOL(SceSasCore *sasCore, int lv, int rv)
 {
 	u32 old_k1 = pspGetK1();
 	u32 k1_check = old_k1 << 11;
@@ -1277,7 +1277,7 @@ int sceSasCore_D5A229C9(SceSasCore *sasCore, int lv, int rv)
 }
 
 /* 0x23F8: __sceSasRevType */
-int sceSasCore_33D4AB37(SceSasCore *sasCore, int type)
+int __sceSasRevType(SceSasCore *sasCore, int type)
 {
 	u32 old_k1 = pspGetK1();
 	u32 k1_check = old_k1 << 11;
@@ -1302,7 +1302,7 @@ int sceSasCore_33D4AB37(SceSasCore *sasCore, int type)
 }
 
 /* 0x24C4: __sceSasRevParam */
-int sceSasCore_267A6DD2(SceSasCore *sasCore, int delay, int feedback)
+int __sceSasRevParam(SceSasCore *sasCore, int delay, int feedback)
 {
 	u32 old_k1 = pspGetK1();
 	u32 k1_check = old_k1 << 11;
@@ -1331,7 +1331,7 @@ int sceSasCore_267A6DD2(SceSasCore *sasCore, int delay, int feedback)
 }
 
 /* 0x25AC: __sceSasSetPause */
-int sceSasCore_787D04D5(SceSasCore *sasCore, u32 voice_bit, int setFlag)
+int __sceSasSetPause(SceSasCore *sasCore, u32 voice_bit, int setFlag)
 {
 	u32 old_k1 = pspGetK1();
 	u32 k1_check = old_k1 << 11;
@@ -1366,7 +1366,7 @@ int sceSasCore_787D04D5(SceSasCore *sasCore, u32 voice_bit, int setFlag)
 }
 
 /* 0x26A8: __sceSasGetPauseFlag */
-int sceSasCore_2C8E6AB3(SceSasCore *sasCore)
+int __sceSasGetPauseFlag(SceSasCore *sasCore)
 {
 	u32 old_k1 = pspGetK1();
 	u32 k1_check = old_k1 << 11;
@@ -1420,7 +1420,7 @@ int module_stop(SceSize args, void *argp)
 }
 
 /* 0x280C: sceP3daBridgeCore */
-int sceP3da_013016F3(u32 *work, u32 numChannels, u32 numSamples, u32 *inBufs, void *outBuf)
+int sceP3daBridgeCore(u32 *work, u32 numChannels, u32 numSamples, u32 *inBufs, void *outBuf)
 {
 	if (!check_valid_ram((u32)work, 0x00220202) ||
 	    !check_valid_ram((u32)inBufs, 0x00220202) ||
@@ -1484,8 +1484,8 @@ int sceP3da_013016F3(u32 *work, u32 numChannels, u32 numSamples, u32 *inBufs, vo
 	return ret;
 }
 
-/* 0x2A38: sceP3da_driver_374500A5 */
-int sceP3da_driver_374500A5(int mode, int param)
+/* 0x2A38: sceP3daBridgeInit */
+int sceP3daBridgeInit(int mode, int param)
 {
 	u32 old_k1 = pspGetK1();
 	pspSetK1(old_k1 << 11);
@@ -1494,8 +1494,8 @@ int sceP3da_driver_374500A5(int mode, int param)
 	return ret;
 }
 
-/* 0x2A70: sceP3da_driver_43F756A2 */
-int sceP3da_driver_43F756A2(void)
+/* 0x2A70: sceP3daBridgeExit */
+int sceP3daBridgeExit(void)
 {
 	u32 old_k1 = pspGetK1();
 	pspSetK1(old_k1 << 11);
