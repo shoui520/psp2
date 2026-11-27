@@ -815,32 +815,48 @@ set_source_files_properties(
 	media_detect_mgr.cpp
 	np_friend_importer.cpp
 	parental_control_mgr.cpp
+	playlog.cpp
 	popup_list.cpp
 	sfo.cpp
+	shell_handler_table.cpp
+	shell_util_server.cpp
+	shutter_sound_server.cpp
+	theme.cpp
 	src/dbsetup/dbsetup_lib.cpp
 	src/dbsetup/dbrecovery_lib.cpp
 	src/esecron/src/esehttp.cpp
+	src/filelist/base_activity2_visualizer.cpp
 	src/filelist/live2_cell_source.cpp
 	src/filelist/lv1status_activity2_visualizer.cpp
 	src/host_collabo/account_link_checker/bind_job.cpp
 	src/import_savedata_plugin/import_savedata_controller.cpp
 	src/liblocation/src/location_service/gps_emulator.cpp
+	src/liblocation/src/location_service/provider_gps_sm.cpp
 	src/livearea_plugin/src/livearea_feed.cpp
 	src/livearea_plugin/src/livearea_page_inner.cpp
 	src/mtp/src/mtp_server.cpp
 	src/mtp/src/mtp_service_dispatch.cpp
+	src/mtp/src/mtp_wrapper.cpp
+	src/musiccore_plugin/src/musiccore_audio_output.cpp
+	src/musiccore_plugin/src/musiccore_cache_io_engine.cpp
 	src/musiccore_plugin/src/musiccore_controller.cpp
+	src/musiccore_plugin/src/musiccore_db_manager.cpp
 	src/musiccore_plugin/src/musiccore_decoder_manager.cpp
 	src/musiccore_plugin/src/musiccore_filter_base.cpp
+	src/musiccore_plugin/src/musiccore_heap.cpp
 	src/musiccore_plugin/src/musiccore_ipc_service.cpp
 	src/musiccore_plugin/src/musiccore_main_thread.cpp
 	src/musiccore_plugin/src/musiccore_media_list.cpp
 	src/musiccore_plugin/src/musiccore_mp3_media.cpp
 	src/musiccore_plugin/src/musiccore_mp3_readers.cpp
 	src/musiccore_plugin/src/musiccore_mp4_boxes.cpp
+	src/musiccore_plugin/src/musiccore_mp4_media.cpp
 	src/musiccore_plugin/src/musiccore_plugin.cpp
 	src/musiccore_plugin/src/musiccore_queue.cpp
+	src/musiccore_plugin/src/musiccore_state_machine.cpp
+	src/musiccore_plugin/src/musiccore_sync_cache_io.cpp
 	src/musiccore_plugin/src/musiccore_wav_at9_media.cpp
+	src/musiccore_plugin/src/musiccore_wav_codec.cpp
 	src/netctl/net_config.cpp
 	src/netctl/net_stun.cpp
 	src/netctl/net_upnp.cpp
@@ -863,6 +879,7 @@ set_source_files_properties(
 	src/np/csla/np_csla.cpp
 	src/np/game_presence/np_game_presence.cpp
 	src/np/imps/np_imps_cache_core.cpp
+	src/np/imps/np_imps_cache_events.cpp
 	src/np/imps/np_imps_cache_stores.cpp
 	src/np/imps/np_imps_core_ctl.cpp
 	src/np/imps/np_imps_core_notif.cpp
@@ -878,20 +895,27 @@ set_source_files_properties(
 	src/np/ipc/npmanager/ipc_server/npmanager_ipc_server.cpp
 	src/np/ipc/npparty/server/np_party_ipc_server.cpp
 	src/np/ipc/npparty/server/np_party_vsh_service.cpp
+	src/np/ipc/nptrophy/nptrophy_ipc_server.cpp
 	src/np/ipc/nptrophy/nptrophy_notify.cpp
 	src/np/ipc/rt_netinfo_udpp2p.cpp
 	src/np/manager/np_manager_core.cpp
 	src/np/np_ipc2/np_ipc2_server.cpp
 	src/np/np_ipc2/np_ipc2_service_server.cpp
+	src/np/np_push_vsh/core/np_push_connection.cpp
 	src/np/np_push_vsh/core/np_push_ctl.cpp
+	src/np/np_push_vsh/core/np_push_packet.cpp
+	src/np/np_push_vsh/core/np_push_request.cpp
 	src/np/np_push_vsh/core/np_push_user_request.cpp
 	src/np/np_push_vsh/service/np_push_dispatcher.cpp
 	src/np/np_push_vsh/service/np_push_ipc_data.cpp
 	src/np/np_push_vsh/service/np_push_ipc_server.cpp
 	src/np/np_websocket/np_websocket_connection.cpp
+	src/np/np_websocket/np_websocket_handshake.cpp
 	src/np/np_websocket/np_websocket_net.cpp
 	src/np/np_websocket/util/np_websocket_util_stream.cpp
 	src/np/polling/np_polling.cpp
+	src/np/roster/np_roster_client.cpp
+	src/np/roster/np_roster_xml.cpp
 	src/np/rt/np_rt_basic.cpp
 	src/np/rt/np_rt_core.cpp
 	src/np/rt/np_rt_ext.cpp
@@ -901,6 +925,7 @@ set_source_files_properties(
 	src/np/sns_fb/np_sns_fb_server.cpp
 	src/np/sns_fb/np_sns_fb_util.cpp
 	src/np/trophy/nptrophy_arbiter.cpp
+	src/np/trophy/nptrophy_core_api.cpp
 	src/np/trophy/nptrophy_data_files.cpp
 	src/np/trophy/nptrophy_http.cpp
 	src/np/trophy/nptrophy_io.cpp
@@ -910,10 +935,13 @@ set_source_files_properties(
 	src/np/trophy/nptrophy_sfm.cpp
 	src/np/trophy/nptrophy_storage.cpp
 	src/np/trophy/nptrophy_trp.cpp
+	src/npdrm_package/npdrm_install_api.cpp
 	src/nsx/nsx_clock_updater.cpp
 	src/nsx/nsx_whats_new.cpp
+	src/photo_export/photo_export_convert.cpp
 	src/picture_file_creator/picture_encoder.cpp
 	src/picture_file_creator/picture_exif_writer.cpp
+	src/power_manage_plugin/src/power_manage_auth.cpp
 	promoter_util_server.cpp
 	src/patch_chk_plugin/bgdl_patch_client.cpp
 	src/patch_chk_plugin/game_update.cpp
@@ -923,18 +951,23 @@ set_source_files_properties(
 	src/shell_svc/src/shell_svc_telephony.cpp
 	src/sysupchk_plugin/sysupchk_np.cpp
 	src/sysupchk_plugin/sysupchk_plugin.cpp
+	src/telephony_plugin/src/common/src/sms/tel_sms_message_helper.cpp
 	src/telephony_plugin/src/common/src/tel_attribute_manager.cpp
 	src/telephony_plugin/src/common/src/tel_message_thread.cpp
 	src/telephony_plugin/src/common/src/tel_operator_profile.cpp
+	src/telephony_plugin/src/common/src/tel_phone_number_util.cpp
 	src/telephony_plugin/src/general/tel_general_logic_gui.cpp
 	src/telephony_plugin/src/general/tel_general_logic_mediator2.cpp
 	src/telephony_plugin/src/sms/tel_sms_logic_mediator.cpp
 	src/telephony_plugin/src/sms_pdu_transcoder/src/sms_pdu_transcoder/amsslib/LibWMS.cpp
 	src/teleport/teleport_app_helper.cpp
 	src/teleport/teleport_http_protocol.cpp
+	src/theme_plugin/src/theme_plugin.cpp
 	src/topmenu_plugin/src/debugger_check_job.cpp
+	src/topmenu_plugin/src/online_storage_delete_launcher.cpp
 	src/topmenu_plugin/src/spawn_process_job.cpp
 	src/topmenu_plugin/src/top_window.cpp
+	src/trigger_mgr/time_of_day_timer.cpp
 	src/trigger_mgr/trigger_mgr.cpp
 	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=0)
 # the SDK's start code
@@ -979,7 +1012,7 @@ set_source_files_properties(
 set_source_files_properties(
 	${PSP2_SRC}/sys/internal/kernel/src/appmgr/fat_format.c
 	${PSP2_SRC}/sys/internal/kernel/src/appmgr/fat_format_storage.c
-	PROPERTIES COMPILE_OPTIONS "-include;${CMAKE_CURRENT_SOURCE_DIR}/src/fsutil/fat_format_user_compat.h")
+	PROPERTIES COMPILE_OPTIONS "-include;${CMAKE_CURRENT_SOURCE_DIR}/src/fsutil/fat_format_user_compat.h;-Xautoinlinesize=0")
 # Statically linked libSceJson uses SceShell's global new/delete
 set_source_files_properties(
 	${PSP2_SRC}/sys/internal/usermode/src/libSceJson/json_value.cpp

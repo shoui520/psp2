@@ -41,7 +41,15 @@ static int destroyContextInternal(SceUInt32 ctxId);
 static int destroyRequestInternal(SceUInt32 reqId);
 static int abortRequestInternal(SceUInt32 reqId);
 static int getResponseInternal(SceUInt32 reqId, char *buf, SceSize bufLen, SceSize *outSize);
-static int createOpRequest(SceUInt32 ctxId, SceUInt16 op, SceUInt32 *outReqId);
+static int createCreateSessionRequest(SceUInt32 ctxId, SceUInt32 *outReqId);
+static int createDeleteSessionRequest(SceUInt32 ctxId, SceUInt32 *outReqId);
+static int createBindAccountRequest(SceUInt32 ctxId, SceUInt32 *outReqId);
+static int createStartRegRequest(SceUInt32 ctxId, SceUInt32 *outReqId);
+static int createAuthenticateRequest(SceUInt32 ctxId, SceUInt32 *outReqId);
+static int createVerifyDobRequest(SceUInt32 ctxId, SceUInt32 *outReqId);
+static int createGetEpwRequest(SceUInt32 ctxId, SceUInt32 *outReqId);
+static int createSendEmailVerRequest(SceUInt32 ctxId, SceUInt32 *outReqId);
+static int createGuestSessionRequest(SceUInt32 ctxId, SceUInt32 *outReqId);
 static int startCreateSessionInternal(SceUInt32 reqId);
 static int startDeleteSessionInternal(SceUInt32 reqId);
 static int startBindAccountInternal(SceUInt32 reqId, const char *username, const char *password);
@@ -144,7 +152,7 @@ extern "C" int sceNpCommerce2CreateSessionCreateReq(SceUInt32 ctxId, SceUInt32 *
 		return SHELL_NP_COMM2_ERR_NOT_INITIALIZED;
 	if (outReqId == NULL)
 		return SHELL_NP_COMM2_ERR_INVALID_ARG;
-	return createOpRequest(ctxId, SHELL_NP_COMM2_OP_CR_SESS, outReqId);
+	return createCreateSessionRequest(ctxId, outReqId);
 }
 
 /* 0x812BD68A */
@@ -171,7 +179,7 @@ extern "C" int SceNpCommerce2_C737A929(SceUInt32 ctxId, SceUInt32 *outReqId)
 		return SHELL_NP_COMM2_ERR_NOT_INITIALIZED;
 	if (outReqId == NULL)
 		return SHELL_NP_COMM2_ERR_INVALID_ARG;
-	return createOpRequest(ctxId, SHELL_NP_COMM2_OP_DEL_SESS, outReqId);
+	return createDeleteSessionRequest(ctxId, outReqId);
 }
 
 /* 0x812BD6F8 */
@@ -189,7 +197,7 @@ extern "C" int npCommerce2CreateBindAccountReq(SceUInt32 ctxId, SceUInt32 *outRe
 		return SHELL_NP_COMM2_ERR_NOT_INITIALIZED;
 	if (outReqId == NULL)
 		return SHELL_NP_COMM2_ERR_INVALID_ARG;
-	return createOpRequest(ctxId, SHELL_NP_COMM2_OP_BIND_ACCOUNT, outReqId);
+	return createBindAccountRequest(ctxId, outReqId);
 }
 
 /* 0x812BD746 */
@@ -210,7 +218,7 @@ extern "C" int npCommerce2CreateStartRegReq(SceUInt32 ctxId, SceUInt32 *outReqId
 		return SHELL_NP_COMM2_ERR_NOT_INITIALIZED;
 	if (outReqId == NULL)
 		return SHELL_NP_COMM2_ERR_INVALID_ARG;
-	return createOpRequest(ctxId, SHELL_NP_COMM2_OP_START_REG, outReqId);
+	return createStartRegRequest(ctxId, outReqId);
 }
 
 /* 0x812BD79E */
@@ -234,7 +242,7 @@ extern "C" int npCommerce2CreateAuthenticateReq(SceUInt32 ctxId, SceUInt32 *outR
 		return SHELL_NP_COMM2_ERR_NOT_INITIALIZED;
 	if (outReqId == NULL)
 		return SHELL_NP_COMM2_ERR_INVALID_ARG;
-	return createOpRequest(ctxId, SHELL_NP_COMM2_OP_AUTHENTICATE, outReqId);
+	return createAuthenticateRequest(ctxId, outReqId);
 }
 
 /* 0x812BD810 */
@@ -256,7 +264,7 @@ extern "C" int npCommerce2CreateVerifyDobReq(SceUInt32 ctxId, SceUInt32 *outReqI
 		return SHELL_NP_COMM2_ERR_NOT_INITIALIZED;
 	if (outReqId == NULL)
 		return SHELL_NP_COMM2_ERR_INVALID_ARG;
-	return createOpRequest(ctxId, SHELL_NP_COMM2_OP_VERIFY_DOB, outReqId);
+	return createVerifyDobRequest(ctxId, outReqId);
 }
 
 /* 0x812BD878 */
@@ -277,7 +285,7 @@ extern "C" int SceNpCommerce2_07C16199(SceUInt32 ctxId, SceUInt32 *outReqId)
 		return SHELL_NP_COMM2_ERR_NOT_INITIALIZED;
 	if (outReqId == NULL)
 		return SHELL_NP_COMM2_ERR_INVALID_ARG;
-	return createOpRequest(ctxId, SHELL_NP_COMM2_OP_GET_EPW, outReqId);
+	return createGetEpwRequest(ctxId, outReqId);
 }
 
 /* 0x812BD8E4 */
@@ -306,7 +314,7 @@ extern "C" int npCommerce2CreateSendEmailVerReq(SceUInt32 ctxId, SceUInt32 *outR
 		return SHELL_NP_COMM2_ERR_NOT_INITIALIZED;
 	if (outReqId == NULL)
 		return SHELL_NP_COMM2_ERR_INVALID_ARG;
-	return createOpRequest(ctxId, SHELL_NP_COMM2_OP_SEND_EMAIL_VER, outReqId);
+	return createSendEmailVerRequest(ctxId, outReqId);
 }
 
 /* 0x812BD960 */
@@ -326,7 +334,7 @@ extern "C" int npCommerce2CreateGuestSessionReq(SceUInt32 ctxId, SceUInt32 *outR
 		return SHELL_NP_COMM2_ERR_NOT_INITIALIZED;
 	if (outReqId == NULL)
 		return SHELL_NP_COMM2_ERR_INVALID_ARG;
-	return createOpRequest(ctxId, SHELL_NP_COMM2_OP_CR_GUEST_SESS, outReqId);
+	return createGuestSessionRequest(ctxId, outReqId);
 }
 
 /* 0x812BD9B8 */
@@ -627,9 +635,7 @@ static int getResponseInternal(SceUInt32 reqId, char *buf, SceSize bufLen, SceSi
 	return ret;
 }
 
-/* Shared helper for 0x812BE00A, 0x812BE1D6, 0x812BE362, 0x812BE51A, 0x812BE702,
- * 0x812BE8EC, 0x812BEAB4, 0x812BEC38, 0x812BEE1E */
-static int createOpRequest(SceUInt32 ctxId, SceUInt16 op, SceUInt32 *outReqId)
+static inline int createOpRequestInline(SceUInt32 ctxId, SceUInt16 op, SceUInt32 *outReqId)
 {
 	ShellNpCommerce2Context *ctx = NULL;
 	int ret = npComm2AcquireContext(&g_npComm2TableMutex, ctxId, &ctx, 1);
@@ -649,6 +655,60 @@ static int createOpRequest(SceUInt32 ctxId, SceUInt16 op, SceUInt32 *outReqId)
 	if (ctx != NULL)
 		npComm2ReleaseContext(&g_npComm2TableMutex, ctx);
 	return ret;
+}
+
+/* 0x812BE00A */
+static int createCreateSessionRequest(SceUInt32 ctxId, SceUInt32 *outReqId)
+{
+	return createOpRequestInline(ctxId, SHELL_NP_COMM2_OP_CR_SESS, outReqId);
+}
+
+/* 0x812BE1D6 */
+static int createDeleteSessionRequest(SceUInt32 ctxId, SceUInt32 *outReqId)
+{
+	return createOpRequestInline(ctxId, SHELL_NP_COMM2_OP_DEL_SESS, outReqId);
+}
+
+/* 0x812BE362 */
+static int createBindAccountRequest(SceUInt32 ctxId, SceUInt32 *outReqId)
+{
+	return createOpRequestInline(ctxId, SHELL_NP_COMM2_OP_BIND_ACCOUNT, outReqId);
+}
+
+/* 0x812BE51A */
+static int createStartRegRequest(SceUInt32 ctxId, SceUInt32 *outReqId)
+{
+	return createOpRequestInline(ctxId, SHELL_NP_COMM2_OP_START_REG, outReqId);
+}
+
+/* 0x812BE702 */
+static int createAuthenticateRequest(SceUInt32 ctxId, SceUInt32 *outReqId)
+{
+	return createOpRequestInline(ctxId, SHELL_NP_COMM2_OP_AUTHENTICATE, outReqId);
+}
+
+/* 0x812BE8EC */
+static int createVerifyDobRequest(SceUInt32 ctxId, SceUInt32 *outReqId)
+{
+	return createOpRequestInline(ctxId, SHELL_NP_COMM2_OP_VERIFY_DOB, outReqId);
+}
+
+/* 0x812BEAB4 */
+static int createGetEpwRequest(SceUInt32 ctxId, SceUInt32 *outReqId)
+{
+	return createOpRequestInline(ctxId, SHELL_NP_COMM2_OP_GET_EPW, outReqId);
+}
+
+/* 0x812BEC38 */
+static int createSendEmailVerRequest(SceUInt32 ctxId, SceUInt32 *outReqId)
+{
+	return createOpRequestInline(ctxId, SHELL_NP_COMM2_OP_SEND_EMAIL_VER, outReqId);
+}
+
+/* 0x812BEE1E */
+static int createGuestSessionRequest(SceUInt32 ctxId, SceUInt32 *outReqId)
+{
+	return createOpRequestInline(ctxId, SHELL_NP_COMM2_OP_CR_GUEST_SESS, outReqId);
 }
 
 static void refreshIdleConnection(ShellNpCommerce2Context *ctx)

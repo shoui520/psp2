@@ -1602,9 +1602,8 @@ public:
         return 1;
     }
 
-    /* 0x8120212E / 0x812021D8 / 0x81202280 */
-    uint32_t readEntryField(const Mp4TableBox *stsc, uint32_t entryIndex,
-                            uint32_t fieldOffset, uint32_t *outErr)
+    inline uint32_t readEntryField(const Mp4TableBox *stsc, uint32_t entryIndex,
+                                   uint32_t fieldOffset, uint32_t *outErr)
     {
         if (!stsc->isParsed()) {
             *outErr = MP4_ERR_NOT_READY;
@@ -1626,19 +1625,28 @@ public:
         return readBigEndian32(ptr);
     }
 
-    uint32_t getFirstChunk(const Mp4TableBox *stsc, uint32_t idx, uint32_t *err)
-    {
-        return readEntryField(stsc, idx, 0u, err);
-    }
-    uint32_t getSamplesPerChunk(const Mp4TableBox *stsc, uint32_t idx, uint32_t *err)
-    {
-        return readEntryField(stsc, idx, 4u, err);
-    }
-    uint32_t getSampleDescIndex(const Mp4TableBox *stsc, uint32_t idx, uint32_t *err)
-    {
-        return readEntryField(stsc, idx, 8u, err);
-    }
+    uint32_t getFirstChunk(const Mp4TableBox *stsc, uint32_t idx, uint32_t *err);
+    uint32_t getSamplesPerChunk(const Mp4TableBox *stsc, uint32_t idx, uint32_t *err);
+    uint32_t getSampleDescIndex(const Mp4TableBox *stsc, uint32_t idx, uint32_t *err);
 };
+
+/* 0x8120212E */
+uint32_t Mp4StscReader::getFirstChunk(const Mp4TableBox *stsc, uint32_t idx, uint32_t *err)
+{
+    return readEntryField(stsc, idx, 0u, err);
+}
+
+/* 0x812021D8 */
+uint32_t Mp4StscReader::getSamplesPerChunk(const Mp4TableBox *stsc, uint32_t idx, uint32_t *err)
+{
+    return readEntryField(stsc, idx, 4u, err);
+}
+
+/* 0x81202280 */
+uint32_t Mp4StscReader::getSampleDescIndex(const Mp4TableBox *stsc, uint32_t idx, uint32_t *err)
+{
+    return readEntryField(stsc, idx, 8u, err);
+}
 
 class Mp4StsdReader : public Mp4FullBoxReader {
 public:
@@ -1851,9 +1859,8 @@ public:
         return 1;
     }
 
-    /* 0x81202A12 / 0x81202AB8 */
-    uint32_t readEntryField(const Mp4TableBox *stts, uint32_t entryIndex,
-                            uint32_t fieldOffset, uint32_t *outErr)
+    inline uint32_t readEntryField(const Mp4TableBox *stts, uint32_t entryIndex,
+                                   uint32_t fieldOffset, uint32_t *outErr)
     {
         if (!stts->isParsed()) {
             *outErr = MP4_ERR_NOT_READY;
@@ -1875,15 +1882,21 @@ public:
         return readBigEndian32(ptr);
     }
 
-    uint32_t getSampleCount(const Mp4TableBox *stts, uint32_t idx, uint32_t *err)
-    {
-        return readEntryField(stts, idx, 0u, err);
-    }
-    uint32_t getSampleDelta(const Mp4TableBox *stts, uint32_t idx, uint32_t *err)
-    {
-        return readEntryField(stts, idx, 4u, err);
-    }
+    uint32_t getSampleCount(const Mp4TableBox *stts, uint32_t idx, uint32_t *err);
+    uint32_t getSampleDelta(const Mp4TableBox *stts, uint32_t idx, uint32_t *err);
 };
+
+/* 0x81202A12 */
+uint32_t Mp4SttsReader::getSampleCount(const Mp4TableBox *stts, uint32_t idx, uint32_t *err)
+{
+    return readEntryField(stts, idx, 0u, err);
+}
+
+/* 0x81202AB8 */
+uint32_t Mp4SttsReader::getSampleDelta(const Mp4TableBox *stts, uint32_t idx, uint32_t *err)
+{
+    return readEntryField(stts, idx, 4u, err);
+}
 
 /* ===== Mp4SampleTableNavigator (0x81201454 - 0x81201D33) ===== */
 

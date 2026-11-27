@@ -19,4 +19,7 @@ extern void *sce_paf_memcpy(void *dst, const void *src, SceSize len);
 #define __builtin_memcpy sce_paf_memcpy
 #define strncpy sceClibStrncpy
 
+/* Sony's user-mode SceShell build keeps fat_format.c's internal helpers out of line */
+#define inline
+
 #endif /* VSH_APP_SHELL_FAT_FORMAT_USER_COMPAT_H */

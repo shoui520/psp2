@@ -197,18 +197,7 @@ static bool isPromoterJobCanceled(void *jobPtr)
 
 class PromoterAddPathJob : public paf::job::JobItem {
 public:
-	PromoterAddPathJob(paf::Plugin *gamePlugin, const char *path, PromoterResultFn doneCb)
-		: paf::job::JobItem("ScePromoterUtilJob", NULL),
-		  m_gamePlugin(gamePlugin),
-		  m_path(NULL),
-		  m_doneCb(doneCb)
-	{
-		m_path = new char[kPromoterPathBufSize];
-		if (m_path != NULL) {
-			sce_paf_strncpy(m_path, path, kPromoterPathBufSize - 1);
-			m_path[kPromoterPathBufSize - 1] = '\0';
-		}
-	}
+	PromoterAddPathJob(paf::Plugin *gamePlugin, const char *path, PromoterResultFn doneCb);
 
 	virtual ~PromoterAddPathJob()
 	{
@@ -243,16 +232,7 @@ public:
 class PromoterAddPkgJob : public paf::job::JobItem {
 public:
 	PromoterAddPkgJob(paf::Plugin *gamePlugin, const PromoterPkgJobParam *pkgParam,
-			  PromoterResultFn doneCb)
-		: paf::job::JobItem("ScePromoterUtilJob", NULL),
-		  m_gamePlugin(gamePlugin),
-		  m_param(NULL),
-		  m_doneCb(doneCb)
-	{
-		m_param = new PromoterPkgJobParam;
-		if (m_param != NULL)
-			sce_paf_memcpy(m_param, pkgParam, sizeof(PromoterPkgJobParam));
-	}
+			  PromoterResultFn doneCb);
 
 	virtual ~PromoterAddPkgJob()
 	{
@@ -287,16 +267,7 @@ public:
 class PromoterImportJob : public paf::job::JobItem {
 public:
 	PromoterImportJob(paf::Plugin *gamePlugin, const PromoterImportJobParam *importParam,
-			  PromoterResultFn doneCb)
-		: paf::job::JobItem("ScePromoterUtilJob", NULL),
-		  m_gamePlugin(gamePlugin),
-		  m_param(NULL),
-		  m_doneCb(doneCb)
-	{
-		m_param = new PromoterImportJobParam;
-		if (m_param != NULL)
-			sce_paf_memcpy(m_param, importParam, sizeof(PromoterImportJobParam));
-	}
+			  PromoterResultFn doneCb);
 
 	virtual ~PromoterImportJob()
 	{
@@ -331,16 +302,7 @@ public:
 class PromoterAddRifJob : public paf::job::JobItem {
 public:
 	PromoterAddRifJob(paf::Plugin *gamePlugin, const PromoterRifJobParam *rifParam,
-			  PromoterResultFn doneCb)
-		: paf::job::JobItem("ScePromoterUtilJob", NULL),
-		  m_gamePlugin(gamePlugin),
-		  m_param(NULL),
-		  m_doneCb(doneCb)
-	{
-		m_param = new PromoterRifJobParam;
-		if (m_param != NULL)
-			sce_paf_memcpy(m_param, rifParam, sizeof(PromoterRifJobParam));
-	}
+			  PromoterResultFn doneCb);
 
 	virtual ~PromoterAddRifJob()
 	{
@@ -375,19 +337,7 @@ public:
 class PromoterDeletePkgJob : public paf::job::JobItem {
 public:
 	PromoterDeletePkgJob(paf::Plugin *gamePlugin, const char *titleId, SceUInt32 *attrOut,
-			     PromoterResultFn doneCb)
-		: paf::job::JobItem("ScePromoterUtilJob", NULL),
-		  m_gamePlugin(gamePlugin),
-		  m_titleId(NULL),
-		  m_attrOut(attrOut),
-		  m_doneCb(doneCb)
-	{
-		m_titleId = new char[kPromoterPathBufSize];
-		if (m_titleId != NULL) {
-			sce_paf_strncpy(m_titleId, titleId, kPromoterPathBufSize - 1);
-			m_titleId[kPromoterPathBufSize - 1] = '\0';
-		}
-	}
+			     PromoterResultFn doneCb);
 
 	virtual ~PromoterDeletePkgJob()
 	{
@@ -424,20 +374,7 @@ public:
 class PromoterSetFlagJob : public paf::job::JobItem {
 public:
 	PromoterSetFlagJob(paf::Plugin *gamePlugin, const char *titleId, int flagValue,
-			   SceUInt32 *attrOut, PromoterResultFn doneCb)
-		: paf::job::JobItem("ScePromoterUtilJob", NULL),
-		  m_gamePlugin(gamePlugin),
-		  m_titleId(NULL),
-		  m_flagValue(flagValue),
-		  m_attrOut(attrOut),
-		  m_doneCb(doneCb)
-	{
-		m_titleId = new char[kPromoterPathBufSize];
-		if (m_titleId != NULL) {
-			sce_paf_strncpy(m_titleId, titleId, kPromoterPathBufSize - 1);
-			m_titleId[kPromoterPathBufSize - 1] = '\0';
-		}
-	}
+			   SceUInt32 *attrOut, PromoterResultFn doneCb);
 
 	virtual ~PromoterSetFlagJob()
 	{
@@ -475,19 +412,7 @@ public:
 class PromoterGetSizeJob : public paf::job::JobItem {
 public:
 	PromoterGetSizeJob(paf::Plugin *gamePlugin, const char *titleId,
-			   PromoterSizeResultFn doneCb)
-		: paf::job::JobItem("ScePromoterUtilJob", NULL),
-		  m_gamePlugin(gamePlugin),
-		  m_titleId(NULL),
-		  m_sizeOut(0),
-		  m_doneCb(doneCb)
-	{
-		m_titleId = new char[kPromoterPathBufSize];
-		if (m_titleId != NULL) {
-			sce_paf_strncpy(m_titleId, titleId, kPromoterPathBufSize - 1);
-			m_titleId[kPromoterPathBufSize - 1] = '\0';
-		}
-	}
+			   PromoterSizeResultFn doneCb);
 
 	virtual ~PromoterGetSizeJob()
 	{
@@ -524,18 +449,7 @@ public:
 class PromoterUpdateUpgradableJob : public paf::job::JobItem {
 public:
 	PromoterUpdateUpgradableJob(paf::Plugin *gamePlugin, const char *titleId,
-				    PromoterResultFn doneCb)
-		: paf::job::JobItem("ScePromoterUtilJob", NULL),
-		  m_gamePlugin(gamePlugin),
-		  m_titleId(NULL),
-		  m_doneCb(doneCb)
-	{
-		m_titleId = new char[kPromoterPathBufSize];
-		if (m_titleId != NULL) {
-			sce_paf_strncpy(m_titleId, titleId, kPromoterPathBufSize - 1);
-			m_titleId[kPromoterPathBufSize - 1] = '\0';
-		}
-	}
+				    PromoterResultFn doneCb);
 
 	virtual ~PromoterUpdateUpgradableJob()
 	{
@@ -570,22 +484,7 @@ public:
 class PromoterAsyncStatusJob : public paf::job::JobItem {
 public:
 	PromoterAsyncStatusJob(IPMI::Session *session, int requestId, paf::Plugin *gamePlugin,
-			       const char *titleId, int queryOption, PromoterSizeResultFn doneCb)
-		: paf::job::JobItem("ScePromoterUtilJob", NULL),
-		  m_session(session),
-		  m_requestId(requestId),
-		  m_gamePlugin(gamePlugin),
-		  m_titleId(NULL),
-		  m_queryOption(queryOption),
-		  m_doneCb(doneCb),
-		  m_sizeOut(0)
-	{
-		m_titleId = new char[kPromoterPathBufSize];
-		if (m_titleId != NULL) {
-			sce_paf_strncpy(m_titleId, titleId, kPromoterPathBufSize - 1);
-			m_titleId[kPromoterPathBufSize - 1] = '\0';
-		}
-	}
+			       const char *titleId, int queryOption, PromoterSizeResultFn doneCb);
 
 	virtual ~PromoterAsyncStatusJob()
 	{
@@ -628,21 +527,7 @@ public:
 class PromoterAsyncNameJob : public paf::job::JobItem {
 public:
 	PromoterAsyncNameJob(IPMI::Session *session, int requestId, paf::Plugin *gamePlugin,
-			     const char *titleId, PromoterBufferResultFn doneCb)
-		: paf::job::JobItem("ScePromoterUtilJob", NULL),
-		  m_session(session),
-		  m_requestId(requestId),
-		  m_gamePlugin(gamePlugin),
-		  m_titleId(NULL),
-		  m_doneCb(doneCb)
-	{
-		sce_paf_memset(m_infoBuf, 0, sizeof(m_infoBuf));
-		m_titleId = new char[kPromoterPathBufSize];
-		if (m_titleId != NULL) {
-			sce_paf_strncpy(m_titleId, titleId, kPromoterPathBufSize - 1);
-			m_titleId[kPromoterPathBufSize - 1] = '\0';
-		}
-	}
+			     const char *titleId, PromoterBufferResultFn doneCb);
 
 	virtual ~PromoterAsyncNameJob()
 	{
@@ -681,17 +566,7 @@ public:
 class PromoterAsyncInfoJob : public paf::job::JobItem {
 public:
 	PromoterAsyncInfoJob(IPMI::Session *session, int requestId, paf::Plugin *gamePlugin,
-			     const char *titleId, int queryOption, PromoterBufferResultFn doneCb)
-		: paf::job::JobItem("ScePromoterUtilJob", NULL),
-		  m_session(session),
-		  m_requestId(requestId),
-		  m_gamePlugin(gamePlugin),
-		  m_titleId((titleId != NULL) ? titleId : ""),
-		  m_queryOption(queryOption),
-		  m_doneCb(doneCb)
-	{
-		sce_paf_memset(m_statusBuf, 0, sizeof(m_statusBuf));
-	}
+			     const char *titleId, int queryOption, PromoterBufferResultFn doneCb);
 
 	virtual ~PromoterAsyncInfoJob()
 	{
@@ -731,17 +606,7 @@ class PromoterAsyncProgressJob : public paf::job::JobItem {
 public:
 	PromoterAsyncProgressJob(IPMI::Session *session, int requestId, paf::Plugin *gamePlugin,
 				 const char *titleId, int queryOption,
-				 PromoterBufferResultFn doneCb)
-		: paf::job::JobItem("ScePromoterUtilJob", NULL),
-		  m_session(session),
-		  m_requestId(requestId),
-		  m_gamePlugin(gamePlugin),
-		  m_titleId((titleId != NULL) ? titleId : ""),
-		  m_queryOption(queryOption),
-		  m_doneCb(doneCb)
-	{
-		sce_paf_memset(m_statusBuf, 0, sizeof(m_statusBuf));
-	}
+				 PromoterBufferResultFn doneCb);
 
 	virtual ~PromoterAsyncProgressJob()
 	{
@@ -780,15 +645,7 @@ public:
 class PromoterRemoveSavedataJob : public paf::job::JobItem {
 public:
 	PromoterRemoveSavedataJob(paf::Plugin *gamePlugin, PromoterResultFn doneCb,
-				  const char *titleId, int removeScope, int removeFlags)
-		: paf::job::JobItem("ScePromoterUtilJob", NULL),
-		  m_gamePlugin(gamePlugin),
-		  m_doneCb(doneCb),
-		  m_titleId((titleId != NULL) ? titleId : ""),
-		  m_removeScope(removeScope),
-		  m_removeFlags(removeFlags)
-	{
-	}
+				  const char *titleId, int removeScope, int removeFlags);
 
 	virtual ~PromoterRemoveSavedataJob()
 	{
@@ -824,6 +681,199 @@ public:
 	int m_removeScope;
 	int m_removeFlags;
 };
+
+/* Out-of-line job constructors matching Sony's emission at 0x812435F8..0x81244200 */
+
+PromoterAddPathJob::PromoterAddPathJob(paf::Plugin *gamePlugin, const char *path,
+				       PromoterResultFn doneCb)
+	: paf::job::JobItem("ScePromoterUtilJob", NULL),
+	  m_gamePlugin(gamePlugin),
+	  m_path(NULL),
+	  m_doneCb(doneCb)
+{
+	m_path = new char[kPromoterPathBufSize];
+	if (m_path != NULL) {
+		sce_paf_strncpy(m_path, path, kPromoterPathBufSize - 1);
+		m_path[kPromoterPathBufSize - 1] = '\0';
+	}
+}
+
+PromoterAddPkgJob::PromoterAddPkgJob(paf::Plugin *gamePlugin,
+				     const PromoterPkgJobParam *pkgParam,
+				     PromoterResultFn doneCb)
+	: paf::job::JobItem("ScePromoterUtilJob", NULL),
+	  m_gamePlugin(gamePlugin),
+	  m_param(NULL),
+	  m_doneCb(doneCb)
+{
+	m_param = new PromoterPkgJobParam;
+	if (m_param != NULL)
+		sce_paf_memcpy(m_param, pkgParam, sizeof(PromoterPkgJobParam));
+}
+
+PromoterImportJob::PromoterImportJob(paf::Plugin *gamePlugin,
+				     const PromoterImportJobParam *importParam,
+				     PromoterResultFn doneCb)
+	: paf::job::JobItem("ScePromoterUtilJob", NULL),
+	  m_gamePlugin(gamePlugin),
+	  m_param(NULL),
+	  m_doneCb(doneCb)
+{
+	m_param = new PromoterImportJobParam;
+	if (m_param != NULL)
+		sce_paf_memcpy(m_param, importParam, sizeof(PromoterImportJobParam));
+}
+
+PromoterAddRifJob::PromoterAddRifJob(paf::Plugin *gamePlugin,
+				     const PromoterRifJobParam *rifParam,
+				     PromoterResultFn doneCb)
+	: paf::job::JobItem("ScePromoterUtilJob", NULL),
+	  m_gamePlugin(gamePlugin),
+	  m_param(NULL),
+	  m_doneCb(doneCb)
+{
+	m_param = new PromoterRifJobParam;
+	if (m_param != NULL)
+		sce_paf_memcpy(m_param, rifParam, sizeof(PromoterRifJobParam));
+}
+
+PromoterDeletePkgJob::PromoterDeletePkgJob(paf::Plugin *gamePlugin, const char *titleId,
+					   SceUInt32 *attrOut, PromoterResultFn doneCb)
+	: paf::job::JobItem("ScePromoterUtilJob", NULL),
+	  m_gamePlugin(gamePlugin),
+	  m_titleId(NULL),
+	  m_attrOut(attrOut),
+	  m_doneCb(doneCb)
+{
+	m_titleId = new char[kPromoterPathBufSize];
+	if (m_titleId != NULL) {
+		sce_paf_strncpy(m_titleId, titleId, kPromoterPathBufSize - 1);
+		m_titleId[kPromoterPathBufSize - 1] = '\0';
+	}
+}
+
+PromoterSetFlagJob::PromoterSetFlagJob(paf::Plugin *gamePlugin, const char *titleId, int flagValue,
+				       SceUInt32 *attrOut, PromoterResultFn doneCb)
+	: paf::job::JobItem("ScePromoterUtilJob", NULL),
+	  m_gamePlugin(gamePlugin),
+	  m_titleId(NULL),
+	  m_flagValue(flagValue),
+	  m_attrOut(attrOut),
+	  m_doneCb(doneCb)
+{
+	m_titleId = new char[kPromoterPathBufSize];
+	if (m_titleId != NULL) {
+		sce_paf_strncpy(m_titleId, titleId, kPromoterPathBufSize - 1);
+		m_titleId[kPromoterPathBufSize - 1] = '\0';
+	}
+}
+
+PromoterGetSizeJob::PromoterGetSizeJob(paf::Plugin *gamePlugin, const char *titleId,
+				       PromoterSizeResultFn doneCb)
+	: paf::job::JobItem("ScePromoterUtilJob", NULL),
+	  m_gamePlugin(gamePlugin),
+	  m_titleId(NULL),
+	  m_sizeOut(0),
+	  m_doneCb(doneCb)
+{
+	m_titleId = new char[kPromoterPathBufSize];
+	if (m_titleId != NULL) {
+		sce_paf_strncpy(m_titleId, titleId, kPromoterPathBufSize - 1);
+		m_titleId[kPromoterPathBufSize - 1] = '\0';
+	}
+}
+
+PromoterUpdateUpgradableJob::PromoterUpdateUpgradableJob(paf::Plugin *gamePlugin,
+							 const char *titleId,
+							 PromoterResultFn doneCb)
+	: paf::job::JobItem("ScePromoterUtilJob", NULL),
+	  m_gamePlugin(gamePlugin),
+	  m_titleId(NULL),
+	  m_doneCb(doneCb)
+{
+	m_titleId = new char[kPromoterPathBufSize];
+	if (m_titleId != NULL) {
+		sce_paf_strncpy(m_titleId, titleId, kPromoterPathBufSize - 1);
+		m_titleId[kPromoterPathBufSize - 1] = '\0';
+	}
+}
+
+PromoterAsyncStatusJob::PromoterAsyncStatusJob(IPMI::Session *session, int requestId,
+					       paf::Plugin *gamePlugin, const char *titleId,
+					       int queryOption, PromoterSizeResultFn doneCb)
+	: paf::job::JobItem("ScePromoterUtilJob", NULL),
+	  m_session(session),
+	  m_requestId(requestId),
+	  m_gamePlugin(gamePlugin),
+	  m_titleId(NULL),
+	  m_queryOption(queryOption),
+	  m_doneCb(doneCb),
+	  m_sizeOut(0)
+{
+	m_titleId = new char[kPromoterPathBufSize];
+	if (m_titleId != NULL) {
+		sce_paf_strncpy(m_titleId, titleId, kPromoterPathBufSize - 1);
+		m_titleId[kPromoterPathBufSize - 1] = '\0';
+	}
+}
+
+PromoterAsyncNameJob::PromoterAsyncNameJob(IPMI::Session *session, int requestId,
+					   paf::Plugin *gamePlugin, const char *titleId,
+					   PromoterBufferResultFn doneCb)
+	: paf::job::JobItem("ScePromoterUtilJob", NULL),
+	  m_session(session),
+	  m_requestId(requestId),
+	  m_gamePlugin(gamePlugin),
+	  m_titleId(NULL),
+	  m_doneCb(doneCb)
+{
+	sce_paf_memset(m_infoBuf, 0, sizeof(m_infoBuf));
+	m_titleId = new char[kPromoterPathBufSize];
+	if (m_titleId != NULL) {
+		sce_paf_strncpy(m_titleId, titleId, kPromoterPathBufSize - 1);
+		m_titleId[kPromoterPathBufSize - 1] = '\0';
+	}
+}
+
+PromoterAsyncInfoJob::PromoterAsyncInfoJob(IPMI::Session *session, int requestId,
+					   paf::Plugin *gamePlugin, const char *titleId,
+					   int queryOption, PromoterBufferResultFn doneCb)
+	: paf::job::JobItem("ScePromoterUtilJob", NULL),
+	  m_session(session),
+	  m_requestId(requestId),
+	  m_gamePlugin(gamePlugin),
+	  m_titleId((titleId != NULL) ? titleId : ""),
+	  m_queryOption(queryOption),
+	  m_doneCb(doneCb)
+{
+	sce_paf_memset(m_statusBuf, 0, sizeof(m_statusBuf));
+}
+
+PromoterAsyncProgressJob::PromoterAsyncProgressJob(IPMI::Session *session, int requestId,
+						   paf::Plugin *gamePlugin, const char *titleId,
+						   int queryOption, PromoterBufferResultFn doneCb)
+	: paf::job::JobItem("ScePromoterUtilJob", NULL),
+	  m_session(session),
+	  m_requestId(requestId),
+	  m_gamePlugin(gamePlugin),
+	  m_titleId((titleId != NULL) ? titleId : ""),
+	  m_queryOption(queryOption),
+	  m_doneCb(doneCb)
+{
+	sce_paf_memset(m_statusBuf, 0, sizeof(m_statusBuf));
+}
+
+PromoterRemoveSavedataJob::PromoterRemoveSavedataJob(paf::Plugin *gamePlugin,
+						     PromoterResultFn doneCb, const char *titleId,
+						     int removeScope, int removeFlags)
+	: paf::job::JobItem("ScePromoterUtilJob", NULL),
+	  m_gamePlugin(gamePlugin),
+	  m_doneCb(doneCb),
+	  m_titleId((titleId != NULL) ? titleId : ""),
+	  m_removeScope(removeScope),
+	  m_removeFlags(removeFlags)
+{
+}
 
 /* --- Method handlers --- */
 

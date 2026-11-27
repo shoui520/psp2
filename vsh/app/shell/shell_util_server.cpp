@@ -196,23 +196,38 @@ public:
 	int m_requestId;
 };
 
-/* Requests carrying a single integer value */
+/* Base request carrying a single integer payload (16 bytes, matching Sony's subclasses) */
 class ShellUtilIntRequest : public ShellUtilRequest {
 public:
-	ShellUtilIntRequest(int kind) : m_kind(kind), m_value(0) {}
-	virtual int GetType() const { return m_kind; }
-
-	int m_kind;
+	ShellUtilIntRequest() : m_value(0) {}
 	int m_value;
 };
 
-/* Requests carrying no payload */
-class ShellUtilVoidRequest : public ShellUtilRequest {
+/* Base request carrying a single string payload (24 bytes, matching Sony's subclasses) */
+class ShellUtilStringRequest : public ShellUtilRequest {
 public:
-	ShellUtilVoidRequest(int kind) : m_kind(kind) {}
-	virtual int GetType() const { return m_kind; }
+	ShellUtilStringRequest() : m_text("") {}
+	string m_text;
+};
 
-	int m_kind;
+class ShellUtilLockRequest : public ShellUtilIntRequest {
+public:
+	virtual int GetType() const { return SHELL_UTIL_REQ_LOCK; }
+};
+
+class ShellUtilUnlockRequest : public ShellUtilIntRequest {
+public:
+	virtual int GetType() const { return SHELL_UTIL_REQ_UNLOCK; }
+};
+
+class ShellUtilUnlockAllRequest : public ShellUtilIntRequest {
+public:
+	virtual int GetType() const { return SHELL_UTIL_REQ_UNLOCK_ALL; }
+};
+
+class ShellUtilSetLocaleRequest : public ShellUtilIntRequest {
+public:
+	virtual int GetType() const { return SHELL_UTIL_REQ_SET_LOCALE; }
 };
 
 /* Type 5: SetDateTimeFormat */
@@ -225,14 +240,44 @@ public:
 	wstring m_timeFormat;
 };
 
-/* Type 6 / 19: single string payload */
-class ShellUtilStringRequest : public ShellUtilRequest {
+class ShellUtilLaunchAppByNameRequest : public ShellUtilStringRequest {
 public:
-	ShellUtilStringRequest(int kind) : m_kind(kind), m_text("") {}
-	virtual int GetType() const { return m_kind; }
+	virtual int GetType() const { return SHELL_UTIL_REQ_LAUNCH_APP_BY_NAME; }
+};
 
-	int m_kind;
-	string m_text;
+class ShellUtilSetClockVisibleRequest : public ShellUtilIntRequest {
+public:
+	virtual int GetType() const { return SHELL_UTIL_REQ_SET_CLOCK_VISIBLE; }
+};
+
+class ShellUtilSetStatusbarVisibleRequest : public ShellUtilIntRequest {
+public:
+	virtual int GetType() const { return SHELL_UTIL_REQ_SET_STATUSBAR_VISIBLE; }
+};
+
+class ShellUtilSetMusicPauseRequest : public ShellUtilIntRequest {
+public:
+	virtual int GetType() const { return SHELL_UTIL_REQ_SET_MUSIC_PAUSE; }
+};
+
+class ShellUtilRefreshLsdbRequest : public ShellUtilIntRequest {
+public:
+	virtual int GetType() const { return SHELL_UTIL_REQ_REFRESH_LSDB; }
+};
+
+class ShellUtilReloadAccessibilityRequest : public ShellUtilRequest {
+public:
+	virtual int GetType() const { return SHELL_UTIL_REQ_RELOAD_ACCESSIBILITY; }
+};
+
+class ShellUtilRequestStandbyRequest : public ShellUtilIntRequest {
+public:
+	virtual int GetType() const { return SHELL_UTIL_REQ_REQUEST_STANDBY; }
+};
+
+class ShellUtilRequestColdResetRequest : public ShellUtilIntRequest {
+public:
+	virtual int GetType() const { return SHELL_UTIL_REQ_REQUEST_COLD_RESET; }
 };
 
 /* Type 14: ShowErrorDialog */
@@ -246,6 +291,46 @@ public:
 	int m_flags;
 };
 
+class ShellUtilNotifyTopmenuUpdateRequest : public ShellUtilRequest {
+public:
+	virtual int GetType() const { return SHELL_UTIL_REQ_NOTIFY_TOPMENU_UPDATE; }
+};
+
+class ShellUtilReloadWallpaperRequest : public ShellUtilIntRequest {
+public:
+	virtual int GetType() const { return SHELL_UTIL_REQ_RELOAD_WALLPAPER; }
+};
+
+class ShellUtilReloadKeylockWallpaperRequest : public ShellUtilRequest {
+public:
+	virtual int GetType() const { return SHELL_UTIL_REQ_RELOAD_KEYLOCK_WALLPAPER; }
+};
+
+class ShellUtilSetBatteryPercentRequest : public ShellUtilIntRequest {
+public:
+	virtual int GetType() const { return SHELL_UTIL_REQ_SET_BATTERY_PERCENT; }
+};
+
+class ShellUtilActivateTitleRequest : public ShellUtilStringRequest {
+public:
+	virtual int GetType() const { return SHELL_UTIL_REQ_ACTIVATE_TITLE; }
+};
+
+class ShellUtilSetNotificationEnabledRequest : public ShellUtilIntRequest {
+public:
+	virtual int GetType() const { return SHELL_UTIL_REQ_SET_NOTIFICATION_ENABLED; }
+};
+
+class ShellUtilSetKeyNavigationRequest : public ShellUtilIntRequest {
+public:
+	virtual int GetType() const { return SHELL_UTIL_REQ_SET_KEY_NAVIGATION; }
+};
+
+class ShellUtilReloadLiveareaRequest : public ShellUtilRequest {
+public:
+	virtual int GetType() const { return SHELL_UTIL_REQ_RELOAD_LIVEAREA; }
+};
+
 /* Type 23: LaunchAppByUri */
 class ShellUtilLaunchUriRequest : public ShellUtilRequest {
 public:
@@ -257,16 +342,39 @@ public:
 	int m_result;
 };
 
+class ShellUtilRefreshCallerAppRequest : public ShellUtilRequest {
+public:
+	virtual int GetType() const { return SHELL_UTIL_REQ_REFRESH_CALLER_APP; }
+};
+
 /* Type 25 / 26: ThemeChange / ThemeDelete */
 class ShellUtilThemeRequest : public ShellUtilRequest {
 public:
-	ShellUtilThemeRequest(int kind)
-		: m_kind(kind), m_themePath(""), m_result(SHELL_UTIL_ERR_INVALID_PARAM) {}
-	virtual int GetType() const { return m_kind; }
+	ShellUtilThemeRequest()
+		: m_themePath(""), m_result(SHELL_UTIL_ERR_INVALID_PARAM) {}
 
-	int m_kind;
 	string m_themePath;
 	int m_result;
+};
+
+class ShellUtilChangeThemeRequest : public ShellUtilThemeRequest {
+public:
+	virtual int GetType() const { return SHELL_UTIL_REQ_CHANGE_THEME; }
+};
+
+class ShellUtilDeleteThemeRequest : public ShellUtilThemeRequest {
+public:
+	virtual int GetType() const { return SHELL_UTIL_REQ_DELETE_THEME; }
+};
+
+class ShellUtilCancelTopmenuGuideRequest : public ShellUtilRequest {
+public:
+	virtual int GetType() const { return SHELL_UTIL_REQ_CANCEL_TOPMENU_GUIDE; }
+};
+
+class ShellUtilResetImposeStatusRequest : public ShellUtilRequest {
+public:
+	virtual int GetType() const { return SHELL_UTIL_REQ_RESET_IMPOSE_STATUS; }
 };
 
 /* Type 29: AddUsageCounter */
@@ -519,7 +627,7 @@ int ShellUtilServerMgr::EnqueueRequest(const common::SharedPtr<ShellUtilRequest>
 /* 0x8124BDDE */
 int ShellUtilServerMgr::OnSessionDisconnected(IPMI::Session *session)
 {
-	ShellUtilIntRequest *unlockReq = new ShellUtilIntRequest(SHELL_UTIL_REQ_UNLOCK_ALL);
+	ShellUtilUnlockAllRequest *unlockReq = new ShellUtilUnlockAllRequest();
 	if (unlockReq == NULL)
 		return SHELL_UTIL_ERR_NO_MEMORY;
 
@@ -1218,16 +1326,10 @@ int ShellUtilServerMgr::ExecuteMainThreadWork(ShellUtilRequest *request)
 	return 0;
 }
 
-/* Helper to submit an async request and respond immediately on enqueue failure */
-static int submitAsyncRequest(IPMI::Session *session, int requestId, ShellUtilRequest *rawReq)
+/* Inline enqueue body shared by Sony's per-method async submission functions (0x81249A68..0x8124B9A8) */
+static inline int enqueueAsyncRequestInline(IPMI::Session *session, int requestId,
+					    ShellUtilRequest *rawReq)
 {
-	if (s_utilServerMgr == NULL) {
-		delete rawReq;
-		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NOT_READY);
-	}
-	if (rawReq == NULL)
-		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NO_MEMORY);
-
 	rawReq->m_session = session;
 	rawReq->m_requestId = requestId;
 	common::SharedPtr<ShellUtilRequest> reqPtr(rawReq);
@@ -1237,103 +1339,307 @@ static int submitAsyncRequest(IPMI::Session *session, int requestId, ShellUtilRe
 	return ret;
 }
 
-static int submitAsyncIntRequest(IPMI::Session *session, int requestId, int kind, int value)
+/* 0x81249A68 */
+static int submitLockRequest(IPMI::Session *session, int requestId, int lockMask)
 {
 	if (s_utilServerMgr == NULL)
 		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NOT_READY);
-
-	ShellUtilIntRequest *req = new ShellUtilIntRequest(kind);
+	ShellUtilLockRequest *req = new ShellUtilLockRequest();
 	if (req == NULL)
 		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NO_MEMORY);
-
-	req->m_value = value;
-	return submitAsyncRequest(session, requestId, req);
+	req->m_value = lockMask;
+	return enqueueAsyncRequestInline(session, requestId, req);
 }
 
-static int submitAsyncVoidRequest(IPMI::Session *session, int requestId, int kind)
+/* 0x81249B76 */
+static int submitUnlockRequest(IPMI::Session *session, int requestId, int lockMask)
 {
 	if (s_utilServerMgr == NULL)
 		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NOT_READY);
-
-	ShellUtilVoidRequest *req = new ShellUtilVoidRequest(kind);
+	ShellUtilUnlockRequest *req = new ShellUtilUnlockRequest();
 	if (req == NULL)
 		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NO_MEMORY);
-
-	return submitAsyncRequest(session, requestId, req);
+	req->m_value = lockMask;
+	return enqueueAsyncRequestInline(session, requestId, req);
 }
 
-static int submitAsyncStringRequest(IPMI::Session *session, int requestId, int kind, const char *text)
+/* 0x81249C84 */
+static int submitUnlockAllRequest(IPMI::Session *session, int requestId, int lockMask)
 {
 	if (s_utilServerMgr == NULL)
 		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NOT_READY);
-
-	ShellUtilStringRequest *req = new ShellUtilStringRequest(kind);
+	ShellUtilUnlockAllRequest *req = new ShellUtilUnlockAllRequest();
 	if (req == NULL)
 		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NO_MEMORY);
-
-	if (text != NULL)
-		req->m_text = text;
-	return submitAsyncRequest(session, requestId, req);
+	req->m_value = lockMask;
+	return enqueueAsyncRequestInline(session, requestId, req);
 }
 
+/* 0x81249D92 */
+static int submitSetLocaleRequest(IPMI::Session *session, int requestId, int locale)
+{
+	if (s_utilServerMgr == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NOT_READY);
+	ShellUtilSetLocaleRequest *req = new ShellUtilSetLocaleRequest();
+	if (req == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NO_MEMORY);
+	req->m_value = locale;
+	return enqueueAsyncRequestInline(session, requestId, req);
+}
+
+/* 0x81249EA0 */
 static int submitDateTimeFormatRequest(IPMI::Session *session, int requestId,
 	const wchar_t *dateFormat, const wchar_t *timeFormat)
 {
 	if (s_utilServerMgr == NULL)
 		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NOT_READY);
-
 	ShellUtilDateTimeFormatRequest *req = new ShellUtilDateTimeFormatRequest();
 	if (req == NULL)
 		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NO_MEMORY);
-
 	if (dateFormat != NULL)
 		req->m_dateFormat = dateFormat;
 	if (timeFormat != NULL)
 		req->m_timeFormat = timeFormat;
-	return submitAsyncRequest(session, requestId, req);
+	return enqueueAsyncRequestInline(session, requestId, req);
 }
 
+/* 0x8124A052 */
+static int submitLaunchAppByNameRequest(IPMI::Session *session, int requestId, const char *appName)
+{
+	if (s_utilServerMgr == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NOT_READY);
+	ShellUtilLaunchAppByNameRequest *req = new ShellUtilLaunchAppByNameRequest();
+	if (req == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NO_MEMORY);
+	if (appName != NULL)
+		req->m_text = appName;
+	return enqueueAsyncRequestInline(session, requestId, req);
+}
+
+/* 0x8124A1A8 */
+static int submitSetClockVisibleRequest(IPMI::Session *session, int requestId, int visible)
+{
+	if (s_utilServerMgr == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NOT_READY);
+	ShellUtilSetClockVisibleRequest *req = new ShellUtilSetClockVisibleRequest();
+	if (req == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NO_MEMORY);
+	req->m_value = visible;
+	return enqueueAsyncRequestInline(session, requestId, req);
+}
+
+/* 0x8124A2B6 */
+static int submitSetStatusbarVisibleRequest(IPMI::Session *session, int requestId, int visible)
+{
+	if (s_utilServerMgr == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NOT_READY);
+	ShellUtilSetStatusbarVisibleRequest *req = new ShellUtilSetStatusbarVisibleRequest();
+	if (req == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NO_MEMORY);
+	req->m_value = visible;
+	return enqueueAsyncRequestInline(session, requestId, req);
+}
+
+/* 0x8124A3C4 */
+static int submitSetMusicPauseRequest(IPMI::Session *session, int requestId, int pauseState)
+{
+	if (s_utilServerMgr == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NOT_READY);
+	ShellUtilSetMusicPauseRequest *req = new ShellUtilSetMusicPauseRequest();
+	if (req == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NO_MEMORY);
+	req->m_value = pauseState;
+	return enqueueAsyncRequestInline(session, requestId, req);
+}
+
+/* 0x8124A4D2 */
+static int submitRefreshLsdbRequest(IPMI::Session *session, int requestId, int refreshFlags)
+{
+	if (s_utilServerMgr == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NOT_READY);
+	ShellUtilRefreshLsdbRequest *req = new ShellUtilRefreshLsdbRequest();
+	if (req == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NO_MEMORY);
+	req->m_value = refreshFlags;
+	return enqueueAsyncRequestInline(session, requestId, req);
+}
+
+/* 0x8124A5E0 */
+static int submitReloadAccessibilityRequest(IPMI::Session *session, int requestId)
+{
+	if (s_utilServerMgr == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NOT_READY);
+	ShellUtilReloadAccessibilityRequest *req = new ShellUtilReloadAccessibilityRequest();
+	if (req == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NO_MEMORY);
+	return enqueueAsyncRequestInline(session, requestId, req);
+}
+
+/* 0x8124A9D4 */
+static int submitNotifyTopmenuUpdateRequest(IPMI::Session *session, int requestId)
+{
+	if (s_utilServerMgr == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NOT_READY);
+	ShellUtilNotifyTopmenuUpdateRequest *req = new ShellUtilNotifyTopmenuUpdateRequest();
+	if (req == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NO_MEMORY);
+	return enqueueAsyncRequestInline(session, requestId, req);
+}
+
+/* 0x8124AAD6 */
+static int submitReloadWallpaperRequest(IPMI::Session *session, int requestId, int wallpaperKind)
+{
+	if (s_utilServerMgr == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NOT_READY);
+	ShellUtilReloadWallpaperRequest *req = new ShellUtilReloadWallpaperRequest();
+	if (req == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NO_MEMORY);
+	req->m_value = wallpaperKind;
+	return enqueueAsyncRequestInline(session, requestId, req);
+}
+
+/* 0x8124ABE4 */
+static int submitReloadKeylockWallpaperRequest(IPMI::Session *session, int requestId)
+{
+	if (s_utilServerMgr == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NOT_READY);
+	ShellUtilReloadKeylockWallpaperRequest *req = new ShellUtilReloadKeylockWallpaperRequest();
+	if (req == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NO_MEMORY);
+	return enqueueAsyncRequestInline(session, requestId, req);
+}
+
+/* 0x8124ACE6 */
+static int submitSetBatteryPercentRequest(IPMI::Session *session, int requestId, int showPercent)
+{
+	if (s_utilServerMgr == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NOT_READY);
+	ShellUtilSetBatteryPercentRequest *req = new ShellUtilSetBatteryPercentRequest();
+	if (req == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NO_MEMORY);
+	req->m_value = showPercent;
+	return enqueueAsyncRequestInline(session, requestId, req);
+}
+
+/* 0x8124ADF4 */
+static int submitActivateTitleRequest(IPMI::Session *session, int requestId, const char *titleId)
+{
+	if (s_utilServerMgr == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NOT_READY);
+	ShellUtilActivateTitleRequest *req = new ShellUtilActivateTitleRequest();
+	if (req == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NO_MEMORY);
+	if (titleId != NULL)
+		req->m_text = titleId;
+	return enqueueAsyncRequestInline(session, requestId, req);
+}
+
+/* 0x8124AF4A */
+static int submitSetNotificationEnabledRequest(IPMI::Session *session, int requestId, int enabled)
+{
+	if (s_utilServerMgr == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NOT_READY);
+	ShellUtilSetNotificationEnabledRequest *req = new ShellUtilSetNotificationEnabledRequest();
+	if (req == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NO_MEMORY);
+	req->m_value = enabled;
+	return enqueueAsyncRequestInline(session, requestId, req);
+}
+
+/* 0x8124B058 */
+static int submitSetKeyNavigationRequest(IPMI::Session *session, int requestId, int enabled)
+{
+	if (s_utilServerMgr == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NOT_READY);
+	ShellUtilSetKeyNavigationRequest *req = new ShellUtilSetKeyNavigationRequest();
+	if (req == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NO_MEMORY);
+	req->m_value = enabled;
+	return enqueueAsyncRequestInline(session, requestId, req);
+}
+
+/* 0x8124B166 */
+static int submitReloadLiveareaRequest(IPMI::Session *session, int requestId)
+{
+	if (s_utilServerMgr == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NOT_READY);
+	ShellUtilReloadLiveareaRequest *req = new ShellUtilReloadLiveareaRequest();
+	if (req == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NO_MEMORY);
+	return enqueueAsyncRequestInline(session, requestId, req);
+}
+
+/* 0x8124B268 */
 static int submitLaunchUriRequest(IPMI::Session *session, int requestId, const char *uri)
 {
 	if (s_utilServerMgr == NULL)
 		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NOT_READY);
-
 	ShellUtilLaunchUriRequest *req = new ShellUtilLaunchUriRequest();
 	if (req == NULL)
 		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NO_MEMORY);
-
 	if (uri != NULL)
 		req->m_uri = uri;
-	return submitAsyncRequest(session, requestId, req);
+	return enqueueAsyncRequestInline(session, requestId, req);
 }
 
-static int submitThemeRequest(IPMI::Session *session, int requestId, int kind, const char *themePath)
+/* 0x8124B3D8 */
+static int submitRefreshCallerAppRequest(IPMI::Session *session, int requestId)
 {
 	if (s_utilServerMgr == NULL)
 		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NOT_READY);
-
-	ShellUtilThemeRequest *req = new ShellUtilThemeRequest(kind);
+	ShellUtilRefreshCallerAppRequest *req = new ShellUtilRefreshCallerAppRequest();
 	if (req == NULL)
 		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NO_MEMORY);
-
-	if (themePath != NULL)
-		req->m_themePath = themePath;
-	return submitAsyncRequest(session, requestId, req);
+	return enqueueAsyncRequestInline(session, requestId, req);
 }
 
+/* 0x8124B63A */
+static int submitDeleteThemeRequest(IPMI::Session *session, int requestId, const char *themePath)
+{
+	if (s_utilServerMgr == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NOT_READY);
+	ShellUtilDeleteThemeRequest *req = new ShellUtilDeleteThemeRequest();
+	if (req == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NO_MEMORY);
+	if (themePath != NULL)
+		req->m_themePath = themePath;
+	return enqueueAsyncRequestInline(session, requestId, req);
+}
+
+/* 0x8124B79A */
+static int submitCancelTopmenuGuideRequest(IPMI::Session *session, int requestId)
+{
+	if (s_utilServerMgr == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NOT_READY);
+	ShellUtilCancelTopmenuGuideRequest *req = new ShellUtilCancelTopmenuGuideRequest();
+	if (req == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NO_MEMORY);
+	return enqueueAsyncRequestInline(session, requestId, req);
+}
+
+/* 0x8124B8A6 */
+static int submitResetImposeStatusRequest(IPMI::Session *session, int requestId)
+{
+	if (s_utilServerMgr == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NOT_READY);
+	ShellUtilResetImposeStatusRequest *req = new ShellUtilResetImposeStatusRequest();
+	if (req == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NO_MEMORY);
+	return enqueueAsyncRequestInline(session, requestId, req);
+}
+
+/* 0x8124B9A8 */
 static int submitUsageCounterRequest(IPMI::Session *session, int requestId,
 	int counterKind, unsigned int increment)
 {
 	if (s_utilServerMgr == NULL)
 		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NOT_READY);
-
 	ShellUtilUsageCounterRequest *req = new ShellUtilUsageCounterRequest();
 	if (req == NULL)
 		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NO_MEMORY);
-
 	req->m_counterKind = counterKind;
 	req->m_increment = increment;
-	return submitAsyncRequest(session, requestId, req);
+	return enqueueAsyncRequestInline(session, requestId, req);
 }
 
 /* 0x8124D440 */
@@ -1377,71 +1683,57 @@ static int dispatchAsyncMethod(IPMI::Session *session, SceUInt32 requestId, SceU
 
 	switch (methodId) {
 	case SHELL_UTIL_METHOD_LOCK:
-		return submitAsyncIntRequest(session, reqId, SHELL_UTIL_REQ_LOCK,
-			*(const int *)inList[0].pData);
+		return submitLockRequest(session, reqId, *(const int *)inList[0].pData);
 	case SHELL_UTIL_METHOD_UNLOCK:
-		return submitAsyncIntRequest(session, reqId, SHELL_UTIL_REQ_UNLOCK,
-			*(const int *)inList[0].pData);
+		return submitUnlockRequest(session, reqId, *(const int *)inList[0].pData);
 	case SHELL_UTIL_METHOD_UNLOCK_ALL:
-		return submitAsyncIntRequest(session, reqId, SHELL_UTIL_REQ_UNLOCK_ALL,
-			*(const int *)inList[0].pData);
+		return submitUnlockAllRequest(session, reqId, *(const int *)inList[0].pData);
 	case SHELL_UTIL_METHOD_SET_LOCALE:
-		return submitAsyncIntRequest(session, reqId, SHELL_UTIL_REQ_SET_LOCALE,
-			*(const int *)inList[0].pData);
+		return submitSetLocaleRequest(session, reqId, *(const int *)inList[0].pData);
 	case SHELL_UTIL_METHOD_SET_DATETIME_FORMAT:
 		return submitDateTimeFormatRequest(session, reqId,
 			(const wchar_t *)inList[0].pData, (const wchar_t *)inList[1].pData);
 	case SHELL_UTIL_METHOD_LAUNCH_APP_BY_NAME:
-		return submitAsyncStringRequest(session, reqId, SHELL_UTIL_REQ_LAUNCH_APP_BY_NAME,
-			(const char *)inList[0].pData);
+		return submitLaunchAppByNameRequest(session, reqId, (const char *)inList[0].pData);
 	case SHELL_UTIL_METHOD_SET_CLOCK_VISIBLE:
-		return submitAsyncIntRequest(session, reqId, SHELL_UTIL_REQ_SET_CLOCK_VISIBLE,
-			*(const int *)inList[0].pData);
+		return submitSetClockVisibleRequest(session, reqId, *(const int *)inList[0].pData);
 	case SHELL_UTIL_METHOD_SET_STATUSBAR_VISIBLE:
-		return submitAsyncIntRequest(session, reqId, SHELL_UTIL_REQ_SET_STATUSBAR_VISIBLE,
-			*(const int *)inList[0].pData);
+		return submitSetStatusbarVisibleRequest(session, reqId, *(const int *)inList[0].pData);
 	case SHELL_UTIL_METHOD_SET_MUSIC_PAUSE:
-		return submitAsyncIntRequest(session, reqId, SHELL_UTIL_REQ_SET_MUSIC_PAUSE,
-			*(const int *)inList[0].pData);
+		return submitSetMusicPauseRequest(session, reqId, *(const int *)inList[0].pData);
 	case SHELL_UTIL_METHOD_REFRESH_LSDB:
-		return submitAsyncIntRequest(session, reqId, SHELL_UTIL_REQ_REFRESH_LSDB,
-			*(const int *)inList[0].pData);
+		return submitRefreshLsdbRequest(session, reqId, *(const int *)inList[0].pData);
 	case SHELL_UTIL_METHOD_RELOAD_ACCESSIBILITY:
-		return submitAsyncVoidRequest(session, reqId, SHELL_UTIL_REQ_RELOAD_ACCESSIBILITY);
+		return submitReloadAccessibilityRequest(session, reqId);
 	case SHELL_UTIL_METHOD_NOTIFY_TOPMENU_UPDATE:
-		return submitAsyncVoidRequest(session, reqId, SHELL_UTIL_REQ_NOTIFY_TOPMENU_UPDATE);
+		return submitNotifyTopmenuUpdateRequest(session, reqId);
 	case SHELL_UTIL_METHOD_RELOAD_WALLPAPER:
-		return submitAsyncIntRequest(session, reqId, SHELL_UTIL_REQ_RELOAD_WALLPAPER,
-			*(const int *)inList[0].pData);
+		return submitReloadWallpaperRequest(session, reqId, *(const int *)inList[0].pData);
 	case SHELL_UTIL_METHOD_RELOAD_KEYLOCK_WALLPAPER:
-		return submitAsyncVoidRequest(session, reqId, SHELL_UTIL_REQ_RELOAD_KEYLOCK_WALLPAPER);
+		return submitReloadKeylockWallpaperRequest(session, reqId);
 	case SHELL_UTIL_METHOD_SET_BATTERY_PERCENT:
-		return submitAsyncIntRequest(session, reqId, SHELL_UTIL_REQ_SET_BATTERY_PERCENT,
-			*(const int *)inList[0].pData);
+		return submitSetBatteryPercentRequest(session, reqId, *(const int *)inList[0].pData);
 	case SHELL_UTIL_METHOD_ACTIVATE_TITLE:
-		return submitAsyncStringRequest(session, reqId, SHELL_UTIL_REQ_ACTIVATE_TITLE,
-			(const char *)inList[0].pData);
+		return submitActivateTitleRequest(session, reqId, (const char *)inList[0].pData);
 	case SHELL_UTIL_METHOD_SET_NOTIFICATION_ENABLED:
-		return submitAsyncIntRequest(session, reqId, SHELL_UTIL_REQ_SET_NOTIFICATION_ENABLED,
+		return submitSetNotificationEnabledRequest(session, reqId,
 			*(const int *)inList[0].pData);
 	case SHELL_UTIL_METHOD_SET_KEY_NAVIGATION:
-		return submitAsyncIntRequest(session, reqId, SHELL_UTIL_REQ_SET_KEY_NAVIGATION,
-			*(const int *)inList[0].pData);
+		return submitSetKeyNavigationRequest(session, reqId, *(const int *)inList[0].pData);
 	case SHELL_UTIL_METHOD_RELOAD_LIVEAREA:
-		return submitAsyncVoidRequest(session, reqId, SHELL_UTIL_REQ_RELOAD_LIVEAREA);
+		return submitReloadLiveareaRequest(session, reqId);
 	case SHELL_UTIL_METHOD_LAUNCH_APP_BY_URI:
 		return submitLaunchUriRequest(session, reqId, (const char *)inList[0].pData);
 	case SHELL_UTIL_METHOD_REFRESH_CALLER_APP:
-		return submitAsyncVoidRequest(session, reqId, SHELL_UTIL_REQ_REFRESH_CALLER_APP);
+		return submitRefreshCallerAppRequest(session, reqId);
 	case SHELL_UTIL_METHOD_CHANGE_THEME:
 		return shellSystemNoticeRequest(session, reqId, (const char *)inList[0].pData);
 	case SHELL_UTIL_METHOD_DELETE_THEME:
-		return submitThemeRequest(session, reqId, SHELL_UTIL_REQ_DELETE_THEME,
-			(const char *)inList[0].pData);
+		return submitDeleteThemeRequest(session, reqId, (const char *)inList[0].pData);
 	case SHELL_UTIL_METHOD_CANCEL_TOPMENU_GUIDE:
-		return submitAsyncVoidRequest(session, reqId, SHELL_UTIL_REQ_CANCEL_TOPMENU_GUIDE);
+		return submitCancelTopmenuGuideRequest(session, reqId);
 	case SHELL_UTIL_METHOD_RESET_IMPOSE_STATUS:
-		return submitAsyncVoidRequest(session, reqId, SHELL_UTIL_REQ_RESET_IMPOSE_STATUS);
+		return submitResetImposeStatusRequest(session, reqId);
 	case SHELL_UTIL_METHOD_ADD_USAGE_COUNTER: {
 		const SceUInt32 *words = (const SceUInt32 *)inList[0].pData;
 		return submitUsageCounterRequest(session, reqId, (int)words[0], words[1]);
@@ -1466,7 +1758,7 @@ int shellShutdownRequest(IPMI::Session *session, int flags)
 	if (s_utilServerMgr == NULL)
 		return SHELL_UTIL_ERR_NOT_READY;
 
-	ShellUtilIntRequest *req = new ShellUtilIntRequest(SHELL_UTIL_REQ_REQUEST_STANDBY);
+	ShellUtilRequestStandbyRequest *req = new ShellUtilRequestStandbyRequest();
 	if (req == NULL)
 		return SHELL_UTIL_ERR_NO_MEMORY;
 
@@ -1482,7 +1774,7 @@ int shellColdResetRequest(IPMI::Session *session, int flags)
 	if (s_utilServerMgr == NULL)
 		return SHELL_UTIL_ERR_NOT_READY;
 
-	ShellUtilIntRequest *req = new ShellUtilIntRequest(SHELL_UTIL_REQ_REQUEST_COLD_RESET);
+	ShellUtilRequestColdResetRequest *req = new ShellUtilRequestColdResetRequest();
 	if (req == NULL)
 		return SHELL_UTIL_ERR_NO_MEMORY;
 
@@ -1513,7 +1805,14 @@ int shellUtilShowErrorDialog(IPMI::Session *session, int errorType, int errorCod
 /* 0x8124B4DA */
 int shellSystemNoticeRequest(IPMI::Session *session, int requestId, const char *themePath)
 {
-	return submitThemeRequest(session, requestId, SHELL_UTIL_REQ_CHANGE_THEME, themePath);
+	if (s_utilServerMgr == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NOT_READY);
+	ShellUtilChangeThemeRequest *req = new ShellUtilChangeThemeRequest();
+	if (req == NULL)
+		return shellUtilSendAsyncResponse(session, requestId, SHELL_UTIL_ERR_NO_MEMORY);
+	if (themePath != NULL)
+		req->m_themePath = themePath;
+	return enqueueAsyncRequestInline(session, requestId, req);
 }
 
 /* 0x8124BAC8 */
