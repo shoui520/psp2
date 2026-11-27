@@ -1456,7 +1456,7 @@ int sceCompatMain(SceSize argLen, void *argp)
 	} else {
 		g_activeCdram = g_cachedCdram;
 	}
-	remotefsSetCdramBase(g_activeCdram);
+	remotefsSetCdramBase(g_activeCdram, g_cachedCdram, g_uncachedCdram);
 
 	res = sceScreenShotDisable();
 	if (res != 0)

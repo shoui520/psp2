@@ -25,15 +25,22 @@
 #include <screenshot.h>
 #include <vshbridge/vshbridge.h>
 #include <libmd5.h>
+#include <ces/libces_jis.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /* POSIX / Vita error codes used by ScePspemu */
+#define PSPEMU_ERROR_KERNEL_NO_ENTRY    ((int)0x80000202)
+#define PSPEMU_ERROR_NO_ENTRY           ((int)0x80010002)
 #define PSPEMU_ERROR_NO_MEMORY          ((int)0x8001000C)
+#define PSPEMU_ERROR_ACCESS_DENIED      ((int)0x8001000D)
 #define PSPEMU_ERROR_FAULT              ((int)0x8001000E)
+#define PSPEMU_ERROR_ALREADY_EXISTS     ((int)0x80010011)
 #define PSPEMU_ERROR_INVALID_ARG        ((int)0x80010016)
+#define PSPEMU_ERROR_TOO_MANY_FILES     ((int)0x80010018)
+#define PSPEMU_ERROR_NO_SPACE           ((int)0x8001001C)
 #define PSPEMU_ERROR_CORRUPTED          ((int)0x8001002F)
 #define PSPEMU_ERROR_NOT_SUPPORTED      ((int)0x80010086)
 #define PSPEMU_ERROR_FATAL              ((int)0x80010089)
@@ -317,6 +324,15 @@ SceUInt32 vshKernelCheckModelCapability(int capability);
 SceInt32 sceKernelAtomicGetAndSet8(volatile SceInt8 *ptr, SceInt8 value);
 SceUInt32 sceKernelGetProcessTimeLow(void);
 int sceKernelPowerUnlock(int type);
+int sceClibStrncasecmp(const char *sLeft, const char *sRight, SceSize len);
+int sceAppUtilMusicMount(void);
+
+int sceCesMbcsStrGetUtf8Len(SceCesMbcsUcsContext *context,
+                            const uint8_t *mbcsStr, uint32_t mbcsMax, uint32_t *mbcsLen,
+                            uint32_t *utf8Len);
+int sceCesMbcsStrToUtf8Str(SceCesMbcsUcsContext *context,
+                           const uint8_t *mbcsStr, uint32_t mbcsMax, uint32_t *mbcsLen,
+                           uint8_t *utf8Buf, uint32_t utf8Max, uint32_t *utf8Len);
 
 /* Shared paths owned by remote_msfs.c */
 extern char g_originalPath[1024];
@@ -375,12 +391,58 @@ int pspemuPngDecodeImage(void *outBuf, uint32_t outSize, const void *pngData, ui
                          uint32_t *outWidth, uint32_t *outHeight, uint32_t *outFormat);
 int pspemuPngConvertToAbgr(void *dstBuf, const void *srcBuf);
 
+/* Kermit IPC request header in PSP shared RAM */
+typedef struct PspemuKermitRequest {
+	uint16_t cmd;
+	uint16_t pad;
+	uint32_t semaId;
+	uint32_t retAddr;
+	uint32_t padWord;
+	uint64_t args[8];
+} PspemuKermitRequest;
+
+/* Virtual filesystem operations table for compatFsLoop */
+typedef struct PspemuFsOps {
+	int (*init)(void *arg);
+	int (*exit)(void *arg);
+	int (*open)(const char *path, int flags, SceMode mode);
+	int (*close)(SceUID fd);
+	SceSSize (*read)(SceUID fd, void *buf, SceSize size);
+	SceSSize (*write)(SceUID fd, const void *buf, SceSize size);
+	SceOff (*lseek)(SceUID fd, SceOff offset, int whence);
+	int (*ioctl)(SceUID fd, unsigned int cmd, void *inData, SceSize inLen, void *outData, SceSize outLen);
+	int (*remove)(const char *path);
+	int (*mkdir)(const char *path, SceMode mode);
+	int (*rmdir)(const char *path);
+	SceUID (*dopen)(const char *path);
+	int (*dclose)(SceUID dfd);
+	int (*dread)(SceUID dfd, SceIoDirent *dir);
+	int (*getstat)(const char *path, SceIoStat *stat);
+	int (*chstat)(const char *path, const SceIoStat *stat, int bits);
+	int (*rename)(const char *oldPath, const char *newPath);
+	int (*chdir)(const char *path);
+	int (*devctl)(const char *dev, unsigned int cmd, void *inData, SceSize inLen, void *outData, SceSize outLen);
+	int (*postOp)(void);
+} PspemuFsOps;
+
 /* remotefs.c */
-void remotefsSetCdramBase(void *cdramBase);
+int pspemuIsAlternateDisplayHead(void);
+void *remotefsSetCdramBase(void *activeCdram, void *cachedCdram, void *uncachedCdram);
+void *remotefsGetCdramBase(void);
 void *remotefsTranslateGuestAddr(uint32_t guestAddr, int cacheMode, SceSize size);
+void *remotefsTranslateUserGuestAddr(uint32_t guestAddr, int cacheMode, SceSize size);
+int remotefsFlushGuestAddr(void *hostPtr, SceSize size);
+int remotefsWaitAndGetRequest(int mode, PspemuKermitRequest **outReq);
+int remotefsReturnValue(int mode, const PspemuKermitRequest *req, int64_t retVal);
+int remotefsConvertLocalToUtc(SceDateTime *dateTime);
+int remotefsConvertUtcToLocal(SceDateTime *dateTime);
+void compatFsLoop(int channel, const PspemuFsOps *ops) __attribute__((noreturn));
 
 /* remote_msfs.c */
-void remoteMsfsSuspendReset(void);
+int remoteMsfsSetBootAllowed(int allowed);
+int remoteMsfsCheckMusicPath(const char *path, int flags);
+int remoteMsfsCloseCachedEboot(void);
+void *remoteMsfsSuspendReset(void);
 int remoteMsfsParseAppParam(char *discId, uint32_t *parentalLevel, char *gamedataId,
                             char *appVer, uint32_t *bootable, int *isPs1Mode, int *isPocsLaunch);
 int remoteMsfsCheckPocketStationParam(void);
@@ -388,7 +450,36 @@ int remoteMsfsPreInit(void);
 int remoteMsfsInit(void);
 
 /* remote_flashfs.c */
+int remoteFlashfsClearGuest(void);
+int remoteFlashfsReset(void);
 int remoteFlashfsInit(void *workBuf);
+
+/* iocache.c */
+SceSSize iocacheRead(SceUID fd, void *buf, SceSize size);
+SceUID iocacheOpenBackingFile(const char *path, int flags, SceMode mode);
+int iocacheRequestClose(void);
+int iocacheInit(uint32_t cacheSize);
+int iocachePrefetchRange(SceOff offset, uint32_t length);
+int iocacheFileInit(SceSize totalSize, SceSize slotSize);
+SceSSize iocacheFileLoad(const char *path, int flags, SceMode mode, SceUID fd);
+int iocacheFileIsCached(SceUID fd);
+int iocacheFileCanCache(const char *path, int flags, SceMode mode);
+SceSSize iocacheFileRead(SceUID fd, void *buf, SceSize size);
+SceOff iocacheFileLseek(SceUID fd, SceOff offset, int whence);
+int iocacheFileClose(SceUID fd);
+
+/* Additional cross-module helpers used by FS & iocache */
+int pspemuLockLwMutexOrFatal(SceKernelLwMutexWork *work);
+int pspemuUnlockLwMutexOrFatal(SceKernelLwMutexWork *work);
+int remoteNetIsThrottleActive(void);
+int remotePeripheralIsKernelOpenAllowed(void);
+int remoteLowPriorityIsPromotablePath(const char *path);
+int remoteLowPriorityEnqueuePromote(const char *path);
+int pspemuCompatIsRestrictedTitle(void);
+int pspemuSettingsIsClearMediaEnabled(void);
+int pspemuSettingsGetEmuListFlag(void);
+int pspemuSettingsSetEmuListFlag(void);
+extern int g_compatMsfsSeekFlag;
 
 /* remote_audioout.c & remote_audioin.c */
 int remoteAudioOutInit(void);

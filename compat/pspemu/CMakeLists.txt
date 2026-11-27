@@ -7,6 +7,10 @@ include("${PSP2_SRC}/toolchains/libgcc/lib1funcs.cmake")
 psp2_module(vs0_app_NPXS10028_eboot KIND user COMPILER gcc48 PARTIAL SOURCES
 	crt0.c
 	main.c
+	remotefs.c
+	remote_msfs.c
+	remote_flashfs.c
+	iocache.c
 	${PSP2_SRC}/sys/sdk/target/src/sha1/libsha1.c
 	${PSP2_SRC}/sys/internal/kernel/src/sysmem/sha1_transform.S
 	${PSP2_SRC}/contrib/zlib-1.2.5/adler32.c
@@ -45,6 +49,10 @@ endif()
 
 set_source_files_properties(
 	main.c
+	remotefs.c
+	remote_msfs.c
+	remote_flashfs.c
+	iocache.c
 	PROPERTIES COMPILE_OPTIONS "-fno-toplevel-reorder;-fno-section-anchors;-fno-partial-inlining;-ffunction-sections")
 
 set_source_files_properties(
