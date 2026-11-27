@@ -89,7 +89,7 @@ SceInt32 UpdateGuiView::Initialize()
 
 	commonResParam.resource_data = g_commonResourceRco;
 	commonResParam.resource_data_size = COMMON_RESOURCE_RCO_SIZE;
-	m_framework->LoadCommonResourceSync(commonResParam, OnCommonResourceLoaded);
+	m_framework->LoadCommonResourceAsync(commonResParam, OnCommonResourceLoaded);
 
 	paf::Plugin::InitParam pluginParam;
 
@@ -102,7 +102,7 @@ SceInt32 UpdateGuiView::Initialize()
 	pluginParam.start_func = OnUpdaterPluginStart;
 	pluginParam.stop_func = OnUpdaterPluginStop;
 	pluginParam.exit_func = OnUpdaterPluginExit;
-	paf::Plugin::LoadSync(pluginParam, OnPluginLoaded, 0);
+	paf::Plugin::LoadAsync(pluginParam, OnPluginLoaded, 0);
 
 	paf::ui::Environment *env = m_framework->GetEnvironmentInstance();
 

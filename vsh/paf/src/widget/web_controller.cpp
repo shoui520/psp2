@@ -245,13 +245,16 @@ void WebController::SetMaxSurfaceSize(math::v2 size)
 	(void)size;
 }
 
-int32_t WebController::GetControllerState()
+int32_t WebController::GetImeTypeAndEnterLabel(int32_t *out_input_type)
 {
+	(void)out_input_type;
 	return 0;
 }
 
-void WebController::OnControllerStateChanged()
+int32_t WebController::OnMultiLineImeCommit(const common::String &text)
 {
+	(void)text;
+	return 0;
 }
 
 void WebController::OnStartLoad()

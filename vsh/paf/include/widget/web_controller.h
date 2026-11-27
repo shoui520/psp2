@@ -431,8 +431,8 @@ public:
 	virtual void OnSuspend();
 	virtual math::v4 GetViewportSize();
 	virtual void SetMaxSurfaceSize(math::v2 size);
-	virtual int32_t GetControllerState();
-	virtual void OnControllerStateChanged();
+	virtual int32_t GetImeTypeAndEnterLabel(int32_t *out_input_type);
+	virtual int32_t OnMultiLineImeCommit(const common::String &text);
 
 	/* WebCorePageClient & WebCoreDocumentHost overrides (slots 18..56, exact order). */
 	virtual void OnStartLoad();

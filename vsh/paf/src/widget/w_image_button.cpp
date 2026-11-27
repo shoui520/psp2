@@ -169,7 +169,11 @@ void ImageButton::SetObjsParam()
 using namespace paf;
 using namespace paf::ui;
 
+#ifdef PAF_BUILD_2014
+static inline __attribute__((always_inline)) float ScePafWidget_BEE530D5(ImageButton *button)
+#else
 float ScePafWidget_BEE530D5(ImageButton *button)
+#endif
 {
 	if (button->m_label_obj == NULL)
 		return 0.0f;

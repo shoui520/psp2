@@ -11,6 +11,29 @@ Priority::Priority()
 	low = SCE_KERNEL_DEFAULT_PRIORITY_USER + 24;
 }
 
+#ifdef PAF_BUILD_2014
+struct PriorityValues {
+	SceInt32 high;
+	SceInt32 normal;
+	SceInt32 low;
+};
+
+static PriorityValues s_priority;
+
+void SetPriority(const Priority &priority)
+{
+	s_priority.high = priority.high;
+	s_priority.normal = priority.normal;
+	s_priority.low = priority.low;
+}
+
+Priority *GetPriority()
+{
+	void *address = &s_priority;
+
+	return static_cast<Priority *>(address);
+}
+#else
 static Priority s_priority;
 
 void SetPriority(const Priority &priority)
@@ -22,6 +45,7 @@ Priority *GetPriority()
 {
 	return &s_priority;
 }
+#endif
 
 }
 }

@@ -196,6 +196,60 @@ float sce_paf_tanf(float x)
 }
 #endif
 
+#ifdef PAF_BUILD_2014
+float sce_paf_atanf(float x)
+{
+	const float halfPi = 1.5707963705062866f;
+	float square, term, step;
+
+	if (x > 1.0f)
+		return halfPi - sce_paf_atanf(1.0f / x);
+	if (x < -1.0f)
+		return -halfPi - sce_paf_atanf(1.0f / x);
+	square = x * x;
+	term = 0.0f;
+	for (step = 10.0f; step > 0.5f; step -= 1.0f)
+		term = (step * step * square) / (step * 2.0f + 1.0f + term);
+	return x / (term + 1.0f);
+}
+
+float sce_paf_asinf(float x)
+{
+	float radicand = 1.0f - x * x;
+
+	if (radicand < 0.0f)
+		return 0.0f;
+	if (radicand == 0.0f)
+		return x < 0.0f ? -1.5707963705062866f : 1.5707963705062866f;
+	return sce_paf_atanf(x / __builtin_sqrtf(radicand));
+}
+
+float sce_paf_acosf(float x)
+{
+	float radicand = 1.0f - x * x;
+
+	if (radicand < 0.0f)
+		return 0.0f;
+	if (radicand == 0.0f)
+		return x < 0.0f ? 3.1415927410125732f : 0.0f;
+	return 1.5707963705062866f - sce_paf_atanf(x / __builtin_sqrtf(radicand));
+}
+
+float sce_paf_atan2f(float y, float x)
+{
+	float ratio;
+
+	if (x == 0.0f)
+		return y < 0.0f ? -1.5707963705062866f : 1.5707963705062866f;
+	ratio = y / x;
+	if (x < 0.0f) {
+		if (y < 0.0f)
+			return sce_paf_atanf(ratio) - 3.1415927410125732f;
+		return sce_paf_atanf(ratio) + 3.1415927410125732f;
+	}
+	return sce_paf_atanf(ratio);
+}
+#else
 float AtanApprox(float x)
 {
 	float square, polynomial, offset, product, numerator;
@@ -328,6 +382,7 @@ float sce_paf_acosf(float x)
 		      (result.bits & 0x7fffffffU);
 	return result.value;
 }
+#endif
 
 float sce_paf_expf(float x)
 {

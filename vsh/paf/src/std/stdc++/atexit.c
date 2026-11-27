@@ -15,6 +15,7 @@ typedef char PafAtexitEntrySizeCheck[sizeof(PafAtexitEntry) == 16 ? 1 : -1];
 static PafAtexitEntry atexitEntries[8];
 static PafAtexitEntry *atexitList;
 
+#ifndef PAF_STATIC_BUILD
 int __cxa_atexit(void (*func)(void *), void *arg, void *dso)
 {
 	PafAtexitEntry *entry = NULL;
@@ -56,6 +57,44 @@ int __aeabi_atexit(void *object, void (*destroy)(void *), void *dso)
 {
 	return __cxa_atexit(destroy, object, dso);
 }
+#else
+int __aeabi_atexit(void *object, void (*destroy)(void *), void *dso)
+{
+	PafAtexitEntry *entry = NULL;
+	void *handle;
+
+	if (PafCrtManagerGet())
+		PafCrtManagerLock(PafCrtManagerGet(), 1);
+	else
+		__breakpoint(0);
+	for (unsigned int i = 0; i < 8; i++) {
+		if (!atexitEntries[i].func) {
+			entry = &atexitEntries[i];
+			break;
+		}
+	}
+	if (!entry)
+		entry = sce_paf_malloc(sizeof(*entry));
+	if (!entry) {
+		if (PafCrtManagerGet())
+			PafCrtManagerUnlock(PafCrtManagerGet(), 1);
+		else
+			__breakpoint(0);
+		return 1;
+	}
+	handle = *(void **)dso;
+	entry->func = destroy;
+	entry->next = atexitList;
+	entry->arg = object;
+	entry->dso = handle;
+	atexitList = entry;
+	if (PafCrtManagerGet())
+		PafCrtManagerUnlock(PafCrtManagerGet(), 1);
+	else
+		__breakpoint(0);
+	return 0;
+}
+#endif
 
 int __cxa_finalize(void *dso)
 {

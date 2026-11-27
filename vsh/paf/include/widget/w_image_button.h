@@ -170,10 +170,12 @@ public:
 }
 }
 
+#ifndef PAF_BUILD_2014
 extern "C" {
 /* the label's width and height, its bounds where it adjusts to them (no name found) */
 float ScePafWidget_06D0F83A(paf::ui::ImageButton *button);
 float ScePafWidget_BEE530D5(paf::ui::ImageButton *button);
 }
+#endif
 
 #endif
