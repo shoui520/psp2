@@ -382,23 +382,24 @@ int dtcpIpIpcConnect(void **outConnection)
 		return 5;
 	object->session = NULL;
 	object->stream = NULL;
-	ret = dtcpIpIpcInitSession(object, config, 140);
-	if (ret == 0)
-		ret = dtcpIpIpcInitStream(&object->stream, object->session, 0, 0, 0, 0x80000);
-	if (ret == 0)
-		ret = dtcpIpIpcInitShared(object->stream, &object->shared);
-	if (ret != 0) {
+	if ((ret = dtcpIpIpcInitSession(object, config, 140)) != 0) {
 		ret = dtcpIpMapIpcStatus(ret);
-		if (object->stream != NULL)
-			dtcpIpIpcFiniStream(object->stream, 0);
-		if (object->session != NULL)
-			dtcpIpIpcFiniSession(object->session);
-		dtcpIpFree(object);
-		*outConnection = NULL;
-		return ret;
+	} else if ((ret = dtcpIpIpcInitStream(&object->stream, object->session, 0, 0, 0,
+					      0x80000)) != 0) {
+		ret = dtcpIpMapIpcStatus(ret);
+	} else if ((ret = dtcpIpIpcInitShared(object->stream, &object->shared)) != 0) {
+		ret = dtcpIpMapIpcStatus(ret);
+	} else {
+		*outConnection = object;
+		return 0;
 	}
-	*outConnection = object;
-	return 0;
+	if (object->stream != NULL)
+		dtcpIpIpcFiniStream(object->stream, 0);
+	if (object->session != NULL)
+		dtcpIpIpcFiniSession(object->session);
+	dtcpIpFree(object);
+	*outConnection = NULL;
+	return ret;
 }
 
 /* disconnect from the middleware */
@@ -574,6 +575,35 @@ int dtcpIpMapIpcStatus2(int status)
 				}
 				return 5;
 			}
+#if FW_VERSION == 0x03630011
+			if (status <= 13000 || status > 13008)
+				return 5;
+			switch (status) {
+			case 13001:
+				result = 22;
+				break;
+			case 13002:
+				result = 23;
+				break;
+			case 13003:
+				result = 24;
+				break;
+			case 13004:
+				return 5;
+			case 13005:
+				result = 25;
+				break;
+			case 13006:
+				result = 26;
+				break;
+			case 13007:
+				result = 28;
+				break;
+			case 13008:
+				result = 27;
+				break;
+			}
+#else
 			if (status <= 13000 || status > 13017)
 				return 5;
 			switch (status) {
@@ -612,6 +642,7 @@ int dtcpIpMapIpcStatus2(int status)
 				result = 37;
 				break;
 			}
+#endif
 		} else if (status <= 12017) {
 			switch (status) {
 			case 12001:
