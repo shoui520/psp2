@@ -414,7 +414,7 @@ static VersatileParam *NewCornerButtonSoundParam()
 }
 
 FactoryFuncTable g_factoryCornerButton = {
-	CornerButton::TypeName(),
+	PAF_FACTORY_TYPE_NAME(CornerButton),
 	NewCornerButton,
 	NewCornerButtonParam,
 	NewCornerButtonLayoutParam,

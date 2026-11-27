@@ -653,7 +653,7 @@ static VersatileParam *NewPageTurnSoundParam()
 }
 
 FactoryFuncTable g_factoryPageTurn = {
-	PageTurn::TypeName(),
+	PAF_FACTORY_TYPE_NAME(PageTurn),
 	NewPageTurn,
 	NewPageTurnParam,
 	NewPageTurnLayoutParam,

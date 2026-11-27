@@ -518,7 +518,7 @@ void paf::ui::UncheckOther(Widget *widget, void *data)
 }
 
 FactoryFuncTable g_factoryRadioBox = {
-	RadioBox::TypeName(),
+	PAF_FACTORY_TYPE_NAME(RadioBox),
 	NewRadioBox,
 	NewRadioBoxParam,
 	NewRadioBoxLayoutParam,

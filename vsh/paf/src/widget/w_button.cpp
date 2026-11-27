@@ -900,7 +900,7 @@ static VersatileParam *NewButtonSoundParam()
 }
 
 FactoryFuncTable g_factoryButton = {
-	Button::TypeName(),
+	PAF_FACTORY_TYPE_NAME(Button),
 	NewButton,
 	NewButtonParam,
 	NewButtonLayoutParam,

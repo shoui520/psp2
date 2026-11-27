@@ -556,7 +556,7 @@ static VersatileParam *NewScrollBarTouchSoundParam()
 }
 
 FactoryFuncTable g_factoryScrollBarTouch = {
-	ScrollBarTouch::TypeName(),
+	PAF_FACTORY_TYPE_NAME(ScrollBarTouch),
 	NewScrollBarTouch,
 	NewScrollBarTouchParam,
 	NewScrollBarTouchLayoutParam,

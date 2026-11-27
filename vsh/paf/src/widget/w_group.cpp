@@ -72,7 +72,7 @@ static VersatileParam *NewGroupSoundParam()
 }
 
 FactoryFuncTable g_factoryGroup = {
-	Group::TypeName(),
+	PAF_FACTORY_TYPE_NAME(Group),
 	NewGroup,
 	NewGroupParam,
 	NewGroupLayoutParam,

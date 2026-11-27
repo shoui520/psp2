@@ -134,7 +134,7 @@ static VersatileParam *NewDialogSoundParam()
 }
 
 FactoryFuncTable g_factoryDialog = {
-	Dialog::TypeName(),
+	PAF_FACTORY_TYPE_NAME(Dialog),
 	NewDialog,
 	NewDialogParam,
 	NewDialogLayoutParam,

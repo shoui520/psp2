@@ -490,7 +490,7 @@ static VersatileParam *NewSlidingDrawerSoundParam()
 }
 
 FactoryFuncTable g_factorySlidingDrawer = {
-	SlidingDrawer::TypeName(),
+	PAF_FACTORY_TYPE_NAME(SlidingDrawer),
 	NewSlidingDrawer,
 	NewSlidingDrawerParam,
 	NewSlidingDrawerLayoutParam,

@@ -22,6 +22,9 @@ class WidgetParam;
 
 class FactoryFuncTable {
 public:
+#ifdef PAF_STATIC_BUILD
+	static inline const char *TypeName(const char *name) { return name; }
+#endif
 	const char *m_name;
 	Widget *(*m_factory_widget)(Widget *parent);
 	WidgetParam *(*m_factory_param)();
@@ -45,6 +48,12 @@ public:
 
 }
 }
+
+#ifdef PAF_STATIC_BUILD
+#define PAF_FACTORY_TYPE_NAME(cls) paf::ui::FactoryFuncTable::TypeName(cls::m_widget_type)
+#else
+#define PAF_FACTORY_TYPE_NAME(cls) cls::TypeName()
+#endif
 
 extern paf::ui::FactoryFuncTable g_factoryGroup;
 extern paf::ui::FactoryFuncTable g_factoryPlane;

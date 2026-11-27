@@ -1007,7 +1007,7 @@ static int SyncNop(void *arg)
 }
 
 FactoryFuncTable g_factoryFileList = {
-	FileList::TypeName(),
+	PAF_FACTORY_TYPE_NAME(FileList),
 	NewFileList,
 	NewFileListParam,
 	NewFileListLayoutParam,

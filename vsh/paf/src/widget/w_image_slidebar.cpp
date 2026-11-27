@@ -684,7 +684,7 @@ static VersatileParam *NewImageSlideBarSoundParam()
 }
 
 FactoryFuncTable g_factoryImageSlideBar = {
-	ImageSlideBar::TypeName(),
+	PAF_FACTORY_TYPE_NAME(ImageSlideBar),
 	NewImageSlideBar,
 	NewImageSlideBarParam,
 	NewImageSlideBarLayoutParam,

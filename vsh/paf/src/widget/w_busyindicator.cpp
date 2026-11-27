@@ -540,7 +540,7 @@ static VersatileParam *NewBusyIndicatorSoundParam()
 }
 
 FactoryFuncTable g_factoryBusyIndicator = {
-	BusyIndicator::TypeName(),
+	PAF_FACTORY_TYPE_NAME(BusyIndicator),
 	NewBusyIndicator,
 	NewBusyIndicatorParam,
 	NewBusyIndicatorLayoutParam,

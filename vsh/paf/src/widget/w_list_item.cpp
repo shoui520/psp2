@@ -458,7 +458,7 @@ static VersatileParam *NewListItemSoundParam()
 }
 
 FactoryFuncTable g_factoryListItem = {
-	ListItem::TypeName(),
+	PAF_FACTORY_TYPE_NAME(ListItem),
 	NewListItem,
 	NewListItemParam,
 	NewListItemLayoutParam,

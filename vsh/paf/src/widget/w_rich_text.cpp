@@ -2824,7 +2824,7 @@ using namespace paf;
 using namespace paf::ui;
 
 FactoryFuncTable g_factoryRichText = {
-	RichText::TypeName(),
+	PAF_FACTORY_TYPE_NAME(RichText),
 	NewRichText,
 	NewRichTextParam,
 	NewRichTextLayoutParam,

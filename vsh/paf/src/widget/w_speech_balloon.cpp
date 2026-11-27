@@ -203,7 +203,7 @@ static VersatileParam *NewSpeechBalloonSoundParam()
 }
 
 FactoryFuncTable g_factorySpeechBalloon = {
-	SpeechBalloon::TypeName(),
+	PAF_FACTORY_TYPE_NAME(SpeechBalloon),
 	NewSpeechBalloon,
 	NewSpeechBalloonParam,
 	NewSpeechBalloonLayoutParam,

@@ -501,7 +501,7 @@ static VersatileParam *NewScrollBar2dSoundParam()
 }
 
 FactoryFuncTable g_factoryScrollBar2d = {
-	ScrollBar2d::TypeName(),
+	PAF_FACTORY_TYPE_NAME(ScrollBar2d),
 	NewScrollBar2d,
 	NewScrollBar2dParam,
 	NewScrollBar2dLayoutParam,

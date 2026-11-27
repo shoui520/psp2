@@ -3580,7 +3580,7 @@ static VersatileParam *NewTextSoundParam()
 }
 
 FactoryFuncTable g_factoryText = {
-	Text::TypeName(),
+	PAF_FACTORY_TYPE_NAME(Text),
 	NewText,
 	NewTextParam,
 	NewTextLayoutParam,

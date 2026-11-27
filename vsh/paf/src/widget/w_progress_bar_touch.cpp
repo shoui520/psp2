@@ -949,7 +949,7 @@ static VersatileParam *NewProgressBarTouchSoundParam()
 }
 
 FactoryFuncTable g_factoryProgressBarTouch = {
-	ProgressBarTouch::TypeName(),
+	PAF_FACTORY_TYPE_NAME(ProgressBarTouch),
 	NewProgressBarTouch,
 	NewProgressBarTouchParam,
 	NewProgressBarTouchLayoutParam,

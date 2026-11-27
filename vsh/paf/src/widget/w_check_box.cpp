@@ -133,7 +133,7 @@ static VersatileParam *NewCheckBoxSoundParam()
 }
 
 FactoryFuncTable g_factoryCheckBox = {
-	CheckBox::TypeName(),
+	PAF_FACTORY_TYPE_NAME(CheckBox),
 	NewCheckBox,
 	NewCheckBoxParam,
 	NewCheckBoxLayoutParam,

@@ -678,7 +678,7 @@ static VersatileParam *NewImageButtonSoundParam()
 }
 
 FactoryFuncTable g_factoryImageButton = {
-	ImageButton::TypeName(),
+	PAF_FACTORY_TYPE_NAME(ImageButton),
 	NewImageButton,
 	NewImageButtonParam,
 	NewImageButtonLayoutParam,

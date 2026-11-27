@@ -151,7 +151,7 @@ static VersatileParam *NewNumSpinSoundParam()
 }
 
 FactoryFuncTable g_factoryNumSpin = {
-	NumSpin::TypeName(),
+	PAF_FACTORY_TYPE_NAME(NumSpin),
 	NewNumSpin,
 	NewNumSpinParam,
 	NewNumSpinLayoutParam,

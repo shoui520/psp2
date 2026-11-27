@@ -306,7 +306,7 @@ static VersatileParam *NewPlaneSoundParam()
 }
 
 FactoryFuncTable g_factoryPlane = {
-	Plane::TypeName(),
+	PAF_FACTORY_TYPE_NAME(Plane),
 	NewPlane,
 	NewPlaneParam,
 	NewPlaneLayoutParam,

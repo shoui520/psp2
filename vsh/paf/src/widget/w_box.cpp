@@ -1306,7 +1306,7 @@ static VersatileParam *NewBoxSoundParam()
 }
 
 FactoryFuncTable g_factoryBox = {
-	Box::TypeName(),
+	PAF_FACTORY_TYPE_NAME(Box),
 	NewBox,
 	NewBoxParam,
 	NewBoxLayoutParam,

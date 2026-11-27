@@ -244,7 +244,7 @@ static VersatileParam *NewCompositeDrawerSoundParam()
 }
 
 FactoryFuncTable g_factoryCompositeDrawer = {
-	CompositeDrawer::TypeName(),
+	PAF_FACTORY_TYPE_NAME(CompositeDrawer),
 	NewCompositeDrawer,
 	NewCompositeDrawerParam,
 	NewCompositeDrawerLayoutParam,

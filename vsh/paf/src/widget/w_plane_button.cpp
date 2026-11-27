@@ -553,7 +553,7 @@ static VersatileParam *NewPlaneButtonSoundParam()
 }
 
 FactoryFuncTable g_factoryPlaneButton = {
-	PlaneButton::TypeName(),
+	PAF_FACTORY_TYPE_NAME(PlaneButton),
 	NewPlaneButton,
 	NewPlaneButtonParam,
 	NewPlaneButtonLayoutParam,

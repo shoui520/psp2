@@ -1714,7 +1714,7 @@ static VersatileParam *NewDirectBarSoundParam()
 }
 
 FactoryFuncTable g_factoryDirectBar = {
-	DirectBar::TypeName(),
+	PAF_FACTORY_TYPE_NAME(DirectBar),
 	NewDirectBar,
 	NewDirectBarParam,
 	NewDirectBarLayoutParam,

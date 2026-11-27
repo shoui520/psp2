@@ -527,7 +527,7 @@ static VersatileParam *NewWebViewSoundParam()
 }
 
 FactoryFuncTable g_factoryWebView = {
-	WebView::TypeName(),
+	PAF_FACTORY_TYPE_NAME(WebView),
 	NewWebView,
 	NewWebViewParam,
 	NewWebViewLayoutParam,

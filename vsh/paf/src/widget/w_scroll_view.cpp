@@ -457,7 +457,7 @@ static VersatileParam *NewScrollViewSoundParam()
 }
 
 FactoryFuncTable g_factoryScrollView = {
-	ScrollView::TypeName(),
+	PAF_FACTORY_TYPE_NAME(ScrollView),
 	NewScrollView,
 	NewScrollViewParam,
 	NewScrollViewLayoutParam,

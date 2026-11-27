@@ -398,7 +398,7 @@ static VersatileParam *NewAppIconSimpleSoundParam()
 }
 
 FactoryFuncTable g_factoryAppIconSimple = {
-	AppIconSimple::TypeName(),
+	PAF_FACTORY_TYPE_NAME(AppIconSimple),
 	NewAppIconSimple,
 	NewAppIconSimpleParam,
 	NewAppIconSimpleLayoutParam,

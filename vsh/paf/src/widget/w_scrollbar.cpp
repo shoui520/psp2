@@ -710,7 +710,7 @@ static VersatileParam *NewScrollBarSoundParam()
 }
 
 FactoryFuncTable g_factoryScrollBar = {
-	ScrollBar::TypeName(),
+	PAF_FACTORY_TYPE_NAME(ScrollBar),
 	NewScrollBar,
 	NewScrollBarParam,
 	NewScrollBarLayoutParam,

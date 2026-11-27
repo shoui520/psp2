@@ -356,7 +356,7 @@ static VersatileParam *NewCompositeButtonSoundParam()
 }
 
 FactoryFuncTable g_factoryCompositeButton = {
-	CompositeButton::TypeName(),
+	PAF_FACTORY_TYPE_NAME(CompositeButton),
 	NewCompositeButton,
 	NewCompositeButtonParam,
 	NewCompositeButtonLayoutParam,

@@ -6495,7 +6495,7 @@ static VersatileParam *NewListViewSoundParam()
 }
 
 FactoryFuncTable g_factoryListView = {
-	ListView::TypeName(),
+	PAF_FACTORY_TYPE_NAME(ListView),
 	NewListView,
 	NewListViewParam,
 	NewListViewLayoutParam,

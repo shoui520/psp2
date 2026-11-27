@@ -1465,7 +1465,7 @@ static VersatileParam *NewTextBoxSoundParam()
 }
 
 FactoryFuncTable g_factoryTextBox = {
-	TextBox::TypeName(),
+	PAF_FACTORY_TYPE_NAME(TextBox),
 	NewTextBox,
 	NewTextBoxParam,
 	NewTextBoxLayoutParam,

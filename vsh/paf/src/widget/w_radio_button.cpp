@@ -100,7 +100,7 @@ static VersatileParam *NewRadioButtonSoundParam()
 }
 
 FactoryFuncTable g_factoryRadioButton = {
-	RadioButton::TypeName(),
+	PAF_FACTORY_TYPE_NAME(RadioButton),
 	NewRadioButton,
 	NewRadioButtonParam,
 	NewRadioButtonLayoutParam,

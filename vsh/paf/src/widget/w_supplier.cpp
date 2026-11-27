@@ -156,7 +156,7 @@ static VersatileParam *NewSupplierSoundParam()
 }
 
 FactoryFuncTable g_factorySupplier = {
-	Supplier::TypeName(),
+	PAF_FACTORY_TYPE_NAME(Supplier),
 	NewSupplier,
 	NewSupplierParam,
 	NewSupplierLayoutParam,

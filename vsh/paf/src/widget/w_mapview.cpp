@@ -189,7 +189,7 @@ static VersatileParam *CreateMapViewSoundParam()
 }
 
 paf::ui::FactoryFuncTable g_factoryMapView = {
-	paf::ui::MapView::TypeName(),
+	PAF_FACTORY_TYPE_NAME(paf::ui::MapView),
 	paf::ui::CreateMapView,
 	paf::ui::CreateMapViewParam,
 	paf::ui::CreateMapViewLayoutParam,
