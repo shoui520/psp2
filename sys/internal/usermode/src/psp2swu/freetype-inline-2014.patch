@@ -1,48 +1,16 @@
---- a/src/autofit/afcjk.c
-+++ b/src/autofit/afcjk.c
-@@ -567,6 +567,7 @@
+diff -ru a/src/autofit/afcjk.c b/src/autofit/afcjk.c
+--- a/src/autofit/afcjk.c	2010-10-03 19:36:03.000000000 +0100
++++ b/src/autofit/afcjk.c	2026-11-27 22:00:34.225749640 +0000
+@@ -71,7 +71,7 @@
    }
  
  
-+#ifndef PAF_STATIC_BUILD
-   static void
-   af_cjk_metrics_scale_dim( AF_CJKMetrics  metrics,
-                             AF_Scaler      scaler,
-@@ -659,14 +660,24 @@
-   }
- 
- 
-+#endif /* !PAF_STATIC_BUILD */
-+
-+
-   FT_LOCAL_DEF( void )
-   af_cjk_metrics_scale( AF_CJKMetrics  metrics,
-                         AF_Scaler      scaler )
-   {
-     metrics->root.scaler = *scaler;
- 
-+#ifdef PAF_STATIC_BUILD
-+    metrics->axis[AF_DIMENSION_HORZ].scale = scaler->x_scale;
-+    metrics->axis[AF_DIMENSION_HORZ].delta = scaler->x_delta;
-+    metrics->axis[AF_DIMENSION_VERT].scale = scaler->y_scale;
-+    metrics->axis[AF_DIMENSION_VERT].delta = scaler->y_delta;
-+#else
-     af_cjk_metrics_scale_dim( metrics, scaler, AF_DIMENSION_HORZ );
-     af_cjk_metrics_scale_dim( metrics, scaler, AF_DIMENSION_VERT );
-+#endif
-   }
- 
- 
-@@ -1166,7 +1177,7 @@
-   }
- 
- 
--  FT_LOCAL_DEF( void )
+-  static void
 +  static inline __attribute__(( always_inline )) void
-   af_cjk_hints_compute_blue_edges( AF_GlyphHints  hints,
-                                    AF_CJKMetrics  metrics,
-                                    AF_Dimension   dim )
-@@ -1494,7 +1505,7 @@
+   af_cjk_metrics_scale_dim( AF_LatinMetrics  metrics,
+                             AF_Scaler        scaler,
+                             AF_Dimension     dim )
+@@ -842,7 +842,7 @@
  
    /* align one stem edge relative to the previous stem edge */
  
@@ -51,7 +19,7 @@
    af_cjk_align_linked_edge( AF_GlyphHints  hints,
                              AF_Dimension   dim,
                              AF_Edge        base_edge,
-@@ -1665,7 +1676,7 @@
+@@ -1013,7 +1013,7 @@
    }
  
  
@@ -60,56 +28,22 @@
    af_cjk_hint_edges( AF_GlyphHints  hints,
                       AF_Dimension   dim )
    {
---- a/src/autofit/afhints.c
-+++ b/src/autofit/afhints.c
-@@ -282,7 +282,7 @@
- #ifdef __cplusplus
-   extern "C" {
- #endif
--  FT_Error
-+  static FT_Error
-   af_glyph_hints_get_num_segments( AF_GlyphHints  hints,
-                                    FT_Int         dimension,
-                                    FT_Int*        num_segments )
-@@ -308,7 +308,7 @@
- #ifdef __cplusplus
-   extern "C" {
- #endif
--  FT_Error
-+  static FT_Error
-   af_glyph_hints_get_segment_offset( AF_GlyphHints  hints,
-                                      FT_Int         dimension,
-                                      FT_Int         idx,
-@@ -412,7 +412,7 @@
-   }
+diff -ru a/src/autofit/afhints.c b/src/autofit/afhints.c
+--- a/src/autofit/afhints.c	2010-10-03 19:36:03.000000000 +0100
++++ b/src/autofit/afhints.c	2026-11-27 22:00:34.226675140 +0000
+@@ -671,7 +671,7 @@
+    ****************************************************************/
  
- 
--  FT_Error
-+  static FT_Error
-   af_glyph_hints_get_num_segments( AF_GlyphHints  hints,
-                                    FT_Int         dimension,
-                                    FT_Int*        num_segments )
-@@ -425,7 +425,7 @@
-   }
- 
- 
--  FT_Error
-+  static FT_Error
-   af_glyph_hints_get_segment_offset( AF_GlyphHints  hints,
-                                      FT_Int         dimension,
-                                      FT_Int         idx,
-@@ -810,7 +810,7 @@
-   /* Align all points of an edge to the same coordinate value, */
-   /* either horizontally or vertically.                        */
  
 -  FT_LOCAL_DEF( void )
 +  static inline __attribute__(( always_inline )) void
    af_glyph_hints_align_edge_points( AF_GlyphHints  hints,
                                      AF_Dimension   dim )
    {
---- a/src/autofit/afhints.h
-+++ b/src/autofit/afhints.h
-@@ -427,7 +427,7 @@
+diff -ru a/src/autofit/afhints.h b/src/autofit/afhints.h
+--- a/src/autofit/afhints.h	2010-10-03 19:36:03.000000000 +0100
++++ b/src/autofit/afhints.h	2026-11-27 22:00:34.227188973 +0000
+@@ -292,7 +292,7 @@
    af_glyph_hints_save( AF_GlyphHints  hints,
                         FT_Outline*    outline );
  
@@ -118,48 +52,51 @@
    af_glyph_hints_align_edge_points( AF_GlyphHints  hints,
                                      AF_Dimension   dim );
  
---- a/src/autofit/aflatin.c
-+++ b/src/autofit/aflatin.c
-@@ -519,7 +519,7 @@
-   /* Adjust scaling value, then scale and shift widths   */
-   /* and blue zones (if applicable) for given dimension. */
+diff -ru a/src/autofit/aflatin.c b/src/autofit/aflatin.c
+--- a/src/autofit/aflatin.c	2010-10-03 19:36:03.000000000 +0100
++++ b/src/autofit/aflatin.c	2026-11-27 22:00:34.228821932 +0000
+@@ -485,7 +485,7 @@
+   }
+ 
  
 -  static void
 +  static __attribute__(( noinline, noclone )) void
    af_latin_metrics_scale_dim( AF_LatinMetrics  metrics,
                                AF_Scaler        scaler,
                                AF_Dimension     dim )
-@@ -1746,7 +1746,7 @@
+@@ -1648,7 +1648,7 @@
  
-   /* Align one stem edge relative to the previous stem edge. */
+   /* align one stem edge relative to the previous stem edge */
  
 -  static void
 +  static inline __attribute__(( always_inline )) void
    af_latin_align_linked_edge( AF_GlyphHints  hints,
                                AF_Dimension   dim,
                                AF_Edge        base_edge,
---- a/src/autofit/aflatin2.c
-+++ b/src/autofit/aflatin2.c
-@@ -502,7 +502,7 @@
+diff -ru a/src/autofit/aflatin2.c b/src/autofit/aflatin2.c
+--- a/src/autofit/aflatin2.c	2010-10-03 19:36:03.000000000 +0100
++++ b/src/autofit/aflatin2.c	2026-11-27 22:00:34.230464308 +0000
+@@ -490,7 +490,7 @@
    }
  
  
 -  static void
 +  static __attribute__(( noinline, noclone )) void
    af_latin2_metrics_scale_dim( AF_LatinMetrics  metrics,
-                                AF_Scaler        scaler,
-                                AF_Dimension     dim )
-@@ -1758,7 +1758,7 @@
+                               AF_Scaler        scaler,
+                               AF_Dimension     dim )
+@@ -1737,7 +1737,7 @@
  
    /* align one stem edge relative to the previous stem edge */
  
 -  static void
 +  static inline __attribute__(( always_inline )) void
    af_latin2_align_linked_edge( AF_GlyphHints  hints,
-                                AF_Dimension   dim,
-                                AF_Edge        base_edge,
---- a/src/base/ftadvanc.c
-+++ b/src/base/ftadvanc.c
+                               AF_Dimension   dim,
+                               AF_Edge        base_edge,
+diff -ru a/src/base/ftadvanc.c b/src/base/ftadvanc.c
+--- a/src/base/ftadvanc.c	2010-10-03 19:36:03.000000000 +0100
++++ b/src/base/ftadvanc.c	2026-11-27 22:00:34.230844725 +0000
 @@ -21,7 +21,7 @@
  #include FT_INTERNAL_OBJECTS_H
  
@@ -169,9 +106,10 @@
    _ft_face_scale_advances( FT_Face    face,
                             FT_Fixed*  advances,
                             FT_UInt    count,
---- a/src/base/ftobjs.c
-+++ b/src/base/ftobjs.c
-@@ -514,7 +514,7 @@
+diff -ru a/src/base/ftobjs.c b/src/base/ftobjs.c
+--- a/src/base/ftobjs.c	2010-10-03 19:36:03.000000000 +0100
++++ b/src/base/ftobjs.c	2026-11-27 22:00:34.233642226 +0000
+@@ -505,7 +505,7 @@
  
  
  #ifdef GRID_FIT_METRICS
@@ -180,7 +118,7 @@
    ft_glyphslot_grid_fit_metrics( FT_GlyphSlot  slot,
                                   FT_Bool       vertical )
    {
-@@ -1056,7 +1056,7 @@
+@@ -1039,7 +1039,7 @@
    /*    This function finds the variant selector charmap, if there is one. */
    /*    There can only be one (platform=0, specific=5, format=14).         */
    /*                                                                       */
@@ -189,7 +127,7 @@
    find_variant_selector_charmap( FT_Face  face )
    {
      FT_CharMap*  first;
-@@ -1990,7 +1990,7 @@
+@@ -1956,7 +1956,7 @@
  
    /* documentation is in freetype.h */
  
@@ -198,7 +136,7 @@
    FT_Open_Face( FT_Library           library,
                  const FT_Open_Args*  args,
                  FT_Long              face_index,
-@@ -2552,7 +2552,7 @@
+@@ -2518,7 +2518,7 @@
    }
  
  
@@ -207,17 +145,18 @@
    ft_recompute_scaled_metrics( FT_Face           face,
                                 FT_Size_Metrics*  metrics )
    {
-@@ -4094,7 +4094,7 @@
+@@ -3983,7 +3983,7 @@
    /* <Note>                                                                */
-   /*    The driver _must_ be LOCKED!                                       */
+   /*     The driver _must_ be LOCKED!                                      */
    /*                                                                       */
 -  static void
 +  static __attribute__(( noinline )) void
    Destroy_Module( FT_Module  module )
    {
      FT_Memory         memory  = module->memory;
---- a/src/base/ftoutln.c
-+++ b/src/base/ftoutln.c
+diff -ru a/src/base/ftoutln.c b/src/base/ftoutln.c
+--- a/src/base/ftoutln.c	2010-10-03 19:36:03.000000000 +0100
++++ b/src/base/ftoutln.c	2026-11-27 22:00:34.234570892 +0000
 @@ -290,7 +290,7 @@
    }
  
@@ -227,8 +166,9 @@
    FT_Outline_New_Internal( FT_Memory    memory,
                             FT_UInt      numPoints,
                             FT_Int       numContours,
---- a/src/base/fttrigon.c
-+++ b/src/base/fttrigon.c
+diff -ru a/src/base/fttrigon.c b/src/base/fttrigon.c
+--- a/src/base/fttrigon.c	2010-10-03 19:36:03.000000000 +0100
++++ b/src/base/fttrigon.c	2026-11-27 22:00:34.235107851 +0000
 @@ -182,7 +182,7 @@
    }
  
@@ -247,9 +187,10 @@
    ft_trig_pseudo_polarize( FT_Vector*  vec )
    {
      FT_Fixed         theta;
---- a/src/cff/cffload.c
-+++ b/src/cff/cffload.c
-@@ -578,7 +578,7 @@
+diff -ru a/src/cff/cffload.c b/src/cff/cffload.c
+--- a/src/cff/cffload.c	2010-10-03 19:36:03.000000000 +0100
++++ b/src/cff/cffload.c	2026-11-27 22:00:34.236312893 +0000
+@@ -579,7 +579,7 @@
  
  
    /* get an entry from Name INDEX */
@@ -258,7 +199,7 @@
    cff_index_get_name( CFF_Font  font,
                        FT_UInt   element )
    {
-@@ -775,7 +775,7 @@
+@@ -776,7 +776,7 @@
    /*************************************************************************/
    /*************************************************************************/
  
@@ -267,8 +208,9 @@
    cff_charset_compute_cids( CFF_Charset  charset,
                              FT_UInt      num_glyphs,
                              FT_Memory    memory )
---- a/src/cff/cffload.h
-+++ b/src/cff/cffload.h
+diff -ru a/src/cff/cffload.h b/src/cff/cffload.h
+--- a/src/cff/cffload.h	2010-10-03 19:36:03.000000000 +0100
++++ b/src/cff/cffload.h	2026-11-27 22:00:34.236998977 +0000
 @@ -49,7 +49,7 @@
    cff_index_forget_element( CFF_Index  idx,
                              FT_Byte**  pbytes );
@@ -278,9 +220,10 @@
    cff_index_get_name( CFF_Font  font,
                        FT_UInt   element );
  
---- a/src/cff/cffobjs.c
-+++ b/src/cff/cffobjs.c
-@@ -102,7 +102,7 @@
+diff -ru a/src/cff/cffobjs.c b/src/cff/cffobjs.c
+--- a/src/cff/cffobjs.c	2010-10-03 19:36:03.000000000 +0100
++++ b/src/cff/cffobjs.c	2026-11-27 22:00:34.237901727 +0000
+@@ -103,7 +103,7 @@
    /* CFF and Type 1 private dictionaries have slightly different      */
    /* structures; we need to synthesize a Type 1 dictionary on the fly */
  
@@ -289,9 +232,10 @@
    cff_make_private_dict( CFF_SubFont  subfont,
                           PS_Private   priv )
    {
---- a/src/cff/cffparse.c
-+++ b/src/cff/cffparse.c
-@@ -125,7 +125,7 @@
+diff -ru a/src/cff/cffparse.c b/src/cff/cffparse.c
+--- a/src/cff/cffparse.c	2010-10-03 19:36:03.000000000 +0100
++++ b/src/cff/cffparse.c	2026-11-27 22:00:34.238723227 +0000
+@@ -127,7 +127,7 @@
  
  
    /* read a real */
@@ -300,7 +244,7 @@
    cff_parse_real( FT_Byte*  start,
                    FT_Byte*  limit,
                    FT_Long   power_ten,
-@@ -368,7 +368,7 @@
+@@ -370,7 +370,7 @@
  
  
    /* read a number, either integer or real */
@@ -309,7 +253,7 @@
    cff_parse_num( FT_Byte**  d )
    {
      return **d == 30 ? ( cff_parse_real( d[0], d[1], 0, NULL ) >> 16 )
-@@ -387,7 +387,7 @@
+@@ -389,7 +389,7 @@
  
    /* read a floating point number, either integer or real, */
    /* but return `10^scaling' times the number read in      */
@@ -318,8 +262,9 @@
    cff_parse_fixed_scaled( FT_Byte**  d,
                            FT_Long    scaling )
    {
---- a/src/psaux/afmparse.c
-+++ b/src/psaux/afmparse.c
+diff -ru a/src/psaux/afmparse.c b/src/psaux/afmparse.c
+--- a/src/psaux/afmparse.c	2026-11-27 22:00:34.211593218 +0000
++++ b/src/psaux/afmparse.c	2026-11-27 22:00:34.239466686 +0000
 @@ -87,7 +87,7 @@
            ( (stream)->status >= AFM_STREAM_STATUS_EOF )
  
@@ -356,8 +301,9 @@
    afm_parser_read_int( AFM_Parser  parser,
                         FT_Int*     aint )
    {
---- a/src/psaux/psconv.c
-+++ b/src/psaux/psconv.c
+diff -ru a/src/psaux/psconv.c b/src/psaux/psconv.c
+--- a/src/psaux/psconv.c	2010-10-03 19:36:03.000000000 +0100
++++ b/src/psaux/psconv.c	2026-11-27 22:00:34.239998936 +0000
 @@ -116,7 +116,7 @@
    }
  
@@ -367,8 +313,9 @@
    PS_Conv_ToInt( FT_Byte**  cursor,
                   FT_Byte*   limit )
  
---- a/src/psaux/psconv.h
-+++ b/src/psaux/psconv.h
+diff -ru a/src/psaux/psconv.h b/src/psaux/psconv.h
+--- a/src/psaux/psconv.h	2010-10-03 19:36:03.000000000 +0100
++++ b/src/psaux/psconv.h	2026-11-27 22:00:34.240486019 +0000
 @@ -32,7 +32,7 @@
                    FT_Int     base );
  
@@ -378,9 +325,10 @@
    PS_Conv_ToInt( FT_Byte**  cursor,
                   FT_Byte*   limit );
  
---- a/src/psaux/psobjs.c
-+++ b/src/psaux/psobjs.c
-@@ -335,7 +335,7 @@
+diff -ru a/src/psaux/psobjs.c b/src/psaux/psobjs.c
+--- a/src/psaux/psobjs.c	2010-10-03 19:36:03.000000000 +0100
++++ b/src/psaux/psobjs.c	2026-11-27 22:00:34.241924145 +0000
+@@ -336,7 +336,7 @@
    /* first character must be `(';                               */
    /* *acur is positioned at the character after the closing `)' */
  
@@ -389,7 +337,7 @@
    skip_literal_string( FT_Byte*  *acur,
                         FT_Byte*   limit )
    {
-@@ -848,7 +848,7 @@
+@@ -849,7 +849,7 @@
    /* NB: `values' can be NULL if we just want to skip the      */
    /*     array; in this case we ignore `max_values'            */
  
@@ -398,8 +346,9 @@
    ps_tofixedarray( FT_Byte*  *acur,
                     FT_Byte*   limit,
                     FT_Int     max_values,
---- a/src/pshinter/pshalgo.c
-+++ b/src/pshinter/pshalgo.c
+diff -ru a/src/pshinter/pshalgo.c b/src/pshinter/pshalgo.c
+--- a/src/pshinter/pshalgo.c	2010-10-03 19:36:03.000000000 +0100
++++ b/src/pshinter/pshalgo.c	2026-11-27 22:00:34.243520937 +0000
 @@ -243,7 +243,7 @@
    }
  
@@ -427,9 +376,10 @@
    psh_glyph_interpolate_normal_points( PSH_Glyph  glyph,
                                         FT_Int     dimension )
    {
---- a/src/raster/ftraster.c
-+++ b/src/raster/ftraster.c
-@@ -794,7 +794,7 @@
+diff -ru a/src/raster/ftraster.c b/src/raster/ftraster.c
+--- a/src/raster/ftraster.c	2010-10-03 19:36:03.000000000 +0100
++++ b/src/raster/ftraster.c	2026-11-27 22:00:34.246139480 +0000
+@@ -766,7 +766,7 @@
    /* <Return>                                                              */
    /*    SUCCESS on success.  FAILURE in case of overflow or incoherency.   */
    /*                                                                       */
@@ -438,7 +388,7 @@
    End_Profile( RAS_ARGS Bool  overshoot )
    {
      Long      h;
-@@ -864,7 +864,7 @@
+@@ -836,7 +836,7 @@
    /* <Return>                                                              */
    /*    SUCCESS on success.  FAILURE in case of overflow.                  */
    /*                                                                       */
@@ -447,7 +397,7 @@
    Insert_Y_Turn( RAS_ARGS Int  y )
    {
      PLong  y_turns;
-@@ -1388,7 +1388,7 @@
+@@ -1360,7 +1360,7 @@
    /* <Return>                                                              */
    /*    SUCCESS on success, FAILURE on render pool overflow.               */
    /*                                                                       */
@@ -456,7 +406,7 @@
    Bezier_Down( RAS_ARGS Int        degree,
                          TSplitter  splitter,
                          Long       miny,
-@@ -2180,7 +2180,7 @@
+@@ -2152,7 +2152,7 @@
    /*    an algorithm which is fast in this case.  Bubble sort is enough    */
    /*    and simple.                                                        */
    /*                                                                       */
@@ -465,8 +415,9 @@
    Sort( PProfileList  list )
    {
      PProfile  *old, current, next;
---- a/src/sfnt/ttcmap.c
-+++ b/src/sfnt/ttcmap.c
+diff -ru a/src/sfnt/ttcmap.c b/src/sfnt/ttcmap.c
+--- a/src/sfnt/ttcmap.c	2010-10-03 19:36:03.000000000 +0100
++++ b/src/sfnt/ttcmap.c	2026-11-27 22:00:34.248521897 +0000
 @@ -3105,7 +3105,7 @@
    }
  
@@ -476,9 +427,10 @@
    tt_cmap14_get_def_chars( TT_CMap     cmap,
                             FT_Byte*    p,
                             FT_Memory   memory )
---- a/src/sfnt/ttpost.c
-+++ b/src/sfnt/ttpost.c
-@@ -152,7 +152,7 @@
+diff -ru a/src/sfnt/ttpost.c b/src/sfnt/ttpost.c
+--- a/src/sfnt/ttpost.c	2010-10-03 19:36:03.000000000 +0100
++++ b/src/sfnt/ttpost.c	2026-11-27 22:00:34.261033484 +0000
+@@ -151,7 +151,7 @@
  #endif /* FT_CONFIG_OPTION_POSTSCRIPT_NAMES */
  
  
@@ -487,8 +439,48 @@
    load_format_20( TT_Face    face,
                    FT_Stream  stream,
                    FT_Long    post_limit )
---- a/src/smooth/ftsmooth.c
-+++ b/src/smooth/ftsmooth.c
+@@ -303,7 +303,7 @@
+   }
+ 
+ 
+-  static FT_Error
++  static __attribute__(( noinline )) FT_Error
+   load_format_25( TT_Face    face,
+                   FT_Stream  stream,
+                   FT_Long    post_limit )
+@@ -369,7 +369,7 @@
+   }
+ 
+ 
+-  static FT_Error
++  static inline __attribute__(( always_inline )) FT_Error
+   load_post_names( TT_Face  face )
+   {
+     FT_Stream  stream;
+diff -ru a/src/smooth/ftgrays.c b/src/smooth/ftgrays.c
+--- a/src/smooth/ftgrays.c	2010-10-03 19:36:03.000000000 +0100
++++ b/src/smooth/ftgrays.c	2026-11-27 22:00:34.260712609 +0000
+@@ -588,7 +588,7 @@
+   /*                                                                       */
+   /* Render a scanline as one or more cells.                               */
+   /*                                                                       */
+-  static void
++  static __attribute__(( noinline )) void
+   gray_render_scanline( RAS_ARG_ TCoord  ey,
+                                  TPos    x1,
+                                  TCoord  y1,
+@@ -695,7 +695,7 @@
+   /*                                                                       */
+   /* Render a given line as a series of scanlines.                         */
+   /*                                                                       */
+-  static void
++  static __attribute__(( noinline )) void
+   gray_render_line( RAS_ARG_ TPos  to_x,
+                              TPos  to_y )
+   {
+diff -ru a/src/smooth/ftsmooth.c b/src/smooth/ftsmooth.c
+--- a/src/smooth/ftsmooth.c	2010-10-03 19:36:03.000000000 +0100
++++ b/src/smooth/ftsmooth.c	2026-11-27 22:00:34.249670522 +0000
 @@ -95,7 +95,7 @@
  
  
@@ -498,9 +490,10 @@
    ft_smooth_render_generic( FT_Renderer       render,
                              FT_GlyphSlot      slot,
                              FT_Render_Mode    mode,
---- a/src/truetype/ttgload.c
-+++ b/src/truetype/ttgload.c
-@@ -1856,7 +1856,7 @@
+diff -ru a/src/truetype/ttgload.c b/src/truetype/ttgload.c
+--- a/src/truetype/ttgload.c	2010-10-03 19:36:03.000000000 +0100
++++ b/src/truetype/ttgload.c	2026-11-27 22:00:34.251379315 +0000
+@@ -1860,7 +1860,7 @@
  #endif /* TT_CONFIG_OPTION_EMBEDDED_BITMAPS */
  
  
@@ -509,8 +502,9 @@
    tt_loader_init( TT_Loader     loader,
                    TT_Size       size,
                    TT_GlyphSlot  glyph,
---- a/src/truetype/ttgxvar.c
-+++ b/src/truetype/ttgxvar.c
+diff -ru a/src/truetype/ttgxvar.c b/src/truetype/ttgxvar.c
+--- a/src/truetype/ttgxvar.c	2010-10-03 19:36:03.000000000 +0100
++++ b/src/truetype/ttgxvar.c	2026-11-27 22:00:34.252762398 +0000
 @@ -276,7 +276,7 @@
    /* <InOut>                                                               */
    /*    face :: The font face.                                             */
@@ -520,9 +514,10 @@
    ft_var_load_avar( TT_Face  face )
    {
      FT_Stream       stream = FT_FACE_STREAM(face);
---- a/src/truetype/ttinterp.c
-+++ b/src/truetype/ttinterp.c
-@@ -449,7 +449,7 @@
+diff -ru a/src/truetype/ttinterp.c b/src/truetype/ttinterp.c
+--- a/src/truetype/ttinterp.c	2010-10-03 19:36:03.000000000 +0100
++++ b/src/truetype/ttinterp.c	2026-11-27 22:00:34.258377608 +0000
+@@ -446,7 +446,7 @@
    /* <Return>                                                              */
    /*    FreeType error code.  0 means success.                             */
    /*                                                                       */
@@ -531,7 +526,7 @@
    Init_Context( TT_ExecContext  exec,
                  FT_Memory       memory )
    {
-@@ -784,7 +784,7 @@
+@@ -776,7 +776,7 @@
  
    /* documentation is in ttinterp.h */
  
@@ -540,7 +535,7 @@
    TT_New_Context( TT_Driver  driver )
    {
      TT_ExecContext  exec;
-@@ -1430,7 +1430,7 @@
+@@ -1422,7 +1422,7 @@
  
  #if 1
  
@@ -549,7 +544,7 @@
    TT_MulFix14( FT_Int32  a,
                 FT_Int    b )
    {
-@@ -1464,7 +1464,7 @@
+@@ -1456,7 +1456,7 @@
  #else
  
    /* compute (a*b)/2^14 with maximal accuracy and rounding */
@@ -558,7 +553,7 @@
    TT_MulFix14( FT_Int32  a,
                 FT_Int    b )
    {
-@@ -1777,7 +1777,7 @@
+@@ -1769,7 +1769,7 @@
    /* <Return>                                                              */
    /*    SUCCESS or FAILURE.                                                */
    /*                                                                       */
@@ -567,7 +562,7 @@
    Ins_Goto_CodeRange( EXEC_OP_ FT_Int    aRange,
                                 FT_ULong  aIP )
    {
-@@ -2820,7 +2820,7 @@
+@@ -2812,7 +2812,7 @@
    /*************************************************************************/
  
  
@@ -576,7 +571,7 @@
    Ins_SxVTL( EXEC_OP_ FT_UShort       aIdx1,
                        FT_UShort       aIdx2,
                        FT_Int          aOpc,
-@@ -4406,7 +4406,7 @@
+@@ -4371,7 +4371,7 @@
    /* Opcode range: 0x26                                                    */
    /* Stack:        int32? --> StkElt                                       */
    /*                                                                       */
@@ -585,7 +580,7 @@
    Ins_MINDEX( INS_ARG )
    {
      FT_Long  L, K;
-@@ -4498,7 +4498,7 @@
+@@ -4461,7 +4461,7 @@
    /* Opcode range: 0x58                                                    */
    /* Stack:        StkElt -->                                              */
    /*                                                                       */
@@ -594,7 +589,7 @@
    Ins_IF( INS_ARG )
    {
      FT_Int   nIfs;
-@@ -4541,7 +4541,7 @@
+@@ -4504,7 +4504,7 @@
    /* Opcode range: 0x1B                                                    */
    /* Stack:        -->                                                     */
    /*                                                                       */
@@ -603,7 +598,7 @@
    Ins_ELSE( INS_ARG )
    {
      FT_Int  nIfs;
-@@ -4585,7 +4585,7 @@
+@@ -4548,7 +4548,7 @@
    /* Opcode range: 0x2C                                                    */
    /* Stack:        uint32 -->                                              */
    /*                                                                       */
@@ -612,7 +607,7 @@
    Ins_FDEF( INS_ARG )
    {
      FT_ULong       n;
-@@ -4707,7 +4707,7 @@
+@@ -4669,7 +4669,7 @@
    /* Opcode range: 0x2B                                                    */
    /* Stack:        uint32? -->                                             */
    /*                                                                       */
@@ -621,7 +616,7 @@
    Ins_CALL( INS_ARG )
    {
      FT_ULong       F;
-@@ -4785,7 +4785,7 @@
+@@ -4746,7 +4746,7 @@
    /* Opcode range: 0x2A                                                    */
    /* Stack:        uint32? Eint16? -->                                     */
    /*                                                                       */
@@ -630,7 +625,7 @@
    Ins_LOOPCALL( INS_ARG )
    {
      FT_ULong       F;
-@@ -4864,7 +4864,7 @@
+@@ -4824,7 +4824,7 @@
    /* Opcode range: 0x89                                                    */
    /* Stack:        Eint8 -->                                               */
    /*                                                                       */
@@ -639,16 +634,16 @@
    Ins_IDEF( INS_ARG )
    {
      TT_DefRecord*  def;
-@@ -5062,7 +5062,7 @@
-   /* XXX: UNDOCUMENTED: Measures from the original glyph must be taken     */
-   /*      along the dual projection vector!                                */
+@@ -5022,7 +5022,7 @@
+   /* BULLSHIT: Measures from the original glyph must be taken along the    */
+   /*           dual projection vector!                                     */
    /*                                                                       */
 -  static void
 +  static inline __attribute__(( always_inline )) void
    Ins_GC( INS_ARG )
    {
      FT_ULong    L;
-@@ -5288,7 +5288,7 @@
+@@ -5230,7 +5230,7 @@
    /* Opcode range: 0x13                                                    */
    /* Stack:        uint32 -->                                              */
    /*                                                                       */
@@ -657,7 +652,7 @@
    Ins_SZP0( INS_ARG )
    {
      switch ( (FT_Int)args[0] )
-@@ -5317,7 +5317,7 @@
+@@ -5259,7 +5259,7 @@
    /* Opcode range: 0x14                                                    */
    /* Stack:        uint32 -->                                              */
    /*                                                                       */
@@ -666,7 +661,7 @@
    Ins_SZP1( INS_ARG )
    {
      switch ( (FT_Int)args[0] )
-@@ -5346,7 +5346,7 @@
+@@ -5288,7 +5288,7 @@
    /* Opcode range: 0x15                                                    */
    /* Stack:        uint32 -->                                              */
    /*                                                                       */
@@ -675,7 +670,7 @@
    Ins_SZP2( INS_ARG )
    {
      switch ( (FT_Int)args[0] )
-@@ -5375,7 +5375,7 @@
+@@ -5317,7 +5317,7 @@
    /* Opcode range: 0x16                                                    */
    /* Stack:        uint32 -->                                              */
    /*                                                                       */
@@ -684,7 +679,7 @@
    Ins_SZPS( INS_ARG )
    {
      switch ( (FT_Int)args[0] )
-@@ -5716,7 +5716,7 @@
+@@ -5656,7 +5656,7 @@
    /* Opcode range: 0x32-0x33                                               */
    /* Stack:        uint32... -->                                           */
    /*                                                                       */
@@ -693,16 +688,16 @@
    Ins_SHP( INS_ARG )
    {
      TT_GlyphZoneRec  zp;
-@@ -5774,7 +5774,7 @@
-   /*               contour in the twilight zone, namely contour number     */
-   /*               zero.                                                   */
+@@ -5709,7 +5709,7 @@
+   /* Opcode range: 0x34-35                                                 */
+   /* Stack:        uint32 -->                                              */
    /*                                                                       */
 -  static void
 +  static inline __attribute__(( always_inline )) void
    Ins_SHC( INS_ARG )
    {
-     TT_GlyphZoneRec  zp;
-@@ -5825,7 +5825,7 @@
+     TT_GlyphZoneRec zp;
+@@ -5767,7 +5767,7 @@
    /* Opcode range: 0x36-37                                                 */
    /* Stack:        uint32 -->                                              */
    /*                                                                       */
@@ -711,7 +706,7 @@
    Ins_SHZ( INS_ARG )
    {
      TT_GlyphZoneRec  zp;
-@@ -6348,7 +6348,7 @@
+@@ -6276,7 +6276,7 @@
    /* Opcode range: 0x3C                                                    */
    /* Stack:        uint32 uint32... -->                                    */
    /*                                                                       */
@@ -720,7 +715,7 @@
    Ins_ALIGNRP( INS_ARG )
    {
      FT_UShort   point;
-@@ -6484,7 +6484,7 @@
+@@ -6411,7 +6411,7 @@
    /* Opcode range: 0x27                                                    */
    /* Stack:        uint32 uint32 -->                                       */
    /*                                                                       */
@@ -729,7 +724,7 @@
    Ins_ALIGNPTS( INS_ARG )
    {
      FT_UShort   p1, p2;
-@@ -7115,7 +7115,7 @@
+@@ -7007,7 +7007,7 @@
    /* Opcode range: 0x88                                                    */
    /* Stack:        uint32 --> uint32                                       */
    /*                                                                       */
@@ -738,9 +733,10 @@
    Ins_GETINFO( INS_ARG )
    {
      FT_Long  K;
---- a/src/truetype/ttobjs.c
-+++ b/src/truetype/ttobjs.c
-@@ -871,7 +871,7 @@
+diff -ru a/src/truetype/ttobjs.c b/src/truetype/ttobjs.c
+--- a/src/truetype/ttobjs.c	2010-10-03 19:36:03.000000000 +0100
++++ b/src/truetype/ttobjs.c	2026-11-27 22:00:34.259492442 +0000
+@@ -548,7 +548,7 @@
  
  #ifdef TT_USE_BYTECODE_INTERPRETER
  
@@ -749,16 +745,16 @@
    tt_size_done_bytecode( FT_Size  ftsize )
    {
      TT_Size    size   = (TT_Size)ftsize;
-@@ -999,7 +999,7 @@
+@@ -675,7 +675,7 @@
    }
  
  
 -  FT_LOCAL_DEF( FT_Error )
 +  FT_LOCAL_DEF( FT_Error ) __attribute__(( noinline ))
-   tt_size_ready_bytecode( TT_Size  size,
-                           FT_Bool  pedantic )
+   tt_size_ready_bytecode( TT_Size  size )
    {
-@@ -1122,7 +1122,7 @@
+     FT_Error  error = TT_Err_Ok;
+@@ -797,7 +797,7 @@
    /* <Input>                                                               */
    /*    size :: A handle to the target size object.                        */
    /*                                                                       */
@@ -767,3 +763,15 @@
    tt_size_reset( TT_Size  size )
    {
      TT_Face           face;
+diff -ru a/src/type1/t1gload.c b/src/type1/t1gload.c
+--- a/src/type1/t1gload.c	2010-10-03 19:36:03.000000000 +0100
++++ b/src/type1/t1gload.c	2026-11-27 22:00:34.261166193 +0000
+@@ -54,7 +54,7 @@
+   /*************************************************************************/
+ 
+ 
+-  FT_LOCAL_DEF( FT_Error )
++  FT_LOCAL_DEF( FT_Error ) __attribute__(( noinline ))
+   T1_Parse_Glyph_And_Get_Char_String( T1_Decoder  decoder,
+                                       FT_UInt     glyph_index,
+                                       FT_Data*    char_string )

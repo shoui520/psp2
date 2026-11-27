@@ -17,12 +17,12 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
 	"${PSP2_SRC}/contrib/dlmalloc-2.8.4/malloc.c"
 	"${PAF}/src/memory/dlmalloc_sce_0996.patch")
 
-# FreeType 2.4.9 with Sony's SCE patch plus 2014 inline overrides (keeps Sony's 2014
+# FreeType 2.4.3 with Sony's SCE patch plus 2014 inline overrides (keeps Sony's 2014
 # TT_RunIns / fttrigon / ftraster / psaux / pshinter function boundaries).
-set(FT2 "${PSP2_SRC}/contrib/freetype-2.4.9")
+set(FT2 "${PSP2_SRC}/contrib/freetype-2.4.3")
 set(FT2_DIR "${PSP2_SRC}/sys/internal/usermode/src/libSceFt2")
 set(FT2_SCE "${CMAKE_CURRENT_BINARY_DIR}/freetype-sce")
-file(MD5 "${FT2_DIR}/freetype-sce.patch" ft2_patch_md5)
+file(MD5 "${CMAKE_CURRENT_SOURCE_DIR}/freetype-2.4.3-sce.patch" ft2_patch_md5)
 file(MD5 "${CMAKE_CURRENT_SOURCE_DIR}/freetype-inline-2014.patch" ft2_inline_md5)
 string(MD5 ft2_patch_md5 "${ft2_patch_md5} ${ft2_inline_md5} ${FT2}")
 set(ft2_stamp "")
@@ -35,11 +35,11 @@ if(NOT ft2_stamp STREQUAL ft2_patch_md5)
 		  src/base/ftobjs.c src/base/ftoutln.c src/base/fttrigon.c
 		  include/freetype/internal/ftobjs.h
 		  src/autofit src/cff src/psaux src/pshinter src/raster src/sfnt src/smooth
-		  src/truetype)
+		  src/truetype src/type1)
 		get_filename_component(d ${f} DIRECTORY)
 		file(COPY "${FT2}/${f}" DESTINATION "${FT2_SCE}/${d}")
 	endforeach()
-	foreach(patch "${FT2_DIR}/freetype-sce.patch" "${CMAKE_CURRENT_SOURCE_DIR}/freetype-inline-2014.patch")
+	foreach(patch "${CMAKE_CURRENT_SOURCE_DIR}/freetype-2.4.3-sce.patch" "${CMAKE_CURRENT_SOURCE_DIR}/freetype-inline-2014.patch")
 		execute_process(COMMAND patch -s -p1 -d "${FT2_SCE}" -i "${patch}"
 			RESULT_VARIABLE ft2_patch_result ERROR_VARIABLE ft2_patch_error)
 		if(NOT ft2_patch_result EQUAL 0)
@@ -49,7 +49,7 @@ if(NOT ft2_stamp STREQUAL ft2_patch_md5)
 	file(WRITE "${FT2_SCE}/.patched" "${ft2_patch_md5}")
 endif()
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
-	"${FT2_DIR}/freetype-sce.patch"
+	"${CMAKE_CURRENT_SOURCE_DIR}/freetype-2.4.3-sce.patch"
 	"${CMAKE_CURRENT_SOURCE_DIR}/freetype-inline-2014.patch")
 
 set(MODULE_COMPILE_OPTIONS $<$<COMPILE_LANGUAGE:C,CXX>:-Xautoinlinesize=8>)
@@ -179,7 +179,7 @@ set(swu_ft2_SOURCES
 	${FT2_SCE}/src/base/ftinit.c
 	${FT2_SCE}/src/autofit/autofit.c
 	${FT2_SCE}/src/truetype/truetype.c
-	${FT2}/src/type1/type1.c
+	${FT2_SCE}/src/type1/type1.c
 	${FT2_SCE}/src/cff/cff.c
 	${FT2_SCE}/src/base/ftsystem.c
 	${FT2_SCE}/src/psaux/psaux.c
@@ -191,10 +191,10 @@ set(swu_ft2_SOURCES
 )
 set_source_files_properties(${swu_ft2_SOURCES} PROPERTIES
 	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;FT2_BUILD_LIBRARY;FT_CONFIG_NO_OTVALID;PAF_STATIC_BUILD"
-	COMPILE_OPTIONS "-O3;-fno-stack-protector;-fno-ipa-sra;-fno-partial-inlining;-fhosted;-fbuiltin;-fdelete-null-pointer-checks;-fsigned-char"
+	COMPILE_OPTIONS "-O3;-fno-tree-vectorize;-fno-stack-protector;-fno-ipa-sra;-fno-partial-inlining;-fhosted;-fbuiltin;-fdelete-null-pointer-checks;-fsigned-char"
 	INCLUDE_DIRECTORIES "${FT2_DIR}/include;${FT2_SCE}/include;${FT2_SCE}/src/base;${FT2}/include;${FT2}/src;${FT2}/src/base")
 set_source_files_properties(${FT2_SCE}/src/base/ftbase.c PROPERTIES
-	COMPILE_OPTIONS "-O3;-fstack-protector;-fno-ipa-sra;-fno-partial-inlining;-fhosted;-fbuiltin;-fdelete-null-pointer-checks;-fsigned-char")
+	COMPILE_OPTIONS "-O3;-fno-tree-vectorize;-fstack-protector;-fno-ipa-sra;-fno-partial-inlining;-fhosted;-fbuiltin;-fdelete-null-pointer-checks;-fsigned-char")
 set_source_files_properties(${FT2_DIR}/libc.c PROPERTIES
 	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;FT2_BUILD_LIBRARY;PAF_STATIC_BUILD"
 	COMPILE_OPTIONS "-O3;-fno-stack-protector;-ffreestanding;-fno-builtin;-fsigned-char")
