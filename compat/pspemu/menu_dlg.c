@@ -429,17 +429,17 @@ static SceUID menuDlgScanSavedata(void)
 
 			if (readBytes == (SceSSize)MENU_SFO_READ_SIZE) {
 				void *sfoHandle = NULL;
-				int titleKeyIdx = 0;
+				void *titleEntry = NULL;
 				const char *keyName = "TITLE";
 				char *titleVal = NULL;
 				size_t usedSize = 0U;
 				size_t maxSize = 0U;
 
 				sfoParseBuffer(g_menuSfoBuf, MENU_SFO_READ_SIZE, &sfoHandle);
-				if (sfoFindKey(sfoHandle, "TITLE", &titleKeyIdx) == 0 &&
-				    sfoGetEntryMeta(sfoHandle, titleKeyIdx, &keyName, &usedSize, &maxSize) == 0 &&
+				if (sfoFindKey(sfoHandle, "TITLE", &titleEntry) == 0 &&
+				    sfoGetEntryMeta(sfoHandle, titleEntry, &keyName, &usedSize, &maxSize) == 0 &&
 				    maxSize >= usedSize && usedSize != 0U &&
-				    sfoGetEntryValue(sfoHandle, titleKeyIdx, &titleVal) == 0) {
+				    sfoGetEntryValue(sfoHandle, titleEntry, &titleVal) == 0) {
 					strncpy(rec->titleName, titleVal, maxSize);
 				}
 				sfoDestroy(sfoHandle);

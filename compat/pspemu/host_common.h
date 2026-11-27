@@ -109,6 +109,7 @@ extern "C" {
 #define PSPEMU_BOOT_MODE_PSP               7U
 
 /* SceCompat cache operations */
+#define PSPEMU_COMPAT_CACHE_INVALIDATE     1
 #define PSPEMU_COMPAT_CACHE_WRITEBACK      2
 
 /* Title list binary format (ur0:emu_list/title_list.bin) */
@@ -308,6 +309,16 @@ int sceDisplayWaitVblankStartCB(void);
 
 int sceCtrlSetSamplingMode(int mode);
 int sceCtrlPeekBufferPositive(int port, SceCtrlData *padData, int count);
+int sceCtrlPeekBufferNegative2(int port, SceCtrlData2 *padData, int count);
+int sceCtrlGetWirelessControllerInfo(SceCtrlWirelessControllerInfo *info);
+typedef struct SceCtrlActuator {
+	uint8_t small;
+	uint8_t large;
+	uint8_t reserved[6];
+} SceCtrlActuator;
+int sceCtrlSetActuator(int port, const SceCtrlActuator *actuator);
+int _sceAppMgrGetAppState(SceAppMgrAppState *appState, SceSize size, uint32_t version);
+void *sceClibMemcpy_safe(void *dst, const void *src, SceSize len);
 
 int sceShellUtilInitEvents(int mode);
 int sceShellUtilLock(uint32_t type);
@@ -979,7 +990,11 @@ int pspemuMenuLoadVmcPreview(unsigned int slot);
 int pspemuMenuImportVmcPreviewEntries(int entryCount);
 
 /* pops_host.c / vmc_manager.c / sfo helpers used by menu_dlg.c */
-extern uint8_t g_popsMenuConfig[64];
+extern uint8_t g_popsMenuConfig[240];
+extern int g_popsSpuAudioFlags;
+int sceDisplaySetFrameBufForCompat(int offsetX, int offsetY, int scaleX, int scaleY,
+                                   const void *srcFrameBuf, void *dstFrameBuf);
+int sceCompatGetPrimaryHead(void);
 int popsHostGetCurrentDisc(void);
 int popsHostIsSingleDisc(void);
 int popsHostIsAnalogDisabled(void);
@@ -988,21 +1003,28 @@ int popsHostGetDiscCount(void);
 int popsHostCaptureScreen(void *dstBuf, int forExport);
 int popsHostGetPocsDisplaySlot(void);
 int popsHostGetPocsDisplayChannel(void);
+int popsHostSetPocsDisplayChannel(uint8_t channel);
 int popsHostGetPocsAutoBoot(void);
 uint8_t popsHostSetPocsAutoBoot(uint8_t enabled);
+int popsSetAudioVolume(int volumeLevel);
+int popsHostSetPocsBgTypeAndSave(uint8_t bgType);
+int popsHostHandlePocsFirstBoot(void);
 int popsPngEncodeRgba(void *dstPng, const void *srcRgba, int width, int height,
                       int stride, int flags);
 int sfoParseBuffer(const void *buf, uint32_t size, void **outHandle);
 int sfoDestroy(void *handle);
-int sfoFindKey(void *handle, const char *key, int *outIndex);
-int sfoGetEntryMeta(void *handle, int index, const char **outKey,
+int sfoFindKey(void *handle, const char *key, void **outEntry);
+int sfoGetEntryMeta(void *handle, void *entryObj, const char **outKey,
                     size_t *outUsedSize, size_t *outMaxSize);
-int sfoGetEntryValue(void *handle, int index, char **outValue);
+int sfoGetEntryValue(void *handle, void *entryObj, char **outValue);
+int vmcManagerFormatSlot(unsigned int cardIndex);
 int vmcManagerFlushAndVerify(unsigned int slot);
 int vmcManagerListEntries(unsigned int slot, void *outEntries);
 int vmcManagerCopyEntry(unsigned int dstSlot, unsigned int srcSlot, const void *entryName);
 int vmcManagerDeleteEntry(unsigned int slot, const void *entryName);
 int vmcManagerFindEntryIndex(unsigned int slot, const char *entryName);
+int vmpSignHeader(void *vmpBuf);
+int vmpVerifyHeader(void *vmpBuf, uint32_t *outHeaderSize);
 const char *remotePocsGetMcxPath(void);
 int remotePocsGetInsertedSlot(void);
 int remotePocsHasActiveSession(void);
@@ -1101,6 +1123,21 @@ void *remotePocsGetCustomFrameBuffer(int index);
 void *remotePocsGetBgTextureBuffer(void);
 void remotePocsCommitBgTexture(void);
 void remotePocsClearBgPreviewCache(void);
+int remotePocsConsumeDirtyFlag(void);
+int remotePocsIsStandbyActive(void);
+int remotePocsNotifyVmcDirty(void);
+int remotePocsStartCore(void);
+int remotePocsActivateStandalone(void);
+int remotePocsNotifyBootReady(void);
+int remotePocsSyncTimeFromHost(void);
+int remotePocsStopBackgroundTasks(void);
+int remotePocsFlushVmc(void);
+
+/* pops_spu.c (Milestone 7) */
+int popsSpuFlushRing(void);
+uint32_t popsSpuMixSample(void);
+int popsSpuReset(void);
+int pocsResetAudioBuffer(void);
 
 /* pops_host.c */
 SceBool popsHostIsOverlayActive(void);

@@ -68,6 +68,11 @@ psp2_module(vs0_app_NPXS10028_eboot KIND user COMPILER gcc48 PARTIAL SOURCES
 	compat_list.c
 	settings.c
 	pocs_dlg.c
+	pops_host.c
+	pops_png_enc.c
+	sfo_parser.c
+	vmc_manager.c
+	vmp_crypto.c
 	me_wrapper_api.c
 	remote_usbpspcm.c
 	scejpeg_decmain.c
@@ -144,6 +149,11 @@ set_source_files_properties(
 	compat_list.c
 	settings.c
 	pocs_dlg.c
+	pops_host.c
+	pops_png_enc.c
+	sfo_parser.c
+	vmc_manager.c
+	vmp_crypto.c
 	me_wrapper_api.c
 	remote_usbpspcm.c
 	scejpeg_decmain.c

@@ -453,7 +453,7 @@ int pspemuSettingsRunPocsMenuFlow(int dialogMode)
 		pspemuBgDialogShowMenu(dialogMode, hasMedia, &bgType, &dialogAction);
 		g_activePocsDialogMode = 0;
 
-		popsHostSetPocsBgType((uint8_t)bgDialogMapBgTypeToMode(bgType));
+		popsHostSetPocsBgTypeAndSave((uint8_t)bgDialogMapBgTypeToMode(bgType));
 		if (pspemuIsPocketStationLaunch() == 0)
 			break;
 
@@ -522,8 +522,8 @@ static int settingsShellEventCallback(int eventArg, int eventType, int eventPara
 				sceTouchSetSamplingState(1, SCE_TOUCH_SAMPLING_STATE_STOP);
 				popsHostSetPauseState(1);
 				if (remotePocsHasMountedMedia() == 0)
-					sceCompatCache(PSPEMU_COMPAT_CACHE_WRITEBACK, popsHostGetVmcBuffer(0U), 0x20080U);
-				sceCompatCache(PSPEMU_COMPAT_CACHE_WRITEBACK, popsHostGetVmcBuffer(1U), 0x20080U);
+					sceCompatCache(PSPEMU_COMPAT_CACHE_INVALIDATE, popsHostGetVmcBuffer(0U), 0x20080U);
+				sceCompatCache(PSPEMU_COMPAT_CACHE_INVALIDATE, popsHostGetVmcBuffer(1U), 0x20080U);
 				g_menuSettings.discLoadSpeed = (uint8_t)popsHostGetDiscLoadSpeed(g_popsMenuConfig);
 				g_menuSettings.customScreenActive = (uint8_t)popsHostIsCustomScreenActive();
 				g_menuSettings.multiTapEnabled = (uint8_t)popsHostIsMultiTapEnabled();
