@@ -293,8 +293,8 @@ static int __attribute__((noinline)) adhocAuthEncryptTxPacket(void *mbuf)
         return -1;
     }
     uint16_t flags = ((SceAuthMbuf *)m)->m_flags;
-    int pkt_len = ((SceAuthMbuf *)m)->m_pkthdr_len;
     if ((flags & 0x100) != 0) {
+        int pkt_len = ((SceAuthMbuf *)m)->m_pkthdr_len;
         if (sceMemab_driver_F742F283(data + 0x30, pkt_len - 0x30, data + 0x10, 1) < 0) {
             return -1;
         }
@@ -307,7 +307,7 @@ static int __attribute__((noinline)) adhocAuthEncryptTxPacket(void *mbuf)
     sceKernelWaitSema(g_hash_sema, 1, NULL);
     uint8_t *ctx = adhocAuthHashFind(data);
     if (ctx == NULL ||
-        sceMemab_driver_3C15BC8C(ctx, data + 0x30, pkt_len - 0x30, data + 0x10, 1) < 0) {
+        sceMemab_driver_3C15BC8C(ctx, data + 0x30, ((SceAuthMbuf *)m)->m_pkthdr_len - 0x30, data + 0x10, 1) < 0) {
         sceKernelSignalSema(g_hash_sema, 1);
         return -1;
     }

@@ -131,6 +131,7 @@ s32 NP_MATCHING2_NOINLINE npWorkerStartContext(NpMatching2Context *ctx)
         return ret;
     }
 
+    ret = 0;
     {
         NpServiceServerEntry *curEntry = entryList;
         while (curEntry != NULL) {

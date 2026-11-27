@@ -1924,7 +1924,8 @@ static int loadIcvTable(MgvMediaCtx *ctx, u8 *buf) {
             ctx->mediaFlags |= 8u;
         memset(buf, 0, 1024);
     }
-    memcpy(ctx->icvTable, buf + 8, 512);
+    for (u32 i = 0; i < 512; i++)
+        ctx->icvTable[i] = buf[i + 8];
     return 0;
 }
 

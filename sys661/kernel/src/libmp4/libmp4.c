@@ -1295,51 +1295,52 @@ static NOINLINE s32 mp4InitCallbackBundle(u32 *dst, const u32 *src)
 /* 0x2928: sceMp4Init */
 s32 sceMp4_68651CBC(s32 mode, s32 version)
 {
-    static const void *const msv_cbs[32] = {
-        (const void *)mp4IoOpen,
-        (const void *)mp4IoClose,
-        (const void *)mp4IoTell,
-        (const void *)mp4IoSeek,
-        (const void *)mp4IoGetSize,
-        (const void *)mp4IoRead,
-        (const void *)mp4IoReadBE,
-        (const void *)mp4MemAllocCb,
-        (const void *)mp4MemCallocCb,
-        (const void *)mp4MemFreeCb,
-        (const void *)mp4MemCopyCb,
-        (const void *)mp4MemSetCb,
-        NULL,
-        NULL,
-        (const void *)mp4StrCmpWrap,
-        NULL,
-        (const void *)mp4StrLenCb,
-    };
-    static const u32 msv_cfg[2][32] = {
-        { 0x64, 1, 1, 3 },
-        { 0x1f4, 1, 1, 3 },
-    };
-    const void *cbs[32];
-    u32 cfg[2][32];
+    u32 heapSizes[2] = { 0x10000U, 0x40000U };
 
     if (_sceKernelCheckThreadStack() < 4080)
         return SCE_MP4_ERROR_STACK_OVERFLOW;
     if ((u32)(mode - 1) >= 2U || version != 1)
         return SCE_MP4_ERROR_INVALID_VALUE;
+
+    u32 heapSize = heapSizes[mode - 1];
     if (mp4IsInitialized() == 0)
         return SCE_MP4_ERROR_ALREADY_INITED;
 
     mp4CreateGlobalMutexes();
-    s32 ret = mp4InitHeap(g_mp4HeapSizes[mode - 1]);
+    s32 ret = mp4InitHeap(heapSize);
     if (ret < 0) {
         mp4DeleteGlobalMutexes();
         return ret;
     }
 
     mp4SetCopyFn(sceKernelMemcpy);
-    sceKernelMemcpy(cbs, msv_cbs, sizeof(cbs));
-    sceKernelMemcpy(cfg, msv_cfg, sizeof(cfg));
-    mp4msv_9CA13D1A(1, cbs);
-    mp4msv_3C2183C7(1, cfg[mode - 1]);
+    {
+        const void *cbs[32] = {
+            (const void *)mp4IoOpen,
+            (const void *)mp4IoClose,
+            (const void *)mp4IoTell,
+            (const void *)mp4IoSeek,
+            (const void *)mp4IoGetSize,
+            (const void *)mp4IoRead,
+            (const void *)mp4IoReadBE,
+            (const void *)mp4MemAllocCb,
+            (const void *)mp4MemCallocCb,
+            (const void *)mp4MemFreeCb,
+            (const void *)mp4MemCopyCb,
+            (const void *)mp4MemSetCb,
+            NULL,
+            NULL,
+            (const void *)mp4StrCmpWrap,
+            NULL,
+            (const void *)mp4StrLenCb,
+        };
+        u32 cfg[2][32] = {
+            { 0x64, 1, 1, 3 },
+            { 0x1f4, 1, 1, 3 },
+        };
+        mp4msv_9CA13D1A(1, cbs);
+        mp4msv_3C2183C7(1, cfg[mode - 1]);
+    }
     return ret;
 }
 
