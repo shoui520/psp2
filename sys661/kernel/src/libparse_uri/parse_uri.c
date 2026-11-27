@@ -4,28 +4,11 @@
  */
 
 #include <common_imp.h>
-#include <stdarg.h>
+#include "uri_in.h"
 
 SCE_MODULE_INFO("SceParseURI_Library", SCE_MODULE_USER | SCE_MODULE_ATTR_CANT_STOP | SCE_MODULE_ATTR_EXCLUSIVE_LOAD, 1, 1);
 SCE_SDK_VERSION(0x06060110);
 
-typedef struct SceParsedUri {
-    s32 noSlash;            /* 0x00 */
-    char *scheme;           /* 0x04 */
-    char *userInfoUserName; /* 0x08 */
-    char *userInfoPassword; /* 0x0C */
-    char *host;             /* 0x10 */
-    char *path;             /* 0x14 */
-    char *query;            /* 0x18 */
-    char *fragment;         /* 0x1C */
-    u16 port;               /* 0x20 */
-    u16 reserved[5];        /* 0x22..0x2B */
-} SceParsedUri;
-
-/* Imports from Kernel_Library */
-extern void *sceKernelMemset(void *dst, int c, u32 size);
-extern int sceKernelCheckThreadStack(void);
-extern void *sceKernelMemcpy(void *dst, const void *src, u32 size);
 
 /* Character classification table at 0x2A80 (g_ctype_table[c + 1]) */
 static const u8 g_ctype_table[129] = {
@@ -72,16 +55,16 @@ static const char g_hex_upper[] = "0123456789ABCDEF";
 static const char g_hex_lower[] = "0123456789abcdef";
 
 /* Forward declarations of internal helpers */
-static int is_scheme_char(u8 c);
-static int get_unescaped_len(const char *str);
-static int parse_userinfo(const char *str, char *workArea, u32 workAreaSize, u32 *userSizeOut, u32 *passSizeOut, int copyFlag);
-static int parse_scheme(char *workArea, const char *uri, u32 *sizeOut, u32 workAreaSize, int copyFlag);
-static int parse_host(const char *str, char *workArea, u32 *sizeOut, u32 workAreaSize, int copyFlag);
-static void get_default_port(const char *scheme, u16 *portOut);
-static int parse_path(const char *str, char *workArea, u32 *sizeOut, u32 workAreaSize, int copyFlag);
-static int parse_fragment(const char *str, char *workArea, u32 *sizeOut, u32 workAreaSize, int copyFlag);
-static int parse_port(const char *str, u16 *portOut);
-static int parse_query(const char *str, char *workArea, u32 *sizeOut, u32 workAreaSize, int copyFlag);
+static int _is_scheme_char(u8 c);
+static int uri_decoded_len(const char *str);
+static int _userinfo_parse(const char *str, char *workArea, u32 workAreaSize, u32 *userSizeOut, u32 *passSizeOut, int copyFlag);
+static int _scheme_parse(char *workArea, const char *uri, u32 *sizeOut, u32 workAreaSize, int copyFlag);
+static int _hostname_parse(const char *str, char *workArea, u32 *sizeOut, u32 workAreaSize, int copyFlag);
+static void _set_default_port(const char *scheme, u16 *portOut);
+static int _path_parse(const char *str, char *workArea, u32 *sizeOut, u32 workAreaSize, int copyFlag);
+static int _fragment_parse(const char *str, char *workArea, u32 *sizeOut, u32 workAreaSize, int copyFlag);
+static int _portnum_parse(const char *str, u16 *portOut);
+static int _query_parse(const char *str, char *workArea, u32 *sizeOut, u32 workAreaSize, int copyFlag);
 static int append_rel_path(char *basePath, const char *relPath);
 static int normalize_path(char *dst, const char *src, u32 size);
 static int hex_char_to_val(u8 c);
@@ -100,7 +83,7 @@ static void sprintf_put_cb(void *ctx, int c);
 static const char *uri_memchr(const char *s, int c, int n);
 
 /* 0x0000 */
-static int is_scheme_char(u8 c)
+static int _is_scheme_char(u8 c)
 {
     u8 flags = g_ctype_table[c + 1];
     if ((flags & 7) != 0 || c == '+' || c == '-' || c == '.') {
@@ -189,7 +172,7 @@ int sceUriUnescape(char *unescaped, u32 *unescapedLenOut, u32 unescapedBufSize, 
         doCopy = 0;
     }
 
-    int check = get_unescaped_len(src);
+    int check = uri_decoded_len(src);
     if (check < 0) {
         return 0x80433060;
     }
@@ -258,7 +241,7 @@ int sceUriParse(SceParsedUri *parsedArea, const char *url, void *workArea, u32 *
     }
 
     char *workBuf = (char *)workArea;
-    int len = parse_scheme(workBuf, url, &elemSize, workAreaSize, doCopy);
+    int len = _scheme_parse(workBuf, url, &elemSize, workAreaSize, doCopy);
     if (len < 0) {
         return len;
     }
@@ -295,7 +278,7 @@ int sceUriParse(SceParsedUri *parsedArea, const char *url, void *workArea, u32 *
     }
 
     char *workPtr = workBuf + curWorkOffset;
-    len = parse_userinfo(p, workPtr, workAreaSize - curWorkOffset, &userSize, &passSize, doCopy);
+    len = _userinfo_parse(p, workPtr, workAreaSize - curWorkOffset, &userSize, &passSize, doCopy);
     if (len < 0) {
         return len;
     }
@@ -309,7 +292,7 @@ int sceUriParse(SceParsedUri *parsedArea, const char *url, void *workArea, u32 *
     curWorkOffset += userSize + passSize;
     workPtr = workBuf + curWorkOffset;
 
-    len = parse_host(p, workPtr, &elemSize, workAreaSize - curWorkOffset, doCopy);
+    len = _hostname_parse(p, workPtr, &elemSize, workAreaSize - curWorkOffset, doCopy);
     if (len < 0) {
         return len;
     }
@@ -328,7 +311,7 @@ int sceUriParse(SceParsedUri *parsedArea, const char *url, void *workArea, u32 *
     }
 
     if (hasPort == 1) {
-        len = parse_port(p, &portVal);
+        len = _portnum_parse(p, &portVal);
         if (len < 0) {
             return len;
         }
@@ -345,13 +328,13 @@ int sceUriParse(SceParsedUri *parsedArea, const char *url, void *workArea, u32 *
 
     if (hasPort == 0 || zeroPort != 0) {
         if (doCopy == 1) {
-            get_default_port(parsedArea->scheme, &portVal);
+            _set_default_port(parsedArea->scheme, &portVal);
             parsedArea->port = portVal;
         }
     }
 
     workPtr = workBuf + curWorkOffset;
-    len = parse_path(p, workPtr, &elemSize, workAreaSize - curWorkOffset, doCopy);
+    len = _path_parse(p, workPtr, &elemSize, workAreaSize - curWorkOffset, doCopy);
     if (len < 0) {
         return len;
     }
@@ -364,7 +347,7 @@ int sceUriParse(SceParsedUri *parsedArea, const char *url, void *workArea, u32 *
     curWorkOffset += elemSize;
     workPtr = workBuf + curWorkOffset;
 
-    len = parse_query(p, workPtr, &elemSize, workAreaSize - curWorkOffset, doCopy);
+    len = _query_parse(p, workPtr, &elemSize, workAreaSize - curWorkOffset, doCopy);
     if (len < 0) {
         return len;
     }
@@ -377,7 +360,7 @@ int sceUriParse(SceParsedUri *parsedArea, const char *url, void *workArea, u32 *
     curWorkOffset += elemSize;
     workPtr = workBuf + curWorkOffset;
 
-    len = parse_fragment(p, workPtr, &elemSize, workAreaSize - curWorkOffset, doCopy);
+    len = _fragment_parse(p, workPtr, &elemSize, workAreaSize - curWorkOffset, doCopy);
     if (len < 0) {
         return len;
     }
@@ -460,7 +443,7 @@ int sceUriBuild(char *url, u32 *urlLenOut, u32 urlBufSize, const SceParsedUri *p
     }
     if ((flags & 0x04) != 0) {
         if (parsedArea->scheme != NULL) {
-            get_default_port(parsedArea->scheme, &defaultPort);
+            _set_default_port(parsedArea->scheme, &defaultPort);
             if (defaultPort == 0) {
                 if (uri_strcasecmp(parsedArea->scheme, "mailto") == 0 && parsedArea->port == defaultPort) {
                     isDefaultPort = 1;
@@ -645,7 +628,7 @@ int sceUriSweepPath(char *dst, const char *src, u32 size)
 }
 
 /* 0x0ec0 */
-static int get_unescaped_len(const char *str)
+static int uri_decoded_len(const char *str)
 {
     int count = 0;
     s8 c = *str;
@@ -683,7 +666,7 @@ static int get_unescaped_len(const char *str)
 }
 
 /* 0x0f94 */
-static int parse_userinfo(const char *str, char *workArea, u32 workAreaSize, u32 *userSizeOut, u32 *passSizeOut, int copyFlag)
+static int _userinfo_parse(const char *str, char *workArea, u32 workAreaSize, u32 *userSizeOut, u32 *passSizeOut, int copyFlag)
 {
     int hasAt = 0;
     int hasColon = 0;
@@ -771,7 +754,7 @@ static int parse_userinfo(const char *str, char *workArea, u32 workAreaSize, u32
 }
 
 /* 0x1248 */
-static int parse_scheme(char *workArea, const char *uri, u32 *sizeOut, u32 workAreaSize, int copyFlag)
+static int _scheme_parse(char *workArea, const char *uri, u32 *sizeOut, u32 workAreaSize, int copyFlag)
 {
     if (uri == NULL) {
         return 0x80433060;
@@ -779,7 +762,7 @@ static int parse_scheme(char *workArea, const char *uri, u32 *sizeOut, u32 workA
 
     u32 len = uri_strlen(uri);
     u32 idx = 0;
-    while (is_scheme_char((u8)uri[idx]) == 1 && idx != len) {
+    while (_is_scheme_char((u8)uri[idx]) == 1 && idx != len) {
         idx++;
     }
 
@@ -809,7 +792,7 @@ static int parse_scheme(char *workArea, const char *uri, u32 *sizeOut, u32 workA
 }
 
 /* 0x1394 */
-static int parse_host(const char *str, char *workArea, u32 *sizeOut, u32 workAreaSize, int copyFlag)
+static int _hostname_parse(const char *str, char *workArea, u32 *sizeOut, u32 workAreaSize, int copyFlag)
 {
     if (str == NULL) {
         return 0x80433060;
@@ -842,7 +825,7 @@ static int parse_host(const char *str, char *workArea, u32 *sizeOut, u32 workAre
 }
 
 /* 0x1490 */
-static void get_default_port(const char *scheme, u16 *portOut)
+static void _set_default_port(const char *scheme, u16 *portOut)
 {
     char upperBuf[128];
 
@@ -889,7 +872,7 @@ static void get_default_port(const char *scheme, u16 *portOut)
 }
 
 /* 0x160c */
-static int parse_path(const char *str, char *workArea, u32 *sizeOut, u32 workAreaSize, int copyFlag)
+static int _path_parse(const char *str, char *workArea, u32 *sizeOut, u32 workAreaSize, int copyFlag)
 {
     if (str == NULL) {
         return 0x80433060;
@@ -916,7 +899,7 @@ static int parse_path(const char *str, char *workArea, u32 *sizeOut, u32 workAre
 }
 
 /* 0x16ec */
-static int parse_fragment(const char *str, char *workArea, u32 *sizeOut, u32 workAreaSize, int copyFlag)
+static int _fragment_parse(const char *str, char *workArea, u32 *sizeOut, u32 workAreaSize, int copyFlag)
 {
     if (str == NULL) {
         return 0x80433060;
@@ -942,7 +925,7 @@ static int parse_fragment(const char *str, char *workArea, u32 *sizeOut, u32 wor
 }
 
 /* 0x1790 */
-static int parse_port(const char *str, u16 *portOut)
+static int _portnum_parse(const char *str, u16 *portOut)
 {
     *portOut = 0;
     if (str == NULL) {
@@ -967,7 +950,7 @@ static int parse_port(const char *str, u16 *portOut)
 }
 
 /* 0x1830 */
-static int parse_query(const char *str, char *workArea, u32 *sizeOut, u32 workAreaSize, int copyFlag)
+static int _query_parse(const char *str, char *workArea, u32 *sizeOut, u32 workAreaSize, int copyFlag)
 {
     if (str == NULL) {
         return 0x80433060;

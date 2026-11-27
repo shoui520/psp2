@@ -29,10 +29,10 @@ static u8 g_ctype[129] = {
 
 extern s32 sceKernelCheckThreadStack(void);
 
-static s32 __attribute__((noinline)) parse_version(const char *buf, u32 len, s32 *ver_major, s32 *ver_minor);
-static s32 __attribute__((noinline)) parse_status_code(const char *buf, u32 len, s32 *status_code);
-static s32 __attribute__((noinline)) parse_strncasecmp(const char *lhs, const char *rhs, u32 n);
-static s32 __attribute__((noinline)) parse_reason_phrase(const char *buf, u32 len, const char **phrase_out, u32 *phrase_len_out);
+static s32 __attribute__((noinline)) _sce_http_parse_http_ver(const char *buf, u32 len, s32 *ver_major, s32 *ver_minor);
+static s32 __attribute__((noinline)) _sce_http_parse_response_code(const char *buf, u32 len, s32 *status_code);
+static s32 __attribute__((noinline)) strncmp_uc(const char *lhs, const char *rhs, u32 n);
+static s32 __attribute__((noinline)) _sce_http_parse_reason_phrase(const char *buf, u32 len, const char **phrase_out, u32 *phrase_len_out);
 static u32 __attribute__((noinline)) parse_strlen(const char *s);
 static s32 __attribute__((noinline)) parse_strncmp(const char *lhs, const char *rhs, s32 n);
 
@@ -48,19 +48,19 @@ s32 sceParseHttpStatusLine(const char *buf, u32 len, s32 *ver_major, s32 *ver_mi
         reason_len == NULL)
         return 0x804321fe;
 
-    s32 res = parse_version(buf, len, ver_major, ver_minor);
+    s32 res = _sce_http_parse_http_ver(buf, len, ver_major, ver_minor);
     if (res < 0)
         return res;
     len -= res;
     const char *p = buf + res;
 
-    res = parse_status_code(p, len, status_code);
+    res = _sce_http_parse_response_code(p, len, status_code);
     if (res < 0)
         return res;
     u32 rem = len - res;
     p += res;
 
-    res = parse_reason_phrase(p, rem, reason_phrase, reason_len);
+    res = _sce_http_parse_reason_phrase(p, rem, reason_phrase, reason_len);
     if (res < 0)
         return res;
     return (p + res) - buf;
@@ -91,7 +91,7 @@ s32 sceParseHttpResponseHeader(const char *buf, u32 len, const char *field_name,
                 u32 flen = parse_strlen(field_name);
                 if (flen < len - i) {
                     u32 flen2 = parse_strlen(field_name);
-                    if (parse_strncasecmp(field_name, cur, flen2) == 0) {
+                    if (strncmp_uc(field_name, cur, flen2) == 0) {
                         u32 flen3 = parse_strlen(field_name);
                         if (buf[i + flen3] == ':') {
                             i += parse_strlen(field_name);
@@ -142,7 +142,7 @@ s32 sceParseHttpResponseHeader(const char *buf, u32 len, const char *field_name,
     return 0x80432025;
 }
 
-static s32 __attribute__((noinline)) parse_version(const char *buf, u32 len, s32 *ver_major, s32 *ver_minor)
+static s32 __attribute__((noinline)) _sce_http_parse_http_ver(const char *buf, u32 len, s32 *ver_major, s32 *ver_minor)
 {
     *ver_major = 0;
     *ver_minor = 0;
@@ -173,7 +173,7 @@ static s32 __attribute__((noinline)) parse_version(const char *buf, u32 len, s32
     return (buf[idx] == ' ') ? (s32)(idx + 1) : (s32)0x80432060;
 }
 
-static s32 __attribute__((noinline)) parse_status_code(const char *buf, u32 len, s32 *status_code)
+static s32 __attribute__((noinline)) _sce_http_parse_response_code(const char *buf, u32 len, s32 *status_code)
 {
     if (len < 4)
         return 0x80432060;
@@ -191,7 +191,7 @@ static s32 __attribute__((noinline)) parse_status_code(const char *buf, u32 len,
     return 3;
 }
 
-static s32 __attribute__((noinline)) parse_strncasecmp(const char *lhs, const char *rhs, u32 n)
+static s32 __attribute__((noinline)) strncmp_uc(const char *lhs, const char *rhs, u32 n)
 {
     if (n == 0)
         return 0;
@@ -209,7 +209,7 @@ static s32 __attribute__((noinline)) parse_strncasecmp(const char *lhs, const ch
     return 0;
 }
 
-static s32 __attribute__((noinline)) parse_reason_phrase(const char *buf, u32 len,
+static s32 __attribute__((noinline)) _sce_http_parse_reason_phrase(const char *buf, u32 len,
                                                       const char **phrase_out, u32 *phrase_len_out)
 {
     u32 i = 0;

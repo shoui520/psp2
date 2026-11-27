@@ -1,4 +1,4 @@
 TARGET := libparse_http
-SRCS := libparse_http.c
+SRCS := parse_http.c
 
 include ../../build.mak
