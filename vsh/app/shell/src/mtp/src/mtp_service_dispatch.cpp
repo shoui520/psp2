@@ -102,22 +102,67 @@ int MtpServer::startServiceJob(IPMI::Session *session, SceUInt32 requestId,
  * IPMI Async Response Helpers (0x812B51C6 - 0x812B5975)
  * --------------------------------------------------------------------------- */
 
-static int respondAsyncEmpty(IPMI::Session *session, SceUInt32 methodId,
-			     SceUInt32 requestId, int result)
-{
-	return session->respondToAsyncMethodRequest(methodId, (int)requestId, result, NULL, 0);
+#define MTP_DEFINE_RESPOND_EMPTY(FnName, MethodId) \
+static int FnName(IPMI::Session *session, SceUInt32 requestId, int result) \
+{ \
+	return session->respondToAsyncMethodRequest((MethodId), (int)requestId, result, NULL, 0); \
 }
 
-static int respondAsyncSingle(IPMI::Session *session, SceUInt32 methodId,
-			      SceUInt32 requestId, int result,
-			      const void *outBuf, SceSize outSize)
-{
-	IPMI::DataInfo outInfo;
-	outInfo.pData = outBuf;
-	outInfo.dataSize = outSize;
-	return session->respondToAsyncMethodRequest(methodId, (int)requestId, result,
-						    &outInfo, 1);
+#define MTP_DEFINE_RESPOND_SINGLE(FnName, MethodId) \
+static int FnName(IPMI::Session *session, SceUInt32 requestId, int result, \
+		  const void *outBuf, SceSize outSize) \
+{ \
+	IPMI::DataInfo outInfo; \
+	outInfo.pData = outBuf; \
+	outInfo.dataSize = outSize; \
+	return session->respondToAsyncMethodRequest((MethodId), (int)requestId, result, \
+						    &outInfo, 1); \
 }
+
+#define MTP_DEFINE_RESPOND_RPC_NET(FnName, MethodId) \
+static int FnName(IPMI::Session *session, SceUInt32 requestId, int result, \
+		  const void *responseBuf, const SceSize *responseSize) \
+{ \
+	IPMI::DataInfo outInfo[2]; \
+	outInfo[0].pData = responseBuf; \
+	outInfo[0].dataSize = *responseSize; \
+	outInfo[1].pData = responseSize; \
+	outInfo[1].dataSize = sizeof(SceSize); \
+	return session->respondToAsyncMethodRequest((MethodId), (int)requestId, result, \
+						    outInfo, 2); \
+}
+
+MTP_DEFINE_RESPOND_SINGLE(respondEndGetNumOfObject, MTP_METHOD_END_GET_NUM_OF_OBJECT)
+MTP_DEFINE_RESPOND_EMPTY(respondEndGetObjectMetadata, MTP_METHOD_END_GET_OBJECT_METADATA)
+MTP_DEFINE_RESPOND_SINGLE(respondEndImportObject, MTP_METHOD_END_IMPORT_OBJECT)
+MTP_DEFINE_RESPOND_EMPTY(respondEndExportObject, MTP_METHOD_END_EXPORT_OBJECT)
+MTP_DEFINE_RESPOND_SINGLE(respondEndCreateHostDir, MTP_METHOD_END_CREATE_HOST_DIR)
+MTP_DEFINE_RESPOND_EMPTY(respondEndRenameHostDir, MTP_METHOD_END_RENAME_HOST_DIR)
+MTP_DEFINE_RESPOND_EMPTY(respondEndMoveHostDir, MTP_METHOD_END_MOVE_HOST_DIR)
+MTP_DEFINE_RESPOND_SINGLE(respondEndCreateHostFile, MTP_METHOD_END_CREATE_HOST_FILE)
+MTP_DEFINE_RESPOND_EMPTY(respondEndGetObjectThumbnail, MTP_METHOD_END_GET_OBJECT_THUMBNAIL)
+MTP_DEFINE_RESPOND_EMPTY(respondEndGetObjectStatus, MTP_METHOD_END_GET_OBJECT_STATUS)
+MTP_DEFINE_RESPOND_EMPTY(respondEndDeleteObject, MTP_METHOD_END_DELETE_OBJECT)
+MTP_DEFINE_RESPOND_EMPTY(respondEndHttpGetDataWithUrl, MTP_METHOD_END_HTTP_GET_DATA_WITH_URL)
+MTP_DEFINE_RESPOND_EMPTY(respondEndGetSystemSetting, MTP_METHOD_END_GET_SYSTEM_SETTING)
+MTP_DEFINE_RESPOND_EMPTY(respondEndSetSystemSetting, MTP_METHOD_END_SET_SYSTEM_SETTING)
+MTP_DEFINE_RESPOND_SINGLE(respondEndGetNpAccountInfo, MTP_METHOD_END_GET_NP_ACCOUNT_INFO)
+MTP_DEFINE_RESPOND_EMPTY(respondEndReadObjectWithOffset, MTP_METHOD_END_READ_OBJECT_WITH_OFFSET)
+MTP_DEFINE_RESPOND_EMPTY(respondEndWriteObjectWithOffset, MTP_METHOD_END_WRITE_OBJECT_WITH_OFFSET)
+MTP_DEFINE_RESPOND_SINGLE(respondEndGetHostStorageSize, MTP_METHOD_END_GET_HOST_STORAGE_SIZE)
+MTP_DEFINE_RESPOND_SINGLE(respondEndCheckSameObjectExist, MTP_METHOD_END_CHECK_SAME_OBJECT_EXIST)
+MTP_DEFINE_RESPOND_EMPTY(respondEndGetSpecifiedMetadata, MTP_METHOD_END_GET_SPECIFIED_METADATA)
+MTP_DEFINE_RESPOND_RPC_NET(respondEndRpcNetOperation, MTP_METHOD_END_RPC_NET_OPERATION)
+MTP_DEFINE_RESPOND_RPC_NET(respondEndRpcNetOperationSend, MTP_METHOD_END_RPC_NET_OPERATION_SEND)
+MTP_DEFINE_RESPOND_EMPTY(respondEndRpcNetOperationRecv, MTP_METHOD_END_RPC_NET_OPERATION_RECV)
+MTP_DEFINE_RESPOND_EMPTY(respondEndConnectToHost, MTP_METHOD_END_CONNECT_TO_HOST)
+MTP_DEFINE_RESPOND_EMPTY(respondEndHandover, MTP_METHOD_END_HANDOVER)
+MTP_DEFINE_RESPOND_EMPTY(respondEndResumeExportObject, MTP_METHOD_END_RESUME_EXPORT_OBJECT)
+MTP_DEFINE_RESPOND_SINGLE(respondEndResumeImportObject, MTP_METHOD_END_RESUME_IMPORT_OBJECT)
+
+#undef MTP_DEFINE_RESPOND_EMPTY
+#undef MTP_DEFINE_RESPOND_SINGLE
+#undef MTP_DEFINE_RESPOND_RPC_NET
 
 /* 0x812B5728 */
 int mtpServiceRespondRecvData(IPMI::Session *session, SceUInt32 requestId, int result,
@@ -228,19 +273,6 @@ static int respondAsyncNpDrmGetLicense(IPMI::Session *session, SceUInt32 request
 						    (int)requestId, result, outInfo, 2);
 }
 
-static int respondAsyncRpcNetOp(IPMI::Session *session, SceUInt32 methodId,
-				SceUInt32 requestId, int result,
-				const void *responseBuf, const SceSize *responseSize)
-{
-	IPMI::DataInfo outInfo[2];
-	outInfo[0].pData = responseBuf;
-	outInfo[0].dataSize = *responseSize;
-	outInfo[1].pData = responseSize;
-	outInfo[1].dataSize = sizeof(SceSize);
-	return session->respondToAsyncMethodRequest(methodId, (int)requestId, result,
-						    outInfo, 2);
-}
-
 static int respondAsyncSearchObject(IPMI::Session *session, SceUInt32 requestId, int result,
 				    const SceUInt32 *numFound, const SceUInt32 *searchId)
 {
@@ -277,7 +309,7 @@ static int endGetNumOfObject(IPMI::Session *session, SceUInt32 requestId, SceUIn
 	g_mtpServer.sessionMgr().deleteContext(session, requestId);
 	int ret = g_mtpServer.sessionMgr().lockSession(session);
 	if (ret >= 0) {
-		ret = respondAsyncSingle(session, MTP_METHOD_END_GET_NUM_OF_OBJECT,
+		ret = respondEndGetNumOfObject(session,
 					 requestId, mtpRes, &numObjects, sizeof(numObjects));
 		if (ret < 0)
 			sceClibPrintf("[MTP %s] Error %s(%u): EndGetNumOfObject failed: 0x%x\n",
@@ -294,7 +326,7 @@ static int endGetObjectMetadata(IPMI::Session *session, SceUInt32 requestId, Sce
 	g_mtpServer.sessionMgr().deleteContext(session, requestId);
 	int ret = g_mtpServer.sessionMgr().lockSession(session);
 	if (ret >= 0) {
-		ret = respondAsyncEmpty(session, MTP_METHOD_END_GET_OBJECT_METADATA,
+		ret = respondEndGetObjectMetadata(session,
 					requestId, mtpRes);
 		if (ret < 0)
 			sceClibPrintf(
@@ -316,7 +348,7 @@ static int endImportObject(IPMI::Session *session, SceUInt32 requestId, SceUInt3
 			      "SERVICE", "endImportObject", 230, mtpRes);
 	int ret = g_mtpServer.sessionMgr().lockSession(session);
 	if (ret >= 0) {
-		int sendRet = respondAsyncSingle(session, MTP_METHOD_END_IMPORT_OBJECT,
+		int sendRet = respondEndImportObject(session,
 						 requestId, mtpRes, &objectId, sizeof(objectId));
 		if (sendRet < 0)
 			sceClibPrintf("[MTP %s] Error %s(%u): EndImportObject failed: 0x%x\n",
@@ -334,7 +366,7 @@ static int endExportObject(IPMI::Session *session, SceUInt32 requestId, SceUInt3
 	g_mtpServer.sessionMgr().deleteContext(session, requestId);
 	int ret = g_mtpServer.sessionMgr().lockSession(session);
 	if (ret >= 0) {
-		ret = respondAsyncEmpty(session, MTP_METHOD_END_EXPORT_OBJECT,
+		ret = respondEndExportObject(session,
 					requestId, mtpRes);
 		if (ret < 0)
 			sceClibPrintf("[MTP %s] Error %s(%u): EndExportObject failed: 0x%x\n",
@@ -352,7 +384,7 @@ static int endCreateHostDir(IPMI::Session *session, SceUInt32 requestId, SceUInt
 	g_mtpServer.sessionMgr().deleteContext(session, requestId);
 	int ret = g_mtpServer.sessionMgr().lockSession(session);
 	if (ret >= 0) {
-		ret = respondAsyncSingle(session, MTP_METHOD_END_CREATE_HOST_DIR,
+		ret = respondEndCreateHostDir(session,
 					 requestId, mtpRes, &dirHandle, sizeof(dirHandle));
 		if (ret < 0)
 			sceClibPrintf("[MTP %s] Error %s(%u): EndCreateHostDir failed: 0x%x\n",
@@ -369,7 +401,7 @@ static int endRenameHostDir(IPMI::Session *session, SceUInt32 requestId, SceUInt
 	g_mtpServer.sessionMgr().deleteContext(session, requestId);
 	int ret = g_mtpServer.sessionMgr().lockSession(session);
 	if (ret >= 0) {
-		ret = respondAsyncEmpty(session, MTP_METHOD_END_RENAME_HOST_DIR,
+		ret = respondEndRenameHostDir(session,
 					requestId, mtpRes);
 		if (ret < 0)
 			sceClibPrintf("[MTP %s] Error %s(%u): EndRenameHostDir failed: 0x%x\n",
@@ -386,7 +418,7 @@ static int endMoveHostDir(IPMI::Session *session, SceUInt32 requestId, SceUInt32
 	g_mtpServer.sessionMgr().deleteContext(session, requestId);
 	int ret = g_mtpServer.sessionMgr().lockSession(session);
 	if (ret >= 0) {
-		ret = respondAsyncEmpty(session, MTP_METHOD_END_MOVE_HOST_DIR,
+		ret = respondEndMoveHostDir(session,
 					requestId, mtpRes);
 		if (ret < 0)
 			sceClibPrintf("[MTP %s] Error %s(%u): EndMoveHostDir failed: 0x%x\n",
@@ -404,7 +436,7 @@ static int endCreateHostFile(IPMI::Session *session, SceUInt32 requestId, SceUIn
 	g_mtpServer.sessionMgr().deleteContext(session, requestId);
 	int ret = g_mtpServer.sessionMgr().lockSession(session);
 	if (ret >= 0) {
-		ret = respondAsyncSingle(session, MTP_METHOD_END_CREATE_HOST_FILE,
+		ret = respondEndCreateHostFile(session,
 					 requestId, mtpRes, &fileHandle, sizeof(fileHandle));
 		if (ret < 0)
 			sceClibPrintf("[MTP %s] Error %s(%u): EndCreateHostFile failed: 0x%x\n",
@@ -421,7 +453,7 @@ static int endGetObjectThumbnail(IPMI::Session *session, SceUInt32 requestId, Sc
 	g_mtpServer.sessionMgr().deleteContext(session, requestId);
 	int ret = g_mtpServer.sessionMgr().lockSession(session);
 	if (ret >= 0) {
-		ret = respondAsyncEmpty(session, MTP_METHOD_END_GET_OBJECT_THUMBNAIL,
+		ret = respondEndGetObjectThumbnail(session,
 					requestId, mtpRes);
 		if (ret < 0)
 			sceClibPrintf(
@@ -439,7 +471,7 @@ static int endGetObjectStatus(IPMI::Session *session, SceUInt32 requestId, SceUI
 	g_mtpServer.sessionMgr().deleteContext(session, requestId);
 	int ret = g_mtpServer.sessionMgr().lockSession(session);
 	if (ret >= 0) {
-		ret = respondAsyncEmpty(session, MTP_METHOD_END_GET_OBJECT_STATUS,
+		ret = respondEndGetObjectStatus(session,
 					requestId, mtpRes);
 		if (ret < 0)
 			sceClibPrintf(
@@ -457,7 +489,7 @@ static int endDeleteObject(IPMI::Session *session, SceUInt32 requestId, SceUInt3
 	g_mtpServer.sessionMgr().deleteContext(session, requestId);
 	int ret = g_mtpServer.sessionMgr().lockSession(session);
 	if (ret >= 0) {
-		ret = respondAsyncEmpty(session, MTP_METHOD_END_DELETE_OBJECT,
+		ret = respondEndDeleteObject(session,
 					requestId, mtpRes);
 		if (ret < 0)
 			sceClibPrintf("[MTP %s] Error %s(%u): EndDeleteObject failed: 0x%x\n",
@@ -474,7 +506,7 @@ static int endHttpGetDataWithUrl(IPMI::Session *session, SceUInt32 requestId, Sc
 	g_mtpServer.sessionMgr().deleteContext(session, requestId);
 	int ret = g_mtpServer.sessionMgr().lockSession(session);
 	if (ret >= 0) {
-		ret = respondAsyncEmpty(session, MTP_METHOD_END_HTTP_GET_DATA_WITH_URL,
+		ret = respondEndHttpGetDataWithUrl(session,
 					requestId, mtpRes);
 		if (ret < 0)
 			sceClibPrintf(
@@ -514,7 +546,7 @@ static int endGetSystemSetting(IPMI::Session *session, SceUInt32 requestId, SceU
 	g_mtpServer.sessionMgr().deleteContext(session, requestId);
 	int ret = g_mtpServer.sessionMgr().lockSession(session);
 	if (ret >= 0) {
-		ret = respondAsyncEmpty(session, MTP_METHOD_END_GET_SYSTEM_SETTING,
+		ret = respondEndGetSystemSetting(session,
 					requestId, mtpRes);
 		if (ret < 0)
 			sceClibPrintf(
@@ -532,7 +564,7 @@ static int endSetSystemSetting(IPMI::Session *session, SceUInt32 requestId, SceU
 	g_mtpServer.sessionMgr().deleteContext(session, requestId);
 	int ret = g_mtpServer.sessionMgr().lockSession(session);
 	if (ret >= 0) {
-		ret = respondAsyncEmpty(session, MTP_METHOD_END_SET_SYSTEM_SETTING,
+		ret = respondEndSetSystemSetting(session,
 					requestId, mtpRes);
 		if (ret < 0)
 			sceClibPrintf(
@@ -551,7 +583,7 @@ static int endGetNpAccountInfo(IPMI::Session *session, SceUInt32 requestId, SceU
 	g_mtpServer.sessionMgr().deleteContext(session, requestId);
 	int ret = g_mtpServer.sessionMgr().lockSession(session);
 	if (ret >= 0) {
-		ret = respondAsyncSingle(session, MTP_METHOD_END_GET_NP_ACCOUNT_INFO,
+		ret = respondEndGetNpAccountInfo(session,
 					 requestId, mtpRes, &accountStatus, sizeof(accountStatus));
 		if (ret < 0)
 			sceClibPrintf(
@@ -570,7 +602,7 @@ static int endReadObjectWithOffset(IPMI::Session *session, SceUInt32 requestId,
 	g_mtpServer.sessionMgr().deleteContext(session, requestId);
 	int ret = g_mtpServer.sessionMgr().lockSession(session);
 	if (ret >= 0) {
-		ret = respondAsyncEmpty(session, MTP_METHOD_END_READ_OBJECT_WITH_OFFSET,
+		ret = respondEndReadObjectWithOffset(session,
 					requestId, mtpRes);
 		if (ret < 0)
 			sceClibPrintf(
@@ -589,7 +621,7 @@ static int endWriteObjectWithOffset(IPMI::Session *session, SceUInt32 requestId,
 	g_mtpServer.sessionMgr().deleteContext(session, requestId);
 	int ret = g_mtpServer.sessionMgr().lockSession(session);
 	if (ret >= 0) {
-		ret = respondAsyncEmpty(session, MTP_METHOD_END_WRITE_OBJECT_WITH_OFFSET,
+		ret = respondEndWriteObjectWithOffset(session,
 					requestId, mtpRes);
 		if (ret < 0)
 			sceClibPrintf(
@@ -608,7 +640,7 @@ static int endGetHostStorageSize(IPMI::Session *session, SceUInt32 requestId, Sc
 	g_mtpServer.sessionMgr().deleteContext(session, requestId);
 	int ret = g_mtpServer.sessionMgr().lockSession(session);
 	if (ret >= 0) {
-		ret = respondAsyncSingle(session, MTP_METHOD_END_GET_HOST_STORAGE_SIZE,
+		ret = respondEndGetHostStorageSize(session,
 					 requestId, mtpRes, storageInfo, sizeof(storageInfo));
 		if (ret < 0)
 			sceClibPrintf(
@@ -628,7 +660,7 @@ static int endCheckSameObjectExist(IPMI::Session *session, SceUInt32 requestId,
 	g_mtpServer.sessionMgr().deleteContext(session, requestId);
 	int ret = g_mtpServer.sessionMgr().lockSession(session);
 	if (ret >= 0) {
-		ret = respondAsyncSingle(session, MTP_METHOD_END_CHECK_SAME_OBJECT_EXIST,
+		ret = respondEndCheckSameObjectExist(session,
 					 requestId, mtpRes, &exists, sizeof(exists));
 		if (ret < 0)
 			sceClibPrintf(
@@ -667,7 +699,7 @@ static int endGetSpecifiedObjectMetadata(IPMI::Session *session, SceUInt32 reque
 	g_mtpServer.sessionMgr().deleteContext(session, requestId);
 	int ret = g_mtpServer.sessionMgr().lockSession(session);
 	if (ret >= 0) {
-		ret = respondAsyncEmpty(session, MTP_METHOD_END_GET_SPECIFIED_METADATA,
+		ret = respondEndGetSpecifiedMetadata(session,
 					requestId, mtpRes);
 		if (ret < 0)
 			sceClibPrintf(
@@ -772,7 +804,7 @@ static int endMtpRpcNetOperation(IPMI::Session *session, SceUInt32 requestId, Sc
 	g_mtpServer.sessionMgr().deleteContext(session, requestId);
 	int ret = g_mtpServer.sessionMgr().lockSession(session);
 	if (ret >= 0) {
-		ret = respondAsyncRpcNetOp(session, MTP_METHOD_END_RPC_NET_OPERATION,
+		ret = respondEndRpcNetOperation(session,
 					   requestId, mtpRes, responseBuf, &responseSize);
 		if (ret < 0)
 			sceClibPrintf(
@@ -797,7 +829,7 @@ static int endMtpRpcNetOperationSend(IPMI::Session *session, SceUInt32 requestId
 	g_mtpServer.sessionMgr().deleteContext(session, requestId);
 	int ret = g_mtpServer.sessionMgr().lockSession(session);
 	if (ret >= 0) {
-		ret = respondAsyncRpcNetOp(session, MTP_METHOD_END_RPC_NET_OPERATION_SEND,
+		ret = respondEndRpcNetOperationSend(session,
 					   requestId, mtpRes, responseBuf, &responseSize);
 		if (ret < 0)
 			sceClibPrintf(
@@ -817,7 +849,7 @@ static int endMtpRpcNetOperationRecv(IPMI::Session *session, SceUInt32 requestId
 	g_mtpServer.sessionMgr().deleteContext(session, requestId);
 	int ret = g_mtpServer.sessionMgr().lockSession(session);
 	if (ret >= 0) {
-		ret = respondAsyncEmpty(session, MTP_METHOD_END_RPC_NET_OPERATION_RECV,
+		ret = respondEndRpcNetOperationRecv(session,
 					requestId, mtpRes);
 		if (ret < 0)
 			sceClibPrintf(
@@ -853,7 +885,7 @@ static int endHandover(IPMI::Session *session, SceUInt32 requestId, SceUInt32 co
 	g_mtpServer.sessionMgr().deleteContext(session, requestId);
 	int ret = g_mtpServer.sessionMgr().lockSession(session);
 	if (ret >= 0) {
-		ret = respondAsyncEmpty(session, MTP_METHOD_END_HANDOVER, requestId, mtpRes);
+		ret = respondEndHandover(session, requestId, mtpRes);
 		if (ret < 0)
 			sceClibPrintf("[MTP %s] Error %s(%u): EndHandover failed: 0x%x\n",
 				      "SERVICE", "endHandover", 1914, ret);
@@ -869,7 +901,7 @@ static int endResumeExportObject(IPMI::Session *session, SceUInt32 requestId, Sc
 	g_mtpServer.sessionMgr().deleteContext(session, requestId);
 	int ret = g_mtpServer.sessionMgr().lockSession(session);
 	if (ret >= 0) {
-		ret = respondAsyncEmpty(session, MTP_METHOD_END_RESUME_EXPORT_OBJECT,
+		ret = respondEndResumeExportObject(session,
 					requestId, mtpRes);
 		if (ret < 0)
 			sceClibPrintf(
@@ -888,7 +920,7 @@ static int endResumeImportObject(IPMI::Session *session, SceUInt32 requestId, Sc
 	g_mtpServer.sessionMgr().deleteContext(session, requestId);
 	int ret = g_mtpServer.sessionMgr().lockSession(session);
 	if (ret >= 0) {
-		ret = respondAsyncSingle(session, MTP_METHOD_END_RESUME_IMPORT_OBJECT,
+		ret = respondEndResumeImportObject(session,
 					 requestId, mtpRes, &objectId, sizeof(objectId));
 		if (ret < 0)
 			sceClibPrintf(
@@ -913,7 +945,7 @@ static int beginGetNumOfObject(IPMI::Session *session, SceUInt32 requestId,
 	if (ret != 0) {
 		sceClibPrintf("[MTP %s] Error %s(%u): sceMtpBeginGetNumOfObject failed: 0x%x\n",
 			      "SERVICE", "BeginGetNumOfObject", 179, ret);
-		int respRet = respondAsyncSingle(session, MTP_METHOD_END_GET_NUM_OF_OBJECT,
+		int respRet = respondEndGetNumOfObject(session,
 						 requestId, ret, &zeroCount, sizeof(zeroCount));
 		if (respRet < 0)
 			sceClibPrintf("[MTP %s] Error %s(%u): EndGetNumOfObject failed: 0x%x\n",
@@ -933,7 +965,7 @@ static int beginGetObjectMetadata(IPMI::Session *session, SceUInt32 requestId,
 		sceClibPrintf(
 			"[MTP %s] Error %s(%u): sceMtpBeginGetObjectMetadata failed: 0x%x\n",
 			"SERVICE", "BeginGetObjectMetadata", 214, ret);
-		int respRet = respondAsyncEmpty(session, MTP_METHOD_END_GET_OBJECT_METADATA,
+		int respRet = respondEndGetObjectMetadata(session,
 						requestId, ret);
 		if (respRet < 0)
 			sceClibPrintf(
@@ -956,7 +988,7 @@ static int beginImportObject(IPMI::Session *session, SceUInt32 requestId,
 	if (ret != 0) {
 		sceClibPrintf("[MTP %s] Error %s(%u): sceMtpBeginImportObject failed: 0x%x\n",
 			      "SERVICE", "BeginImportObject", 254, ret);
-		int respRet = respondAsyncSingle(session, MTP_METHOD_END_IMPORT_OBJECT,
+		int respRet = respondEndImportObject(session,
 						 requestId, ret, &zeroObjId, sizeof(zeroObjId));
 		if (respRet < 0)
 			sceClibPrintf("[MTP %s] Error %s(%u): EndImportObject failed: 0x%x\n",
@@ -978,7 +1010,7 @@ static int beginExportObjectWithCheck(IPMI::Session *session, SceUInt32 requestI
 		sceClibPrintf(
 			"[MTP %s] Error %s(%u): sceMtpBeginExportObjectWithCheck failed: 0x%x\n",
 			"SERVICE", "BeginExportObjectWithCheck", 289, ret);
-		int respRet = respondAsyncEmpty(session, MTP_METHOD_END_EXPORT_OBJECT,
+		int respRet = respondEndExportObject(session,
 						requestId, ret);
 		if (respRet < 0)
 			sceClibPrintf("[MTP %s] Error %s(%u): EndExportObject failed: 0x%x\n",
@@ -998,7 +1030,7 @@ static int beginCreateHostDir(IPMI::Session *session, SceUInt32 requestId,
 	if (ret != 0) {
 		sceClibPrintf("[MTP %s] Error %s(%u): sceMtpBeginCreateHostDir failed: 0x%x\n",
 			      "SERVICE", "BeginCreateHostDir", 324, ret);
-		int respRet = respondAsyncSingle(session, MTP_METHOD_END_CREATE_HOST_DIR,
+		int respRet = respondEndCreateHostDir(session,
 						 requestId, ret, &zeroHandle, sizeof(zeroHandle));
 		if (respRet < 0)
 			sceClibPrintf("[MTP %s] Error %s(%u): EndCreateHostDir failed: 0x%x\n",
@@ -1017,7 +1049,7 @@ static int beginRenameHostDir(IPMI::Session *session, SceUInt32 requestId,
 	if (ret != 0) {
 		sceClibPrintf("[MTP %s] Error %s(%u): sceMtpBeginDeleteHostDir failed: 0x%x\n",
 			      "SERVICE", "BeginRenameHostDir", 357, ret);
-		int respRet = respondAsyncEmpty(session, MTP_METHOD_END_RENAME_HOST_DIR,
+		int respRet = respondEndRenameHostDir(session,
 						requestId, ret);
 		if (respRet < 0)
 			sceClibPrintf("[MTP %s] Error %s(%u): EndRenameHostDir failed: 0x%x\n",
@@ -1036,7 +1068,7 @@ static int beginMoveHostDir(IPMI::Session *session, SceUInt32 requestId,
 	if (ret != 0) {
 		sceClibPrintf("[MTP %s] Error %s(%u): sceMtpBeginMoveHostDir failed: 0x%x\n",
 			      "SERVICE", "BeginMoveHostDir", 390, ret);
-		int respRet = respondAsyncEmpty(session, MTP_METHOD_END_MOVE_HOST_DIR,
+		int respRet = respondEndMoveHostDir(session,
 						requestId, ret);
 		if (respRet < 0)
 			sceClibPrintf("[MTP %s] Error %s(%u): EndMoveHostDir failed: 0x%x\n",
@@ -1056,7 +1088,7 @@ static int beginCreateHostFile(IPMI::Session *session, SceUInt32 requestId,
 	if (ret != 0) {
 		sceClibPrintf("[MTP %s] Error %s(%u): sceMtpBeginCreateHostFile failed: 0x%x\n",
 			      "SERVICE", "BeginCreateHostFile", 425, ret);
-		int respRet = respondAsyncSingle(session, MTP_METHOD_END_CREATE_HOST_FILE,
+		int respRet = respondEndCreateHostFile(session,
 						 requestId, ret, &zeroHandle, sizeof(zeroHandle));
 		if (respRet < 0)
 			sceClibPrintf("[MTP %s] Error %s(%u): EndCreateHostFile failed: 0x%x\n",
@@ -1076,7 +1108,7 @@ static int beginGetObjectThumbnail(IPMI::Session *session, SceUInt32 requestId,
 		sceClibPrintf(
 			"[MTP %s] Error %s(%u): sceMtpBeginGetObjectThumbnail failed: 0x%x\n",
 			"SERVICE", "BeginGetObjectThumbnail", 460, ret);
-		int respRet = respondAsyncEmpty(session, MTP_METHOD_END_GET_OBJECT_THUMBNAIL,
+		int respRet = respondEndGetObjectThumbnail(session,
 						requestId, ret);
 		if (respRet < 0)
 			sceClibPrintf(
@@ -1096,7 +1128,7 @@ static int beginGetObjectStatus2(IPMI::Session *session, SceUInt32 requestId,
 	if (ret != 0) {
 		sceClibPrintf("[MTP %s] Error %s(%u): sceMtpBeginGetObjectStatus2 failed: 0x%x\n",
 			      "SERVICE", "BeginGetObjectStatus2", 493, ret);
-		int respRet = respondAsyncEmpty(session, MTP_METHOD_END_GET_OBJECT_STATUS,
+		int respRet = respondEndGetObjectStatus(session,
 						requestId, ret);
 		if (respRet < 0)
 			sceClibPrintf("[MTP %s] Error %s(%u): EndGetObjectStatus failed: 0x%x\n",
@@ -1114,7 +1146,7 @@ static int beginDeleteObject(IPMI::Session *session, SceUInt32 requestId, int ob
 	if (ret != 0) {
 		sceClibPrintf("[MTP %s] Error %s(%u): sceMtpBeginDeleteObject failed: 0x%x\n",
 			      "SERVICE", "BeginDeleteObject", 526, ret);
-		int respRet = respondAsyncEmpty(session, MTP_METHOD_END_DELETE_OBJECT,
+		int respRet = respondEndDeleteObject(session,
 						requestId, ret);
 		if (respRet < 0)
 			sceClibPrintf("[MTP %s] Error %s(%u): EndDeleteObject failed: 0x%x\n",
@@ -1134,7 +1166,7 @@ static int beginHttpGetDataWithUrl(IPMI::Session *session, SceUInt32 requestId,
 		sceClibPrintf(
 			"[MTP %s] Error %s(%u): sceMtpBeginHttpGetDataWithUrl failed: 0x%x\n",
 			"SERVICE", "BeginHttpGetDataWithUrl", 559, ret);
-		int respRet = respondAsyncEmpty(session, MTP_METHOD_END_HTTP_GET_DATA_WITH_URL,
+		int respRet = respondEndHttpGetDataWithUrl(session,
 						requestId, ret);
 		if (respRet < 0)
 			sceClibPrintf(
@@ -1177,7 +1209,7 @@ static int beginGetSystemSetting(IPMI::Session *session, SceUInt32 requestId, in
 		sceClibPrintf(
 			"[MTP %s] Error %s(%u): sceMtpBeginGetSystemSetting failed: 0x%x\n",
 			"SERVICE", "BeginGetSystemSetting", 629, ret);
-		int respRet = respondAsyncEmpty(session, MTP_METHOD_END_GET_SYSTEM_SETTING,
+		int respRet = respondEndGetSystemSetting(session,
 						requestId, ret);
 		if (respRet < 0)
 			sceClibPrintf(
@@ -1198,7 +1230,7 @@ static int beginSetSystemSetting(IPMI::Session *session, SceUInt32 requestId,
 		sceClibPrintf(
 			"[MTP %s] Error %s(%u): sceMtpBeginSetSystemSetting failed: 0x%x\n",
 			"SERVICE", "BeginSetSystemSetting", 662, ret);
-		int respRet = respondAsyncEmpty(session, MTP_METHOD_END_SET_SYSTEM_SETTING,
+		int respRet = respondEndSetSystemSetting(session,
 						requestId, ret);
 		if (respRet < 0)
 			sceClibPrintf(
@@ -1219,7 +1251,7 @@ static int beginGetNpAccountInfo(IPMI::Session *session, SceUInt32 requestId, in
 		sceClibPrintf(
 			"[MTP %s] Error %s(%u): sceMtpBeginGetNpAccountInfo failed: 0x%x\n",
 			"SERVICE", "BeginGetNpAccountInfo", 696, ret);
-		int respRet = respondAsyncSingle(session, MTP_METHOD_END_GET_NP_ACCOUNT_INFO,
+		int respRet = respondEndGetNpAccountInfo(session,
 						 requestId, ret, &zeroResult, sizeof(zeroResult));
 		if (respRet < 0)
 			sceClibPrintf(
@@ -1240,7 +1272,7 @@ static int beginReadObjectWithOffset(IPMI::Session *session, SceUInt32 requestId
 		sceClibPrintf(
 			"[MTP %s] Error %s(%u): sceMtpBeginReadObjectWithOffset failed: 0x%x\n",
 			"SERVICE", "BeginReadObjectWithOffset", 730, ret);
-		int respRet = respondAsyncEmpty(session, MTP_METHOD_END_READ_OBJECT_WITH_OFFSET,
+		int respRet = respondEndReadObjectWithOffset(session,
 						requestId, ret);
 		if (respRet < 0)
 			sceClibPrintf(
@@ -1261,7 +1293,7 @@ static int beginWriteObjectWithOffset(IPMI::Session *session, SceUInt32 requestI
 		sceClibPrintf(
 			"[MTP %s] Error %s(%u): sceMtpBeginWriteObjectWithOffset failed: 0x%x\n",
 			"SERVICE", "BeginWriteObjectWithOffset", 763, ret);
-		int respRet = respondAsyncEmpty(session, MTP_METHOD_END_WRITE_OBJECT_WITH_OFFSET,
+		int respRet = respondEndWriteObjectWithOffset(session,
 						requestId, ret);
 		if (respRet < 0)
 			sceClibPrintf(
@@ -1283,7 +1315,7 @@ static int beginGetHostStorageSize(IPMI::Session *session, SceUInt32 requestId, 
 			"[MTP %s] Error %s(%u): sceMtpBeginGetHostStorageSize failed: 0x%x\n",
 			"SERVICE", "BeginGetHostStorageSize", 797, ret);
 		sce_paf_memset(zeroStorageInfo, 0, sizeof(zeroStorageInfo));
-		int respRet = respondAsyncSingle(session, MTP_METHOD_END_GET_HOST_STORAGE_SIZE,
+		int respRet = respondEndGetHostStorageSize(session,
 						 requestId, ret, zeroStorageInfo,
 						 sizeof(zeroStorageInfo));
 		if (respRet < 0)
@@ -1306,7 +1338,7 @@ static int beginCheckSameObjectExist(IPMI::Session *session, SceUInt32 requestId
 		sceClibPrintf(
 			"[MTP %s] Error %s(%u): sceMtpBeginCheckSameObjectExist failed: 0x%x\n",
 			"SERVICE", "BeginCheckSameObjectExist", 833, ret);
-		int respRet = respondAsyncSingle(session, MTP_METHOD_END_CHECK_SAME_OBJECT_EXIST,
+		int respRet = respondEndCheckSameObjectExist(session,
 						 requestId, ret, &zeroExists, sizeof(zeroExists));
 		if (respRet < 0)
 			sceClibPrintf(
@@ -1349,7 +1381,7 @@ static int beginGetSpecifiedObjectMetadata(IPMI::Session *session, SceUInt32 req
 		sceClibPrintf(
 			"[MTP %s] Error %s(%u): sceMtpBeginSpecifiedObjectMetadata failed: 0x%x\n",
 			"SERVICE", "BeginGetSpecifiedObjectMetadata", 906, ret);
-		int respRet = respondAsyncEmpty(session, MTP_METHOD_END_GET_SPECIFIED_METADATA,
+		int respRet = respondEndGetSpecifiedMetadata(session,
 						requestId, ret);
 		if (respRet < 0)
 			sceClibPrintf(
@@ -1504,7 +1536,7 @@ static int beginMtpRpcNetOperation(IPMI::Session *session, SceUInt32 requestId,
 	if (ret != 0) {
 		sceClibPrintf("[MTP %s] Error %s(%u): sceMtpBeginRpcNetOperation failed: 0x%x\n",
 			      "SERVICE", "BeginMtpRpcNetOperation", 1688, ret);
-		int respRet = respondAsyncRpcNetOp(session, MTP_METHOD_END_RPC_NET_OPERATION,
+		int respRet = respondEndRpcNetOperation(session,
 						   requestId, ret, NULL, &zeroSize);
 		if (respRet < 0)
 			sceClibPrintf(
@@ -1525,7 +1557,7 @@ static int beginMtpRpcNetOperationSend(IPMI::Session *session, SceUInt32 request
 		sceClibPrintf(
 			"[MTP %s] Error %s(%u): sceMtpBeginRpcNetOperationSend failed: 0x%x\n",
 			"SERVICE", "BeginMtpRpcNetOperationSend", 1742, ret);
-		int respRet = respondAsyncRpcNetOp(session, MTP_METHOD_END_RPC_NET_OPERATION_SEND,
+		int respRet = respondEndRpcNetOperationSend(session,
 						   requestId, ret, NULL, &zeroSize);
 		if (respRet < 0)
 			sceClibPrintf(
@@ -1546,7 +1578,7 @@ static int beginMtpRpcNetOperationRecv(IPMI::Session *session, SceUInt32 request
 		sceClibPrintf(
 			"[MTP %s] Error %s(%u): sceMtpBeginRpcNetOperationRecv failed: 0x%x\n",
 			"SERVICE", "BeginMtpRpcNetOperationRecv", 1777, ret);
-		int respRet = respondAsyncEmpty(session, MTP_METHOD_END_RPC_NET_OPERATION_RECV,
+		int respRet = respondEndRpcNetOperationRecv(session,
 						requestId, ret);
 		if (respRet < 0)
 			sceClibPrintf(
@@ -1612,7 +1644,7 @@ static int beginConnectToHost(IPMI::Session *session, SceUInt32 requestId,
 		}
 	}
 
-	int respRet = respondAsyncEmpty(session, MTP_METHOD_END_CONNECT_TO_HOST, requestId, err);
+	int respRet = respondEndConnectToHost(session, requestId, err);
 	if (respRet < 0)
 		sceClibPrintf("[MTP %s] Error %s(%u): EndConnectToHost failed: 0x%x\n",
 			      "SERVICE", "BeginConnectToHost", 1892, respRet);
@@ -1627,7 +1659,7 @@ static int beginHandover(IPMI::Session *session, SceUInt32 requestId, int handov
 	if (ret != 0) {
 		sceClibPrintf("[MTP %s] Error %s(%u): sceMtpBeginHandover failed: 0x%x\n",
 			      "SERVICE", "BeginHandover", 1929, ret);
-		int respRet = respondAsyncEmpty(session, MTP_METHOD_END_HANDOVER, requestId, ret);
+		int respRet = respondEndHandover(session, requestId, ret);
 		if (respRet < 0)
 			sceClibPrintf("[MTP %s] Error %s(%u): EndHandover failed: 0x%x\n",
 				      "SERVICE", "BeginHandover", 1933, respRet);
@@ -1645,7 +1677,7 @@ static int beginResumeExportObject(IPMI::Session *session, SceUInt32 requestId)
 		sceClibPrintf(
 			"[MTP %s] Error %s(%u): sceMtpBeginResumeExportObject failed: 0x%x\n",
 			"SERVICE", "BeginResumeExportObject", 1989, ret);
-		int respRet = respondAsyncEmpty(session, MTP_METHOD_END_RESUME_EXPORT_OBJECT,
+		int respRet = respondEndResumeExportObject(session,
 						requestId, ret);
 		if (respRet < 0)
 			sceClibPrintf(
@@ -1669,7 +1701,7 @@ static int beginResumeImportObject(IPMI::Session *session, SceUInt32 requestId,
 		sceClibPrintf(
 			"[MTP %s] Error %s(%u): sceMtpBeginResumeImportObject failed: 0x%x\n",
 			"SERVICE", "BeginResumeImportObject", 2035, ret);
-		int respRet = respondAsyncSingle(session, MTP_METHOD_END_RESUME_IMPORT_OBJECT,
+		int respRet = respondEndResumeImportObject(session,
 						 requestId, ret, &zeroObjId, sizeof(zeroObjId));
 		if (respRet < 0)
 			sceClibPrintf(
@@ -1888,6 +1920,410 @@ static int syncBgCopyNotifyTask(int taskId, int contentType, SceUInt32 sizeLow, 
 }
 
 /* ---------------------------------------------------------------------------
+ * Dedicated Sync Method Handlers (0x812B831E..0x812BB0B0)
+ * --------------------------------------------------------------------------- */
+
+/* 0x812B831E */
+static int syncGetSessionId(IPMI::Session *session, SceUInt32 *outIndex)
+{
+	g_mtpServer.sessionMgr().getSessionIndex(session, outIndex);
+	return 0;
+}
+
+/* 0x812B8336 */
+static int syncDisableNotify(IPMI::Session *session)
+{
+	g_mtpServer.sessionMgr().disableNotify(session);
+	return 0;
+}
+
+/* 0x812B9DAC */
+static int syncRecvData(IPMI::Session *session, SceUInt32 ticket, void *outBuf,
+			SceSize maxLen, SceSize *outReceived, SceUInt64 *outTotal)
+{
+	*outReceived = 0;
+	*outTotal = 0;
+	SceUInt32 contextId = 0;
+	int res = g_mtpServer.sessionMgr().getContext(session, ticket, &contextId);
+	if (res >= 0)
+		res = SceLibMtp_CA704934(contextId, outBuf, maxLen, outReceived, outTotal);
+	return res;
+}
+
+/* 0x812B9EE8 */
+static int syncSendData(IPMI::Session *session, SceUInt32 ticket, const void *inBuf,
+			SceSize sendLen, SceSize *outSent, SceUInt64 *outTotal)
+{
+	*outSent = 0;
+	*outTotal = 0;
+	SceUInt32 contextId = 0;
+	int res = g_mtpServer.sessionMgr().getContext(session, ticket, &contextId);
+	if (res >= 0)
+		res = sceMtpSendData(contextId, inBuf, sendLen, outSent, outTotal);
+	return res;
+}
+
+/* 0x812B9F52 */
+static int syncSetDataPhaseResult(IPMI::Session *session, SceUInt32 ticket, int phaseResult)
+{
+	SceUInt32 contextId = 0;
+	int res = g_mtpServer.sessionMgr().getContext(session, ticket, &contextId);
+	if (res >= 0)
+		res = SceLibMtp_77793BF2(contextId, phaseResult);
+	return res;
+}
+
+/* 0x812B9F96 */
+static int syncGetContextProgress(IPMI::Session *session, SceUInt32 ticket, void *outProgress)
+{
+	SceUInt32 contextId = 0;
+	int res = g_mtpServer.sessionMgr().getContext(session, ticket, &contextId);
+	if (res >= 0) {
+		sce_paf_memset(outProgress, 0, 24u);
+		res = SceLibMtp_0497FA87(contextId, outProgress);
+	}
+	return res;
+}
+
+/* 0x812BA09C */
+static int syncGetHostVersion(void *outVersion)
+{
+	return SceLibMtp_F6C15FE8(outVersion);
+}
+
+/* 0x812BA1C0 */
+static int syncCheckHostReset(IPMI::Session *session, SceUInt32 *outWasReset)
+{
+	SceUInt8 wasReset = 0;
+	int res = g_mtpServer.sessionMgr().checkHostReset(session, &wasReset);
+	if (res >= 0)
+		*outWasReset = wasReset;
+	return res;
+}
+
+/* 0x812BA206 */
+static int syncMarlinActivate(SceUInt32 accountFlag, SceUInt32 *outStatus, SceUInt32 *outErr)
+{
+	return SceLibMtp_C12DE479(accountFlag, outStatus, outErr);
+}
+
+/* 0x812BA214 */
+static int syncMarlinDeactivate(SceUInt32 accountFlag, SceUInt32 *outStatus, SceUInt32 *outErr)
+{
+	return SceLibMtp_24369599(accountFlag, outStatus, outErr);
+}
+
+/* 0x812BA222 */
+static int syncMarlinLicenseMove(const char *path, SceUInt32 contentId, SceUInt32 licenseFlags,
+				 SceUInt32 *outStatus)
+{
+	return SceLibMtp_A55E6AB6(path, contentId, licenseFlags, outStatus);
+}
+
+/* 0x812BA234 */
+static int syncMarlinLicenseCopy(const char *path, SceUInt32 contentId, SceUInt32 licenseFlags,
+				 SceUInt32 *outStatus)
+{
+	return SceLibMtp_0BC34F1F(path, contentId, licenseFlags, outStatus);
+}
+
+/* 0x812BA246 */
+static int syncMarlinLicenseCheck(const char *path, SceUInt32 contentId, SceUInt32 licenseFlags,
+				  SceUInt32 *outStatus)
+{
+	return SceLibMtp_542F3064(path, contentId, licenseFlags, outStatus);
+}
+
+/* 0x812BA258 */
+static int syncMarlinSharedInfoAcq(const char *path, SceUInt32 requestFlags, SceUInt32 *outStatus)
+{
+	return SceLibMtp_E35C1C83(path, requestFlags, outStatus);
+}
+
+/* 0x812BA266 */
+static int syncAddObjectData(const void *objectRecord, SceUInt64 *outObjectId)
+{
+	return SceLibMtp_81BCF297(objectRecord, outObjectId);
+}
+
+/* 0x812BA272 */
+static int syncRemoveObjectData(SceUInt32 objectIdLow, SceUInt32 objectIdHigh)
+{
+	return SceLibMtp_E2A9E59C(objectIdLow, objectIdHigh);
+}
+
+/* 0x812BA27E */
+static int syncGetObjectData(SceUInt32 objectIdLow, SceUInt32 objectIdHigh, void *outRecord)
+{
+	return SceLibMtp_9310EEEF(objectIdLow, objectIdHigh, outRecord);
+}
+
+/* 0x812BA28E */
+static int syncSetBgCopyFlag(int enabled)
+{
+	return SceLibMtp_6BB1C852(enabled);
+}
+
+/* 0x812BA3DC */
+static int syncFindObjectByPath(const char *path, SceUInt64 *outObjectId)
+{
+	return SceLibMtp_E107F90D(path, outObjectId);
+}
+
+/* 0x812BA3E8 */
+static int syncUpdateObjectData(SceUInt32 objectIdLow, SceUInt32 objectIdHigh,
+				const void *objectRecord)
+{
+	return SceLibMtp_EA4E8C39(objectIdLow, objectIdHigh, objectRecord);
+}
+
+/* 0x812BA3F8 */
+static int syncResetStorage(void)
+{
+	g_mtpServer.enqueueStorageResetJob();
+	return 0;
+}
+
+/* 0x812BA40A */
+static int syncStartHostDiscovery(IPMI::Session *session)
+{
+	int res = SceLibMtp_79F3EE1B();
+	if (res == 0) {
+		g_mtpServer.sessionMgr().onStartHostDiscovery(session);
+		g_mtpServer.sessionMgr().enableNetworkImpose(session);
+	}
+	return res;
+}
+
+/* 0x812BA428 */
+static int syncStopHostDiscovery(IPMI::Session *session)
+{
+	g_mtpServer.sessionMgr().disableNetworkImpose(session);
+	g_mtpServer.sessionMgr().onStopHostDiscovery(session);
+	return SceLibMtp_71197C62();
+}
+
+/* 0x812BA440 */
+static int syncGetHostDiscoveryState(int *outState)
+{
+	return SceLibMtp_06123E14(outState);
+}
+
+/* 0x812BA44A */
+static int syncGetNumDiscoveredHosts(SceUInt32 *outCount)
+{
+	return SceLibMtp_06714DA7(outCount);
+}
+
+/* 0x812BA454 */
+static int syncGetDiscoveredHost(SceUInt32 index, MtpNetHost *outHost)
+{
+	return SceLibMtp_2CA2CD16(index, outHost);
+}
+
+/* 0x812BA460 */
+static int syncStartNetRegister(IPMI::Session *session, MtpNetHost *host)
+{
+	int res = SceLibMtp_6DBD4FF7(host, onNetMtpRegisterCallback);
+	if (res == 0)
+		g_mtpServer.sessionMgr().onStartRegister(session);
+	return res;
+}
+
+/* 0x812BA48A */
+static int syncSendNetRegisterPin(const char *pin)
+{
+	return SceLibMtp_66B08C7D(pin);
+}
+
+/* 0x812BA494 */
+static int syncStopNetRegister(IPMI::Session *session)
+{
+	g_mtpServer.sessionMgr().onStopRegister(session);
+	return SceLibMtp_55B66FA0();
+}
+
+/* 0x812BA4AC */
+static int syncGetNumRegisteredHosts(SceUInt32 *outCount)
+{
+	return SceLibMtp_8E76FE4D(outCount);
+}
+
+/* 0x812BA4B6 */
+static int syncGetRegisteredHost(SceUInt32 index, MtpNetHost *outHost)
+{
+	return SceLibMtp_0898F989(index, outHost);
+}
+
+/* 0x812BA4C2 */
+static int syncUnregisterHost(const MtpNetHost *host)
+{
+	return SceLibMtp_9144D0B4(host);
+}
+
+/* 0x812BA4CC */
+static int syncIsHostOnline(const MtpNetHost *host, int *outOnline)
+{
+	return SceLibMtp_56FA46BB(host, outOnline);
+}
+
+/* 0x812BA4D8 */
+static int syncIsHostRegistered(const MtpNetHost *host, int *outRegistered)
+{
+	return SceLibMtp_389F2FE2(host, outRegistered);
+}
+
+/* 0x812BA4E4 */
+static int syncAssignHost(const MtpNetHost *host)
+{
+	return SceLibMtp_5B4AF4B8(host);
+}
+
+/* 0x812BA4EE */
+static int syncUnassignHost(void)
+{
+	return SceLibMtp_27F8701C();
+}
+
+/* 0x812BA4F6 */
+static int syncIsHostAssigned(int *outAssigned)
+{
+	return SceLibMtp_8CD95681(outAssigned);
+}
+
+/* 0x812BA500 */
+static int syncGetAssignedHost(MtpNetHost *outHost)
+{
+	return SceLibMtp_ED13170C(outHost);
+}
+
+/* 0x812BA50A */
+static int syncGetCurrentInterface(int *outIfType)
+{
+	return sceMtpGetCurrentInterface(outIfType);
+}
+
+/* 0x812BA564 */
+static int syncStopInterface(void)
+{
+	return sceMtpStop();
+}
+
+/* 0x812BA56C */
+static int syncIsStarted(int *outStarted)
+{
+	return SceLibMtp_B7984D4C(outStarted);
+}
+
+/* 0x812BA576 */
+static int syncSwitchUsbMode(int usbMode)
+{
+	return g_mtpServer.switchUsbMode(usbMode);
+}
+
+/* 0x812BA586 */
+static int syncGetUsbModeState(int *outState)
+{
+	return g_mtpServer.getUsbModeState(outState);
+}
+
+/* 0x812BA596 */
+static int syncGetPublicStatus(int *outStatus)
+{
+	if (outStatus == NULL)
+		return MTP_SVC_ERROR_INVALID_ARGUMENT;
+	int progress = 0;
+	*outStatus = SceLibMtp_08C00AFC(&progress);
+	return 0;
+}
+
+/* 0x812BA666 */
+static int syncSetCmaActive(int active)
+{
+	g_mtpServer.setCmaActive(active);
+	return 0;
+}
+
+/* 0x812BA678 */
+static int syncGetCmaActive(int *outActive)
+{
+	if (outActive == NULL)
+		return MTP_SVC_ERROR_INVALID_ARGUMENT;
+	*outActive = g_mtpServer.isCmaActive();
+	return 0;
+}
+
+/* 0x812BA69A */
+static int syncStartConsoleInfo(int *outTransferId)
+{
+	if (outTransferId == NULL)
+		return MTP_SVC_ERROR_INVALID_ARGUMENT;
+	return g_mtpServer.startConsoleInfo(outTransferId);
+}
+
+/* 0x812BA6B6 */
+static int syncBeginSendConsoleInfoData(char *outUrlBuf, SceSize urlBufSize, int *outSendId)
+{
+	return g_mtpServer.beginSendConsoleInfoData(outUrlBuf, urlBufSize, outSendId);
+}
+
+/* 0x812BA6C6 */
+static int syncEndSendConsoleInfoData(int transferResult)
+{
+	return g_mtpServer.endSendConsoleInfoData(transferResult);
+}
+
+/* 0x812BA6D6 */
+static int syncCancelConsoleInfo(void)
+{
+	return g_mtpServer.cancelConsoleInfo();
+}
+
+/* 0x812BA9CC */
+static int syncCheckAborted(int contentCategory, int objectHandle, int queryMode, int *outAborted)
+{
+	return SceLibMtp_FB181427(contentCategory, objectHandle, queryMode, outAborted);
+}
+
+/* 0x812BAC9E */
+static int syncGetDeviceId(SceUInt8 *outDeviceId)
+{
+	return SceLibMtp_29FAC63B(outDeviceId);
+}
+
+/* 0x812BAE20 */
+static int syncBeginLargeBuffer(void)
+{
+	SceLibMtp_AF9A2787();
+	return 0;
+}
+
+/* 0x812BAE2A */
+static int syncEndLargeBuffer(void)
+{
+	return SceLibMtp_BB32CD0A();
+}
+
+/* 0x812BB008 */
+static int syncBgCopyEndTask(void)
+{
+	return SceLibMtp_E7542628();
+}
+
+/* 0x812BB096 */
+static int syncBgCopyWriteData(const void *buffer, SceSize size, int streamFlags)
+{
+	return SceLibMtp_972A378F(buffer, size, streamFlags);
+}
+
+/* 0x812BB0A4 */
+static int syncBgCopyReadData(void *outBuffer, SceSize offset, SceSize readSize,
+			      int streamFlags, SceSize *outReadBytes)
+{
+	return SceLibMtp_ADE08924(outBuffer, offset, readSize, streamFlags, outReadBytes);
+}
+
+/* ---------------------------------------------------------------------------
  * Top-Level Sync & Async Dispatchers (0x812B5976 & 0x812B64B8)
  * --------------------------------------------------------------------------- */
 
@@ -1904,26 +2340,19 @@ int mtpServiceDispatchSync(IPMI::Session *session, SceUInt32 methodId,
 
 	switch (methodId) {
 	case MTP_METHOD_GET_SESSION_ID:
-		g_mtpServer.sessionMgr().getSessionIndex(session, (SceUInt32 *)outList[0].pBuffer);
+		res = syncGetSessionId(session, (SceUInt32 *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(SceUInt32);
-		res = 0;
 		break;
 
 	case MTP_METHOD_DISABLE_NOTIFY:
-		g_mtpServer.sessionMgr().disableNotify(session);
-		res = 0;
+		res = syncDisableNotify(session);
 		break;
 
 	case MTP_METHOD_RECV_DATA_SYNC: {
 		SceSize *receivedSize = (SceSize *)outList[1].pBuffer;
 		SceUInt64 *totalSize = (SceUInt64 *)outList[2].pBuffer;
-		*receivedSize = 0;
-		*totalSize = 0;
-		SceUInt32 contextId = 0;
-		res = g_mtpServer.sessionMgr().getContext(session, inWords[0], &contextId);
-		if (res >= 0)
-			res = SceLibMtp_CA704934(contextId, outList[0].pBuffer, inWords[1],
-						 receivedSize, totalSize);
+		res = syncRecvData(session, inWords[0], outList[0].pBuffer, inWords[1],
+				   receivedSize, totalSize);
 		outList[0].outSize = *receivedSize;
 		outList[1].outSize = sizeof(SceSize);
 		outList[2].outSize = sizeof(SceUInt64);
@@ -1933,36 +2362,21 @@ int mtpServiceDispatchSync(IPMI::Session *session, SceUInt32 methodId,
 	case MTP_METHOD_SEND_DATA_SYNC: {
 		SceSize *sentSize = (SceSize *)outList[0].pBuffer;
 		SceUInt64 *totalSize = (SceUInt64 *)outList[1].pBuffer;
-		*sentSize = 0;
-		*totalSize = 0;
-		SceUInt32 contextId = 0;
-		res = g_mtpServer.sessionMgr().getContext(session, inWords[0], &contextId);
-		if (res >= 0)
-			res = sceMtpSendData(contextId, inList[1].pData, inWords[1],
-					     sentSize, totalSize);
+		res = syncSendData(session, inWords[0], inList[1].pData, inWords[1],
+				   sentSize, totalSize);
 		outList[0].outSize = sizeof(SceSize);
 		outList[1].outSize = sizeof(SceUInt64);
 		break;
 	}
 
-	case MTP_METHOD_SET_DATA_PHASE_RESULT: {
-		SceUInt32 contextId = 0;
-		res = g_mtpServer.sessionMgr().getContext(session, inWords[0], &contextId);
-		if (res >= 0)
-			res = SceLibMtp_77793BF2(contextId, (int)inWords[1]);
+	case MTP_METHOD_SET_DATA_PHASE_RESULT:
+		res = syncSetDataPhaseResult(session, inWords[0], (int)inWords[1]);
 		break;
-	}
 
-	case MTP_METHOD_GET_CONTEXT_PROGRESS: {
-		SceUInt32 contextId = 0;
-		res = g_mtpServer.sessionMgr().getContext(session, inWords[0], &contextId);
-		if (res >= 0) {
-			sce_paf_memset(outList[0].pBuffer, 0, 24u);
-			res = SceLibMtp_0497FA87(contextId, outList[0].pBuffer);
-		}
+	case MTP_METHOD_GET_CONTEXT_PROGRESS:
+		res = syncGetContextProgress(session, inWords[0], outList[0].pBuffer);
 		outList[0].outSize = 24u;
 		break;
-	}
 
 	case MTP_METHOD_GET_HOST_STATUS:
 		res = syncGetHostStatus(session, (MtpStatus *)outList[0].pBuffer);
@@ -1970,7 +2384,7 @@ int mtpServiceDispatchSync(IPMI::Session *session, SceUInt32 methodId,
 		break;
 
 	case MTP_METHOD_GET_HOST_VERSION:
-		res = SceLibMtp_F6C15FE8(outList[0].pBuffer);
+		res = syncGetHostVersion(outList[0].pBuffer);
 		outList[0].outSize = 36u;
 		break;
 
@@ -1978,172 +2392,158 @@ int mtpServiceDispatchSync(IPMI::Session *session, SceUInt32 methodId,
 		res = syncCancelExecution(inWords[0], inWords[1]);
 		break;
 
-	case MTP_METHOD_CHECK_HOST_RESET: {
-		SceUInt8 wasReset = 0;
-		res = g_mtpServer.sessionMgr().checkHostReset(session, &wasReset);
-		if (res >= 0)
-			*(SceUInt32 *)outList[0].pBuffer = wasReset;
+	case MTP_METHOD_CHECK_HOST_RESET:
+		res = syncCheckHostReset(session, (SceUInt32 *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(SceUInt32);
 		break;
-	}
 
 	case MTP_METHOD_MARLIN_ACTIVATE:
-		res = SceLibMtp_C12DE479(inWords[0], (SceUInt32 *)outList[0].pBuffer,
+		res = syncMarlinActivate(inWords[0], (SceUInt32 *)outList[0].pBuffer,
 					 (SceUInt32 *)outList[1].pBuffer);
 		outList[0].outSize = sizeof(SceUInt32);
 		outList[1].outSize = sizeof(SceUInt32);
 		break;
 
 	case MTP_METHOD_MARLIN_DEACTIVATE:
-		res = SceLibMtp_24369599(inWords[0], (SceUInt32 *)outList[0].pBuffer,
-					 (SceUInt32 *)outList[1].pBuffer);
+		res = syncMarlinDeactivate(inWords[0], (SceUInt32 *)outList[0].pBuffer,
+					   (SceUInt32 *)outList[1].pBuffer);
 		outList[0].outSize = sizeof(SceUInt32);
 		outList[1].outSize = sizeof(SceUInt32);
 		break;
 
 	case MTP_METHOD_MARLIN_LICENSE_MOVE:
-		res = SceLibMtp_A55E6AB6((const char *)inList[1].pData, inWords[0], inWords[1],
-					 (SceUInt32 *)outList[0].pBuffer);
+		res = syncMarlinLicenseMove((const char *)inList[1].pData, inWords[0], inWords[1],
+					    (SceUInt32 *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(SceUInt32);
 		break;
 
 	case MTP_METHOD_MARLIN_LICENSE_COPY:
-		res = SceLibMtp_0BC34F1F((const char *)inList[1].pData, inWords[0], inWords[1],
-					 (SceUInt32 *)outList[0].pBuffer);
+		res = syncMarlinLicenseCopy((const char *)inList[1].pData, inWords[0], inWords[1],
+					    (SceUInt32 *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(SceUInt32);
 		break;
 
 	case MTP_METHOD_MARLIN_LICENSE_CHECK:
-		res = SceLibMtp_542F3064((const char *)inList[1].pData, inWords[0], inWords[1],
-					 (SceUInt32 *)outList[0].pBuffer);
+		res = syncMarlinLicenseCheck((const char *)inList[1].pData, inWords[0], inWords[1],
+					     (SceUInt32 *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(SceUInt32);
 		break;
 
 	case MTP_METHOD_MARLIN_SHARED_INFO_ACQ:
-		res = SceLibMtp_E35C1C83((const char *)inList[1].pData, inWords[0],
-					 (SceUInt32 *)outList[0].pBuffer);
+		res = syncMarlinSharedInfoAcq((const char *)inList[1].pData, inWords[0],
+					      (SceUInt32 *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(SceUInt32);
 		break;
 
 	case MTP_METHOD_ADD_OBJECT_DATA:
-		res = SceLibMtp_81BCF297(inList[0].pData, (SceUInt64 *)outList[0].pBuffer);
+		res = syncAddObjectData(inList[0].pData, (SceUInt64 *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(SceUInt64);
 		break;
 
 	case MTP_METHOD_REMOVE_OBJECT_DATA:
-		res = SceLibMtp_E2A9E59C(inWords[0], inWords[1]);
+		res = syncRemoveObjectData(inWords[0], inWords[1]);
 		break;
 
 	case MTP_METHOD_GET_OBJECT_DATA:
-		res = SceLibMtp_9310EEEF(inWords[0], inWords[1], outList[0].pBuffer);
+		res = syncGetObjectData(inWords[0], inWords[1], outList[0].pBuffer);
 		outList[0].outSize = 1329u;
 		break;
 
 	case MTP_METHOD_FIND_OBJECT_BY_PATH:
-		res = SceLibMtp_E107F90D((const char *)inList[0].pData,
-					 (SceUInt64 *)outList[0].pBuffer);
+		res = syncFindObjectByPath((const char *)inList[0].pData,
+					   (SceUInt64 *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(SceUInt64);
 		break;
 
 	case MTP_METHOD_UPDATE_OBJECT_DATA:
-		res = SceLibMtp_EA4E8C39(inWords[0], inWords[1], inList[1].pData);
+		res = syncUpdateObjectData(inWords[0], inWords[1], inList[1].pData);
 		break;
 
 	case MTP_METHOD_RESET_STORAGE:
-		g_mtpServer.enqueueStorageResetJob();
-		res = 0;
+		res = syncResetStorage();
 		break;
 
 	case MTP_METHOD_START_HOST_DISCOVERY:
-		res = SceLibMtp_79F3EE1B();
-		if (res == 0) {
-			g_mtpServer.sessionMgr().onStartHostDiscovery(session);
-			g_mtpServer.sessionMgr().enableNetworkImpose(session);
-		}
+		res = syncStartHostDiscovery(session);
 		break;
 
 	case MTP_METHOD_STOP_HOST_DISCOVERY:
-		g_mtpServer.sessionMgr().disableNetworkImpose(session);
-		g_mtpServer.sessionMgr().onStopHostDiscovery(session);
-		res = SceLibMtp_71197C62();
+		res = syncStopHostDiscovery(session);
 		break;
 
 	case MTP_METHOD_GET_HOST_DISCOVERY_STATE:
-		res = SceLibMtp_06123E14((int *)outList[0].pBuffer);
+		res = syncGetHostDiscoveryState((int *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(int);
 		break;
 
 	case MTP_METHOD_GET_NUM_DISCOVERED_HOSTS:
-		res = SceLibMtp_06714DA7((SceUInt32 *)outList[0].pBuffer);
+		res = syncGetNumDiscoveredHosts((SceUInt32 *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(SceUInt32);
 		break;
 
 	case MTP_METHOD_GET_DISCOVERED_HOST:
-		res = SceLibMtp_2CA2CD16(inWords[0], (MtpNetHost *)outList[0].pBuffer);
+		res = syncGetDiscoveredHost(inWords[0], (MtpNetHost *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(MtpNetHost);
 		break;
 
 	case MTP_METHOD_START_NET_REGISTER:
-		res = SceLibMtp_6DBD4FF7((MtpNetHost *)inList[0].pData, onNetMtpRegisterCallback);
-		if (res == 0)
-			g_mtpServer.sessionMgr().onStartRegister(session);
+		res = syncStartNetRegister(session, (MtpNetHost *)inList[0].pData);
 		break;
 
 	case MTP_METHOD_SEND_NET_REGISTER_PIN:
-		res = SceLibMtp_66B08C7D((const char *)inList[0].pData);
+		res = syncSendNetRegisterPin((const char *)inList[0].pData);
 		break;
 
 	case MTP_METHOD_STOP_NET_REGISTER:
-		g_mtpServer.sessionMgr().onStopRegister(session);
-		res = SceLibMtp_55B66FA0();
+		res = syncStopNetRegister(session);
 		break;
 
 	case MTP_METHOD_GET_NUM_REGISTERED_HOSTS:
-		res = SceLibMtp_8E76FE4D((SceUInt32 *)outList[0].pBuffer);
+		res = syncGetNumRegisteredHosts((SceUInt32 *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(SceUInt32);
 		break;
 
 	case MTP_METHOD_GET_REGISTERED_HOST:
-		res = SceLibMtp_0898F989(inWords[0], (MtpNetHost *)outList[0].pBuffer);
+		res = syncGetRegisteredHost(inWords[0], (MtpNetHost *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(MtpNetHost);
 		break;
 
 	case MTP_METHOD_UNREGISTER_HOST:
-		res = SceLibMtp_9144D0B4((const MtpNetHost *)inList[0].pData);
+		res = syncUnregisterHost((const MtpNetHost *)inList[0].pData);
 		break;
 
 	case MTP_METHOD_IS_HOST_ONLINE:
-		res = SceLibMtp_56FA46BB((const MtpNetHost *)inList[0].pData,
-					 (int *)outList[0].pBuffer);
+		res = syncIsHostOnline((const MtpNetHost *)inList[0].pData,
+				       (int *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(int);
 		break;
 
 	case MTP_METHOD_IS_HOST_REGISTERED:
-		res = SceLibMtp_389F2FE2((const MtpNetHost *)inList[0].pData,
-					 (int *)outList[0].pBuffer);
+		res = syncIsHostRegistered((const MtpNetHost *)inList[0].pData,
+					   (int *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(int);
 		break;
 
 	case MTP_METHOD_ASSIGN_HOST:
-		res = SceLibMtp_5B4AF4B8((const MtpNetHost *)inList[0].pData);
+		res = syncAssignHost((const MtpNetHost *)inList[0].pData);
 		break;
 
 	case MTP_METHOD_UNASSIGN_HOST:
-		res = SceLibMtp_27F8701C();
+		res = syncUnassignHost();
 		break;
 
 	case MTP_METHOD_IS_HOST_ASSIGNED:
-		res = SceLibMtp_8CD95681((int *)outList[0].pBuffer);
+		res = syncIsHostAssigned((int *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(int);
 		break;
 
 	case MTP_METHOD_GET_ASSIGNED_HOST:
-		res = SceLibMtp_ED13170C((MtpNetHost *)outList[0].pBuffer);
+		res = syncGetAssignedHost((MtpNetHost *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(MtpNetHost);
 		break;
 
 	case MTP_METHOD_GET_CURRENT_INTERFACE:
-		res = sceMtpGetCurrentInterface((int *)outList[0].pBuffer);
+		res = syncGetCurrentInterface((int *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(int);
 		break;
 
@@ -2153,35 +2553,27 @@ int mtpServiceDispatchSync(IPMI::Session *session, SceUInt32 methodId,
 
 	case MTP_METHOD_STOP_INTERFACE:
 	case MTP_METHOD_STOP_INTERFACE_ALT:
-		res = sceMtpStop();
+		res = syncStopInterface();
 		break;
 
 	case MTP_METHOD_IS_STARTED:
-		res = SceLibMtp_B7984D4C((int *)outList[0].pBuffer);
+		res = syncIsStarted((int *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(int);
 		break;
 
 	case MTP_METHOD_SWITCH_USB_MODE:
-		res = g_mtpServer.switchUsbMode((int)inWords[0]);
+		res = syncSwitchUsbMode((int)inWords[0]);
 		break;
 
 	case MTP_METHOD_GET_USB_MODE_STATE:
-		res = g_mtpServer.getUsbModeState((int *)outList[0].pBuffer);
+		res = syncGetUsbModeState((int *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(int);
 		break;
 
-	case MTP_METHOD_GET_PUBLIC_STATUS: {
-		int *outStatus = (int *)outList[0].pBuffer;
-		if (outStatus == NULL) {
-			res = MTP_SVC_ERROR_INVALID_ARGUMENT;
-		} else {
-			int progress = 0;
-			*outStatus = SceLibMtp_08C00AFC(&progress);
-			res = 0;
-		}
+	case MTP_METHOD_GET_PUBLIC_STATUS:
+		res = syncGetPublicStatus((int *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(int);
 		break;
-	}
 
 	case MTP_METHOD_GET_CAPABILITY:
 		res = syncGetCapability((int)inWords[0], (MtpCapabilityInfo *)outList[0].pBuffer);
@@ -2189,55 +2581,44 @@ int mtpServiceDispatchSync(IPMI::Session *session, SceUInt32 methodId,
 		break;
 
 	case MTP_METHOD_SET_CMA_ACTIVE:
-		g_mtpServer.setCmaActive((int)inWords[0]);
-		res = 0;
+		res = syncSetCmaActive((int)inWords[0]);
 		break;
 
-	case MTP_METHOD_GET_CMA_ACTIVE: {
-		int *outActive = (int *)outList[0].pBuffer;
-		if (outActive == NULL) {
-			res = MTP_SVC_ERROR_INVALID_ARGUMENT;
-		} else {
-			*outActive = g_mtpServer.isCmaActive();
-			res = 0;
-		}
+	case MTP_METHOD_GET_CMA_ACTIVE:
+		res = syncGetCmaActive((int *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(int);
 		break;
-	}
 
 	case MTP_METHOD_START_CONSOLE_INFO:
-		if (outList[0].pBuffer == NULL)
-			res = MTP_SVC_ERROR_INVALID_ARGUMENT;
-		else
-			res = g_mtpServer.startConsoleInfo((int *)outList[0].pBuffer);
+		res = syncStartConsoleInfo((int *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(int);
 		break;
 
 	case MTP_METHOD_BEGIN_SEND_CONSOLE_INFO_DATA: {
 		SceSize urlBufSize = inWords[0];
-		res = g_mtpServer.beginSendConsoleInfoData((char *)outList[0].pBuffer, urlBufSize,
-							   (int *)outList[1].pBuffer);
+		res = syncBeginSendConsoleInfoData((char *)outList[0].pBuffer, urlBufSize,
+						   (int *)outList[1].pBuffer);
 		outList[0].outSize = urlBufSize;
 		outList[1].outSize = sizeof(int);
 		break;
 	}
 
 	case MTP_METHOD_END_SEND_CONSOLE_INFO_DATA:
-		res = g_mtpServer.endSendConsoleInfoData((int)inWords[0]);
+		res = syncEndSendConsoleInfoData((int)inWords[0]);
 		break;
 
 	case MTP_METHOD_CANCEL_CONSOLE_INFO:
-		res = g_mtpServer.cancelConsoleInfo();
+		res = syncCancelConsoleInfo();
 		break;
 
 	case MTP_METHOD_CHECK_ABORTED:
-		res = SceLibMtp_FB181427((int)inWords[0], (int)inWords[1], (int)inWords[2],
-					 (int *)outList[0].pBuffer);
+		res = syncCheckAborted((int)inWords[0], (int)inWords[1], (int)inWords[2],
+				       (int *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(int);
 		break;
 
 	case MTP_METHOD_GET_DEVICE_ID:
-		res = SceLibMtp_29FAC63B((SceUInt8 *)outList[0].pBuffer);
+		res = syncGetDeviceId((SceUInt8 *)outList[0].pBuffer);
 		outList[0].outSize = 16u;
 		break;
 
@@ -2250,16 +2631,15 @@ int mtpServiceDispatchSync(IPMI::Session *session, SceUInt32 methodId,
 		break;
 
 	case MTP_METHOD_BEGIN_LARGE_BUFFER:
-		SceLibMtp_AF9A2787();
-		res = 0;
+		res = syncBeginLargeBuffer();
 		break;
 
 	case MTP_METHOD_END_LARGE_BUFFER:
-		res = SceLibMtp_BB32CD0A();
+		res = syncEndLargeBuffer();
 		break;
 
 	case MTP_METHOD_SET_BG_COPY_FLAG:
-		res = SceLibMtp_6BB1C852((int)inWords[0]);
+		res = syncSetBgCopyFlag((int)inWords[0]);
 		break;
 
 	case MTP_METHOD_SEND_SESSION_INFO:
@@ -2274,7 +2654,7 @@ int mtpServiceDispatchSync(IPMI::Session *session, SceUInt32 methodId,
 		break;
 
 	case MTP_METHOD_BGCOPY_END_TASK:
-		res = SceLibMtp_E7542628();
+		res = syncBgCopyEndTask();
 		break;
 
 	case MTP_METHOD_BGCOPY_SET_TASK_INFO:
@@ -2284,12 +2664,12 @@ int mtpServiceDispatchSync(IPMI::Session *session, SceUInt32 methodId,
 		break;
 
 	case MTP_METHOD_BGCOPY_WRITE_DATA:
-		res = SceLibMtp_972A378F(inList[1].pData, inWords[0], (int)inWords[1]);
+		res = syncBgCopyWriteData(inList[1].pData, inWords[0], (int)inWords[1]);
 		break;
 
 	case MTP_METHOD_BGCOPY_READ_DATA: {
 		SceSize readSize = inWords[1];
-		res = SceLibMtp_ADE08924(outList[0].pBuffer, inWords[0], readSize,
+		res = syncBgCopyReadData(outList[0].pBuffer, inWords[0], readSize,
 					 (int)inWords[2], (SceSize *)outList[1].pBuffer);
 		outList[0].outSize = readSize;
 		outList[1].outSize = sizeof(SceSize);

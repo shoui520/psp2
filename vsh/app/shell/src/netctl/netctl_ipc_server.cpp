@@ -612,6 +612,60 @@ static int netCtlIpcAdhocJoinPspGroup(IPMI::Session *session, const char *ssid, 
 	return ret;
 }
 
+/* 0x8120D63C */
+static int netCtlIpcInetDisconnect(void)
+{
+	return SceShell_3F41E440();
+}
+
+/* 0x8120D644 */
+static int netCtlIpcAdhocDisconnect(void)
+{
+	return SceShell_C1886828();
+}
+
+/* 0x8120D64C */
+static int netCtlIpcInetGetInfo(int code, SceNetCtlInfo *outInfo)
+{
+	return SceShell_7AD86CE1(code, outInfo);
+}
+
+/* 0x8120D658 */
+static int netCtlIpcInetGetState(int *outState)
+{
+	return netCtlApiInetGetState(outState);
+}
+
+/* 0x8120D662 */
+static int netCtlIpcInetGetStatus(int *outStatus)
+{
+	return SceShell_77642C92(outStatus);
+}
+
+/* 0x8120D66C */
+static int netCtlIpcAdhocGetState(int *outState)
+{
+	return netCtlApiAdhocGetState(outState);
+}
+
+/* 0x8120D676 */
+static int netCtlIpcAdhocGetInfo(int code, void *outInfo)
+{
+	return netCtlApiAdhocGetInfo(code, outInfo);
+}
+
+/* 0x8120D682 */
+static int netCtlIpcAdhocGetStatus(int *outStatus)
+{
+	return SceShell_5DC4A753(outStatus);
+}
+
+/* 0x8120D68C */
+static int netCtlIpcGetMobileStatus(int *outStatus)
+{
+	return netCtlApiGetMobileStatus(outStatus);
+}
+
 /* 0x8120D696 */
 static int netCtlIpcStartScan(const char *packedSsids, SceUInt32 count,
 			      const NetCtlScanParam *inParam, const void *customIe)
@@ -630,6 +684,18 @@ static int netCtlIpcStartScan(const char *packedSsids, SceUInt32 count,
 		localParam.customIeData = customIe;
 
 	return SceShell_449348B6(ssidPtrs, count, &localParam);
+}
+
+/* 0x8120D6FE */
+static int netCtlIpcGetScanResultCount(void)
+{
+	return netCtlApiGetScanResultCount();
+}
+
+/* 0x8120D706 */
+static int netCtlIpcGetScanResultByIndex(SceUInt32 index, NetCtlScanInfo *outInfo)
+{
+	return netCtlApiGetScanResultByIndex(index, outInfo);
 }
 
 /* 0x8120D712 */
@@ -688,14 +754,152 @@ static int netCtlIpcGetMultiScanInfoByBssid(const SceNetEtherAddr *bssid,
 	return SceShell_3E737FBE(bssid, outInfo, outIe, ioIeSize);
 }
 
-/* 0x8120D866 / 0x8120D890 */
-static int netCtlIpcGetIfStat(int device, SceSize size, SceNetCtlIfStat *outStat)
+/* 0x8120D7B2 */
+static int netCtlIpcGetNetConfigCount(int *outCount)
+{
+	return SceShell_36788D70(outCount);
+}
+
+/* 0x8120D7BC */
+static int netCtlIpcGetCurrentNetConfig(int *outId)
+{
+	return SceShell_8858B876(outId);
+}
+
+/* 0x8120D7C6 */
+static int netCtlIpcDeleteNetConfig(int configId)
+{
+	return SceShell_29A14252(configId);
+}
+
+/* 0x8120D7D0 */
+static int netCtlIpcAdhocGetInAddr(SceNetInAddr *outAddr)
+{
+	return netCtlApiAdhocGetInAddr(outAddr);
+}
+
+/* 0x8120D7DA */
+static int netCtlIpcGetNatInfo(SceSize size, SceNetCtlNatInfo *outInfo)
+{
+	outInfo->size = size;
+	return netCtlApiGetNatInfo(outInfo);
+}
+
+/* 0x8120D7E6 */
+static int netCtlIpcGetNatDetailInfo(SceSize size, NetCtlNatDetailInfo *outInfo)
+{
+	outInfo->size = size;
+	return netCtlApiGetNatDetailInfo(outInfo);
+}
+
+/* 0x8120D7F2 */
+static int netCtlIpcUpnpGetLastError(int *outError)
+{
+	return netUpnpGetLastError(outError);
+}
+
+/* 0x8120D7FC */
+static int netCtlIpcFreeze(IPMI::Session *session)
+{
+	return netCtlApiFreeze(session->getProcessId());
+}
+
+/* 0x8120D80A */
+static int netCtlIpcUnfreeze(void)
+{
+	return netCtlApiUnfreeze();
+}
+
+/* 0x8120D812 */
+static int netCtlIpcSuppressAutoConnect(IPMI::Session *session)
+{
+	return netCtlApiSuppressAutoConnect(session->getProcessId());
+}
+
+/* 0x8120D820 */
+static int netCtlIpcResumeAutoConnect(IPMI::Session *session)
+{
+	return netCtlApiResumeAutoConnect(session->getProcessId());
+}
+
+/* 0x8120D82E */
+static int netCtlIpcForceImposePrompt(IPMI::Session *session)
+{
+	return netCtlApiForceImposePrompt(session->getProcessId());
+}
+
+/* 0x8120D83C */
+static int netCtlIpcClearImposePrompt(IPMI::Session *session)
+{
+	return netCtlApiClearImposePrompt(session->getProcessId());
+}
+
+/* 0x8120D84A */
+static int netCtlIpcResetExclusivePrompt(void)
+{
+	return netCtlApiResetExclusivePrompt();
+}
+
+/* 0x8120D852 */
+static int netCtlIpcGetWisprStatus(NetCtlWisprStatus *outStatus)
+{
+	return netCtlApiGetWisprStatus(outStatus);
+}
+
+/* 0x8120D85C */
+static int netCtlIpcAbortExclusive(void)
+{
+	return netCtlApiAbortExclusive();
+}
+
+/* 0x8120D866 */
+static int netCtlIpcGetIfStatWifi(int device, SceSize size, SceNetCtlIfStat *outStat)
 {
 	if (size != sizeof(SceNetCtlIfStat))
 		return SCE_NET_CTL_ERROR_INVALID_SIZE;
 	sceClibMemset(outStat, 0, sizeof(SceNetCtlIfStat));
 	outStat->size = sizeof(SceNetCtlIfStat);
 	return netCtlApiGetIfStat(device, outStat);
+}
+
+/* 0x8120D890 */
+static int netCtlIpcGetIfStatEth(int device, SceSize size, SceNetCtlIfStat *outStat)
+{
+	if (size != sizeof(SceNetCtlIfStat))
+		return SCE_NET_CTL_ERROR_INVALID_SIZE;
+	sceClibMemset(outStat, 0, sizeof(SceNetCtlIfStat));
+	outStat->size = sizeof(SceNetCtlIfStat);
+	return netCtlApiGetIfStat(device, outStat);
+}
+
+/* 0x8120D8BA */
+static int netCtlIpcClearIfStat(int device)
+{
+	return netCtlApiClearIfStat(device);
+}
+
+/* 0x8120D8C4 */
+static int netCtlIpcDeleteIfStat(void)
+{
+	return netCtlApiDeleteIfStat();
+}
+
+/* 0x8120D8CC */
+static int netCtlIpcLinkProcess(SceUID parentPid, SceUID childPid)
+{
+	return netCtlApiLinkProcess(parentPid, childPid);
+}
+
+/* 0x8120D8D8 */
+static int netCtlIpcUnlinkProcess(SceUID parentPid, SceUID childPid)
+{
+	return netCtlApiUnlinkProcess(parentPid, childPid);
+}
+
+/* 0x8120D8E4 */
+static int netCtlIpcSetWifiRegConfigs(const NetCtlRegConfig *entries, SceUInt32 count)
+{
+	return SceShell_60129092(entries, count);
 }
 
 /* 0x8120D8F0 */
@@ -705,6 +909,56 @@ static int netCtlIpcGetWifiRegConfigs(const SceUInt32 *configIds, NetCtlRegConfi
 	for (SceUInt32 i = 0; i < count; ++i)
 		outEntries[i].configId = configIds[i];
 	return SceShell_A25CD3F2(outEntries, count);
+}
+
+/* 0x8120D916 */
+static int netCtlIpcSetEthRegConfig(const NetCtlRegConfig *entry)
+{
+	return netCtlApiSetEthRegConfig(entry);
+}
+
+/* 0x8120D920 */
+static int netCtlIpcGetEthRegConfig(NetCtlRegConfig *outEntry)
+{
+	return netCtlApiGetEthRegConfig(outEntry);
+}
+
+/* 0x8120D92A */
+static int netCtlIpcUpnpEnablePortCheck(IPMI::Session *session)
+{
+	return netUpnpEnablePortCheck(session);
+}
+
+/* 0x8120D932 */
+static int netCtlIpcUpnpDisablePortCheck(void)
+{
+	return netUpnpDisablePortCheck();
+}
+
+/* 0x8120D93A */
+static int netCtlIpcGetFlag(int *outFlag)
+{
+	*outFlag = s_netCtlIpcFlag;
+	return 0;
+}
+
+/* 0x8120D94A */
+static int netCtlIpcSetFlag(int flagValue)
+{
+	s_netCtlIpcFlag = flagValue;
+	return 0;
+}
+
+/* 0x8120D9EC */
+static int netCtlIpcGetMacAddress(SceNetEtherAddr *outAddr)
+{
+	return netCtlApiGetMacAddress(outAddr);
+}
+
+/* 0x8120D9F6 */
+static int netCtlIpcIsAdhocCooldownExpired(void)
+{
+	return netCtlApiIsAdhocCooldownExpired();
 }
 
 /* 0x8120DEEA */
@@ -770,32 +1024,32 @@ static int netCtlIpcDispatchSync(IPMI::Session *session, SceUInt32 methodId,
 	}
 
 	case 0x2000A:
-		ret = SceShell_3F41E440();
+		ret = netCtlIpcInetDisconnect();
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x2000B:
-		ret = SceShell_7AD86CE1(*(const int *)inList[0].pData,
-					(SceNetCtlInfo *)outList[0].pBuffer);
+		ret = netCtlIpcInetGetInfo(*(const int *)inList[0].pData,
+					   (SceNetCtlInfo *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(SceNetCtlInfo);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x2000C:
-		ret = netCtlApiGetMacAddress((SceNetEtherAddr *)outList[0].pBuffer);
+		ret = netCtlIpcGetMacAddress((SceNetEtherAddr *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(SceNetEtherAddr);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x2000D:
-		ret = netCtlApiInetGetState((int *)outList[0].pBuffer);
+		ret = netCtlIpcInetGetState((int *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(int);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x2000E:
-		ret = SceShell_77642C92((int *)outList[0].pBuffer);
+		ret = netCtlIpcInetGetStatus((int *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(int);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x2000F:
-		ret = netCtlApiGetMobileStatus((int *)outList[0].pBuffer);
+		ret = netCtlIpcGetMobileStatus((int *)outList[0].pBuffer);
 		outList[0].outSize = 8;
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
@@ -807,11 +1061,11 @@ static int netCtlIpcDispatchSync(IPMI::Session *session, SceUInt32 methodId,
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x20011:
-		ret = netCtlApiGetScanResultCount();
+		ret = netCtlIpcGetScanResultCount();
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x20012:
-		ret = netCtlApiGetScanResultByIndex(*(const SceUInt32 *)inList[0].pData,
+		ret = netCtlIpcGetScanResultByIndex(*(const SceUInt32 *)inList[0].pData,
 						    (NetCtlScanInfo *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(NetCtlScanInfo);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
@@ -880,17 +1134,17 @@ static int netCtlIpcDispatchSync(IPMI::Session *session, SceUInt32 methodId,
 	}
 
 	case 0x20018:
-		ret = SceShell_36788D70((int *)outList[0].pBuffer);
+		ret = netCtlIpcGetNetConfigCount((int *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(int);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x20019:
-		ret = SceShell_8858B876((int *)outList[0].pBuffer);
+		ret = netCtlIpcGetCurrentNetConfig((int *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(int);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x2001A:
-		ret = SceShell_29A14252(*(const int *)inList[0].pData);
+		ret = netCtlIpcDeleteNetConfig(*(const int *)inList[0].pData);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x2001B:
@@ -911,124 +1165,126 @@ static int netCtlIpcDispatchSync(IPMI::Session *session, SceUInt32 methodId,
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x2001F:
-		ret = SceShell_C1886828();
+		ret = netCtlIpcAdhocDisconnect();
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x20020:
-		ret = netCtlApiAdhocGetState((int *)outList[0].pBuffer);
+		ret = netCtlIpcAdhocGetState((int *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(int);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x20021:
-		ret = netCtlApiAdhocGetInfo(*(const int *)inList[0].pData, outList[0].pBuffer);
+		ret = netCtlIpcAdhocGetInfo(*(const int *)inList[0].pData, outList[0].pBuffer);
 		outList[0].outSize = 36;
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x20022:
-		ret = SceShell_5DC4A753((int *)outList[0].pBuffer);
+		ret = netCtlIpcAdhocGetStatus((int *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(int);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x20023:
-		ret = netCtlApiAdhocGetInAddr((SceNetInAddr *)outList[0].pBuffer);
+		ret = netCtlIpcAdhocGetInAddr((SceNetInAddr *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(SceNetInAddr);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
-	case 0x20024: {
-		SceNetCtlNatInfo *nat = (SceNetCtlNatInfo *)outList[0].pBuffer;
-
-		nat->size = *(const SceSize *)inList[0].pData;
-		ret = netCtlApiGetNatInfo(nat);
+	case 0x20024:
+		ret = netCtlIpcGetNatInfo(*(const SceSize *)inList[0].pData,
+					  (SceNetCtlNatInfo *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(SceNetCtlNatInfo);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
-	}
 
-	case 0x20025: {
-		NetCtlNatDetailInfo *nat = (NetCtlNatDetailInfo *)outList[0].pBuffer;
-
-		nat->size = *(const SceSize *)inList[0].pData;
-		ret = netCtlApiGetNatDetailInfo(nat);
+	case 0x20025:
+		ret = netCtlIpcGetNatDetailInfo(*(const SceSize *)inList[0].pData,
+						(NetCtlNatDetailInfo *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(NetCtlNatDetailInfo);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
-	}
 
 	case 0x20026:
-		ret = netUpnpGetLastError((int *)outList[0].pBuffer);
+		ret = netCtlIpcUpnpGetLastError((int *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(int);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x20027:
-		ret = netCtlApiFreeze(session->getProcessId());
+		ret = netCtlIpcFreeze(session);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x20028:
-		ret = netCtlApiUnfreeze();
+		ret = netCtlIpcUnfreeze();
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x20029:
-		ret = netCtlApiSuppressAutoConnect(session->getProcessId());
+		ret = netCtlIpcSuppressAutoConnect(session);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x2002A:
-		ret = netCtlApiResumeAutoConnect(session->getProcessId());
+		ret = netCtlIpcResumeAutoConnect(session);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x2002B:
-		ret = netCtlApiForceImposePrompt(session->getProcessId());
+		ret = netCtlIpcForceImposePrompt(session);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x2002C:
-		ret = netCtlApiClearImposePrompt(session->getProcessId());
+		ret = netCtlIpcClearImposePrompt(session);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x2002D:
-		ret = netCtlApiResetExclusivePrompt();
+		ret = netCtlIpcResetExclusivePrompt();
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x2002E:
-		ret = netCtlApiGetWisprStatus((NetCtlWisprStatus *)outList[0].pBuffer);
+		ret = netCtlIpcGetWisprStatus((NetCtlWisprStatus *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(NetCtlWisprStatus);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x2002F:
-		ret = netCtlApiAbortExclusive();
+		ret = netCtlIpcAbortExclusive();
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
-	case 0x20030:
+	case 0x20030: {
+		const int *args = (const int *)inList[0].pData;
+
+		ret = netCtlIpcGetIfStatWifi(args[0], (SceSize)args[1],
+					     (SceNetCtlIfStat *)outList[0].pBuffer);
+		outList[0].outSize = sizeof(SceNetCtlIfStat);
+		return session->respondToSyncMethodRequest(ret, outList, outCount);
+	}
+
 	case 0x20031: {
 		const int *args = (const int *)inList[0].pData;
 
-		ret = netCtlIpcGetIfStat(args[0], (SceSize)args[1],
-					 (SceNetCtlIfStat *)outList[0].pBuffer);
+		ret = netCtlIpcGetIfStatEth(args[0], (SceSize)args[1],
+					    (SceNetCtlIfStat *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(SceNetCtlIfStat);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 	}
 
 	case 0x20032:
-		ret = netCtlApiClearIfStat(*(const int *)inList[0].pData);
+		ret = netCtlIpcClearIfStat(*(const int *)inList[0].pData);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x20033:
-		ret = netCtlApiDeleteIfStat();
+		ret = netCtlIpcDeleteIfStat();
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x20034: {
 		const SceUID *args = (const SceUID *)inList[0].pData;
 
-		ret = netCtlApiLinkProcess(args[0], args[1]);
+		ret = netCtlIpcLinkProcess(args[0], args[1]);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 	}
 
 	case 0x20035: {
 		const SceUID *args = (const SceUID *)inList[0].pData;
 
-		ret = netCtlApiUnlinkProcess(args[0], args[1]);
+		ret = netCtlIpcUnlinkProcess(args[0], args[1]);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 	}
 
 	case 0x20036:
-		ret = SceShell_60129092((const NetCtlRegConfig *)inList[1].pData,
-					*(const SceUInt32 *)inList[0].pData);
+		ret = netCtlIpcSetWifiRegConfigs((const NetCtlRegConfig *)inList[1].pData,
+						 *(const SceUInt32 *)inList[0].pData);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x20037: {
@@ -1041,33 +1297,33 @@ static int netCtlIpcDispatchSync(IPMI::Session *session, SceUInt32 methodId,
 	}
 
 	case 0x20038:
-		ret = netCtlApiSetEthRegConfig((const NetCtlRegConfig *)inList[0].pData);
+		ret = netCtlIpcSetEthRegConfig((const NetCtlRegConfig *)inList[0].pData);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x20039:
-		ret = netCtlApiGetEthRegConfig((NetCtlRegConfig *)outList[0].pBuffer);
+		ret = netCtlIpcGetEthRegConfig((NetCtlRegConfig *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(NetCtlRegConfig);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x2003A:
-		ret = netUpnpEnablePortCheck(session);
+		ret = netCtlIpcUpnpEnablePortCheck(session);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x2003B:
-		ret = netUpnpDisablePortCheck();
+		ret = netCtlIpcUpnpDisablePortCheck();
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x2003C:
-		*(int *)outList[0].pBuffer = s_netCtlIpcFlag;
+		ret = netCtlIpcGetFlag((int *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(int);
-		return session->respondToSyncMethodRequest(0, outList, outCount);
+		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x2003D:
-		s_netCtlIpcFlag = *(const int *)inList[0].pData;
-		return session->respondToSyncMethodRequest(0, outList, outCount);
+		ret = netCtlIpcSetFlag(*(const int *)inList[0].pData);
+		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	case 0x2003E:
-		ret = netCtlApiIsAdhocCooldownExpired();
+		ret = netCtlIpcIsAdhocCooldownExpired();
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 
 	default:

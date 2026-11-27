@@ -1155,6 +1155,35 @@ public:
 private:
 	int ExecuteTurnOnInternal();
 	void HandleAppDeactivated(int code, int appId);
+	void HandleBbmcComBootOk(const TelEventInfo &event);
+	void HandleBbmcComBootNg(const TelEventInfo &event);
+	void HandleMediatorComFailure(const TelEventInfo &event);
+	void HandleBbmcNeedUpdatingDeviceInfo(const TelEventInfo &event);
+	void HandleBbmcSetupReady(const TelEventInfo &event);
+	void HandleBbmcNetworkReady(const TelEventInfo &event);
+	void HandleBbmcPinRequired(const TelEventInfo &event);
+	void HandleBbmcPukRequired(const TelEventInfo &event);
+	void HandleBbmcPinNotRequired(const TelEventInfo &event);
+	void HandleBbmcPinPermanentlyBlocked(const TelEventInfo &event);
+	void HandleBbmcNetScanFin(const TelEventInfo &event);
+	void HandleBbmcNetScanFailed(const TelEventInfo &event);
+	void HandleBbmcPinStatusReady(const TelEventInfo &event);
+	void HandleBbmcExceedHiTemp(const TelEventInfo &event);
+	void HandleBbmcPacketCallEndReasonUpdate(const TelEventInfo &event);
+	void HandleBbmcComFwUpdateNotice(const TelEventInfo &event);
+	void HandleInternalVerifyPin(const TelEventInfo &event);
+	void HandleInternalUnblockPin(const TelEventInfo &event);
+	void HandleInternalSetPinProtection(const TelEventInfo &event);
+	void HandleInternalChangePinCode(const TelEventInfo &event);
+	void HandleInternalSetApnInfo(const TelEventInfo &event);
+	void HandleInternalSetApnInfoWithBillingPlan(const TelEventInfo &event);
+	void HandleInternalRestoreApnInfo(const TelEventInfo &event);
+	void HandleInternalRemoveCurrentApnInfo(const TelEventInfo &event);
+	void HandleInternalDeactivateSimLock(const TelEventInfo &event);
+	void HandleInternalUnblockSimLock(const TelEventInfo &event);
+	void HandleInternalResume(const TelEventInfo &event);
+	void HandleAttributeError(const TelEventInfo &event);
+	void HandleInternalSimLockError(const TelEventInfo &event);
 
 	paf::thread::Mutex m_smcMutex;
 	paf::thread::Mutex m_listenerMutex;

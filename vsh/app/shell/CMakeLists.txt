@@ -781,6 +781,7 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc SOURCES
 	vshbridge_wrappers.c
 )
 target_link_options(vs0_vsh_shell_shell PRIVATE -Wl,--gc-sections)
+target_compile_definitions(vs0_vsh_shell_shell PRIVATE PSP2_STRIP_UNUSED)
 target_include_directories(vs0_vsh_shell_shell BEFORE PRIVATE "${PSP2_SRC}/vsh/paf/include")
 target_include_directories(vs0_vsh_shell_shell PRIVATE
 	"${PSP2_SRC}/vsh/paf" "${PSP2_SRC}/contrib/sqlite-3.7.6.3" "${PSP2_SRC}/vsh/app/common/src"
@@ -802,6 +803,7 @@ set_source_files_properties(src/applauncher_plugin/src/applauncher_iconinfo_game
 # Static library and service TUs whose internal helpers Sony keeps out of line (e.g. libSceNpPolling,
 # libSceNpRt, libSceNpImps, musiccore IPC, MTP dispatch, LibWMS)
 set_source_files_properties(
+	media_detect_mgr.cpp
 	np_friend_importer.cpp
 	popup_list.cpp
 	sfo.cpp
@@ -857,11 +859,14 @@ set_source_files_properties(
 	src/np/sns_fb/np_sns_fb_server.cpp
 	src/np/sns_fb/np_sns_fb_util.cpp
 	src/nsx/nsx_whats_new.cpp
+	src/picture_file_creator/picture_encoder.cpp
 	promoter_util_server.cpp
 	src/patch_chk_plugin/bgdl_patch_client.cpp
 	src/patch_chk_plugin/game_update.cpp
 	src/shell_svc/src/shell_svc_activity_client.cpp
+	src/shell_svc/src/shell_svc_telephony.cpp
 	src/sysupchk_plugin/sysupchk_np.cpp
+	src/telephony_plugin/src/general/tel_general_logic_mediator2.cpp
 	src/telephony_plugin/src/sms_pdu_transcoder/src/sms_pdu_transcoder/amsslib/LibWMS.cpp
 	src/topmenu_plugin/src/spawn_process_job.cpp
 	src/topmenu_plugin/src/top_window.cpp

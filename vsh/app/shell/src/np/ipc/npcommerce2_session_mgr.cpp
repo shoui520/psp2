@@ -405,9 +405,86 @@ static int npComm2GetSlotGeneration(NpCommerce2SessionManager *mgr, int kind, in
 	}
 }
 
-/* Shared enqueuer for 0x81221FA4..0x81222A2C */
-static int npComm2EnqueueRequest(IPMI::Session *session, int kind, const void *payload,
-				 SceSize payloadSize)
+/* 0x81221F84 */
+static int npComm2IpcInvalidateSlot(int kind)
+{
+	return npComm2InvalidateSlot(&s_comm2Mgr, kind);
+}
+
+/* 0x81221F94 */
+static int npComm2IpcGetSlotGeneration(int kind, int *outGen)
+{
+	return npComm2GetSlotGeneration(&s_comm2Mgr, kind, outGen);
+}
+
+/* Forward declaration for per-kind GetResult helpers */
+static int npComm2GetResultCommon(NpCommerce2SessionManager *mgr, IPMI::Session *session, int kind,
+				  int *outResult, int *outGeneration, void *outRespBuf,
+				  SceSize respBufSize, SceSize *outRespSize, char *outUrlBuf,
+				  SceSize urlBufSize, SceSize *outUrlSize, int *outStamp);
+
+/* Per-kind Start/Get helpers matching Sony's 0x81221FA4..0x81222ADE layout */
+#define NP_COMM2_DEFINE_START_GET(StartName, GetName, KindVal, PayloadSz) \
+static int StartName(IPMI::Session *session, const void *payload) \
+{ \
+	NpCommerce2QueueItem item; \
+	int reqId; \
+	int ret; \
+	sceClibMemset(&item, 0, sizeof(item)); \
+	item.session = session; \
+	item.clientPid = session->getProcessId(); \
+	item.kind = (KindVal); \
+	item.netCtlPid = session->getProcessId(); \
+	sceClibMemcpy_safe(item.payload.raw, payload, (PayloadSz)); \
+	reqId = npComm2AllocReqId(&s_comm2Mgr); \
+	if (reqId < 0) \
+		return reqId; \
+	ret = sceKernelLockLwMutex(&s_comm2Mgr.mutex, 1, NULL); \
+	if (ret >= 0) { \
+		ret = npComm2QueuePush(reqId, &item, sizeof(item)); \
+		sceKernelUnlockLwMutex(&s_comm2Mgr.mutex, 1); \
+	} \
+	if (ret >= 0) \
+		return reqId; \
+	npComm2FreeReqId(&s_comm2Mgr, reqId); \
+	return ret; \
+} \
+static int GetName(IPMI::Session *session, int *outResult, int *outGeneration, \
+		   void *outRespBuf, SceSize respBufSize, SceSize *outRespSize, \
+		   char *outUrlBuf, SceSize urlBufSize, SceSize *outUrlSize, int *outStamp) \
+{ \
+	return npComm2GetResultCommon(&s_comm2Mgr, session, (KindVal), \
+				      outResult, outGeneration, outRespBuf, respBufSize, \
+				      outRespSize, outUrlBuf, urlBufSize, outUrlSize, outStamp); \
+}
+
+/* 0x81221FA4 / 0x81222056 */
+NP_COMM2_DEFINE_START_GET(npComm2StartSession, npComm2GetSessionResult, NP_COMM2_KIND_SESSION, 4u)
+/* 0x81222098 / 0x8122214A */
+NP_COMM2_DEFINE_START_GET(npComm2StartSessionShared, npComm2GetSessionSharedResult, NP_COMM2_KIND_SESSION_SHARED, 4u)
+/* 0x8122218C / 0x8122223E */
+NP_COMM2_DEFINE_START_GET(npComm2StartSessionAlt, npComm2GetSessionAltResult, NP_COMM2_KIND_SESSION_ALT, 4u)
+/* 0x81222280 / 0x81222332 */
+NP_COMM2_DEFINE_START_GET(npComm2StartVoucher, npComm2GetVoucherResult, NP_COMM2_KIND_VOUCHER, 0x18u)
+/* 0x81222374 / 0x81222428 */
+NP_COMM2_DEFINE_START_GET(npComm2StartProductInfo, npComm2GetProductInfoResult, NP_COMM2_KIND_PRODUCT_INFO, 0x214u)
+/* 0x8122246A / 0x8122251E */
+NP_COMM2_DEFINE_START_GET(npComm2StartProductInfoEx, npComm2GetProductInfoExResult, NP_COMM2_KIND_PRODUCT_INFO_EX, 0x214u)
+/* 0x81222560 / 0x81222614 */
+NP_COMM2_DEFINE_START_GET(npComm2StartProductInfoAlt, npComm2GetProductInfoAltResult, NP_COMM2_KIND_PRODUCT_INFO_ALT, 0x214u)
+/* 0x81222656 / 0x81222708 */
+NP_COMM2_DEFINE_START_GET(npComm2StartProductList, npComm2GetProductListResult, NP_COMM2_KIND_PRODUCT_LIST, 0x1Cu)
+/* 0x8122274A / 0x812227FE */
+NP_COMM2_DEFINE_START_GET(npComm2StartCategory, npComm2GetCategoryResult, NP_COMM2_KIND_CATEGORY, 0x20Cu)
+/* 0x81222840 / 0x812228F4 */
+NP_COMM2_DEFINE_START_GET(npComm2StartBrowse, npComm2GetBrowseResult, NP_COMM2_KIND_BROWSE, 0x114u)
+/* 0x81222936 / 0x812229EA */
+NP_COMM2_DEFINE_START_GET(npComm2StartEntitlement, npComm2GetEntitlementResult, NP_COMM2_KIND_ENTITLEMENT, 0x114u)
+
+#undef NP_COMM2_DEFINE_START_GET
+
+/* 0x81222A2C */
+static int npComm2StartEmptyStore(IPMI::Session *session, const void *payload)
 {
 	NpCommerce2QueueItem item;
 	int reqId;
@@ -416,9 +493,9 @@ static int npComm2EnqueueRequest(IPMI::Session *session, int kind, const void *p
 	sceClibMemset(&item, 0, sizeof(item));
 	item.session = session;
 	item.clientPid = session->getProcessId();
-	item.kind = kind;
+	item.kind = NP_COMM2_KIND_EMPTY_STORE;
 	item.netCtlPid = session->getProcessId();
-	sceClibMemcpy_safe(item.payload.raw, payload, payloadSize);
+	sceClibMemcpy_safe(item.payload.raw, payload, 8u);
 
 	reqId = npComm2AllocReqId(&s_comm2Mgr);
 	if (reqId < 0)
@@ -533,6 +610,18 @@ static int npComm2GetEmptyStoreResult(IPMI::Session *session, int *outResult, vo
 				      NULL, 0, &unusedUrlSize, NULL);
 }
 
+/* 0x81222B2A */
+static int npComm2IpcAbortReq(int requestId)
+{
+	return npComm2AbortReq(&s_comm2Mgr, requestId);
+}
+
+/* 0x81222B3A */
+static int npComm2IpcIsReqActive(int requestId, int *outActive)
+{
+	return npComm2IsReqActive(&s_comm2Mgr, requestId, outActive);
+}
+
 /* 0x81222B4A */
 static int npComm2ShowStoreIcon(IPMI::Session *session, int position)
 {
@@ -596,31 +685,42 @@ void shellSvcDisp_0E_Disconn(IPMI::Session *session)
 	npComm2CleanupSession(&s_comm2Mgr, session);
 }
 
-/* Shared 7-output get-result responder (0x81222CA8..0x812230B4) */
-static int npComm2RespondGetResult(IPMI::Session *session, int kind,
-				   const IPMI::DataInfo *inList,
-				   IPMI::BufferInfo *outList, SceUInt32 outCount)
-{
-	const SceSize *sizes = (const SceSize *)inList[0].pData;
-	SceSize *outRespSize = (SceSize *)outList[3].pBuffer;
-	SceSize *outUrlSize = (SceSize *)outList[5].pBuffer;
-
-	int res = npComm2GetResultCommon(&s_comm2Mgr, session, kind,
-					 (int *)outList[0].pBuffer,
-					 (int *)outList[1].pBuffer,
-					 outList[2].pBuffer, sizes[0], outRespSize,
-					 (char *)outList[4].pBuffer, sizes[1], outUrlSize,
-					 (int *)outList[6].pBuffer);
-
-	outList[0].outSize = sizeof(int);
-	outList[1].outSize = sizeof(int);
-	outList[2].outSize = *outRespSize;
-	outList[3].outSize = sizeof(SceSize);
-	outList[4].outSize = *outUrlSize;
-	outList[5].outSize = sizeof(SceSize);
-	outList[6].outSize = sizeof(int);
-	return session->respondToSyncMethodRequest(res, outList, outCount);
+/* Per-kind 7-output IPC get-result responders matching Sony's 0x81222CA8..0x812230B4 */
+#define NP_COMM2_DEFINE_RESPOND_GET(RespondName, GetName) \
+static int RespondName(IPMI::Session *session, const IPMI::DataInfo *inList, \
+		       IPMI::BufferInfo *outList, SceUInt32 outCount) \
+{ \
+	const SceSize *sizes = (const SceSize *)inList[0].pData; \
+	SceSize *outRespSize = (SceSize *)outList[3].pBuffer; \
+	SceSize *outUrlSize = (SceSize *)outList[5].pBuffer; \
+	int res = GetName(session, (int *)outList[0].pBuffer, (int *)outList[1].pBuffer, \
+			  outList[2].pBuffer, sizes[0], outRespSize, \
+			  (char *)outList[4].pBuffer, sizes[1], outUrlSize, \
+			  (int *)outList[6].pBuffer); \
+	outList[0].outSize = sizeof(int); \
+	outList[1].outSize = sizeof(int); \
+	outList[2].outSize = *outRespSize; \
+	outList[3].outSize = sizeof(SceSize); \
+	outList[4].outSize = *outUrlSize; \
+	outList[5].outSize = sizeof(SceSize); \
+	outList[6].outSize = sizeof(int); \
+	return session->respondToSyncMethodRequest(res, outList, outCount); \
 }
+
+/* 0x81222CA8..0x812230B4 */
+NP_COMM2_DEFINE_RESPOND_GET(npComm2RespondGetSession, npComm2GetSessionResult)
+NP_COMM2_DEFINE_RESPOND_GET(npComm2RespondGetSessionShared, npComm2GetSessionSharedResult)
+NP_COMM2_DEFINE_RESPOND_GET(npComm2RespondGetSessionAlt, npComm2GetSessionAltResult)
+NP_COMM2_DEFINE_RESPOND_GET(npComm2RespondGetVoucher, npComm2GetVoucherResult)
+NP_COMM2_DEFINE_RESPOND_GET(npComm2RespondGetProductInfo, npComm2GetProductInfoResult)
+NP_COMM2_DEFINE_RESPOND_GET(npComm2RespondGetProductInfoEx, npComm2GetProductInfoExResult)
+NP_COMM2_DEFINE_RESPOND_GET(npComm2RespondGetProductInfoAlt, npComm2GetProductInfoAltResult)
+NP_COMM2_DEFINE_RESPOND_GET(npComm2RespondGetProductList, npComm2GetProductListResult)
+NP_COMM2_DEFINE_RESPOND_GET(npComm2RespondGetCategory, npComm2GetCategoryResult)
+NP_COMM2_DEFINE_RESPOND_GET(npComm2RespondGetBrowse, npComm2GetBrowseResult)
+NP_COMM2_DEFINE_RESPOND_GET(npComm2RespondGetEntitlement, npComm2GetEntitlementResult)
+
+#undef NP_COMM2_DEFINE_RESPOND_GET
 
 /* 0x8122311A */
 static int npComm2DispatchSync(IPMI::Session *session, SceUInt32 methodId,
@@ -641,83 +741,83 @@ static int npComm2DispatchSync(IPMI::Session *session, SceUInt32 methodId,
 	}
 	case NP_COMM2_IPC_INVALIDATE_TYPE: {
 		int kind = *(const int *)inList[0].pData;
-		int res = npComm2InvalidateSlot(&s_comm2Mgr, kind);
+		int res = npComm2IpcInvalidateSlot(kind);
 		return session->respondToSyncMethodRequest(res, outList, outCount);
 	}
 	case NP_COMM2_IPC_GET_TYPE_GEN: {
 		int kind = *(const int *)inList[0].pData;
-		int res = npComm2GetSlotGeneration(&s_comm2Mgr, kind, (int *)outList[0].pBuffer);
+		int res = npComm2IpcGetSlotGeneration(kind, (int *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(int);
 		return session->respondToSyncMethodRequest(res, outList, outCount);
 	}
 	case NP_COMM2_IPC_START_SESSION: {
-		int res = npComm2EnqueueRequest(session, NP_COMM2_KIND_SESSION, inList[0].pData, 4u);
+		int res = npComm2StartSession(session, inList[0].pData);
 		return session->respondToSyncMethodRequest(res, outList, outCount);
 	}
 	case NP_COMM2_IPC_START_SESSION_SHARED: {
-		int res = npComm2EnqueueRequest(session, NP_COMM2_KIND_SESSION_SHARED, inList[0].pData, 4u);
+		int res = npComm2StartSessionShared(session, inList[0].pData);
 		return session->respondToSyncMethodRequest(res, outList, outCount);
 	}
 	case NP_COMM2_IPC_START_SESSION_ALT: {
-		int res = npComm2EnqueueRequest(session, NP_COMM2_KIND_SESSION_ALT, inList[0].pData, 4u);
+		int res = npComm2StartSessionAlt(session, inList[0].pData);
 		return session->respondToSyncMethodRequest(res, outList, outCount);
 	}
 	case NP_COMM2_IPC_GET_SESSION:
-		return npComm2RespondGetResult(session, NP_COMM2_KIND_SESSION, inList, outList, outCount);
+		return npComm2RespondGetSession(session, inList, outList, outCount);
 	case NP_COMM2_IPC_GET_SESSION_SHARED:
-		return npComm2RespondGetResult(session, NP_COMM2_KIND_SESSION_SHARED, inList, outList, outCount);
+		return npComm2RespondGetSessionShared(session, inList, outList, outCount);
 	case NP_COMM2_IPC_GET_SESSION_ALT:
-		return npComm2RespondGetResult(session, NP_COMM2_KIND_SESSION_ALT, inList, outList, outCount);
+		return npComm2RespondGetSessionAlt(session, inList, outList, outCount);
 	case NP_COMM2_IPC_START_VOUCHER: {
-		int res = npComm2EnqueueRequest(session, NP_COMM2_KIND_VOUCHER, inList[0].pData, 0x18u);
+		int res = npComm2StartVoucher(session, inList[0].pData);
 		return session->respondToSyncMethodRequest(res, outList, outCount);
 	}
 	case NP_COMM2_IPC_GET_VOUCHER:
-		return npComm2RespondGetResult(session, NP_COMM2_KIND_VOUCHER, inList, outList, outCount);
+		return npComm2RespondGetVoucher(session, inList, outList, outCount);
 	case NP_COMM2_IPC_START_PRODUCT_INFO: {
-		int res = npComm2EnqueueRequest(session, NP_COMM2_KIND_PRODUCT_INFO, inList[0].pData, 0x214u);
+		int res = npComm2StartProductInfo(session, inList[0].pData);
 		return session->respondToSyncMethodRequest(res, outList, outCount);
 	}
 	case NP_COMM2_IPC_GET_PRODUCT_INFO:
-		return npComm2RespondGetResult(session, NP_COMM2_KIND_PRODUCT_INFO, inList, outList, outCount);
+		return npComm2RespondGetProductInfo(session, inList, outList, outCount);
 	case NP_COMM2_IPC_START_PRODUCT_INFO_EX: {
-		int res = npComm2EnqueueRequest(session, NP_COMM2_KIND_PRODUCT_INFO_EX, inList[0].pData, 0x214u);
+		int res = npComm2StartProductInfoEx(session, inList[0].pData);
 		return session->respondToSyncMethodRequest(res, outList, outCount);
 	}
 	case NP_COMM2_IPC_GET_PRODUCT_INFO_EX:
-		return npComm2RespondGetResult(session, NP_COMM2_KIND_PRODUCT_INFO_EX, inList, outList, outCount);
+		return npComm2RespondGetProductInfoEx(session, inList, outList, outCount);
 	case NP_COMM2_IPC_START_PRODUCT_INFO_ALT: {
-		int res = npComm2EnqueueRequest(session, NP_COMM2_KIND_PRODUCT_INFO_ALT, inList[0].pData, 0x214u);
+		int res = npComm2StartProductInfoAlt(session, inList[0].pData);
 		return session->respondToSyncMethodRequest(res, outList, outCount);
 	}
 	case NP_COMM2_IPC_GET_PRODUCT_INFO_ALT:
-		return npComm2RespondGetResult(session, NP_COMM2_KIND_PRODUCT_INFO_ALT, inList, outList, outCount);
+		return npComm2RespondGetProductInfoAlt(session, inList, outList, outCount);
 	case NP_COMM2_IPC_START_PRODUCT_LIST: {
-		int res = npComm2EnqueueRequest(session, NP_COMM2_KIND_PRODUCT_LIST, inList[0].pData, 0x1Cu);
+		int res = npComm2StartProductList(session, inList[0].pData);
 		return session->respondToSyncMethodRequest(res, outList, outCount);
 	}
 	case NP_COMM2_IPC_GET_PRODUCT_LIST:
-		return npComm2RespondGetResult(session, NP_COMM2_KIND_PRODUCT_LIST, inList, outList, outCount);
+		return npComm2RespondGetProductList(session, inList, outList, outCount);
 	case NP_COMM2_IPC_START_CATEGORY: {
-		int res = npComm2EnqueueRequest(session, NP_COMM2_KIND_CATEGORY, inList[0].pData, 0x20Cu);
+		int res = npComm2StartCategory(session, inList[0].pData);
 		return session->respondToSyncMethodRequest(res, outList, outCount);
 	}
 	case NP_COMM2_IPC_GET_CATEGORY:
-		return npComm2RespondGetResult(session, NP_COMM2_KIND_CATEGORY, inList, outList, outCount);
+		return npComm2RespondGetCategory(session, inList, outList, outCount);
 	case NP_COMM2_IPC_START_BROWSE: {
-		int res = npComm2EnqueueRequest(session, NP_COMM2_KIND_BROWSE, inList[0].pData, 0x114u);
+		int res = npComm2StartBrowse(session, inList[0].pData);
 		return session->respondToSyncMethodRequest(res, outList, outCount);
 	}
 	case NP_COMM2_IPC_GET_BROWSE:
-		return npComm2RespondGetResult(session, NP_COMM2_KIND_BROWSE, inList, outList, outCount);
+		return npComm2RespondGetBrowse(session, inList, outList, outCount);
 	case NP_COMM2_IPC_START_ENTITLEMENT: {
-		int res = npComm2EnqueueRequest(session, NP_COMM2_KIND_ENTITLEMENT, inList[0].pData, 0x114u);
+		int res = npComm2StartEntitlement(session, inList[0].pData);
 		return session->respondToSyncMethodRequest(res, outList, outCount);
 	}
 	case NP_COMM2_IPC_GET_ENTITLEMENT:
-		return npComm2RespondGetResult(session, NP_COMM2_KIND_ENTITLEMENT, inList, outList, outCount);
+		return npComm2RespondGetEntitlement(session, inList, outList, outCount);
 	case NP_COMM2_IPC_START_EMPTY_STORE: {
-		int res = npComm2EnqueueRequest(session, NP_COMM2_KIND_EMPTY_STORE, inList[0].pData, 8u);
+		int res = npComm2StartEmptyStore(session, inList[0].pData);
 		return session->respondToSyncMethodRequest(res, outList, outCount);
 	}
 	case NP_COMM2_IPC_GET_EMPTY_STORE: {
@@ -732,12 +832,12 @@ static int npComm2DispatchSync(IPMI::Session *session, SceUInt32 methodId,
 	}
 	case NP_COMM2_IPC_ABORT_REQUEST: {
 		int reqId = *(const int *)inList[0].pData;
-		int res = npComm2AbortReq(&s_comm2Mgr, reqId);
+		int res = npComm2IpcAbortReq(reqId);
 		return session->respondToSyncMethodRequest(res, outList, outCount);
 	}
 	case NP_COMM2_IPC_IS_REQUEST_ACTIVE: {
 		int reqId = *(const int *)inList[0].pData;
-		int res = npComm2IsReqActive(&s_comm2Mgr, reqId, (int *)outList[0].pBuffer);
+		int res = npComm2IpcIsReqActive(reqId, (int *)outList[0].pBuffer);
 		outList[0].outSize = sizeof(int);
 		return session->respondToSyncMethodRequest(res, outList, outCount);
 	}

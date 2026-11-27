@@ -291,640 +291,1260 @@ static void telPackNetRegistration(const TelNetworkInfo &netInfo, void *outBuf)
 	sce_paf_memcpy(outBuf, &packed, sizeof(packed));
 }
 
-} /* anonymous namespace */
-
 /* ------------------------------------------------------------------
- * SceShellSvc Channel 0x00050000 Dispatchers
+ * Per-method Telephony IPMI handlers (0x8126A1FE, 0x8126A3DA..0x8126D1E0)
  * ------------------------------------------------------------------ */
 
-/* 0x8126D372: sync dispatcher for methods 0x050000..0x050055 */
-int shellSvcDisp_05_Sync(IPMI::Session *session, SceUInt32 methodId,
-			 const IPMI::DataInfo *inList, SceUInt32 inCount,
-			 IPMI::BufferInfo *outList, SceUInt32 outCount)
+/* 0x8126A1FE */
+static int telIpcUnregisterSession(IPMI::Session *session)
 {
-	(void)inCount;
-	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
-	TelSmsLogicApiInterface *sms = telGetSmsApi();
+	return telUnregisterSession(session);
+}
 
+/* 0x8126A3DA */
+static int telIpcGetGeneralLogicState(int *outState)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outState == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->GetGeneralLogicState(outState).GetCode();
+}
+
+/* 0x8126A45A */
+static int telIpcSmsGetServiceState(int *outState)
+{
+	TelSmsLogicApiInterface *sms = telGetSmsApi();
+	if (sms == NULL || outState == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return sms->GetServiceState(outState).GetCode();
+}
+
+/* 0x8126A49A */
+static int telIpcSetFlightMode(int flightMode)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->SetFlightMode(flightMode).GetCode();
+}
+
+/* 0x8126A516 */
+static int telIpcGetFlightMode(int *outEnabled)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outEnabled == NULL)
+		return TEL_ERR_NOT_FOUND;
+	bool enabled = false;
+	int result = svc->GetFlightMode(&enabled).GetCode();
+	*outEnabled = enabled ? 1 : 0;
+	return result;
+}
+
+/* 0x8126A59C */
+static int telIpcSetEnableWwan(int enableWwan)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->SetEnableWwan(enableWwan != 0).GetCode();
+}
+
+/* 0x8126A618 */
+static int telIpcGetEnableWwan(int *outEnabled)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outEnabled == NULL)
+		return TEL_ERR_NOT_FOUND;
+	bool enabled = false;
+	int result = svc->GetEnableWwan(&enabled).GetCode();
+	*outEnabled = enabled ? 1 : 0;
+	return result;
+}
+
+/* 0x8126A696 */
+static int telIpcGetPhoneNumber(void *outBuf)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outBuf == NULL)
+		return TEL_ERR_NOT_FOUND;
+	TelPhoneNumber number;
+	int result = svc->GetPhoneNumber(&number).GetCode();
+	telCopyStringField(outBuf, 33, paf::string(number.GetDigits()));
+	return result;
+}
+
+/* 0x8126A742 */
+static int telIpcGetImei(void *outBuf)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outBuf == NULL)
+		return TEL_ERR_NOT_FOUND;
+	paf::string imei;
+	int result = svc->GetImei(&imei).GetCode();
+	telCopyStringField(outBuf, 33, imei);
+	return result;
+}
+
+/* 0x8126A7F2 */
+static int telIpcGetIccid(void *outBuf)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outBuf == NULL)
+		return TEL_ERR_NOT_FOUND;
+	paf::string iccid;
+	int result = svc->GetIccid(&iccid).GetCode();
+	telCopyStringField(outBuf, 21, iccid);
+	return result;
+}
+
+/* 0x8126A8A2 */
+static int telIpcVerifyPin(const char *pinText)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL)
+		return TEL_ERR_NOT_FOUND;
+	paf::string pinStr(pinText);
+	TelPinCode pin(pinStr);
+	return svc->VerifyPin(pin).GetCode();
+}
+
+/* 0x8126A968 */
+static int telIpcUnblockPin(const char *pukText, const char *newPinText)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL)
+		return TEL_ERR_NOT_FOUND;
+	paf::string pukStr(pukText);
+	paf::string newPinStr(newPinText);
+	TelUnblockPinInfo unblock(pukStr, newPinStr);
+	return svc->UnblockPin(unblock).GetCode();
+}
+
+/* 0x8126AA8A */
+static int telIpcSetPinProtection(int enableProtection, const char *pinText)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL)
+		return TEL_ERR_NOT_FOUND;
+	paf::string pinStr(pinText);
+	TelPinCode pin(pinStr);
+	return svc->SetPinProtection(enableProtection != 0, pin).GetCode();
+}
+
+/* 0x8126AB66 */
+static int telIpcGetPinProtection(int *outEnabled)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outEnabled == NULL)
+		return TEL_ERR_NOT_FOUND;
+	bool enabled = false;
+	int result = svc->GetPinProtection(&enabled).GetCode();
+	*outEnabled = enabled ? 1 : 0;
+	return result;
+}
+
+/* 0x8126ABE4 */
+static int telIpcGetPinStatus(int *outStatus)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outStatus == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->GetPinStatus(outStatus).GetCode();
+}
+
+/* 0x8126AC60 */
+static int telIpcGetPinRemain(int *outRemain)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outRemain == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->GetPinRemain(outRemain).GetCode();
+}
+
+/* 0x8126ACDE */
+static int telIpcChangePinCode(const char *oldPinText, const char *newPinText)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL)
+		return TEL_ERR_NOT_FOUND;
+	paf::string oldPinStr(oldPinText);
+	paf::string newPinStr(newPinText);
+	TelPinCode oldPin(oldPinStr);
+	TelPinCode newPin(newPinStr);
+	return svc->ChangePinCode(oldPin, newPin).GetCode();
+}
+
+/* 0x8126AE00 */
+static int telIpcSmsGetDbPath(void *outBuf)
+{
+	TelSmsLogicApiInterface *sms = telGetSmsApi();
+	if (sms == NULL || outBuf == NULL)
+		return TEL_ERR_NOT_FOUND;
+	paf::string dbPath;
+	int result = sms->GetDbPath(&dbPath).GetCode();
+	telCopyStringField(outBuf, 128, dbPath);
+	return result;
+}
+
+/* 0x8126AEAE */
+static int telIpcSmsSendSms(SceUInt64 rawMessageId)
+{
+	TelSmsLogicApiInterface *sms = telGetSmsApi();
+	if (sms == NULL)
+		return TEL_ERR_NOT_FOUND;
+	TelSmsMessageId msgId(rawMessageId);
+	return sms->SendSms(msgId);
+}
+
+/* 0x8126AF32 */
+static int telIpcSmsResendSms(SceUInt64 rawMessageId)
+{
+	TelSmsLogicApiInterface *sms = telGetSmsApi();
+	if (sms == NULL)
+		return TEL_ERR_NOT_FOUND;
+	TelSmsMessageId msgId(rawMessageId);
+	return sms->ResendSms(msgId);
+}
+
+/* 0x8126AFB6 */
+static int telIpcSmsUpdateSmsStatus(const TelIpcSmsUpdateStatusReq *req)
+{
+	TelSmsLogicApiInterface *sms = telGetSmsApi();
+	if (sms == NULL || req == NULL)
+		return TEL_ERR_NOT_FOUND;
+	TelSmsMessageId msgId(req->messageId);
+	return sms->UpdateSmsStatus(msgId, req->status);
+}
+
+/* 0x8126B040 */
+static int telIpcSmsDeleteSmsList(const SceUInt64 *rawIds, SceSize count)
+{
+	TelSmsLogicApiInterface *sms = telGetSmsApi();
+	if (sms == NULL)
+		return TEL_ERR_NOT_FOUND;
+	paf::vector<TelSmsMessageId> ids;
+	for (SceSize idx = 0; idx < count; ++idx)
+		ids.push_back(TelSmsMessageId(rawIds[idx]));
+	return sms->DeleteSmsList(ids);
+}
+
+/* 0x8126B144 */
+static int telIpcSmsDeleteAllSms(void)
+{
+	TelSmsLogicApiInterface *sms = telGetSmsApi();
+	if (sms == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return sms->DeleteAllSms();
+}
+
+/* 0x8126B184 */
+static int telIpcSetApnInfoTemp(const char *rawRecord)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL)
+		return TEL_ERR_NOT_FOUND;
+	TelephonyOperator apnOp;
+	apnOp.SetFromRawRecord(rawRecord);
+	return svc->SetApnInfo(apnOp, false).GetCode();
+}
+
+/* 0x8126B21C */
+static int telIpcSetApnInfoSave(const char *rawRecord)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL)
+		return TEL_ERR_NOT_FOUND;
+	TelephonyOperator apnOp;
+	apnOp.SetFromRawRecord(rawRecord);
+	return svc->SetApnInfo(apnOp, true).GetCode();
+}
+
+/* 0x8126B2B4 */
+static int telIpcSetApnInfoWithBillingPlan(const TelOperatorApnRawRecord *rawRecord)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL)
+		return TEL_ERR_NOT_FOUND;
+	TelOperatorApnInfo apnInfo;
+	apnInfo.UnpackFromRaw(rawRecord);
+	return svc->SetApnInfoWithBillingPlan(apnInfo, true).GetCode();
+}
+
+/* 0x8126B34C */
+static int telIpcGetUnsupportedProfile(void)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->GetUnsupportedProfile().GetCode();
+}
+
+/* 0x8126B3C0 */
+static int telIpcRestoreApnInfo(void)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->RestoreApnInfo().GetCode();
+}
+
+/* 0x8126B434 */
+static int telIpcGetMccMncOfImsi(int *outPair)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outPair == NULL)
+		return TEL_ERR_NOT_FOUND;
+	TelephonyPlmn plmn;
+	int result = svc->GetMccMncOfImsi(&plmn).GetCode();
+	outPair[0] = plmn.GetMcc();
+	outPair[1] = plmn.GetMnc();
+	return result;
+}
+
+/* 0x8126B4F4 */
+static int telIpcGetProductTargetOperator(int *outOperator)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outOperator == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->GetProductTargetOperator(outOperator).GetCode();
+}
+
+/* 0x8126B574 */
+static int telIpcGetOperatorProfileCount(int *outCount)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outCount == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->GetOperatorProfileCount(outCount).GetCode();
+}
+
+/* 0x8126B604 */
+static int telIpcGetOperatorProfile(int index, TelOperatorProfileRawRecord *outRecord)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outRecord == NULL)
+		return TEL_ERR_NOT_FOUND;
+	TelOperatorProfile profile;
+	int result = svc->GetOperatorProfile(index, &profile).GetCode();
+	profile.PackToRaw(outRecord);
+	return result;
+}
+
+/* 0x8126B6A6 */
+static int telIpcGetApnInfoListCount(int *outCount)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outCount == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->GetApnInfoListCount(outCount).GetCode();
+}
+
+/* 0x8126B72A */
+static int telIpcGetApnInfoListItem(int index, TelOperatorApnRawRecord *outRecord)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outRecord == NULL)
+		return TEL_ERR_NOT_FOUND;
+	TelOperatorApnInfo apnItem;
+	int result = svc->GetApnInfoListItem(index, &apnItem).GetCode();
+	apnItem.PackToRaw(outRecord);
+	return result;
+}
+
+/* 0x8126B7CC */
+static int telIpcGetCurrentApnInfo(TelOperatorApnRawRecord *outRecord)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outRecord == NULL)
+		return TEL_ERR_NOT_FOUND;
+	TelephonyOperator apnOp;
+	int result = svc->GetCurrentApnInfo(&apnOp).GetCode();
+	TelOperatorApnInfo apnInfo(apnOp);
+	apnInfo.PackToRaw(outRecord);
+	return result;
+}
+
+/* 0x8126B868 */
+static int telIpcRemoveCurrentApnInfo(void)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->RemoveCurrentApnInfo().GetCode();
+}
+
+/* 0x8126B8DE */
+static int telIpcStartNetworkScan(void)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->StartNetworkScan().GetCode();
+}
+
+/* 0x8126B954 */
+static int telIpcAbortNetworkScan(void)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->AbortNetworkScan().GetCode();
+}
+
+/* 0x8126B9CA */
+static int telIpcGetNetworkScanInfoCount(int *outCount)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outCount == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->GetNetworkScanInfoCount(outCount).GetCode();
+}
+
+/* 0x8126BA50 */
+static int telIpcGetNetworkScanInfo(int index, TelNetScanRawRecord *outRecord)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outRecord == NULL)
+		return TEL_ERR_NOT_FOUND;
+	TelNetScanInfo scanItem;
+	int result = svc->GetNetworkScanInfo(index, &scanItem).GetCode();
+	scanItem.PackToRaw(outRecord);
+	return result;
+}
+
+/* 0x8126BAF2 */
+static int telIpcSetNetRegisterAuto(void)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->SetNetRegisterAuto().GetCode();
+}
+
+/* 0x8126BB68 */
+static int telIpcSetNetRegisterInfo(const TelNetScanRawRecord *rawRecord)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL)
+		return TEL_ERR_NOT_FOUND;
+	TelNetScanInfo scanTarget;
+	scanTarget.UnpackFromRaw(rawRecord);
+	return svc->SetNetRegisterInfo(scanTarget).GetCode();
+}
+
+/* 0x8126BBF8 */
+static int telIpcGetNetRegistrationInfo(void *outBuf)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outBuf == NULL)
+		return TEL_ERR_NOT_FOUND;
+	TelNetworkInfo netInfo;
+	int result = svc->GetNetRegistrationInfo(&netInfo).GetCode();
+	telPackNetRegistration(netInfo, outBuf);
+	return result;
+}
+
+/* 0x8126BCDC */
+static int telIpcGetSavedNetworkSelection(void *outBuf)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outBuf == NULL)
+		return TEL_ERR_NOT_FOUND;
+	TelNetworkInfo netInfo;
+	int result = svc->GetSavedNetworkSelection(&netInfo).GetCode();
+	telPackNetRegistration(netInfo, outBuf);
+	return result;
+}
+
+/* 0x8126BDC0 */
+static int telIpcSetRegistrationAppNetMode(int netMode)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->SetRegistrationAppNetMode(netMode).GetCode();
+}
+
+/* 0x8126BE3A */
+static int telIpcSetDataRoamingPermission(int allowRoaming)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->SetDataRoamingPermission(allowRoaming != 0).GetCode();
+}
+
+/* 0x8126BEB8 */
+static int telIpcGetDataRoamingPermission(int *outAllowed)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outAllowed == NULL)
+		return TEL_ERR_NOT_FOUND;
+	bool allowed = false;
+	int result = svc->GetDataRoamingPermission(&allowed).GetCode();
+	*outAllowed = allowed ? 1 : 0;
+	return result;
+}
+
+/* 0x8126BF40 */
+static int telIpcSetDataRoamingDefinition(int definition)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->SetDataRoamingDefinition(definition).GetCode();
+}
+
+/* 0x8126BFBE */
+static int telIpcCheckSimCondition(int *outCondition)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outCondition == NULL)
+		return TEL_ERR_NOT_FOUND;
+	*outCondition = svc->CheckSimCondition().GetCode();
+	return 0;
+}
+
+/* 0x8126C036 */
+static int telIpcGetControlKeyState(int *outState)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outState == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->GetControlKeyState(outState).GetCode();
+}
+
+/* 0x8126C0B0 */
+static int telIpcGetControlKeyBlockType(int *outBlockType)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outBlockType == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->GetControlKeyBlockType(outBlockType).GetCode();
+}
+
+/* 0x8126C12A */
+static int telIpcGetNetworkStatusReport(void)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL)
+		return TEL_ERR_NOT_FOUND;
+	paf::string report;
+	return svc->GetNetworkStatusReport(&report).GetCode();
+}
+
+/* 0x8126C1A6 */
+static int telIpcGetDeviceInfoReport(void)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL)
+		return TEL_ERR_NOT_FOUND;
+	paf::string report;
+	return svc->GetDeviceInfoReport(&report).GetCode();
+}
+
+/* 0x8126C21C */
+static int telIpcGetIsComExist(int *outExists)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outExists == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->GetIsComExist(outExists).GetCode();
+}
+
+/* 0x8126C296 */
+static int telIpcGetIsApnInit(int *outInitialized)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outInitialized == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->GetIsApnInit(outInitialized).GetCode();
+}
+
+/* 0x8126C310 */
+static int telIpcIsOpenSimModel(int *outOpenModel)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outOpenModel == NULL)
+		return TEL_ERR_NOT_FOUND;
+	bool openModel = false;
+	int result = svc->IsOpenSimModel(&openModel).GetCode();
+	*outOpenModel = openModel ? 1 : 0;
+	return result;
+}
+
+/* 0x8126C38A */
+static int telIpcGetNetworkSelectionMode(int *outMode)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outMode == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->GetNetworkSelectionMode(outMode).GetCode();
+}
+
+/* 0x8126C404 */
+static int telIpcGetConditionError(int *outErrorCode)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outErrorCode == NULL)
+		return TEL_ERR_NOT_FOUND;
+	TelephonyResult condErr(TEL_OK);
+	int result = svc->GetConditionError(&condErr).GetCode();
+	*outErrorCode = condErr.GetCode();
+	return result;
+}
+
+/* 0x8126C49C */
+static int telIpcDeactivateSimLock(const char *keyText)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL)
+		return TEL_ERR_NOT_FOUND;
+	paf::string keyStr(keyText);
+	TelCarrierLockKey key(keyStr);
+	return svc->DeactivateSimLock(key).GetCode();
+}
+
+/* 0x8126C570 */
+static int telIpcUnblockSimLock(const char *keyText)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL)
+		return TEL_ERR_NOT_FOUND;
+	paf::string keyStr(keyText);
+	TelControlKey key(keyStr);
+	return svc->UnblockSimLock(key).GetCode();
+}
+
+/* 0x8126C644 */
+static int telIpcGetSimLockDeactivateRemain(int *outRemain)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outRemain == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->GetSimLockDeactivateRemain(outRemain).GetCode();
+}
+
+/* 0x8126C6BE */
+static int telIpcGetSimLockUnblockRemain(int *outRemain)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outRemain == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->GetSimLockUnblockRemain(outRemain).GetCode();
+}
+
+/* 0x8126C738 */
+static int telIpcGetCurrentSignalLevel(int *outLevel)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outLevel == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->GetCurrentSignalLevel(outLevel).GetCode();
+}
+
+/* 0x8126C7B6 */
+static int telIpcSetBillingPlan(int billingPlan)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->SetBillingPlan(&billingPlan).GetCode();
+}
+
+/* 0x8126C832 */
+static int telIpcGetBillingPlan(int *outPlan)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outPlan == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->GetBillingPlan(outPlan).GetCode();
+}
+
+/* 0x8126C8B0 */
+static int telIpcSetDebugLogEnabled(int enabled)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->SetDebugLogEnabled(enabled != 0).GetCode();
+}
+
+/* 0x8126C934 */
+static int telIpcReadDebugLogLine(void *outBuf)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outBuf == NULL)
+		return TEL_ERR_NOT_FOUND;
+	paf::string line;
+	int result = svc->ReadDebugLogLine(&line).GetCode();
+	telCopyStringField(outBuf, 257, line);
+	return result;
+}
+
+/* 0x8126C9EA */
+static int telIpcSetDebugDiagFlag(int diagFlag)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->SetDebugDiagFlag(&diagFlag).GetCode();
+}
+
+/* 0x8126CA64 */
+static int telIpcGetDebugDiagFlag(int *outDiagFlag)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outDiagFlag == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->GetDebugDiagFlag(outDiagFlag).GetCode();
+}
+
+/* 0x8126CADE */
+static int telIpcSetDebugForceFlag(int forceFlag)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->SetDebugForceFlag(&forceFlag).GetCode();
+}
+
+/* 0x8126CB84 */
+static int telIpcGetDebugForceFlag(int *outForceFlag)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outForceFlag == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->GetDebugForceFlag(outForceFlag).GetCode();
+}
+
+/* 0x8126CC30 */
+static int telIpcIsSimActivated(int *outActivated)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outActivated == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->IsSimActivated(outActivated).GetCode();
+}
+
+/* 0x8126CCAA */
+static int telIpcGetLatestArchiveVersion(SceUInt32 *outVersion)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outVersion == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->GetLatestArchiveVersion(outVersion).GetCode();
+}
+
+/* 0x8126CD24 */
+static int telIpcGetArchiveVersion(SceUInt32 *outVersion)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outVersion == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->GetArchiveVersion(outVersion).GetCode();
+}
+
+/* 0x8126CD9E */
+static int telIpcCheckComVersion(int *outMatches)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outMatches == NULL)
+		return TEL_ERR_NOT_FOUND;
+	bool matches = false;
+	int result = svc->CheckComVersion(&matches).GetCode();
+	*outMatches = matches ? 1 : 0;
+	return result;
+}
+
+/* 0x8126CE34 */
+static int telIpcReleasePdpContext(void)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->ReleasePdpContext().GetCode();
+}
+
+/* 0x8126CEB0 */
+static int telIpcCheckImsiForOperatorCode(const TelIpcCheckImsiReq *req)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || req == NULL)
+		return TEL_ERR_NOT_FOUND;
+	int opCode = req->operatorCode;
+	bool matched = false;
+	return svc->CheckImsiForOperatorCode(&opCode, &matched).GetCode();
+}
+
+/* 0x8126CF28 */
+static int telIpcStartApnListDownload(void)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->StartApnListDownload().GetCode();
+}
+
+/* 0x8126CFA4 */
+static int telIpcCheckContentDownloadAllowed(int serviceType)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->CheckContentDownloadAllowed(serviceType).GetCode();
+}
+
+/* 0x8126D01E */
+static int telIpcGetDownloadSizeLimit(unsigned int serviceType, SceInt64 *outLimitBytes)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outLimitBytes == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->GetDownloadSizeLimit(serviceType, outLimitBytes).GetCode();
+}
+
+/* 0x8126D0B4 */
+static int telIpcCheckRoamingDownloadAllowed(unsigned int serviceType)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL)
+		return TEL_ERR_NOT_FOUND;
+	return svc->CheckRoamingDownloadAllowed(serviceType).GetCode();
+}
+
+/* 0x8126D12E */
+static int telIpcGetModemFirmwareVersion(void *outBuf)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outBuf == NULL)
+		return TEL_ERR_NOT_FOUND;
+	paf::string fwVer;
+	int result = svc->GetModemFirmwareVersion(&fwVer).GetCode();
+	telCopyStringField(outBuf, 33, fwVer);
+	return result;
+}
+
+/* 0x8126D1E0 */
+static int telIpcGetUpdateListUrl(void *outBuf)
+{
+	TelGeneralLogicServiceInterface *svc = telGetGeneralService();
+	if (svc == NULL || outBuf == NULL)
+		return TEL_ERR_NOT_FOUND;
+	paf::string url;
+	int result = svc->GetUpdateListUrl(&url).GetCode();
+	telCopyStringField(outBuf, 128, url);
+	return result;
+}
+
+/* 0x8126D372: sync dispatcher implementation for methods 0x050000..0x050055 */
+static int telIpcDispatchSyncImpl(IPMI::Session *session, SceUInt32 methodId,
+				  const IPMI::DataInfo *inList, SceUInt32 inCount,
+				  IPMI::BufferInfo *outList, SceUInt32 outCount)
+{
 	int result = TEL_ERR_NOT_FOUND;
 	SceSize outBytes = 0;
 
 	switch (methodId) {
-	case 0x050000: /* 327680: Register session */
+	case 0x050000:
 		result = telRegisterSession(session);
 		break;
-
-	case 0x050001: /* 327681: Unregister session */
-		result = telUnregisterSession(session);
+	case 0x050001:
+		result = telIpcUnregisterSession(session);
 		break;
-
-	case 0x050002: /* 327682: Pop general event */
+	case 0x050002:
 		result = telPopGeneralEvent(session,
 					    (outCount > 0) ? outList[0].pBuffer : NULL,
 					    (outCount > 1) ? static_cast<int *>(outList[1].pBuffer) : NULL);
+		if (outCount > 1)
+			outList[1].outSize = sizeof(int);
 		outBytes = sizeof(TelGeneralLegacyEventRecord);
 		break;
-
-	case 0x050003: /* 327683: Pop SMS event */
+	case 0x050003:
 		result = telPopSmsEvent(session,
 					(outCount > 0) ? outList[0].pBuffer : NULL,
 					(outCount > 1) ? static_cast<int *>(outList[1].pBuffer) : NULL);
+		if (outCount > 1)
+			outList[1].outSize = sizeof(int);
 		outBytes = sizeof(TelSmsLegacyEventRecord);
 		break;
-
-	case 0x050004: /* 327684: GetGeneralLogicState */
-		if (svc != NULL && outCount > 0)
-			result = svc->GetGeneralLogicState(static_cast<int *>(outList[0].pBuffer)).GetCode();
+	case 0x050004:
+		result = telIpcGetGeneralLogicState(
+			(outCount > 0) ? static_cast<int *>(outList[0].pBuffer) : NULL);
 		outBytes = 4;
 		break;
-
-	case 0x050005: /* 327685: SMS GetServiceState */
-		if (sms != NULL && outCount > 0)
-			result = sms->GetServiceState(static_cast<int *>(outList[0].pBuffer)).GetCode();
+	case 0x050005:
+		result = telIpcSmsGetServiceState(
+			(outCount > 0) ? static_cast<int *>(outList[0].pBuffer) : NULL);
 		outBytes = 4;
 		break;
-
-	case 0x050006: /* 327686: SetFlightMode */
-		if (svc != NULL && inCount > 1)
-			result = svc->SetFlightMode(*static_cast<const int *>(inList[0].pData)).GetCode();
+	case 0x050006:
+		if (inCount > 1)
+			result = telIpcSetFlightMode(*static_cast<const int *>(inList[0].pData));
 		break;
-
-	case 0x050007: /* 327687: GetFlightMode */
-		if (svc != NULL && outCount > 0) {
-			bool enabled = false;
-			result = svc->GetFlightMode(&enabled).GetCode();
-			*static_cast<int *>(outList[0].pBuffer) = enabled ? 1 : 0;
-		}
+	case 0x050007:
+		result = telIpcGetFlightMode(
+			(outCount > 0) ? static_cast<int *>(outList[0].pBuffer) : NULL);
 		outBytes = 4;
 		break;
-
-	case 0x050008: /* 327688: SetEnableWwan */
-		if (svc != NULL && inCount > 1)
-			result = svc->SetEnableWwan(*static_cast<const int *>(inList[0].pData) != 0).GetCode();
+	case 0x050008:
+		if (inCount > 1)
+			result = telIpcSetEnableWwan(*static_cast<const int *>(inList[0].pData));
 		break;
-
-	case 0x050009: /* 327689: GetEnableWwan */
-		if (svc != NULL && outCount > 0) {
-			bool enabled = false;
-			result = svc->GetEnableWwan(&enabled).GetCode();
-			*static_cast<int *>(outList[0].pBuffer) = enabled ? 1 : 0;
-		}
+	case 0x050009:
+		result = telIpcGetEnableWwan(
+			(outCount > 0) ? static_cast<int *>(outList[0].pBuffer) : NULL);
 		outBytes = 4;
 		break;
-
-	case 0x05000A: /* 327690: GetPhoneNumber */
-		if (svc != NULL && outCount > 0) {
-			TelPhoneNumber number;
-			result = svc->GetPhoneNumber(&number).GetCode();
-			telCopyStringField(outList[0].pBuffer, 33, paf::string(number.GetDigits()));
-		}
+	case 0x05000A:
+		result = telIpcGetPhoneNumber((outCount > 0) ? outList[0].pBuffer : NULL);
 		outBytes = 33;
 		break;
-
-	case 0x05000B: /* 327691: GetImei */
-		if (svc != NULL && outCount > 0) {
-			paf::string imei;
-			result = svc->GetImei(&imei).GetCode();
-			telCopyStringField(outList[0].pBuffer, 33, imei);
-		}
+	case 0x05000B:
+		result = telIpcGetImei((outCount > 0) ? outList[0].pBuffer : NULL);
 		outBytes = 33;
 		break;
-
-	case 0x05000C: /* 327692: GetIccid */
-		if (svc != NULL && outCount > 0) {
-			paf::string iccid;
-			result = svc->GetIccid(&iccid).GetCode();
-			telCopyStringField(outList[0].pBuffer, 21, iccid);
-		}
+	case 0x05000C:
+		result = telIpcGetIccid((outCount > 0) ? outList[0].pBuffer : NULL);
 		outBytes = 21;
 		break;
-
-	case 0x05000D: /* 327693: VerifyPin */
-		if (svc != NULL && inCount > 1) {
-			TelPinCode pin(paf::string(static_cast<const char *>(inList[1].pData)));
-			result = svc->VerifyPin(pin).GetCode();
-		}
+	case 0x05000D:
+		if (inCount > 1)
+			result = telIpcVerifyPin(static_cast<const char *>(inList[1].pData));
 		break;
-
-	case 0x05000E: /* 327694: UnblockPin */
-		if (svc != NULL && inCount > 2) {
-			TelUnblockPinInfo unblock(
-				paf::string(static_cast<const char *>(inList[1].pData)),
-				paf::string(static_cast<const char *>(inList[2].pData)));
-			result = svc->UnblockPin(unblock).GetCode();
-		}
+	case 0x05000E:
+		if (inCount > 2)
+			result = telIpcUnblockPin(static_cast<const char *>(inList[1].pData),
+						  static_cast<const char *>(inList[2].pData));
 		break;
-
-	case 0x05000F: /* 327695: SetPinProtection */
-		if (svc != NULL && inCount > 2) {
-			bool enable = (*static_cast<const int *>(inList[0].pData) != 0);
-			TelPinCode pin(paf::string(static_cast<const char *>(inList[2].pData)));
-			result = svc->SetPinProtection(enable, pin).GetCode();
-		}
+	case 0x05000F:
+		if (inCount > 2)
+			result = telIpcSetPinProtection(*static_cast<const int *>(inList[0].pData),
+							static_cast<const char *>(inList[2].pData));
 		break;
-
-	case 0x050010: /* 327696: GetPinProtection */
-		if (svc != NULL && outCount > 0) {
-			bool enabled = false;
-			result = svc->GetPinProtection(&enabled).GetCode();
-			*static_cast<int *>(outList[0].pBuffer) = enabled ? 1 : 0;
-		}
+	case 0x050010:
+		result = telIpcGetPinProtection(
+			(outCount > 0) ? static_cast<int *>(outList[0].pBuffer) : NULL);
 		outBytes = 4;
 		break;
-
-	case 0x050011: /* 327697: GetPinStatus */
-		if (svc != NULL && outCount > 0)
-			result = svc->GetPinStatus(static_cast<int *>(outList[0].pBuffer)).GetCode();
+	case 0x050011:
+		result = telIpcGetPinStatus(
+			(outCount > 0) ? static_cast<int *>(outList[0].pBuffer) : NULL);
 		outBytes = 4;
 		break;
-
-	case 0x050012: /* 327698: GetPinRemain */
-		if (svc != NULL && outCount > 0)
-			result = svc->GetPinRemain(static_cast<int *>(outList[0].pBuffer)).GetCode();
+	case 0x050012:
+		result = telIpcGetPinRemain(
+			(outCount > 0) ? static_cast<int *>(outList[0].pBuffer) : NULL);
 		outBytes = 4;
 		break;
-
-	case 0x050013: /* 327699: ChangePinCode */
-		if (svc != NULL && inCount > 2) {
-			TelPinCode oldPin(paf::string(static_cast<const char *>(inList[1].pData)));
-			TelPinCode newPin(paf::string(static_cast<const char *>(inList[2].pData)));
-			result = svc->ChangePinCode(oldPin, newPin).GetCode();
-		}
+	case 0x050013:
+		if (inCount > 2)
+			result = telIpcChangePinCode(static_cast<const char *>(inList[1].pData),
+						     static_cast<const char *>(inList[2].pData));
 		break;
-
-	case 0x050014: /* 327700: SMS GetDbPath */
-		if (sms != NULL && outCount > 0) {
-			paf::string dbPath;
-			result = sms->GetDbPath(&dbPath).GetCode();
-			telCopyStringField(outList[0].pBuffer, 128, dbPath);
-		}
+	case 0x050014:
+		result = telIpcSmsGetDbPath((outCount > 0) ? outList[0].pBuffer : NULL);
 		outBytes = 128;
 		break;
-
-	case 0x050015: /* 327701: SMS SendSms */
-		if (sms != NULL && inCount > 0) {
-			TelSmsMessageId msgId(*static_cast<const SceUInt64 *>(inList[0].pData));
-			result = sms->SendSms(msgId);
-		}
+	case 0x050015:
+		if (inCount > 0)
+			result = telIpcSmsSendSms(*static_cast<const SceUInt64 *>(inList[0].pData));
 		break;
-
-	case 0x050016: /* 327702: SMS ResendSms */
-		if (sms != NULL && inCount > 0) {
-			TelSmsMessageId msgId(*static_cast<const SceUInt64 *>(inList[0].pData));
-			result = sms->ResendSms(msgId);
-		}
+	case 0x050016:
+		if (inCount > 0)
+			result = telIpcSmsResendSms(*static_cast<const SceUInt64 *>(inList[0].pData));
 		break;
-
-	case 0x050017: /* 327703: SMS UpdateSmsStatus */
-		if (sms != NULL && inCount > 0) {
-			const TelIpcSmsUpdateStatusReq *req =
-				static_cast<const TelIpcSmsUpdateStatusReq *>(inList[0].pData);
-			TelSmsMessageId msgId(req->messageId);
-			result = sms->UpdateSmsStatus(msgId, req->status);
-		}
+	case 0x050017:
+		if (inCount > 0)
+			result = telIpcSmsUpdateSmsStatus(
+				static_cast<const TelIpcSmsUpdateStatusReq *>(inList[0].pData));
 		break;
-
-	case 0x050018: /* 327704: SMS DeleteSmsList */
-		if (sms != NULL && inCount > 0) {
-			SceSize count = inList[0].dataSize / sizeof(SceUInt64);
-			const SceUInt64 *rawIds = static_cast<const SceUInt64 *>(inList[0].pData);
-			paf::vector<TelSmsMessageId> ids;
-			for (SceSize idx = 0; idx < count; ++idx)
-				ids.push_back(TelSmsMessageId(rawIds[idx]));
-			result = sms->DeleteSmsList(ids);
-		}
+	case 0x050018:
+		if (inCount > 0)
+			result = telIpcSmsDeleteSmsList(
+				static_cast<const SceUInt64 *>(inList[0].pData),
+				inList[0].dataSize / sizeof(SceUInt64));
 		break;
-
-	case 0x050019: /* 327705: SMS DeleteAllSms */
-		if (sms != NULL)
-			result = sms->DeleteAllSms();
+	case 0x050019:
+		result = telIpcSmsDeleteAllSms();
 		break;
-
-	case 0x05001A: /* 327706: SetApnInfo (save = false) */
-		if (svc != NULL && inCount > 1) {
-			TelephonyOperator apnOp;
-			apnOp.SetFromRawRecord(static_cast<const char *>(inList[1].pData));
-			result = svc->SetApnInfo(apnOp, false).GetCode();
-		}
+	case 0x05001A:
+		if (inCount > 1)
+			result = telIpcSetApnInfoTemp(static_cast<const char *>(inList[1].pData));
 		break;
-
-	case 0x05001B: /* 327707: SetApnInfo (save = true) */
-		if (svc != NULL && inCount > 1) {
-			TelephonyOperator apnOp;
-			apnOp.SetFromRawRecord(static_cast<const char *>(inList[1].pData));
-			result = svc->SetApnInfo(apnOp, true).GetCode();
-		}
+	case 0x05001B:
+		if (inCount > 1)
+			result = telIpcSetApnInfoSave(static_cast<const char *>(inList[1].pData));
 		break;
-
-	case 0x05001C: /* 327708: SetApnInfoWithBillingPlan */
-		if (svc != NULL && inCount > 1) {
-			TelOperatorApnInfo apnInfo;
-			apnInfo.UnpackFromRaw(
+	case 0x05001C:
+		if (inCount > 1)
+			result = telIpcSetApnInfoWithBillingPlan(
 				static_cast<const TelOperatorApnRawRecord *>(inList[1].pData));
-			result = svc->SetApnInfoWithBillingPlan(apnInfo, true).GetCode();
-		}
 		break;
-
-	case 0x05001D: /* 327709: GetUnsupportedProfile */
-		if (svc != NULL)
-			result = svc->GetUnsupportedProfile().GetCode();
+	case 0x05001D:
+		result = telIpcGetUnsupportedProfile();
 		break;
-
-	case 0x05001E: /* 327710: RestoreApnInfo */
-		if (svc != NULL)
-			result = svc->RestoreApnInfo().GetCode();
+	case 0x05001E:
+		result = telIpcRestoreApnInfo();
 		break;
-
-	case 0x05001F: /* 327711: GetMccMncOfImsi */
-		if (svc != NULL && outCount > 0) {
-			TelephonyPlmn plmn;
-			result = svc->GetMccMncOfImsi(&plmn).GetCode();
-			int *outPair = static_cast<int *>(outList[0].pBuffer);
-			outPair[0] = plmn.GetMcc();
-			outPair[1] = plmn.GetMnc();
+	case 0x05001F:
+		if (outCount > 0) {
+			result = telIpcGetMccMncOfImsi(static_cast<int *>(outList[0].pBuffer));
 			outBytes = 8;
 		}
 		break;
-
-	case 0x050020: /* 327712: GetProductTargetOperator */
-		if (svc != NULL && outCount > 0)
-			result = svc->GetProductTargetOperator(static_cast<int *>(outList[0].pBuffer)).GetCode();
+	case 0x050020:
+		result = telIpcGetProductTargetOperator(
+			(outCount > 0) ? static_cast<int *>(outList[0].pBuffer) : NULL);
 		outBytes = 4;
 		break;
-
-	case 0x050021: /* 327713: GetOperatorProfileCount */
-		if (svc != NULL && outCount > 0)
-			result = svc->GetOperatorProfileCount(static_cast<int *>(outList[0].pBuffer)).GetCode();
+	case 0x050021:
+		result = telIpcGetOperatorProfileCount(
+			(outCount > 0) ? static_cast<int *>(outList[0].pBuffer) : NULL);
 		outBytes = 4;
 		break;
-
-	case 0x050022: /* 327714: GetOperatorProfile */
-		if (svc != NULL && inCount > 0 && outCount > 0) {
-			int index = *static_cast<const int *>(inList[0].pData);
-			TelOperatorProfile profile;
-			result = svc->GetOperatorProfile(index, &profile).GetCode();
-			profile.PackToRaw(static_cast<TelOperatorProfileRawRecord *>(outList[0].pBuffer));
-		}
+	case 0x050022:
+		if (inCount > 0 && outCount > 0)
+			result = telIpcGetOperatorProfile(
+				*static_cast<const int *>(inList[0].pData),
+				static_cast<TelOperatorProfileRawRecord *>(outList[0].pBuffer));
 		outBytes = sizeof(TelOperatorProfileRawRecord);
 		break;
-
-	case 0x050023: /* 327715: GetApnInfoListCount */
-		if (svc != NULL && outCount > 0)
-			result = svc->GetApnInfoListCount(static_cast<int *>(outList[0].pBuffer)).GetCode();
+	case 0x050023:
+		result = telIpcGetApnInfoListCount(
+			(outCount > 0) ? static_cast<int *>(outList[0].pBuffer) : NULL);
 		outBytes = 4;
 		break;
-
-	case 0x050024: /* 327716: GetApnInfoListItem */
-		if (svc != NULL && inCount > 0 && outCount > 0) {
-			int index = *static_cast<const int *>(inList[0].pData);
-			TelOperatorApnInfo apnItem;
-			result = svc->GetApnInfoListItem(index, &apnItem).GetCode();
-			apnItem.PackToRaw(static_cast<TelOperatorApnRawRecord *>(outList[0].pBuffer));
-		}
+	case 0x050024:
+		if (inCount > 0 && outCount > 0)
+			result = telIpcGetApnInfoListItem(
+				*static_cast<const int *>(inList[0].pData),
+				static_cast<TelOperatorApnRawRecord *>(outList[0].pBuffer));
 		outBytes = sizeof(TelOperatorApnRawRecord);
 		break;
-
-	case 0x050025: /* 327717: GetCurrentApnInfo */
-		if (svc != NULL && outCount > 0) {
-			TelephonyOperator apnOp;
-			result = svc->GetCurrentApnInfo(&apnOp).GetCode();
-			TelOperatorApnInfo apnInfo(apnOp);
-			apnInfo.PackToRaw(static_cast<TelOperatorApnRawRecord *>(outList[0].pBuffer));
-		}
+	case 0x050025:
+		result = telIpcGetCurrentApnInfo(
+			(outCount > 0) ? static_cast<TelOperatorApnRawRecord *>(outList[0].pBuffer) : NULL);
 		outBytes = sizeof(TelOperatorApnRawRecord);
 		break;
-
-	case 0x050026: /* 327718: RemoveCurrentApnInfo */
-		if (svc != NULL)
-			result = svc->RemoveCurrentApnInfo().GetCode();
+	case 0x050026:
+		result = telIpcRemoveCurrentApnInfo();
 		break;
-
-	case 0x050027: /* 327719: StartNetworkScan */
-		if (svc != NULL)
-			result = svc->StartNetworkScan().GetCode();
+	case 0x050027:
+		result = telIpcStartNetworkScan();
 		break;
-
-	case 0x050028: /* 327720: AbortNetworkScan */
-		if (svc != NULL)
-			result = svc->AbortNetworkScan().GetCode();
+	case 0x050028:
+		result = telIpcAbortNetworkScan();
 		break;
-
-	case 0x050029: /* 327721: GetNetworkScanInfoCount */
-		if (svc != NULL && outCount > 0)
-			result = svc->GetNetworkScanInfoCount(static_cast<int *>(outList[0].pBuffer)).GetCode();
+	case 0x050029:
+		result = telIpcGetNetworkScanInfoCount(
+			(outCount > 0) ? static_cast<int *>(outList[0].pBuffer) : NULL);
 		outBytes = 4;
 		break;
-
-	case 0x05002A: /* 327722: GetNetworkScanInfo */
-		if (svc != NULL && inCount > 0 && outCount > 0) {
-			int index = *static_cast<const int *>(inList[0].pData);
-			TelNetScanInfo scanItem;
-			result = svc->GetNetworkScanInfo(index, &scanItem).GetCode();
-			scanItem.PackToRaw(static_cast<TelNetScanRawRecord *>(outList[0].pBuffer));
-		}
+	case 0x05002A:
+		if (inCount > 0 && outCount > 0)
+			result = telIpcGetNetworkScanInfo(
+				*static_cast<const int *>(inList[0].pData),
+				static_cast<TelNetScanRawRecord *>(outList[0].pBuffer));
 		outBytes = sizeof(TelNetScanRawRecord);
 		break;
-
-	case 0x05002B: /* 327723: SetNetRegisterAuto */
-		if (svc != NULL)
-			result = svc->SetNetRegisterAuto().GetCode();
+	case 0x05002B:
+		result = telIpcSetNetRegisterAuto();
 		break;
-
-	case 0x05002C: /* 327724: SetNetRegisterInfo */
-		if (svc != NULL && inCount > 1) {
-			TelNetScanInfo scanTarget;
-			scanTarget.UnpackFromRaw(
+	case 0x05002C:
+		if (inCount > 1)
+			result = telIpcSetNetRegisterInfo(
 				static_cast<const TelNetScanRawRecord *>(inList[1].pData));
-			result = svc->SetNetRegisterInfo(scanTarget).GetCode();
-		}
 		break;
-
-	case 0x05002D: /* 327725: GetNetRegistrationInfo */
-		if (svc != NULL && outCount > 0) {
-			TelNetworkInfo netInfo;
-			result = svc->GetNetRegistrationInfo(&netInfo).GetCode();
-			telPackNetRegistration(netInfo, outList[0].pBuffer);
-		}
+	case 0x05002D:
+		result = telIpcGetNetRegistrationInfo((outCount > 0) ? outList[0].pBuffer : NULL);
 		outBytes = sizeof(TelIpcNetRegistrationInfo);
 		break;
-
-	case 0x05002E: /* 327726: SetRegistrationAppNetMode */
-		if (svc != NULL && inCount > 0)
-			result = svc->SetRegistrationAppNetMode(*static_cast<const int *>(inList[0].pData)).GetCode();
+	case 0x05002E:
+		if (inCount > 0)
+			result = telIpcSetRegistrationAppNetMode(
+				*static_cast<const int *>(inList[0].pData));
 		break;
-
-	case 0x05002F: /* 327727: SetDataRoamingPermission */
-		if (svc != NULL && inCount > 0)
-			result = svc->SetDataRoamingPermission(*static_cast<const int *>(inList[0].pData) != 0).GetCode();
+	case 0x05002F:
+		if (inCount > 0)
+			result = telIpcSetDataRoamingPermission(
+				*static_cast<const int *>(inList[0].pData));
 		break;
-
-	case 0x050030: /* 327728: GetDataRoamingPermission */
-		if (svc != NULL && outCount > 0) {
-			bool allowed = false;
-			result = svc->GetDataRoamingPermission(&allowed).GetCode();
-			*static_cast<int *>(outList[0].pBuffer) = allowed ? 1 : 0;
-		}
+	case 0x050030:
+		result = telIpcGetDataRoamingPermission(
+			(outCount > 0) ? static_cast<int *>(outList[0].pBuffer) : NULL);
 		outBytes = 4;
 		break;
-
-	case 0x050031: /* 327729: SetDataRoamingDefinition */
-		if (svc != NULL && inCount > 0)
-			result = svc->SetDataRoamingDefinition(*static_cast<const int *>(inList[0].pData)).GetCode();
+	case 0x050031:
+		if (inCount > 0)
+			result = telIpcSetDataRoamingDefinition(
+				*static_cast<const int *>(inList[0].pData));
 		break;
-
-	case 0x050032: /* 327730: CheckSimCondition */
-		if (svc != NULL && outCount > 0) {
-			int cond = svc->CheckSimCondition().GetCode();
-			*static_cast<int *>(outList[0].pBuffer) = cond;
-			result = 0;
-		}
+	case 0x050032:
+		result = telIpcCheckSimCondition(
+			(outCount > 0) ? static_cast<int *>(outList[0].pBuffer) : NULL);
 		outBytes = 4;
 		break;
-
-	case 0x050033: /* 327731: GetControlKeyState */
-		if (svc != NULL && outCount > 0)
-			result = svc->GetControlKeyState(static_cast<int *>(outList[0].pBuffer)).GetCode();
+	case 0x050033:
+		result = telIpcGetControlKeyState(
+			(outCount > 0) ? static_cast<int *>(outList[0].pBuffer) : NULL);
 		outBytes = 4;
 		break;
-
-	case 0x050034: /* 327732: GetControlKeyBlockType */
-		if (svc != NULL && outCount > 0)
-			result = svc->GetControlKeyBlockType(static_cast<int *>(outList[0].pBuffer)).GetCode();
+	case 0x050034:
+		result = telIpcGetControlKeyBlockType(
+			(outCount > 0) ? static_cast<int *>(outList[0].pBuffer) : NULL);
 		outBytes = 4;
 		break;
-
-	case 0x050035: /* 327733: GetNetworkStatusReport */
-		if (svc != NULL) {
-			paf::string report;
-			result = svc->GetNetworkStatusReport(&report).GetCode();
-		}
+	case 0x050035:
+		result = telIpcGetNetworkStatusReport();
 		break;
-
-	case 0x050036: /* 327734: GetDeviceInfoReport */
-		if (svc != NULL) {
-			paf::string report;
-			result = svc->GetDeviceInfoReport(&report).GetCode();
-		}
+	case 0x050036:
+		result = telIpcGetDeviceInfoReport();
 		break;
-
-	case 0x050037: /* 327735: GetIsComExist */
-		if (svc != NULL && outCount > 0)
-			result = svc->GetIsComExist(static_cast<int *>(outList[0].pBuffer)).GetCode();
+	case 0x050037:
+		result = telIpcGetIsComExist(
+			(outCount > 0) ? static_cast<int *>(outList[0].pBuffer) : NULL);
 		outBytes = 4;
 		break;
-
-	case 0x050038: /* 327736: GetIsApnInit */
-		if (svc != NULL && outCount > 0)
-			result = svc->GetIsApnInit(static_cast<int *>(outList[0].pBuffer)).GetCode();
+	case 0x050038:
+		result = telIpcGetIsApnInit(
+			(outCount > 0) ? static_cast<int *>(outList[0].pBuffer) : NULL);
 		outBytes = 4;
 		break;
-
-	case 0x050039: /* 327737: IsOpenSimModel */
-		if (svc != NULL && outCount > 0) {
-			bool openModel = false;
-			result = svc->IsOpenSimModel(&openModel).GetCode();
-			*static_cast<int *>(outList[0].pBuffer) = openModel ? 1 : 0;
-		}
+	case 0x050039:
+		result = telIpcIsOpenSimModel(
+			(outCount > 0) ? static_cast<int *>(outList[0].pBuffer) : NULL);
 		outBytes = 4;
 		break;
-
-	case 0x05003A: /* 327738: GetNetworkSelectionMode */
-		if (svc != NULL && outCount > 0)
-			result = svc->GetNetworkSelectionMode(static_cast<int *>(outList[0].pBuffer)).GetCode();
+	case 0x05003A:
+		result = telIpcGetNetworkSelectionMode(
+			(outCount > 0) ? static_cast<int *>(outList[0].pBuffer) : NULL);
 		outBytes = 4;
 		break;
-
-	case 0x05003B: /* 327739: GetConditionError */
-		if (svc != NULL && outCount > 0) {
-			TelephonyResult condErr(TEL_OK);
-			result = svc->GetConditionError(&condErr).GetCode();
-			*static_cast<int *>(outList[0].pBuffer) = condErr.GetCode();
-		}
+	case 0x05003B:
+		result = telIpcGetConditionError(
+			(outCount > 0) ? static_cast<int *>(outList[0].pBuffer) : NULL);
 		outBytes = 4;
 		break;
-
-	case 0x05003C: /* 327740: DeactivateSimLock */
-		if (svc != NULL && inCount > 1) {
-			TelCarrierLockKey key(paf::string(static_cast<const char *>(inList[1].pData)));
-			result = svc->DeactivateSimLock(key).GetCode();
-		}
+	case 0x05003C:
+		if (inCount > 1)
+			result = telIpcDeactivateSimLock(static_cast<const char *>(inList[1].pData));
 		break;
-
-	case 0x05003D: /* 327741: UnblockSimLock */
-		if (svc != NULL && inCount > 1) {
-			TelControlKey key(paf::string(static_cast<const char *>(inList[1].pData)));
-			result = svc->UnblockSimLock(key).GetCode();
-		}
+	case 0x05003D:
+		if (inCount > 1)
+			result = telIpcUnblockSimLock(static_cast<const char *>(inList[1].pData));
 		break;
-
-	case 0x05003E: /* 327742: GetSimLockDeactivateRemain */
-		if (svc != NULL && outCount > 0)
-			result = svc->GetSimLockDeactivateRemain(static_cast<int *>(outList[0].pBuffer)).GetCode();
+	case 0x05003E:
+		result = telIpcGetSimLockDeactivateRemain(
+			(outCount > 0) ? static_cast<int *>(outList[0].pBuffer) : NULL);
 		outBytes = 4;
 		break;
-
-	case 0x05003F: /* 327743: GetSimLockUnblockRemain */
-		if (svc != NULL && outCount > 0)
-			result = svc->GetSimLockUnblockRemain(static_cast<int *>(outList[0].pBuffer)).GetCode();
+	case 0x05003F:
+		result = telIpcGetSimLockUnblockRemain(
+			(outCount > 0) ? static_cast<int *>(outList[0].pBuffer) : NULL);
 		outBytes = 4;
 		break;
-
-	case 0x050040: /* 327744: GetCurrentSignalLevel */
-		if (svc != NULL && outCount > 0)
-			result = svc->GetCurrentSignalLevel(static_cast<int *>(outList[0].pBuffer)).GetCode();
+	case 0x050040:
+		result = telIpcGetCurrentSignalLevel(
+			(outCount > 0) ? static_cast<int *>(outList[0].pBuffer) : NULL);
 		outBytes = 4;
 		break;
-
-	case 0x050041: /* 327745: SetBillingPlan */
-		if (svc != NULL && inCount > 0) {
-			int plan = *static_cast<const int *>(inList[0].pData);
-			result = svc->SetBillingPlan(&plan).GetCode();
-		}
+	case 0x050041:
+		if (inCount > 0)
+			result = telIpcSetBillingPlan(*static_cast<const int *>(inList[0].pData));
 		break;
-
-	case 0x050042: /* 327746: GetBillingPlan */
-		if (svc != NULL && outCount > 0)
-			result = svc->GetBillingPlan(static_cast<int *>(outList[0].pBuffer)).GetCode();
+	case 0x050042:
+		result = telIpcGetBillingPlan(
+			(outCount > 0) ? static_cast<int *>(outList[0].pBuffer) : NULL);
 		outBytes = 4;
 		break;
-
-	case 0x050043: /* 327747: GetSavedNetworkSelection */
-		if (svc != NULL && outCount > 0) {
-			TelNetworkInfo netInfo;
-			result = svc->GetSavedNetworkSelection(&netInfo).GetCode();
-			telPackNetRegistration(netInfo, outList[0].pBuffer);
-		}
+	case 0x050043:
+		result = telIpcGetSavedNetworkSelection((outCount > 0) ? outList[0].pBuffer : NULL);
 		outBytes = sizeof(TelIpcNetRegistrationInfo);
 		break;
-
-	case 0x050044: /* 327748: SetDebugLogEnabled */
-		if (svc != NULL && inCount > 0)
-			result = svc->SetDebugLogEnabled(*static_cast<const int *>(inList[0].pData) != 0).GetCode();
+	case 0x050044:
+		if (inCount > 0)
+			result = telIpcSetDebugLogEnabled(*static_cast<const int *>(inList[0].pData));
 		break;
-
-	case 0x050045: /* 327749: ReadDebugLogLine */
-		if (svc != NULL && outCount > 0) {
-			paf::string line;
-			result = svc->ReadDebugLogLine(&line).GetCode();
-			telCopyStringField(outList[0].pBuffer, 257, line);
-		}
+	case 0x050045:
+		result = telIpcReadDebugLogLine((outCount > 0) ? outList[0].pBuffer : NULL);
 		outBytes = 257;
 		break;
-
-	case 0x050046: /* 327750: SetDebugDiagFlag */
-		if (svc != NULL && inCount > 0) {
-			int diagVal = *static_cast<const int *>(inList[0].pData);
-			result = svc->SetDebugDiagFlag(&diagVal).GetCode();
-		}
+	case 0x050046:
+		if (inCount > 0)
+			result = telIpcSetDebugDiagFlag(*static_cast<const int *>(inList[0].pData));
 		break;
-
-	case 0x050047: /* 327751: GetDebugDiagFlag */
-		if (svc != NULL && outCount > 0)
-			result = svc->GetDebugDiagFlag(static_cast<int *>(outList[0].pBuffer)).GetCode();
+	case 0x050047:
+		result = telIpcGetDebugDiagFlag(
+			(outCount > 0) ? static_cast<int *>(outList[0].pBuffer) : NULL);
 		outBytes = 4;
 		break;
-
-	case 0x050048: /* 327752: SetDebugForceFlag */
-		if (svc != NULL && inCount > 0) {
-			int forceVal = *static_cast<const int *>(inList[0].pData);
-			result = svc->SetDebugForceFlag(&forceVal).GetCode();
-		}
+	case 0x050048:
+		if (inCount > 0)
+			result = telIpcSetDebugForceFlag(*static_cast<const int *>(inList[0].pData));
 		break;
-
-	case 0x050049: /* 327753: GetDebugForceFlag */
-		if (svc != NULL && outCount > 0)
-			result = svc->GetDebugForceFlag(static_cast<int *>(outList[0].pBuffer)).GetCode();
+	case 0x050049:
+		result = telIpcGetDebugForceFlag(
+			(outCount > 0) ? static_cast<int *>(outList[0].pBuffer) : NULL);
 		outBytes = 4;
 		break;
-
-	case 0x05004A: /* 327754: IsSimActivated */
-		if (svc != NULL && outCount > 0)
-			result = svc->IsSimActivated(static_cast<int *>(outList[0].pBuffer)).GetCode();
+	case 0x05004A:
+		result = telIpcIsSimActivated(
+			(outCount > 0) ? static_cast<int *>(outList[0].pBuffer) : NULL);
 		outBytes = 4;
 		break;
-
-	case 0x05004B: /* 327755: GetLatestArchiveVersion */
-		if (svc != NULL && outCount > 0)
-			result = svc->GetLatestArchiveVersion(static_cast<SceUInt32 *>(outList[0].pBuffer)).GetCode();
+	case 0x05004B:
+		result = telIpcGetLatestArchiveVersion(
+			(outCount > 0) ? static_cast<SceUInt32 *>(outList[0].pBuffer) : NULL);
 		outBytes = 4;
 		break;
-
-	case 0x05004C: /* 327756: GetArchiveVersion */
-		if (svc != NULL && outCount > 0)
-			result = svc->GetArchiveVersion(static_cast<SceUInt32 *>(outList[0].pBuffer)).GetCode();
+	case 0x05004C:
+		result = telIpcGetArchiveVersion(
+			(outCount > 0) ? static_cast<SceUInt32 *>(outList[0].pBuffer) : NULL);
 		outBytes = 4;
 		break;
-
-	case 0x05004D: /* 327757: CheckComVersion */
-		if (svc != NULL && outCount > 0) {
-			bool matches = false;
-			result = svc->CheckComVersion(&matches).GetCode();
-			*static_cast<int *>(outList[0].pBuffer) = matches ? 1 : 0;
-		}
+	case 0x05004D:
+		result = telIpcCheckComVersion(
+			(outCount > 0) ? static_cast<int *>(outList[0].pBuffer) : NULL);
 		outBytes = 4;
 		break;
-
-	case 0x05004E: /* 327758: ReleasePdpContext */
-		if (svc != NULL)
-			result = svc->ReleasePdpContext().GetCode();
+	case 0x05004E:
+		result = telIpcReleasePdpContext();
 		break;
-
-	case 0x05004F: /* 327759: CheckImsiForOperatorCode */
-		if (svc != NULL && inCount > 1) {
-			const TelIpcCheckImsiReq *req =
-				static_cast<const TelIpcCheckImsiReq *>(inList[1].pData);
-			int opCode = req->operatorCode;
-			bool matched = false;
-			result = svc->CheckImsiForOperatorCode(&opCode, &matched).GetCode();
-		}
+	case 0x05004F:
+		if (inCount > 1)
+			result = telIpcCheckImsiForOperatorCode(
+				static_cast<const TelIpcCheckImsiReq *>(inList[1].pData));
 		break;
-
-	case 0x050050: /* 327760: StartApnListDownload */
-		if (svc != NULL)
-			result = svc->StartApnListDownload().GetCode();
+	case 0x050050:
+		result = telIpcStartApnListDownload();
 		break;
-
-	case 0x050051: /* 327761: CheckContentDownloadAllowed */
-		if (svc != NULL && inCount > 0) {
-			int serviceType = *static_cast<const int *>(inList[0].pData);
-			result = svc->CheckContentDownloadAllowed(serviceType).GetCode();
-		}
+	case 0x050051:
+		if (inCount > 0)
+			result = telIpcCheckContentDownloadAllowed(
+				*static_cast<const int *>(inList[0].pData));
 		break;
-
-	case 0x050052: /* 327762: GetDownloadSizeLimit */
-		if (svc != NULL && inCount > 0 && outCount > 0) {
-			unsigned int serviceType = *static_cast<const unsigned int *>(inList[0].pData);
-			result = svc->GetDownloadSizeLimit(
-				serviceType, static_cast<SceInt64 *>(outList[0].pBuffer)).GetCode();
-		}
+	case 0x050052:
+		if (inCount > 0 && outCount > 0)
+			result = telIpcGetDownloadSizeLimit(
+				*static_cast<const unsigned int *>(inList[0].pData),
+				static_cast<SceInt64 *>(outList[0].pBuffer));
 		outBytes = 8;
 		break;
-
-	case 0x050053: /* 327763: CheckRoamingDownloadAllowed */
-		if (svc != NULL && inCount > 0) {
-			unsigned int serviceType = *static_cast<const unsigned int *>(inList[0].pData);
-			result = svc->CheckRoamingDownloadAllowed(serviceType).GetCode();
-		}
+	case 0x050053:
+		if (inCount > 0)
+			result = telIpcCheckRoamingDownloadAllowed(
+				*static_cast<const unsigned int *>(inList[0].pData));
 		break;
-
-	case 0x050054: /* 327764: GetModemFirmwareVersion */
-		if (svc != NULL && outCount > 0) {
-			paf::string fwVer;
-			result = svc->GetModemFirmwareVersion(&fwVer).GetCode();
-			telCopyStringField(outList[0].pBuffer, 33, fwVer);
-		}
+	case 0x050054:
+		result = telIpcGetModemFirmwareVersion((outCount > 0) ? outList[0].pBuffer : NULL);
 		outBytes = 33;
 		break;
-
-	case 0x050055: /* 327765: GetUpdateListUrl */
-		if (svc != NULL && outCount > 0) {
-			paf::string url;
-			result = svc->GetUpdateListUrl(&url).GetCode();
-			telCopyStringField(outList[0].pBuffer, 128, url);
-		}
+	case 0x050055:
+		result = telIpcGetUpdateListUrl((outCount > 0) ? outList[0].pBuffer : NULL);
 		outBytes = 128;
 		break;
-
 	default:
 		return kErrUnsupportedMethod;
 	}
@@ -932,6 +1552,20 @@ int shellSvcDisp_05_Sync(IPMI::Session *session, SceUInt32 methodId,
 	if (outCount > 0 && outBytes != 0)
 		outList[0].outSize = outBytes;
 	return session->respondToSyncMethodRequest(result, outList, outCount);
+}
+
+} /* anonymous namespace */
+
+/* ------------------------------------------------------------------
+ * SceShellSvc Channel 0x00050000 Dispatchers
+ * ------------------------------------------------------------------ */
+
+/* 0x8126D292: outer sync dispatcher forwarding to 0x8126D372 */
+int shellSvcDisp_05_Sync(IPMI::Session *session, SceUInt32 methodId,
+			 const IPMI::DataInfo *inList, SceUInt32 inCount,
+			 IPMI::BufferInfo *outList, SceUInt32 outCount)
+{
+	return telIpcDispatchSyncImpl(session, methodId, inList, inCount, outList, outCount);
 }
 
 /* Async dispatcher (unsupported on Telephony channel) */

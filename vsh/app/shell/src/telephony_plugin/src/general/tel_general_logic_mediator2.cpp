@@ -284,65 +284,324 @@ void TelGeneralLogicMediator::OnHandleEvent(const TelEventInfo &event)
 	DispatchMediatorEvent(event);
 }
 
-/* 0x8125C6EC..0x8125D35D: async internal API dispatch helpers */
-void TelGeneralLogicMediator::HandleInternalAsyncApi(const TelEventInfo &event)
+/* ------------------------------------------------------------------
+ * Dedicated mediator event handlers (0x8125BE8A..0x8125D35D, 0x8125D736)
+ * ------------------------------------------------------------------ */
+
+/* 0x8125BE8A */
+void TelGeneralLogicMediator::HandleBbmcComBootOk(const TelEventInfo &event)
 {
-	int eventId = event.GetEventId();
 	m_smcMutex.Lock();
 	m_action.SetEvent(event);
+	m_stateMachine.OnEventBbmcComBootOk();
+	m_smcMutex.Unlock();
+}
 
-	switch (eventId) {
+/* 0x8125BED4 */
+void TelGeneralLogicMediator::HandleBbmcComBootNg(const TelEventInfo &event)
+{
+	m_smcMutex.Lock();
+	m_action.SetEvent(event);
+	m_stateMachine.OnEventBbmcComBootNg();
+	m_smcMutex.Unlock();
+}
+
+/* 0x8125BF20 */
+void TelGeneralLogicMediator::HandleMediatorComFailure(const TelEventInfo &event)
+{
+	m_smcMutex.Lock();
+	m_action.SetEvent(event);
+	m_stateMachine.OnEventMediatorComFailure();
+	m_smcMutex.Unlock();
+}
+
+/* 0x8125BFC2 */
+void TelGeneralLogicMediator::HandleBbmcNeedUpdatingDeviceInfo(const TelEventInfo &event)
+{
+	m_smcMutex.Lock();
+	m_action.SetEvent(event);
+	m_stateMachine.OnEventBbmcNeedUpdatingDeviceInfo();
+	NotifyObservers(event);
+	m_smcMutex.Unlock();
+}
+
+/* 0x8125C00C */
+void TelGeneralLogicMediator::HandleBbmcSetupReady(const TelEventInfo &event)
+{
+	m_smcMutex.Lock();
+	m_action.SetEvent(event);
+	m_stateMachine.OnEventBbmcSetupReady();
+	m_smcMutex.Unlock();
+}
+
+/* 0x8125C056 */
+void TelGeneralLogicMediator::HandleBbmcNetworkReady(const TelEventInfo &event)
+{
+	m_smcMutex.Lock();
+	m_action.SetEvent(event);
+	m_stateMachine.OnEventBbmcNetworkReady();
+	m_smcMutex.Unlock();
+}
+
+/* 0x8125C0A0 */
+void TelGeneralLogicMediator::HandleBbmcPinRequired(const TelEventInfo &event)
+{
+	m_smcMutex.Lock();
+	m_action.SetEvent(event);
+	m_stateMachine.OnEventBbmcPinRequired();
+	m_smcMutex.Unlock();
+}
+
+/* 0x8125C136 */
+void TelGeneralLogicMediator::HandleBbmcPukRequired(const TelEventInfo &event)
+{
+	m_smcMutex.Lock();
+	m_action.SetEvent(event);
+	m_stateMachine.OnEventBbmcPukRequired();
+	m_smcMutex.Unlock();
+}
+
+/* 0x8125C1CC */
+void TelGeneralLogicMediator::HandleBbmcPinNotRequired(const TelEventInfo &event)
+{
+	m_smcMutex.Lock();
+	m_action.SetEvent(event);
+	m_stateMachine.OnEventBbmcPinNotRequired();
+	m_smcMutex.Unlock();
+}
+
+/* 0x8125C262 */
+void TelGeneralLogicMediator::HandleBbmcPinPermanentlyBlocked(const TelEventInfo &event)
+{
+	m_smcMutex.Lock();
+	m_action.SetEvent(event);
+	m_stateMachine.OnEventBbmcPinPermanentlyBlocked();
+	m_smcMutex.Unlock();
+}
+
+/* 0x8125C2FA */
+void TelGeneralLogicMediator::HandleBbmcNetScanFin(const TelEventInfo &event)
+{
+	m_smcMutex.Lock();
+	m_action.SetEvent(event);
+	m_scanActive = false;
+	m_stateMachine.OnEventBbmcNetScanFin();
+	m_smcMutex.Unlock();
+}
+
+/* 0x8125C374 */
+void TelGeneralLogicMediator::HandleBbmcNetScanFailed(const TelEventInfo &event)
+{
+	m_smcMutex.Lock();
+	m_action.SetEvent(event);
+	m_scanActive = false;
+	m_stateMachine.OnEventBbmcNetScanFailed();
+	m_smcMutex.Unlock();
+}
+
+/* 0x8125C3EE */
+void TelGeneralLogicMediator::HandleBbmcPinStatusReady(const TelEventInfo &event)
+{
+	m_smcMutex.Lock();
+	m_action.SetEvent(event);
+	m_stateMachine.OnEventBbmcPinStatusReady();
+	m_smcMutex.Unlock();
+}
+
+/* 0x8125C486 */
+void TelGeneralLogicMediator::HandleBbmcExceedHiTemp(const TelEventInfo &event)
+{
+	m_smcMutex.Lock();
+	m_action.SetEvent(event);
+	m_stateMachine.OnEventBbmcExceedHiTemp();
+	NotifyObservers(event);
+	m_smcMutex.Unlock();
+}
+
+/* 0x8125C4E6 */
+void TelGeneralLogicMediator::HandleBbmcPacketCallEndReasonUpdate(const TelEventInfo &event)
+{
+	m_smcMutex.Lock();
+	m_action.SetEvent(event);
+	m_stateMachine.OnEventBbmcPacketCallEndReasonUpdate();
+	m_smcMutex.Unlock();
+}
+
+/* 0x8125C5E4 */
+void TelGeneralLogicMediator::HandleBbmcComFwUpdateNotice(const TelEventInfo &event)
+{
+	NotifyObservers(event);
+}
+
+/* 0x8125C6EC */
+void TelGeneralLogicMediator::HandleInternalVerifyPin(const TelEventInfo &event)
+{
+	m_smcMutex.Lock();
+	m_action.SetEvent(event);
+	m_action.SetCurrentApiId(TEL_API_INTERNAL_VERIFY_PIN);
+	m_stateMachine.OnEventMediatorInternalVerifyPin();
+	m_smcMutex.Unlock();
+}
+
+/* 0x8125C7E0 */
+void TelGeneralLogicMediator::HandleInternalUnblockPin(const TelEventInfo &event)
+{
+	m_smcMutex.Lock();
+	m_action.SetEvent(event);
+	m_action.SetCurrentApiId(TEL_API_INTERNAL_UNBLOCK_PIN);
+	m_stateMachine.OnEventMediatorInternalUnblockPin();
+	m_smcMutex.Unlock();
+}
+
+/* 0x8125C924 */
+void TelGeneralLogicMediator::HandleInternalSetPinProtection(const TelEventInfo &event)
+{
+	m_smcMutex.Lock();
+	m_action.SetEvent(event);
+	m_action.SetCurrentApiId(TEL_API_INTERNAL_SET_PIN_PROTECTION);
+	m_stateMachine.OnEventMediatorInternalSetPinProtection();
+	m_smcMutex.Unlock();
+}
+
+/* 0x8125CA3C */
+void TelGeneralLogicMediator::HandleInternalChangePinCode(const TelEventInfo &event)
+{
+	m_smcMutex.Lock();
+	m_action.SetEvent(event);
+	m_action.SetCurrentApiId(TEL_API_INTERNAL_CHANGE_PIN_CODE);
+	m_stateMachine.OnEventMediatorInternalChangePinCode();
+	m_smcMutex.Unlock();
+}
+
+/* 0x8125CBF6 */
+void TelGeneralLogicMediator::HandleInternalSetApnInfo(const TelEventInfo &event)
+{
+	m_smcMutex.Lock();
+	m_action.SetEvent(event);
+	m_action.SetCurrentApiId(TEL_API_INTERNAL_SET_APN_INFO);
+	m_stateMachine.OnEventMediatorInternalSetApnInfo();
+	m_smcMutex.Unlock();
+}
+
+/* 0x8125CD56 */
+void TelGeneralLogicMediator::HandleInternalSetApnInfoWithBillingPlan(const TelEventInfo &event)
+{
+	m_smcMutex.Lock();
+	m_action.SetEvent(event);
+	if (event.GetCategory() == 20) {
+		const TelSetApnBillingEvent &billingEv =
+			static_cast<const TelSetApnBillingEvent &>(event);
+		m_action.internalBillingApn = billingEv.GetApnInfo();
+		m_action.internalBillingSaveFlag = (event.GetEventResult() != 0);
+	}
+	m_action.SetCurrentApiId(TEL_API_INTERNAL_SET_APN_INFO_BILLING);
+	m_stateMachine.OnEventMediatorInternalSetApnInfoWithBillingPlan();
+	m_smcMutex.Unlock();
+}
+
+/* 0x8125CF0E */
+void TelGeneralLogicMediator::HandleInternalRestoreApnInfo(const TelEventInfo &event)
+{
+	m_smcMutex.Lock();
+	m_action.SetEvent(event);
+	m_action.SetCurrentApiId(TEL_API_INTERNAL_RESTORE_APN_INFO);
+	m_stateMachine.OnEventMediatorInternalRestoreApnInfo();
+	m_smcMutex.Unlock();
+}
+
+/* 0x8125CFBC */
+void TelGeneralLogicMediator::HandleInternalRemoveCurrentApnInfo(const TelEventInfo &event)
+{
+	m_smcMutex.Lock();
+	m_action.SetEvent(event);
+	m_action.SetCurrentApiId(TEL_API_INTERNAL_REMOVE_CURRENT_APN_INFO);
+	m_stateMachine.OnEventMediatorInternalRemoveCurrentApnInfo();
+	m_smcMutex.Unlock();
+}
+
+/* 0x8125D06C */
+void TelGeneralLogicMediator::HandleInternalDeactivateSimLock(const TelEventInfo &event)
+{
+	m_smcMutex.Lock();
+	m_action.SetEvent(event);
+	m_action.SetCurrentApiId(TEL_API_INTERNAL_DEACTIVATE_SIM_LOCK);
+	m_stateMachine.OnEventMediatorInternalDeactivateSimLock();
+	m_smcMutex.Unlock();
+}
+
+/* 0x8125D166 */
+void TelGeneralLogicMediator::HandleInternalUnblockSimLock(const TelEventInfo &event)
+{
+	m_smcMutex.Lock();
+	m_action.SetEvent(event);
+	m_action.SetCurrentApiId(TEL_API_INTERNAL_UNBLOCK_SIM_LOCK);
+	m_stateMachine.OnEventMediatorInternalUnblockSimLock();
+	m_smcMutex.Unlock();
+}
+
+/* 0x8125D262 */
+void TelGeneralLogicMediator::HandleInternalResume(const TelEventInfo &event)
+{
+	m_smcMutex.Lock();
+	m_action.SetEvent(event);
+	m_stateMachine.OnEventMediatorInternalResume();
+	m_smcMutex.Unlock();
+}
+
+/* 0x8125D302 */
+void TelGeneralLogicMediator::HandleAttributeError(const TelEventInfo &event)
+{
+	m_smcMutex.Lock();
+	m_action.SetEvent(event);
+	m_stateMachine.OnEventAttributeError();
+	m_smcMutex.Unlock();
+}
+
+/* 0x8125D736 */
+void TelGeneralLogicMediator::HandleInternalSimLockError(const TelEventInfo &event)
+{
+	m_smcMutex.Lock();
+	m_action.SetEvent(event);
+	m_stateMachine.OnEventMediatorInternalSimLockError();
+	m_smcMutex.Unlock();
+}
+
+void TelGeneralLogicMediator::HandleInternalAsyncApi(const TelEventInfo &event)
+{
+	switch (event.GetEventId()) {
 	case TEL_EV_INTERNAL_VERIFY_PIN:
-		m_action.SetCurrentApiId(TEL_API_INTERNAL_VERIFY_PIN);
-		m_stateMachine.OnEventMediatorInternalVerifyPin();
+		HandleInternalVerifyPin(event);
 		break;
 	case TEL_EV_INTERNAL_UNBLOCK_PIN:
-		m_action.SetCurrentApiId(TEL_API_INTERNAL_UNBLOCK_PIN);
-		m_stateMachine.OnEventMediatorInternalUnblockPin();
+		HandleInternalUnblockPin(event);
 		break;
 	case TEL_EV_INTERNAL_SET_PIN_PROTECTION:
-		m_action.SetCurrentApiId(TEL_API_INTERNAL_SET_PIN_PROTECTION);
-		m_stateMachine.OnEventMediatorInternalSetPinProtection();
+		HandleInternalSetPinProtection(event);
 		break;
 	case TEL_EV_INTERNAL_CHANGE_PIN_CODE:
-		m_action.SetCurrentApiId(TEL_API_INTERNAL_CHANGE_PIN_CODE);
-		m_stateMachine.OnEventMediatorInternalChangePinCode();
+		HandleInternalChangePinCode(event);
 		break;
 	case TEL_EV_INTERNAL_SET_APN_INFO:
-		m_action.SetCurrentApiId(TEL_API_INTERNAL_SET_APN_INFO);
-		m_stateMachine.OnEventMediatorInternalSetApnInfo();
+		HandleInternalSetApnInfo(event);
 		break;
 	case TEL_EV_INTERNAL_SET_APN_INFO_BILLING:
-		if (event.GetCategory() == 20) {
-			const TelSetApnBillingEvent &billingEv =
-				static_cast<const TelSetApnBillingEvent &>(event);
-			m_action.internalBillingApn = billingEv.GetApnInfo();
-			m_action.internalBillingSaveFlag = (event.GetEventResult() != 0);
-		}
-		m_action.SetCurrentApiId(TEL_API_INTERNAL_SET_APN_INFO_BILLING);
-		m_stateMachine.OnEventMediatorInternalSetApnInfoWithBillingPlan();
+		HandleInternalSetApnInfoWithBillingPlan(event);
 		break;
 	case TEL_EV_INTERNAL_RESTORE_APN_INFO:
-		m_action.SetCurrentApiId(TEL_API_INTERNAL_RESTORE_APN_INFO);
-		m_stateMachine.OnEventMediatorInternalRestoreApnInfo();
+		HandleInternalRestoreApnInfo(event);
 		break;
 	case TEL_EV_INTERNAL_REMOVE_CURRENT_APN_INFO:
-		m_action.SetCurrentApiId(TEL_API_INTERNAL_REMOVE_CURRENT_APN_INFO);
-		m_stateMachine.OnEventMediatorInternalRemoveCurrentApnInfo();
+		HandleInternalRemoveCurrentApnInfo(event);
 		break;
 	case TEL_EV_INTERNAL_DEACTIVATE_SIM_LOCK:
-		m_action.SetCurrentApiId(TEL_API_INTERNAL_DEACTIVATE_SIM_LOCK);
-		m_stateMachine.OnEventMediatorInternalDeactivateSimLock();
+		HandleInternalDeactivateSimLock(event);
 		break;
 	case TEL_EV_INTERNAL_UNBLOCK_SIM_LOCK:
-		m_action.SetCurrentApiId(TEL_API_INTERNAL_UNBLOCK_SIM_LOCK);
-		m_stateMachine.OnEventMediatorInternalUnblockSimLock();
+		HandleInternalUnblockSimLock(event);
 		break;
 	default:
 		break;
 	}
-
-	m_smcMutex.Unlock();
 }
 
 /* 0x8125D7E4: main event switch routing BBMC, attribute, and internal events into SMC */
@@ -365,209 +624,202 @@ void TelGeneralLogicMediator::DispatchMediatorEvent(const TelEventInfo &event)
 		return;
 	}
 
+	if (eventId == TEL_EV_COM_FW_UPDATE_NOTICE) {
+		HandleBbmcComFwUpdateNotice(event);
+		return;
+	}
+
 	/* GUI notifications forwarded directly to observers (TelGeneralLogicGui) */
-	if (eventId == TEL_EV_COM_FW_UPDATE_NOTICE ||
-	    eventId == TEL_GUI_EVENT_ERROR_DIALOG ||
+	if (eventId == TEL_GUI_EVENT_ERROR_DIALOG ||
 	    eventId == TEL_GUI_EVENT_SIM_STATE_RESET) {
 		NotifyObservers(event);
 		return;
 	}
 
-	m_smcMutex.Lock();
-	m_action.SetEvent(event);
-
 	switch (eventId) {
-	/* BBMC power / readiness lifecycle (517..522) */
 	case TEL_EV_BBMC_COM_BOOT_OK:
-		m_stateMachine.OnEventBbmcComBootOk();
+		HandleBbmcComBootOk(event);
 		break;
 	case TEL_EV_BBMC_COM_BOOT_NG:
-		m_stateMachine.OnEventBbmcComBootNg();
+		HandleBbmcComBootNg(event);
 		break;
 	case TEL_EV_BBMC_SETUP_READY:
-		m_stateMachine.OnEventBbmcSetupReady();
-		break;
-	case TEL_EV_BBMC_COM_DOWN_AT_SUSPEND:
-		m_stateMachine.OnEventBbmcComDownAtSuspend();
+		HandleBbmcSetupReady(event);
 		break;
 	case TEL_EV_BBMC_NETWORK_READY:
-		m_stateMachine.OnEventBbmcNetworkReady();
-		break;
-	case TEL_EV_BBMC_LPM_FROM_NETWORK_READY:
-		m_stateMachine.OnEventBbmcLpmFromNetworkReady();
-		break;
-
-	/* SIM lock, thermal, low-battery, and mediator internal events (772..828) */
-	case TEL_EV_SIM_BLOCKED_NORMAL_OP:
-		m_cachedSimCondition = 3;
-		m_stateMachine.OnEventBbmcSimBlockedNormalOperation();
-		break;
-	case TEL_EV_SIM_PERMANENTLY_BLOCKED:
-		m_cachedSimCondition = 4;
-		m_stateMachine.OnEventBbmcSimPermanentlyBlocked();
+		HandleBbmcNetworkReady(event);
+		RefreshNetworkAndBearerCache();
 		break;
 	case TEL_EV_EXCEED_HI_TEMP:
-		m_stateMachine.OnEventBbmcExceedHiTemp();
-		NotifyObservers(event);
-		break;
-	case TEL_EV_FALL_DOWN_LOW_TEMP:
-		m_stateMachine.OnEventBbmcFallDownLowTemp();
-		break;
-	case TEL_EV_ENTER_LOW_BATT:
-		m_stateMachine.OnEventBbmcEnterLowBatt();
-		break;
-	case TEL_EV_EXIT_LOW_BATT:
-		m_stateMachine.OnEventBbmcExitLowBatt();
-		break;
-	case TEL_EV_REGISTRATION_REJECT:
-		m_stateMachine.OnEventBbmcRegistrationReject();
-		NotifyObservers(event);
+		HandleBbmcExceedHiTemp(event);
+		RefreshNetworkAndBearerCache();
 		break;
 	case TEL_EV_MEDIATOR_COM_FAILURE:
-		m_stateMachine.OnEventMediatorComFailure();
-		break;
-	case TEL_EV_INTERNAL_DEACTIVATE_TEL_REG:
-		m_stateMachine.OnEventMediatorInternalDeactivateTelReg();
-		break;
-	case TEL_EV_INTERNAL_START_NETWORK_SCAN:
-		m_stateMachine.OnEventMediatorInternalStartNetworkScan();
-		break;
-	case TEL_EV_INTERNAL_EXIT_FROM_ERROR:
-		m_stateMachine.OnEventMediatorInternalExitFromErrorState();
-		break;
-	case TEL_EV_INTERNAL_CAN_NOT_USE_SIM:
-		m_stateMachine.OnEventMediatorInternalCanNotUseSim();
-		break;
-	case TEL_EV_INTERNAL_SHUTDOWN:
-		m_stateMachine.OnEventMediatorInternalShutdown();
+		HandleMediatorComFailure(event);
 		break;
 	case TEL_EV_INTERNAL_SIM_LOCK_ERROR:
-		m_stateMachine.OnEventMediatorInternalSimLockError();
+		HandleInternalSimLockError(event);
 		break;
 	case TEL_EV_INTERNAL_RESUME:
-		m_stateMachine.OnEventMediatorInternalResume();
-		break;
-	case TEL_EV_INTERNAL_RE_TURN_ON:
-		m_stateMachine.OnEventMediatorInternalReTurnOn();
-		break;
-	case TEL_EV_INTERNAL_BBMC_ERROR:
-		m_stateMachine.OnEventMediatorInternalBbmcError();
-		break;
-	case TEL_EV_INTERNAL_ENABLE_WWAN:
-		m_stateMachine.OnEventMediatorInternalEnableWwan();
-		break;
-	case TEL_EV_INTERNAL_LIVESPACE_READY:
-		m_stateMachine.OnEventMediatorInternalLivespaceReady();
-		break;
-	case TEL_EV_INTERNAL_SET_DATA_ROAMING_PERM:
-		m_stateMachine.OnEventMediatorInternalSetDataRoamingPermission();
-		break;
-
-	/* BBMC status, SIM, PIN, profile, scan, and registration events (1025..1086) */
-	case TEL_EV_BBMC_COM_FAILURE:
-		m_stateMachine.OnEventBbmcComFailure();
-		break;
-	case TEL_EV_BBMC_STATUS_UPDATE:
-		m_stateMachine.OnEventBbmcStatusUpdate();
-		break;
-	case TEL_EV_BBMC_NETINFO:
-		m_stateMachine.OnEventBbmcNetinfo();
-		break;
-	case TEL_EV_BBMC_SIM_ENABLED:
-		m_cachedSimCondition = 1;
-		m_stateMachine.OnEventSimEnabled();
-		NotifyObservers(event);
-		break;
-	case TEL_EV_BBMC_SIM_DISABLED:
-		m_cachedSimCondition = 0;
-		m_stateMachine.OnEventSimDisabled();
-		NotifyObservers(event);
+		HandleInternalResume(event);
 		break;
 	case TEL_EV_BBMC_PIN_STATUS_READY:
-		m_stateMachine.OnEventBbmcPinStatusReady();
+		HandleBbmcPinStatusReady(event);
 		break;
 	case TEL_EV_BBMC_PIN_NOT_REQUIRED:
-		m_stateMachine.OnEventBbmcPinNotRequired();
+		HandleBbmcPinNotRequired(event);
 		break;
 	case TEL_EV_BBMC_PIN_REQUIRED:
-		m_stateMachine.OnEventBbmcPinRequired();
+		HandleBbmcPinRequired(event);
 		break;
 	case TEL_EV_BBMC_PUK_REQUIRED:
-		m_stateMachine.OnEventBbmcPukRequired();
+		HandleBbmcPukRequired(event);
 		break;
 	case TEL_EV_BBMC_PIN_PERM_BLOCKED:
-		m_stateMachine.OnEventBbmcPinPermanentlyBlocked();
-		break;
-	case TEL_EV_BBMC_CHANGE_PIN_FIN:
-		m_stateMachine.OnEventBbmcChangePinCodeFin();
-		break;
-	case TEL_EV_BBMC_CHANGE_PIN_FAILED:
-		m_stateMachine.OnEventBbmcChangePinCodeFailed();
-		break;
-	case TEL_EV_BBMC_PIN_PROTECTION_FIN:
-		m_stateMachine.OnEventBbmcPinProtectionFin();
-		break;
-	case TEL_EV_BBMC_PIN_PROTECTION_FAILED:
-		m_stateMachine.OnEventBbmcPinProtectionFailed();
-		break;
-	case TEL_EV_BBMC_NET_PROFILE_FIN:
-		m_stateMachine.OnEventBbmcNetProfileSettingFin();
-		break;
-	case TEL_EV_BBMC_NET_PROFILE_FAILED:
-		m_stateMachine.OnEventBbmcNetProfileSettingFailed();
+		HandleBbmcPinPermanentlyBlocked(event);
 		break;
 	case TEL_EV_BBMC_NET_SCAN_FIN:
-		m_scanActive = false;
-		m_stateMachine.OnEventBbmcNetScanFin();
+		HandleBbmcNetScanFin(event);
 		break;
 	case TEL_EV_BBMC_NET_SCAN_FAILED:
-		m_scanActive = false;
-		m_stateMachine.OnEventBbmcNetScanFailed();
-		break;
-	case TEL_EV_BBMC_NET_REGISTER_FIN:
-		m_stateMachine.OnEventBbmcNetRegisterSettingFin();
-		break;
-	case TEL_EV_BBMC_NET_REGISTER_FAILED:
-		m_stateMachine.OnEventBbmcNetRegisterSettingFailed();
+		HandleBbmcNetScanFailed(event);
 		break;
 	case TEL_EV_BBMC_NEED_DEVICE_INFO:
-		m_stateMachine.OnEventBbmcNeedUpdatingDeviceInfo();
-		NotifyObservers(event);
+		HandleBbmcNeedUpdatingDeviceInfo(event);
 		break;
 	case TEL_EV_BBMC_PACKET_CALL_END_REASON:
-		m_stateMachine.OnEventBbmcPacketCallEndReasonUpdate();
+		HandleBbmcPacketCallEndReasonUpdate(event);
 		break;
-	case TEL_EV_BBMC_SIM_LOCK_INFO:
-		m_stateMachine.OnEventBbmcSimLockInfo();
-		break;
-	case TEL_EV_BBMC_PLMN_MODE_BIT:
-		m_stateMachine.OnEventBbmcPlmnModeBit();
-		break;
-
-	/* Attribute manager error event (1795) */
 	case TEL_EVENT_ATTRIBUTE_ERROR:
-		m_stateMachine.OnEventAttributeError();
+		HandleAttributeError(event);
 		break;
-
 	default:
-		m_stateMachine.OnEventNotifyCallback();
+		m_smcMutex.Lock();
+		m_action.SetEvent(event);
+		switch (eventId) {
+		case TEL_EV_BBMC_COM_DOWN_AT_SUSPEND:
+			m_stateMachine.OnEventBbmcComDownAtSuspend();
+			break;
+		case TEL_EV_BBMC_LPM_FROM_NETWORK_READY:
+			m_stateMachine.OnEventBbmcLpmFromNetworkReady();
+			break;
+		case TEL_EV_SIM_BLOCKED_NORMAL_OP:
+			m_cachedSimCondition = 3;
+			m_stateMachine.OnEventBbmcSimBlockedNormalOperation();
+			break;
+		case TEL_EV_SIM_PERMANENTLY_BLOCKED:
+			m_cachedSimCondition = 4;
+			m_stateMachine.OnEventBbmcSimPermanentlyBlocked();
+			break;
+		case TEL_EV_FALL_DOWN_LOW_TEMP:
+			m_stateMachine.OnEventBbmcFallDownLowTemp();
+			break;
+		case TEL_EV_ENTER_LOW_BATT:
+			m_stateMachine.OnEventBbmcEnterLowBatt();
+			break;
+		case TEL_EV_EXIT_LOW_BATT:
+			m_stateMachine.OnEventBbmcExitLowBatt();
+			break;
+		case TEL_EV_REGISTRATION_REJECT:
+			m_stateMachine.OnEventBbmcRegistrationReject();
+			NotifyObservers(event);
+			break;
+		case TEL_EV_INTERNAL_DEACTIVATE_TEL_REG:
+			m_stateMachine.OnEventMediatorInternalDeactivateTelReg();
+			break;
+		case TEL_EV_INTERNAL_START_NETWORK_SCAN:
+			m_stateMachine.OnEventMediatorInternalStartNetworkScan();
+			break;
+		case TEL_EV_INTERNAL_EXIT_FROM_ERROR:
+			m_stateMachine.OnEventMediatorInternalExitFromErrorState();
+			break;
+		case TEL_EV_INTERNAL_CAN_NOT_USE_SIM:
+			m_stateMachine.OnEventMediatorInternalCanNotUseSim();
+			break;
+		case TEL_EV_INTERNAL_SHUTDOWN:
+			m_stateMachine.OnEventMediatorInternalShutdown();
+			break;
+		case TEL_EV_INTERNAL_RE_TURN_ON:
+			m_stateMachine.OnEventMediatorInternalReTurnOn();
+			break;
+		case TEL_EV_INTERNAL_BBMC_ERROR:
+			m_stateMachine.OnEventMediatorInternalBbmcError();
+			break;
+		case TEL_EV_INTERNAL_ENABLE_WWAN:
+			m_stateMachine.OnEventMediatorInternalEnableWwan();
+			break;
+		case TEL_EV_INTERNAL_LIVESPACE_READY:
+			m_stateMachine.OnEventMediatorInternalLivespaceReady();
+			break;
+		case TEL_EV_INTERNAL_SET_DATA_ROAMING_PERM:
+			m_stateMachine.OnEventMediatorInternalSetDataRoamingPermission();
+			break;
+		case TEL_EV_BBMC_COM_FAILURE:
+			m_stateMachine.OnEventBbmcComFailure();
+			break;
+		case TEL_EV_BBMC_STATUS_UPDATE:
+			m_stateMachine.OnEventBbmcStatusUpdate();
+			break;
+		case TEL_EV_BBMC_NETINFO:
+			m_stateMachine.OnEventBbmcNetinfo();
+			break;
+		case TEL_EV_BBMC_SIM_ENABLED:
+			m_cachedSimCondition = 1;
+			m_stateMachine.OnEventSimEnabled();
+			NotifyObservers(event);
+			break;
+		case TEL_EV_BBMC_SIM_DISABLED:
+			m_cachedSimCondition = 0;
+			m_stateMachine.OnEventSimDisabled();
+			NotifyObservers(event);
+			break;
+		case TEL_EV_BBMC_CHANGE_PIN_FIN:
+			m_stateMachine.OnEventBbmcChangePinCodeFin();
+			break;
+		case TEL_EV_BBMC_CHANGE_PIN_FAILED:
+			m_stateMachine.OnEventBbmcChangePinCodeFailed();
+			break;
+		case TEL_EV_BBMC_PIN_PROTECTION_FIN:
+			m_stateMachine.OnEventBbmcPinProtectionFin();
+			break;
+		case TEL_EV_BBMC_PIN_PROTECTION_FAILED:
+			m_stateMachine.OnEventBbmcPinProtectionFailed();
+			break;
+		case TEL_EV_BBMC_NET_PROFILE_FIN:
+			m_stateMachine.OnEventBbmcNetProfileSettingFin();
+			break;
+		case TEL_EV_BBMC_NET_PROFILE_FAILED:
+			m_stateMachine.OnEventBbmcNetProfileSettingFailed();
+			break;
+		case TEL_EV_BBMC_NET_REGISTER_FIN:
+			m_stateMachine.OnEventBbmcNetRegisterSettingFin();
+			break;
+		case TEL_EV_BBMC_NET_REGISTER_FAILED:
+			m_stateMachine.OnEventBbmcNetRegisterSettingFailed();
+			break;
+		case TEL_EV_BBMC_SIM_LOCK_INFO:
+			m_stateMachine.OnEventBbmcSimLockInfo();
+			break;
+		case TEL_EV_BBMC_PLMN_MODE_BIT:
+			m_stateMachine.OnEventBbmcPlmnModeBit();
+			break;
+		default:
+			m_stateMachine.OnEventNotifyCallback();
+			break;
+		}
+		m_smcMutex.Unlock();
+
+		if (eventId == TEL_EV_BBMC_NETINFO ||
+		    eventId == TEL_EV_BBMC_STATUS_UPDATE ||
+		    eventId == TEL_EV_BBMC_LPM_FROM_NETWORK_READY ||
+		    eventId == TEL_EV_BBMC_SIM_ENABLED ||
+		    eventId == TEL_EV_BBMC_SIM_DISABLED ||
+		    eventId == TEL_EV_FALL_DOWN_LOW_TEMP ||
+		    eventId == TEL_EV_SIM_BLOCKED_NORMAL_OP ||
+		    eventId == TEL_EV_SIM_PERMANENTLY_BLOCKED) {
+			RefreshNetworkAndBearerCache();
+		}
 		break;
-	}
-
-	m_smcMutex.Unlock();
-
-	/* Refresh cached network/bearer/SIM state and broadcast to shell listeners */
-	if (eventId == TEL_EV_BBMC_NETINFO ||
-	    eventId == TEL_EV_BBMC_STATUS_UPDATE ||
-	    eventId == TEL_EV_BBMC_NETWORK_READY ||
-	    eventId == TEL_EV_BBMC_LPM_FROM_NETWORK_READY ||
-	    eventId == TEL_EV_BBMC_SIM_ENABLED ||
-	    eventId == TEL_EV_BBMC_SIM_DISABLED ||
-	    eventId == TEL_EV_EXCEED_HI_TEMP ||
-	    eventId == TEL_EV_FALL_DOWN_LOW_TEMP ||
-	    eventId == TEL_EV_SIM_BLOCKED_NORMAL_OP ||
-	    eventId == TEL_EV_SIM_PERMANENTLY_BLOCKED) {
-		RefreshNetworkAndBearerCache();
 	}
 }
 
