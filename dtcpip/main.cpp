@@ -37,9 +37,9 @@ extern "C" int sceRegMgrSetKeyBin(const char *category, const char *name, const 
 /* the middleware's main (SwMwMain) */
 extern "C" int swagnerMain(void);
 
-/* the key manager: its handle and its reset (SWKeyManager) */
-extern "C" int swKeyManagerOpen(void);
-extern "C" void swKeyManagerReset(int handle);
+/* the key store reset helpers (SWKeyManager/KeyManager/libkm/libswkeystore.c) */
+extern "C" int kmRemoveParamTbl(void);
+extern "C" int swKeyStoreResetAll(void);
 
 extern "C" int main(int argc, char *argv[])
 {
@@ -62,7 +62,8 @@ extern "C" int main(int argc, char *argv[])
 	if (memcmp(param, "dtcpip::reset", 13) == 0) {
 		allowReset = vshSblQafMgrIsAllowDtcpIpReset() != 0;
 		if (allowReset) {
-			swKeyManagerReset(swKeyManagerOpen());
+			kmRemoveParamTbl();
+			swKeyStoreResetAll();
 			memset(devCert, 0, 3);
 			res = sceRegMgrSetKeyBin("/CONFIG/DTCPIP", "devcert", devCert, 3);
 		}

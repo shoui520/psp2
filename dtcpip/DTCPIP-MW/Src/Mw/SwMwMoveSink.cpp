@@ -42,6 +42,23 @@ void *SwMwMoveSinkBaseConstruct(void *sink);
 void *SwMwMoveSinkBaseDestruct(void *sink);
 }
 
+/* construct/destruct the move sink's embedded URI */
+extern "C" void *SwMwMoveSinkBaseConstruct(void *sinkPtr)
+{
+	struct SwMwMoveSink *sink = (struct SwMwMoveSink *)sinkPtr;
+
+	SwMwUriInit(&sink->uri, "");
+	return sink;
+}
+
+extern "C" void *SwMwMoveSinkBaseDestruct(void *sinkPtr)
+{
+	struct SwMwMoveSink *sink = (struct SwMwMoveSink *)sinkPtr;
+
+	SwMwUriDone(&sink->uri);
+	return sink;
+}
+
 /* the move sink's lwmutex, "sce_sws_mutex" */
 extern "C" int SwMwMoveSinkMutexCreate(SceKernelLwMutexWork *mutex)
 {

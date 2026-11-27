@@ -294,3 +294,43 @@ extern "C" int SwMwSinkSetUri(int handle, void *uriText, int size)
 	}
 	return SwMwStatus(status);
 }
+
+/* construct/destruct the sink's embedded URI */
+extern "C" void *SwMwSinkBaseConstruct(void *sinkPtr)
+{
+	struct SwMwSink *sink = (struct SwMwSink *)sinkPtr;
+
+	SwMwUriInit(&sink->uri, "");
+	return sink;
+}
+
+extern "C" void *SwMwSinkBaseDestruct(void *sinkPtr)
+{
+	struct SwMwSink *sink = (struct SwMwSink *)sinkPtr;
+
+	SwMwUriDone(&sink->uri);
+	return sink;
+}
+
+/* re-authenticate an existing sink session */
+extern "C" int SwMwSinkReauthenticate(int handle)
+{
+	struct SwMwSink *sink = (struct SwMwSink *)handle;
+	int status;
+	int failed;
+
+	SwMwSinkMutexLock(&sink->mutex);
+	sink->closed = 0;
+	sink->status = 0;
+	SwMwSinkMutexUnlock(&sink->mutex);
+	status = sink->content->begin(&sink->uri, 0, 0);
+	failed = 0;
+	if (status != 0) {
+		swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_SINK_SOURCE, 203);
+		failed = 1;
+	}
+	if (failed != 0)
+		return SwMwStatus(status);
+	sink->notified = 1;
+	return 0;
+}

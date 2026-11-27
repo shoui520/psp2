@@ -37,7 +37,8 @@ struct SwOptParseResult {
 };
 
 /* external software-Wagner trace logger */
-int swLogPrintf(const char *format, ...);
+extern int swMwTrace(const char *format, ...);
+#define swLogPrintf swMwTrace
 
 /* trace verbosity level */
 int g_swOptLogLevel;

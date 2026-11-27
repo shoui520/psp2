@@ -728,7 +728,7 @@ static int swDepProcOptParseRxOpen(struct SwDepProc *proc, unsigned char dstQueu
 	self->heldMsg = NULL;
 	swOptSectionInit(self->patSec);
 	swOptSectionInit(self->pmtSec);
-	swOptParserInit(self->parser);
+	swOptParseResultInit(self->parser);
 	return 0;
 }
 
@@ -736,7 +736,7 @@ static void swDepProcOptParseRxClose(struct SwDepProc *proc)
 {
 	struct SwDepProcOptRx *self = (struct SwDepProcOptRx *)proc;
 
-	swOptParserFini(self->parser);
+	swOptParseResultFini(self->parser);
 	swOptSectionFini(self->pmtSec);
 	swOptSectionFini(self->patSec);
 	swDepMsgQueueFini(&self->queue);
@@ -955,7 +955,7 @@ static int swDepProcOptParseTxOpen(struct SwDepProc *proc, unsigned char dstQueu
 	self->heldMsg = NULL;
 	swOptSectionInit(self->patSec);
 	swOptSectionInit(self->pmtSec);
-	swOptParserInit(self->parser);
+	swOptParseResultInit(self->parser);
 	return 0;
 }
 
@@ -963,7 +963,7 @@ static void swDepProcOptParseTxClose(struct SwDepProc *proc)
 {
 	struct SwDepProcOptTx *self = (struct SwDepProcOptTx *)proc;
 
-	swOptParserFini(self->parser);
+	swOptParseResultFini(self->parser);
 	swOptSectionFini(self->pmtSec);
 	swOptSectionFini(self->patSec);
 	swDepMsgQueueFini(&self->queue);

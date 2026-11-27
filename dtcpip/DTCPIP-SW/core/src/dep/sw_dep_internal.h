@@ -313,8 +313,8 @@ int swRxCompCallback(void *driverCtx, unsigned char streamId, uint32_t pktInfo);
 int swOptSectionInit(void *section);
 void swOptSectionFini(void *section);
 void swOptSectionReset(void *section);
-void swOptParserInit(void *parser);
-void swOptParserFini(void *parser);
+int swOptParseResultInit(void *parser);
+void swOptParseResultFini(void *parser);
 int sw_opt_section_put(void *section, const unsigned char *packet, unsigned int packetLen,
 		       int rewriteFlag, int *outComplete, unsigned char **outData,
 		       unsigned int *outLen);

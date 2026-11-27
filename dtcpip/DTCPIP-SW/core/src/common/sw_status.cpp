@@ -8,8 +8,7 @@
 
 extern "C" {
 
-const unsigned char g_swMwCertificateTemplate[4] = { 0, 0, 0, 0 };
-char g_swagnerIdentity[16] = "swagner";
+extern const unsigned char g_swMwCertificateTemplate[4] = { 0, 0, 0, 0 };
 
 int SwMwStatus(int status)
 {

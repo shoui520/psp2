@@ -37,15 +37,15 @@ extern "C" {
 int swMwTrace(const char *format, ...);
 
 /* the manager object's session methods (SwMwManager.cpp) */
-int SwMwManagerSessionConnect(int *device, const int *values, void *payload, int size);
-int SwMwManagerSessionDisconnect(int device);
-int SwMwManagerSessionStatus(int device);
-int SwMwManagerSessionResult(int device, int *out);
-int SwMwManagerSessionClose(int device);
-int SwMwManagerSessionOpen(int device);
-int SwMwManagerSessionWaitReady(int device, int *out);
-int SwMwManagerSessionDestroy(int device);
-int SwMwManagerConnectDevice(int device);
+int SwMwManagerCreate(int *device, const int *values, void *payload, int size);
+int SwMwManagerTeardown(int device);
+int SwMwManagerStartActivation(void);
+int SwMwManagerGetActivationResult(int *out);
+int SwMwManagerCancel(void);
+int SwMwManagerCheckActivation(void);
+int SwMwManagerEnsureSession(int device, int *out);
+int SwMwManagerCancelDownloadWrap(void);
+int SwMwManagerNoop(void);
 int SwMwManagerSetSrm(int device, void *srm, int size);
 int SwMwManagerSetNetworkState(int device, int connected, int valid);
 int SwMwManagerStartResumeList(int device, int isSink);
@@ -85,7 +85,7 @@ extern "C" int SwMwManagerConnect(struct SwMwCommChannel *channel, struct SwMwIp
 	values[1] = request->value1;
 	values[2] = request->value2;
 	values[3] = request->value3;
-	result = SwMwManagerSessionConnect(device, values, request->payload, request->size);
+	result = SwMwManagerCreate(device, values, request->payload, request->size);
 	if (result != 0)
 		swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_MANAGER_SOURCE, 184);
 	else
@@ -119,7 +119,7 @@ extern "C" int SwMwManagerDisconnect(struct SwMwCommChannel *channel,
 		SwMwCommServerReplyStatus(channel, request, 12004);
 		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12004, SWMW_MANAGER_SOURCE, 212);
 	}
-	result = SwMwManagerSessionDisconnect(*device);
+	result = SwMwManagerTeardown(*device);
 	if (result != 0)
 		swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_MANAGER_SOURCE, 217);
 	*device = 0;
@@ -150,7 +150,7 @@ extern "C" int SwMwManagerWaitReady(struct SwMwCommChannel *channel,
 		SwMwCommServerReplyStatus(channel, request, 12003);
 		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 241);
 	}
-	result = SwMwManagerSessionWaitReady(*device, &value);
+	result = SwMwManagerEnsureSession(*device, &value);
 	request->result = result;
 	request->outSize = 0;
 	request->outPayload = NULL;
@@ -177,7 +177,7 @@ extern "C" int SwMwManagerDestroy(struct SwMwCommChannel *channel,
 		SwMwCommServerReplyStatus(channel, request, 12003);
 		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 266);
 	}
-	result = SwMwManagerSessionDestroy(*device);
+	result = SwMwManagerCancelDownloadWrap();
 	request->result = result;
 	request->outSize = 0;
 	request->outPayload = NULL;
@@ -234,7 +234,7 @@ extern "C" int SwMwManagerDeviceConnect(struct SwMwCommChannel *channel,
 		SwMwCommServerReplyStatus(channel, request, 12004);
 		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12004, SWMW_MANAGER_SOURCE, 321);
 	}
-	result = SwMwManagerConnectDevice(*device);
+	result = SwMwManagerNoop();
 	if (result != 0)
 		return swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_MANAGER_SOURCE, 326);
 	return result;
@@ -717,7 +717,7 @@ extern "C" int SwMwManagerGetSessionStatus(struct SwMwCommChannel *channel,
 		SwMwCommServerReplyStatus(channel, request, 12003);
 		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 850);
 	}
-	result = SwMwManagerSessionStatus(*device);
+	result = SwMwManagerStartActivation();
 	request->result = result;
 	request->outSize = 0;
 	request->outPayload = NULL;
@@ -744,7 +744,7 @@ extern "C" int SwMwManagerGetSessionResult(struct SwMwCommChannel *channel,
 		SwMwCommServerReplyStatus(channel, request, 12003);
 		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 875);
 	}
-	result = SwMwManagerSessionResult(*device, &value);
+	result = SwMwManagerGetActivationResult(&value);
 	request->result = result;
 	request->outSize = 0;
 	request->outPayload = NULL;
@@ -771,7 +771,7 @@ extern "C" int SwMwManagerCloseSession(struct SwMwCommChannel *channel,
 		SwMwCommServerReplyStatus(channel, request, 12003);
 		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 899);
 	}
-	result = SwMwManagerSessionClose(*device);
+	result = SwMwManagerCancel();
 	request->result = result;
 	request->outSize = 0;
 	request->outPayload = NULL;
@@ -797,7 +797,7 @@ extern "C" int SwMwManagerOpenSession(struct SwMwCommChannel *channel,
 		SwMwCommServerReplyStatus(channel, request, 12003);
 		return swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_MANAGER_SOURCE, 922);
 	}
-	result = SwMwManagerSessionOpen(*device);
+	result = SwMwManagerCheckActivation();
 	request->result = result;
 	request->outSize = 0;
 	request->outPayload = NULL;

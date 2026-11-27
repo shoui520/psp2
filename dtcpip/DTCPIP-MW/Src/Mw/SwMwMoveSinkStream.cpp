@@ -5,6 +5,7 @@
  */
 
 #include <stddef.h>
+#include <stdint.h>
 #include <string.h>
 
 /* the SDK's <new> asks std::size_t of the freestanding headers */
@@ -34,15 +35,15 @@ int SwMwSinkStreamMutexDelete(SceKernelLwMutexWork *mutex);
 /* the device's move-sink check (the SWS core) */
 int SwMwCoreCheckMoveSink(int device);
 
-/* the certificate block helpers (the SWS content library, /) */
+/* the certificate block helpers (SwMwSink.cpp) */
 struct SwMwCertificateBlock {
 	unsigned char sender[16];	/* 0x00 */
 	unsigned char receiver[16];	/* 0x10 */
 	unsigned int length;		/* 0x20 */
 	unsigned char certificate[32];	/* 0x24 */
 };
-int SwMwCertificateCopy(int certificate, struct SwMwCertificateBlock *block);
-int SwMwCertificateId(const void *certificate);
+void SwMwContentGetInfo(void *certificate, void *block);
+int SwMwContentGetStatus(void *certificate);
 
 /* the move session's record list and the device label (SwMwMoveSink.cpp's calls) */
 int SwMwMoveRecordBegin(int manager, int id, int mode);
@@ -504,12 +505,12 @@ extern "C" int SwMwMoveSinkStreamGetInfo(struct SwMwSinkStream *stream,
 	stream->work.tag = 0x90020001;
 	stream->work.eof = stream->window.reserved == 0;
 	if (info->value1 != 0) {
-		SwMwCertificateCopy(info->value1, &block);
+		SwMwContentGetInfo((void *)(uintptr_t)info->value1, &block);
 		memcpy(stream->work.sender, block.sender, 16);
 		memcpy(stream->work.receiver, block.receiver, 16);
 		stream->work.length = block.length >> 4;
 		memcpy(stream->work.certificate, block.certificate, 32);
-		stream->work.keyId = SwMwCertificateId((const void *)info->value1);
+		stream->work.keyId = SwMwContentGetStatus((void *)(uintptr_t)info->value1);
 	} else if (info->header.word[3] != 0) {
 		memcpy(stream->work.sender, info->second, 16);
 		memcpy(stream->work.receiver, info->third, 16);
@@ -1200,4 +1201,38 @@ extern "C" struct SwMwSinkStream *SwMwMoveSinkStreamConstructCopy(struct SwMwSin
 extern "C" struct SwMwSinkStream *SwMwMoveSinkStreamDestructCopy(struct SwMwSinkStream *stream)
 {
 	return SwMwMoveSinkStreamDestruct(stream);
+}
+
+/* move stream event vtable and lifecycle helpers */
+static void swMwMoveStreamEventNoop(void) {}
+
+static void swMwMoveStreamEventDelete(struct SwMwStreamEvent *event)
+{
+	SwMwMoveStreamEventDestruct(event);
+	::operator delete(event);
+}
+
+static void *g_swMwMoveStreamEventVtable[8] = {
+	(void *)SwMwMoveStreamEventDestruct,
+	(void *)swMwMoveStreamEventDelete,
+	(void *)swMwMoveStreamEventNoop,
+	(void *)swMwMoveStreamEventNoop,
+	(void *)swMwMoveStreamEventNoop,
+	(void *)SwMwMoveSinkStreamOnEemi,
+	(void *)SwMwMoveSinkStreamOnDiscard,
+	(void *)SwMwMoveSinkStreamOnKeyExpired,
+};
+
+extern "C" void SwMwMoveStreamEventConstruct(struct SwMwStreamEvent *event)
+{
+	event->vtable = g_swMwMoveStreamEventVtable;
+	event->context = NULL;
+	event->handler = NULL;
+	event->argument = NULL;
+	event->eemi = 0xFF;
+}
+
+extern "C" void SwMwMoveStreamEventDestruct(struct SwMwStreamEvent *event)
+{
+	event->vtable = NULL;
 }
