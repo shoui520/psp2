@@ -447,6 +447,9 @@ intrusive_ptr<graph::Surface> Plugin::LoadTexture(graph::SurfacePool *pool, void
 	return surface;
 }
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline))
+#endif
 graph::Surface *Plugin::GetNodeEntity_Surface(const IDParam &id) const
 {
 	map<uint32_t, graph::Surface *>::iterator it = m_surface_table.find(id.GetIDHash());
@@ -1542,6 +1545,7 @@ void Plugin::InstantiateWidget_Focus(const cxml::Element &elm, ui::Widget *widge
 }
 #endif
 
+#ifndef PAF_BUILD_2014
 /* Sony's build calls this vector's push_back rather than inlining it. */
 template<>
 inline __attribute__((noinline)) int
@@ -1555,6 +1559,7 @@ vector<WidgetResourceInfo::LayoutData>::push_back(const WidgetResourceInfo::Layo
 	}
 	return result;
 }
+#endif
 
 /* called whole by InstantiateWidget_Layout */
 __attribute__((noinline)) VersatileParam *Plugin::CallFactoryLayout(const char *name)
@@ -1621,9 +1626,13 @@ ui::WidgetParam *Plugin::CallFactoryWidgetParam(const char *name)
 	return NULL;
 }
 
-/* called whole by CreateWidgetWithStyleType */
-__attribute__((noinline)) ui::Widget *Plugin::CallFactoryWidget(const char *name,
-								ui::Widget *parent)
+/* called whole by CreateWidgetWithStyleType in 3.65 */
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline))
+#else
+__attribute__((noinline))
+#endif
+ui::Widget *Plugin::CallFactoryWidget(const char *name, ui::Widget *parent)
 {
 	map<string, ui::FactoryFuncTable>::iterator it = s_factory_table.find(string(name));
 

@@ -140,19 +140,7 @@ public:
 	};
 
 #ifdef PAF_BUILD_2014
-	__attribute__((noinline)) _Tree() : count(0)
-	{
-		_Node *node = (_Node *)operator new(sizeof(_Node));
-
-		head = node;
-		if (node != NULL) {
-			node->parent = node;
-			node->left = node;
-			node->right = node;
-			node->color = _Black;
-			head->isnil = true;
-		}
-	}
+	_Tree();
 #else
 	_Tree() : count(0)
 	{
@@ -313,6 +301,23 @@ private:
 	void _Rebalance(_Node *node);
 	void _EraseFixup(_Node *fixnode, _Node *fixnodeparent);
 };
+
+#ifdef PAF_BUILD_2014
+template<class _Traits>
+__attribute__((noinline)) _Tree<_Traits>::_Tree() : count(0)
+{
+	_Node *node = (_Node *)operator new(sizeof(_Node));
+
+	head = node;
+	if (node != NULL) {
+		node->parent = node;
+		node->left = node;
+		node->right = node;
+		node->color = _Black;
+		head->isnil = true;
+	}
+}
+#endif
 
 template<class _Traits>
 _Tree<_Traits>::_Tree(const _Tree &src) : count(0)
@@ -703,5 +708,22 @@ void _Tree<_Traits>::erase(iterator first, iterator last)
 }
 
 }
+
+/* _Tree<Traits>::_Tree inline, for types where Sony's 2014 build inlines it into map::map */
+#define PAF_TREE_INLINE_CTOR(...) \
+	namespace paf { \
+	template<> inline __attribute__((always_inline)) _Tree<__VA_ARGS__ >::_Tree() : count(0) \
+	{ \
+		_Node *node = (_Node *)operator new(sizeof(_Node)); \
+		head = node; \
+		if (node != NULL) { \
+			node->parent = node; \
+			node->left = node; \
+			node->right = node; \
+			node->color = _Black; \
+			head->isnil = true; \
+		} \
+	} \
+	}
 
 #endif

@@ -153,7 +153,15 @@ public:
 	 * The child of a texture element for this resolution or model, else the element
 	 * (name ours).
 	 */
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) cxml::Element GetOverrideElement(
+		const cxml::Element &elm) const
+	{
+		return elm;
+	}
+#else
 	cxml::Element GetOverrideElement(const cxml::Element &elm) const;
+#endif
 	/* the string table's element of a language (name ours) */
 	cxml::Element GetLocaleElement(int32_t locale) const;
 	/*

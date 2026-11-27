@@ -4,6 +4,10 @@
  */
 #include <common/property_list.h>
 
+#ifdef PAF_BUILD_2014
+PAF_VECTOR_INLINE_RESERVE(common::SharedPtr<common::property_list::PropertyElement>)
+#endif
+
 namespace paf {
 namespace common {
 namespace property_list {
@@ -122,12 +126,14 @@ void PropertyList::SetValue(const IDParam &id, PropertyValue value)
 	m_value_map[id] = value;
 }
 
+#ifndef PAF_BUILD_2014
 void PropertyList::SetValue(uint32_t index, PropertyValue value)
 {
 	if (index >= m_value_list.size())
 		m_value_list.resize(index + 1);
 	m_value_list[index] = value;
 }
+#endif
 
 SharedPtr<PropertyElement> PropertyList::GetElement(const IDParam &id) const
 {

@@ -87,7 +87,22 @@ public:
 	int32_t RemoveAllChars();
 	int32_t SetPos(const math::v2 &pos);
 	int32_t SetSize(const math::v2 &size);
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) int32_t SetScale(const math::v2 &scale)
+	{
+		if (!(scale == m_scale)) {
+			if (m_mutex != NULL)
+				m_mutex->Lock();
+			m_dirty |= Dirty_Scale;
+			m_scale = scale;
+			if (m_mutex != NULL)
+				m_mutex->Unlock();
+		}
+		return 0;
+	}
+#else
 	int32_t SetScale(const math::v2 &scale);
+#endif
 	/* the caret at pos, height high */
 	int32_t SetCaret(const math::v2 &pos, float height);
 	/* the selection's rectangles */

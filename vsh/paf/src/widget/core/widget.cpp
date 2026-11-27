@@ -25,6 +25,11 @@
 /* the adjustment a widget without its own is given (name ours) */
 paf::ui::AdjustParam ScePafWidget_BE1CEA2E;
 
+#ifdef PAF_BUILD_2014
+PAF_TREE_INLINE_CTOR(_Tmap_traits<ui::Widget *, Timer *, less<ui::Widget *> >)
+PAF_TREE_INLINE_CTOR(_Tmap_traits<ui::Scene *, int32_t, less<ui::Scene *> >)
+#endif
+
 namespace paf {
 
 /*
@@ -7202,7 +7207,11 @@ intrusive_ptr<TextureSource> Widget::GetDrawObjMaskBit(int32_t obj)
 	return intrusive_ptr<TextureSource>();
 }
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) void Widget::detach_scene()
+#else
 void Widget::detach_scene()
+#endif
 {
 	Scene *scene = m_scene;
 
@@ -8033,6 +8042,14 @@ int32_t Widget::SetSize_core(const math::v4 &size, uint32_t notify_layout, bool 
 {
 	math::v4 value = size;
 
+#ifdef PAF_BUILD_2014
+	if (m_adjust_x == 1)
+		value.set_x(m_size.extract_x());
+	if (m_adjust_y == 1)
+		value.set_y(m_size.extract_y());
+	if (m_adjust_z == 1)
+		value.set_z(m_size.extract_z());
+#else
 	if (m_adjust_x != 0 || m_adjust_y != 0 || m_adjust_z != 0) {
 		float width, height;
 
@@ -8054,14 +8071,8 @@ int32_t Widget::SetSize_core(const math::v4 &size, uint32_t notify_layout, bool 
 			height = screen.height();
 		}
 		if (this == m_scene) {
-#ifdef PAF_BUILD_2014
-			SceneResolution *resolution = m_env->FindResolution(
-				m_env->m_resolutions, m_env->m_resolution_num,
-				m_scene->m_resolution_id);
-#else
 			SceneResolution *resolution =
 				ScePafWidget_CDC90BA2(m_scene->m_env_param, m_scene->m_resolution_id);
-#endif
 
 			if (resolution != NULL && m_scene->IsResolutionActMorph(m_scene->m_resolution_id)) {
 				width = (float)resolution->m_width;
@@ -8078,6 +8089,7 @@ int32_t Widget::SetSize_core(const math::v4 &size, uint32_t notify_layout, bool 
 		if (m_adjust_y == 4)
 			value.set_y(height);
 	}
+#endif
 	return SetSize_core_force(value, notify_layout, force);
 }
 

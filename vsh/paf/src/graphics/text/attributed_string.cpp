@@ -24,6 +24,23 @@ __attribute__((noinline)) void AttributedString::ClearStyleRuns()
 	m_styleRuns.clear();
 }
 
+#ifdef PAF_BUILD_2014
+__attribute__((noinline)) void AttributedString::InitDefaultStyle(const TextStyle *style)
+{
+	ClearStyleRuns();
+	AddStyleRun(style, 0);
+}
+
+AttributedString::AttributedString() : m_str(L"")
+{
+	InitDefaultStyle(NULL);
+}
+
+AttributedString::AttributedString(const TextStyle &style) : m_str(L"")
+{
+	InitDefaultStyle(&style);
+}
+#else
 AttributedString::AttributedString() : m_str(L"")
 {
 	ClearStyleRuns();
@@ -35,6 +52,7 @@ AttributedString::AttributedString(const TextStyle &style) : m_str(L"")
 	ClearStyleRuns();
 	AddStyleRun(&style, 0);
 }
+#endif
 
 void AttributedString::Copy(const AttributedString &str)
 {

@@ -173,6 +173,7 @@ void PageTurnRenderer::MakeDistanceTexture(common::SharedPtr<arl::TextureObject>
 	texture->setWrapT(arl::TEXTURE_WRAP_CLAMP_FULL_BORDER);
 }
 
+#ifndef PAF_BUILD_2014
 /* Sony's PageTurnRenderer constructor calls these rather than inlining them. */
 template<>
 inline __attribute__((noinline))
@@ -208,6 +209,7 @@ inline __attribute__((noinline)) WaveMesh<WaveVertex>::WaveMesh()
 	  m_primitive(arl::TRIANGLE_STRIP), m_line_count(0)
 {
 }
+#endif
 
 /* the light's PointLightPack2, which Sony's Draw calls out of line where every other user has it
    inline (SNC stopped inlining into Draw; name ours) */

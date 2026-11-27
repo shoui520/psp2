@@ -80,7 +80,15 @@ public:
 	float get_area() const;
 
 	bool operator==(const rect &rhs) const;
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) bool operator!=(const rect &rhs) const
+	{
+		return !(m_x_center == rhs.m_x_center && m_y_center == rhs.m_y_center &&
+			 m_w == rhs.m_w && m_h == rhs.m_h);
+	}
+#else
 	bool operator!=(const rect &rhs) const;
+#endif
 
 private:
 	float m_x_center;

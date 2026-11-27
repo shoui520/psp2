@@ -1049,7 +1049,11 @@ void WebViewBase::OnRequestConfirmPlugin(int32_t mode, void *request_handle)
 	m_dialog_request = NULL;
 }
 
+#ifdef PAF_BUILD_2014
+static inline __attribute__((always_inline)) bool MapSslErrorCode(int32_t error_mask, int32_t *out_code)
+#else
 static bool MapSslErrorCode(int32_t error_mask, int32_t *out_code)
+#endif
 {
 	switch (error_mask) {
 	case 1:

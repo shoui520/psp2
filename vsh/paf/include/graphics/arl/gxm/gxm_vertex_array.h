@@ -232,6 +232,11 @@ public:
 	IndexArray()
 	{
 	}
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) ~IndexArray()
+	{
+	}
+#endif
 
 	IndexArray(common::SharedPtr<VramAllocator> allocator)
 		: m_memory(new IndexMemory(allocator)), m_format(SCE_GXM_INDEX_FORMAT_U16)

@@ -6,6 +6,10 @@
 #include <std/stdlib.h>
 #include <widget/wutil.h>
 
+#ifdef PAF_BUILD_2014
+PAF_VECTOR_INLINE_RESERVE(common::SharedPtr<job::JobItem>)
+#endif
+
 namespace paf {
 namespace common {
 

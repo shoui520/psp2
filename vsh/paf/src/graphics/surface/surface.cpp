@@ -461,6 +461,9 @@ int32_t Surface::Initialize(SurfacePool *pool, int32_t width, int32_t height, Im
 	return 0;
 }
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline))
+#endif
 Surface::Surface(SurfacePool *pool, int32_t width, int32_t height, ImageMode format,
 		 ImageOrder order, int32_t num_page, int32_t align_bytes, int32_t line_bytes,
 		 int32_t num_level, bool reserved)

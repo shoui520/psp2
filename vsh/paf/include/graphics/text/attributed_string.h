@@ -79,6 +79,9 @@ public:
 private:
 	/* names ours */
 	void ClearStyleRuns();
+#ifdef PAF_BUILD_2014
+	void InitDefaultStyle(const TextStyle *style);
+#endif
 	void Copy(const AttributedString &str);
 	/* a run of the style (the default one for none), at the end */
 	void AddStyleRun(const TextStyle *style, uint32_t len)

@@ -21,6 +21,10 @@ using sce::Vectormath::Simd::floatInVec;
 using sce::Vectormath::Simd::Aos::Vector2;
 using sce::Vectormath::Simd::Aos::Vector3;
 
+#ifdef PAF_BUILD_2014
+PAF_VECTOR_INLINE_RESERVE(common::SharedPtr<graph::EnvProbe>)
+#endif
+
 namespace paf {
 
 /* Sony's build calls the probe list's push_back out of line */
@@ -173,6 +177,118 @@ void EnvProbeBackground::Draw()
 	m_camera->PopMatrices();
 }
 
+#ifdef PAF_BUILD_2014
+__attribute__((noinline)) bool Trackball::Hit(math::v3 center, math::v3 origin,
+					      math::v3 direction, math::v3 &point,
+					      float radius)
+{
+	Vector3 dir = direction.getImpl();
+
+	point = math::v3(origin.getImpl() + dir * dot(dir, center.getImpl() - origin.getImpl()) /
+						    dot(dir, dir));
+
+	float left = radius * radius - lengthSqr(point.getImpl() - center.getImpl()).getAsFloat();
+
+	if (left < 0.0f)
+		return false;
+	point = math::v3(point.getImpl() -
+			 dir * sce::Vectormath::Simd::recipf(length(dir)) * __builtin_sqrtf(left));
+	return true;
+}
+
+/* the turn by the angle about the unit axis */
+static inline __attribute__((always_inline)) math::matrix AxisRotation(Vector3 axis, float c,
+									 float s)
+{
+	float x = axis.getX();
+	float y = axis.getY();
+	float z = axis.getZ();
+	float t = 1.0f - c;
+
+	return math::matrix(math::v4(x * x * t + c, x * y * t + z * s, x * z * t - y * s, 0.0f),
+			    math::v4(y * x * t - z * s, y * y * t + c, y * z * t + x * s, 0.0f),
+			    math::v4(z * x * t + y * s, z * y * t - x * s, z * z * t + c, 0.0f),
+			    math::v4(0.0f, 0.0f, 0.0f, 1.0f));
+}
+
+/* GetSignedAngle, which Sony's build inlines here */
+static inline __attribute__((always_inline)) float SignedAngle(const math::v2 &from,
+							       const math::v2 &to)
+{
+	Vector2 a = from.getImpl() * sce::Vectormath::Simd::recipf(length(from.getImpl()));
+	Vector2 b = to.getImpl() * sce::Vectormath::Simd::recipf(length(to.getImpl()));
+	float angle = sce_paf_acosf(math::ClampUnit(dot(b, a).getAsFloat()));
+	floatInVec cross = floatInVec(to.extract_y() * from.extract_x() -
+				      to.extract_x() * from.extract_y());
+
+	return angle * sce::Vectormath::Simd::select(floatInVec(-1.0f), floatInVec(1.0f),
+						     cross > floatInVec(0.0f))
+			       .getAsFloat();
+}
+
+inline __attribute__((always_inline)) void Trackball::Update(const math::v3 &center,
+			      const math::v3 &origin, const math::v3 &direction, bool pressed,
+			      bool down, math::matrix &rotation, float radius)
+{
+	math::v3 point(0.0f);
+	bool on_sphere = Hit(center, origin, direction, point, radius);
+
+	if (!down)
+		return;
+	if (pressed) {
+		m_start_point = point;
+		m_start_on_sphere = on_sphere;
+		m_start_rotation.assign(rotation);
+	}
+
+	Vector3 to = point.getImpl() - center.getImpl();
+	floatInVec to_length = length(to);
+
+	if (!(to_length > floatInVec(0.00001f)).getAsBool())
+		return;
+
+	Vector3 from = m_start_point.getImpl() - center.getImpl();
+	floatInVec from_length = length(from);
+
+	if (!(from_length > floatInVec(0.00001f)).getAsBool())
+		return;
+
+	Vector3 a = to * sce::Vectormath::Simd::recipf(to_length);
+	Vector3 b = from * sce::Vectormath::Simd::recipf(from_length);
+	float angle = -sce_paf_acosf(sce::Vectormath::Simd::fminf(
+		sce::Vectormath::Simd::fmaxf(dot(b, a), floatInVec(-1.0f)), floatInVec(1.0f))
+					     .getAsFloat());
+
+	if (!(__builtin_fabsf(angle) > 0.001f))
+		return;
+
+	math::matrix turn;
+
+	if (m_start_on_sphere) {
+		Vector3 normal = cross(a, b);
+		Vector3 axis = normal * sce::Vectormath::Simd::recipf(length(normal));
+		float c = sce_paf_cosf(angle);
+		float s = sce_paf_sinf(angle);
+
+		turn = AxisRotation(axis, c, s);
+	} else {
+		float roll = -SignedAngle(math::v2(a.getX(), a.getY()), math::v2(b.getX(), b.getY()));
+		float s = sce_paf_sinf(roll);
+		float c = sce_paf_cosf(roll);
+
+		turn = math::matrix(math::v4(c, s, 0.0f, 0.0f), math::v4(-s, c, 0.0f, 0.0f),
+				    math::v4(0.0f, 0.0f, 1.0f, 0.0f), math::v4(0.0f, 0.0f, 0.0f, 1.0f));
+	}
+	rotation = turn * m_start_rotation;
+
+	/* kept a rotation: the turn's drift taken out through a quaternion */
+	math::v4 translation = rotation.w();
+	math::matrix unit = math::quaternion(rotation).toMatrix(0.0001f);
+
+	rotation = math::matrix(unit.x(), unit.y(), unit.z(), translation);
+}
+#endif
+
 void EnvProbeBackground::Update()
 {
 	Prepare();
@@ -244,14 +360,9 @@ common::SharedPtr<arl::Texture2D> EnvProbeBackground::GetSharedTexture()
 	return textures->m_white;
 }
 
-#ifdef PAF_BUILD_2014
-inline __attribute__((always_inline)) bool Trackball::Hit(math::v3 center, math::v3 origin,
-							  math::v3 direction, math::v3 &point,
-							  float radius)
-#else
+#ifndef PAF_BUILD_2014
 inline bool Trackball::Hit(math::v3 center, math::v3 origin, math::v3 direction, math::v3 &point,
 			   float radius)
-#endif
 {
 	Vector3 dir = direction.getImpl();
 
@@ -297,15 +408,9 @@ static inline __attribute__((always_inline)) float SignedAngle(const math::v2 &f
 			       .getAsFloat();
 }
 
-#ifdef PAF_BUILD_2014
-inline __attribute__((always_inline)) void Trackball::Update(const math::v3 &center,
-			      const math::v3 &origin, const math::v3 &direction, bool pressed,
-			      bool down, math::matrix &rotation, float radius)
-#else
 inline void Trackball::Update(const math::v3 &center, const math::v3 &origin,
 			      const math::v3 &direction, bool pressed, bool down,
 			      math::matrix &rotation, float radius)
-#endif
 {
 	math::v3 point(0.0f);
 	bool on_sphere = Hit(center, origin, direction, point, radius);
@@ -364,6 +469,7 @@ inline void Trackball::Update(const math::v3 &center, const math::v3 &origin,
 
 	rotation = math::matrix(unit.x(), unit.y(), unit.z(), translation);
 }
+#endif
 
 }
 }

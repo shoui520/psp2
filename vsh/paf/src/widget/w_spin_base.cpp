@@ -110,7 +110,11 @@ SpinBase::SpinBase(Widget *parent, CreateParam *param)
 	AddDrawObj(DrawObjEntry(ptr, attr), false);
 }
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) void SpinDrum::UpdatePos(float offset)
+#else
 __attribute__((noinline)) void SpinDrum::UpdatePos(float offset)
+#endif
 {
 	float max = (float)m_max;
 	float first = (float)m_first;

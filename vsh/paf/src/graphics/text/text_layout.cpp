@@ -29,6 +29,10 @@
 
 using sce::Vectormath::Simd::floatInVec;
 
+#ifdef PAF_BUILD_2014
+PAF_VECTOR_INLINE_RESERVE(graph::TextLayoutLine *)
+#endif
+
 namespace paf {
 namespace graph {
 

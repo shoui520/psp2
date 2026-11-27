@@ -11,6 +11,11 @@
 #include <std/string>
 #include <std/vector>
 
+#ifdef PAF_BUILD_2014
+PAF_VECTOR_INLINE_RESERVE(graph::arl::ShaderObject<graph::arl::VertProgram>::Entry)
+PAF_VECTOR_INLINE_RESERVE(graph::arl::ShaderObject<graph::arl::FragProgram>::Entry)
+#endif
+
 namespace paf {
 
 typedef graph::arl::ShaderObject<graph::arl::VertProgram>::Entry VertProgramEntry;

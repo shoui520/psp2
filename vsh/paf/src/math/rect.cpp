@@ -373,12 +373,14 @@ bool rect::is_point_in_rect(const v2 &xyvalue)
 	return is_point_in_rect(xyvalue.extract_x(), xyvalue.extract_y());
 }
 
+#ifndef PAF_BUILD_2014
 /* Sony's operator== also answers whether the rectangles differ. */
 bool rect::operator!=(const rect &rhs) const
 {
 	return !(m_x_center == rhs.m_x_center && m_y_center == rhs.m_y_center &&
 		 m_w == rhs.m_w && m_h == rhs.m_h);
 }
+#endif
 
 bool rect::operator==(const rect &rhs) const
 {

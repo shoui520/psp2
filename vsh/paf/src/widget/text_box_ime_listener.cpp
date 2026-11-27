@@ -110,7 +110,11 @@ int32_t TextBoxImeListener::PostEvent(uint32_t type, const math::v4 &rect)
 }
 
 /* the text box's enter label as the IME's (name ours) */
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) int32_t ConvertEnterLabel(int32_t label)
+#else
 int32_t ConvertEnterLabel(int32_t label)
+#endif
 {
 	int32_t ret = SCE_IME_ENTER_LABEL_DEFAULT;
 

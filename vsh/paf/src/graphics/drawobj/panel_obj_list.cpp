@@ -19,6 +19,10 @@
 #include <graphics/effects/wave_renderer.h>
 #include <std/map>
 
+#ifdef PAF_BUILD_2014
+PAF_TREE_INLINE_CTOR(_Tmap_traits<graph::DrawObj *, int32_t, less<graph::DrawObj *> >)
+#endif
+
 namespace paf {
 
 /* Sony has the lookup and the removal in the panel object map inline. */

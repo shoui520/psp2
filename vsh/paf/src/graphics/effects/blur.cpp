@@ -23,6 +23,10 @@
 
 using namespace sce::Vectormath::Simd::Aos;
 
+#ifdef PAF_BUILD_2014
+PAF_VECTOR_INLINE_RESERVE(common::SharedPtr<graph::arl::Texture2D>)
+#endif
+
 namespace paf {
 
 /* Sony's build calls the temporaries' push_back rather than inlining it. */

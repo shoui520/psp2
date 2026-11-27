@@ -1006,7 +1006,11 @@ void ScePafWidget_A0CEFD28(DirectBar *bar, int32_t index, bool key, float time)
 namespace paf {
 namespace ui {
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) bool DirectBar::IsBtnEnable(int32_t index)
+#else
 bool DirectBar::IsBtnEnable(int32_t index)
+#endif
 {
 	if (GetDrawObj(OBJ_LABEL) == NULL ||
 	    !GetDrawObj(OBJ_LABEL)->IsInherit(graph::TextObj::DrawObjType()))

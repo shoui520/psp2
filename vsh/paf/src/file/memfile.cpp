@@ -52,6 +52,7 @@ common::SharedPtr<MemFile> MemFile::Open(const void *addr, size_t size, int32_t 
 	return common::SharedPtr<MemFile>();
 }
 
+#ifndef PAF_BUILD_2014
 common::SharedPtr<MemFile> MemFile::Open(void *addr, size_t size, int32_t *error)
 {
 	common::SharedPtr<MemFile> file = Open((const void *)addr, size, error);
@@ -60,6 +61,7 @@ common::SharedPtr<MemFile> MemFile::Open(void *addr, size_t size, int32_t *error
 		file->m_is_writable = true;
 	return file;
 }
+#endif
 
 common::SharedPtr<MemFile> MemFile::Open(common::SharedPtr<Buffer> buffer, int32_t *error)
 {

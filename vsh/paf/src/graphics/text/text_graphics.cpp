@@ -197,6 +197,7 @@ int32_t TextGraphics::SetSize(const math::v2 &size)
 	return SCE_PAF_OK;
 }
 
+#ifndef PAF_BUILD_2014
 int32_t TextGraphics::SetScale(const math::v2 &scale)
 {
 	if (!(scale == m_scale)) {
@@ -209,6 +210,7 @@ int32_t TextGraphics::SetScale(const math::v2 &scale)
 	}
 	return SCE_PAF_OK;
 }
+#endif
 
 int32_t TextGraphics::SetCaret(const math::v2 &pos, float height)
 {

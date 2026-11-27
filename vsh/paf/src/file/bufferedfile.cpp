@@ -55,7 +55,11 @@ int32_t BufferedFile::OpenAsync(const File::OpenArg *param)
 }
 
 /* Writes the window to the file. */
+#ifdef PAF_BUILD_2014
+static inline __attribute__((always_inline)) int32_t WriteBuffer(common::SharedPtr<File> file, BufferedFileState *state)
+#else
 static __attribute__((noinline)) int32_t WriteBuffer(common::SharedPtr<File> file, BufferedFileState *state)
+#endif
 {
 	if (file.get() == NULL)
 		return 0;

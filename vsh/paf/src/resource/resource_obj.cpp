@@ -845,10 +845,10 @@ bool ResourceObj::IsRegisteredID(uint32_t idhash)
 	return m_document->IsRegisteredIDHash(idhash);
 }
 
+#ifndef PAF_BUILD_2014
 cxml::Element ResourceObj::GetOverrideElement(const cxml::Element &elm) const
 {
 	cxml::Element result = elm;
-#ifndef PAF_BUILD_2014
 	const char *name = elm.GetName();
 
 	if (name != NULL && sce_paf_strncmp(name, "override_", sce_paf_strlen("override_")) != 0) {
@@ -876,9 +876,9 @@ cxml::Element ResourceObj::GetOverrideElement(const cxml::Element &elm) const
 			}
 		}
 	}
-#endif
 	return result;
 }
+#endif
 
 IDParam ResourceObj::GetAliasID(const IDParam &id) const
 {

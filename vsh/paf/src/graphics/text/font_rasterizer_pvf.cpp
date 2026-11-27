@@ -27,6 +27,10 @@
 
 extern "C" int sceAppMgrConvertVs0UserDrivePath(const char *path, char *out, int out_size);
 
+#ifdef PAF_BUILD_2014
+PAF_TREE_INLINE_CTOR(_Tmap_traits<int32_t, common::SharedPtr<graph::FontRasterizerPvf::Font>, less<int32_t> >)
+#endif
+
 namespace paf {
 namespace graph {
 

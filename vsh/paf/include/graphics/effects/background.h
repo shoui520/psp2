@@ -218,9 +218,16 @@ public:
 	__attribute__((noinline)) bool Hit(math::v3 center, math::v3 origin, math::v3 direction,
 					   math::v3 &point, float radius);
 	/* the rotation turned from where the drag started to where the pointer is now */
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) void Update(const math::v3 &center,
+					      const math::v3 &origin, const math::v3 &direction,
+					      bool pressed, bool down, math::matrix &rotation,
+					      float radius);
+#else
 	__attribute__((noinline)) void Update(const math::v3 &center, const math::v3 &origin,
 					      const math::v3 &direction, bool pressed, bool down,
 					      math::matrix &rotation, float radius);
+#endif
 
 	/* the rotation and the point where the drag started, and whether it was on the sphere */
 	math::matrix m_start_rotation;

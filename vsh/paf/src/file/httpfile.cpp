@@ -622,7 +622,18 @@ int32_t ScePafMisc_C098F659(HttpFile *self, int64_t *result)
 
 	self->m_lock_rwlock.WriterLock();
 	delete self->m_io_thread;
-
+#ifdef PAF_BUILD_2014
+	self->m_io_thread = NULL;
+	if (operation == FileIoThread::Operation_Open) {
+		if (value != 0) {
+			self->m_is_opened = false;
+			delete self->m_http_reader;
+			self->m_http_reader = NULL;
+		} else {
+			self->m_is_opened = true;
+		}
+	}
+#else
 	HttpFileReader *reader = self->m_http_reader;
 
 	self->m_io_thread = NULL;
@@ -641,6 +652,7 @@ int32_t ScePafMisc_C098F659(HttpFile *self, int64_t *result)
 			self->m_is_opened = true;
 		}
 	}
+#endif
 	self->m_lock_rwlock.WriterUnlock();
 	if (result != NULL)
 		*result = value;

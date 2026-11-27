@@ -8,7 +8,11 @@
 namespace paf {
 namespace graph {
 
+#ifdef PAF_BUILD_2014
+static inline __attribute__((always_inline)) EmitParamData MakeEmitDefaults()
+#else
 static EmitParamData MakeEmitDefaults()
+#endif
 {
 	EmitParamData defaults;
 
@@ -104,7 +108,11 @@ void MovParamSet::Values::CopyToRaw(MovParamData &dst) const
 	dst.m_brownian_scale_shake = m_brownian_scale_shake.m_value;
 }
 
+#ifdef PAF_BUILD_2014
+static inline __attribute__((always_inline)) LitParamData MakeLitDefaults()
+#else
 static LitParamData MakeLitDefaults()
+#endif
 {
 	LitParamData defaults;
 
@@ -153,7 +161,11 @@ void LitParamSet::Values::CopyToRaw(LitParamData &dst) const
 	dst.m_global_alpha = m_global_alpha.m_value;
 }
 
+#ifdef PAF_BUILD_2014
+static inline __attribute__((always_inline)) FocusParamData MakeFocusDefaults()
+#else
 static FocusParamData MakeFocusDefaults()
+#endif
 {
 	FocusParamData defaults;
 

@@ -234,6 +234,11 @@ public:
 	};
 
 	FrameBufferCopy();
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) ~FrameBufferCopy()
+	{
+	}
+#endif
 
 	/* the texture over the page shown, the other one with the flag 1 */
 	common::SharedPtr<Texture2D> *GetTexture(ArlInstance &gl, uint32_t flags);

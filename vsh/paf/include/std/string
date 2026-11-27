@@ -101,7 +101,11 @@ public:
 		append(len, ch);
 	}
 
+#ifdef PAF_BUILD_2014
+	inline __attribute__((always_inline)) basic_string(const _Myt &src)
+#else
 	basic_string(const _Myt &src)
+#endif
 	{
 		ptr = &empty_string;
 		count = 0;
@@ -887,7 +891,11 @@ basic_string<wchar_t>::append(const wchar_t *src, size_type len)
 
 /* Sony's build calls the char append of repeated characters everywhere rather than inlining it. */
 template<>
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) basic_string<char> &
+#else
 inline __attribute__((noinline)) basic_string<char> &
+#endif
 basic_string<char>::append(size_type len, char ch)
 {
 	char *dst = alloc.allocate(count + len + 1);

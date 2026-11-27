@@ -29,6 +29,10 @@
 using namespace sce::Vectormath::Simd;
 using namespace sce::Vectormath::Simd::Aos;
 
+#ifdef PAF_BUILD_2014
+PAF_VECTOR_INLINE_RESERVE(ui::listview::Cell *)
+#endif
+
 namespace paf {
 namespace ui {
 

@@ -38,7 +38,11 @@ static inline __attribute__((always_inline)) graph::TextObj *GetLabel(Widget *wi
 }
 
 /* defined in reverse: SNC emits a file's static functions last defined first */
+#ifdef PAF_BUILD_2014
+static __attribute__((noinline)) graph::PlaneObj *CreateImage(StateButtonBase *button)
+#else
 static graph::PlaneObj *CreateImage(StateButtonBase *button)
+#endif
 {
 	graph::PlaneObj *obj = new graph::PlaneObj(graph::PlaneObjStyle());
 	common::SharedPtr<graph::DrawObj> ptr(obj);
@@ -62,7 +66,11 @@ static graph::TextObj *CreateLabel(StateButtonBase *button)
 	return (graph::TextObj *)ptr.get();
 }
 
+#ifdef PAF_BUILD_2014
+static __attribute__((noinline)) graph::PlaneObj *CreateHighlight(StateButtonBase *button)
+#else
 static graph::PlaneObj *CreateHighlight(StateButtonBase *button)
+#endif
 {
 	graph::PlaneObj *obj = new graph::PlaneObj(graph::PlaneObjStyle());
 	common::SharedPtr<graph::DrawObj> ptr(obj);
@@ -73,7 +81,11 @@ static graph::PlaneObj *CreateHighlight(StateButtonBase *button)
 	return (graph::PlaneObj *)ptr.get();
 }
 
+#ifdef PAF_BUILD_2014
+static __attribute__((noinline)) graph::PlaneObj *CreateGlow(StateButtonBase *button)
+#else
 static graph::PlaneObj *CreateGlow(StateButtonBase *button)
+#endif
 {
 	graph::PlaneObj *obj = new graph::PlaneObj(graph::PlaneObjStyle());
 	common::SharedPtr<graph::DrawObj> ptr(obj);

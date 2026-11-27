@@ -84,11 +84,13 @@ SharedPtr<graph::arl::FrameBufferObject>::operator=(const SharedPtr &src)
 	return *this;
 }
 
+#ifndef PAF_BUILD_2014
 template<>
 inline __attribute__((noinline)) SharedPtr<graph::arl::FrameBufferObject>::~SharedPtr()
 {
 	Release();
 }
+#endif
 
 }
 

@@ -52,7 +52,19 @@ public:
 	/* Read only over buffer or [addr, addr + size); the void * and Buffer kinds are writable. */
 	static common::SharedPtr<MemFile> Open(common::SharedPtr<const Buffer> buffer, int32_t *error);
 	static common::SharedPtr<MemFile> Open(const void *addr, size_t size, int32_t *error);
+#ifdef PAF_BUILD_2014
+	static inline __attribute__((always_inline)) common::SharedPtr<MemFile> Open(
+		void *addr, size_t size, int32_t *error)
+	{
+		common::SharedPtr<MemFile> file = Open((const void *)addr, size, error);
+
+		if (file.get() != NULL)
+			file->m_is_writable = true;
+		return file;
+	}
+#else
 	static common::SharedPtr<MemFile> Open(void *addr, size_t size, int32_t *error);
+#endif
 	static common::SharedPtr<MemFile> Open(common::SharedPtr<Buffer> buffer, int32_t *error);
 
 private:
