@@ -26,9 +26,11 @@ using namespace paf::ui;
 #define PLUS_DIALOG_TEXT		0xC85BE980
 #define PLUS_DIALOG_LOCALE_ENLARGED	13
 
+#ifndef COMMON_GUI_DIALOG_2014
 /* the PlayStation Store's PlayStation Plus page, and the page that also tries it out */
 static const char s_plusUri[] = "psts:browse?target=plus";
 static const char s_plusTrialUri[] = "psts:browse?target=plus&exp=true";
+#endif
 
 /* the PlayStation Plus dialog's buttons */
 #define PLUS_DIALOG_BUTTON_CLOSE	0
@@ -61,6 +63,7 @@ static const char s_plusTrialUri[] = "psts:browse?target=plus&exp=true";
 #define LIST_DIALOG_FIT_HEIGHT		240.0f
 #define LIST_DIALOG_FIT_HEIGHT_MAX	440.0f
 
+#ifndef COMMON_GUI_DIALOG_2014
 /*
  * The PlayStation Plus dialog's handler: its join and try buttons open the store's page once the
  * dialog has closed, and every button is passed on to the caller's handler.
@@ -88,10 +91,8 @@ public:
 		} else if (button == PLUS_DIALOG_BUTTON_CANCEL) {
 			SceCommonGuiDialog_BC311DC0(value);
 		} else if (button == PLUS_DIALOG_BUTTON_CLOSE) {
-#ifndef COMMON_GUI_DIALOG_2014
 			if (m_uri != NULL)
 				sceAppMgrLaunchAppByUri(0x60000, m_uri);
-#endif
 		}
 		if (m_handler != NULL)
 			(*m_handler)(value, button);
@@ -114,7 +115,6 @@ int SceCommonGuiDialog_D6B6809B(const CommonGuiPlusDialogParam *param)
 	layoutParam.notifyClose = true;
 	layoutParam.handler = new PlusDialogHandler(param->handler);
 	id = SceCommonGuiDialog_CCFCD9A6(&layoutParam);
-#ifndef COMMON_GUI_DIALOG_2014
 	if (id >= 0 && layoutParam.resourcePlugin->m_locale == PLUS_DIALOG_LOCALE_ENLARGED) {
 		Widget *part = SceCommonGuiDialog_8947FC23(id, LIST_DIALOG_PART_ENLARGED);
 
@@ -126,9 +126,9 @@ int SceCommonGuiDialog_D6B6809B(const CommonGuiPlusDialogParam *param)
 					graph::TextStyleAttribute_EnlargeFontSize, 0, 0, false);
 		}
 	}
-#endif
 	return id;
 }
+#endif
 
 /* the dialog's heading, contents and view adjusted on the y axis as ay */
 static void SetDialogAdjustY(Widget *widget, uint32_t ay)

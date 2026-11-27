@@ -18,11 +18,15 @@ extern const CommonGuiDialogPage g_pageInternal;
 extern const CommonGuiDialogPage g_pageE872FB5D;
 extern const CommonGuiDialogPage g_page1424609E;
 extern const CommonGuiDialogPage g_page3AC06BC6;
+#ifndef COMMON_GUI_DIALOG_2014
 extern const CommonGuiDialogPage g_page04D71470;
+#endif
 
 extern const CommonGuiDialogButton g_okButtons[];
 extern const CommonGuiDialogButton g_noYesButtons[];
+#ifndef COMMON_GUI_DIALOG_2014
 extern const CommonGuiDialogButton g_04D71470Buttons[];
+#endif
 extern const CommonGuiDialogButton g_panelButtons[];
 extern const CommonGuiDialogButton g_noButtons[];
 
@@ -31,7 +35,9 @@ extern paf::ui::Dialog::PartsList g_partsInternal[];
 extern paf::ui::Dialog::PartsList g_partsE872FB5D[];
 extern paf::ui::Dialog::PartsList g_parts1424609E[];
 extern paf::ui::Dialog::PartsList g_parts3AC06BC6[];
+#ifndef COMMON_GUI_DIALOG_2014
 extern paf::ui::Dialog::PartsList g_parts04D71470[];
+#endif
 
 /* the default layout a layout dialog's parameters start with: the constant below */
 struct CommonGuiDialogLayout;
@@ -63,9 +69,11 @@ static const CommonGuiDialogLayout s_layout3AC06BC6 = {
 	&g_page3AC06BC6, g_parts3AC06BC6, g_noYesButtons
 };
 
+#ifndef COMMON_GUI_DIALOG_2014
 static const CommonGuiDialogLayout s_layout04D71470 = {
 	&g_page04D71470, g_parts04D71470, g_04D71470Buttons
 };
+#endif
 
 /* parts 9 and 10 without buttons, which SceCommonGuiDialog_F3D37CAE takes for its type 2: the
    library's one layout it does not export */

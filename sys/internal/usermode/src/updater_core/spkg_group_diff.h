@@ -30,13 +30,25 @@ private:
 	void freeTarBuffer(void);
 	int unmountTargetPartition(void);
 	int convertErrorCodeUpdateResult(int packageType, int error);
+#ifdef UPDATER_CORE_2014
+	__attribute__((noinline)) int convertErrorCodeUpdateStatus(int packageType, int error);
+#else
 	int convertErrorCodeUpdateStatus(int packageType, int error);
+#endif
 	int convertErrorCodeUpdateRequest(int packageType, int error);
 	int commitHeaderSpkg(SceUID pupFd);
 	int flushImageAndCommit(SceUID pupFd);
+#ifdef UPDATER_CORE_2014
+	__attribute__((noinline)) int convertErrorCodeGetExtract(int packageType, int error);
+#else
 	int convertErrorCodeGetExtract(int packageType, int error);
+#endif
 	int convertErrorCodeExtractResult(int packageType, int error);
+#ifdef UPDATER_CORE_2014
+	__attribute__((noinline)) int convertErrorCodeExtractStatus(int packageType, int error);
+#else
 	int convertErrorCodeExtractStatus(int packageType, int error);
+#endif
 	int convertErrorCodeExtractRequest(int packageType, int error);
 	int extractSpkg(SceUID pupFd, const SpkgEntry *entry, void *outputBuffer);
 #ifdef UPDATER_CORE_2014

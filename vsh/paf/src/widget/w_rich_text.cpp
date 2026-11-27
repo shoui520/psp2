@@ -79,6 +79,7 @@ void DeleteItems(list<_Ty *> &items)
 	items.clear();
 }
 
+#ifndef PAF_BUILD_2014
 /* what a link's widget sends its rich text when it is decided: the link */
 class LinkListener : public EventListener {
 public:
@@ -95,6 +96,7 @@ public:
 	RichText *m_owner;
 	int32_t m_link;
 };
+#endif
 
 static void *Alloc(size_t size);
 static void Free(void *ptr);
@@ -215,6 +217,7 @@ void RichText::Clear()
 	UpdateViewBox();
 }
 
+#ifndef PAF_BUILD_2014
 void RichText::LinkFocus()
 {
 	vector<Item *>::iterator prev = m_items.end();
@@ -230,7 +233,6 @@ void RichText::LinkFocus()
 		if (prev == m_items.end()) {
 			ScePafWidget_EC6175D6(widget, true);
 		} else {
-#ifndef PAF_BUILD_2014
 			int32_t dir = 0;
 			int32_t back = 1;
 
@@ -240,11 +242,11 @@ void RichText::LinkFocus()
 			}
 			widget->SetFocusDirectionWidget(dir, (*prev)->m_widget);
 			(*prev)->m_widget->SetFocusDirectionWidget(back, (*it)->m_widget);
-#endif
 		}
 		prev = it;
 	}
 }
+#endif
 
 void RichText::CreateItemWidget(Item *item)
 {
@@ -282,11 +284,14 @@ void RichText::CreateItemWidget(Item *item)
 		ImageItem *image_item = (ImageItem *)item;
 		Widget *image;
 
+#ifndef PAF_BUILD_2014
 		if (image_item->m_link >= 0) {
 			image = new PlaneButton(m_view_parent, NULL);
 			image->AddEventListener(0x10000008,
 						new LinkListener(this, image_item->m_link));
-		} else {
+		} else
+#endif
+		{
 			image = new Plane(m_view_parent, NULL);
 		}
 		item->m_widget = image;
@@ -328,7 +333,9 @@ void RichText::scroll_down(float top)
 			break;
 		--m_next_top;
 	}
+#ifndef PAF_BUILD_2014
 	LinkFocus();
+#endif
 }
 
 void RichText::scroll_up(float top)
@@ -349,7 +356,9 @@ void RichText::scroll_up(float top)
 			(*m_next_bottom)->m_widget = NULL;
 		}
 	}
+#ifndef PAF_BUILD_2014
 	LinkFocus();
+#endif
 }
 
 void RichText::SetVisibleTop(float top)
@@ -2743,6 +2752,7 @@ int32_t TextureReadyListener::Do(int32_t type, Handler *self, Event *e)
 	return 0;
 }
 
+#ifndef PAF_BUILD_2014
 int32_t LinkListener::Do(int32_t type, Handler *self, Event *e)
 {
 	int32_t index = m_link;
@@ -2753,6 +2763,7 @@ int32_t LinkListener::Do(int32_t type, Handler *self, Event *e)
 	owner->DoEvent(RichText::CB_RICH_TEXT_LINK, &link);
 	return 0;
 }
+#endif
 
 static Widget *NewRichText(Widget *parent)
 {

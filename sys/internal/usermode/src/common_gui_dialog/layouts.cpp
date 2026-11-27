@@ -35,6 +35,7 @@ static const CommonGuiDialogPage s_page25BD4084 = {
 	{ 0x3A918C2C, 0x438C7285, 0x62B94EAC }
 };
 
+#ifndef COMMON_GUI_DIALOG_2014
 static const CommonGuiDialogPage s_page95087497 = {
 	{ 0x3A918C2C, 0x438C7285, 0x172BBE55 }
 };
@@ -42,6 +43,7 @@ static const CommonGuiDialogPage s_page95087497 = {
 static const CommonGuiDialogPage s_pageEA557911 = {
 	{ 0x3A918C2C, 0x438C7285, 0x5A7AC6CF }
 };
+#endif
 
 static const CommonGuiDialogPage s_pageA0E0A437 = {
 	{ 0x3A918C2C, 0x438C7285, 0x3605C1D0 }
@@ -87,6 +89,7 @@ static const CommonGuiDialogPage s_pageF8B2D7E1 = {
 	{ 0x3A918C2C, 0x438C7285, 0x9AA18618 }
 };
 
+#ifndef COMMON_GUI_DIALOG_2014
 static const CommonGuiDialogPage s_page7D8FE85E = {
 	{ 0x3A918C2C, 0x438C7285, 0x8F4AD103 }
 };
@@ -110,6 +113,7 @@ static const CommonGuiDialogPage s_pageDEDA75E4 = {
 const CommonGuiDialogPage g_page04D71470 = {
 	{ 0x3A918C2C, 0x438C7285, 0xF6FC5F73 }
 };
+#endif
 
 #ifdef COMMON_GUI_DIALOG_2014
 #define DIALOG_PART_OFFSET	1
@@ -153,12 +157,14 @@ static const CommonGuiDialogButton s_yesNoCancelButtons[] = {
 	{ 0, 0, 0, 0 },
 };
 
+#ifndef COMMON_GUI_DIALOG_2014
 const CommonGuiDialogButton g_04D71470Buttons[] = {
 	{ 12 - DIALOG_PART_OFFSET, 0x0D47D642, 7, 0x20413274 },
 	{ 13 - DIALOG_PART_OFFSET, 0xADCD9ADF, 3, 0xC17D7980 },
 	{ 23 - DIALOG_PART_OFFSET, 0x96DA3F40, 8, 0x6622F138 },
 	{ 0, 0, 0, 0 },
 };
+#endif
 
 const CommonGuiDialogButton g_panelButtons[] = {
 	{ 8 - DIALOG_PART_OFFSET, 0x00000000, 1, 0x25D6D211 },
@@ -199,6 +205,7 @@ static Dialog::PartsList s_parts446F8B49[] = {
 	{ 0, IDParam() },
 };
 
+#ifndef COMMON_GUI_DIALOG_2014
 static Dialog::PartsList s_parts95087497[] = {
 	{ 1, IDParam((uint32_t)0xD0791765) },
 	{ 2, IDParam((uint32_t)0x66EA7A2F) },
@@ -217,6 +224,7 @@ static Dialog::PartsList s_partsEA557911[] = {
 	{ 19 - DIALOG_PART_OFFSET, IDParam((uint32_t)0x71D8557B) },
 	{ 0, IDParam() },
 };
+#endif
 
 static Dialog::PartsList s_partsA0E0A437[] = {
 	{ 1, IDParam((uint32_t)0xD0791765) },
@@ -270,6 +278,7 @@ static Dialog::PartsList s_parts3785AD25[] = {
 	{ 0, IDParam() },
 };
 
+#ifndef COMMON_GUI_DIALOG_2014
 static Dialog::PartsList s_parts7D8FE85E[] = {
 	{ 5, IDParam((uint32_t)0x2A35777A) },
 	{ 1, IDParam((uint32_t)0xD0791765) },
@@ -305,6 +314,7 @@ Dialog::PartsList g_parts04D71470[] = {
 	{ 23 - DIALOG_PART_OFFSET, IDParam((uint32_t)0xEEE519F6) },
 	{ 0, IDParam() },
 };
+#endif
 
 /* the layouts */
 const CommonGuiDialogLayout SceCommonGuiDialog_AF75CA6D = {
@@ -339,6 +349,7 @@ const CommonGuiDialogLayout SceCommonGuiDialog_25BD4084 = {
 	&s_page25BD4084, s_parts446F8B49, s_cancelButtons
 };
 
+#ifndef COMMON_GUI_DIALOG_2014
 const CommonGuiDialogLayout SceCommonGuiDialog_95087497 = {
 	&s_page95087497, s_parts95087497, s_cancelButtons
 };
@@ -346,6 +357,7 @@ const CommonGuiDialogLayout SceCommonGuiDialog_95087497 = {
 const CommonGuiDialogLayout SceCommonGuiDialog_EA557911 = {
 	&s_pageEA557911, s_partsEA557911, s_cancelButtons
 };
+#endif
 
 const CommonGuiDialogLayout SceCommonGuiDialog_A0E0A437 = {
 	&s_pageA0E0A437, s_partsA0E0A437, g_noButtons
@@ -391,6 +403,7 @@ const CommonGuiDialogLayout SceCommonGuiDialog_F8B2D7E1 = {
 	&s_pageF8B2D7E1, g_partsAF75CA6D, s_cancelButtons
 };
 
+#ifndef COMMON_GUI_DIALOG_2014
 const CommonGuiDialogLayout SceCommonGuiDialog_7D8FE85E = {
 	&s_page7D8FE85E, s_parts7D8FE85E, g_okButtons
 };
@@ -414,4 +427,5 @@ const CommonGuiDialogLayout SceCommonGuiDialog_DEDA75E4 = {
 const CommonGuiDialogLayout SceCommonGuiDialog_04D71470 = {
 	&g_page04D71470, g_parts04D71470, g_04D71470Buttons
 };
+#endif
 

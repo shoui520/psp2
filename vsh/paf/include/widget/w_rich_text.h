@@ -586,8 +586,10 @@ public:
 
 	/* the view box sized to the contents */
 	void UpdateViewBox();
+#ifndef PAF_BUILD_2014
 	/* the links' focus directions set among them */
 	void LinkFocus();
+#endif
 	/* the item's widget made */
 	void CreateItemWidget(Item *item);
 	int32_t StartLayout();
