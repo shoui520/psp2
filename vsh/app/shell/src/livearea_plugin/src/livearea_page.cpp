@@ -14,7 +14,7 @@ extern "C" {
 int SceShell_7FE4E732(int id, void *callback, void *arg);
 int SceShell_D4C7D2B7(int id, void *callback, void *arg);
 int SceShell_E3D3A162(int id, void *callback, void *arg);
-void SceShell_83D16CA8(void);
+int SceShell_83D16CA8(int id, void *callback, void *arg);
 }
 
 static paf::list<LiveAreaPage *> s_pages;			/* 0x815670F4 */
@@ -67,6 +67,8 @@ LiveAreaPage::LiveAreaPage(int pageKey, const char *titleId, const char *content
 		paf::math::v2 margin(0.0f, 192.0f);
 		m_fileList->SetGenerateMargin(margin);
 		m_fileList->SetBarFadeTime(0.0001f);
+		m_fileList->AddDeleteCB(liveareaPageOnDestroyCb, this);
+		m_fileList->AddEventCallback(0x10000001, liveareaPageOnScrollEvent, this);
 		paf::ui::ScrollViewScrollParam scrollParam;
 		scrollParam.m_value[0] = 16.0f;
 		scrollParam.m_value[1] = 16.0f;
@@ -80,7 +82,7 @@ LiveAreaPage::LiveAreaPage(int pageKey, const char *titleId, const char *content
 	topmenuIf->addPageShowListener(pageKey, (void *)liveareaPageOnShowCb, this);
 	topmenuIf->addPageHideListener(pageKey, (void *)liveareaPageOnHideCb, this);
 	SceShell_7FE4E732(7, (void *)liveareaPageOnHomeReturnCb, this);
-	SceShell_83D16CA8();
+	SceShell_83D16CA8(6, (void *)liveareaPageOnAppUpdatedCb, this);
 
 	if (liveareaMgrIsPendingLaunch(m_titleId.c_str()))
 		m_pendingScroll = true;

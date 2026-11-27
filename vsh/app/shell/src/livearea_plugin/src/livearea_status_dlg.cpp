@@ -8,45 +8,37 @@
 extern "C" void ScePafAutoTestTty_9E10E873(int32_t type, const char *format, ...);
 #endif
 
-static void liveareaStatusDlgTimerCb(int eventId, int eventArg, int eventData, int dlgId); /* 0x811A122E */
+static void liveareaStatusDlgTimerCb(int eventId, paf::ui::Handler *handler,
+				     paf::ui::Event *event, void *userdata); /* 0x811A122E */
 
 /* 0x811A078C */
-LiveAreaStatusDlg::LiveAreaStatusDlg(int *pageKeyPtr, paf::ui::Widget *parent,
-				     ActivityRecord **record, int displayMode,
-				     paf::common::SharedPtr<int> *feedContext,
-				     paf::common::SharedPtr<SceUInt64> *lastReadTime,
-				     paf::cache::CacheImageInterface **iconRef)
-	: m_pageKey(pageKeyPtr != NULL ? *pageKeyPtr : -1),
+LiveAreaStatusDlg::LiveAreaStatusDlg(
+	int *pageKeyPtr, paf::ui::Widget *parent,
+	const paf::intrusive_ptr<filelist::Live2Record> &record,
+	int displayMode,
+	const paf::common::SharedPtr<filelist::Live2AccessorProxy> &accessorProxy,
+	const paf::common::SharedPtr<SceUInt64> &lastReadTime,
+	const paf::intrusive_ptr<paf::cache::CacheImageInterface> &iconRef)
+	: filelist::ActivityStatusDialog(
+		  parent, g_liveareaPlugin, g_liveareaCache->m_manager,
+		  record, displayMode, accessorProxy,
+		  paf::common::SharedPtr<filelist::Live2VisualizerFactory>(
+			  new LiveAreaSubVisualizer(record, lastReadTime))),
+	  m_pageKey(pageKeyPtr != NULL ? *pageKeyPtr : -1),
 	  m_locked(false),
 	  m_lockRequested(false),
-	  m_lastReadTime(*lastReadTime),
-	  m_iconRef(*iconRef),
-	  m_ownerContext(),
+	  m_lastReadTime(lastReadTime),
+	  m_iconRef(iconRef),
+	  m_ownerAccessor(),
 	  m_titleId(),
 	  m_showUnreadBadge(false),
 	  m_forceGameIcon(false)
 {
-	void *subVisMem = operator new(24);
-	LiveAreaSubVisualizer *subVis = NULL;
-	if (subVisMem != NULL) {
-		ActivityRecord *rec = *record;
-		if (rec != NULL)
-			rec->AddRef();
-		subVis = liveareaSubVisualizerCtor(subVisMem, &rec, lastReadTime);
-		if (rec != NULL)
-			rec->Release();
-	}
-	paf::common::SharedPtr<LiveAreaSubVisualizer> subVisRef(subVis);
-	activityUiStatusDlgBaseCtor(this, parent, g_liveareaPlugin, g_liveareaCache->m_manager,
-				    record, displayMode, feedContext, &subVisRef);
-
-	if (m_iconRef != NULL)
-		m_iconRef->AddRef();
 	g_liveareaMgr->m_topmenuIf->setScrollEnabled(0);
 }
 
 /* 0x811A09E8 */
-void LiveAreaStatusDlg::UnlockFeed()
+void LiveAreaStatusDlg::OnDialogClosed()
 {
 	LiveAreaPage *page = liveareaPageFindByAppId(m_pageKey);
 	if (page != NULL && page->m_feed != NULL && m_locked) {
@@ -63,27 +55,19 @@ void LiveAreaStatusDlg::UnlockFeed()
 /* 0x811A0A14 / 0x811A0B4C */
 LiveAreaStatusDlg::~LiveAreaStatusDlg()
 {
-	UnlockFeed();
+	OnDialogClosed();
 	g_liveareaMgr->m_topmenuIf->setScrollEnabled(1);
-	if (m_iconRef != NULL)
-		m_iconRef->Release();
-	activityUiStatusDlgBaseDtor(this);
 }
 
 /* 0x811A0B5C */
 void LiveAreaStatusDlg::SetupIcon()
 {
-	ActivityRecord *record = m_record;
-	if (record != NULL)
-		record->AddRef();
-	int category = activityUiGetItemCategory(&record);
-	if (record != NULL)
-		record->Release();
-	if (category != 2)
+	int category = filelist::BaseActivityVisualizer::ClassifyUriCategory(m_record);
+	if (category != filelist::ACTIVITY_URI_CATEGORY_GAME)
 		return;
 
 	paf::IDParam actionContainerId(526555210U);
-	paf::ui::Widget *actionContainer = m_contentRoot->FindChild(actionContainerId, 0);
+	paf::ui::Widget *actionContainer = m_listView->FindChild(actionContainerId, 0);
 	if (actionContainer == NULL)
 		return;
 	paf::IDParam iconWidgetId((uint32_t)-1145406561);
@@ -92,21 +76,15 @@ void LiveAreaStatusDlg::SetupIcon()
 		return;
 
 	bool showIcon = m_forceGameIcon;
-	if (!showIcon) {
-		ActivityRecord *checkRec = m_record;
-		if (checkRec != NULL)
-			checkRec->AddRef();
-		showIcon = (liveareaIsGamePlayUri(&checkRec) != 0);
-		if (checkRec != NULL)
-			checkRec->Release();
-	}
+	if (!showIcon)
+		showIcon = (liveareaIsGamePlayUri(m_record) != 0);
 
 	if (!showIcon) {
 		ScePafWidget_4588699E(iconWidget, NULL, 2, 0.0f, NULL);
 		return;
 	}
 
-	if (m_displayMode == 1 && m_iconRef != NULL) {
+	if (m_displayMode == 1 && m_iconRef.get() != NULL) {
 		paf::IDParam texId((uint32_t)-375432280);
 		paf::intrusive_ptr<paf::graph::Surface> surf =
 			paf::Framework::Instance()->GetCommonTexture(texId);
@@ -115,7 +93,7 @@ void LiveAreaStatusDlg::SetupIcon()
 }
 
 /* 0x811A0E32 */
-int LiveAreaStatusDlg::LockFeed()
+void LiveAreaStatusDlg::OnDialogOpened()
 {
 	LiveAreaPage *page = liveareaPageFindByAppId(m_pageKey);
 	if (page != NULL && page->m_feed != NULL) {
@@ -124,37 +102,42 @@ int LiveAreaStatusDlg::LockFeed()
 	}
 	m_lockRequested = true;
 #if !defined(FW_TYPE_CEX)
-	if (page != NULL && page->m_isActive)
+	if (page != NULL && page->m_isActive && m_record.get() != NULL)
 		ScePafAutoTestTty_9E10E873(1, "/livespace/livearea_%s/activity/comment_%lld",
 					   page->m_titleId.c_str(),
-					   m_record->m_activityId);
+					   m_record->m_rowid);
 #endif
-	return 1;
 }
 
 /* 0x811A0E5A */
-void LiveAreaStatusDlg::BindContext(paf::common::SharedPtr<int> *ownerContext, const char *titleId)
+void LiveAreaStatusDlg::BindContext(
+	const paf::common::SharedPtr<filelist::Live2Accessor> &ownerAccessor,
+	const char *titleId)
 {
-	m_ownerContext = *ownerContext;
+	m_ownerAccessor = ownerAccessor;
 	m_titleId = titleId;
+	if (m_dialogRoot != NULL) {
+		m_dialogRoot->SetIntervalEvent(
+			0x2000123, 16.0f, &liveareaStatusDlgTimerCb,
+			reinterpret_cast<void *>(static_cast<intptr_t>(m_dialogId)));
+	}
 }
 
 /* 0x811A0F4E */
 bool LiveAreaStatusDlg::IsUnread()
 {
-	ActivityRecord *record = m_record;
-	if (record != NULL)
-		record->AddRef();
-	bool unread = false;
-	if (record->GetRecordKind() == 1)
-		unread = (*m_lastReadTime.get() < record->m_updateTimestamp);
-	if (record != NULL)
-		record->Release();
-	return unread;
+	if (m_record.get() != NULL &&
+	    m_record->GetRecordKind() == filelist::LIVE2_RECORD_STATUS) {
+		filelist::Live2StatusRecord *statusRec =
+			static_cast<filelist::Live2StatusRecord *>(m_record.get());
+		return (*m_lastReadTime.get() <
+			static_cast<SceUInt64>(statusRec->m_status.updateTime));
+	}
+	return false;
 }
 
 /* 0x811A0F98 */
-bool LiveAreaStatusDlg::GetShowUnreadBadge()
+bool LiveAreaStatusDlg::ShouldShowTitleName()
 {
 	return m_showUnreadBadge;
 }
@@ -177,50 +160,61 @@ void LiveAreaStatusDlg::SetForceGameIcon(bool force)
 }
 
 /* 0x811A0FAC */
-int LiveAreaStatusDlg::TriggerSysUpdate()
+bool LiveAreaStatusDlg::HandleSysUpdateError(int errorCode)
 {
+	(void)errorCode;
 	liveareaFeedHandleSysUpdateErr((int)0x80550D12);
-	return 1;
+	return true;
+}
+
+/* 0x81409E2C */
+int LiveAreaStatusDlg::GetVoteQueryType()
+{
+	return 0;
 }
 
 /* 0x811A0FBE */
-const paf::IDParam &LiveAreaStatusDlg::GetDialogTemplateId()
+const paf::IDParam &LiveAreaStatusDlg::GetBackButtonTemplateId()
 {
 	static paf::IDParam s_templateId((uint32_t)-337631049);
 	return s_templateId;
 }
 
 /* 0x811A105A */
-const paf::IDParam &LiveAreaStatusDlg::GetDialogRootId()
+const paf::IDParam &LiveAreaStatusDlg::GetOptionButtonTemplateId()
 {
 	static paf::IDParam s_rootId(1483096796U);
 	return s_rootId;
 }
 
 /* 0x811A10F6 */
-const paf::IDParam &LiveAreaStatusDlg::GetContentRootId()
+const paf::IDParam &LiveAreaStatusDlg::GetBackButtonId()
 {
 	static paf::IDParam s_contentId(617383319U);
 	return s_contentId;
 }
 
 /* 0x811A1192 */
-const paf::IDParam &LiveAreaStatusDlg::GetSubListId()
+const paf::IDParam &LiveAreaStatusDlg::GetOptionButtonId()
 {
 	static paf::IDParam s_subListId(1389538884U);
 	return s_subListId;
 }
 
 /* 0x811A122E */
-static void liveareaStatusDlgTimerCb(int eventId, int eventArg, int eventData, int dlgId)
+static void liveareaStatusDlgTimerCb(int eventId, paf::ui::Handler *handler,
+				     paf::ui::Event *event, void *userdata)
 {
 	(void)eventId;
-	(void)eventArg;
-	(void)eventData;
-	LiveAreaStatusDlg *dlg = (LiveAreaStatusDlg *)activityUiFindDialogById(dlgId);
+	(void)handler;
+	(void)event;
+	int dlgId = static_cast<int>(reinterpret_cast<intptr_t>(userdata));
+	LiveAreaStatusDlg *dlg =
+		static_cast<LiveAreaStatusDlg *>(filelist::activityUiFindDialogById(dlgId));
 	if (dlg == NULL)
 		return;
-	activityUiRefreshContext(&dlg->m_ownerContext);
+	if (dlg->m_ownerAccessor.get() != NULL)
+		dlg->m_ownerAccessor->MarkDirty();
 	LiveAreaPage *page = liveareaPageFindByTitleId(dlg->m_titleId.c_str());
 	if (page == NULL || !page->m_isActive || page->m_feed == NULL)
 		return;
@@ -230,7 +224,7 @@ static void liveareaStatusDlgTimerCb(int eventId, int eventArg, int eventData, i
 		dlg->m_pageKey = page->m_pageKey;
 		page->m_feed->SetDialogId(dlg->m_dialogId);
 		if (dlg->m_lockRequested)
-			dlg->LockFeed();
+			dlg->OnDialogOpened();
 	}
 	paf::ui::Widget *rootWidget = page->m_rootWidget;
 	if (rootWidget->GetWorldMatrix().w().extract_x() == 0.0f &&

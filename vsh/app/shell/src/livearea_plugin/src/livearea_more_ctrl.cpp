@@ -86,30 +86,26 @@ void LiveAreaMoreCtrl::SetState(int state, paf::ui::Widget *header)
 /* 0x811A1AF2 */
 void LiveAreaMoreCtrl::Enable()
 {
-	paf::ui::filelist::SegmentSource *segSrc = m_fileList->m_segment_source.get();
-	if (segSrc != NULL) {
-		segSrc->AddRef();
-		paf::common::RefObj *nullCell = NULL;
+	paf::intrusive_ptr<filelist::BasicSegmentSource> segSrc(
+		static_cast<filelist::BasicSegmentSource *>(m_fileList->m_segment_source.get()));
+	if (segSrc.get() != NULL) {
+		paf::intrusive_ptr<paf::ui::filelist::CellSource> nullCell;
 		paf::ui::filelist::SegmentListAccessor::OptionParam option;
 		sce_paf_memset(&option, 0, sizeof(option));
 		option.m_joined = true;
-		activityUiSegmentSetCell(segSrc, m_segmentIndex, &nullCell, &option);
-		if (nullCell != NULL)
-			nullCell->Release();
+		segSrc->InsertSegment(m_segmentIndex, nullCell, option);
 		SetState(0, NULL);
-		segSrc->Release();
 	}
 }
 
 /* 0x811A1B76 */
 void LiveAreaMoreCtrl::Disable()
 {
-	paf::ui::filelist::SegmentSource *segSrc = m_fileList->m_segment_source.get();
-	if (segSrc != NULL) {
-		segSrc->AddRef();
-		activityUiSegmentRemoveCell(segSrc, m_segmentIndex);
+	paf::intrusive_ptr<filelist::BasicSegmentSource> segSrc(
+		static_cast<filelist::BasicSegmentSource *>(m_fileList->m_segment_source.get()));
+	if (segSrc.get() != NULL) {
+		segSrc->RemoveSegment(m_segmentIndex);
 		SetState(0, NULL);
-		segSrc->Release();
 	}
 }
 

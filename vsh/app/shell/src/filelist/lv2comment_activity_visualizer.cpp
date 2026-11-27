@@ -619,38 +619,6 @@ PafVec4 Lv2CommentVisualizerFactory::GetVisualSize()
 	return PafVec4(832.0f, 110.0f, 0.0f, 0.0f);
 }
 
-} /* namespace filelist */
-
-class ActivitySubItemBase;
-class ActivitySubVisualizerBase;
-class ActivityRecord;
-
-void activityUiSubItemBaseCtor(ActivitySubItemBase *self, int itemType, paf::Plugin *plugin,
-			       paf::cache::CacheManager *cacheManager,
-			       paf::common::SharedPtr<int> *context)
-{
-	void *savedVptr = *reinterpret_cast<void **>(self);
-	paf::intrusive_ptr<filelist::Live2Record> emptyParent;
-	new (self) filelist::Lv2CommentActivityVisualizer(
-		reinterpret_cast<paf::ui::Widget *>(itemType), plugin, cacheManager,
-		*reinterpret_cast<const paf::common::SharedPtr<filelist::Live2Iterator> *>(context),
-		0, emptyParent);
-	*reinterpret_cast<void **>(self) = savedVptr;
-}
-
-void activityUiSubVisualizerBaseCtor(ActivitySubVisualizerBase *self, paf::Plugin *plugin,
-				     paf::cache::CacheManager *cacheManager,
-				     ActivityRecord **record)
-{
-	void *savedVptr = *reinterpret_cast<void **>(self);
-	paf::intrusive_ptr<filelist::Live2Record> recRef(
-		record != NULL ? reinterpret_cast<filelist::Live2Record *>(*record) : NULL);
-	new (self) filelist::Lv2CommentVisualizerFactory(plugin, cacheManager, recRef);
-	*reinterpret_cast<void **>(self) = savedVptr;
-}
-
-namespace filelist {
-
 /* -------------------------------------------------------------------------- */
 /* ActivityBusyFooter                                                         */
 /* -------------------------------------------------------------------------- */

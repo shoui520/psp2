@@ -135,19 +135,23 @@ void GetStatusInfoJob::Finish(int result)
 		condition.titleId = m_titleId;
 		condition.limit = 0;
 
-		paf::common::SharedPtr<int> ownerContext;
-		paf::common::SharedPtr<int> feedContext;
-		activityUiCreateStatusContexts(&feedContext, &ownerContext, &condition);
+		paf::common::SharedPtr<filelist::Live2AccessorProxy> accessorProxy;
+		paf::common::SharedPtr<filelist::Live2Accessor> ownerAccessor;
+		filelist::activityUiCreateStatusContexts(&accessorProxy, &ownerAccessor, &condition);
 
-		ActivityRecord *record = NULL;
-		paf::cache::CacheImageInterface *nullIcon = NULL;
-		LiveAreaStatusDlg *dlg = new LiveAreaStatusDlg(NULL, overlay, &record, 3,
-							       &feedContext, &lastReadRef, &nullIcon);
+		paf::intrusive_ptr<filelist::Live2StatusRecord> statusRec(
+			new filelist::Live2StatusRecord());
+		statusRec->m_rowid = m_items[0].rowid;
+		statusRec->m_status = m_items[0];
+		paf::intrusive_ptr<filelist::Live2Record> record(statusRec.get());
+		paf::intrusive_ptr<paf::cache::CacheImageInterface> nullIcon;
+		LiveAreaStatusDlg *dlg = new LiveAreaStatusDlg(NULL, overlay, record, 3,
+							       accessorProxy, lastReadRef, nullIcon);
 		if (dlg != NULL) {
-			activityUiStatusDlgOpen(dlg, NULL);
+			dlg->Open(NULL);
 			dlg->SetupIcon();
 			s_statusDlgId = dlg->m_dialogId;
-			dlg->BindContext(&ownerContext, m_titleId.c_str());
+			dlg->BindContext(ownerAccessor, m_titleId.c_str());
 			return;
 		}
 		overlay->DestroyWidget();

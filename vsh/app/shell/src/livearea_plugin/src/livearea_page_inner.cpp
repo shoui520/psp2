@@ -394,22 +394,18 @@ LiveAreaPageInner::~LiveAreaPageInner()
 void LiveAreaPageInner::Init()
 {
 	paf::ui::FileList *fileList = m_page->m_fileList;
-	paf::ui::filelist::SegmentSource *segSrc = filelist::createBasicSegmentSource();
-	segSrc->AddRef();
-	paf::common::SharedPtr<paf::ui::filelist::Visualizer> bgVis(liveareaCreateBgFactory());
-	paf::common::RefObj *cellSrc = activityUiCreateSingleCellSource();
-	if (cellSrc != NULL)
-		cellSrc->AddRef();
+	paf::intrusive_ptr<filelist::BasicSegmentSource> segSrc(new filelist::BasicSegmentSource());
+	paf::common::SharedPtr<filelist::NullVisualizerFactory> bgFactory(liveareaCreateBgFactory());
+	paf::intrusive_ptr<paf::ui::filelist::CellSource> cellSrc(
+		new filelist::NullCellSource(bgFactory, 1));
 
 	paf::ui::filelist::SegmentListAccessor::OptionParam option;
 	sce_paf_memset(&option, 0, sizeof(option));
 	option.m_header_disappearance = true;
-	activityUiSegmentSetCell(segSrc, 0, &cellSrc, &option);
+	segSrc->InsertSegment(0, cellSrc, option);
+	paf::intrusive_ptr<paf::ui::filelist::SegmentSource> baseSegSrc(segSrc.get());
+	fileList->SetSegmentSource(baseSegSrc);
 	fileList->SetSegmentLayoutType(0, paf::ui::ListView::LAYOUT_TYPE_LIST);
-
-	if (cellSrc != NULL)
-		cellSrc->Release();
-	segSrc->Release();
 
 	paf::common::SharedPtr<paf::job::JobItem> job;
 	liveareaEnqueueContentParserJob(&job, this, m_xmlPath.c_str(), NULL, 0, 0, -1, 1);

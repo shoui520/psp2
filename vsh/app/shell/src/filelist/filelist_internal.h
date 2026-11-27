@@ -46,7 +46,7 @@ typedef __typeof__(static_cast<paf::ui::Widget *>(NULL)->m_pos) PafVec4;
 
 extern "C" {
 int sceAppMgrLaunchAppByName(unsigned int flags, const char *name, const char *param);
-int sceAppMgrLaunchAppByUri(unsigned int flags, const char *uri);
+int sceAppMgrLaunchAppByUri(int flags, const char *uri);
 int sceAppMgrWorkDirMount(int id, char *mountPoint);
 int sceAppMgrUmount(const char *mountPoint);
 int sceRtcFormatRFC3339(char *outBuf, const SceRtcTick *utcTick, int tzOffsetMinutes);
@@ -171,15 +171,9 @@ static inline int SceActivityDb_2A7ABB45(void *syncHandle, const SceInt64 *statu
 }
 
 #include "../activity_drawobj/activity_drawobj.h"
+#include "../../plugins.h"
 
 /* External shell helpers used by the filelist / activity UI framework */
-extern paf::wstring shellTickText(const paf::rtc::Tick *tick, bool flag);
-extern paf::wstring shellFormatText(const wchar_t *format, const wchar_t *first = L"",
-				    const wchar_t *second = L"", const wchar_t *third = L"",
-				    const wchar_t *fourth = L"", const wchar_t *fifth = L"",
-				    const wchar_t *sixth = L"", const wchar_t *seventh = L"",
-				    const wchar_t *eighth = L"", const wchar_t *ninth = L"",
-				    const wchar_t *tenth = L"", const wchar_t *eleventh = L"");
 extern paf::job::JobQueue *activityUiGetNetworkJobQueue(void);
 extern void activityUiDialogManagerInit(void);
 extern void activityUiDialogManagerTerm(void);
@@ -843,15 +837,36 @@ public:
 			     const paf::common::SharedPtr<Live2VisualizerFactory> &commentFactory);
 	virtual ~ActivityStatusDialog();
 
-	virtual void OnStatusActionDecide(int eventId, paf::ui::Handler *handler,
-					  paf::ui::Event *event);
-	virtual bool CustomizeStatusActionIcon(paf::ui::Widget *iconWidget);
-	virtual void Open(paf::ui::ListItem *anchorItem);
-	virtual void Close();
-	virtual void CloseWithReason(int reason);
+	virtual bool HandleSysUpdateError(int errorCode);
+	virtual int GetVoteQueryType();
+	virtual void OnAvatarDecide();
+	virtual void OnStatusActionDecide();
+	virtual void OnBackButtonDecide();
+	virtual void OpenStatusOptionMenu(paf::ui::Widget *anchorWidget);
+	virtual void OnSendComment();
+	virtual void OnCommentBoxBeginEdit(paf::ui::Widget *textBox);
+	virtual void OnCommentBoxEndEdit(paf::ui::Widget *textBox);
+	virtual float GetDialogHeight();
+	virtual float GetDialogCenterY();
+	virtual float GetListViewHeight();
+	virtual bool ShouldAnimateOpen();
+	virtual bool ShouldAnimateClose();
+	virtual bool IsUnread();
 	virtual bool ShouldShowTitleName();
-	virtual void OnBackPressed();
+	virtual bool UseWideCommentBox();
+	virtual bool HasBackButton();
+	virtual bool HasOptionButton();
+	virtual const paf::IDParam &GetBackButtonTemplateId();
+	virtual const paf::IDParam &GetOptionButtonTemplateId();
+	virtual const paf::IDParam &GetBackButtonId();
+	virtual const paf::IDParam &GetOptionButtonId();
+	virtual void OnDialogOpened();
+	virtual void OnDialogClosed();
 
+	void Open(paf::ui::ListItem *anchorItem);
+	void Close();
+	void CloseWithReason(int reason);
+	bool CustomizeStatusActionIcon(paf::ui::Widget *iconWidget);
 	void SetupPanel();
 	void SetupHeader(paf::ui::Widget *headerWidget);
 	void SetupCommentList(const paf::common::SharedPtr<Live2AccessorProxy> &accessorProxy,
@@ -875,7 +890,6 @@ public:
 				   Lv2CommentActivityVisualizer *visualizer);
 	void OpenDeleteOrReportCommentMenu(paf::ui::Widget *anchorWidget,
 					   Lv2CommentActivityVisualizer *visualizer);
-	void OpenStatusOptionMenu(paf::ui::Widget *anchorWidget);
 	void ShowDeleteStatusConfirmDialog();
 	void ShowDeleteCommentConfirmDialog(const paf::intrusive_ptr<Live2Record> &commentRecord);
 	void ShowErrorDialog(int errorCode, bool closeStatusDialogOnDismiss);
@@ -883,11 +897,8 @@ public:
 	void StartDeleteStatus();
 	void StartDeleteComment(const paf::intrusive_ptr<Live2Record> &commentRecord);
 	void StartGriefReport(const paf::intrusive_ptr<Live2Record> &commentRecord);
-	void OnSendComment();
 	void OnVoteGoodJob();
 	void OnCancelGoodJob();
-	void OnCommentBoxBeginEdit(paf::ui::Widget *textBox);
-	void OnCommentBoxEndEdit(paf::ui::Widget *textBox);
 	void SetInputEnabled(bool enabled);
 	void StartPostCommentAnimation(paf::ui::Widget *commentWidget);
 	void UpdateDialogLayout();
@@ -1029,6 +1040,9 @@ void activityUiOpenDeleteOrReportCommentMenu(const SceInt64 *statusRowid,
 					     Lv2CommentActivityVisualizer *visualizer);
 void activityUiInitFileList(paf::ui::FileList *fileList);
 void activityUiCloseDialog(int dialogId);
+void activityUiCreateStatusContexts(paf::common::SharedPtr<Live2AccessorProxy> *outProxy,
+				    paf::common::SharedPtr<Live2Accessor> *outAccessor,
+				    const ActivityDbQueryCondition *condition);
 
 /* Activity grief report export helpers (grief_report.cpp) */
 int activityGriefReportBegin(const ActivityDbStatus *status, const ActivityDbComment *comment);
@@ -1044,5 +1058,8 @@ void activityUiSetNetCallbacks(void (*acquireFn)(void), void (*releaseFn)(void),
 			       void (*connectFn)(void));
 void activityUiSetDialogPriority(int priority);
 void activityUiEnqueueCacheInfoJob(void);
+void activityUiCloseDialog(void);
+void activityUiCloseDialogFast(void);
+int activityUiIsDialogActive(void);
 
 #endif /* SHELL_FILELIST_INTERNAL_H */

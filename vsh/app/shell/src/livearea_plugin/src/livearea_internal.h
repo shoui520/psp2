@@ -30,6 +30,7 @@
 #include "../../livespace_db/lsdb_keys.h"
 #include "../../livespace_db/livearea.h"
 #include "../../livespace_db/livespace_db_internal.h"
+#include "../../filelist/filelist_internal.h"
 #include "../../../plugins.h"
 #include "livearea_interface.h"
 
@@ -232,90 +233,39 @@ public:
 	paf::cache::CacheManager *m_manager;
 };
 
-/*
- * Activity feed UI base classes (defined in 0x81348E94 - 0x8135D814).
- */
-class ShellListItemBase : public paf::common::RefObj {
+class LiveAreaFeedVisualizer : public filelist::Lv1StatusVisualizerFactory {
 public:
-	paf::ui::ListItem *m_listItem;				/* +0x08 */
-	paf::Plugin *m_plugin;					/* +0x0C */
-	paf::graph::SurfacePool *m_surfacePool;			/* +0x10 */
-	paf::common::JobSlots m_itemJobSlots;			/* +0x14 (24 bytes -> +0x2C) */
+	LiveAreaFeedVisualizer(const paf::common::SharedPtr<SceUInt64> &lastReadTime,
+			       const paf::intrusive_ptr<paf::cache::CacheImageInterface> &iconRef); /* 0x811A240E */
+	virtual ~LiveAreaFeedVisualizer();			/* 0x811A2476 / 0x811A24F0 */
+
+	virtual paf::intrusive_ptr<paf::ui::filelist::Visualizer> CreateVisualizer(
+		paf::ui::Widget *parent,
+		const paf::common::SharedPtr<filelist::Live2Iterator> &iterator,
+		int index, SceInt64 cellId);			/* 0x811A2500 */
+
+	void SetShowUnreadBadge(bool show);			/* 0x811A25B0 */
+	bool GetShowUnreadBadge();				/* 0x811A25B4 */
+	void SetForceGameIcon(bool force);			/* 0x811A25B8 */
+
+	paf::common::SharedPtr<SceUInt64> m_lastReadTime;	/* +0x0C */
+	paf::intrusive_ptr<paf::cache::CacheImageInterface> m_iconRef; /* +0x14 */
+	bool m_showUnreadBadge;					/* +0x18 */
+	bool m_forceGameIcon;					/* +0x19 */
 };
 
-struct ActivityRecord : public paf::common::RefObj {
-	virtual int GetRecordKind() = 0;			/* slot 2 (+0x08) */
-	SceInt64 m_activityId;					/* +0x08 */
-	unsigned char recordHeaderPadding[32];			/* +0x10..+0x2F */
-	SceUInt64 m_updateTimestamp;				/* +0x30 */
-	unsigned char recordMiddlePadding[64];			/* +0x38..+0x77 */
-	int m_commentCount;					/* +0x78 */
-	int m_actionPadding;					/* +0x7C */
-	paf::string m_actionUri;				/* +0x80 */
-};
-
-struct ActivityFeedCellSource : public paf::common::RefObj {
-	unsigned char cellHeaderPadding[68];			/* +0x08..+0x4B */
-	int m_totalCount;					/* +0x4C */
-	SceUInt64 m_lastReadTime;				/* +0x50 */
-	SceUInt64 m_lastUpdateTime;				/* +0x58 */
-	SceUInt64 m_latestActivityTime;				/* +0x60 */
-};
-
-class ActivityItemBase : public ShellListItemBase {
+class LiveAreaSubVisualizer : public filelist::Lv2CommentVisualizerFactory {
 public:
-	paf::common::JobSlots m_feedJobSlots;			/* +0x2C (24 bytes -> +0x44) */
-	ActivityRecord *m_record;				/* +0x44 */
-	paf::common::SharedPtr<int> m_feedContext;		/* +0x48 */
-	SceInt64 m_itemKey;					/* +0x50 */
-	bool m_isInitialized;					/* +0x58 */
-	unsigned char initPadding[3];				/* +0x59..+0x5B */
-	paf::cache::CacheManager *m_cacheManager;		/* +0x5C */
-	int m_displayMode;					/* +0x60 */
-	int m_statusIndex;					/* +0x64 */
-};
+	LiveAreaSubVisualizer(const paf::intrusive_ptr<filelist::Live2Record> &parentRecord,
+			      const paf::common::SharedPtr<SceUInt64> &lastReadTime); /* 0x811A272C */
+	virtual ~LiveAreaSubVisualizer();			/* 0x811A27BE / 0x811A2842 */
 
-class ActivityFeedItemBase : public ActivityItemBase {
-public:
-	void *m_feedItemExtra;					/* +0x68 */
-};
+	virtual paf::intrusive_ptr<paf::ui::filelist::Visualizer> CreateVisualizer(
+		paf::ui::Widget *parent,
+		const paf::common::SharedPtr<filelist::Live2Iterator> &iterator,
+		int index, SceInt64 cellId);			/* 0x811A2852 */
 
-class ActivitySubItemBase : public ActivityItemBase {
-public:
-	ActivityRecord *m_parentRecord;				/* +0x68 */
-};
-
-class ActivityFeedVisualizerBase {
-public:
-	virtual ~ActivityFeedVisualizerBase() {}
-
-	paf::Plugin *m_plugin;					/* +0x04 */
-	paf::cache::CacheManager *m_cacheManager;		/* +0x08 */
-};
-
-class ActivitySubVisualizerBase {
-public:
-	virtual ~ActivitySubVisualizerBase() {}
-
-	paf::Plugin *m_plugin;					/* +0x04 */
-	paf::cache::CacheManager *m_cacheManager;		/* +0x08 */
-	ActivityRecord *m_parentRecord;				/* +0x0C */
-};
-
-class ActivityStatusDlgBase {
-public:
-	virtual ~ActivityStatusDlgBase() {}
-
-	int m_dialogId;						/* +0x04 */
-	paf::Plugin *m_plugin;					/* +0x08 */
-	unsigned char statusHelperBytes[20];			/* +0x0C..+0x1F */
-	paf::cache::CacheManager *m_cacheManager;		/* +0x20 */
-	ActivityRecord *m_record;				/* +0x24 */
-	int m_displayMode;					/* +0x28 */
-	paf::ui::Widget *m_dialogRoot;				/* +0x2C */
-	paf::ui::Widget *m_contentRoot;				/* +0x30 */
-	paf::common::JobSlots m_dialogJobSlots;			/* +0x34 (24 bytes -> +0x4C) */
-	unsigned char activityClientBytes[116];			/* +0x4C..+0xBF */
+	paf::common::SharedPtr<SceUInt64> m_lastReadTime;	/* +0x10 */
 };
 
 class LiveAreaMoreCtrl {
@@ -540,37 +490,41 @@ public:
 	paf::vector<LiveAreaNewsEntry> m_news;			/* +0x70 */
 };
 
-class LiveAreaStatusDlg : public ActivityStatusDlgBase {
+class LiveAreaStatusDlg : public filelist::ActivityStatusDialog {
 public:
-	LiveAreaStatusDlg(int *pageKeyPtr, paf::ui::Widget *parent, ActivityRecord **record,
-			  int displayMode, paf::common::SharedPtr<int> *feedContext,
-			  paf::common::SharedPtr<SceUInt64> *lastReadTime,
-			  paf::cache::CacheImageInterface **iconRef); /* 0x811A078C */
+	LiveAreaStatusDlg(int *pageKeyPtr, paf::ui::Widget *parent,
+			  const paf::intrusive_ptr<filelist::Live2Record> &record,
+			  int displayMode,
+			  const paf::common::SharedPtr<filelist::Live2AccessorProxy> &accessorProxy,
+			  const paf::common::SharedPtr<SceUInt64> &lastReadTime,
+			  const paf::intrusive_ptr<paf::cache::CacheImageInterface> &iconRef); /* 0x811A078C */
 	virtual ~LiveAreaStatusDlg();				/* 0x811A0A14 / 0x811A0B4C */
 
-	void UnlockFeed();					/* 0x811A09E8 */
+	virtual bool HandleSysUpdateError(int errorCode);	/* 0x811A0FAC */
+	virtual int GetVoteQueryType();				/* 0x81409E2C */
+	virtual bool IsUnread();				/* 0x811A0F4E */
+	virtual bool ShouldShowTitleName();			/* 0x811A0F98 */
+	virtual const paf::IDParam &GetBackButtonTemplateId();	/* 0x811A0FBE */
+	virtual const paf::IDParam &GetOptionButtonTemplateId(); /* 0x811A105A */
+	virtual const paf::IDParam &GetBackButtonId();		/* 0x811A10F6 */
+	virtual const paf::IDParam &GetOptionButtonId();	/* 0x811A1192 */
+	virtual void OnDialogOpened();				/* 0x811A0E32 */
+	virtual void OnDialogClosed();				/* 0x811A09E8 */
+
 	void SetupIcon();					/* 0x811A0B5C */
-	int LockFeed();						/* 0x811A0E32 */
-	void BindContext(paf::common::SharedPtr<int> *ownerContext, const char *titleId); /* 0x811A0E5A */
-	bool IsUnread();					/* 0x811A0F4E */
-	bool GetShowUnreadBadge();				/* 0x811A0F98 */
+	void BindContext(const paf::common::SharedPtr<filelist::Live2Accessor> &ownerAccessor,
+			 const char *titleId);			/* 0x811A0E5A */
 	void SetShowUnreadBadge(bool show);			/* 0x811A0F9E */
 	void OnStatusUpdated();					/* 0x811A0FA4 */
 	void SetForceGameIcon(bool force);			/* 0x811A0FA6 */
-	int TriggerSysUpdate();					/* 0x811A0FAC */
-
-	static const paf::IDParam &GetDialogTemplateId();	/* 0x811A0FBE */
-	static const paf::IDParam &GetDialogRootId();		/* 0x811A105A */
-	static const paf::IDParam &GetContentRootId();		/* 0x811A10F6 */
-	static const paf::IDParam &GetSubListId();		/* 0x811A1192 */
 
 	int m_pageKey;						/* +0xC0 */
 	bool m_locked;						/* +0xC4 */
 	bool m_lockRequested;					/* +0xC5 */
 	unsigned char lockStatePadding[2];
 	paf::common::SharedPtr<SceUInt64> m_lastReadTime;	/* +0xC8 */
-	paf::cache::CacheImageInterface *m_iconRef;		/* +0xD0 */
-	paf::common::SharedPtr<int> m_ownerContext;		/* +0xD4 */
+	paf::intrusive_ptr<paf::cache::CacheImageInterface> m_iconRef; /* +0xD0 */
+	paf::common::SharedPtr<filelist::Live2Accessor> m_ownerAccessor; /* +0xD4 */
 	paf::string m_titleId;					/* +0xDC */
 	bool m_showUnreadBadge;					/* +0xE8 */
 	bool m_forceGameIcon;					/* +0xE9 */
@@ -579,11 +533,6 @@ public:
 
 extern void liveareaMoreCtrlSetCount(LiveAreaMoreCtrl *ctrl, int count); /* 0x811A1CA2 */
 extern int liveareaFeedHandleSysUpdateErr(int err);			/* 0x8119E85A */
-extern LiveAreaSubVisualizer *liveareaSubVisualizerCtor(void *mem, ActivityRecord **record,
-							paf::common::SharedPtr<SceUInt64> *lastReadTime); /* 0x811A272C */
-extern LiveAreaFeedVisualizer *liveareaFeedVisualizerCtor(void *mem,
-							  paf::common::SharedPtr<SceUInt64> *lastReadTime,
-							  paf::cache::CacheImageInterface **iconRef); /* 0x811A240E */
 
 struct MusicCoreImposeInfo {
 	int volume;						/* +0x00 */
@@ -634,61 +583,8 @@ extern void arlGraphicsInit(int option);				/* 0x8138D570 */
 extern void arlGraphicsTerm(void);					/* 0x8138D77E */
 extern paf::common::SharedPtr<paf::graph::Shader> *activityUiGetIconShader(void); /* 0x8139303C */
 
-/* Activity Feed UI framework (0x81348E94 - 0x8135D814) */
-extern void activityUiInit(void);					/* 0x8134A248 */
-extern void activityUiTerm(void);					/* 0x8134A270 */
-extern void activityUiSetNetCallbacks(void (*acquireFn)(void), void (*releaseFn)(void),
-				      void (*connectFn)(void));		/* 0x8134A2EA */
-extern void activityUiSetDialogPriority(int priority);			/* 0x8134A34C */
-extern void activityUiEnqueueCacheInfoJob(void);			/* 0x8134A716 */
-extern void activityUiSegmentSetCell(paf::ui::filelist::SegmentSource *source, int segmentIndex,
-				     paf::common::RefObj **cellSource,
-				     paf::ui::filelist::SegmentListAccessor::OptionParam *option); /* 0x8134A8D2 */
-extern void activityUiSegmentRemoveCell(paf::ui::filelist::SegmentSource *source, int segmentIndex); /* 0x8134AAA2 */
-extern void activityUiSegmentGetCell(ActivityFeedCellSource **outCellSource,
-				     paf::ui::filelist::SegmentSource *source, int segmentIndex); /* 0x8134AB4C */
-extern paf::ui::Widget *shellListItemCreateWidget(ShellListItemBase *self, paf::ui::Widget *parent,
-						  const paf::IDParam *templateId,
-						  const paf::IDParam *itemId); /* 0x8134ADF8 */
-extern void shellListItemAttachWidget(ShellListItemBase *self);		/* 0x8134AEC2 */
-extern void shellListItemBaseCtor(ShellListItemBase *self, int itemType, paf::Plugin *plugin,
-				  const paf::IDParam *templateId, const paf::IDParam *itemId); /* 0x8134AFF6 */
-extern paf::ui::Widget *shellListItemGetWidget(ShellListItemBase *self); /* 0x8134B4F6 */
-extern void activityUiCellSourceSetCountCallback(ActivityFeedCellSource *cellSource,
-						 void (*callback)(int, int), int pageKey); /* 0x8134BF04 */
-extern void activityUiRefreshContext(paf::common::SharedPtr<int> *context); /* 0x8134C54C */
-extern void activityUiItemBaseCtor(ActivityFeedItemBase *self, int itemType, paf::Plugin *plugin,
-				   paf::cache::CacheManager *cacheManager,
-				   paf::common::SharedPtr<int> *context); /* 0x8134DA7E */
-extern int activityUiGetItemCategory(ActivityRecord **record);		/* 0x81349E1C */
-extern int activityUiGetCurrentCategory(void);				/* 0x81349C32 */
-extern int activityUiGetItemDisplayMode(ActivityFeedItemBase *self);	/* 0x812FEA62 */
-extern void activityUiGetItemContext(paf::common::SharedPtr<int> *outContext,
-				     ActivityFeedItemBase *self);	/* 0x8134D860 */
-extern void activityUiFeedVisualizerBaseCtor(ActivityFeedVisualizerBase *self, paf::Plugin *plugin,
-					     paf::cache::CacheManager *cacheManager); /* 0x813508E8 */
+/* Activity Feed UI framework entry point */
 extern void activityUiInitFileList(paf::ui::FileList *fileList);	/* 0x81350B40 */
-extern void activityUiStatusDlgBaseCtor(ActivityStatusDlgBase *self, paf::ui::Widget *parent,
-					paf::Plugin *plugin, paf::cache::CacheManager *cacheManager,
-					ActivityRecord **record, int displayMode,
-					paf::common::SharedPtr<int> *feedContext,
-					paf::common::SharedPtr<LiveAreaSubVisualizer> *subVisualizer); /* 0x8135286C */
-extern void activityUiStatusDlgBaseDtor(ActivityStatusDlgBase *self);	/* 0x81352A64 */
-extern void activityUiStatusDlgOpen(ActivityStatusDlgBase *self, paf::ui::ListItem *anchorItem); /* 0x813531DA */
-extern void activityUiCloseDialog(void);				/* 0x81353DF2 */
-extern void activityUiCloseDialogFast(void);				/* 0x81353E16 */
-extern ActivityStatusDlgBase *activityUiFindDialogById(int dialogId);	/* 0x8135B002 */
-extern int activityUiIsDialogActive(void);				/* 0x8135B002 */
-extern void activityUiCreateStatusContexts(paf::common::SharedPtr<int> *outFeedContext,
-					   paf::common::SharedPtr<int> *outOwnerContext,
-					   ActivityDbQueryCondition *condition); /* 0x8135B0BA */
-extern void activityUiSubItemBaseCtor(ActivitySubItemBase *self, int itemType, paf::Plugin *plugin,
-				      paf::cache::CacheManager *cacheManager,
-				      paf::common::SharedPtr<int> *context); /* 0x8135B39E */
-extern void activityUiSubVisualizerBaseCtor(ActivitySubVisualizerBase *self, paf::Plugin *plugin,
-					    paf::cache::CacheManager *cacheManager,
-					    ActivityRecord **record);	/* 0x8135D0DC */
-extern paf::ui::filelist::CellSource *activityUiCreateSingleCellSource(void); /* 0x8135D814 */
 
 /* MusicCore plugin exports (musiccore_plugin.cpp) */
 extern int musicPlayerSeek(int mode, int offset, int flags);		/* 0x811CBD5E */
@@ -738,7 +634,7 @@ extern void liveareaPageReloadPocketStation(void);			/* 0x8119C4F2 */
 extern const char *liveareaPageGetTitleIdRaw(LiveAreaPage *page);	/* 0x8119982C */
 extern paf::ui::Widget *liveareaGetNewsContainer(LiveAreaPage *page);	/* 0x811D4E58 */
 
-extern int liveareaIsGamePlayUri(ActivityRecord **recordPtr);		/* 0x8119F9EA */
+extern int liveareaIsGamePlayUri(const paf::intrusive_ptr<filelist::Live2Record> &record); /* 0x8119F9EA */
 extern void liveareaLaunchWithArg(const char *titleId, const char *statusParam); /* 0x811A064C */
 extern paf::common::SharedPtr<paf::job::JobItem> liveareaEnqueueContentResetJob(LiveAreaPageInner *inner,
 										int resetMask); /* 0x811A3426 */
@@ -754,7 +650,7 @@ extern int liveareaEnqueueContentParserJob(paf::common::SharedPtr<paf::job::JobI
 					   LiveAreaPageInner *inner, const char *xmlPath,
 					   const char *contentDir, SceUInt8 useLsdb,
 					   SceUInt8 isDefault, int reloadMask, SceUInt8 allowDialog); /* 0x811B67AA */
-extern paf::ui::filelist::Visualizer *liveareaCreateBgFactory(void);	/* 0x811B7470 */
+extern filelist::NullVisualizerFactory *liveareaCreateBgFactory(void);	/* 0x811B7470 */
 
 /* Updater wrapper, implementation, daily task, task manager, and updator */
 extern LiveAreaUpdater *liveareaUpdaterCtor(LiveAreaUpdater *updater);	/* 0x811A2910 */

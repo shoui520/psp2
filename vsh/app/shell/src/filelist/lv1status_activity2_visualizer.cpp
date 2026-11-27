@@ -886,17 +886,20 @@ void OnDialogAvatarDecideCallback(int eventId, paf::ui::Handler *handler,
 	(void)handler;
 	(void)event;
 	ActivityStatusDialog *dialog = static_cast<ActivityStatusDialog *>(userdata);
-	if (dialog != NULL && dialog->m_record.get() != NULL)
-		BaseActivityVisualizer::LaunchProfileForRecord(dialog->m_record);
+	if (dialog != NULL)
+		dialog->OnAvatarDecide();
 }
 
 /* 0x8135A93E */
 void OnDialogActionDecideCallback(int eventId, paf::ui::Handler *handler,
 				  paf::ui::Event *event, void *userdata)
 {
+	(void)eventId;
+	(void)handler;
+	(void)event;
 	ActivityStatusDialog *dialog = static_cast<ActivityStatusDialog *>(userdata);
 	if (dialog != NULL)
-		dialog->OnStatusActionDecide(eventId, handler, event);
+		dialog->OnStatusActionDecide();
 }
 
 /* 0x81354396 */
@@ -1042,7 +1045,7 @@ void OnDialogRootDeleteCallback(paf::ui::Widget *widget, void *userdata)
 	int dialogId = static_cast<int>(reinterpret_cast<intptr_t>(userdata));
 	ActivityStatusDialog *dialog = activityUiFindDialogById(dialogId);
 	if (dialog != NULL)
-		dialog->OnBackPressed();
+		dialog->OnBackButtonDecide();
 }
 
 /* 0x8135B27A */
@@ -2142,11 +2145,14 @@ void ActivityStatusDialog::Open(paf::ui::ListItem *anchorItem)
 	int voteCount = BaseActivityVisualizer::GetVoteCount(m_record);
 	UpdateGoodJobArea(voteCount, false);
 	RequestVoteInfo();
+	if (!ShouldAnimateOpen())
+		OnDialogOpened();
 }
 
 /* 0x81353E16 */
 void ActivityStatusDialog::Close()
 {
+	OnDialogClosed();
 	if (m_dialogRoot == NULL) {
 		delete this;
 		return;
@@ -2182,24 +2188,124 @@ void ActivityStatusDialog::CloseWithReason(int reason)
 	Close();
 }
 
+bool ActivityStatusDialog::HandleSysUpdateError(int errorCode)
+{
+	(void)errorCode;
+	return false;
+}
+
+int ActivityStatusDialog::GetVoteQueryType()
+{
+	return 0;
+}
+
+/* 0x81357D88 */
+void ActivityStatusDialog::OnAvatarDecide()
+{
+	if (m_record.get() != NULL)
+		BaseActivityVisualizer::LaunchProfileForRecord(m_record);
+}
+
+/* 0x81357DC2 */
+void ActivityStatusDialog::OnStatusActionDecide()
+{
+	int category = BaseActivityVisualizer::ClassifyUriCategory(m_record);
+	BaseActivityVisualizer::LaunchActionUri(m_record, category);
+}
+
+/* 0x81357E18 */
+void ActivityStatusDialog::OnBackButtonDecide()
+{
+	Close();
+}
+
+/* 0x813585DC */
+float ActivityStatusDialog::GetDialogHeight()
+{
+	return 530.0f;
+}
+
+/* 0x813585E8 */
+float ActivityStatusDialog::GetDialogCenterY()
+{
+	return 256.0f;
+}
+
+/* 0x813585F2 */
+float ActivityStatusDialog::GetListViewHeight()
+{
+	return 430.0f;
+}
+
+bool ActivityStatusDialog::ShouldAnimateOpen()
+{
+	return true;
+}
+
+bool ActivityStatusDialog::ShouldAnimateClose()
+{
+	return true;
+}
+
+bool ActivityStatusDialog::IsUnread()
+{
+	return false;
+}
+
 bool ActivityStatusDialog::ShouldShowTitleName()
 {
 	return true;
 }
 
-void ActivityStatusDialog::OnBackPressed()
+bool ActivityStatusDialog::UseWideCommentBox()
 {
-	Close();
+	return false;
 }
 
-void ActivityStatusDialog::OnStatusActionDecide(int eventId, paf::ui::Handler *handler,
-						paf::ui::Event *event)
+bool ActivityStatusDialog::HasBackButton()
 {
-	(void)eventId;
-	(void)handler;
-	(void)event;
-	int category = BaseActivityVisualizer::ClassifyUriCategory(m_record);
-	BaseActivityVisualizer::LaunchActionUri(m_record, category);
+	return true;
+}
+
+bool ActivityStatusDialog::HasOptionButton()
+{
+	return true;
+}
+
+/* 0x813585FE */
+const paf::IDParam &ActivityStatusDialog::GetBackButtonTemplateId()
+{
+	static paf::IDParam s_backTemplateId(1665067179U);
+	return s_backTemplateId;
+}
+
+/* 0x8135869A */
+const paf::IDParam &ActivityStatusDialog::GetOptionButtonTemplateId()
+{
+	static paf::IDParam s_optionTemplateId(static_cast<uint32_t>(-1229031538));
+	return s_optionTemplateId;
+}
+
+/* 0x81358736 */
+const paf::IDParam &ActivityStatusDialog::GetBackButtonId()
+{
+	static paf::IDParam s_backButtonId(static_cast<uint32_t>(-677217553));
+	return s_backButtonId;
+}
+
+/* 0x813587D2 */
+const paf::IDParam &ActivityStatusDialog::GetOptionButtonId()
+{
+	static paf::IDParam s_optionButtonId(2125679975U);
+	return s_optionButtonId;
+}
+
+void ActivityStatusDialog::OnDialogOpened()
+{
+}
+
+void ActivityStatusDialog::OnDialogClosed()
+{
 }
 
 bool ActivityStatusDialog::CustomizeStatusActionIcon(paf::ui::Widget *iconWidget)
@@ -3094,12 +3200,6 @@ void activityUiNotifyCacheInfoUpdated(void)
 	}
 }
 
-class ActivityFeedItemBase;
-class ActivityFeedVisualizerBase;
-class ActivityStatusDlgBase;
-class ActivityRecord;
-class LiveAreaSubVisualizer;
-
 void activityUiInitFileList(paf::ui::FileList *fileList)
 {
 	filelist::activityUiInitFileList(fileList);
@@ -3140,60 +3240,4 @@ int activityUiIsDialogActive(void)
 	if (filelist::s_dialogManager == NULL)
 		return 0;
 	return (filelist::s_dialogManager->dialogs.size() == 0) ? 0 : 1;
-}
-
-void activityUiCreateStatusContexts(paf::common::SharedPtr<int> *outFeedContext,
-				    paf::common::SharedPtr<int> *outOwnerContext,
-				    ActivityDbQueryCondition *condition)
-{
-	filelist::activityUiCreateStatusContexts(
-		reinterpret_cast<paf::common::SharedPtr<filelist::Live2AccessorProxy> *>(outOwnerContext),
-		reinterpret_cast<paf::common::SharedPtr<filelist::Live2Accessor> *>(outFeedContext),
-		condition);
-}
-
-void activityUiItemBaseCtor(ActivityFeedItemBase *self, int itemType, paf::Plugin *plugin,
-			    paf::cache::CacheManager *cacheManager,
-			    paf::common::SharedPtr<int> *context)
-{
-	void *savedVptr = *reinterpret_cast<void **>(self);
-	new (self) filelist::Lv1StatusActivityVisualizer(
-		reinterpret_cast<paf::ui::Widget *>(itemType), plugin, cacheManager,
-		*reinterpret_cast<const paf::common::SharedPtr<filelist::Live2Iterator> *>(context),
-		0);
-	*reinterpret_cast<void **>(self) = savedVptr;
-}
-
-void activityUiFeedVisualizerBaseCtor(ActivityFeedVisualizerBase *self, paf::Plugin *plugin,
-				      paf::cache::CacheManager *cacheManager)
-{
-	void *savedVptr = *reinterpret_cast<void **>(self);
-	new (self) filelist::Lv1StatusVisualizerFactory(plugin, cacheManager);
-	*reinterpret_cast<void **>(self) = savedVptr;
-}
-
-void activityUiStatusDlgBaseCtor(ActivityStatusDlgBase *self, paf::ui::Widget *parent,
-				 paf::Plugin *plugin, paf::cache::CacheManager *cacheManager,
-				 ActivityRecord **record, int displayMode,
-				 paf::common::SharedPtr<int> *feedContext,
-				 paf::common::SharedPtr<LiveAreaSubVisualizer> *subVisualizer)
-{
-	void *savedVptr = *reinterpret_cast<void **>(self);
-	paf::intrusive_ptr<filelist::Live2Record> recRef(
-		record != NULL ? reinterpret_cast<filelist::Live2Record *>(*record) : NULL);
-	new (self) filelist::ActivityStatusDialog(
-		parent, plugin, cacheManager, recRef, displayMode,
-		*reinterpret_cast<const paf::common::SharedPtr<filelist::Live2AccessorProxy> *>(feedContext),
-		*reinterpret_cast<const paf::common::SharedPtr<filelist::Live2VisualizerFactory> *>(subVisualizer));
-	*reinterpret_cast<void **>(self) = savedVptr;
-}
-
-void activityUiStatusDlgBaseDtor(ActivityStatusDlgBase *self)
-{
-	reinterpret_cast<filelist::ActivityStatusDialog *>(self)->~ActivityStatusDialog();
-}
-
-void activityUiStatusDlgOpen(ActivityStatusDlgBase *self, paf::ui::ListItem *anchorItem)
-{
-	reinterpret_cast<filelist::ActivityStatusDialog *>(self)->Open(anchorItem);
 }

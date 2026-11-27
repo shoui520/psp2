@@ -12,72 +12,69 @@
 #include <widget/core/widget.h>
 #include "livearea_internal.h"
 
-class LiveAreaBgItem : public ShellListItemBase {
+class LiveAreaBgItem : public filelist::BasicVisualizer {
 public:
-	LiveAreaBgItem(paf::ui::Widget *parent, paf::ui::Widget **outWidget);
+	LiveAreaBgItem(paf::ui::Widget *parent, paf::ui::ListItem **outWidget);
 	virtual ~LiveAreaBgItem();
-	virtual void HideWidget();
-	virtual void OnAction();
+	virtual void Stop();
 };
 
 /* 0x811B71E8 */
-LiveAreaBgItem::LiveAreaBgItem(paf::ui::Widget *parent, paf::ui::Widget **outWidget)
+LiveAreaBgItem::LiveAreaBgItem(paf::ui::Widget *parent, paf::ui::ListItem **outWidget)
+	: filelist::BasicVisualizer(parent, g_liveareaPlugin, paf::IDParam(0u), paf::IDParam(0u))
 {
-	paf::IDParam emptyTemplateId(0u);
-	paf::IDParam emptyItemId(0u);
-	shellListItemBaseCtor(this, 0, g_liveareaPlugin, &emptyTemplateId, &emptyItemId);
-
-	paf::ui::Widget *widget = *outWidget;
+	paf::ui::ListItem *widget = *outWidget;
 	if (!widget) {
 		paf::IDParam templateId(2020107953u);
 		paf::IDParam itemId(1158217665u);
-		*outWidget = shellListItemCreateWidget(this, parent, &templateId, &itemId);
+		*outWidget = CreateListItemWidget(parent, templateId, itemId);
 		widget = *outWidget;
 	}
 	if (widget) {
-		shellListItemAttachWidget(this);
-		(*outWidget)->Show(0xff, NULL, NULL, 0.0f);
+		AttachListItemEvents(widget);
+		widget->Show(0xff, NULL, NULL, 0.0f);
 	}
 }
 
 /* 0x811B73F4 */
 LiveAreaBgItem::~LiveAreaBgItem()
-{}
-
-/* 0x811B7424 */
-void LiveAreaBgItem::HideWidget()
 {
-	paf::ui::Widget *widget = shellListItemGetWidget(this);
-	widget->Hide(0xff, NULL, NULL, 0.0f);
 }
 
-/* 0x811B746E */
-void LiveAreaBgItem::OnAction()
-{}
+/* 0x811B7424 */
+void LiveAreaBgItem::Stop()
+{
+	paf::ui::Widget *widget = DetachListItem();
+	if (widget != NULL)
+		widget->Hide(0xff, NULL, NULL, 0.0f);
+}
 
-class LiveAreaBgFactory {
+class LiveAreaBgFactory : public filelist::NullVisualizerFactory {
 public:
 	LiveAreaBgFactory();
 	virtual ~LiveAreaBgFactory() {}
-	virtual void Create(paf::common::RefObj **out, paf::ui::Widget *parent);
+	virtual paf::intrusive_ptr<paf::ui::filelist::Visualizer> CreateVisualizer(
+		paf::ui::Widget *parent, int index);
 	virtual paf::math::v4 GetItemSize();
 
 private:
-	paf::ui::Widget *m_cachedWidget;
+	paf::ui::ListItem *m_cachedWidget;
 };
 
 /* 0x811B7470 */
 LiveAreaBgFactory::LiveAreaBgFactory()
 	: m_cachedWidget(NULL)
-{}
+{
+}
 
 /* 0x811B7482 */
-void LiveAreaBgFactory::Create(paf::common::RefObj **out, paf::ui::Widget *parent)
+paf::intrusive_ptr<paf::ui::filelist::Visualizer> LiveAreaBgFactory::CreateVisualizer(
+	paf::ui::Widget *parent, int index)
 {
-	LiveAreaBgItem *item = new LiveAreaBgItem(parent, &m_cachedWidget);
-	*out = item;
-	if (item)
-		item->AddRef();
+	(void)index;
+	paf::intrusive_ptr<paf::ui::filelist::Visualizer> item(
+		new LiveAreaBgItem(parent, &m_cachedWidget));
+	return item;
 }
 
 /* 0x811B74B0 */
@@ -86,7 +83,7 @@ paf::math::v4 LiveAreaBgFactory::GetItemSize()
 	return paf::math::v4(840.0f, 512.0f, 0.0f, 0.0f);
 }
 
-paf::ui::filelist::Visualizer *liveareaCreateBgFactory(void)
+filelist::NullVisualizerFactory *liveareaCreateBgFactory(void)
 {
-	return reinterpret_cast<paf::ui::filelist::Visualizer *>(new LiveAreaBgFactory());
+	return new LiveAreaBgFactory();
 }

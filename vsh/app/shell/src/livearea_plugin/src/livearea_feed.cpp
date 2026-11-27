@@ -8,6 +8,7 @@
 #include <datetime/datetime.h>
 #include <timer/timer.h>
 #include <appmgr.h>
+#include <graphics/drawobj/text_obj.h>
 #include "../../../sysupchk.h"
 #include "livearea_internal.h"
 
@@ -152,9 +153,8 @@ int LiveAreaFeed::RequestUpdate(int mode)
 void LiveAreaFeed::RebuildFeed()
 {
 	paf::ui::FileList *fileList = m_page->m_fileList;
-	paf::ui::filelist::SegmentSource *segSrc = fileList->m_segment_source.get();
-	if (segSrc != NULL)
-		segSrc->AddRef();
+	paf::intrusive_ptr<filelist::BasicSegmentSource> segSrc(
+		static_cast<filelist::BasicSegmentSource *>(fileList->m_segment_source.get()));
 
 	const char *title = liveareaPageGetTitleIdRaw(m_page);
 	bool isSpecial = (sce_paf_strcmp(title, "NPXS10999") == 0 ||
@@ -165,51 +165,136 @@ void LiveAreaFeed::RebuildFeed()
 	if (netState == 0 && !isSpecial) {
 		if (m_state != 1) {
 			m_state = 1;
+			paf::ui::Widget *oldHeader = fileList->FindChild(paf::IDParam(1047668178U), 0);
+			if (oldHeader != NULL)
+				oldHeader->m_name = paf::IDParam("");
 			m_moreCtrl.Disable();
-			ActivityFeedCellSource *oldCell = NULL;
-			activityUiSegmentGetCell(&oldCell, segSrc, 1);
-			if (oldCell != NULL) {
-				oldCell->Release();
-				activityUiCellSourceSetCountCallback(oldCell, NULL, 0);
+			paf::intrusive_ptr<paf::ui::filelist::CellSource> oldCell =
+				segSrc->GetSegmentCellSource(1);
+			if (oldCell.get() != NULL &&
+			    oldCell->IsInherit(filelist::Live2CellSource::TypeName())) {
+				static_cast<filelist::Live2CellSource *>(oldCell.get())->SetCountCallback(NULL, 0);
 			}
-			activityUiSegmentRemoveCell(segSrc, 1);
-			paf::IDParam tmplId(748860498U);
+			segSrc->RemoveSegment(1);
 			paf::Plugin::TemplateOpenParam openParam;
-			g_liveareaPlugin->TemplateOpen(fileList, tmplId, openParam);
+			g_liveareaPlugin->TemplateOpen(fileList, paf::IDParam(748860498U), openParam);
+			paf::ui::Widget *header = fileList->FindChild(paf::IDParam(1047668178U), 0);
+			if (header != NULL) {
+				paf::ui::Widget *signInBtn = header->FindChild(paf::IDParam(1527842694U), 0);
+				if (signInBtn != NULL) {
+					signInBtn->AddEventCallback(
+						0x10000008,
+						reinterpret_cast<paf::ui::HandlerCB>(liveareaFeedOnSignInBtnCb),
+						NULL);
+				}
+				paf::ui::filelist::SegmentListAccessor::OptionParam option;
+				sce_paf_memset(&option, 0, sizeof(option));
+				option.m_layout_type = paf::ui::ListView::LAYOUT_TYPE_LIST;
+				option.m_header = header;
+				option.m_joined = true;
+				paf::intrusive_ptr<paf::ui::filelist::CellSource> emptyCell;
+				segSrc->InsertSegment(1, emptyCell, option);
+			}
 			fileList->BlockSync();
 			fileList->UnblockSync();
 		}
 	} else if (signedIn != 0) {
 		if (m_state != 3) {
 			m_state = 3;
+			paf::ui::Widget *oldHeader = fileList->FindChild(paf::IDParam((uint32_t)-1200125837), 0);
+			if (oldHeader != NULL)
+				oldHeader->m_name = paf::IDParam("");
 			m_moreCtrl.Disable();
-			ActivityFeedCellSource *oldCell = NULL;
-			activityUiSegmentGetCell(&oldCell, segSrc, 1);
-			if (oldCell != NULL) {
-				oldCell->Release();
-				activityUiCellSourceSetCountCallback(oldCell, NULL, 0);
+			paf::intrusive_ptr<paf::ui::filelist::CellSource> oldCell =
+				segSrc->GetSegmentCellSource(1);
+			if (oldCell.get() != NULL &&
+			    oldCell->IsInherit(filelist::Live2CellSource::TypeName())) {
+				static_cast<filelist::Live2CellSource *>(oldCell.get())->SetCountCallback(NULL, 0);
 			}
-			activityUiSegmentRemoveCell(segSrc, 1);
-			paf::IDParam tmplId((uint32_t)-1274478996);
+			segSrc->RemoveSegment(1);
 			paf::Plugin::TemplateOpenParam openParam;
-			g_liveareaPlugin->TemplateOpen(fileList, tmplId, openParam);
+			g_liveareaPlugin->TemplateOpen(fileList, paf::IDParam((uint32_t)-1274478996), openParam);
+			paf::ui::Widget *header = fileList->FindChild(paf::IDParam((uint32_t)-1200125837), 0);
+			if (header != NULL) {
+				paf::ui::filelist::SegmentListAccessor::OptionParam option;
+				sce_paf_memset(&option, 0, sizeof(option));
+				option.m_layout_type = paf::ui::ListView::LAYOUT_TYPE_LIST;
+				option.m_header = header;
+				option.m_joined = true;
+				paf::intrusive_ptr<paf::ui::filelist::CellSource> emptyCell;
+				segSrc->InsertSegment(1, emptyCell, option);
+			}
 			fileList->BlockSync();
 			fileList->UnblockSync();
 		}
 	} else if (m_state != 2) {
 		m_state = 2;
+		paf::ui::Widget *oldHeader = fileList->FindChild(paf::IDParam(1508614477U), 0);
+		if (oldHeader != NULL)
+			oldHeader->m_name = paf::IDParam("");
 		m_moreCtrl.Disable();
-		activityUiSegmentRemoveCell(segSrc, 1);
-		paf::IDParam tmplId(596741914U);
+		segSrc->RemoveSegment(1);
 		paf::Plugin::TemplateOpenParam openParam;
-		g_liveareaPlugin->TemplateOpen(fileList, tmplId, openParam);
+		g_liveareaPlugin->TemplateOpen(fileList, paf::IDParam(596741914U), openParam);
+		paf::ui::Widget *header = fileList->FindChild(paf::IDParam(1508614477U), 0);
+		if (header != NULL) {
+			paf::ui::Widget *refreshBtn = header->FindChild(paf::IDParam(724248317U), 0);
+			if (refreshBtn != NULL) {
+				refreshBtn->AddEventCallback(0x10000008, liveareaFeedOnRefreshBtnCb, this);
+			}
+			paf::ui::Widget *timeWidget = header->FindChild(paf::IDParam((uint32_t)-1333795569), 0);
+			if (timeWidget != NULL) {
+				paf::graph::TextObj *timeText =
+					static_cast<paf::graph::TextObj *>(timeWidget->GetDrawObj(0));
+				if (timeText != NULL) {
+					const wchar_t *initialTimeLabel =
+						g_liveareaPlugin->GetString(paf::IDParam(375471696U));
+					paf::wstring wideText(initialTimeLabel != NULL ? initialTimeLabel : L"");
+					timeText->SetString(wideText);
+				}
+			}
+		}
+
+		paf::ui::filelist::SegmentListAccessor::OptionParam option;
+		sce_paf_memset(&option, 0, sizeof(option));
+		option.m_layout_type = paf::ui::ListView::LAYOUT_TYPE_LIST;
+		option.m_header = header;
+		option.m_min_size = paf::math::v2(0.0f, 512.0f);
+		option.m_joined = true;
+
+		if (title != NULL) {
+			paf::intrusive_ptr<paf::cache::CacheImageInterface> iconRef(m_iconCacheRef);
+			LiveAreaFeedVisualizer *feedVis =
+				new LiveAreaFeedVisualizer(m_lastReadTime, iconRef);
+			paf::common::SharedPtr<filelist::Live2VisualizerFactory> visFactory(feedVis);
+			filelist::Live2StatusAccessorFactory *statusAcc =
+				new filelist::Live2StatusAccessorFactory(128);
+			paf::common::SharedPtr<filelist::Live2AccessorFactory> accFactory(statusAcc);
+
+			if (sce_paf_strcmp(title, "NPXS10006") != 0) {
+				statusAcc->m_condition.type = ACTIVITY_DB_QUERY_TITLE;
+			} else {
+				statusAcc->m_condition.type = ACTIVITY_DB_QUERY_ALL;
+				feedVis->SetShowUnreadBadge(true);
+				feedVis->SetForceGameIcon(true);
+			}
+			statusAcc->m_condition.titleId = title;
+
+			paf::intrusive_ptr<filelist::Live2CellSource> cellSource(
+				new filelist::Live2CellSource(visFactory, accFactory));
+			cellSource->SetRefreshMode(2);
+			cellSource->SetCountCallback(liveareaFeedOnItemCountCb, m_page->m_pageKey);
+			paf::intrusive_ptr<paf::ui::filelist::CellSource> baseCell(cellSource.get());
+			segSrc->InsertSegment(1, baseCell, option);
+		} else {
+			paf::intrusive_ptr<paf::ui::filelist::CellSource> emptyCell;
+			segSrc->InsertSegment(1, emptyCell, option);
+		}
+
 		m_moreCtrl.Enable();
 		fileList->BlockSync();
 		fileList->UnblockSync();
 	}
-
-	if (segSrc != NULL)
-		segSrc->Release();
 }
 
 /* 0x8119D6B8 */
@@ -548,16 +633,16 @@ void LiveAreaFeed::UpdateEmptyNotice(bool hasItems)
 void LiveAreaFeed::OnItemCountChanged(int count)
 {
 	UpdateEmptyNotice(count > 0);
-	paf::ui::filelist::SegmentSource *segSrc = m_page->m_fileList->m_segment_source.get();
-	if (segSrc != NULL)
-		segSrc->AddRef();
+	paf::intrusive_ptr<filelist::BasicSegmentSource> segSrc(
+		static_cast<filelist::BasicSegmentSource *>(m_page->m_fileList->m_segment_source.get()));
+	paf::intrusive_ptr<paf::ui::filelist::CellSource> rawCell =
+		segSrc.get() != NULL ? segSrc->GetSegmentCellSource(1)
+				     : paf::intrusive_ptr<paf::ui::filelist::CellSource>();
 
-	ActivityFeedCellSource *cellSrc = NULL;
-	activityUiSegmentGetCell(&cellSrc, segSrc, 1);
-	if (cellSrc != NULL)
-		cellSrc->Release();
-
-	if (cellSrc != NULL) {
+	if (rawCell.get() != NULL &&
+	    rawCell->IsInherit(filelist::Live2CellSource::TypeName())) {
+		filelist::Live2CellSource *cellSrc =
+			static_cast<filelist::Live2CellSource *>(rawCell.get());
 		int total = cellSrc->m_totalCount;
 		SceUInt64 lastRead = cellSrc->m_lastReadTime;
 		SceUInt64 updTime = cellSrc->m_lastUpdateTime;
@@ -582,8 +667,6 @@ void LiveAreaFeed::OnItemCountChanged(int count)
 		else
 			m_moreCtrl.Show();
 	}
-	if (segSrc != NULL)
-		segSrc->Release();
 }
 
 /* 0x8119F0A6 */
@@ -775,14 +858,15 @@ static void liveareaFeedOnNewsClickCb(int eventId, paf::ui::Handler *handler,
 }
 
 /* 0x8119F9EA */
-int liveareaIsGamePlayUri(ActivityRecord **recordPtr)
+int liveareaIsGamePlayUri(const paf::intrusive_ptr<filelist::Live2Record> &record)
 {
-	ActivityRecord *record = *recordPtr;
-	if (record == NULL)
+	if (record.get() == NULL)
 		return 0;
-	if (record->GetRecordKind() != 1)
+	if (record->GetRecordKind() != filelist::LIVE2_RECORD_STATUS)
 		return 0;
-	return (sce_paf_strncmp(record->m_actionUri.c_str(), "psgm:play?", 10) == 0) ? 1 : 0;
+	filelist::Live2StatusRecord *statusRec =
+		static_cast<filelist::Live2StatusRecord *>(record.get());
+	return (sce_paf_strncmp(statusRec->m_status.actionUrl.c_str(), "psgm:play?", 10) == 0) ? 1 : 0;
 }
 
 int liveareaFeedHandleSysUpdateErr(int err)
