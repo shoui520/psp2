@@ -342,38 +342,44 @@ static void PostFriendOnlineNotification(const char *onlineId)
 
 class NpFriendImportProfileJob : public paf::job::JobItem {
 public:
-	NpFriendImportProfileJob(const SceNpId &npId, int requestDirection)
-		: paf::job::JobItem("SceNpFriendJobImportProfile", NULL),
-		  m_npId(npId),
-		  m_requestDirection(requestDirection)
-	{
-	}
-
-	virtual ~NpFriendImportProfileJob() {}
-
-	/* 0x813C71C8 */
-	virtual int Run()
-	{
-		NpFriendProfileImporter *profImporter = NpFriendProfileImporter::GetInstance();
-		return profImporter->ImportProfile(&m_npId, m_requestDirection);
-	}
-
-	/* 0x813C71DC */
-	virtual void Finish(int result)
-	{
-		(void)result;
-		if (IsCanceled()) {
-			NpFriendProfileImporter *profImporter =
-				NpFriendProfileImporter::GetInstance();
-			if (profImporter != NULL)
-				profImporter->AddPendingRetry(&m_npId);
-		}
-	}
+	NpFriendImportProfileJob(const SceNpId &npId, int requestDirection);
+	virtual ~NpFriendImportProfileJob();
+	virtual int Run();
+	virtual void Finish(int result);
 
 private:
 	SceNpId m_npId;
 	int m_requestDirection;
 };
+
+NpFriendImportProfileJob::NpFriendImportProfileJob(const SceNpId &npId, int requestDirection)
+	: paf::job::JobItem("SceNpFriendJobImportProfile", NULL),
+	  m_npId(npId),
+	  m_requestDirection(requestDirection)
+{
+}
+
+NpFriendImportProfileJob::~NpFriendImportProfileJob()
+{
+}
+
+/* 0x813C71C8 */
+int NpFriendImportProfileJob::Run()
+{
+	NpFriendProfileImporter *profImporter = NpFriendProfileImporter::GetInstance();
+	return profImporter->ImportProfile(&m_npId, m_requestDirection);
+}
+
+/* 0x813C71DC */
+void NpFriendImportProfileJob::Finish(int result)
+{
+	(void)result;
+	if (IsCanceled()) {
+		NpFriendProfileImporter *profImporter = NpFriendProfileImporter::GetInstance();
+		if (profImporter != NULL)
+			profImporter->AddPendingRetry(&m_npId);
+	}
+}
 
 /* 0x813C71FA */
 int npFriendImportProfileJobCreate(paf::common::SharedPtr<paf::job::JobItem> *outJob,
@@ -395,92 +401,15 @@ int npFriendImportProfileJobCreate(paf::common::SharedPtr<paf::job::JobItem> *ou
 /* AddFriends / AddBlocked event (0x813C5BF6, 0x813C5CAA, 0x813C5D52..0x813C60CF) */
 class NpFriendAddEvent : public NpFriendImporterEvent {
 public:
-	explicit NpFriendAddEvent(NpFriendStorage *storage)
-		: m_storage(storage), m_count(0), m_players(NULL)
-	{
-	}
+	explicit NpFriendAddEvent(NpFriendStorage *storage);
+	virtual ~NpFriendAddEvent();
+	virtual void Execute();
 
-	virtual ~NpFriendAddEvent()
-	{
-		if (m_players != NULL) {
-			ReleasePlayerArray(m_players, m_count);
-			m_players = NULL;
-		}
-	}
-
-	/* 0x813C5F8C */
-	virtual void Execute()
-	{
-		int added = 0;
-		const paf::intrusive_ptr<NpFriendPlayer> *basePlayers =
-			reinterpret_cast<const paf::intrusive_ptr<NpFriendPlayer> *>(m_players);
-		if (m_storage->AddFriends(m_count, basePlayers, &added) < 0)
-			return;
-
-		PostFriendRequestNotification(m_count, m_players);
-		NpFriendProfileImporter *profImporter = NpFriendProfileImporter::GetInstance();
-		NpFriendImporter *importer = NULL;
-		if (profImporter == NULL || NpFriendImporter::GetInstance(&importer) < 0)
-			return;
-
-		int enqueued = 0;
-		for (unsigned int index = 0; index < m_count; ++index) {
-			const SceNpId *npId = m_players[index]->GetNpId();
-			int reqDir = 0;
-			if (m_players[index]->GetPlayerType() == 3)
-				reqDir = m_players[index]->GetRequestDirection();
-
-			paf::common::SharedPtr<paf::job::JobItem> job;
-			if (npFriendImportProfileJobCreate(&job, npId, reqDir) < 0 ||
-			    importer->EnqueueProfileJob(job) < 0) {
-				profImporter->AddPendingRetry(npId);
-			} else if (++enqueued == added) {
-				break;
-			}
-		}
-	}
-
-	/* 0x813C5BF6 */
 	static int CreateForFriends(paf::intrusive_ptr<NpFriendImporterEvent> *outEvent,
 				    const SceNpId *npIds, NpImpsCacheFriendPtr *const *handles,
-				    unsigned int count)
-	{
-		NpFriendStorage *storage = NULL;
-		int ret = NpFriendStorage::GetInstance(&storage);
-		if (ret < 0)
-			return ret;
-
-		void *raw = npFriendImporterMalloc(sizeof(NpFriendAddEvent));
-		if (raw == NULL)
-			return NP_FRIEND_IMPORTER_ERR_OUT_OF_MEMORY;
-
-		NpFriendAddEvent *ev = new (raw) NpFriendAddEvent(storage);
-		*outEvent = paf::intrusive_ptr<NpFriendImporterEvent>(ev);
-		ret = BuildPlayerArrayFromImps(&ev->m_players, npIds, handles, count);
-		if (ret >= 0)
-			ev->m_count = count;
-		return ret;
-	}
-
-	/* 0x813C5CAA */
+				    unsigned int count);
 	static int CreateForBlocked(paf::intrusive_ptr<NpFriendImporterEvent> *outEvent,
-				    const SceNpId *npIds, unsigned int count)
-	{
-		NpFriendStorage *storage = NULL;
-		int ret = NpFriendStorage::GetInstance(&storage);
-		if (ret < 0)
-			return ret;
-
-		void *raw = npFriendImporterMalloc(sizeof(NpFriendAddEvent));
-		if (raw == NULL)
-			return NP_FRIEND_IMPORTER_ERR_OUT_OF_MEMORY;
-
-		NpFriendAddEvent *ev = new (raw) NpFriendAddEvent(storage);
-		*outEvent = paf::intrusive_ptr<NpFriendImporterEvent>(ev);
-		if (BuildBlockedPlayerArray(&ev->m_players, npIds, count) >= 0)
-			ev->m_count = count;
-		return 0;
-	}
+				    const SceNpId *npIds, unsigned int count);
 
 private:
 	NpFriendStorage *m_storage;
@@ -488,61 +417,102 @@ private:
 	paf::intrusive_ptr<NpFriendPlayerImpl> *m_players;
 };
 
+NpFriendAddEvent::NpFriendAddEvent(NpFriendStorage *storage)
+	: m_storage(storage), m_count(0), m_players(NULL)
+{
+}
+
+NpFriendAddEvent::~NpFriendAddEvent()
+{
+	if (m_players != NULL) {
+		ReleasePlayerArray(m_players, m_count);
+		m_players = NULL;
+	}
+}
+
+/* 0x813C5F8C */
+void NpFriendAddEvent::Execute()
+{
+	int added = 0;
+	const paf::intrusive_ptr<NpFriendPlayer> *basePlayers =
+		reinterpret_cast<const paf::intrusive_ptr<NpFriendPlayer> *>(m_players);
+	if (m_storage->AddFriends(m_count, basePlayers, &added) < 0)
+		return;
+
+	PostFriendRequestNotification(m_count, m_players);
+	NpFriendProfileImporter *profImporter = NpFriendProfileImporter::GetInstance();
+	NpFriendImporter *importer = NULL;
+	if (profImporter == NULL || NpFriendImporter::GetInstance(&importer) < 0)
+		return;
+
+	int enqueued = 0;
+	for (unsigned int index = 0; index < m_count; ++index) {
+		const SceNpId *npId = m_players[index]->GetNpId();
+		int reqDir = 0;
+		if (m_players[index]->GetPlayerType() == 3)
+			reqDir = m_players[index]->GetRequestDirection();
+
+		paf::common::SharedPtr<paf::job::JobItem> job;
+		if (npFriendImportProfileJobCreate(&job, npId, reqDir) < 0 ||
+		    importer->EnqueueProfileJob(job) < 0) {
+			profImporter->AddPendingRetry(npId);
+		} else if (++enqueued == added) {
+			break;
+		}
+	}
+}
+
+/* 0x813C5BF6 */
+int NpFriendAddEvent::CreateForFriends(paf::intrusive_ptr<NpFriendImporterEvent> *outEvent,
+				       const SceNpId *npIds, NpImpsCacheFriendPtr *const *handles,
+				       unsigned int count)
+{
+	NpFriendStorage *storage = NULL;
+	int ret = NpFriendStorage::GetInstance(&storage);
+	if (ret < 0)
+		return ret;
+
+	void *raw = npFriendImporterMalloc(sizeof(NpFriendAddEvent));
+	if (raw == NULL)
+		return NP_FRIEND_IMPORTER_ERR_OUT_OF_MEMORY;
+
+	NpFriendAddEvent *ev = new (raw) NpFriendAddEvent(storage);
+	*outEvent = paf::intrusive_ptr<NpFriendImporterEvent>(ev);
+	ret = BuildPlayerArrayFromImps(&ev->m_players, npIds, handles, count);
+	if (ret >= 0)
+		ev->m_count = count;
+	return ret;
+}
+
+/* 0x813C5CAA */
+int NpFriendAddEvent::CreateForBlocked(paf::intrusive_ptr<NpFriendImporterEvent> *outEvent,
+				       const SceNpId *npIds, unsigned int count)
+{
+	NpFriendStorage *storage = NULL;
+	int ret = NpFriendStorage::GetInstance(&storage);
+	if (ret < 0)
+		return ret;
+
+	void *raw = npFriendImporterMalloc(sizeof(NpFriendAddEvent));
+	if (raw == NULL)
+		return NP_FRIEND_IMPORTER_ERR_OUT_OF_MEMORY;
+
+	NpFriendAddEvent *ev = new (raw) NpFriendAddEvent(storage);
+	*outEvent = paf::intrusive_ptr<NpFriendImporterEvent>(ev);
+	if (BuildBlockedPlayerArray(&ev->m_players, npIds, count) >= 0)
+		ev->m_count = count;
+	return 0;
+}
+
 /* DeletePlayers event (0x813C60D0..0x813C6219) */
 class NpFriendDeleteEvent : public NpFriendImporterEvent {
 public:
-	explicit NpFriendDeleteEvent(NpFriendStorage *storage)
-		: m_storage(storage), m_npIds(NULL), m_count(0), m_which(0)
-	{
-	}
+	explicit NpFriendDeleteEvent(NpFriendStorage *storage);
+	virtual ~NpFriendDeleteEvent();
+	virtual void Execute();
 
-	virtual ~NpFriendDeleteEvent()
-	{
-		if (m_npIds != NULL) {
-			npFriendImporterFree(m_npIds);
-			m_npIds = NULL;
-		}
-	}
-
-	/* 0x813C61EC */
-	virtual void Execute()
-	{
-		int which = 0;
-		if (m_which == 1)
-			which = NP_FRIEND_DELETE_FRIEND;
-		else if (m_which == 2)
-			which = NP_FRIEND_DELETE_BLOCKED;
-		else
-			return;
-		m_storage->DeletePlayers(m_count, m_npIds, which);
-	}
-
-	/* 0x813C60D0 */
 	static int Create(paf::intrusive_ptr<NpFriendImporterEvent> *outEvent, const SceNpId *npIds,
-			  unsigned int count, int which)
-	{
-		NpFriendStorage *storage = NULL;
-		int ret = NpFriendStorage::GetInstance(&storage);
-		if (ret < 0)
-			return ret;
-
-		void *raw = npFriendImporterMalloc(sizeof(NpFriendDeleteEvent));
-		if (raw == NULL)
-			return NP_FRIEND_IMPORTER_ERR_OUT_OF_MEMORY;
-
-		NpFriendDeleteEvent *ev = new (raw) NpFriendDeleteEvent(storage);
-		*outEvent = paf::intrusive_ptr<NpFriendImporterEvent>(ev);
-		ev->m_npIds = static_cast<SceNpId *>(
-			npFriendImporterMalloc(sizeof(SceNpId) * count));
-		if (ev->m_npIds == NULL) {
-			outEvent->clear();
-			return NP_FRIEND_IMPORTER_ERR_OUT_OF_MEMORY;
-		}
-		sce_paf_memcpy(ev->m_npIds, npIds, sizeof(SceNpId) * count);
-		ev->m_count = count;
-		ev->m_which = which;
-		return 0;
-	}
+			  unsigned int count, int which);
 
 private:
 	NpFriendStorage *m_storage;
@@ -551,63 +521,68 @@ private:
 	int m_which;
 };
 
+NpFriendDeleteEvent::NpFriendDeleteEvent(NpFriendStorage *storage)
+	: m_storage(storage), m_npIds(NULL), m_count(0), m_which(0)
+{
+}
+
+NpFriendDeleteEvent::~NpFriendDeleteEvent()
+{
+	if (m_npIds != NULL) {
+		npFriendImporterFree(m_npIds);
+		m_npIds = NULL;
+	}
+}
+
+/* 0x813C61EC */
+void NpFriendDeleteEvent::Execute()
+{
+	int which = 0;
+	if (m_which == 1)
+		which = NP_FRIEND_DELETE_FRIEND;
+	else if (m_which == 2)
+		which = NP_FRIEND_DELETE_BLOCKED;
+	else
+		return;
+	m_storage->DeletePlayers(m_count, m_npIds, which);
+}
+
+/* 0x813C60D0 */
+int NpFriendDeleteEvent::Create(paf::intrusive_ptr<NpFriendImporterEvent> *outEvent,
+				const SceNpId *npIds, unsigned int count, int which)
+{
+	NpFriendStorage *storage = NULL;
+	int ret = NpFriendStorage::GetInstance(&storage);
+	if (ret < 0)
+		return ret;
+
+	void *raw = npFriendImporterMalloc(sizeof(NpFriendDeleteEvent));
+	if (raw == NULL)
+		return NP_FRIEND_IMPORTER_ERR_OUT_OF_MEMORY;
+
+	NpFriendDeleteEvent *ev = new (raw) NpFriendDeleteEvent(storage);
+	*outEvent = paf::intrusive_ptr<NpFriendImporterEvent>(ev);
+	ev->m_npIds = static_cast<SceNpId *>(npFriendImporterMalloc(sizeof(SceNpId) * count));
+	if (ev->m_npIds == NULL) {
+		outEvent->clear();
+		return NP_FRIEND_IMPORTER_ERR_OUT_OF_MEMORY;
+	}
+	sce_paf_memcpy(ev->m_npIds, npIds, sizeof(SceNpId) * count);
+	ev->m_count = count;
+	ev->m_which = which;
+	return 0;
+}
+
 /* Friend presence transition event (0x813C621A..0x813C669F) */
 class NpFriendPresenceEvent : public NpFriendImporterEvent {
 public:
 	NpFriendPresenceEvent(NpFriendStorage *storage, const SceNpId &npId, int onlineState,
-			      int transitionKind)
-		: m_storage(storage),
-		  m_npId(npId),
-		  m_onlineState(onlineState),
-		  m_transitionKind(transitionKind)
-	{
-	}
+			      int transitionKind);
+	virtual ~NpFriendPresenceEvent();
+	virtual void Execute();
 
-	virtual ~NpFriendPresenceEvent() {}
-
-	/* 0x813C64C4 */
-	virtual void Execute()
-	{
-		if ((m_transitionKind == 1 || m_transitionKind == 2) && m_onlineState == 3)
-			PostFriendOnlineNotification(m_npId.handle.data);
-
-		if (m_onlineState == 0)
-			return;
-
-		NpFriendProfileImporter *profImporter = NpFriendProfileImporter::GetInstance();
-		if (profImporter == NULL)
-			return;
-
-		NpFriendImporter *importer = NULL;
-		if (NpFriendImporter::GetInstance(&importer) < 0)
-			return;
-
-		paf::common::SharedPtr<paf::job::JobItem> job;
-		if (npFriendImportProfileJobCreate(&job, &m_npId, 0) < 0 ||
-		    importer->EnqueueProfileJob(job) < 0) {
-			profImporter->AddPendingRetry(&m_npId);
-		}
-	}
-
-	/* 0x813C621A */
 	static int Create(paf::intrusive_ptr<NpFriendImporterEvent> *outEvent, const SceNpId *npId,
-			  int onlineState, int transitionKind)
-	{
-		NpFriendStorage *storage = NULL;
-		int ret = NpFriendStorage::GetInstance(&storage);
-		if (ret < 0)
-			return ret;
-
-		void *raw = npFriendImporterMalloc(sizeof(NpFriendPresenceEvent));
-		if (raw == NULL)
-			return NP_FRIEND_IMPORTER_ERR_OUT_OF_MEMORY;
-
-		NpFriendPresenceEvent *ev =
-			new (raw) NpFriendPresenceEvent(storage, *npId, onlineState,
-							transitionKind);
-		*outEvent = paf::intrusive_ptr<NpFriendImporterEvent>(ev);
-		return 0;
-	}
+			  int onlineState, int transitionKind);
 
 private:
 	NpFriendStorage *m_storage;
@@ -616,389 +591,537 @@ private:
 	int m_transitionKind;
 };
 
+NpFriendPresenceEvent::NpFriendPresenceEvent(NpFriendStorage *storage, const SceNpId &npId,
+					     int onlineState, int transitionKind)
+	: m_storage(storage),
+	  m_npId(npId),
+	  m_onlineState(onlineState),
+	  m_transitionKind(transitionKind)
+{
+}
+
+NpFriendPresenceEvent::~NpFriendPresenceEvent()
+{
+}
+
+/* 0x813C64C4 */
+void NpFriendPresenceEvent::Execute()
+{
+	if ((m_transitionKind == 1 || m_transitionKind == 2) && m_onlineState == 3)
+		PostFriendOnlineNotification(m_npId.handle.data);
+
+	if (m_onlineState == 0)
+		return;
+
+	NpFriendProfileImporter *profImporter = NpFriendProfileImporter::GetInstance();
+	if (profImporter == NULL)
+		return;
+
+	NpFriendImporter *importer = NULL;
+	if (NpFriendImporter::GetInstance(&importer) < 0)
+		return;
+
+	paf::common::SharedPtr<paf::job::JobItem> job;
+	if (npFriendImportProfileJobCreate(&job, &m_npId, 0) < 0 ||
+	    importer->EnqueueProfileJob(job) < 0) {
+		profImporter->AddPendingRetry(&m_npId);
+	}
+}
+
+/* 0x813C621A */
+int NpFriendPresenceEvent::Create(paf::intrusive_ptr<NpFriendImporterEvent> *outEvent,
+				  const SceNpId *npId, int onlineState, int transitionKind)
+{
+	NpFriendStorage *storage = NULL;
+	int ret = NpFriendStorage::GetInstance(&storage);
+	if (ret < 0)
+		return ret;
+
+	void *raw = npFriendImporterMalloc(sizeof(NpFriendPresenceEvent));
+	if (raw == NULL)
+		return NP_FRIEND_IMPORTER_ERR_OUT_OF_MEMORY;
+
+	NpFriendPresenceEvent *ev =
+		new (raw) NpFriendPresenceEvent(storage, *npId, onlineState, transitionKind);
+	*outEvent = paf::intrusive_ptr<NpFriendImporterEvent>(ev);
+	return 0;
+}
+
 /* Network reconnected event (0x813C66A0..0x813C670B) */
 class NpFriendNetOnlineEvent : public NpFriendImporterEvent {
 public:
-	NpFriendNetOnlineEvent() {}
-	virtual ~NpFriendNetOnlineEvent() {}
+	NpFriendNetOnlineEvent();
+	virtual ~NpFriendNetOnlineEvent();
+	virtual void Execute();
 
-	/* 0x813C66F4 */
-	virtual void Execute()
-	{
-		NpFriendProfileImporter *profImporter = NpFriendProfileImporter::GetInstance();
-		if (profImporter != NULL) {
-			profImporter->RetryPending();
-			profImporter->RetrySelfProfile();
-		}
-	}
-
-	/* 0x813C66A0 */
-	static int Create(paf::intrusive_ptr<NpFriendImporterEvent> *outEvent)
-	{
-		void *raw = npFriendImporterMalloc(sizeof(NpFriendNetOnlineEvent));
-		if (raw == NULL)
-			return NP_FRIEND_IMPORTER_ERR_OUT_OF_MEMORY;
-		NpFriendNetOnlineEvent *ev = new (raw) NpFriendNetOnlineEvent();
-		*outEvent = paf::intrusive_ptr<NpFriendImporterEvent>(ev);
-		return 0;
-	}
+	static int Create(paf::intrusive_ptr<NpFriendImporterEvent> *outEvent);
 };
+
+NpFriendNetOnlineEvent::NpFriendNetOnlineEvent()
+{
+}
+
+NpFriendNetOnlineEvent::~NpFriendNetOnlineEvent()
+{
+}
+
+/* 0x813C66F4 */
+void NpFriendNetOnlineEvent::Execute()
+{
+	NpFriendProfileImporter *profImporter = NpFriendProfileImporter::GetInstance();
+	if (profImporter != NULL) {
+		profImporter->RetryPending();
+		profImporter->RetrySelfProfile();
+	}
+}
+
+/* 0x813C66A0 */
+int NpFriendNetOnlineEvent::Create(paf::intrusive_ptr<NpFriendImporterEvent> *outEvent)
+{
+	void *raw = npFriendImporterMalloc(sizeof(NpFriendNetOnlineEvent));
+	if (raw == NULL)
+		return NP_FRIEND_IMPORTER_ERR_OUT_OF_MEMORY;
+	NpFriendNetOnlineEvent *ev = new (raw) NpFriendNetOnlineEvent();
+	*outEvent = paf::intrusive_ptr<NpFriendImporterEvent>(ev);
+	return 0;
+}
 
 /* NP Sign-in / sign-out event (0x813C670C..0x813C6843) */
 class NpFriendSignInEvent : public NpFriendImporterEvent {
 public:
-	explicit NpFriendSignInEvent(int state) : m_state(state) {}
-	virtual ~NpFriendSignInEvent() {}
+	explicit NpFriendSignInEvent(int state);
+	virtual ~NpFriendSignInEvent();
+	virtual void Execute();
 
-	/* 0x813C6768 */
-	virtual void Execute()
-	{
-		if (m_state == 1) {
-			NpFriendProfileImporter *profImporter =
-				NpFriendProfileImporter::GetInstance();
-			if (profImporter != NULL)
-				profImporter->OnSignOut();
-
-			NpFriendStorage *storage = NULL;
-			if (NpFriendStorage::GetInstance(&storage) >= 0)
-				storage->Clear();
-		} else if (m_state == 2) {
-			NpFriendProfileImporter *profImporter =
-				NpFriendProfileImporter::GetInstance();
-			if (profImporter == NULL)
-				return;
-
-			profImporter->RefreshSelfNpId();
-			SceNpId selfNpId;
-			sce_paf_memset(&selfNpId, 0, sizeof(selfNpId));
-			sce_paf_memcpy(&selfNpId, profImporter->GetSelfNpId(), sizeof(selfNpId));
-
-			NpLookupProfile profile;
-			sce_paf_memset(&profile, 0, sizeof(profile));
-			if (NpFriendProfileImporter::FetchProfileFromServer(&selfNpId, &selfNpId,
-									    &profile, 3) < 0 ||
-			    npFriendCacheDownloadAvatar(profile.icon.data) < 0) {
-				profImporter->MarkSelfRetryPending();
-			}
-		}
-	}
-
-	/* 0x813C670C */
-	static int Create(paf::intrusive_ptr<NpFriendImporterEvent> *outEvent, int state)
-	{
-		void *raw = npFriendImporterMalloc(sizeof(NpFriendSignInEvent));
-		if (raw == NULL)
-			return NP_FRIEND_IMPORTER_ERR_OUT_OF_MEMORY;
-		NpFriendSignInEvent *ev = new (raw) NpFriendSignInEvent(state);
-		*outEvent = paf::intrusive_ptr<NpFriendImporterEvent>(ev);
-		return 0;
-	}
+	static int Create(paf::intrusive_ptr<NpFriendImporterEvent> *outEvent, int state);
 
 private:
 	int m_state;
 };
 
+NpFriendSignInEvent::NpFriendSignInEvent(int state) : m_state(state)
+{
+}
+
+NpFriendSignInEvent::~NpFriendSignInEvent()
+{
+}
+
+/* 0x813C6768 */
+void NpFriendSignInEvent::Execute()
+{
+	if (m_state == 1) {
+		NpFriendProfileImporter *profImporter = NpFriendProfileImporter::GetInstance();
+		if (profImporter != NULL)
+			profImporter->OnSignOut();
+
+		NpFriendStorage *storage = NULL;
+		if (NpFriendStorage::GetInstance(&storage) >= 0)
+			storage->Clear();
+	} else if (m_state == 2) {
+		NpFriendProfileImporter *profImporter = NpFriendProfileImporter::GetInstance();
+		if (profImporter == NULL)
+			return;
+
+		profImporter->RefreshSelfNpId();
+		SceNpId selfNpId;
+		sce_paf_memset(&selfNpId, 0, sizeof(selfNpId));
+		sce_paf_memcpy(&selfNpId, profImporter->GetSelfNpId(), sizeof(selfNpId));
+
+		NpLookupProfile profile;
+		sce_paf_memset(&profile, 0, sizeof(profile));
+		if (NpFriendProfileImporter::FetchProfileFromServer(&selfNpId, &selfNpId,
+								    &profile, 3) < 0 ||
+		    npFriendCacheDownloadAvatar(profile.icon.data) < 0) {
+			profImporter->MarkSelfRetryPending();
+		}
+	}
+}
+
+/* 0x813C670C */
+int NpFriendSignInEvent::Create(paf::intrusive_ptr<NpFriendImporterEvent> *outEvent, int state)
+{
+	void *raw = npFriendImporterMalloc(sizeof(NpFriendSignInEvent));
+	if (raw == NULL)
+		return NP_FRIEND_IMPORTER_ERR_OUT_OF_MEMORY;
+	NpFriendSignInEvent *ev = new (raw) NpFriendSignInEvent(state);
+	*outEvent = paf::intrusive_ptr<NpFriendImporterEvent>(ev);
+	return 0;
+}
+
 /* Sync full blocked list event (0x813C6844..0x813C6B07) */
 class NpFriendSyncBlockedEvent : public NpFriendImporterEvent {
 public:
-	explicit NpFriendSyncBlockedEvent(NpFriendStorage *storage) : m_storage(storage) {}
-	virtual ~NpFriendSyncBlockedEvent() {}
+	explicit NpFriendSyncBlockedEvent(NpFriendStorage *storage);
+	virtual ~NpFriendSyncBlockedEvent();
+	virtual void Execute();
 
-	/* 0x813C6AA8 */
-	virtual void Execute()
-	{
-		paf::intrusive_ptr<NpFriendPlayerImpl> *players = NULL;
-		if (BuildPlayerArrayFromRecordList(&players, m_records) < 0)
-			return;
-
-		unsigned int count = static_cast<unsigned int>(m_records.size());
-		const paf::intrusive_ptr<NpFriendPlayer> *basePlayers =
-			reinterpret_cast<const paf::intrusive_ptr<NpFriendPlayer> *>(players);
-		if (m_storage->StoreBlocked(count, basePlayers, false) >= 0) {
-			NpFriendProfileImporter *profImporter =
-				NpFriendProfileImporter::GetInstance();
-			if (profImporter != NULL && count != 0)
-				profImporter->ImportProfiles(count,
-					reinterpret_cast<NpFriendPlayerImpl *const *>(players));
-		}
-		ReleasePlayerArray(players, count);
-	}
-
-	/* 0x813C6844 */
 	static int Create(paf::intrusive_ptr<NpFriendImporterEvent> *outEvent, const SceNpId *npIds,
-			  unsigned int count)
-	{
-		NpFriendStorage *storage = NULL;
-		int ret = NpFriendStorage::GetInstance(&storage);
-		if (ret < 0)
-			return ret;
-
-		void *raw = npFriendImporterMalloc(sizeof(NpFriendSyncBlockedEvent));
-		if (raw == NULL)
-			return NP_FRIEND_IMPORTER_ERR_OUT_OF_MEMORY;
-
-		NpFriendSyncBlockedEvent *ev = new (raw) NpFriendSyncBlockedEvent(storage);
-		*outEvent = paf::intrusive_ptr<NpFriendImporterEvent>(ev);
-
-		for (unsigned int index = 0; index < count; ++index) {
-			NpFriendListRecord rec;
-			sce_paf_memset(&rec, 0, sizeof(rec));
-			sce_paf_memcpy(&rec.npId, &npIds[index], sizeof(rec.npId));
-			rec.playerType = 5;
-			size_t before = ev->m_records.size();
-			ev->m_records.push_back(rec);
-			if (ev->m_records.size() == before) {
-				outEvent->clear();
-				return NP_FRIEND_IMPORTER_ERR_OUT_OF_MEMORY;
-			}
-		}
-		return 0;
-	}
+			  unsigned int count);
 
 private:
 	NpFriendStorage *m_storage;
 	NpFriendRecordList m_records;
 };
+
+NpFriendSyncBlockedEvent::NpFriendSyncBlockedEvent(NpFriendStorage *storage) : m_storage(storage)
+{
+}
+
+NpFriendSyncBlockedEvent::~NpFriendSyncBlockedEvent()
+{
+}
+
+/* 0x813C6AA8 */
+void NpFriendSyncBlockedEvent::Execute()
+{
+	paf::intrusive_ptr<NpFriendPlayerImpl> *players = NULL;
+	if (BuildPlayerArrayFromRecordList(&players, m_records) < 0)
+		return;
+
+	unsigned int count = static_cast<unsigned int>(m_records.size());
+	const paf::intrusive_ptr<NpFriendPlayer> *basePlayers =
+		reinterpret_cast<const paf::intrusive_ptr<NpFriendPlayer> *>(players);
+	if (m_storage->StoreBlocked(count, basePlayers, false) >= 0) {
+		NpFriendProfileImporter *profImporter = NpFriendProfileImporter::GetInstance();
+		if (profImporter != NULL && count != 0)
+			profImporter->ImportProfiles(count,
+				reinterpret_cast<NpFriendPlayerImpl *const *>(players));
+	}
+	ReleasePlayerArray(players, count);
+}
+
+/* 0x813C6844 */
+int NpFriendSyncBlockedEvent::Create(paf::intrusive_ptr<NpFriendImporterEvent> *outEvent,
+				     const SceNpId *npIds, unsigned int count)
+{
+	NpFriendStorage *storage = NULL;
+	int ret = NpFriendStorage::GetInstance(&storage);
+	if (ret < 0)
+		return ret;
+
+	void *raw = npFriendImporterMalloc(sizeof(NpFriendSyncBlockedEvent));
+	if (raw == NULL)
+		return NP_FRIEND_IMPORTER_ERR_OUT_OF_MEMORY;
+
+	NpFriendSyncBlockedEvent *ev = new (raw) NpFriendSyncBlockedEvent(storage);
+	*outEvent = paf::intrusive_ptr<NpFriendImporterEvent>(ev);
+
+	for (unsigned int index = 0; index < count; ++index) {
+		NpFriendListRecord rec;
+		sce_paf_memset(&rec, 0, sizeof(rec));
+		sce_paf_memcpy(&rec.npId, &npIds[index], sizeof(rec.npId));
+		rec.playerType = 5;
+		size_t before = ev->m_records.size();
+		ev->m_records.push_back(rec);
+		if (ev->m_records.size() == before) {
+			outEvent->clear();
+			return NP_FRIEND_IMPORTER_ERR_OUT_OF_MEMORY;
+		}
+	}
+	return 0;
+}
 
 /* Clear blocked list event (0x813C6B08..0x813C6BA3) */
 class NpFriendClearBlockedEvent : public NpFriendImporterEvent {
 public:
-	explicit NpFriendClearBlockedEvent(NpFriendStorage *storage) : m_storage(storage) {}
-	virtual ~NpFriendClearBlockedEvent() {}
+	explicit NpFriendClearBlockedEvent(NpFriendStorage *storage);
+	virtual ~NpFriendClearBlockedEvent();
+	virtual void Execute();
 
-	/* 0x813C6B92 */
-	virtual void Execute()
-	{
-		m_storage->StoreBlocked(0, NULL, true);
-	}
-
-	/* 0x813C6B08 */
-	static int Create(paf::intrusive_ptr<NpFriendImporterEvent> *outEvent)
-	{
-		NpFriendStorage *storage = NULL;
-		int ret = NpFriendStorage::GetInstance(&storage);
-		if (ret < 0)
-			return ret;
-
-		void *raw = npFriendImporterMalloc(sizeof(NpFriendClearBlockedEvent));
-		if (raw == NULL)
-			return NP_FRIEND_IMPORTER_ERR_OUT_OF_MEMORY;
-
-		NpFriendClearBlockedEvent *ev = new (raw) NpFriendClearBlockedEvent(storage);
-		*outEvent = paf::intrusive_ptr<NpFriendImporterEvent>(ev);
-		return 0;
-	}
+	static int Create(paf::intrusive_ptr<NpFriendImporterEvent> *outEvent);
 
 private:
 	NpFriendStorage *m_storage;
 };
+
+NpFriendClearBlockedEvent::NpFriendClearBlockedEvent(NpFriendStorage *storage)
+	: m_storage(storage)
+{
+}
+
+NpFriendClearBlockedEvent::~NpFriendClearBlockedEvent()
+{
+}
+
+/* 0x813C6B92 */
+void NpFriendClearBlockedEvent::Execute()
+{
+	m_storage->StoreBlocked(0, NULL, true);
+}
+
+/* 0x813C6B08 */
+int NpFriendClearBlockedEvent::Create(paf::intrusive_ptr<NpFriendImporterEvent> *outEvent)
+{
+	NpFriendStorage *storage = NULL;
+	int ret = NpFriendStorage::GetInstance(&storage);
+	if (ret < 0)
+		return ret;
+
+	void *raw = npFriendImporterMalloc(sizeof(NpFriendClearBlockedEvent));
+	if (raw == NULL)
+		return NP_FRIEND_IMPORTER_ERR_OUT_OF_MEMORY;
+
+	NpFriendClearBlockedEvent *ev = new (raw) NpFriendClearBlockedEvent(storage);
+	*outEvent = paf::intrusive_ptr<NpFriendImporterEvent>(ev);
+	return 0;
+}
 
 /* Sync full friend list event (0x813C6BA4..0x813C6DBB) */
 class NpFriendSyncFriendsEvent : public NpFriendImporterEvent {
 public:
-	explicit NpFriendSyncFriendsEvent(NpFriendStorage *storage) : m_storage(storage) {}
-	virtual ~NpFriendSyncFriendsEvent() {}
+	explicit NpFriendSyncFriendsEvent(NpFriendStorage *storage);
+	virtual ~NpFriendSyncFriendsEvent();
+	virtual void Execute();
 
-	/* 0x813C6D5C */
-	virtual void Execute()
-	{
-		paf::intrusive_ptr<NpFriendPlayerImpl> *players = NULL;
-		if (BuildPlayerArrayFromRecordList(&players, m_records) < 0)
-			return;
-
-		unsigned int count = static_cast<unsigned int>(m_records.size());
-		const paf::intrusive_ptr<NpFriendPlayer> *basePlayers =
-			reinterpret_cast<const paf::intrusive_ptr<NpFriendPlayer> *>(players);
-		if (m_storage->StoreFriends(count, basePlayers, false) >= 0) {
-			NpFriendProfileImporter *profImporter =
-				NpFriendProfileImporter::GetInstance();
-			if (profImporter != NULL && count != 0)
-				profImporter->ImportProfiles(count,
-					reinterpret_cast<NpFriendPlayerImpl *const *>(players));
-		}
-		ReleasePlayerArray(players, count);
-	}
-
-	/* 0x813C6BA4 */
 	static int Create(paf::intrusive_ptr<NpFriendImporterEvent> *outEvent, const SceNpId *npIds,
-			  NpImpsCacheFriendPtr *const *handles, unsigned int count)
-	{
-		NpFriendStorage *storage = NULL;
-		int ret = NpFriendStorage::GetInstance(&storage);
-		if (ret < 0)
-			return ret;
-
-		void *raw = npFriendImporterMalloc(sizeof(NpFriendSyncFriendsEvent));
-		if (raw == NULL)
-			return NP_FRIEND_IMPORTER_ERR_OUT_OF_MEMORY;
-
-		NpFriendSyncFriendsEvent *ev = new (raw) NpFriendSyncFriendsEvent(storage);
-		*outEvent = paf::intrusive_ptr<NpFriendImporterEvent>(ev);
-
-		for (unsigned int index = 0; index < count; ++index) {
-			int relation = 0;
-			paf::rtc::Tick reqDate = 0;
-			int reqDir = 0;
-
-			ret = npImpsSvcGetFriendEntryRelation(handles[index], &relation);
-			if (ret >= 0)
-				ret = npImpsSvcGetFriendEntryDate(handles[index], &reqDate);
-			if (ret >= 0)
-				ret = npImpsSvcGetFriendEntryRequestDirection(handles[index],
-									      &reqDir);
-			if (ret >= 0)
-				ret = AppendFriendRecord(&ev->m_records, &npIds[index], relation,
-							 &reqDate, reqDir);
-			if (ret < 0) {
-				outEvent->clear();
-				return ret;
-			}
-		}
-		return 0;
-	}
+			  NpImpsCacheFriendPtr *const *handles, unsigned int count);
 
 private:
 	NpFriendStorage *m_storage;
 	NpFriendRecordList m_records;
 };
+
+NpFriendSyncFriendsEvent::NpFriendSyncFriendsEvent(NpFriendStorage *storage) : m_storage(storage)
+{
+}
+
+NpFriendSyncFriendsEvent::~NpFriendSyncFriendsEvent()
+{
+}
+
+/* 0x813C6D5C */
+void NpFriendSyncFriendsEvent::Execute()
+{
+	paf::intrusive_ptr<NpFriendPlayerImpl> *players = NULL;
+	if (BuildPlayerArrayFromRecordList(&players, m_records) < 0)
+		return;
+
+	unsigned int count = static_cast<unsigned int>(m_records.size());
+	const paf::intrusive_ptr<NpFriendPlayer> *basePlayers =
+		reinterpret_cast<const paf::intrusive_ptr<NpFriendPlayer> *>(players);
+	if (m_storage->StoreFriends(count, basePlayers, false) >= 0) {
+		NpFriendProfileImporter *profImporter = NpFriendProfileImporter::GetInstance();
+		if (profImporter != NULL && count != 0)
+			profImporter->ImportProfiles(count,
+				reinterpret_cast<NpFriendPlayerImpl *const *>(players));
+	}
+	ReleasePlayerArray(players, count);
+}
+
+/* 0x813C6BA4 */
+int NpFriendSyncFriendsEvent::Create(paf::intrusive_ptr<NpFriendImporterEvent> *outEvent,
+				     const SceNpId *npIds, NpImpsCacheFriendPtr *const *handles,
+				     unsigned int count)
+{
+	NpFriendStorage *storage = NULL;
+	int ret = NpFriendStorage::GetInstance(&storage);
+	if (ret < 0)
+		return ret;
+
+	void *raw = npFriendImporterMalloc(sizeof(NpFriendSyncFriendsEvent));
+	if (raw == NULL)
+		return NP_FRIEND_IMPORTER_ERR_OUT_OF_MEMORY;
+
+	NpFriendSyncFriendsEvent *ev = new (raw) NpFriendSyncFriendsEvent(storage);
+	*outEvent = paf::intrusive_ptr<NpFriendImporterEvent>(ev);
+
+	for (unsigned int index = 0; index < count; ++index) {
+		int relation = 0;
+		paf::rtc::Tick reqDate = 0;
+		int reqDir = 0;
+
+		ret = npImpsSvcGetFriendEntryRelation(handles[index], &relation);
+		if (ret >= 0)
+			ret = npImpsSvcGetFriendEntryDate(handles[index], &reqDate);
+		if (ret >= 0)
+			ret = npImpsSvcGetFriendEntryRequestDirection(handles[index], &reqDir);
+		if (ret >= 0)
+			ret = AppendFriendRecord(&ev->m_records, &npIds[index], relation,
+						 &reqDate, reqDir);
+		if (ret < 0) {
+			outEvent->clear();
+			return ret;
+		}
+	}
+	return 0;
+}
 
 /* Clear friend list event (0x813C6DBC..0x813C6E57) */
 class NpFriendClearFriendsEvent : public NpFriendImporterEvent {
 public:
-	explicit NpFriendClearFriendsEvent(NpFriendStorage *storage) : m_storage(storage) {}
-	virtual ~NpFriendClearFriendsEvent() {}
+	explicit NpFriendClearFriendsEvent(NpFriendStorage *storage);
+	virtual ~NpFriendClearFriendsEvent();
+	virtual void Execute();
 
-	/* 0x813C6E46 */
-	virtual void Execute()
-	{
-		m_storage->StoreFriends(0, NULL, true);
-	}
-
-	/* 0x813C6DBC */
-	static int Create(paf::intrusive_ptr<NpFriendImporterEvent> *outEvent)
-	{
-		NpFriendStorage *storage = NULL;
-		int ret = NpFriendStorage::GetInstance(&storage);
-		if (ret < 0)
-			return ret;
-
-		void *raw = npFriendImporterMalloc(sizeof(NpFriendClearFriendsEvent));
-		if (raw == NULL)
-			return NP_FRIEND_IMPORTER_ERR_OUT_OF_MEMORY;
-
-		NpFriendClearFriendsEvent *ev = new (raw) NpFriendClearFriendsEvent(storage);
-		*outEvent = paf::intrusive_ptr<NpFriendImporterEvent>(ev);
-		return 0;
-	}
+	static int Create(paf::intrusive_ptr<NpFriendImporterEvent> *outEvent);
 
 private:
 	NpFriendStorage *m_storage;
 };
 
+NpFriendClearFriendsEvent::NpFriendClearFriendsEvent(NpFriendStorage *storage)
+	: m_storage(storage)
+{
+}
+
+NpFriendClearFriendsEvent::~NpFriendClearFriendsEvent()
+{
+}
+
+/* 0x813C6E46 */
+void NpFriendClearFriendsEvent::Execute()
+{
+	m_storage->StoreFriends(0, NULL, true);
+}
+
+/* 0x813C6DBC */
+int NpFriendClearFriendsEvent::Create(paf::intrusive_ptr<NpFriendImporterEvent> *outEvent)
+{
+	NpFriendStorage *storage = NULL;
+	int ret = NpFriendStorage::GetInstance(&storage);
+	if (ret < 0)
+		return ret;
+
+	void *raw = npFriendImporterMalloc(sizeof(NpFriendClearFriendsEvent));
+	if (raw == NULL)
+		return NP_FRIEND_IMPORTER_ERR_OUT_OF_MEMORY;
+
+	NpFriendClearFriendsEvent *ev = new (raw) NpFriendClearFriendsEvent(storage);
+	*outEvent = paf::intrusive_ptr<NpFriendImporterEvent>(ev);
+	return 0;
+}
+
 /* Self profile changed event (0x813C6E58..0x813C6EC7) */
 class NpFriendUpdateSelfProfileEvent : public NpFriendImporterEvent {
 public:
-	NpFriendUpdateSelfProfileEvent() {}
-	virtual ~NpFriendUpdateSelfProfileEvent() {}
+	NpFriendUpdateSelfProfileEvent();
+	virtual ~NpFriendUpdateSelfProfileEvent();
+	virtual void Execute();
 
-	/* 0x813C6EAC */
-	virtual void Execute()
-	{
-		NpFriendProfileImporter *profImporter = NpFriendProfileImporter::GetInstance();
-		if (profImporter != NULL && profImporter->RefreshSelfProfile() < 0)
-			profImporter->MarkSelfRetryPending();
-	}
-
-	/* 0x813C6E58 */
-	static int Create(paf::intrusive_ptr<NpFriendImporterEvent> *outEvent)
-	{
-		void *raw = npFriendImporterMalloc(sizeof(NpFriendUpdateSelfProfileEvent));
-		if (raw == NULL)
-			return NP_FRIEND_IMPORTER_ERR_OUT_OF_MEMORY;
-		NpFriendUpdateSelfProfileEvent *ev = new (raw) NpFriendUpdateSelfProfileEvent();
-		*outEvent = paf::intrusive_ptr<NpFriendImporterEvent>(ev);
-		return 0;
-	}
+	static int Create(paf::intrusive_ptr<NpFriendImporterEvent> *outEvent);
 };
+
+NpFriendUpdateSelfProfileEvent::NpFriendUpdateSelfProfileEvent()
+{
+}
+
+NpFriendUpdateSelfProfileEvent::~NpFriendUpdateSelfProfileEvent()
+{
+}
+
+/* 0x813C6EAC */
+void NpFriendUpdateSelfProfileEvent::Execute()
+{
+	NpFriendProfileImporter *profImporter = NpFriendProfileImporter::GetInstance();
+	if (profImporter != NULL && profImporter->RefreshSelfProfile() < 0)
+		profImporter->MarkSelfRetryPending();
+}
+
+/* 0x813C6E58 */
+int NpFriendUpdateSelfProfileEvent::Create(paf::intrusive_ptr<NpFriendImporterEvent> *outEvent)
+{
+	void *raw = npFriendImporterMalloc(sizeof(NpFriendUpdateSelfProfileEvent));
+	if (raw == NULL)
+		return NP_FRIEND_IMPORTER_ERR_OUT_OF_MEMORY;
+	NpFriendUpdateSelfProfileEvent *ev = new (raw) NpFriendUpdateSelfProfileEvent();
+	*outEvent = paf::intrusive_ptr<NpFriendImporterEvent>(ev);
+	return 0;
+}
 
 /* Update friend player types event (0x813C6EC8..0x813C71C7) */
 class NpFriendUpdateTypesEvent : public NpFriendImporterEvent {
 public:
-	explicit NpFriendUpdateTypesEvent(NpFriendStorage *storage) : m_storage(storage) {}
-	virtual ~NpFriendUpdateTypesEvent() {}
+	explicit NpFriendUpdateTypesEvent(NpFriendStorage *storage);
+	virtual ~NpFriendUpdateTypesEvent();
+	virtual void Execute();
 
-	/* 0x813C716C */
-	virtual void Execute()
-	{
-		paf::intrusive_ptr<NpFriendPlayerImpl> *players = NULL;
-		if (BuildPlayerArrayFromRecordList(&players, m_records) < 0)
-			return;
+	int AddRecord(const SceNpId *npId, int relation, const paf::rtc::Tick *reqDate);
 
-		unsigned int count = static_cast<unsigned int>(m_records.size());
-		const paf::intrusive_ptr<NpFriendPlayer> *basePlayers =
-			reinterpret_cast<const paf::intrusive_ptr<NpFriendPlayer> *>(players);
-		if (m_storage->UpdatePlayerTypes(count, basePlayers) >= 0) {
-			NpFriendProfileImporter *profImporter =
-				NpFriendProfileImporter::GetInstance();
-			if (profImporter != NULL)
-				profImporter->ImportProfiles(count,
-					reinterpret_cast<NpFriendPlayerImpl *const *>(players));
-		}
-		ReleasePlayerArray(players, count);
-	}
-
-	/* 0x813C6EC8 */
-	int AddRecord(const SceNpId *npId, int relation, const paf::rtc::Tick *reqDate)
-	{
-		NpFriendListRecord rec;
-		sce_paf_memset(&rec, 0, sizeof(rec));
-		sce_paf_memcpy(&rec.npId, npId, sizeof(rec.npId));
-		rec.requestDate = *reqDate;
-		int ret = MapImpsRelationToPlayerType(relation, false, &rec.playerType);
-		if (ret < 0)
-			return ret;
-
-		size_t before = m_records.size();
-		m_records.push_back(rec);
-		return (m_records.size() != before) ? 0 : NP_FRIEND_IMPORTER_ERR_OUT_OF_MEMORY;
-	}
-
-	/* 0x813C6FBE */
 	static int Create(paf::intrusive_ptr<NpFriendImporterEvent> *outEvent, const SceNpId *npIds,
-			  NpImpsCacheFriendPtr *const *handles, unsigned int count)
-	{
-		NpFriendStorage *storage = NULL;
-		int ret = NpFriendStorage::GetInstance(&storage);
-		if (ret < 0)
-			return ret;
-
-		void *raw = npFriendImporterMalloc(sizeof(NpFriendUpdateTypesEvent));
-		if (raw == NULL)
-			return NP_FRIEND_IMPORTER_ERR_OUT_OF_MEMORY;
-
-		NpFriendUpdateTypesEvent *ev = new (raw) NpFriendUpdateTypesEvent(storage);
-		*outEvent = paf::intrusive_ptr<NpFriendImporterEvent>(ev);
-
-		for (unsigned int index = 0; index < count; ++index) {
-			int relation = 0;
-			paf::rtc::Tick reqDate = 0;
-			ret = npImpsSvcGetFriendEntryRelation(handles[index], &relation);
-			if (ret >= 0)
-				ret = npImpsSvcGetFriendEntryDate(handles[index], &reqDate);
-			if (ret >= 0)
-				ret = ev->AddRecord(&npIds[index], relation, &reqDate);
-			if (ret < 0) {
-				outEvent->clear();
-				return ret;
-			}
-		}
-		return 0;
-	}
+			  NpImpsCacheFriendPtr *const *handles, unsigned int count);
 
 private:
 	NpFriendStorage *m_storage;
 	NpFriendRecordList m_records;
 };
+
+NpFriendUpdateTypesEvent::NpFriendUpdateTypesEvent(NpFriendStorage *storage) : m_storage(storage)
+{
+}
+
+NpFriendUpdateTypesEvent::~NpFriendUpdateTypesEvent()
+{
+}
+
+/* 0x813C716C */
+void NpFriendUpdateTypesEvent::Execute()
+{
+	paf::intrusive_ptr<NpFriendPlayerImpl> *players = NULL;
+	if (BuildPlayerArrayFromRecordList(&players, m_records) < 0)
+		return;
+
+	unsigned int count = static_cast<unsigned int>(m_records.size());
+	const paf::intrusive_ptr<NpFriendPlayer> *basePlayers =
+		reinterpret_cast<const paf::intrusive_ptr<NpFriendPlayer> *>(players);
+	if (m_storage->UpdatePlayerTypes(count, basePlayers) >= 0) {
+		NpFriendProfileImporter *profImporter = NpFriendProfileImporter::GetInstance();
+		if (profImporter != NULL)
+			profImporter->ImportProfiles(count,
+				reinterpret_cast<NpFriendPlayerImpl *const *>(players));
+	}
+	ReleasePlayerArray(players, count);
+}
+
+/* 0x813C6EC8 */
+int NpFriendUpdateTypesEvent::AddRecord(const SceNpId *npId, int relation,
+					const paf::rtc::Tick *reqDate)
+{
+	NpFriendListRecord rec;
+	sce_paf_memset(&rec, 0, sizeof(rec));
+	sce_paf_memcpy(&rec.npId, npId, sizeof(rec.npId));
+	rec.requestDate = *reqDate;
+	int ret = MapImpsRelationToPlayerType(relation, false, &rec.playerType);
+	if (ret < 0)
+		return ret;
+
+	size_t before = m_records.size();
+	m_records.push_back(rec);
+	return (m_records.size() != before) ? 0 : NP_FRIEND_IMPORTER_ERR_OUT_OF_MEMORY;
+}
+
+/* 0x813C6FBE */
+int NpFriendUpdateTypesEvent::Create(paf::intrusive_ptr<NpFriendImporterEvent> *outEvent,
+				     const SceNpId *npIds, NpImpsCacheFriendPtr *const *handles,
+				     unsigned int count)
+{
+	NpFriendStorage *storage = NULL;
+	int ret = NpFriendStorage::GetInstance(&storage);
+	if (ret < 0)
+		return ret;
+
+	void *raw = npFriendImporterMalloc(sizeof(NpFriendUpdateTypesEvent));
+	if (raw == NULL)
+		return NP_FRIEND_IMPORTER_ERR_OUT_OF_MEMORY;
+
+	NpFriendUpdateTypesEvent *ev = new (raw) NpFriendUpdateTypesEvent(storage);
+	*outEvent = paf::intrusive_ptr<NpFriendImporterEvent>(ev);
+
+	for (unsigned int index = 0; index < count; ++index) {
+		int relation = 0;
+		paf::rtc::Tick reqDate = 0;
+		ret = npImpsSvcGetFriendEntryRelation(handles[index], &relation);
+		if (ret >= 0)
+			ret = npImpsSvcGetFriendEntryDate(handles[index], &reqDate);
+		if (ret >= 0)
+			ret = ev->AddRecord(&npIds[index], relation, &reqDate);
+		if (ret < 0) {
+			outEvent->clear();
+			return ret;
+		}
+	}
+	return 0;
+}
 
 /* ============================================================================
  * IMPS & NetCtl Callbacks (0x813C5970..0x813C5BDF)
