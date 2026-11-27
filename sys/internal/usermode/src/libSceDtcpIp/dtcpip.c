@@ -67,16 +67,16 @@ static int dtcpIpCommandEventId(int *outEvent, int command)
  * SceDtcpIp_6AE48FE3: start the library. Allocates the shared heap, creates the locks,
  * the event flag and the worker thread (and the HTTP worker with it), and moves to the
  * idle state. heapSize is the shared memory the library allocates from, priority and
- * affinity the worker threads'; reserved4 must be zero.
+ * affinity the worker threads'; reservedMustBeZero must be zero.
  */
-int SceDtcpIp_6AE48FE3(SceSize heapSize, SceInt32 priority, SceInt32 affinity, int reserved1,
-		       int reserved2, int reserved3, int reserved4)
+int SceDtcpIp_6AE48FE3(SceSize heapSize, SceInt32 priority, SceInt32 affinity, int unusedOptA,
+		       int unusedOptB, int unusedOptC, int reservedMustBeZero)
 {
 	SceUID worker;
 	int ret;
 	SceUID eventFlag;
 
-	if (heapSize == 0 || reserved4 != 0)
+	if (heapSize == 0 || reservedMustBeZero != 0)
 		return SCE_DTCP_IP_ERROR_PARAM;
 	if (g_dtcpIp.state != SCE_DTCP_IP_STATE_STOPPED)
 		return SCE_DTCP_IP_ERROR_SEQUENCE;
@@ -88,7 +88,6 @@ int SceDtcpIp_6AE48FE3(SceSize heapSize, SceInt32 priority, SceInt32 affinity, i
 
 	ret = dtcpIpCreateLocks();
 	if (ret < 0) {
-destroyHeap:
 		dtcpIpDestroyHeap();
 		return ret;
 	}
@@ -96,47 +95,43 @@ destroyHeap:
 	eventFlag = sceKernelCreateEventFlag("SceDtcpIpWorkerEvent", 0, 0, NULL);
 	ret = eventFlag;
 	if (eventFlag < 0) {
-destroyLocks:
 		dtcpIpDestroyLocks();
-		goto destroyHeap;
+		dtcpIpDestroyHeap();
+		return ret;
 	}
 	g_dtcpIp.workerEvent = eventFlag;
 
 	worker = sceKernelCreateThread("SceDtcpIpWorkerThread", dtcpIpWorkerThread, priority,
 				       0x1000, 0, affinity, NULL);
 	ret = worker;
-	if (worker < 0) {
-eventFlagDropped:
-		if (g_dtcpIp.workerEvent != -1)
-			sceKernelDeleteEventFlag(g_dtcpIp.workerEvent);
-		g_dtcpIp.workerThread = -1;
-		g_dtcpIp.state = SCE_DTCP_IP_STATE_STOPPED;
-		g_dtcpIp.commandState = 0;	/* not started */
-		goto destroyLocks;
-	}
-	g_dtcpIp.workerThread = worker;
-
-	ret = dtcpIpStartHttpWorker(priority, affinity);
-	if (ret < 0) {
-workerDropped:
+	if (worker >= 0) {
+		g_dtcpIp.workerThread = worker;
+		ret = dtcpIpStartHttpWorker(priority, affinity);
+		if (ret >= 0) {
+			ret = sceKernelStartThread(g_dtcpIp.workerThread, 8, &g_dtcpIp);
+			if (ret >= 0) {
+				g_dtcpIp.state = SCE_DTCP_IP_STATE_IDLE;
+				g_dtcpIp.commandState = SCE_DTCP_IP_COMMAND_IDLE;
+				if (affinity == 0)
+					affinity = SCE_KERNEL_CPU_MASK_USER_ALL;
+				g_dtcpIp.streamThreadAffinity = affinity;
+				return 0;
+			}
+			dtcpIpStopHttpWorker();
+		}
 		if (g_dtcpIp.workerThread != -1)
 			sceKernelDeleteThread(g_dtcpIp.workerThread);
 		g_dtcpIp.workerThread = -1;
-		goto eventFlagDropped;
 	}
 
-	ret = sceKernelStartThread(g_dtcpIp.workerThread, 8, &g_dtcpIp);
-	if (ret < 0) {
-		dtcpIpStopHttpWorker();
-		goto workerDropped;
-	}
-
-	g_dtcpIp.state = SCE_DTCP_IP_STATE_IDLE;
-	g_dtcpIp.commandState = SCE_DTCP_IP_COMMAND_IDLE;
-	if (affinity == 0)
-		affinity = SCE_KERNEL_CPU_MASK_USER_ALL;
-	g_dtcpIp.streamThreadAffinity = affinity;
-	return 0;
+	if (g_dtcpIp.workerEvent != -1)
+		sceKernelDeleteEventFlag(g_dtcpIp.workerEvent);
+	g_dtcpIp.workerThread = -1;
+	g_dtcpIp.state = SCE_DTCP_IP_STATE_STOPPED;
+	g_dtcpIp.commandState = 0;	/* not started */
+	dtcpIpDestroyLocks();
+	dtcpIpDestroyHeap();
+	return ret;
 }
 
 /*
@@ -943,20 +938,22 @@ int dtcpIpWorkerThread(SceSize args, void *argp)
 		switch (g_command.common.id) {
 		case SCE_DTCP_IP_COMMAND_EXIT:
 			exitLoop = 0;
-			goto handled;
+			break;
 		case SCE_DTCP_IP_COMMAND_CONNECT:
 			g_command.common.result = dtcpIpOpenMwSession();
-			goto handled;
+			break;
 		case SCE_DTCP_IP_COMMAND_ACTIVATE:
 			g_command.common.result = dtcpIpCheckActivation(&g_dtcpIp.mw);
-			goto handled;
+			break;
 		case SCE_DTCP_IP_COMMAND_CREATE_SINK: {
 			unsigned int sinkType = g_command.createSink.sinkType;
 			const struct SceDtcpIpSinkManager *manager;
 
+#if FW_VERSION != 0x03630011
 			dtcpIpLock(SCE_DTCP_IP_LOCK_MANAGER);
 			dtcpIpSessionClear();
 			dtcpIpUnlock(SCE_DTCP_IP_LOCK_MANAGER);
+#endif
 			g_dtcpIp.manager = NULL;
 			if (sinkType != 0) {
 				if (sinkType > 1)
@@ -978,7 +975,7 @@ int dtcpIpWorkerThread(SceSize args, void *argp)
 			}
 			g_command.common.result = result;
 			dtcpIpFreeWith(dtcpIpHeapFree, g_command.createSink.parameter);
-			goto handled;
+			break;
 		}
 		case SCE_DTCP_IP_COMMAND_CLOSE_SINK: {
 			int closeResult = 0;
@@ -987,12 +984,14 @@ int dtcpIpWorkerThread(SceSize args, void *argp)
 				closeResult = g_dtcpIp.manager->close();
 				g_dtcpIp.manager = NULL;
 			}
+#if FW_VERSION != 0x03630011
 			dtcpIpLock(SCE_DTCP_IP_LOCK_MANAGER);
 			dtcpIpSessionClear();
 			dtcpIpUnlock(SCE_DTCP_IP_LOCK_MANAGER);
+#endif
 			g_dtcpIp.state = SCE_DTCP_IP_STATE_IDLE;
 			g_command.common.result = closeResult;
-			goto handled;
+			break;
 		}
 		case SCE_DTCP_IP_COMMAND_SET_URI: {
 			char *uri = g_command.setUri.uri;
@@ -1006,7 +1005,7 @@ int dtcpIpWorkerThread(SceSize args, void *argp)
 			}
 			g_command.common.result = result;
 			dtcpIpFreeWith(dtcpIpHeapFree, uri);
-			goto handled;
+			break;
 		}
 		case SCE_DTCP_IP_COMMAND_CLEAR_URI:
 			result = SCE_DTCP_IP_ERROR_GENERIC;
@@ -1016,7 +1015,7 @@ int dtcpIpWorkerThread(SceSize args, void *argp)
 					g_dtcpIp.state = SCE_DTCP_IP_STATE_SINK_OPEN;
 			}
 			g_command.common.result = result;
-			goto handled;
+			break;
 		case SCE_DTCP_IP_COMMAND_OPEN_STREAM: {
 			char *uri = g_command.openStream.uri;
 			unsigned short mode = g_command.openStream.mode;
@@ -1034,7 +1033,7 @@ int dtcpIpWorkerThread(SceSize args, void *argp)
 			}
 			g_command.common.result = result;
 			dtcpIpFreeWith(dtcpIpHeapFree, uri);
-			goto handled;
+			break;
 		}
 		case SCE_DTCP_IP_COMMAND_READ:
 			result = SCE_DTCP_IP_ERROR_GENERIC;
@@ -1046,25 +1045,25 @@ int dtcpIpWorkerThread(SceSize args, void *argp)
 					g_dtcpIp.state = SCE_DTCP_IP_STATE_STREAM_DONE;
 			}
 			g_command.common.result = result;
-			goto handled;
+			break;
 		case SCE_DTCP_IP_COMMAND_SEEK_BYTE:
 			result = SCE_DTCP_IP_ERROR_GENERIC;
 			if (g_dtcpIp.manager != NULL)
 				result = g_dtcpIp.manager->seekByte(g_command.range.start, g_command.range.end);
 			g_command.common.result = result;
-			goto handled;
+			break;
 		case SCE_DTCP_IP_COMMAND_SEEK_TIME:
 			result = SCE_DTCP_IP_ERROR_GENERIC;
 			if (g_dtcpIp.manager != NULL)
 				result = g_dtcpIp.manager->seekTime(g_command.range.start, g_command.range.end);
 			g_command.common.result = result;
-			goto handled;
+			break;
 		case SCE_DTCP_IP_COMMAND_STOP_STREAM:
 			result = SCE_DTCP_IP_ERROR_GENERIC;
 			if (g_dtcpIp.manager != NULL)
 				result = g_dtcpIp.manager->stopStream();
 			g_command.common.result = result;
-			goto handled;
+			break;
 		case SCE_DTCP_IP_COMMAND_CLOSE_STREAM:
 			result = SCE_DTCP_IP_ERROR_GENERIC;
 			if (g_dtcpIp.manager != NULL) {
@@ -1072,13 +1071,12 @@ int dtcpIpWorkerThread(SceSize args, void *argp)
 				g_dtcpIp.state = SCE_DTCP_IP_STATE_URI_SET;
 			}
 			g_command.common.result = result;
-			goto handled;
+			break;
 		default:
 			g_command.common.result = SCE_DTCP_IP_ERROR_GENERIC;
-			goto handled;
+			break;
 		}
 
-handled:
 		ret = dtcpIpLock(SCE_DTCP_IP_LOCK_COMMAND);
 		if (ret < 0)
 			break;

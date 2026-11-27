@@ -439,20 +439,18 @@ void dtcpIpSessionClosed(void)
 }
 
 /* clear the sink session, before a sink manager is created or after it is closed */
+#if FW_VERSION != 0x03630011
 void dtcpIpSessionClear(void)
 {
 	g_session.connection = NULL;
 	g_session.stream = 0;
 	g_session.buffer = 0;
 	g_session.status = 0;
-#if FW_VERSION != 0x03630011
 	g_session.cancelled = 0;
-#endif
 }
 
 /* the STOP export asks the worker to cancel what it is holding out on (the 3.630 build
  * keeps its closed word where the later builds keep this flag, so it has no cancel) */
-#if FW_VERSION != 0x03630011
 void dtcpIpSessionCancelled(void)
 {
 	g_session.cancelled = 1;

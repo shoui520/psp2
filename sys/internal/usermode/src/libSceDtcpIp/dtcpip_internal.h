@@ -90,8 +90,10 @@ int dtcpIpSignalCond(unsigned int cond);
 /* the middleware connection (dtcpip_session.c) */
 int dtcpIpMapError(int status);
 void dtcpIpSessionClosed(void);
+#if FW_VERSION != 0x03630011
 void dtcpIpSessionCancelled(void);
 void dtcpIpSessionClear(void);
+#endif
 
 /* the stream clients the sink classes hold (dtcpip_stream.c defines their tables): the
  * SW IPC session and stream objects, one for the sink and one for the move sink */
