@@ -1,0 +1,262 @@
+--- a/src/truetype/ttinterp.c
++++ b/src/truetype/ttinterp.c
+@@ -1777,7 +1777,7 @@
+   /* <Return>                                                              */
+   /*    SUCCESS or FAILURE.                                                */
+   /*                                                                       */
+-  static FT_Bool
++  static inline __attribute__(( always_inline )) FT_Bool
+   Ins_Goto_CodeRange( EXEC_OP_ FT_Int    aRange,
+                                FT_ULong  aIP )
+   {
+@@ -2820,7 +2820,7 @@
+   /*************************************************************************/
+ 
+ 
+-  static FT_Bool
++  static inline __attribute__(( always_inline )) FT_Bool
+   Ins_SxVTL( EXEC_OP_ FT_UShort       aIdx1,
+                       FT_UShort       aIdx2,
+                       FT_Int          aOpc,
+@@ -4406,7 +4406,7 @@
+   /* Opcode range: 0x26                                                    */
+   /* Stack:        int32? --> StkElt                                       */
+   /*                                                                       */
+-  static void
++  static inline __attribute__(( always_inline )) void
+   Ins_MINDEX( INS_ARG )
+   {
+     FT_Long  L, K;
+@@ -4498,7 +4498,7 @@
+   /* Opcode range: 0x58                                                    */
+   /* Stack:        StkElt -->                                              */
+   /*                                                                       */
+-  static void
++  static inline __attribute__(( always_inline )) void
+   Ins_IF( INS_ARG )
+   {
+     FT_Int   nIfs;
+@@ -4541,7 +4541,7 @@
+   /* Opcode range: 0x1B                                                    */
+   /* Stack:        -->                                                     */
+   /*                                                                       */
+-  static void
++  static inline __attribute__(( always_inline )) void
+   Ins_ELSE( INS_ARG )
+   {
+     FT_Int  nIfs;
+@@ -4585,7 +4585,7 @@
+   /* Opcode range: 0x2C                                                    */
+   /* Stack:        uint32 -->                                              */
+   /*                                                                       */
+-  static void
++  static inline __attribute__(( always_inline )) void
+   Ins_FDEF( INS_ARG )
+   {
+     FT_ULong       n;
+@@ -4707,7 +4707,7 @@
+   /* Opcode range: 0x2B                                                    */
+   /* Stack:        uint32? -->                                             */
+   /*                                                                       */
+-  static void
++  static inline __attribute__(( always_inline )) void
+   Ins_CALL( INS_ARG )
+   {
+     FT_ULong       F;
+@@ -4785,7 +4785,7 @@
+   /* Opcode range: 0x2A                                                    */
+   /* Stack:        uint32? Eint16? -->                                     */
+   /*                                                                       */
+-  static void
++  static inline __attribute__(( always_inline )) void
+   Ins_LOOPCALL( INS_ARG )
+   {
+     FT_ULong       F;
+@@ -4864,7 +4864,7 @@
+   /* Opcode range: 0x89                                                    */
+   /* Stack:        Eint8 -->                                               */
+   /*                                                                       */
+-  static void
++  static inline __attribute__(( always_inline )) void
+   Ins_IDEF( INS_ARG )
+   {
+     TT_DefRecord*  def;
+@@ -5062,7 +5062,7 @@
+   /* XXX: UNDOCUMENTED: Measures from the original glyph must be taken     */
+   /*      along the dual projection vector!                                */
+   /*                                                                       */
+-  static void
++  static inline __attribute__(( always_inline )) void
+   Ins_GC( INS_ARG )
+   {
+     FT_ULong    L;
+@@ -5288,7 +5288,7 @@
+   /* Opcode range: 0x13                                                    */
+   /* Stack:        uint32 -->                                              */
+   /*                                                                       */
+-  static void
++  static inline __attribute__(( always_inline )) void
+   Ins_SZP0( INS_ARG )
+   {
+     switch ( (FT_Int)args[0] )
+@@ -5317,7 +5317,7 @@
+   /* Opcode range: 0x14                                                    */
+   /* Stack:        uint32 -->                                              */
+   /*                                                                       */
+-  static void
++  static inline __attribute__(( always_inline )) void
+   Ins_SZP1( INS_ARG )
+   {
+     switch ( (FT_Int)args[0] )
+@@ -5346,7 +5346,7 @@
+   /* Opcode range: 0x15                                                    */
+   /* Stack:        uint32 -->                                              */
+   /*                                                                       */
+-  static void
++  static inline __attribute__(( always_inline )) void
+   Ins_SZP2( INS_ARG )
+   {
+     switch ( (FT_Int)args[0] )
+@@ -5375,7 +5375,7 @@
+   /* Opcode range: 0x16                                                    */
+   /* Stack:        uint32 -->                                              */
+   /*                                                                       */
+-  static void
++  static inline __attribute__(( always_inline )) void
+   Ins_SZPS( INS_ARG )
+   {
+     switch ( (FT_Int)args[0] )
+@@ -5716,7 +5716,7 @@
+   /* Opcode range: 0x32-0x33                                               */
+   /* Stack:        uint32... -->                                           */
+   /*                                                                       */
+-  static void
++  static inline __attribute__(( always_inline )) void
+   Ins_SHP( INS_ARG )
+   {
+     TT_GlyphZoneRec  zp;
+@@ -5774,7 +5774,7 @@
+   /*               contour in the twilight zone, namely contour number     */
+   /*               zero.                                                   */
+   /*                                                                       */
+-  static void
++  static inline __attribute__(( always_inline )) void
+   Ins_SHC( INS_ARG )
+   {
+     TT_GlyphZoneRec  zp;
+@@ -5825,7 +5825,7 @@
+   /* Opcode range: 0x36-37                                                 */
+   /* Stack:        uint32 -->                                              */
+   /*                                                                       */
+-  static void
++  static inline __attribute__(( always_inline )) void
+   Ins_SHZ( INS_ARG )
+   {
+     TT_GlyphZoneRec  zp;
+@@ -6348,7 +6348,7 @@
+   /* Opcode range: 0x3C                                                    */
+   /* Stack:        uint32 uint32... -->                                    */
+   /*                                                                       */
+-  static void
++  static inline __attribute__(( always_inline )) void
+   Ins_ALIGNRP( INS_ARG )
+   {
+     FT_UShort   point;
+@@ -6484,7 +6484,7 @@
+   /* Opcode range: 0x27                                                    */
+   /* Stack:        uint32 uint32 -->                                       */
+   /*                                                                       */
+-  static void
++  static inline __attribute__(( always_inline )) void
+   Ins_ALIGNPTS( INS_ARG )
+   {
+     FT_UShort   p1, p2;
+--- a/src/base/fttrigon.c
++++ b/src/base/fttrigon.c
+@@ -182,7 +182,7 @@
+   }
+ 
+ 
+-  static void
++  static inline __attribute__(( always_inline )) void
+   ft_trig_pseudo_rotate( FT_Vector*  vec,
+                          FT_Angle    theta )
+   {
+@@ -252,7 +252,7 @@
+   }
+ 
+ 
+-  static void
++  static inline __attribute__(( always_inline )) void
+   ft_trig_pseudo_polarize( FT_Vector*  vec )
+   {
+     FT_Fixed         theta;
+--- a/src/raster/ftraster.c
++++ b/src/raster/ftraster.c
+@@ -794,7 +794,7 @@
+   /* <Return>                                                              */
+   /*    SUCCESS on success.  FAILURE in case of overflow or incoherency.   */
+   /*                                                                       */
+-  static Bool
++  static inline __attribute__(( always_inline )) Bool
+   End_Profile( RAS_ARGS Bool  overshoot )
+   {
+     Long      h;
+@@ -864,7 +864,7 @@
+   /* <Return>                                                              */
+   /*    SUCCESS on success.  FAILURE in case of overflow.                  */
+   /*                                                                       */
+-  static Bool
++  static inline __attribute__(( always_inline )) Bool
+   Insert_Y_Turn( RAS_ARGS Int  y )
+   {
+     PLong  y_turns;
+@@ -1388,7 +1388,7 @@
+   /* <Return>                                                              */
+   /*    SUCCESS on success, FAILURE on render pool overflow.               */
+   /*                                                                       */
+-  static Bool
++  static inline __attribute__(( always_inline )) Bool
+   Bezier_Down( RAS_ARGS Int        degree,
+                         TSplitter  splitter,
+                         Long       miny,
+@@ -2180,7 +2180,7 @@
+   /*    an algorithm which is fast in this case.  Bubble sort is enough    */
+   /*    and simple.                                                        */
+   /*                                                                       */
+-  static void
++  static inline __attribute__(( always_inline )) void
+   Sort( PProfileList  list )
+   {
+     PProfile  *old, current, next;
+--- a/src/psaux/afmparse.c
++++ b/src/psaux/afmparse.c
+@@ -115,7 +115,7 @@
+ 
+ 
+   /* read a key or value in current column */
+-  static char*
++  static inline __attribute__(( always_inline )) char*
+   afm_stream_read_one( AFM_Stream  stream )
+   {
+     char*  str;
+@@ -155,7 +155,7 @@
+ 
+ 
+   /* read a string (i.e., read to EOL) */
+-  static char*
++  static inline __attribute__(( always_inline )) char*
+   afm_stream_read_string( AFM_Stream  stream )
+   {
+     char*  str;
+--- a/src/pshinter/pshalgo.c
++++ b/src/pshinter/pshalgo.c
+@@ -243,7 +243,7 @@
+   }
+ 
+ 
+-  static void
++  static inline __attribute__(( always_inline )) void
+   psh_hint_table_activate_mask( PSH_Hint_Table  table,
+                                 PS_Mask         hint_mask )
+   {

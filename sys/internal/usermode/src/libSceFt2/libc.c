@@ -50,10 +50,22 @@ int __sceLibFt2DoneLibCHook(void)
 	return sceKernelDeleteLwMutex(&g_ioMutex);
 }
 
+#ifdef PAF_STATIC_BUILD
+__attribute__((optimize("no-tree-loop-distribute-patterns")))
+#endif
 void *memset(void *dst, int ch, size_t len)
 {
+#ifdef PAF_STATIC_BUILD
+	unsigned char *out = dst;
+	size_t i;
+
+	for (i = 0; i < len; i++)
+		out[i] = (unsigned char)ch;
+	return dst;
+#else
 	sceClibMemset(dst, ch, len);
 	return dst;
+#endif
 }
 
 int memcmp(const void *s1, const void *s2, size_t n)
@@ -97,6 +109,34 @@ size_t strlen(const char *s)
 	}
 	return len;
 }
+
+#ifdef PAF_STATIC_BUILD
+char *strcpy(char *dst, const char *src)
+{
+	char *out;
+
+	if (dst == NULL || src == NULL)
+		return NULL;
+	out = dst;
+	while ((*out++ = *src++) != '\0')
+		;
+	return dst;
+}
+
+__attribute__((optimize("no-tree-loop-distribute-patterns")))
+char *strncpy(char *dst, const char *src, size_t n)
+{
+	size_t i;
+
+	if (dst == NULL || src == NULL)
+		return NULL;
+	for (i = 0; i < n && src[i] != '\0'; i++)
+		dst[i] = src[i];
+	for (; i < n; i++)
+		dst[i] = '\0';
+	return dst;
+}
+#endif
 
 /* the C locale's character classes, indexed by the character plus one (index 0 is EOF) */
 #define CT_U	0x01	/* upper case */

@@ -17,31 +17,37 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
 	"${PSP2_SRC}/contrib/dlmalloc-2.8.4/malloc.c"
 	"${PAF}/src/memory/dlmalloc_sce_0996.patch")
 
-# FreeType 2.4.9 with Sony's SCE patch (2014 libSceFt2.a did not use 3.65's freetype-inline.patch).
+# FreeType 2.4.9 with Sony's SCE patch plus 2014 inline overrides (keeps Sony's 2014
+# TT_RunIns / fttrigon / ftraster / psaux / pshinter function boundaries).
 set(FT2 "${PSP2_SRC}/contrib/freetype-2.4.9")
 set(FT2_DIR "${PSP2_SRC}/sys/internal/usermode/src/libSceFt2")
 set(FT2_SCE "${CMAKE_CURRENT_BINARY_DIR}/freetype-sce")
 file(MD5 "${FT2_DIR}/freetype-sce.patch" ft2_patch_md5)
-string(MD5 ft2_patch_md5 "${ft2_patch_md5} ${FT2}")
+file(MD5 "${CMAKE_CURRENT_SOURCE_DIR}/freetype-inline-2014.patch" ft2_inline_md5)
+string(MD5 ft2_patch_md5 "${ft2_patch_md5} ${ft2_inline_md5} ${FT2}")
 set(ft2_stamp "")
 if(EXISTS "${FT2_SCE}/.patched")
 	file(READ "${FT2_SCE}/.patched" ft2_stamp)
 endif()
 if(NOT ft2_stamp STREQUAL ft2_patch_md5)
 	file(REMOVE_RECURSE "${FT2_SCE}")
-	foreach(f src/base/ftsystem.c src/base/ftinit.c include/freetype/internal/ftobjs.h src/psaux src/truetype)
+	foreach(f src/base/ftsystem.c src/base/ftinit.c src/base/ftbase.c src/base/fttrigon.c
+		  include/freetype/internal/ftobjs.h src/psaux src/pshinter src/raster src/truetype)
 		get_filename_component(d ${f} DIRECTORY)
 		file(COPY "${FT2}/${f}" DESTINATION "${FT2_SCE}/${d}")
 	endforeach()
-	execute_process(COMMAND patch -s -p1 -d "${FT2_SCE}" -i "${FT2_DIR}/freetype-sce.patch"
-		RESULT_VARIABLE ft2_patch_result ERROR_VARIABLE ft2_patch_error)
-	if(NOT ft2_patch_result EQUAL 0)
-		message(FATAL_ERROR "psp2swu FreeType patch failed: ${ft2_patch_error}")
-	endif()
+	foreach(patch "${FT2_DIR}/freetype-sce.patch" "${CMAKE_CURRENT_SOURCE_DIR}/freetype-inline-2014.patch")
+		execute_process(COMMAND patch -s -p1 -d "${FT2_SCE}" -i "${patch}"
+			RESULT_VARIABLE ft2_patch_result ERROR_VARIABLE ft2_patch_error)
+		if(NOT ft2_patch_result EQUAL 0)
+			message(FATAL_ERROR "psp2swu FreeType patch ${patch} failed: ${ft2_patch_error}")
+		endif()
+	endforeach()
 	file(WRITE "${FT2_SCE}/.patched" "${ft2_patch_md5}")
 endif()
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
-	"${FT2_DIR}/freetype-sce.patch")
+	"${FT2_DIR}/freetype-sce.patch"
+	"${CMAKE_CURRENT_SOURCE_DIR}/freetype-inline-2014.patch")
 
 set(MODULE_COMPILE_OPTIONS $<$<COMPILE_LANGUAGE:C,CXX>:-Xautoinlinesize=8>)
 
@@ -140,7 +146,7 @@ set(swu_sas_SOURCES
 )
 set_source_files_properties(${swu_sas_SOURCES} PROPERTIES
 	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;SCE_SAS_STATIC_RUNTIME"
-	COMPILE_OPTIONS "-O3;-fno-stack-protector;-fdelete-null-pointer-checks;-mfloat-abi=hard;-fsigned-char;-ffunction-sections;-fdata-sections")
+	COMPILE_OPTIONS "-O3;-fno-stack-protector;-fdelete-null-pointer-checks;-mfloat-abi=hard;-fsigned-char")
 
 set(swu_libgcc "${PSP2_SRC}/toolchains/libgcc")
 set(swu_libgcc_SOURCES
@@ -164,7 +170,7 @@ set_source_files_properties(
 	INCLUDE_DIRECTORIES "${swu_libgcc};${swu_libgcc}/target;${PSP2_SRC}/contrib/gcc-4.8-2014.05/gcc;${PSP2_SRC}/contrib/gcc-4.8-2014.05/gcc/ginclude;${PSP2_SRC}/contrib/gcc-4.8-2014.05/libgcc;${PSP2_SRC}/contrib/gcc-4.8-2014.05/include")
 
 set(swu_ft2_SOURCES
-	${FT2}/src/base/ftbase.c
+	${FT2_SCE}/src/base/ftbase.c
 	${FT2}/src/base/ftbitmap.c
 	${FT2}/src/base/ftglyph.c
 	${FT2_SCE}/src/base/ftinit.c
@@ -175,18 +181,18 @@ set(swu_ft2_SOURCES
 	${FT2_SCE}/src/base/ftsystem.c
 	${FT2_SCE}/src/psaux/psaux.c
 	${FT2}/src/psnames/psnames.c
-	${FT2}/src/pshinter/pshinter.c
-	${FT2}/src/raster/raster.c
+	${FT2_SCE}/src/pshinter/pshinter.c
+	${FT2_SCE}/src/raster/raster.c
 	${FT2}/src/sfnt/sfnt.c
 	${FT2}/src/smooth/smooth.c
 )
 set_source_files_properties(${swu_ft2_SOURCES} PROPERTIES
 	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;FT2_BUILD_LIBRARY;FT_CONFIG_NO_OTVALID"
-	COMPILE_OPTIONS "-O3;-fno-stack-protector;-fhosted;-fbuiltin;-fdelete-null-pointer-checks;-ffunction-sections;-fdata-sections;-fsigned-char"
-	INCLUDE_DIRECTORIES "${FT2_DIR}/include;${FT2_SCE}/include;${FT2}/include;${FT2}/src;${FT2}/src/base")
+	COMPILE_OPTIONS "-O3;-fno-stack-protector;-fhosted;-fbuiltin;-fdelete-null-pointer-checks;-fsigned-char"
+	INCLUDE_DIRECTORIES "${FT2_DIR}/include;${FT2_SCE}/include;${FT2_SCE}/src/base;${FT2}/include;${FT2}/src;${FT2}/src/base")
 set_source_files_properties(${FT2_DIR}/libc.c PROPERTIES
 	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;FT2_BUILD_LIBRARY;PAF_STATIC_BUILD"
-	COMPILE_OPTIONS "-ffreestanding;-fno-builtin;-ffunction-sections;-fdata-sections;-fsigned-char")
+	COMPILE_OPTIONS "-O3;-fno-stack-protector;-ffreestanding;-fno-builtin;-fsigned-char")
 set_source_files_properties(${FT2_DIR}/setjmp.S PROPERTIES
 	COMPILE_DEFINITIONS PSP2_COMPILER_GCC48)
 
@@ -197,7 +203,7 @@ set(swu_pvf_SOURCES
 )
 set_source_files_properties(${swu_pvf_SOURCES} PROPERTIES
 	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;SCE_PVF_2014"
-	COMPILE_OPTIONS "-fno-stack-protector;-fno-ipa-cp-clone;-mfloat-abi=hard;-ffunction-sections;-fdata-sections"
+	COMPILE_OPTIONS "-fno-stack-protector;-fno-ipa-cp-clone;-mfloat-abi=hard"
 	INCLUDE_DIRECTORIES "${FT2}/include")
 
 set(swu_updater_SOURCES
@@ -572,14 +578,14 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc SOURCES
 	${PSP2_SRC}/sys/sdk/target/src/libsnc/unwind_pr2.c
 	${PSP2_SRC}/sys/sdk/target/src/deflt/crc.S
 	${PSP2_SRC}/sys/sdk/target/src/deflt/zlibhdr.c
-	${PSP2_SRC}/sys/sdk/target/src/deflt/deflate.c
+	${PSP2_SRC}/sys/sdk/target/src/deflt/deflate.S
 	${PSP2_SRC}/sys/sdk/target/src/deflt/deflate_common.c
 	${PSP2_SRC}/sys/sdk/target/src/aes/libaes.c
 	${PSP2_SRC}/sys/sdk/target/src/aes/aes.S
 	${PSP2_SRC}/sys/sdk/target/src/sha256/libsha256.c
 	${PSP2_SRC}/sys/sdk/target/src/sha256/sha256.S
 	${PSP2_SRC}/sys/sdk/target/src/sha1/libsha1.c
-	${PSP2_SRC}/sys/internal/kernel/src/sysmem/sha1_transform.S
+	${PSP2_SRC}/sys/sdk/target/src/sha1/sha1.S
 	${swu_sas_SOURCES}
 	${swu_libgcc_SOURCES}
 	${swu_pvf_SOURCES}
@@ -631,6 +637,7 @@ target_link_options(${PSP2_TARGET} PRIVATE
 	-Wl,-u,getargv
 	-Wl,-u,sceZlibIsValid
 	-Wl,-u,sceZlibGetCompressedData
+	-Wl,-u,png_create_read_struct
 	-Wl,--defsym=sceProcessParam=__sce_process_param
 	-Wl,--defsym=__stack_chk_guard=__sce_process_param
 	-Wl,--defsym=__stack_chk_fail=__cxa_pure_virtual
@@ -656,10 +663,20 @@ set_source_files_properties(${PSP2_SRC}/sys/internal/usermode/src/dbgfont/libdbg
 
 set_source_files_properties(
 	${PSP2_SRC}/sys/sdk/target/src/deflt/zlibhdr.c
-	${PSP2_SRC}/sys/sdk/target/src/deflt/deflate.c
 	${PSP2_SRC}/sys/sdk/target/src/deflt/deflate_common.c PROPERTIES
 	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;SCE_DEFLT_2014;DEFLATE_MEMCPY=sceClibMemcpy"
 	COMPILE_OPTIONS "-Os;-funwind-tables;-fno-stack-protector")
+set_source_files_properties(${PSP2_SRC}/sys/sdk/target/src/deflt/deflate.S PROPERTIES
+	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;SCE_DEFLT_2014;DEFLATE_MEMCPY=sceClibMemcpy")
+set_source_files_properties(
+	${PAF}/src/std/setjmp_abi.S
+	${PAF}/src/std/mem_neon.S
+	${PSP2_SRC}/sys/sdk/target/src/deflt/crc.S PROPERTIES
+	COMPILE_DEFINITIONS PSP2_COMPILER_GCC48)
+set_property(SOURCE
+	${swu_libgcc}/ldivmod.S
+	${swu_libgcc}/uldivmod.S
+	APPEND PROPERTY COMPILE_DEFINITIONS PSP2_COMPILER_GCC48)
 
 set_source_files_properties(${PSP2_SRC}/sys/sdk/target/src/aes/libaes.c PROPERTIES
 	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;SCE_AES_2014"
@@ -676,8 +693,8 @@ set_source_files_properties(${PSP2_SRC}/sys/sdk/target/src/sha256/sha256.S PROPE
 set_source_files_properties(${PSP2_SRC}/sys/sdk/target/src/sha1/libsha1.c PROPERTIES
 	COMPILE_DEFINITIONS PSP2_COMPILER_GCC48
 	COMPILE_OPTIONS "-fno-stack-protector")
-set_source_files_properties(${PSP2_SRC}/sys/internal/kernel/src/sysmem/sha1_transform.S PROPERTIES
-	COMPILE_DEFINITIONS PSP2_COMPILER_GCC48)
+set_source_files_properties(${PSP2_SRC}/sys/sdk/target/src/sha1/sha1.S PROPERTIES
+	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;SCE_SHA1_2014")
 
 set_source_files_properties(
 	${PSP2_SRC}/sys/sdk/target/src/libSceSblSsUpdateMgr_stub/update_mgr_stub.c
@@ -700,7 +717,7 @@ set_source_files_properties(${swu_squish_SOURCES} ${swu_squish_API} PROPERTIES
 	COMPILE_OPTIONS -Xautoinlinesize=32 COMPILE_DEFINITIONS SQUISH_USE_NEON=1)
 set_source_files_properties(${swu_zlib_SOURCES} ${swu_zlib_INFFAST}
 	${PSP2_PAF_ZLIB_UPSTREAM}/adler32.c ${PSP2_PAF_ZLIB_UPSTREAM}/crc32.c
-	PROPERTIES COMPILE_OPTIONS -O0)
+	PROPERTIES COMPILE_OPTIONS "-O0;-Xautoinlinesize=0")
 set_source_files_properties(${PSP2_PAF_ZLIB_UPSTREAM}/zutil.c PROPERTIES
 	COMPILE_DEFINITIONS MY_ZCALLOC)
 set_source_files_properties("${swu_dlmalloc_source}" PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=21)

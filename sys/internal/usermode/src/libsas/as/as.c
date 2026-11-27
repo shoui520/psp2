@@ -345,6 +345,42 @@ static __attribute__((noinline)) int sceSasAsUnlinkHandle(SceSasAsHandle *handle
 }
 #endif
 
+#if defined(SCE_SAS_STATIC_RUNTIME) && defined(PAF_BUILD_2014)
+static __attribute__((noinline)) int sceSasAsHandleDestroyChild(SceSasAsHandle *handle)
+{
+	SceSasAsHandle *child;
+	int ret;
+
+	if (handle == NULL || handle->magic != SCE_SAS_AS_HANDLE_MAGIC)
+		return SCE_SAS_AS_ERROR_INVALID_HANDLE;
+	if (*handle->subsystem != SCE_SAS_AS_SUBSYSTEM_MAGIC)
+		sceSasAsError(SCE_SAS_AS_ERROR_BROKEN, "Sub system has broken (%X,%X)\n",
+			      handle->magic, *handle->subsystem);
+	for (;;) {
+		sceSasAsSpinLock(&handle->lock);
+		child = handle->children;
+		sceSasAsSpinUnlock(&handle->lock);
+		if (child == NULL)
+			break;
+		ret = sceSasAsHandleDestroyChild(child);
+		if (ret < 0)
+			return ret;
+	}
+	if (sceSasAsCompareAndSwap((volatile SceUInt32 *)&handle->referenceCount, 0, -1) != 0)
+		return sceSasAsError(SCE_SAS_AS_ERROR_BUSY,
+				     "Couldn't destroy AS handle. The handler is still using. (%p,%s)\n",
+				     handle, handle->class->name);
+	if (handle->class->destroy(handle) < 0)
+		sceSasAsError(SCE_SAS_AS_ERROR_BUSY, "Failed to destroy AS handle. (%p,%s)\n",
+			      handle, handle->class->name);
+	sceSasAsUnlinkHandle(handle);
+	if (handle->parent != NULL)
+		sceSasAsHandleDropRef(handle->parent);
+	sceSasAsMemZero(handle, sizeof(*handle));
+	return 0;
+}
+#endif
+
 int sceSasAsHandleDestroy(SceSasAsHandle *handle, void **buffer, SceSize *size)
 {
 #if !defined(SCE_SAS_STATIC_RUNTIME) || !defined(PAF_BUILD_2014)
@@ -365,7 +401,11 @@ int sceSasAsHandleDestroy(SceSasAsHandle *handle, void **buffer, SceSize *size)
 		sceSasAsSpinUnlock(&handle->lock);
 		if (child == NULL)
 			break;
+#if defined(SCE_SAS_STATIC_RUNTIME) && defined(PAF_BUILD_2014)
+		ret = sceSasAsHandleDestroyChild(child);
+#else
 		ret = sceSasAsHandleDestroy(child, NULL, NULL);
+#endif
 		if (ret < 0)
 			return ret;
 	}

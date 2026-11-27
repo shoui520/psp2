@@ -25,6 +25,15 @@ static const SceUInt8 sceSasSustainModes[4] = { SCE_SAS_ADSR_MODE_LINEAR_DEC,
 						SCE_SAS_ADSR_MODE_BENT_LINEAR,
 						SCE_SAS_ADSR_MODE_REVEXPONENT };
 
+#if defined(SCE_SAS_STATIC_RUNTIME) && defined(PAF_BUILD_2014)
+static __attribute__((noinline)) SceSasResult sceSasDestroyHandle(SceSasAsHandle *handle)
+{
+	if (handle != NULL)
+		return sceSasAsHandleDestroy(handle, NULL, NULL) < 0 ? SCE_SAS_ERROR_FAIL : 0;
+	return 0;
+}
+#endif
+
 /*
  * One AS object of the class (its VENEZIA build when venezia), made from the configuration
  * format makes: its size is added to the total, and, while there is a buffer, it is made there.
@@ -261,6 +270,17 @@ static int sceSasCreate(const char *config, void *buffer, SceSasSystem **outSas,
 
 error:
 	if (sas != NULL) {
+#if defined(SCE_SAS_STATIC_RUNTIME) && defined(PAF_BUILD_2014)
+		sceSasDestroyHandle(sas->synth);
+		sceSasDestroyHandle(sas->reverbs[0]);
+		sceSasDestroyHandle(sas->reverbs[1]);
+		sceSasDestroyHandle(sas->reverbs[2]);
+		sceSasDestroyHandle(sas->reverbs[3]);
+		sceSasDestroyHandle(sas->mixer);
+		sceSasDestroyHandle(sas->master);
+		sceSasDestroyHandle(sas->buss);
+		sceSasDestroyHandle(sas->core);
+#else
 		if (sas->synth != NULL)
 			sceSasAsHandleDestroy(sas->synth, NULL, NULL);
 		if (sas->reverbs[0] != NULL)
@@ -279,6 +299,7 @@ error:
 			sceSasAsHandleDestroy(sas->buss, NULL, NULL);
 		if (sas->core != NULL)
 			sceSasAsHandleDestroy(sas->core, NULL, NULL);
+#endif
 	}
 	return SCE_SAS_ERROR_FAIL;
 }
