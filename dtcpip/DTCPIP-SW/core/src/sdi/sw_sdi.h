@@ -102,7 +102,6 @@ public:
 	SwDrv();
 	virtual ~SwDrv();
 
-	static int getInstance(SwDrv **out);
 	static int drvOpen(const char *path);
 	static int drvIoctl(int fd, unsigned int cmd, void *arg, unsigned int size);
 	static int drvClose(int fd);

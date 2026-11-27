@@ -39,7 +39,7 @@ int SdiDevice::getInstance(SdiDevice **out)
 SdiDeviceCXD3705::SdiDeviceCXD3705()
 	: m_sourceSessions(), m_sinkSessions(), m_drv(NULL)
 {
-	SwDrv::getInstance(&m_drv);
+	SwMwSessionInit(&m_drv);
 	m_sourceSessions.clear();
 	m_sinkSessions.clear();
 }

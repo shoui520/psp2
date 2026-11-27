@@ -57,18 +57,13 @@ SwDrv::SwDrv()
 
 SwDrv::~SwDrv() {}
 
-int SwDrv::getInstance(SwDrv **out)
-{
-	if (!out)
-		return 5;
-	static SwDrv s_instance;
-	*out = &s_instance;
-	return 0;
-}
-
 extern "C" int SwMwSessionInit(SwDrv **outDrv)
 {
-	return SwDrv::getInstance(outDrv);
+	if (!outDrv)
+		return 5;
+	static SwDrv s_instance;
+	*outDrv = &s_instance;
+	return 0;
 }
 
 int SwDrv::drvOpen(const char *path)
@@ -370,7 +365,7 @@ SacSessionCXD3705::SacSessionCXD3705()
 	m_reserved[0] = 0;
 	m_reserved[1] = 0;
 	m_reserved[2] = 0;
-	SwDrv::getInstance(&m_drv);
+	SwMwSessionInit(&m_drv);
 }
 
 SacSessionCXD3705::~SacSessionCXD3705()
