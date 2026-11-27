@@ -8,10 +8,18 @@
 #include "kernel.h"
 #include "scratchpad.h"
 
+#if ERNIE_FW >= 0x00080302
+#define SCRATCH_PAD	keepRam.scratchPad
+#else
+/* 0x00080003 keeps the pad in the RAM cstart clears, not in the kept block */
+__far unsigned char scratchPad[SCRATCH_PAD_SIZE];
+#define SCRATCH_PAD	scratchPad
+#endif
+
 void scratchPadClear(void)
 {
 	dis_dsp();
-	memset(keepRam.scratchPad, 0, SCRATCH_PAD_SIZE);
+	memset(SCRATCH_PAD, 0, SCRATCH_PAD_SIZE);
 	ena_dsp();
 }
 
@@ -23,7 +31,7 @@ unsigned char scratchPadRead(unsigned int offset, unsigned int size, unsigned ch
 	if (size > SCRATCH_PAD_MAX)
 		return 1;
 	dis_dsp();
-	memcpy(buf, &keepRam.scratchPad[offset], size);
+	memcpy(buf, &SCRATCH_PAD[offset], size);
 	ena_dsp();
 	return 0;
 }
@@ -36,7 +44,7 @@ unsigned char scratchPadWrite(unsigned int offset, unsigned int size, unsigned c
 	if (size > SCRATCH_PAD_MAX)
 		return 1;
 	dis_dsp();
-	memcpy(&keepRam.scratchPad[offset], buf, size);
+	memcpy(&SCRATCH_PAD[offset], buf, size);
 	ena_dsp();
 	return 0;
 }

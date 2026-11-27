@@ -398,6 +398,170 @@ static void commandLogAnswer(void);
 #endif
 
 /* request 0's command came in, or its answer went out */
+#if !FW_SINCE(0x00080302)
+/* 0x00080003: no handshake test, no watchdog and no NVS commands (their requests fail); an
+   answer is the request's status and length, and hostRequestAnswerReady */
+void commandRequestNotify(void)
+{
+	union RtcTick tick;
+	unsigned int offset;
+	unsigned char size;
+	unsigned char transition;	/* never used */
+	struct StateEvent transitionEvent;
+	unsigned char result;
+	union CommandWord word;
+
+	switch (commandRequest.event) {
+	case HOST_EVENT_COMMAND:
+		switch (commandRequest.command) {
+		case 0x0080:		/* the link's settings */
+			if (commandRequest.length == 2) {
+				word.value = commandRequestData[0] |
+					     (unsigned int)commandRequestData[1] << 8;
+				result = hostSetLinkConfig(word.config);
+				if (result == 0)
+					commandRequest.status = 0;
+				else
+					commandRequest.status = 0x20;
+			} else
+				commandRequest.status = 0x3b;
+			commandRequest.answerLength = 0;
+			hostRequestAnswerReady(&commandRequest.state);
+			break;
+		case 0x0081:		/* sceSysconSetClock */
+			if (commandRequest.length == 4) {
+				tick.byte[0] = commandRequestData[0];
+				tick.byte[1] = commandRequestData[1];
+				tick.byte[2] = commandRequestData[2];
+				tick.byte[3] = commandRequestData[3];
+				setClock(tick.value);
+				commandRequest.status = 0;
+			} else
+				commandRequest.status = 0x3b;
+			commandRequest.answerLength = 0;
+			hostRequestAnswerReady(&commandRequest.state);
+			break;
+		case 0x0082:		/* the alarm */
+			if (commandRequest.length == 4) {
+				tick.byte[0] = commandRequestData[0];
+				tick.byte[1] = commandRequestData[1];
+				tick.byte[2] = commandRequestData[2];
+				tick.byte[3] = commandRequestData[3];
+				setAlarm(tick.value);
+				commandRequest.status = 0;
+			} else
+				commandRequest.status = 0x3b;
+			commandRequest.answerLength = 0;
+			hostRequestAnswerReady(&commandRequest.state);
+			break;
+		case 0x0083:		/* no host watchdog */
+			commandRequest.state = HOST_REQUEST_ERROR;
+			break;
+		case 0x0090:		/* sceSysconReadScratchPad */
+			if (commandRequest.length != 3) {
+				commandRequest.answerLength = 0;
+				commandRequest.status = 0x3b;
+				hostRequestAnswerReady(&commandRequest.state);
+				break;
+			}
+			offset = commandRequestData[0] | (unsigned int)commandRequestData[1] << 8;
+			size = commandRequestData[2];
+			if (scratchPadRead(offset, size, commandRequestAnswer) == 0) {
+				commandRequest.answerLength = size;
+				commandRequest.status = 0;
+			} else {
+				commandRequest.answerLength = 0;
+				commandRequest.status = 2;
+			}
+			hostRequestAnswerReady(&commandRequest.state);
+			break;
+		case 0x0091:		/* sceSysconWriteScratchPad */
+			if (commandRequest.length < 4) {
+				commandRequest.answerLength = 0;
+				commandRequest.status = 0x3b;
+				hostRequestAnswerReady(&commandRequest.state);
+				break;
+			}
+			offset = commandRequestData[0] | (unsigned int)commandRequestData[1] << 8;
+			size = commandRequestData[2];
+			if (scratchPadWrite(offset, size, &commandRequestData[3]) == 0)
+				commandRequest.status = 0;
+			else
+				commandRequest.status = 2;
+			commandRequest.answerLength = 0;
+			hostRequestAnswerReady(&commandRequest.state);
+			break;
+		case 0x0092:		/* no NVS */
+			commandRequest.state = HOST_REQUEST_ERROR;
+			break;
+		case 0x0093:
+			commandRequest.state = HOST_REQUEST_ERROR;
+			break;
+		case 0x00a0:		/* the handshake */
+			if (hostLink.config.size == 0) {
+				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x20, 0);
+				break;
+			}
+			if (commandRequest.length == 0x28) {
+				task2SetFlag(3, 0x2000);
+				hostRequestSetState(&commandRequest, HOST_REQUEST_BUSY);
+			} else
+				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 2, 0x28);
+			break;
+		case 0x00b0:		/* sceSysconOutputClock */
+			if (commandRequest.length == 1) {
+				if (commandRequestData[0] == 1)
+					clockOutputStart();
+				else
+					clockOutputStop();
+				commandRequest.status = 0;
+			} else
+				commandRequest.status = 0x3b;
+			commandRequest.answerLength = 0;
+			hostRequestAnswerReady(&commandRequest.state);
+			break;
+		case 0x00b1:		/* sceSysconCtrlWirelessPowerDown: answered, the status left
+					   as it was */
+			commandRequest.answerLength = 0;
+			hostRequestAnswerReady(&commandRequest.state);
+			break;
+		case 0x00c0:		/* a transition with its wake mask's three bytes */
+			if (commandRequest.length == 4) {
+				if (commandRequestData[0] == 0x00) {
+					transitionEvent.transition = 0x50;
+					memcpy(&transitionEvent.wakeMask, &commandRequestData[1], 3);
+				} else if (commandRequestData[0] == 0x01) {
+					transitionEvent.transition = 0x51;
+					memcpy(&transitionEvent.wakeMask, &commandRequestData[1], 3);
+				} else
+					commandRequest.status = 0x3c;
+				if (commandRequestData[0] == 0x00 || commandRequestData[0] == 0x01) {
+					if ((unsigned char)stateTransition(&transitionEvent) == 0)
+						commandRequest.status = 0;
+					else
+						commandRequest.status = 6;
+				}
+			} else
+				commandRequest.status = 0x3b;
+			commandRequest.answerLength = 0;
+			hostRequestAnswerReady(&commandRequest.state);
+			return;
+		case 0x00c1:		/* sceSysconErnieShutdown */
+			commandRequest.status = 0x3e;
+			commandRequest.answerLength = 0;
+			hostRequestAnswerReady(&commandRequest.state);
+			return;
+		default:
+			commandRequest.state = HOST_REQUEST_ERROR;
+			return;
+		}
+		break;
+	case HOST_EVENT_ANSWERED:
+		commandRequest.state = HOST_REQUEST_RECEIVE;
+		break;
+	}
+}
+#else
 void commandRequestNotify(void)
 {
 #if SOURCE_0103
@@ -1026,6 +1190,7 @@ allowed:
 #endif
 	}
 }
+#endif /* !FW_SINCE(0x00080302) */
 
 /* request 0's commands a task handles (event flag 3, 0x2000) */
 void commandRequestRun(void)

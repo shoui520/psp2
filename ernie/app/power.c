@@ -630,7 +630,9 @@ unsigned char powerOff(void)
 	inputPowerOff();
 	powerPendingClear(3);
 	hostIntDisable();
+#if FW_SINCE(0x00080302)	/* 0x00080003 does not wait here */
 	dly_tsk(1);
+#endif
 	csiClose();
 	HOST_FRAME = 0;
 	HOST_READY = 0;
@@ -654,7 +656,9 @@ unsigned char powerOff(void)
 	POWER_WAIT(5, 0x8ca);
 	powerPendingClear(5);
 	POWER_WAIT_CLEAR(6);
+#if FW_SINCE(0x00080302)	/* 0x00080003 tells task 6 nothing */
 	task6SetFlag(6, 0x80);
+#endif
 #if FW_SINCE(0x00090502)
 	POWER_WAIT(6, 5);
 #endif
@@ -742,7 +746,9 @@ unsigned char powerSuspend(void)
 	inputSuspend();
 	powerPendingClear(3);
 	hostIntDisable();
+#if FW_SINCE(0x00080302)	/* 0x00080003 does not wait here */
 	dly_tsk(1);
+#endif
 	csiClose();
 	HOST_FRAME = 0;
 	HOST_READY = 0;
@@ -832,7 +838,9 @@ unsigned char powerShutdown(void)
 	inputShutdown();
 	powerPendingClear(3);
 	hostIntDisable();
+#if FW_SINCE(0x00080302)	/* 0x00080003 does not wait here */
 	dly_tsk(1);
+#endif
 	csiClose();
 	HOST_FRAME = 0;
 	HOST_READY = 0;
@@ -919,6 +927,12 @@ unsigned char powerCut(void)
 	BOARD_POWER_CUT_PIN = 1;
 	return result;
 #else
+#if !FW_SINCE(0x00080302)
+	/* 0x00080003: the line low first, the devices cut at once, no clock output to stop */
+	P6.2 = 0;
+	powerJobPostCut();
+	powerPendingClear(5);
+#else
 #if FW_SINCE(0x00090203)
 	clockOutputStop();
 #endif
@@ -934,8 +948,11 @@ unsigned char powerCut(void)
 #if !FW_SINCE(0x00090203)
 	clockOutputStop();	/* 0x00090009: after the line */
 #endif
+#endif
 	hostIntDisable();
+#if FW_SINCE(0x00080302)	/* 0x00080003 does not wait here */
 	dly_tsk(1);
+#endif
 	csiClose();
 	HOST_FRAME = 0;
 	HOST_READY = 0;
@@ -1011,7 +1028,9 @@ unsigned char powerReset(void)
 	inputReset();
 	powerPendingClear(3);
 	hostIntDisable();
+#if FW_SINCE(0x00080302)	/* 0x00080003 does not wait here */
 	dly_tsk(1);
+#endif
 	csiClose();
 	HOST_FRAME = 0;
 	powerPendingClear(4);

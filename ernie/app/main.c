@@ -128,7 +128,11 @@ void hdwinit(void)
 	TS0L = 0x01;
 #endif
 	rtcInit();
+#if FW_SINCE(0x00080302)
 	clockOutputStop();
+#else
+	clockOutputStart();	/* 0x00080003 leaves the clock output on */
+#endif
 	return;
 }
 
@@ -168,7 +172,7 @@ void intInit(void)
 	SRPR14 = 1;
 	SREPR04 = 0;
 	SREPR14 = 1;
-#else
+#elif FW_SINCE(0x00080302)	/* 0x00080003 leaves every interrupt at the lowest */
 	SRPR02 = 0;
 	SRPR12 = 1;
 	SREPR02 = 0;

@@ -108,7 +108,11 @@
 #define BOARD_DEBUG_PINS_POWER	HW_IS(0x00601000)
 
 /* the Elmo mask steps of each power sequence (app/powerseq.c's tables) */
+#if !FW_SINCE(0x00080302)
+#define BOARD_POWER_STEPS	3	/* 0x00080003's tables */
+#else
 #define BOARD_POWER_STEPS	(BOARD_IRS1001 || BOARD_102603 || BOARD_USS1001 || BOARD_DOL1001 ? 4 : 3)
+#endif
 
 /* the multi-connector's switch: the output's bits 0 and 1 are P13.0 and P2.2, set at once
    (0x00102603); the others' a mode, with a wait between the two pins */
@@ -190,9 +194,9 @@
    keep input1Bit7Poll empty */
 #define BOARD_INPUT1_BIT7_POLL	((ERNIE_BOARD == 0x00406000 || BOARD_102603 && !HW_IRT001) && !BOARD_USS1001)
 
-/* INTP11 (P7.7, intp11Level): not on PCH-1000 or 0x00102603, whose intp11Enable does nothing
-   and whose handler is empty */
-#define BOARD_INTP11		(ERNIE_BOARD != 0x00406000 && (!BOARD_102603 || HW_IRT001))
+/* INTP11 (P7.7, intp11Level): not on PCH-1000 or 0x00102603, nor in 0x00080003, whose
+   intp11Enable does nothing and whose handler is empty */
+#define BOARD_INTP11		(ERNIE_BOARD != 0x00406000 && (!BOARD_102603 || HW_IRT001) && FW_SINCE(0x00080302))
 /* and its level kept on both edges since 0x00090203; 0x00090009's INTP11 takes the rising edge
    only, holding the scan (intp11Interrupt), and intp11Low reads input group 3 */
 #define BOARD_INTP11_LEVEL	(BOARD_INTP11 && FW_SINCE(0x00090203))
@@ -247,8 +251,9 @@
 #define BOARD_P95		(!BOARD_102603)
 
 /* the motion sensor's ready line, read by inputreq.c's 0x0484-0x0488 and powerMotionOn: P7.2;
-   0x00102603's P7.7 (its input 3 takes P7.2; 0x00315200's input 3 does not) */
-#if BOARD_102603 && !HW_IRT001
+   0x00102603's P7.7 (its input 3 takes P7.2; 0x00315200's input 3 does not), and
+   0x00080003's (its input 3 as 0x00102603's) */
+#if BOARD_102603 && (!HW_IRT001 || !FW_SINCE(0x00080302))
 #define BOARD_MOTION_READY	P7.7
 #else
 #define BOARD_MOTION_READY	P7.2

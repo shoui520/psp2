@@ -12,7 +12,11 @@
 #include "input.h"
 #include "kernel.h"
 
+#if !FW_SINCE(0x00080302)
+#define BBMC_REGS		0x20	/* 0x00080003's registers */
+#else
 #define BBMC_REGS		0x30	/* the registers */
+#endif
 
 /* bbmcWriteRegs' modes: who writes, which decides what each register lets it do
    (bbmcRegModes) */

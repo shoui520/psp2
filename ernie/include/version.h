@@ -28,9 +28,15 @@ extern const struct AppVersionInfo appVersionInfo;
 /* the Subversion $Date$ of the build, after appVersionInfo (command 0x0002) */
 extern const char * const appTimeStamp;
 
+#if !defined(ERNIE_UPDATER) && ERNIE_FW < 0x00080302
+/* 0x00080003's callers copy the block's bytes themselves */
+#define getErnieVersion(buf)	memcpy(buf, appVersionInfo.version, 4)
+#define getHardwareInfo(buf)	memcpy(buf, appVersionInfo.hardwareInfo, 4)
+#else
 extern void		versionInit(void);
 extern void		getErnieVersion(unsigned char *buf);
 extern void		getHardwareInfo(unsigned char *buf);
+#endif
 /* the slim's */
 extern void		getHardwareInfo2(unsigned char *buf);
 extern char		getHardwareInfo2Bit(unsigned char number);

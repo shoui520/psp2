@@ -16,7 +16,11 @@
 #else
 #define SERIAL_PORT		3	/* the UART (DOL-1001's too) */
 #endif
+#if !FW_SINCE(0x00080302)
+#define SERIAL_DATA_SIZE	0x41	/* 0x00080003's frames carry less than 0x41 bytes */
+#else
 #define SERIAL_DATA_SIZE	0x39	/* the most data a frame carries */
+#endif
 /* the most a received frame carries: 0x00090804 takes less than it sends */
 #if FW_SINCE(0x00090903)
 #define SERIAL_RECEIVE_SIZE	SERIAL_DATA_SIZE
@@ -30,7 +34,14 @@
 #define SERIAL_FRAME_STATUS	2
 #define SERIAL_FRAME_LENGTH	3
 #define SERIAL_FRAME_DATA	5
+#if !FW_SINCE(0x00080302)
+/* 0x00080003 reads a frame straight into its buffer, text into one twice as long */
+#define SERIAL_FRAME_SIZE	0x80
+#define SERIAL_TEXT_SIZE	0x100
+#else
 #define SERIAL_FRAME_SIZE	(SERIAL_FRAME_DATA + SERIAL_DATA_SIZE + 2)
+#define SERIAL_TEXT_SIZE	0x80
+#endif
 
 /* serial.mode */
 #define SERIAL_MODE		0x7f	/* 1, 2 or 3 */
@@ -100,12 +111,14 @@ struct Serial {
 	unsigned int	length;		/* the frame's data's */
 	unsigned int	checksum;	/* the frame's */
 	unsigned char	status;		/* the frame's; the answer's */
+#if FW_SINCE(0x00080302)	/* 0x00080003's answer is serialEvent's own */
 	unsigned char	*data;		/* the answer's data */
 	unsigned int	dataLength;
+#endif
 };
 
 extern struct Serial serial;
-extern unsigned char serialText[0x80];			/* a frame as hex text */
+extern unsigned char serialText[SERIAL_TEXT_SIZE];			/* a frame as hex text */
 extern unsigned char serialFrame[SERIAL_FRAME_SIZE];
 
 /* a command of mode 2's (its handler answers from response), a notification's handler */
@@ -141,7 +154,9 @@ extern unsigned char serialGetNextMode(void);
 extern unsigned char serialSetNextMode(unsigned char mode);
 extern unsigned char serialGetBaud(void);
 extern unsigned char serialSetBaud(unsigned char baud);
+#if ERNIE_FW >= 0x00080302
 extern unsigned char serialSelectBaud(unsigned char code);
+#endif
 extern unsigned char serialGetState(void);
 extern unsigned char serialSetState(unsigned char state);
 extern unsigned char serialIsLocked(void);
@@ -150,8 +165,13 @@ extern void serialStop(int port);
 extern void serialStart(unsigned char mode);
 extern unsigned char serialReceive(void);
 extern unsigned int serialChecksum(unsigned char *data, unsigned int length);
+#if !FW_SINCE(0x00080302)
+extern unsigned char serialDispatch(struct SerialBuffer *response);
+extern unsigned char serialSendAnswer(struct SerialBuffer *response, unsigned char status);
+#else
 extern unsigned char serialDispatch(void);
 extern unsigned char serialSendAnswer(void);
+#endif
 extern unsigned char serialRead(int port, unsigned char *buf, int size);
 extern unsigned char serialWrite(int port, unsigned char *buf, int size);
 extern void serialFlush(int port);

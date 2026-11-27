@@ -19,6 +19,12 @@
 #include "flash.h"
 #endif
 
+#if !FW_SINCE(0x00080302)
+/* 0x00080003 prints through the NVS's own print, which prints nothing (the file's last) */
+static void nvsPrintf(const char *format, ...);
+#define tracePrintf	nvsPrintf
+#endif
+
 #if BOARD_USS1001
 /*
  * USS-1001's NVS is its own: 0x5d records of 0x20 bytes (area 0 offsets 0-0xb5f, area 1 the
@@ -1277,7 +1283,11 @@ unsigned char nvsClean(unsigned char count)
 	unsigned char block;
 	struct NvsMark *mark;
 
+#if !FW_SINCE(0x00080302)	/* 0x00080003: 0 when nothing is erased */
+	result = 0;
+#else
 	result = 0x20;
+#endif
 	for (i = 0; i < NVS_SPARE_BLOCKS && count != 0; i++) {
 		block = nvsSpareBlocks[i];
 		mark = (struct NvsMark *)NVS_ADDRESS(block);
@@ -2771,3 +2781,9 @@ struct NvsBlockInfo *nvsListPopFront(struct NvsList *list)
 	return NULL;
 }
 #endif	/* BOARD_USS1001 */
+
+#if !FW_SINCE(0x00080302)
+static void nvsPrintf(const char *format, ...)
+{
+}
+#endif

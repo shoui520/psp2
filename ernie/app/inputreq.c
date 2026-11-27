@@ -634,10 +634,13 @@ static void touchRequestRun(void)
 	unsigned char i;
 
 	if (inputRequests.touchPending != 0) {
+#if FW_SINCE(0x00080302)	/* 0x00080003 has no handshake */
 		if (!handshakeUnlocked11()) {
 			hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
 			handshakeRefuse();
-		} else {
+		} else
+#endif
+		{
 			for (i = 0; i < sizeof(touchCommands) / sizeof(touchCommands[0]); i++) {
 				if (touchCommands[i].command == touchRequest.command) {
 					touchCommands[i].handler();
@@ -667,11 +670,14 @@ static void motionRequestRun(void)
 	if (inputRequests.motionFlags & MOTION_PENDING) {
 		if (inputRequests.motionDelay != 0)
 			inputRequests.motionDelay--;
+#if FW_SINCE(0x00080302)	/* 0x00080003 has no handshake */
 		else if (!handshakeUnlocked11()) {
 			hostRequestAnswer(&motionRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
 			handshakeRefuse();
 			return;
-		} else
+		}
+#endif
+		else
 			motionCommands[inputRequests.motionCommand]();
 	}
 	if (inputRequests.motionFlags & MOTION_TRANSFER) {
@@ -710,10 +716,13 @@ void controlsRequestRun(void)
 {
 	unsigned char i;
 
+#if FW_SINCE(0x00080302)	/* 0x00080003 has no handshake */
 	if (!handshakeUnlocked11()) {
 		hostRequestAnswer(&controlsRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
 		handshakeRefuse();
-	} else {
+	} else
+#endif
+	{
 		for (i = 0; i < sizeof(controlsCommands) / sizeof(controlsCommands[0]); i++) {
 			if (controlsCommands[i].command == controlsRequest.command) {
 				controlsCommands[i].handler();

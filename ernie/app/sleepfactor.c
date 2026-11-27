@@ -160,6 +160,7 @@ void sleepFactorSet2(unsigned char on)
 	}
 }
 
+#if FW_SINCE(0x00080302)	/* 0x00080003 has none */
 void sleepFactorSet9(unsigned char on)
 {
 	if (sleepFactor.bits[1].b1 ^ on) {
@@ -169,6 +170,7 @@ void sleepFactorSet9(unsigned char on)
 		ena_dsp();
 	}
 }
+#endif
 
 /* 0x00090206 has none */
 #if FW_SINCE(0x00090502)

@@ -90,7 +90,9 @@ void task2(VP_INT exinf)
 			}
 			if (ptn & 0x8000) {
 				clr_flg(3, ~0x8000);
+#if FW_SINCE(0x00080302)	/* 0x00080003 has no alarm check here */
 				task2Tick();
+#endif
 			}
 #if FW_SINCE(0x00080502)	/* 0x00080307 has no settings requests */
 			if (ptn & 0x4000) {
@@ -286,8 +288,10 @@ unsigned char task2On(void)
 	if (nvsInit() != 0)
 #if FW_SINCE(0x00090903)
 		nvsJobService();
-#else
+#elif FW_SINCE(0x00080302)
 		task2SetFlag(3, 0x0040);
+#else
+		;	/* 0x00080003 tests the result and does nothing */
 #endif
 	serial1Reset();
 #if FW_SINCE(0x00090502)
@@ -317,7 +321,9 @@ unsigned char task2Off(void)
 	nvsRequestInit();
 	serialAuthInit();
 	serialRequestInit();
+#if FW_SINCE(0x00080302)	/* 0x00080003's serial 4 has no timers */
 	serial4StartTimers();
+#endif
 #if SOURCE_0103
 	boardMultiCnUpdate();
 #elif FW_SINCE(0x00090502)
@@ -494,6 +500,7 @@ unsigned char task2Update(void)
 }
 #endif
 
+#if FW_SINCE(0x00080302)
 /* every second (the RTC's interrupt sets flag 0x8000): the alarm checked against the clock */
 unsigned char task2Tick(void)
 {
@@ -563,3 +570,4 @@ unsigned char task2Tick(void)
 #endif
 	return ret;
 }
+#endif

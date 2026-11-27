@@ -56,7 +56,9 @@ struct ButtonPress {
 					   1, at least 3) */
 	unsigned char	time2;		/* presses for the second (byte 0x2f, at least 3) */
 #endif
+#if FW_SINCE(0x00080302)	/* 0x00080003 counts in any state */
 	unsigned int	state;		/* the system state the presses were counted in */
+#endif
 };
 
 extern unsigned char getResetCause(void);
@@ -683,7 +685,11 @@ void inputInit(void)
 	inputState1 = 0xfe;
 	inputGroup1.prev = 0xfe;
 	inputGroup1.changed = 0;
+#if FW_SINCE(0x00080302)
 	inputGroup1.pending = 0xa0;
+#else
+	inputGroup1.pending = 0x20;	/* 0x00080003: nor bit 7 */
+#endif
 #endif
 #if FW_SINCE(0x0100060B)
 	inputGroup1.enable = 0xfb;	/* bit 2 is not watched */
@@ -872,7 +878,7 @@ void inputResumePrepare(void)
 #if BOARD_DOL1001
 	intp8Enable(0);
 #endif
-#else
+#elif FW_SINCE(0x00080302)	/* 0x00080003 leaves the other interrupts as they are */
 	intp2Enable(0);
 	intp7Enable(0);
 	intp4Enable(0);
@@ -1040,7 +1046,13 @@ void inputPowerOff(void)
 
 void inputStateOff(void)
 {
-#if SOURCE_0103
+#if !FW_SINCE(0x00080302)
+	/* 0x00080003: the scan at its fastest, no wake interrupts */
+	inputScan.interval = 1;
+	inputScan.hold = 0;
+	timerStart(INPUT_SCAN_TIMER, inputScan.interval);
+}
+#elif SOURCE_0103
 #if !BOARD_DOL1001
 	intp7Enable(0);
 #endif
@@ -1138,11 +1150,19 @@ void inputShutdown(void)
 	boardMultiCnOutputOff();	/* 0x00090206 turns the multi-connector off here */
 #endif
 #endif
+#if !FW_SINCE(0x00080302)
+	/* 0x00080003 clears level monitor 1 here: its inputStateShutdown starts none */
+	levelMonitor1.last = 0;
+	levelMonitor1.now = 0;
+	levelMonitor1.state = 0;
+#endif
 }
 
 void inputStateShutdown(void)
 {
+#if FW_SINCE(0x00080302)
 	levelMonitor1Start();
+#endif
 #if FW_SINCE(0x00090502)	/* 0x00090206 has no mark */
 	inputShutdownMark();
 #endif
@@ -1173,8 +1193,17 @@ void inputCut(void)
 	boardMultiCnOutputOff();	/* 0x00090206 turns the multi-connector off here */
 #endif
 #endif
+#if !FW_SINCE(0x00080302)
+	/* 0x00080003 has no inputStateCut: level monitor 2 and the scan started here */
+	levelMonitor2.last = 0;
+	levelMonitor2.now = 0;
+	levelMonitor2.state = 0;
+	inputScan.interval = 1;
+	timerStart(INPUT_SCAN_TIMER, 1);
+#endif
 }
 
+#if FW_SINCE(0x00080302)
 void inputStateCut(void)
 {
 	levelMonitor2Start();
@@ -1186,6 +1215,7 @@ void inputStateCut(void)
 	inputScanMode2(1);
 #endif
 }
+#endif
 
 void inputSuspend(void)
 {
@@ -1203,7 +1233,7 @@ void inputSuspend(void)
 	if (!(unsigned char)stateGetWakeBit(0x1e))
 		intp8Enable(1);
 #endif
-#else
+#elif FW_SINCE(0x00080302)	/* 0x00080003 wakes from nothing here */
 	unsigned long flags;
 
 	flags = stateGetWakeMask();
@@ -1223,6 +1253,7 @@ void inputSuspend(void)
 	if ((flags & 0x40000000) == 0)
 		intp8Enable(1);
 #endif
+#elif !FW_SINCE(0x00080302)
 #elif !FW_SINCE(0x00090502)
 	/* 0x00090206 turns a pin's interrupt on only while the pin is high: a low pin is
 	   monitored at once, and its interrupt turns itself off at the edge */
@@ -1353,7 +1384,12 @@ void inputSuspend(void)
 
 void inputStateSuspend(void)
 {
-#if BOARD_OFF_WAKE
+#if !FW_SINCE(0x00080302)
+	/* 0x00080003: as inputStateOff */
+	inputScan.interval = 1;
+	inputScan.hold = 0;
+	timerStart(INPUT_SCAN_TIMER, inputScan.interval);
+#elif BOARD_OFF_WAKE
 	intp1Enable(1);
 	intp13Enable(1);
 #if BOARD_INTP11 && !FW_SINCE(0x00090203)
@@ -1560,10 +1596,16 @@ void sampleInputs1(void)
 		inputGroup1.prev |= 0x08;
 #endif
 	inputGroupUpdate(&inputRaw1, &inputState1, &inputGroup1);
+#if FW_SINCE(0x00080302)
 	if (inputGroup1.changed) {
 	}
 	sleepFactorSet4(inputState1.4 ? 0 : 1);
 	sleepFactorSet7(inputState1.6 ? 0 : 1);
+#else
+	/* 0x00080003: the bits' complements, of which the setters keep bit 0 */
+	sleepFactorSet4(~(unsigned char)inputState1.4);
+	sleepFactorSet7(~(unsigned char)inputState1.6);
+#endif
 }
 
 void sampleInputs2(void)
@@ -1582,7 +1624,7 @@ void sampleInputs2(void)
 void sampleInputs3(void)
 {
 #if !INPUT_0104	/* DOL-1002's samples nothing */
-#if BOARD_INPUTS_102603 && !HW_IRT001
+#if BOARD_INPUTS_102603 && (!HW_IRT001 || !FW_SINCE(0x00080302))
 	inputRaw3.0 = P7.3;
 	inputRaw3.1 = P7.2;
 #elif BOARD_INPUT3_PINS
@@ -1600,8 +1642,10 @@ void sampleInputs3(void)
 	inputRaw3.5 = P2.1;
 #endif
 	inputGroupUpdate(&inputRaw3, &inputState3, &inputGroup3);
+#if FW_SINCE(0x00080302)	/* 0x00080003 does not look */
 	if (inputGroup3.changed) {
 	}
+#endif
 #endif
 }
 
@@ -1749,7 +1793,7 @@ void pinMonitorPoll(void)
 				}
 			} else {
 				pinMonitor2Enable(0);
-#if !FW_SINCE(0x00090502)
+#if !FW_SINCE(0x00090502) && FW_SINCE(0x00080302)	/* not in 0x00080003 */
 				intp7Enable(1);
 #endif
 			}
@@ -1766,7 +1810,7 @@ void pinMonitorPoll(void)
 				}
 			} else {
 				pinMonitor3Enable(0);
-#if !FW_SINCE(0x00090502)
+#if !FW_SINCE(0x00090502) && FW_SINCE(0x00080302)	/* not in 0x00080003 */
 				intp4Enable(1);
 #endif
 			}
@@ -1795,7 +1839,7 @@ void pinMonitorPoll(void)
 				}
 			} else {
 				pinMonitor4Enable(0);
-#if !FW_SINCE(0x00090502)
+#if !FW_SINCE(0x00090502) && FW_SINCE(0x00080302)	/* not in 0x00080003 */
 				intp3Enable(1);
 #endif
 			}
@@ -1810,7 +1854,7 @@ void pinMonitorPoll(void)
 				}
 			} else {
 				pinMonitor5Enable(0);
-#if !FW_SINCE(0x00090502)
+#if !FW_SINCE(0x00090502) && FW_SINCE(0x00080302)	/* not in 0x00080003 */
 				intp10Enable(1);
 #endif
 			}
@@ -2018,9 +2062,12 @@ void button2Held(void)
 	STATE_TRANSITION_EVENT
 
 	buttonPress2.count++;
+#if FW_SINCE(0x00080302)
 	if (stateGet() != button2State()) {
 		button2SetState(0);
-	} else if (buttonPress2.count < 2) {
+	} else
+#endif
+	if (buttonPress2.count < 2) {
 		pinMonitor1Enable(1);
 	} else if (buttonPress2.count == 2) {
 		inputKeysOpen();
@@ -2277,7 +2324,9 @@ int button1Reset(void)
 	buttonPress1.count = 0;
 	buttonPress1.keys = 0;
 	buttonPress1.result = 0;
+#if FW_SINCE(0x00080302)
 	button1SetState(stateGet());
+#endif
 	return 0;
 }
 
@@ -2286,6 +2335,7 @@ int button1Result(void)
 	return buttonPress1.result;
 }
 
+#if FW_SINCE(0x00080302)
 int button1State(void)
 {
 	return buttonPress1.state;
@@ -2296,6 +2346,7 @@ int button1SetState(unsigned int state)
 	buttonPress1.state = state;
 	return 0;
 }
+#endif
 
 int button2Reset(void)
 {
@@ -2304,7 +2355,9 @@ int button2Reset(void)
 	buttonPress2.count = 0;
 	buttonPress2.keys = 0;
 	buttonPress2.result = 0;
+#if FW_SINCE(0x00080302)
 	button2SetState(stateGet());
+#endif
 	return 0;
 }
 
@@ -2313,6 +2366,7 @@ int button2Result(void)
 	return buttonPress2.result;
 }
 
+#if FW_SINCE(0x00080302)
 unsigned int button2State(void)
 {
 	return buttonPress2.state;
@@ -2323,6 +2377,7 @@ int button2SetState(unsigned int state)
 	buttonPress2.state = state;
 	return 0;
 }
+#endif
 
 unsigned char button2Keys(void)
 {
@@ -2395,12 +2450,17 @@ unsigned char button1Keys(void)
 void button1Held(void)
 {
 	STATE_TRANSITION_EVENT
+#if FW_SINCE(0x00080302)
 	unsigned char value;
+#endif
 
 	buttonPress1.count++;
+#if FW_SINCE(0x00080302)
 	if (stateGet() != button1State()) {
 		button1SetState(0);
-	} else if (buttonPress1.count < 2) {
+	} else
+#endif
+	if (buttonPress1.count < 2) {
 		pinMonitor0Enable(1);
 	} else if (buttonPress1.count == 2) {
 		inputKeysOpen();
@@ -2414,9 +2474,13 @@ void button1Held(void)
 				buttonPress1.result = buttonPress1.keys;
 				buttonPress2.result = buttonPress1.keys;
 				inputKeysClose();
+#if FW_SINCE(0x00080302)
 				value = STATE_TRANSITION_NOMASK(0x31);
 				if (value != 0)
 					;
+#else
+				STATE_TRANSITION_NOMASK(0x31);
+#endif
 			} else {
 				pinMonitor0Enable(1);
 			}
@@ -2794,7 +2858,9 @@ void input1Bit2High(void)
 
 void inputMultiCnChanged(void)
 {
-#if !FW_SINCE(0x00080502)
+#if !FW_SINCE(0x00080302)
+	sleepFactorSet5(~(unsigned char)inputState1.5);	/* as sampleInputs1's */
+#elif !FW_SINCE(0x00080502)
 	/* 0x00080307: the sleep factor from the pin first, none cleared after */
 	sleepFactorSet5(inputState1.5 ? 0 : 1);
 #endif
@@ -2810,7 +2876,12 @@ void inputMultiCnChanged(void)
 #if FW_SINCE(0x0100010B)
 		analogMultiCnStop();
 #endif
+#if !FW_SINCE(0x00080302)
+		powerDeviceSetPending(0x20);	/* 0x00080003: both */
+		powerDeviceSetPending(2);
+#else
 		powerDeviceSetPending(BOARD_INPUTS_102603 && !SOURCE_0103 ? 2 : 0x20);
+#endif
 #if FW_SINCE(0x00080502)
 		sleepFactorSet5(0);
 #endif
@@ -3106,11 +3177,17 @@ void inputScanTimer(void)
 }
 #endif
 
+#if FW_SINCE(0x00080302)
+#define LEVEL_MONITOR_ON(monitor)	((monitor).enable != 0)
+#else
+#define LEVEL_MONITOR_ON(monitor)	1	/* 0x00080003's monitors always run */
+#endif
+
 /* the RTC's interrupt (state 0x0010 or 0x0800): P11.4 */
 void levelMonitor1Poll(void)
 {
 	STATE_TRANSITION_EVENT
-	if (levelMonitor1.enable != 0) {
+	if (LEVEL_MONITOR_ON(levelMonitor1)) {
 #if SOURCE_0103 && !BOARD_DOL1001
 		levelMonitor1.now = P13.7;
 #else
@@ -3123,7 +3200,7 @@ void levelMonitor1Poll(void)
 #if SOURCE_0103
 				inputLogTransition(0x61);
 #endif
-#if !FW_SINCE(0x00090502)
+#if !FW_SINCE(0x00090502) && FW_SINCE(0x00080302)
 				levelMonitor1.enable = 0;
 #endif
 			}
@@ -3136,7 +3213,7 @@ void levelMonitor1Poll(void)
 void levelMonitor2Poll(void)
 {
 	STATE_TRANSITION_EVENT
-	if (levelMonitor2.enable != 0) {
+	if (LEVEL_MONITOR_ON(levelMonitor2)) {
 #if SOURCE_0103 && !BOARD_DOL1001
 		levelMonitor2.now = P3.1;
 #else
@@ -3149,7 +3226,7 @@ void levelMonitor2Poll(void)
 #if SOURCE_0103
 				inputLogTransition(0x42);
 #endif
-#if !FW_SINCE(0x00090502)
+#if !FW_SINCE(0x00090502) && FW_SINCE(0x00080302)
 				levelMonitor2.enable = 0;
 #endif
 			}
@@ -3217,6 +3294,8 @@ void inputNone(void)
 {
 }
 
+#if FW_SINCE(0x00080302)	/* 0x00080003 has none of these: its inputShutdown and inputCut
+				   clear the monitors */
 unsigned char input1Bit7Active(void)
 {
 #if BOARD_DOL1001	/* DOL-1001's: never */
@@ -3243,6 +3322,7 @@ void levelMonitor2Start(void)
 	levelMonitor2.state = 0;
 	levelMonitor2.enable = 1;
 }
+#endif
 
 #if FW_SINCE(0x00090502)	/* 0x00090206 marks no shutdown */
 void inputShutdownMark(void)

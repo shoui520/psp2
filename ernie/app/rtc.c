@@ -28,6 +28,12 @@
 unsigned char alarmMode;
 #endif
 
+#if !FW_SINCE(0x00080302)
+/* 0x00080003: whether the clock had reached the alarm at the last interrupt (later the sleep
+   factor's bit 3) */
+unsigned char alarmReached;
+#endif
+
 #if FW_SINCE(0x00080502)
 /* the clock's low word at the last interrupt: odd every other one, once a second */
 static __sreg unsigned int rtcClockLow;
@@ -62,7 +68,12 @@ void rtcStart(void)
 #endif
 	RTCIF = 0;
 	RTCMK = 0;
-#if !FW_SINCE(0x01000104)
+#if !FW_SINCE(0x00080302)
+	/* 0x00080003: the clock and the alarm cleared at every start */
+	setClock(0);
+	setAlarm(RTC_ALARM_NONE);
+	alarmReached = 0;
+#elif !FW_SINCE(0x01000104)
 	/* before 0x01000104 a warm reset keeps the clock and the alarm, which has no mode */
 	switch (getResetCause()) {
 	case 0xf1:
@@ -149,6 +160,18 @@ void setAlarm(unsigned long alarm)
 	return;
 }
 
+#if !FW_SINCE(0x00080302)
+/* 0x00080003 reads the clock and the alarm with interrupts enabled */
+int isAlarmReached(void)
+{
+	return keepRam.clock >= keepRam.alarm;
+}
+
+unsigned int sleepFactorBit3Get(void)
+{
+	return alarmReached;
+}
+#else
 int isAlarmReached(void)
 {
 	int reached;
@@ -163,6 +186,7 @@ unsigned int sleepFactorBit3Get(void)
 {
 	return sleepFactorGet() & 8;
 }
+#endif
 
 #if FW_SINCE(0x01000104)
 void setAlarmMode(unsigned char mode)
@@ -191,9 +215,16 @@ static unsigned char rtcCount;
 void rtcInterrupt(void)
 {
 	clockIncrement();
+#if !FW_SINCE(0x00080302)
+	/* 0x00080003: the alarm noted here, the count tested before it is incremented */
+	alarmReached = isAlarmReached();
+	if (stateGet() != 0x0010 && (rtcCount++ & 0x03) == 0)
+		task2ISetFlag(0x0040);
+#else
 	rtcCount++;
 	if (stateGet() != 0x0010 && (rtcCount & 0x03) == 0)
 		task2ISetFlag(0x0040);
+#endif
 	if (stateGet() & 0x0810)
 		levelMonitor1Poll();
 	if (rtcCount & 0x01)

@@ -184,7 +184,9 @@ void systemInit(void)
 #endif
 	/* 0x00090009 keeps no reset flags and opens the settings in task2On */
 	timerInit();
+#if FW_SINCE(0x00080302)	/* 0x00080003 has no parameters or version flags */
 	paramInit();
+#endif
 #if TASK_PENDING_MARKS
 	taskClearPending(-1);
 	taskSetPending(1);
@@ -193,7 +195,9 @@ void systemInit(void)
 	timer.handler = stateCheck;
 	timerSetHandler(TIMER_RTC(0x1a), &timer);
 #endif
+#if FW_SINCE(0x00080302)
 	versionInit();
+#endif
 #if FW_SINCE(0x00090502)
 	cause = getResetCause() & 0xf0;
 #endif

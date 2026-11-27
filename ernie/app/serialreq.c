@@ -37,8 +37,12 @@ extern unsigned char serialRequestData[0x1c];
 #if FW_SINCE(0x00090903)
 #define SERIAL_REQUEST_COPY()	(result = serial1BufferRead(offset, size, serial.buffer))
 #define SERIAL_REQUEST_RESULT	result
-#else
+#elif FW_SINCE(0x00080302)
 #define SERIAL_REQUEST_COPY()	memcpy(serial.buffer, &serial1Buffer[offset], size)
+#define SERIAL_REQUEST_RESULT	0
+#else
+/* 0x00080003: the frame sent from serial1Buffer itself */
+#define SERIAL_REQUEST_COPY()	(serial.buffer = &serial1Buffer[offset])
 #define SERIAL_REQUEST_RESULT	0
 #endif
 
@@ -55,6 +59,7 @@ void serialRequestInit(void)
 void serialRequestReset(void)
 {
 	serialRequest.state = HOST_REQUEST_RECEIVE;
+#if FW_SINCE(0x00080302)	/* 0x00080003 keeps the sleep factor and the buffer */
 	sleepFactorSet25(0);
 #if FW_SINCE(0x00090903)
 	serial1BufferClear();
@@ -62,6 +67,7 @@ void serialRequestReset(void)
 	memset(serial1Buffer, 0, sizeof(serial1Buffer));
 #endif
 	return;
+#endif
 }
 
 #if !FW_SINCE(0x00090006)
@@ -72,11 +78,13 @@ void serialRequestNotify(void)
 	unsigned char offset;
 	unsigned char size;
 
+#if FW_SINCE(0x00080302)	/* 0x00080003 has no handshake */
 	if (!handshakeUnlocked11()) {
 		hostRequestAnswer(&serialRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
 		handshakeRefuse();
 		return;
 	}
+#endif
 	switch (serialRequest.event) {
 	case HOST_EVENT_COMMAND:
 		if (serialRequest.command >= 0x2082 && (serialIsLocked() || serialGetLink() != 1)) {
@@ -126,6 +134,9 @@ restartEnd:
 				offset = serialRequestData[0];
 				size = serialRequestData[1];
 				result = serial1BufferRead(offset, size, serialRequestData);
+#if !FW_SINCE(0x00080302)
+				serial1State = 0;
+#endif
 				sleepFactorSet25(0);
 				if (result != 0)
 					serialRequest.answerLength = 0;

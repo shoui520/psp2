@@ -23,6 +23,16 @@ void task6(VP_INT exinf)
 	bbmcInit();
 #endif
 	for (;;) {
+#if !FW_SINCE(0x00080302)
+		/* 0x00080003: the modem's events in the low byte, left unhandled, and 0x0300 */
+		ercd = wai_flg(6, 0x03ff, TWF_ORW, &ptn);
+		if (ercd != E_OK)
+			continue;
+		if (0xff & ptn)
+			clr_flg(6, ~(0xff & ptn));
+		if (ptn & 0x0300)
+			clr_flg(6, ~(ptn & 0x0300));
+#else
 #if FW_SINCE(0x00080502)
 		ercd = wai_flg(6, 0x7000 | BBMC_EVENTS, TWF_ORW, &ptn);
 #else
@@ -46,5 +56,6 @@ void task6(VP_INT exinf)
 #if TASK_PENDING_MARKS
 		task6Idle();
 #endif
+#endif /* !FW_SINCE(0x00080302) */
 	}
 }

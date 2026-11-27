@@ -55,6 +55,8 @@ extern int csi10Cancel(void);
 extern void csi10StopChannel(void);
 extern void csi10Close(void);
 extern unsigned char csi10GetState(void);
+#if ERNIE_FW >= 0x00080302	/* 0x00080003: no csi10Release */
 extern void csi10Release(void);
+#endif
 
 #endif

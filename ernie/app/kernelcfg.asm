@@ -28,7 +28,11 @@ $ENDIF
 	DW	HIGHW(kMpfBlocks1)
 	DW	LOWW(kMpfBlocks2)
 	DW	HIGHW(kMpfBlocks2)
+$_IF (ERNIE_FW<0x00080302)	; 0x00080003: the first pool's blocks 8 bytes
+	DW	8, 0F0H
+$ELSE
 	DW	0CH, 0F0H
+$ENDIF
 	DW	8, 2
 ; the tasks: entry, then CS (bits 0-3), priority (bits 10-14), bit 15 not activated at start
 _rtos_task_table:
@@ -64,9 +68,15 @@ $_IF (ERNIE_FW>=0x00090206)
 	DW	0D3DCH, 0D4F8H, 0D59CH, 0D678H, 0D74CH, 0D828H	; their stacks' tops
 	DW	0D8EAH			; the kernel's stack
 $ELSE
+$_IF (ERNIE_FW<0x00080302)
+; 0x00080003: tasks 3-6 and the kernel with other stacks
+	DW	0D41CH, 0D538H, 0D5D4H, 0D670H, 0D72CH, 0D7FAH
+	DW	0D8FCH
+$ELSE
 ; 0x00090009: task 4's stack 0x38 bytes smaller, the kernel's 8 bytes higher
 	DW	0D41CH, 0D538H, 0D5DCH, 0D680H, 0D754H, 0D830H
 	DW	0D8F2H
+$ENDIF
 $ENDIF
 $ENDIF
 $ENDIF

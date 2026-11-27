@@ -97,7 +97,11 @@ void csi01Interrupt(void)
 {
 	unsigned char data;
 
+#if !FW_SINCE(0x00080302)
+	if (0x01 & SSR01L) {
+#else
 	if (SSR01L & 0x01) {
+#endif
 		SIR01L = 0x01;
 		data = 0;
 	} else
@@ -113,7 +117,11 @@ void csi01Interrupt(void)
 		csi01.sendCount--;
 	} else if (csi01.receiveCount != 0)
 		SIO01 = 0;
+#if !FW_SINCE(0x00080302)
+	if (csi01.receiveCount == 0 && csi01.sendCount == 0 && !(0x40 & SSR01L)) {
+#else
 	if (csi01.receiveCount == 0 && csi01.sendCount == 0 && !(SSR01L & 0x40)) {
+#endif
 		csi01.state &= ~CSI01_BUSY;
 		P4.2 = 1;
 		switch (csi01.state & CSI01_PHASE) {

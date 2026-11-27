@@ -47,10 +47,92 @@
 
 
 struct Serial serial;
-unsigned char serialText[0x80];
+unsigned char serialText[SERIAL_TEXT_SIZE];
 unsigned char serialFrame[SERIAL_FRAME_SIZE];
 
-#if !SOURCE_0103	/* not in the slim's */
+#if !FW_SINCE(0x00080302)
+/* 0x00080003's events of event flag 3 (never called): a frame received is answered at once
+   with the status and data its handler gave */
+unsigned char serialEvent(FLGPTN ptn)
+{
+	unsigned char result;
+	struct SerialBuffer response;
+
+	result = 0;
+	if (SERIAL_MODE_OF(serial) == 2) {
+#if BOARD_SERIAL2
+		if (ptn & 0x0004) {
+			clr_flg(3, ~0x0004);
+			serial.state = SERIAL_RECEIVED;
+		} else if (ptn & 0x0002) {
+			clr_flg(3, ~0x0002);
+			serial.state = SERIAL_NOTIFY;
+		} else if (ptn & 0x0008) {
+			clr_flg(3, ~0x0008);
+			serial.state = SERIAL_ANSWER_LATER;
+		}
+		switch (serial.state) {
+		case 0:
+		case SERIAL_RECEIVE:
+		case SERIAL_RECEIVED:
+			result = serialReceive();
+			serialFlush(4);
+			if (result == SERIAL_OK) {
+				result = serialDispatch(&response);
+			} else {
+				response.length = 0;
+				response.data = NULL;
+			}
+			serialSendAnswer(&response, result);
+			break;
+		case SERIAL_NOTIFY:
+			serialStart(SERIAL_MODE_BYTE(serial));
+			serialNotify();
+			break;
+		}
+#endif
+	} else if (SERIAL_MODE_OF(serial) == 1) {
+		if (ptn & 0x0010) {
+			clr_flg(3, ~0x0010);
+			serial.state = SERIAL_SEND;
+		} else if (ptn & 0x0004) {
+			clr_flg(3, ~0x0004);
+			serial.state = SERIAL_RECEIVED;
+		} else if (ptn & 0x0002) {
+			clr_flg(3, ~0x0002);
+			serial.state = SERIAL_NOTIFY;
+		} else if (ptn & 0x0008) {
+			clr_flg(3, ~0x0008);
+			serial.state = SERIAL_ANSWER_LATER;
+		}
+		switch (serial.state) {
+		case 0:
+		case SERIAL_RECEIVE:
+		case SERIAL_RECEIVED:
+			result = serialReceive();
+			serialFlush(SERIAL_PORT);
+			if (result == SERIAL_OK) {
+				result = serialDispatch(&response);
+			} else {
+				response.length = 0;
+				response.data = NULL;
+			}
+			serialSendAnswer(&response, result);
+			break;
+		case SERIAL_NOTIFY:
+			serialStart(SERIAL_MODE_BYTE(serial));
+			serialNotify();
+			break;
+		case SERIAL_SEND:
+			serialSend(&serial);
+			break;
+		}
+	} else {
+		clr_flg(3, ~0x001e);
+	}
+	return result;
+}
+#elif !SOURCE_0103	/* not in the slim's */
 /* the events of event flag 3 (never called) */
 unsigned char serialEvent(FLGPTN ptn)
 {
@@ -168,6 +250,7 @@ unsigned char serialSetBaud(unsigned char baud)
 	return serial.baud = baud;
 }
 
+#if FW_SINCE(0x00080302)	/* 0x00080003 has none */
 /* the baud for a host's code; 1 if there is none */
 unsigned char serialSelectBaud(unsigned char code)
 {
@@ -184,6 +267,7 @@ unsigned char serialSelectBaud(unsigned char code)
 	}
 	return 1;
 }
+#endif
 
 unsigned char serialGetState(void)
 {
@@ -244,6 +328,46 @@ void serialStart(unsigned char mode)
 	serialFlush(SERIAL_PORT);
 }
 
+#if !FW_SINCE(0x00080302)
+/* 0x00080003's: the frame received, its length checked before anything else */
+unsigned char serialReceive(void)
+{
+	unsigned int length;
+	unsigned char status;
+
+	status = SERIAL_OK;
+	length = serialRead(SERIAL_PORT, serial.buffer, 0x7f);
+	if SERIAL_IS_BINARY(serial) {
+		memcpy(&serial.length, &serialFrame[SERIAL_FRAME_LENGTH], 2);
+		if (serial.length < SERIAL_DATA_SIZE && length - 7 == serial.length)
+			memcpy(serialFrame, serial.buffer, serial.length + 7);
+		else
+			status = SERIAL_BAD_LENGTH;
+	} else {
+		if (hexDecode((unsigned char *)&serial.length,
+			      (char *)serial.buffer + SERIAL_FRAME_LENGTH * 2, 2))
+			status = SERIAL_BAD_HEX;
+		/* the text's length counts digits */
+		if (serial.length < 2 * SERIAL_DATA_SIZE - 1 && length - 0x10 == serial.length) {
+			if (hexDecode(serialFrame, (char *)serial.buffer, (serial.length + 0x10 - 2) >> 1))
+				status = SERIAL_BAD_HEX;
+		} else {
+			status = SERIAL_BAD_LENGTH;
+		}
+		serial.length >>= 1;
+	}
+	memcpy(&serial.command, &serialFrame[SERIAL_FRAME_COMMAND], 2);
+	if (status != SERIAL_OK)
+		return status;
+	serial.status = serialFrame[SERIAL_FRAME_STATUS];
+	memcpy(&serial.checksum, &serialFrame[SERIAL_FRAME_DATA + serial.length], 2);
+	if (serial.status != 0)
+		return serial.status;
+	if (serial.checksum != serialChecksum(serialFrame, serial.length + SERIAL_FRAME_DATA))
+		return SERIAL_BAD_CHECKSUM;
+	return SERIAL_OK;
+}
+#else
 /* the frame received: its fields into serial; SERIAL_OK or what is wrong with it */
 unsigned char serialReceive(void)
 {
@@ -293,6 +417,7 @@ unsigned char serialReceive(void)
 		return SERIAL_BAD_LENGTH;
 	return SERIAL_OK;
 }
+#endif
 
 /* 0xffff less the sum of the bytes */
 unsigned int serialChecksum(unsigned char *data, unsigned int length)
@@ -305,6 +430,71 @@ unsigned int serialChecksum(unsigned char *data, unsigned int length)
 	return 0xffff - sum;
 }
 
+#if !FW_SINCE(0x00080302)
+/* 0x00080003's: runs the command received, its handler's status and data the answer */
+unsigned char serialDispatch(struct SerialBuffer *response)
+{
+	unsigned int i;
+	struct SerialBuffer request;
+
+	if (SERIAL_MODE_OF(serial) == 2) {
+#if BOARD_SERIAL2
+		i = serialCommands2Count();
+		while (i--) {
+			if (serialCommands2[i].command == serial.command) {
+				request.data = &serialFrame[SERIAL_FRAME_DATA];
+				request.length = serial.length;
+				return serialCommands2[i].handler(&request, response);
+			}
+		}
+#endif
+	} else if (SERIAL_MODE_OF(serial) == 1) {
+		i = serialCommands1Count();
+		while (i--) {
+			if (serialCommands1[i].command == serial.command) {
+				request.data = &serialFrame[SERIAL_FRAME_DATA];
+				request.length = serial.length;
+				return serialCommands1[i].handler(&request, response);
+			}
+		}
+	}
+	return SERIAL_UNKNOWN;
+}
+
+/* 0x00080003's: sends the answer, the command with bit 15, status and response's data */
+unsigned char serialSendAnswer(struct SerialBuffer *response, unsigned char status)
+{
+	unsigned int checksum;
+	unsigned int textLength;
+
+	serial.command |= 0x8000;
+	memcpy(&serialFrame[SERIAL_FRAME_COMMAND], &serial.command, 2);
+	serialFrame[SERIAL_FRAME_STATUS] = status;
+	if (response->length >= SERIAL_DATA_SIZE)
+		response->length = 0;
+	if SERIAL_IS_BINARY(serial) {
+		memcpy(&serialFrame[SERIAL_FRAME_LENGTH], &response->length, 2);
+		if (response->length != 0 && response->data != NULL)
+			memcpy(&serialFrame[SERIAL_FRAME_DATA], response->data, response->length);
+		checksum = serialChecksum(serialFrame, response->length + SERIAL_FRAME_DATA);
+		memcpy(&serialFrame[SERIAL_FRAME_DATA + response->length], &checksum, 2);
+		serialWrite(SERIAL_PORT, serialFrame, response->length + 7);
+	} else {
+		textLength = response->length * 2;
+		memcpy(&serialFrame[SERIAL_FRAME_LENGTH], &textLength, 2);
+		if (response->length != 0 && response->data != NULL)
+			memcpy(&serialFrame[SERIAL_FRAME_DATA], response->data, response->length);
+		checksum = serialChecksum(serialFrame, response->length + SERIAL_FRAME_DATA);
+		memcpy(&serialFrame[SERIAL_FRAME_DATA + response->length], &checksum, 2);
+		/* the digits of textLength + 7 bytes, not the frame's */
+		hexEncode((char *)serialText, serialFrame, textLength + 7);
+		serialText[textLength + 14] = '\r';
+		serialText[textLength + 15] = '\n';
+		serialWrite(SERIAL_PORT, serialText, textLength + 16);
+	}
+	return 0;
+}
+#else
 /* runs the command received (unless its status is not 0) and answers it */
 unsigned char serialDispatch(void)
 {
@@ -424,6 +614,7 @@ unsigned char serialSendAnswer(void)
 	}
 	return 0;
 }
+#endif
 
 unsigned char serialRead(int port, unsigned char *buf, int size)
 {
@@ -457,7 +648,9 @@ void serialFlush(int port)
 /* opens the UART again at baud, 13 ticks on */
 unsigned char serialReopen(int baud)
 {
+#if FW_SINCE(0x00080302)	/* 0x00080003 opens it at once */
 	serialWait(13);
+#endif
 	return serialUartOpen(baud);
 }
 
@@ -596,7 +789,11 @@ unsigned char serialSend(struct Serial *s)
 			memcpy(&serialFrame[SERIAL_FRAME_DATA], s->buffer, s->length);
 		checksum = serialChecksum(serialFrame, s->length + SERIAL_FRAME_DATA);
 		memcpy(&serialFrame[SERIAL_FRAME_DATA + s->length], &checksum, 2);
+#if !FW_SINCE(0x00080302)	/* 0x00080003: the digits of textLength + 7 bytes */
+		hexEncode((char *)serialText, serialFrame, textLength + 7);
+#else
 		hexEncode((char *)serialText, serialFrame, s->length + 7);
+#endif
 		serialText[textLength + 14] = '\r';
 		serialText[textLength + 15] = '\n';
 		serialWrite(SERIAL_PORT, serialText, textLength + 16);
@@ -604,6 +801,28 @@ unsigned char serialSend(struct Serial *s)
 	return 0;
 }
 
+#if !FW_SINCE(0x00080302)
+/* 0x00080003's: runs the handler of the notification for the command received */
+unsigned char serialNotify(void)
+{
+	unsigned char i;
+
+	if (SERIAL_MODE_OF(serial) == 2) {
+#if BOARD_SERIAL2
+		i = serialNotifies2Count();
+		while (i--)
+			if ((serial.command & 0x7fff) == serialNotifies2[i].command)
+				return serialNotifies2[i].handler();
+#endif
+	} else if (SERIAL_MODE_OF(serial) == 1) {
+		i = serialNotifies1Count();
+		while (i--)
+			if ((serial.command & 0x7fff) == serialNotifies1[i].command)
+				return serialNotifies1[i].handler();
+	}
+	return 0;
+}
+#else
 /* runs the handler of the notification for the command received, back to receiving */
 unsigned char serialNotify(void)
 {
@@ -638,7 +857,9 @@ unsigned char serialNotify(void)
 	serial.state = SERIAL_RECEIVE;
 	return 0;
 }
+#endif
 
+#if FW_SINCE(0x00080302)	/* 0x00080003's serial.c ends here */
 /* answers now (SERIAL_ANSWER) or later (SERIAL_ANSWER_LATER) */
 void serialSetAnswer(unsigned char state)
 {
@@ -699,3 +920,4 @@ unsigned char serialAnswer0105(void)
 	serialPostAnswer();
 	return 0;
 }
+#endif /* FW_SINCE(0x00080302) */

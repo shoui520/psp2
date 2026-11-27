@@ -599,10 +599,14 @@ void powerRequestEvent(void)
 {
 	unsigned char i;
 
+#if !FW_SINCE(0x00080302)	/* 0x00080003 runs it without the handshake */
+	{
+#else
 	if (!handshakeUnlocked11()) {
 		hostRequestAnswer(&powerRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
 		handshakeRefuse();
 	} else {
+#endif
 		for (i = 0; i < sizeof(powerCommands) / sizeof(powerCommands[0]); i++) {
 			if (powerCommands[i].command == powerCommand) {
 				powerCommands[i].handler();
@@ -623,10 +627,14 @@ void batteryRequestEvent(void)
 {
 	unsigned char i;
 
+#if !FW_SINCE(0x00080302)	/* 0x00080003 runs it without the handshake */
+	{
+#else
 	if (!handshakeUnlocked11()) {
 		hostRequestAnswer(&batteryRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
 		handshakeRefuse();
 	} else {
+#endif
 		for (i = 0; i < sizeof(batteryCommands) / sizeof(batteryCommands[0]); i++) {
 			if (batteryCommands[i].command == batteryRequest.command) {
 				batteryCommands[i].handler();
@@ -919,8 +927,13 @@ void powerRequestUnknown(void)
 void powerRequestDone(unsigned char status)
 {
 	powerRequest.answerLength = 0;
+#if !FW_SINCE(0x00080302)	/* 0x00080003 sets the status after */
+	hostRequestAnswerReady(&powerRequest.state);
+	powerRequest.status = status;
+#else
 	powerRequest.status = status;
 	hostRequestAnswerReady(&powerRequest.state);
+#endif
 }
 #endif
 
@@ -1352,8 +1365,8 @@ static void powerRequestCtrlUsbStatus(void)
 #endif
 
 /* 0x088d (SceSysconForDriver_DD16ABD9) */
-#if !BOARD_BBMC
-/* no 3G modem */
+#if !BOARD_BBMC || !FW_SINCE(0x00080302)
+/* no 3G modem (0x00080003: not run) */
 static void powerRequest088D(void)
 {
 	powerRequestDone(4);
@@ -1665,6 +1678,14 @@ static void powerRequest089F(void)
 #endif
 
 /* 0x088e (sceSysconCtrlVoltage): data[0] the regulator 1-4, data[1] its level */
+#if !FW_SINCE(0x00080302)
+/* 0x00080003 sets no voltage, and answers 0 */
+static void powerRequestCtrlVoltage(void)
+{
+	powerRequestDone(0);
+	return;
+}
+#else
 static void powerRequestCtrlVoltage(void)
 {
 	unsigned char result;
@@ -1731,6 +1752,7 @@ static void powerRequestCtrlVoltage(void)
 done:
 	powerRequestDone(result);
 }
+#endif
 
 /* 0x088f (sceSysconCtrlDeviceReset): data[1] the devices, data[0] 1 to hold them in reset */
 static void powerRequestCtrlDeviceReset(void)
@@ -1981,6 +2003,9 @@ static void powerRequestCtrlChargeAC(void)
 static void powerRequestCtrlChargeAC(void)
 {
 	powerRequestDone(0);
+#if !FW_SINCE(0x00080302)
+	return;
+#endif
 }
 #else
 /* 0x0892 (sceSysconCtrlChargeAC) */

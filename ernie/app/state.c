@@ -227,7 +227,9 @@ void stateEvent(struct StateEvent *event)
 			case STATE_EVENT_TRANSITION:
 				stateTable[i].handle(event);
 				stateEvents |= stateNext;
+#if FW_SINCE(0x00080302)	/* 0x00080003 has no event hook */
 				taskHookEvent(event);
+#endif
 				if (statePhase != 0)
 					return;
 				break;
@@ -348,6 +350,9 @@ void stateInit(void)
 	mask &= ~configGet()->BOARD_WAKE_MASKS.off;
 	if (configGet()->start.bits.wakeUnmask22)
 		mask &= ~0x00400000UL;
+#elif !FW_SINCE(0x00080302)
+	/* 0x00080003 wakes on everything */
+	stateSetWakeMask(0xffffffff);
 #elif !FW_SINCE(0x00080502)
 	/* 0x00080307 never wakes on factors 22 and 15 */
 	stateSetWakeMask(~0x00408000UL);
@@ -473,6 +478,7 @@ int stateEnter(void)
 	return 0;
 }
 
+#if FW_SINCE(0x00080302)	/* not in 0x00080003 */
 int stateCheck(void)
 {
 	struct StateMsg *msg;
@@ -490,6 +496,7 @@ int stateCheck(void)
 		return 2;
 	return 0;
 }
+#endif
 
 static int stateStartEnter(void)
 {
@@ -530,10 +537,12 @@ static int stateOffEnter(void)
 #endif
 
 	stateInputOff();
-#if !SOURCE_0103
+#if !SOURCE_0103 && FW_SINCE(0x00080302)	/* 0x00080003 answers neither */
 	serial4Answer0205();
 #endif
+#if FW_SINCE(0x00080302)
 	serialAnswer0105();
+#endif
 #if FW_SINCE(0x00080502)	/* 0x00080307 stops no TAU0 and checks nothing */
 	tau0PowerOff();
 	stateCheck();
@@ -630,8 +639,10 @@ static int stateResumeEnter(void)
 	union PowerRequest *factor;
 
 #endif
+#if FW_SINCE(0x00080302)	/* 0x00080003 answers neither */
 	serial4Answer0205();
 	serialAnswer0105();
+#endif
 #if FW_SINCE(0x00090502)
 	factor = stateGetWakeupFactor();
 	if (factor->bits.notify)
@@ -677,7 +688,9 @@ static int stateShutdownEnter(void)
 
 static int stateCutEnter(void)
 {
+#if FW_SINCE(0x00080302)	/* 0x00080003's inputCut does the cut's input part */
 	stateInputCut();
+#endif
 #if FW_SINCE(0x00080502)	/* 0x00080307 stops no TAU0 and checks nothing */
 	tau0PowerOff();
 	stateCheck();
@@ -792,6 +805,9 @@ static int stateOffHandle(struct StateEvent *event)
 #if FW_SINCE(0x00090804)
 		stateWakeMask |= configGet()->BOARD_WAKE_MASKS.on;
 		stateWakeMask &= ~configGet()->BOARD_WAKE_MASKS.off;
+#elif !FW_SINCE(0x00080302)
+		/* 0x00080003: the event's mask, less factors 0, 9, 11, 12, 14 and 17-21 */
+		stateWakeMask = event->wakeMask & ~0x003e5a01UL;
 #else
 		/* 0x00090206 has the masks in its code */
 		/* bit 13 wakes the other boards (0x00315200 too), bit 14 PCH-1000 too */
@@ -841,7 +857,7 @@ static int stateOffHandle(struct StateEvent *event)
 		    (serial2TestAreaUsed() == 0 && !configGet()->test.bits.startCheckOff &&
 		     serial2InTime() != 0))
 			stateNext = 0;
-#else
+#elif FW_SINCE(0x00080302)	/* 0x00080003 asks the charger nothing */
 		if (!(unsigned char)chargeMayStart())
 			stateNext = 0;
 #endif
@@ -980,6 +996,13 @@ static int stateSuspendHandle(struct StateEvent *event)
 	}
 #else
 	}
+#if !FW_SINCE(0x00080302)
+	/* 0x00080003: the event's mask, less factors 0 and 18-20, at every event, and no charger */
+	stateWakeMask = event->wakeMask & ~0x001c0001UL;
+	if (stateRequest.bits.mode != 0 &&
+	    ((1UL << stateRequest.bits.mode) & stateWakeMask))
+		stateNext = 0;
+#else
 	/* 0x00090206 sets the masks and checks the request at every event */
 	stateWakeMask |= BOARD_IS(0x00411000) && !HW_IRT001 ? 0xffa21c10UL :
 			 ERNIE_BOARD == 0x00406000 ? 0xffa27c10UL : 0xffa23d10UL;	/* PCH-1000: bit 14, not 8 */
@@ -991,6 +1014,7 @@ static int stateSuspendHandle(struct StateEvent *event)
 		stateNext = 0;
 	if (!(unsigned char)chargeMayStart())
 		stateNext = 0;
+#endif
 #endif
 	return 0;
 }
@@ -1176,8 +1200,13 @@ void stateInputWake2(void)
 		button2Reset();
 		pinMonitor1Enable(1);
 	} else {
+#if !FW_SINCE(0x00080302)	/* 0x00080003's presses keep no state */
+		if (!(unsigned char)button2Result() && !input1Bit6Active() &&
+		    stateGet() != STATE_RESUME)
+#else
 		if (!(unsigned char)button2Result() && !input1Bit6Active() &&
 		    stateGet() != STATE_RESUME && stateGet() == button2State())
+#endif
 			STATE_TRANSITION_WAKE(0);
 		button2Reset();
 	}
@@ -1192,8 +1221,12 @@ void stateInputWake1(void)
 		button1Reset();
 		pinMonitor0Enable(1);
 	} else {
+#if !FW_SINCE(0x00080302)
+		if (!(unsigned char)button1Result() && stateGet() != STATE_RESUME)
+#else
 		if (!(unsigned char)button1Result() && stateGet() != STATE_RESUME &&
 		    stateGet() == button1State())
+#endif
 			STATE_TRANSITION_WAKE(0x12);
 		button1Reset();
 	}
@@ -1298,9 +1331,11 @@ void taskHookState(void)
 {
 }
 
+#if FW_SINCE(0x00080302)
 void taskHookEvent(void *event)
 {
 }
+#endif
 #endif
 
 #if SOURCE_0103

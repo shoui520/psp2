@@ -1087,7 +1087,9 @@ unsigned char cookieCtrlReg3Bit0(void)
 }
 
 #else
+#if FW_SINCE(0x00080302)	/* 0x00080003: each transfer's request on its stack */
 static struct IicaRequest cookieIica;
+#endif
 #if FW_SINCE(0x00090502)
 union CookieReg cookieRegs[6];
 #else
@@ -1138,6 +1140,56 @@ unsigned char cookieRead(unsigned char *reg, unsigned char *data)
 }
 #else
 /* data[0] is the register */
+#if !FW_SINCE(0x00080302)
+/* 0x00080003: the request on the stack, and no wait before the transfer */
+unsigned char cookieWrite(unsigned char *data, unsigned char length)
+{
+	ER ercd;
+	FLGPTN ptn;
+	struct IicaRequest request;
+	unsigned char status;
+
+	request.rxData = NULL;
+	request.rxCount = 0;
+	request.txData = data;
+	request.txCount = length;
+	request.address = COOKIE_ADDRESS;
+	request.status = &status;
+	iicaStart(&request);
+	ercd = twai_flg(4, 0x10, TWF_ORW, &ptn, 0x4b);
+	if (ercd == E_OK) {
+		if (ptn & 0x10)
+			clr_flg(4, ~0x10);
+	} else if (ercd == E_TMOUT) {
+		status = 0x10;
+	}
+	return status;
+}
+
+unsigned char cookieRead(unsigned char *reg, unsigned char *data)
+{
+	ER ercd;
+	FLGPTN ptn;
+	struct IicaRequest request;
+	unsigned char status;
+
+	request.rxData = data;
+	request.rxCount = 2;
+	request.txData = reg;
+	request.txCount = 1;
+	request.address = COOKIE_ADDRESS;
+	request.status = &status;
+	iicaStart(&request);
+	ercd = twai_flg(4, 0x10, TWF_ORW, &ptn, 0x4b);
+	if (ercd == E_OK) {
+		if (ptn & 0x10)
+			clr_flg(4, ~0x10);
+	} else if (ercd == E_TMOUT) {
+		status = 0x10;
+	}
+	return status;
+}
+#else
 unsigned char cookieWrite(unsigned char *data, unsigned char length)
 {
 	ER ercd;
@@ -1193,6 +1245,7 @@ unsigned char cookieRead(unsigned char *reg, unsigned char *data)
 	}
 	return status;
 }
+#endif
 #endif
 
 /* register 0 */
@@ -1328,6 +1381,7 @@ unsigned char cookieCtrlSupplyCurrentUsb(unsigned char current)
 	return result;
 }
 
+#if FW_SINCE(0x00080302)	/* 0x00080003 ends at cookieCtrlSupplyCurrentUsb */
 /* register 5's low byte, halved on a Cookie before 0x31 and at most chargeCookieSetting
    (0x00090804: as given): 0x08c3 (sceSysconCtrlSupplyCurrentAc) */
 unsigned char cookieCtrlSupplyCurrentAc(unsigned char current)
@@ -1579,6 +1633,7 @@ unsigned char cookieReadStatus2(unsigned char *status)
 
 #endif
 #endif
+#endif /* FW_SINCE(0x00080302) */
 
 #if FW_SINCE(0x00090804)	/* led.c's */
 /* register 3's bit 0 set and bit 2 clear (the updater's: nothing, and nothing calls it) */

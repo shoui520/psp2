@@ -113,8 +113,14 @@ static const char aesRevision[] = "$Rev: 4488 $";
 static const char aesRevision[] = "$Rev: 2587 $";
 #elif FW_SINCE(0x00090203)
 static const char aesRevision[] = "$Rev: 2166 $";
-#else
+#elif FW_SINCE(0x00090006)
 static const char aesRevision[] = "$Rev: 1987 $";
+#elif FW_SINCE(0x00080502)
+static const char aesRevision[] = "$Rev: 1826 $";
+#elif FW_SINCE(0x00080302)
+static const char aesRevision[] = "$Rev: 1441 $";
+#else
+static const char aesRevision[] = "$Rev: 1344 $";
 #endif
 
 /* the application's tests them against NULL, a far null */

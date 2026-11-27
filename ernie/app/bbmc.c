@@ -69,6 +69,8 @@ struct Bbmc bbmc;			/* the link */
 #define bbmcPackets	(bbmc.packets)
 #define bbmcStatusSeen	(bbmc.statusSeen)
 #define bbmcEventsSeen	(bbmc.eventsSeen)
+#elif !FW_SINCE(0x00080302)
+/* 0x00080003 keeps no mode in NVS */
 #else
 static unsigned int bbmcSavedMode;	/* the mode as NVS holds it */
 #if FW_SINCE(0x0100060B)
@@ -86,6 +88,7 @@ static unsigned char bbmcRequestData[0x20];
 struct InputHandler bbmcInputHandlerPower;
 struct InputHandler bbmcInputHandlerWake;
 
+#if FW_SINCE(0x00080302)	/* 0x00080003's bbmcWriteRegs tests the registers itself */
 /* a register's 2-bit right for each mode, at the shift bbmcModeShift gives */
 static const unsigned char bbmcModeShift[5] = { 4, 0, 2, 6, 6 };
 #if BOARD_BBMC
@@ -104,6 +107,7 @@ static const unsigned char bbmcRegModes[BBMC_REGS] = {
 	0x3c, 0x3c, 0x3c, 0x3c, 0x3c, 0x3c, 0x3c, 0x3c,
 	0x3c, 0x3c, 0x3c, 0x3c, 0x0f,
 };
+#endif
 #if !BOARD_BBMC
 /* no modem: none of the zeros its registers are reset with */
 #elif !FW_SINCE(0x00080503)
@@ -154,8 +158,10 @@ void bbmcInit(void)
 	result = timerSetHandler(BBMC_LINK_TIMER, &handler);
 	handler.handler = bbmcPostStart;
 	result = timerSetHandler(TIMER_RTC(0x15), &handler);
+#if FW_SINCE(0x00080302)	/* 0x00080003 has no mode timer */
 	handler.handler = bbmcPostMode;
 	result = timerSetHandler(TIMER_RTC(0x19), &handler);
+#endif
 	bbmc.lastSequence = 0;
 	bbmc.repeats = 0;
 	bbmc.rxLength = 0;
@@ -366,14 +372,23 @@ unsigned char bbmcSetOff(void)
 
 void bbmcStop(void)
 {
+#if !FW_SINCE(0x00080302)	/* 0x00080003's status and mode */
+	bbmcSetStatus(0x10);
+	bbmcSetModeActive(2);
+#else
 	bbmcSetStatus(2);
 	bbmcSetModeActive(0x0200);
+#endif
 	bbmc.state = 1;
 }
 
 void bbmcWake(void)
 {
+#if !FW_SINCE(0x00080302)
+	bbmcSetModeActive(2);
+#else
 	bbmcSetModeActive(0x0200);
+#endif
 	if (input2Bit0Get())
 		bbmc.state = 2;
 }
@@ -388,6 +403,7 @@ void bbmcSignal8(void)
 	bbmcSetEvents(8);
 }
 
+#if FW_SINCE(0x00080302)	/* not in 0x00080003 */
 /* the mode in effect as 1-4 (modes 1, 2, 6 and 7), else 0 */
 unsigned char bbmcGetMode(void)
 {
@@ -405,6 +421,7 @@ unsigned char bbmcGetMode(void)
 	}
 	return 0;
 }
+#endif
 
 #if FW_SINCE(0x00090502)
 unsigned char bbmcIsOn(void)
@@ -435,7 +452,14 @@ unsigned char bbmcModeIsNone(void)
 /* event flag 6's events */
 unsigned char bbmcEvent(FLGPTN ptn)
 {
-#if !BOARD_BBMC && !FW_SINCE(0x00090502)
+#if !FW_SINCE(0x00080302)
+	/* 0x00080003: the request, and nothing for the state's change */
+	if (ptn & BBMC_EVENT_REQUEST)
+		bbmcRequestRun();
+	if (ptn & BBMC_EVENT_STATE)
+		;
+	return 0;
+#elif !BOARD_BBMC && !FW_SINCE(0x00090502)
 	/* 0x00315200's 0x00090206: the request, and the state's change still writes the modem's
 	   registers */
 	if (ptn & BBMC_EVENT_REQUEST)
@@ -902,18 +926,27 @@ unsigned char bbmcCommandRead(struct BbmcPacket *packet, struct BbmcAnswer *answ
 
 unsigned char bbmcCommandEcho20(struct BbmcPacket *packet, struct BbmcAnswer *answer)
 {
+#if !FW_SINCE(0x00080302)	/* 0x00080003 refuses it */
+	return 0xfe;
+#else
 	answer->length++;
 	answer->data[0] = packet->data[0];
 	return 0;
+#endif
 }
 
 unsigned char bbmcCommandEcho21(struct BbmcPacket *packet, struct BbmcAnswer *answer)
 {
+#if !FW_SINCE(0x00080302)	/* 0x00080003 refuses it */
+	return 0xfe;
+#else
 	answer->length++;
 	answer->data[0] = packet->data[0];
 	return 0;
+#endif
 }
 
+#if FW_SINCE(0x00080302)	/* 0x00080003 keeps no mode in NVS */
 /* the mode's reads and writes in NVS: 0xffff read becomes 0, and a mode the host set is
    saved */
 void bbmcNvsDone(unsigned char command, unsigned char result)
@@ -949,6 +982,7 @@ void bbmcNvsDone(unsigned char command, unsigned char result)
 		break;
 	}
 }
+#endif
 
 #if FW_SINCE(0x0100060B) && !SOURCE_0103
 /* host command 0x0a00 and serial command 0x01d0 (not on USS-1001): the link's state, the modem's lines (P12.6,
@@ -980,6 +1014,11 @@ void bbmcGetInfo(unsigned char *out)
 
 void bbmcRegsInit(void)
 {
+#if !FW_SINCE(0x00080302)
+	/* 0x00080003: no id, no size, no mode from NVS; register 0x12 0xff */
+	memset(&bbmcRegs, 0, BBMC_REGS);
+	bbmcRegs.byte[0x12] = 0xff;
+#else
 	unsigned char result;
 
 	memset(&bbmcRegs, 0, BBMC_REGS);
@@ -996,8 +1035,60 @@ void bbmcRegsInit(void)
 			    bbmcNvsDone);
 	if (result != 0)
 		;
+#endif
 }
 
+#if !FW_SINCE(0x00080302)
+/* 0x00080003's: registers 8-0x0f (the status and the events) ORed by the modem's and the
+   firmware's writes, set by the resets' and left by the host's, the others written; a write
+   of 6-7 (the mode in effect) sets status bit 0 for a mode in 0x01ff, else bit 1 for one in
+   0xfe00 */
+unsigned char bbmcWriteRegs(unsigned char reg, unsigned char count, unsigned char *values,
+			    unsigned char mode)
+{
+	unsigned char result;
+	unsigned char changed;
+	STATE_TRANSITION_EVENT
+
+	changed = 0;
+	if (reg + count >= BBMC_REGS + 1) {
+		if (reg >= BBMC_REGS + 1)
+			return 0;
+		count = BBMC_REGS - reg;
+	}
+	result = count;
+	while (count--) {
+		if (reg >= 8 && reg < 0x10) {
+			if (mode == BBMC_WRITE_MODEM || mode == BBMC_WRITE_SET)
+				bbmcRegs.byte[reg] |= *values;
+			else if (mode == BBMC_WRITE_RESET)
+				bbmcRegs.byte[reg] = *values;
+			else if (mode == BBMC_WRITE_HOST)
+				;
+		} else {
+			bbmcRegs.byte[reg] = *values;
+		}
+		if (reg >= 6 && reg < 8)
+			changed = 1;
+		values++;
+		reg++;
+	}
+	if (changed) {
+		if (bbmcRegs.r.modeActive & 0x01ff)
+			bbmcRegs.r.status |= 1;
+		else if (bbmcRegs.r.modeActive & 0xfe00)
+			bbmcRegs.r.status |= 2;
+	}
+	bbmc.pending = (bbmcRegs.r.status != 0 || bbmcRegs.r.events != 0) ? (unsigned char)1 :
+									     (unsigned char)0;
+	sleepFactorSet8(bbmc.pending);
+	if (bbmcRegs.r.events != 0 && !bbmc.transition && stateGet() == 0x0008) {
+		bbmc.transition = 1;
+		STATE_TRANSITION(8);
+	}
+	return result;
+}
+#else
 /* writes count registers from reg as mode may; the count, or 0 if reg is past them */
 unsigned char bbmcWriteRegs(unsigned char reg, unsigned char count, unsigned char *values,
 			    unsigned char mode)
@@ -1075,6 +1166,7 @@ unsigned char bbmcWriteRegs(unsigned char reg, unsigned char count, unsigned cha
 	}
 	return result;
 }
+#endif
 
 /* reads count registers from reg as the host (keep 0: the status and the events read are
    cleared) or the modem (keep 1) */
@@ -1304,10 +1396,12 @@ void bbmcPostStart(void)
 	task6SetFlag(6, BBMC_EVENT_START);
 }
 
+#if FW_SINCE(0x00080302)	/* 0x00080003 has no mode timer */
 void bbmcPostMode(void)
 {
 	task6SetFlag(6, BBMC_EVENT_MODE);
 }
+#endif
 
 void bbmcPostPower(void)
 {

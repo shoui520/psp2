@@ -96,6 +96,9 @@ unsigned char hostCommandRequests(unsigned char *out, unsigned char *length);
 #if BOARD_USS1001 && SOURCE_0104
 /* the slim's 0x0105 (USS-1002): its revision first, ahead of the tables */
 static const char hostRevision[] = "$Rev: 10808 $";
+#elif !FW_SINCE(0x00080302)
+/* 0x00080003's: also ahead of the tables */
+static const char hostRevision[] = "$Rev: 1441 $";
 #endif
 
 /* the commands, in order: all of them, and those taken before handshakeUnlocked11 allows the rest */
@@ -220,6 +223,7 @@ static const struct HostCommand hostBaseCommands[] = {
 #endif
 
 #if BOARD_USS1001 && SOURCE_0104
+#elif !FW_SINCE(0x00080302)
 #elif FW_SINCE(0x0100060B)
 static const char hostRevision[] = "$Rev: 4066 $";
 #elif FW_SINCE(0x00090903)
@@ -553,7 +557,9 @@ void hostRequestAnswer(struct HostRequest *request, unsigned char state,
 		case HOST_REQUEST_UNKNOWN:
 			request->answerLength = 0;
 			request->status = 0x3f;
+#if FW_SINCE(0x00080302)	/* 0x00080003 leaves the state unknown */
 			state = HOST_REQUEST_ANSWER;
+#endif
 			break;
 		case HOST_REQUEST_ERROR:
 			request->answerLength = 0;
@@ -906,8 +912,10 @@ int hostDispatch(unsigned int command, unsigned char *out, unsigned char *length
 		else if (entry->command < command)
 			low = middle + 1;
 	}
+#if FW_SINCE(0x00080302)	/* 0x00080003 has no handshake */
 	if (!handshakeUnlocked11())
 		handshakeRefuse();
+#endif
 	return -1;
 }
 
@@ -1143,8 +1151,10 @@ void hostTask(VP_INT exinf)
 			paused = 0;
 			csiClose();
 			csiOpenLsb();
+#if FW_SINCE(0x00080302)	/* 0x00080003 polls nothing on the resume */
 			if (hostPollRequests())
 				;
+#endif
 			hostIntEnable();
 			HOST_READY = 1;
 		}

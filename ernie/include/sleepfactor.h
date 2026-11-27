@@ -47,7 +47,9 @@ extern void sleepFactorSetStatus3(unsigned char on);
 extern void sleepFactorSet0(unsigned char on);
 extern void sleepFactorSet1(unsigned char on);
 extern void sleepFactorSet2(unsigned char on);
+#if ERNIE_FW >= 0x00080302
 extern void sleepFactorSet9(unsigned char on);
+#endif
 extern void sleepFactorSet10(unsigned char on);
 extern void sleepFactorSetStatus4(unsigned char on);
 extern void sleepFactorSet16(unsigned char on);

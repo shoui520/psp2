@@ -55,18 +55,24 @@ void nvsRequestEvent(FLGPTN ptn)
 			break;
 		case NVS_STATE_FULL:
 			result = nvsMove();
+#if FW_SINCE(0x00080302)
 			if (result == 0x0a)
 				;
+#endif
 			break;
 		case NVS_STATE_MOVED:
 			result = nvsClean(2);
+#if FW_SINCE(0x00080302)
 			if (result == 0x20)
 				;
+#endif
 			break;
 		default:
 			result = nvsClean(2);
+#if FW_SINCE(0x00080302)	/* 0x00080003 does not test the results */
 			if (result == 0x20)
 				;
+#endif
 			break;
 		}
 	}
@@ -75,10 +81,13 @@ void nvsRequestEvent(FLGPTN ptn)
 		unsigned int offset;
 		unsigned char size;
 
+#if FW_SINCE(0x00080302)	/* 0x00080003 tests no handshake */
 		if (!handshakeUnlocked11()) {
 			hostRequestAnswer(&nvsRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
 			handshakeRefuse();
-		} else {
+		} else
+#endif
+		{
 			switch (nvsRequest.command) {
 			case 0x1080:
 				hostRequestAnswer(&nvsRequest, HOST_REQUEST_ANSWER, 0, 0);
@@ -145,7 +154,13 @@ void nvsRequestEvent(FLGPTN ptn)
 		unsigned char status;
 #endif
 
+#if !FW_SINCE(0x00080302)
+		/* 0x00080003: one job an event */
+		job = nvsJobNext();
+		if (job != NULL) {
+#else
 		while ((job = nvsJobNext()) != NULL) {
+#endif
 			switch (job->state) {
 			case NVS_JOB_READ:
 				result = nvsRead(job->offset, job->size, job->data, job->area);

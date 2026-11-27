@@ -13,7 +13,7 @@
 #define SERIAL4_PORT		4	/* the UART */
 
 extern struct Serial serial4;
-extern unsigned char serial4Text[0x80];
+extern unsigned char serial4Text[SERIAL_TEXT_SIZE];
 extern unsigned char serial4Frame[SERIAL_FRAME_SIZE];
 
 extern unsigned char serial4GetMode(void);
@@ -21,7 +21,9 @@ extern unsigned char serial4GetNextMode(void);
 extern unsigned char serial4SetNextMode(unsigned char mode);
 extern unsigned char serial4GetBaud(void);
 extern unsigned char serial4SetBaud(unsigned char baud);
+#if FW_SINCE(0x00080302)
 extern unsigned char serial4SelectBaud(unsigned char code);
+#endif
 extern unsigned char serial4GetState(void);
 extern unsigned char serial4SetState(unsigned char state);
 extern unsigned char serial4IsLocked(void);
@@ -30,8 +32,13 @@ extern void serial4Stop(void);
 extern void serial4Start(unsigned char mode);
 extern unsigned char serial4Receive(void);
 extern unsigned int serial4Checksum(unsigned char *data, unsigned int length);
+#if !FW_SINCE(0x00080302)
+extern unsigned char serial4Dispatch(struct SerialBuffer *response);
+extern unsigned char serial4SendAnswer(struct SerialBuffer *response, unsigned char status);
+#else
 extern unsigned char serial4Dispatch(void);
 extern unsigned char serial4SendAnswer(void);
+#endif
 extern unsigned char serial4Read(int port, unsigned char *buf, int size);
 extern unsigned char serial4Write(int port, unsigned char *buf, int size);
 extern void serial4Flush(int port);

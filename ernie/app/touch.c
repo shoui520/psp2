@@ -471,7 +471,9 @@ void touchStartFrame(void)
 			TOUCH_FRAME_STATE(touch.frame, 0) = touch.state.value;
 #endif
 		}
+#if FW_SINCE(0x00080302)
 		touchDelaySelect();
+#endif
 		transfer.receive = (unsigned char *)&touchReply;
 		transfer.receiveCount = 0;
 		transfer.send = (unsigned char *)&touchCommand;
@@ -1793,6 +1795,12 @@ unlock:
 	return result;
 }
 #else
+#if FW_SINCE(0x00080302)
+#define TOUCH_LINK_DONE		CSI10_DONE
+#else
+#define TOUCH_LINK_DONE		CSI10_OPEN	/* 0x00080003: a transfer's end leaves it open */
+#endif
+
 /* takes the link and writes: 0, 1 for no such panel, 2 if the link stays busy or the transfer
    does not end */
 unsigned char touchWrite(unsigned int address, unsigned char *data, unsigned int length,
@@ -1815,7 +1823,9 @@ unsigned char touchWrite(unsigned int address, unsigned char *data, unsigned int
 		P0.0 = 0;
 	else
 		return 1;
+#if FW_SINCE(0x00080302)
 	touchDelaySelect();
+#endif
 	transfer.receive = (unsigned char *)&touchReply;
 	transfer.receiveCount = 0;
 	transfer.send = (unsigned char *)&touchCommand;
@@ -1838,12 +1848,14 @@ unsigned char touchWrite(unsigned int address, unsigned char *data, unsigned int
 	/* 0x00080504 waits a tick between its 30 looks */
 	retry = 30;
 	for (;;) {
-		if (csi10GetState() == CSI10_DONE) {
+		if (csi10GetState() == TOUCH_LINK_DONE) {
 			if (panel == 0)
 				P0.1 = 1;
 			else if (panel == 1)
 				P0.0 = 1;
+#if FW_SINCE(0x00080302)
 			csi10Release();
+#endif
 			return 0;
 		}
 		if (retry-- == 0)
@@ -1874,7 +1886,9 @@ unsigned char touchRead(unsigned int address, unsigned char *data, unsigned int 
 		P0.0 = 0;
 	else
 		return 1;
+#if FW_SINCE(0x00080302)
 	touchDelaySelect();
+#endif
 	transfer.receive = (unsigned char *)&touchReply;
 	transfer.receiveCount = length + 2;
 	transfer.send = (unsigned char *)&touchCommand;
@@ -1898,13 +1912,15 @@ unsigned char touchRead(unsigned int address, unsigned char *data, unsigned int 
 	/* 0x00080504 waits a tick between its 30 looks */
 	retry = 30;
 	for (;;) {
-		if (csi10GetState() == CSI10_DONE) {
+		if (csi10GetState() == TOUCH_LINK_DONE) {
 			if (panel == 0)
 				P0.1 = 1;
 			else if (panel == 1)
 				P0.0 = 1;
 			memcpy(data, touchReply.data, length);
+#if FW_SINCE(0x00080302)
 			csi10Release();
+#endif
 			return 0;
 		}
 		if (retry-- == 0)
@@ -2991,7 +3007,7 @@ void touchDelay(unsigned char count)
 	for (i = 0; i < count; i++)
 		NOP();
 }
-#else
+#elif FW_SINCE(0x00080302)	/* 0x00080003 has no delay after a chip select */
 /* after a chip select */
 void touchDelaySelect(void)
 {

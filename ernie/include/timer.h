@@ -122,6 +122,8 @@ struct Timer {
 #define TIMER_COUNT		0x1f
 #elif FW_SINCE(0x00090502)
 #define TIMER_COUNT		0x1e	/* 0x00090804: no timer 0x1e */
+#elif !FW_SINCE(0x00080302)
+#define TIMER_COUNT		0x12	/* 0x00080003 */
 #elif !FW_SINCE(0x00080502)
 #define TIMER_COUNT		0x16
 #elif FW_SINCE(0x00090006)

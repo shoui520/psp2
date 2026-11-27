@@ -51,6 +51,10 @@
 #endif
 #include "version.h"
 
+#if !FW_SINCE(0x00080302)
+#define serialSetAnswer(answer)		/* 0x00080003's commands leave the answer alone */
+#endif
+
 extern unsigned char intp11Low(void);
 
 #ifdef ERNIE_UPDATER
@@ -184,6 +188,16 @@ static unsigned int serial1Key;		/* SERIAL1_KEY_OPEN or SERIAL1_KEY_CLOSED */
 
 void serial1Reset(void)
 {
+#if !FW_SINCE(0x00080302)
+	/* 0x00080003: the buffers first, the sleep factor after the state */
+	serialLock(1);
+	memset(serial1Buffer, 0, sizeof(serial1Buffer));
+	memset(&serial1Data, 0, sizeof(serial1Data));
+	serial1State = 0;
+	sleepFactorSet25(0);
+	serialAuthInit();
+}
+#else
 	serialLock(1);
 	sleepFactorSet25(0);
 #if FW_SINCE(0x00090903)
@@ -198,6 +212,7 @@ void serial1Reset(void)
 	serial1Key = SERIAL1_KEY_CLOSED;
 #endif
 }
+#endif
 
 #if !FW_SINCE(0x00090903)
 /* 0x00090804 has request 0x20 here, after serial1Reset; it has its own object (serialreq.c)
@@ -304,7 +319,11 @@ void serial1InputHandler(void)
    called */
 unsigned int serial1SleepFactor(void)
 {
+#if FW_SINCE(0x00080302)
 	return (unsigned int)(sleepFactorGet() & 0x02000000);
+#else
+	return serial1State;	/* 0x00080003's */
+#endif
 }
 
 #if FW_SINCE(0x01000104)
@@ -354,8 +373,10 @@ unsigned char serialCommands1Count(void)
 	return 0x2c;	/* 0x00090502: no 0x0146-0x0147, 0x0160, 0x0170-0x0171 */
 #elif FW_SINCE(0x00090006)
 	return 0x25;
-#else
+#elif FW_SINCE(0x00080302)
 	return 0x1f;
+#else
+	return 0x0d;
 #endif
 }
 
@@ -380,8 +401,13 @@ static unsigned char serial1Command0101(struct SerialBuffer *request, struct Ser
 	union PowerRequest factor;
 
 #endif
+#if !FW_SINCE(0x00080302)
+	/* 0x00080003: the version block at once */
+	memcpy(serial1Data.version.hardwareInfo, &appVersionInfo, sizeof(appVersionInfo));
+#else
 	getHardwareInfo(serial1Data.version.hardwareInfo);
 	getErnieVersion(serial1Data.version.version);
+#endif
 #if FW_SINCE(0x00080502)	/* 0x00080307 reports no updater's version */
 	getErnieDlVersion(serial1Data.version.dlVersion);
 #endif
@@ -522,6 +548,10 @@ static unsigned char serial1Notify0102(void)
 /* 0x0103 */
 static unsigned char serial1Command0103(struct SerialBuffer *request, struct SerialBuffer *response)
 {
+#if !FW_SINCE(0x00080302)
+	response->length = 0;
+	return serialUnlock(1);
+#else
 	unsigned char result = 0;
 
 	response->length = 0;
@@ -532,11 +562,16 @@ static unsigned char serial1Command0103(struct SerialBuffer *request, struct Ser
 #else
 	return result;
 #endif
+#endif
 }
 
 /* 0x0104 */
 static unsigned char serial1Command0104(struct SerialBuffer *request, struct SerialBuffer *response)
 {
+#if !FW_SINCE(0x00080302)
+	response->length = 0;
+	return serialLock(1);
+#else
 	unsigned char result = 0;
 
 	response->length = 0;
@@ -546,6 +581,7 @@ static unsigned char serial1Command0104(struct SerialBuffer *request, struct Ser
 	return serial1SerialResult(result);
 #else
 	return result;
+#endif
 #endif
 }
 
@@ -660,6 +696,30 @@ static unsigned char serial1Command0105(struct SerialBuffer *request, struct Ser
 		return 0x33;
 	}
 	return result;
+}
+#elif !FW_SINCE(0x00080302)
+/* 0x00080003's 0x0105: the lock checked first, no state tested (0: 0x53; 2: 9; 3: 0x11) */
+static unsigned char serial1Command0105(struct SerialBuffer *request, struct SerialBuffer *response)
+{
+	STATE_TRANSITION_EVENT
+	unsigned char mode;
+
+	mode = request->data[0];
+	response->length = 0;
+	SERIAL1_UNLOCKED_CHECK();
+	if (mode == 0) {
+		transitionEvent.transition = 0x53;
+		transitionEvent.wakeMask = stateGetWakeMask();
+	} else if (mode == 2) {
+		transitionEvent.transition = 9;
+		transitionEvent.wakeMask = stateGetWakeMask();
+	} else if (mode == 3) {
+		transitionEvent.transition = 0x11;
+		transitionEvent.wakeMask = stateGetWakeMask();
+	} else {
+		return 0x33;
+	}
+	return (unsigned char)stateTransition(&transitionEvent);
 }
 #elif !FW_SINCE(0x00080502)
 /* 0x00080307's 0x0105: the lock checked first, and the states tested as masks (0: 0x53 from
@@ -810,7 +870,11 @@ static unsigned char serial1Command0107(struct SerialBuffer *request, struct Ser
 /* 0x0110: serialAuthCommand on the request's 0x28 bytes, which answers in their place */
 static unsigned char serial1Command0110(struct SerialBuffer *request, struct SerialBuffer *response)
 {
+#if !FW_SINCE(0x00080302)
+	unsigned char result;
+#else
 	unsigned char result = 0;
+#endif
 
 	response->length = 0;
 #if !FW_SINCE(0x00090502)
@@ -876,6 +940,7 @@ static unsigned char serial1Command0120(struct SerialBuffer *request, struct Ser
 	return result;
 }
 
+#if FW_SINCE(0x00080302)	/* 0x00080003 has no 0x0121 */
 /* 0x0121: a register of the SPI device (not 5-0xfff), 4 bytes (in mode 0x11, state 0x20) */
 static unsigned char serial1Command0121(struct SerialBuffer *request, struct SerialBuffer *response)
 {
@@ -910,6 +975,7 @@ static unsigned char serial1Command0121(struct SerialBuffer *request, struct Ser
 	serialSetAnswer(SERIAL_ANSWER);
 	return result;
 }
+#endif
 
 #if SOURCE_0103
 /* the flash library's result as an answer's: 0xc0-0xc9, 0xff for any other */
@@ -992,9 +1058,11 @@ static unsigned char serial1Command0131(struct SerialBuffer *request, struct Ser
 {
 	union Serial1Word offset;
 	unsigned int size;
+#if FW_SINCE(0x00080302)
 	unsigned char result;
 
 	result = 0;
+#endif
 	response->length = 0;
 #if !FW_SINCE(0x00090502)
 	SERIAL1_UNLOCKED_CHECK();
@@ -1008,12 +1076,16 @@ static unsigned char serial1Command0131(struct SerialBuffer *request, struct Ser
 	size = request->data[2];
 	response->data = serial1Data.byte;
 	response->length = size;
+#if !FW_SINCE(0x00080302)
+	return nvsRead(offset.value, size, serial1Data.byte, 0);
+#else
 	result = nvsRead(offset.value, size, serial1Data.byte, 0);
 	serialSetAnswer(SERIAL_ANSWER);
 #if SOURCE_0103
 	return serial1NvsResult(result);
 #else
 	return result;
+#endif
 #endif
 }
 
@@ -1022,9 +1094,11 @@ static unsigned char serial1Command0132(struct SerialBuffer *request, struct Ser
 {
 	union Serial1Word offset;
 	unsigned int size;
+#if FW_SINCE(0x00080302)
 	unsigned char result;
 
 	result = 0;
+#endif
 	response->length = 0;
 #if !FW_SINCE(0x00090502)
 	SERIAL1_UNLOCKED_CHECK();
@@ -1036,12 +1110,16 @@ static unsigned char serial1Command0132(struct SerialBuffer *request, struct Ser
 	offset.byte[0] = request->data[0];
 	offset.byte[1] = request->data[1];
 	size = request->data[2];
+#if !FW_SINCE(0x00080302)
+	return nvsWrite(offset.value, size, &request->data[3], 0);
+#else
 	result = nvsWrite(offset.value, size, &request->data[3], 0);
 	serialSetAnswer(SERIAL_ANSWER);
 #if SOURCE_0103
 	return serial1NvsResult(result);
 #else
 	return result;
+#endif
 #endif
 }
 
@@ -1084,7 +1162,11 @@ static unsigned char serial1Command0170(struct SerialBuffer *request, struct Ser
 /* 0x0300: the request's data into serial1Buffer; sets sleep factor 25 */
 static unsigned char serial1Command0300(struct SerialBuffer *request, struct SerialBuffer *response)
 {
+#if !FW_SINCE(0x00080302)
+	unsigned char result;
+#else
 	unsigned char result = 0;
+#endif
 
 	response->length = 0;
 	result = serial1BufferWrite(0, (unsigned char)request->length, request->data);
@@ -1093,6 +1175,11 @@ static unsigned char serial1Command0300(struct SerialBuffer *request, struct Ser
 		result = 0x99;
 	else
 		sleepFactorSet25(1);
+#elif !FW_SINCE(0x00080302)
+	if (result == 0) {
+		serial1State = 1;
+		sleepFactorSet25(1);
+	}
 #else
 	if (result == 0)
 		sleepFactorSet25(1);
@@ -1104,11 +1191,16 @@ static unsigned char serial1Command0300(struct SerialBuffer *request, struct Ser
 /* 0x0301: serial1Buffer */
 static unsigned char serial1Command0301(struct SerialBuffer *request, struct SerialBuffer *response)
 {
+#if FW_SINCE(0x00080302)
 	unsigned char result = 0;
 
+#endif
 	response->length = 0;
 	response->data = serial1Data.byte;
 	response->length = sizeof(serial1Buffer);
+#if !FW_SINCE(0x00080302)
+	return serial1BufferRead(0, sizeof(serial1Buffer), serial1Data.byte);
+#else
 	result = serial1BufferRead(0, sizeof(serial1Buffer), serial1Data.byte);
 #if SOURCE_0103
 	if (result != 0)
@@ -1116,6 +1208,7 @@ static unsigned char serial1Command0301(struct SerialBuffer *request, struct Ser
 #endif
 	serialSetAnswer(SERIAL_ANSWER);
 	return result;
+#endif
 }
 
 #if SOURCE_0103
@@ -2442,6 +2535,7 @@ static unsigned char serial1Command01d1(struct SerialBuffer *request, struct Ser
 #endif	/* !ERNIE_UPDATER */
 #endif
 #ifndef ERNIE_UPDATER
+#if FW_SINCE(0x00080302)	/* 0x00080003 has none of 0x0900-0x0951 */
 
 #if FW_SINCE(0x00090502)
 int serial1KeyOpen(void)
@@ -3156,6 +3250,7 @@ done:
 	return result;
 }
 #endif
+#endif	/* FW_SINCE(0x00080302) */
 
 #endif	/* !ERNIE_UPDATER */
 
@@ -3350,7 +3445,9 @@ const struct SerialCommand serialCommands1[] = {
 	{ 0x0106, serial1Command0106 },
 	{ 0x0110, serial1Command0110 },
 	{ 0x0120, serial1Command0120 },
+#if FW_SINCE(0x00080302)
 	{ 0x0121, serial1Command0121 },
+#endif
 	{ 0x0131, serial1Command0131 },
 	{ 0x0132, serial1Command0132 },
 #if FW_SINCE(0x00090006)
@@ -3363,6 +3460,7 @@ const struct SerialCommand serialCommands1[] = {
 #endif
 	{ 0x0300, serial1Command0300 },
 	{ 0x0301, serial1Command0301 },
+#if FW_SINCE(0x00080302)
 	{ 0x0900, serial1Command0900 },
 	{ 0x0901, serial1Command0901 },
 	{ 0x0910, serial1Command0910 },
@@ -3380,6 +3478,7 @@ const struct SerialCommand serialCommands1[] = {
 	{ 0x0945, serial1Command0941 },
 	{ 0x0950, serial1Command0950 },
 	{ 0x0951, serial1Command0951 },
+#endif
 };
 #else
 const struct SerialCommand1 serialCommands1[] = {
@@ -3487,7 +3586,7 @@ const struct SerialNotify serialNotifies1[] = {
 #endif
 };
 
-#if !FW_SINCE(0x0100060B)
+#if !FW_SINCE(0x0100060B) && FW_SINCE(0x00080302)
 const struct Serial1Level serial1Levels[SERIAL1_LEVELS] = {
 	{ 0x81, &param.levels[0] },
 	{ 0x82, &param.levels[1] },

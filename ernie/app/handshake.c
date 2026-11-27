@@ -196,7 +196,11 @@ unsigned char handshakeCommand(unsigned char *data)
 		handshake.mode = 0x0b;
 		randomGenerate(seed, nonce);
 		memcpy(handshake.challenge, nonce, 8);
+#if !FW_SINCE(0x00080302)
+		HANDSHAKE_DUMP("hello");	/* 0x00080003 swaps the two tags */
+#else
 		HANDSHAKE_DUMP("reqhello");
+#endif
 		/* fall through */
 	case 1:
 		if (handshakePacket.magic != 0x30 || handshakePacket.step != 0 ||
@@ -213,7 +217,11 @@ unsigned char handshakeCommand(unsigned char *data)
 		memset(handshakePacket.header, 0, 0x24);
 		memcpy(handshakePacket.challenge, handshake.challenge, 8);
 		memcpy(data, &handshakePacket, sizeof(handshakePacket));
+#if !FW_SINCE(0x00080302)
+		HANDSHAKE_DUMP("reqHello");
+#else
 		HANDSHAKE_DUMP("hello");
+#endif
 		break;
 	case 2:
 		HANDSHAKE_DUMP("challenge");

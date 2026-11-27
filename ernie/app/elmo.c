@@ -248,6 +248,31 @@ unsigned char elmoWrite(unsigned char *data, unsigned char length)
 #endif
 	return status;
 }
+#elif !FW_SINCE(0x00080302)
+/* 0x00080003: tried once */
+{
+	ER ercd;
+	FLGPTN ptn;
+	struct IicaRequest request;
+	unsigned char status;
+
+	if (deviceVersions.elmo[0] == 0xff)
+		return 0;
+	request.rxData = NULL;
+	request.rxCount = 0;
+	request.txData = data;
+	request.txCount = length;
+	request.address = ELMO_ADDRESS;
+	request.status = &status;
+	iicaStart(&request);
+	ercd = twai_flg(4, ELMO_DONE, TWF_ORW, &ptn, ELMO_TIMEOUT);
+	if (ercd == E_OK) {
+		if (ptn & ELMO_DONE)
+			clr_flg(4, ~ELMO_DONE);
+	} else if (ercd == E_TMOUT)
+		status = ELMO_NO_ANSWER;
+	return status;
+}
 #else
 {
 	ER ercd;
@@ -334,6 +359,34 @@ unsigned char elmoRead(unsigned char *reg, unsigned char *value)
 		/* the application's events 0x21 and 0x22: none in the updater */
 	}
 #endif
+	return status;
+}
+#elif !FW_SINCE(0x00080302)
+/* 0x00080003: tried once */
+{
+	ER ercd;
+	FLGPTN ptn;
+	struct IicaRequest request;
+	unsigned char status;
+
+	if (deviceVersions.elmo[0] == 0xff) {
+		*value++ = 0;
+		*value = 0;
+		return 0;
+	}
+	request.rxData = value;
+	request.rxCount = 2;
+	request.txData = reg;
+	request.txCount = 1;
+	request.address = ELMO_ADDRESS;
+	request.status = &status;
+	iicaStart(&request);
+	ercd = twai_flg(4, ELMO_DONE, TWF_ORW, &ptn, ELMO_TIMEOUT);
+	if (ercd == E_OK) {
+		if (ptn & ELMO_DONE)
+			clr_flg(4, ~ELMO_DONE);
+	} else if (ercd == E_TMOUT)
+		status = ELMO_NO_ANSWER;
 	return status;
 }
 #else
@@ -591,9 +644,11 @@ unsigned char elmoClearMasks(struct ElmoMasks *masks, unsigned char *command)
 	length = 0;
 	if (masks->status0 != 0) {
 		elmoStatusMask.reg[0] &= ~masks->status0;
+#if FW_SINCE(0x00080302)	/* 0x00080003 clears bit 2 in any state */
 		if ((masks->status0 & 0x0004) && (stateGet() & 0x8008) &&
 		    (elmoStatusMask.reg[2] & 0x1000))
 			elmoStatusMask.reg[0] |= 0x0004;
+#endif
 		command[length++] = 0xa0;
 		command[length++] = elmoStatusMask.byte[1];
 		command[length++] = elmoStatusMask.byte[0];

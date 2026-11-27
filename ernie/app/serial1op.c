@@ -606,6 +606,8 @@ static unsigned char serial1Read0954(struct Serial1Status *out, unsigned char pa
 done:
 	return result;
 }
+#elif !FW_SINCE(0x00080302)
+/* 0x00080003 has no operations: its mode 1 commands answer at once */
 #else
 void serial1Operation(void)
 {

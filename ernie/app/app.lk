@@ -126,6 +126,7 @@ OBJECT	../lib/memmove.asm	IF ERNIE_FW>=0x00090502	# log.c's
 OBJECT	../lib/memcmp.asm
 OBJECT	../lib/memset.asm
 OBJECT	../lib/memset_n.asm
+OBJECT	../lib/vsprintf.asm	IF ERNIE_FW<0x00080302	# 0x00080003's tracePrintf
 OBJECT	../lib/fslopen.asm
 # the ends of the startup's segments, after everything
 OBJECT	cstartend.asm

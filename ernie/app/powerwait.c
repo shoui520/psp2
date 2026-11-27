@@ -168,6 +168,12 @@ void powerWaitInput(unsigned char edges, unsigned int timeout)
 			clr_flg(4, ~0x40);
 	}
 	powerInputHandler.type = 0;
+#elif !FW_SINCE(0x00080302)
+	/* 0x00080003: only an edge seen ends the wait's handler */
+	if (ercd == E_OK && (0x40 & ptn)) {
+		clr_flg(4, ~0x40);
+		powerInputHandler.type = 0;
+	}
 #else
 	powerInputHandler.type = 0;
 	clr_flg(4, ~0x40);

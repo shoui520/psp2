@@ -24,7 +24,11 @@ KEEPRAM		EQU	0D900H		; the kept RAM (keepRam)
 $_IF (ERNIE_FW>=0x00090006)
 KEEPCLEAR	EQU	0DA90H		; what a warm start clears from
 $ELSE
+$_IF (ERNIE_FW<0x00080302)
+KEEPCLEAR	EQU	0D90EH		; (0x00080003)
+$ELSE
 KEEPCLEAR	EQU	0DA8EH		; (0x00080504)
+$ENDIF
 $ENDIF
 $ENDIF
 KEEPEND		EQU	KEEPRAM + 4 + 0FCH	; the kept RAM's end: its header and the bytes summed

@@ -17,10 +17,16 @@
 
 	PUBLIC	_iact_tsk, _act_tsk, _ichg_pri, _chg_pri, _clr_flg, _dis_dsp, _dly_tsk
 	PUBLIC	_ena_dsp, _ext_tsk, _get_mpf, _pget_mpf, _tget_mpf, _rcv_mbx, _prcv_mbx
+$_IF (ERNIE_FW<0x00080302)
+	PUBLIC	_trcv_mbx, _rel_mpf, _ret_int, _iset_flg, _set_flg
+$ELSE
 	PUBLIC	_trcv_mbx, _ref_flg, _ref_mbx, _rel_mpf, _ret_int, _iset_flg, _set_flg
+$ENDIF
 	PUBLIC	_snd_mbx, _sta_cyc, _isig_tim, _wai_flg, _pol_flg, _twai_flg
+$_IF (ERNIE_FW>=0x00080302)
 $_IF (ERNIE_FW<=0x00090804||ERNIE_KERNEL==0x00411000)
 	PUBLIC	_ref_cyc, _ref_mpf, _ref_tsk, _ref_ver
+$ENDIF
 $ENDIF
 	PUBLIC	__kernel_int_entry, _kernelStart
 	PUBLIC	_cycInit, _flgInit, _mbxInit, _mpfInit
@@ -40,10 +46,14 @@ $ELSE
 $_IF (ERNIE_HW==0x00723030)	; DOL-1002: after waitEnter too
 CONFIG		EQU	0D608H
 $ELSE
+$_IF (ERNIE_FW<0x00080302)	; 0x00080003: no ref_ services before it
+CONFIG		EQU	0D55EH
+$ELSE
 $_IF (ERNIE_FW<=0x00090804||ERNIE_KERNEL==0x00411000)
 CONFIG		EQU	0D878H
 $ELSE
 CONFIG		EQU	0D5FEH
+$ENDIF
 $ENDIF
 $ENDIF
 $ENDIF
@@ -118,7 +128,11 @@ mpfFree:	DS	2	; a pool's first free block (a far pointer)
 mpfFreeSeg:	DS	1
 mbxMsgCount:			; a prioritised mailbox's count of messages
 mpfWait:	DS	9
+$_IF (ERNIE_FW<0x00080302)	; 0x00080003: blocks of 8 bytes
+kMpfBlocks1:	DS	40H		; the first pool's 8 blocks of 8 bytes
+$ELSE
 kMpfBlocks1:	DS	60H		; the first pool's 8 blocks of 0xc bytes
+$ENDIF
 kMpfBlocks2:	DS	1E0H		; the second pool's 2 blocks of 0xf0
 
 ; the kernel's short direct work registers, and the compiler's
@@ -970,6 +984,7 @@ _trcv_mbx:
 	MOVW	HL, #0
 	BR	$!_serviceExit
 
+$_IF (ERNIE_FW>=0x00080302)	; 0x00080003 has no ref_ services
 $_IF (ERNIE_FW<=0x00090804||ERNIE_KERNEL==0x00411000)
 ; ER ref_cyc(ID cycid, T_RCYC *pk_rcyc): its state, and the ticks to its next start (the
 ; counts of the timeout queue up to it, when it is on the queue)
@@ -1354,6 +1369,7 @@ _ref_ver:
 	MOV	ES, #0FH
 	MOVW	HL, #0
 	BR	$!_serviceExit
+$ENDIF
 $ENDIF
 
 @@KREL	CSEG	BASE

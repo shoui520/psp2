@@ -266,6 +266,7 @@ noStop:
 
 void iicaClose(void)
 {
+#if FW_SINCE(0x00080302)	/* 0x00080003 leaves the pins as they are */
 	P6.0 = 1;
 #if CHIP_RL78 || BOARD_DOL1001
 	PM6.0 = 0;
@@ -275,6 +276,7 @@ void iicaClose(void)
 	PM6.0 = 0;
 #endif
 	PM6.1 = 0;
+#endif
 	IICE = 0;
 	IICAMK = 1;
 	IICAIF = 0;

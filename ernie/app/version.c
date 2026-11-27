@@ -126,7 +126,9 @@ const unsigned char timeStampDigits[12] = { 8, 9, 10, 11, 13, 14, 16, 17, 19, 20
 #endif
 #endif
 
+#if defined(ERNIE_UPDATER) || FW_SINCE(0x00080302)
 struct VersionFlags versionFlags;
+#endif
 
 #if defined(ERNIE_UPDATER) && SOURCE_0103
 /*
@@ -278,6 +280,9 @@ void getErnieDlVersion(unsigned char *buf)
 {
 	memcpy(buf, APP_VERSION_INFO->dlVersion, 4);
 }
+#elif !FW_SINCE(0x00080302)
+/* 0x00080003 keeps no flags and has no getters: its callers copy appVersionInfo's bytes
+   (version.h) */
 #else
 void versionInit(void)
 {

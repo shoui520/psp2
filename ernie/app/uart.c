@@ -22,6 +22,9 @@
 #pragma EI
 
 #include <stddef.h>
+#if ERNIE_FW < 0x00080302
+#include <string.h>
+#endif
 
 #include "ernie.h"
 #include "chip.h"
@@ -31,6 +34,9 @@
 #include "task.h"
 #include "timer.h"
 #include "uart.h"
+#if !FW_SINCE(0x00080302)
+#include "util.h"
+#endif
 
 /* UartPort.flags */
 #define UART_OPEN		0x01
@@ -126,12 +132,14 @@ static const struct UartConfig uart2Config = { 4, 0x0c, 0x0097 };
 /* kept from 0x01000306, when nothing reads it any more */
 static const struct UartConfig uart3Config = { 1, 0x11, 0x0097 };
 
+#if FW_SINCE(0x00080302)	/* 0x00080003 has one other speed, in uart3Open */
 static const struct UartBaud uartBauds[4] = {
 	{ 0, 4, 0x19 },
 	{ 1, 4, 0x0c },
 	{ 2, 3, 0x0c },
 	{ 3, 1, 0x11 },
 };
+#endif
 
 #if !FW_SINCE(0x01000306)
 /* both ports' buffers, and UART3 at uart3Config's speed (before 0x01000306 nothing calls it;
@@ -231,9 +239,21 @@ void uartReset(unsigned char port)
 /* opens UART3 at one of uartBauds' speeds (115200 bit/s when none is baud) */
 unsigned char uart3Open(unsigned char baud)
 {
+#if FW_SINCE(0x00080302)
 	unsigned char i;
+#endif
 	struct UartConfig config = { 1, 0x11, 0x0097 };
 
+#if !FW_SINCE(0x00080302)
+	/* 0x00080003: speed 2 (prescaler 3, divisor 12), any other at 115200 bit/s */
+	if (baud == 2) {
+		config.prescaler = 3;
+		config.divisor = 0x0c;
+	} else {
+		config.prescaler = 1;
+		config.divisor = 0x11;
+	}
+#else
 	for (i = 0; i < 4; i++) {
 		if (uartBauds[i].baud == baud) {
 			config.prescaler = uartBauds[i].prescaler;
@@ -241,6 +261,7 @@ unsigned char uart3Open(unsigned char baud)
 			break;
 		}
 	}
+#endif
 	if (!SAU1EN)
 		SAU1EN = 1;
 	uartStopTx(3);
@@ -602,6 +623,45 @@ void uart3ErrorInterrupt(void)
 	}
 }
 
+#if !FW_SINCE(0x00080302)
+/* 0x00080003 finds a command frame's end here: the frame's length taken once its length field
+   is in, task 2's event 0x0004 at the frame's last byte (in text, or at a newline) */
+void uart3ReceiveInterrupt(void)
+{
+	struct UartPort *p;
+	unsigned char data;
+
+	p = &uart3;
+	if (serial.mode == 3) {
+		if ((p->rxWrite + 1 & p->rxMask) != p->rxRead) {
+			data = SDR13;
+			p->rxBuffer[p->rxWrite] = data;
+			p->rxWrite = p->rxWrite + 1 & p->rxMask;
+			if (p->timeout.flgid != 0)
+				timerStart(p->timeout.timer, p->timeout.timeout);
+		}
+	} else if ((p->rxWrite + 1 & p->rxMask) != p->rxRead) {
+		data = SDR13;
+		p->rxBuffer[p->rxWrite] = data;
+		if (SERIAL_IS_BINARY(serial)) {
+			if (p->rxWrite == SERIAL_FRAME_DATA)
+				memcpy(&serial.length, &p->rxBuffer[SERIAL_FRAME_LENGTH], 2);
+			if (p->rxWrite >= (serial.length + (SERIAL_FRAME_DATA + 2) - 1 < p->rxMask ?
+					   serial.length + (SERIAL_FRAME_DATA + 2) - 1 : p->rxMask))
+				task2ISetFlag(0x0004);
+		} else {
+			if (p->rxWrite == 2 * SERIAL_FRAME_DATA)
+				hexDecode((unsigned char *)&serial.length,
+					  (char *)&p->rxBuffer[2 * SERIAL_FRAME_LENGTH], 4);
+			if (p->rxWrite >= (serial.length + 0x10 - 1 < p->rxMask ?
+					   serial.length + 0x10 - 1 : p->rxMask) ||
+			    p->rxBuffer[p->rxWrite] == '\n')
+				task2ISetFlag(0x0004);
+		}
+		p->rxWrite = p->rxWrite + 1 & p->rxMask;
+	}
+}
+#else
 void uart3ReceiveInterrupt(void)
 {
 	struct UartPort *p;
@@ -627,6 +687,7 @@ void uart3ReceiveInterrupt(void)
 			timerStart(TIMER(0x10), 2);
 	}
 }
+#endif
 
 void uart3SendInterrupt(void)
 {

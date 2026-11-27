@@ -227,11 +227,13 @@ void updaterRequestNotify(void)
 {
 	switch (updaterRequest.event) {
 	case HOST_EVENT_COMMAND:
+#if FW_SINCE(0x00080302)	/* 0x00080003 tests no handshake */
 		if (!handshakeUnlocked11()) {
 			hostRequestAnswer(&updaterRequest, HOST_REQUEST_UNKNOWN, 0x3f, 0);
 			handshakeRefuse();
 			return;
 		}
+#endif
 		switch (updaterRequest.command) {
 		case 0x1183:
 			updaterRequest.status = 0x3c;

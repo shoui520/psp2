@@ -43,9 +43,11 @@ unsigned char powerResumed;		/* set by a resume, cleared by a power on */
 static unsigned char padding;		/* 0xff2ed: nothing uses it */
 #endif
 struct PowerJobState powerJobState;
+#if FW_SINCE(0x00080302)	/* 0x00080003 reads no registers at a power cut */
 unsigned int powerCutRegs[POWER_CUT_REGS];	/* registers 0xb0-0xb2 (the slim's: 0xb3) of
 						   elmoRead's device, read at a power cut and
 						   cleared at a power on */
+#endif
 
 /* the charge update's period: chargeSetAcDelay's since 0x01000306, 10 before */
 #if FW_SINCE(0x01000306)
@@ -83,13 +85,15 @@ static void powerJobResume(void);
 static void powerJobOff(void);
 static void powerJobShutdown(void);
 static void powerJobSuspend(void);
+#if FW_SINCE(0x00080302)
 static void powerJobCut(void);
+#endif
 #if FW_SINCE(0x00090006)	/* not in 0x00080504 */
 static void powerJobOffEnd(void);
 #endif
 #if FW_SINCE(0x01000104)
 static void powerJobUpdate(void);
-#else
+#elif FW_SINCE(0x00080302)	/* 0x00080003 has no charge LED blink */
 static void chargeLedBlinkExpire(void);
 #endif
 #if FW_SINCE(0x01000306)
@@ -115,9 +119,11 @@ void powerJob(void)
 	case POWER_JOB_SHUTDOWN:
 		powerJobShutdown();
 		return;
+#if FW_SINCE(0x00080302)	/* 0x00080003's powerJobPostCut cuts at once */
 	case POWER_JOB_CUT:
 		powerJobCut();
 		return;
+#endif
 #if FW_SINCE(0x00090006)	/* not in 0x00080504 */
 	case POWER_JOB_OFF_END:
 		powerJobOffEnd();
@@ -498,11 +504,13 @@ static void powerJobOn(void)
 	PIF0 = 0;
 	PMK0 = 0;
 	powerSeqOn();
+#if FW_SINCE(0x00080302)
 #if FW_SINCE(0x0100060B)
 	/* the power cut's registers kept through a start from cause 0x42 */
 	if (stateGetCause() != 0x42)
 #endif
 		powerCutRegs[0] = powerCutRegs[1] = powerCutRegs[2] = 0;
+#endif
 	powerTimersInit();
 #if FW_SINCE(0x00090804)
 	powerSeqInit();
@@ -513,8 +521,12 @@ static void powerJobOn(void)
 	timerStart(TIMER_RTC(0x17), 1);
 	powerResumed = 0;
 #elif !FW_SINCE(0x00090502)
+#if !FW_SINCE(0x00080302)
+	timerStart(TIMER_RTC(0x17), TIMER_RTC_TICKS(10));	/* 0x00080003: no charge LED, every 10 */
+#else
 	chargeLedInit();
 	timerStart(TIMER_RTC(0x17), TIMER_RTC_TICKS(1));
+#endif
 #else
 	if (configGet()->start.bits.chargeLedOff) {
 		cookieCtrlReg3Bit2(0);
@@ -641,7 +653,11 @@ static void powerJobOff(void)
 static void powerJobOff(void)
 {
 	if ((signed char)bbmc.state >= 2 || input2Bit0Get() == 1)
+#if !FW_SINCE(0x00080302)
+		powerBbmcCycle();	/* 0x00080003 has no powerBbmcRestart */
+#else
 		powerBbmcRestart();
+#endif
 	powerSeqOff();
 #if FW_SINCE(0x00090502)
 	cookieCtrlBatteryCharge(1);
@@ -768,6 +784,7 @@ static void powerJobSuspend(void)
 }
 #endif
 
+#if FW_SINCE(0x00080302)
 static void powerJobCut(void)
 {
 	unsigned char reg;
@@ -797,6 +814,7 @@ static void powerJobCut(void)
 #endif
 	powerReady(POWER_JOB_PART);
 }
+#endif
 
 #if FW_SINCE(0x00090006)	/* not in 0x00080504 */
 static void powerJobOffEnd(void)
@@ -820,7 +838,7 @@ static void powerJobUpdate(void)
 	ledUpdate();
 	powerReady(POWER_JOB_PART);
 }
-#else
+#elif FW_SINCE(0x00080302)
 /* before 0x01000104 the charge LED's blink is here: timer 0x18's, its on and off times
    paramSetting1 and 2 */
 static void chargeLedBlinkExpire(void)

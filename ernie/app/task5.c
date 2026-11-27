@@ -3,6 +3,9 @@
  * battery requests (powerreq.c).
  */
 #pragma rtos_task task5
+#if ERNIE_FW < 0x00080302	/* 0x00080003's powerJobPostCut drives the lines */
+#pragma sfr
+#endif
 
 #include "ernie.h"
 #include "battery.h"
@@ -23,6 +26,9 @@
 #if BOARD_DOL1001
 #include "thermal.h"
 #endif
+#if !FW_SINCE(0x00080302)
+#include "iica.h"
+#endif
 
 unsigned int powerDevicePending;
 #if !FW_SINCE(0x00090203)
@@ -31,7 +37,8 @@ unsigned char chargeLedBlinkOn;
 
 extern unsigned char input1Bit7Active(void);
 
-#if !BOARD_DOL1001
+#if BOARD_DOL1001 || !FW_SINCE(0x00080302)	/* 0x00080003's task 5 has no LEDs */
+#else
 static void task5ChargeLed(void);
 #if !LED_REQUESTS
 static void chargeLedBlinkUpdate(void);
@@ -102,6 +109,34 @@ void task5(VP_INT exinf)
 #if TASK_PENDING_MARKS
 		task5Idle();
 #endif
+	}
+#elif !FW_SINCE(0x00080302)
+	/* 0x00080003: the jobs, the devices, the power and battery requests and the charge */
+	for (;;) {
+		ercd = wai_flg(4, 0x01a3, TWF_ORW, &ptn);
+		if (ercd == E_OK) {
+			if (ptn & 0x0002) {
+				clr_flg(4, ~0x0002);
+				powerJobState.flag = 0;
+				powerJob();
+			}
+			if (ptn & 0x0080) {
+				clr_flg(4, ~0x0080);
+				powerDeviceRun();
+			}
+			if (ptn & 0x0001) {
+				clr_flg(4, ~0x0001);
+				powerRequestEvent();
+			}
+			if (ptn & 0x0100) {
+				clr_flg(4, ~0x0100);
+				batteryRequestEvent();
+			}
+			if (ptn & 0x0020) {
+				clr_flg(4, ~0x0020);
+				chargeUpdate();
+			}
+		}
 	}
 #else
 	for (;;) {
@@ -273,10 +308,21 @@ void powerJobPostShutdown(void)
 
 void powerJobPostCut(void)
 {
+#if !FW_SINCE(0x00080302)
+	/* 0x00080003 posts no job: the lines low, the I2C closed and the charge's timer stopped
+	   here */
+	P0.6 = 0;
+	P0.5 = 0;
+	P6.3 = 0;
+	P13.1 = 0;
+	iicaClose();
+	timerStop(TIMER_RTC(0x17));
+#else
 	powerJobState.id = POWER_JOB_CUT;
 	task5SetFlag(4, 0x0002);
 #if POST_RETURN
 	return;
+#endif
 #endif
 }
 
@@ -341,6 +387,8 @@ void powerDeviceSetPending(unsigned int bits)
 
 #if BOARD_DOL1001
 /* DOL-1001's task 5 handles no charge LED */
+#elif !FW_SINCE(0x00080302)
+/* nor 0x00080003's */
 #elif SOURCE_0103
 /* the slim's: the power LED module's causes (the charge LED off, its full charge) */
 static void task5ChargeLed(void)

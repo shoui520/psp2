@@ -31,6 +31,10 @@
 
 extern unsigned char intp11Low(void);
 
+#if !FW_SINCE(0x00080302)
+#define serial4SetAnswer(answer)	/* 0x00080003's commands leave the answer alone */
+#endif
+
 /* level less trim, or 0 when that is 0x40 or more; on IRS-1001 level plus trim, held to its
    regulators' 0x48-0x87, on USS-1001 and DOL-1002 0x7b less level plus trim held to 0x3c-0x7b */
 unsigned char levelTrim(unsigned char level, unsigned char trim)
@@ -157,9 +161,16 @@ static unsigned char serial2Command0200(struct SerialBuffer *request, struct Ser
 /* 0x0201: the hardware info, the firmware's version and the updater's */
 static unsigned char serial2Command0201(struct SerialBuffer *request, struct SerialBuffer *response)
 {
+#if !FW_SINCE(0x00080302)
+	/* 0x00080003 copies the version block, the hardware info and the version, at once */
+	memcpy(serial2Data, &appVersionInfo, sizeof(appVersionInfo));
+	memset(&serial2Data[8], 0, 8);
+#else
 	getHardwareInfo(&serial2Data[0]);
 	getErnieVersion(&serial2Data[4]);
-#if FW_SINCE(0x00080502)
+#endif
+#if !FW_SINCE(0x00080302)
+#elif FW_SINCE(0x00080502)
 	getErnieDlVersion(&serial2Data[8]);
 	memset(&serial2Data[12], 0, 4);
 #else
@@ -176,7 +187,9 @@ static unsigned char serial2Command0202(struct SerialBuffer *request, struct Ser
 {
 	unsigned char mode;
 	unsigned char value;
+#if FW_SINCE(0x00080302)
 	unsigned char result;
+#endif
 
 	response->length = 0;
 	if (request->length != 4) {
@@ -193,11 +206,21 @@ static unsigned char serial2Command0202(struct SerialBuffer *request, struct Ser
 		serial4SetAnswer(SERIAL_ANSWER);
 		return 0x33;
 	}
+#if !FW_SINCE(0x00080302)
+	/* 0x00080003: value 0 or 1, uart3Open's bauds 2 and 3 */
+	if (value == 0 || value == 1) {
+		value = value + 2;
+		serial4SetBaud(value);
+	} else {
+		return 0x33;
+	}
+#else
 	result = serial4SelectBaud(value);
 	if (result != 0) {
 		serial4SetAnswer(SERIAL_ANSWER);
 		return 0x33;
 	}
+#endif
 	serial4SetAnswer(SERIAL_ANSWER);
 	return 0;
 }
@@ -211,6 +234,19 @@ static unsigned char serial2Notify0202(void)
 	return serial4Reopen(serial4GetBaud());
 }
 
+#if !FW_SINCE(0x00080302)
+static unsigned char serial2Command0203(struct SerialBuffer *request, struct SerialBuffer *response)
+{
+	response->length = 0;
+	return serial4Unlock(2);
+}
+
+static unsigned char serial2Command0204(struct SerialBuffer *request, struct SerialBuffer *response)
+{
+	response->length = 0;
+	return serial4Lock(2);
+}
+#else
 static unsigned char serial2Command0203(struct SerialBuffer *request, struct SerialBuffer *response)
 {
 	unsigned char result;
@@ -232,10 +268,31 @@ static unsigned char serial2Command0204(struct SerialBuffer *request, struct Ser
 	serial4SetAnswer(SERIAL_ANSWER);
 	return result;
 }
+#endif
 
 /* 0x0205: data[0] 0 runs transition 0x52 from state 0x20 or 8, 2 transition 0x0e from state
    4 or 8 */
-#if !FW_SINCE(0x00080502)
+#if !FW_SINCE(0x00080302)
+/* 0x00080003 tests no state */
+static unsigned char serial2Command0205(struct SerialBuffer *request, struct SerialBuffer *response)
+{
+	STATE_TRANSITION_EVENT
+	unsigned char mode;
+
+	mode = request->data[0];
+	response->length = 0;
+	if (mode == 0) {
+		transitionEvent.transition = 0x52;
+		transitionEvent.wakeMask = stateGetWakeMask();
+	} else if (mode == 2) {
+		transitionEvent.transition = 0x0e;
+		transitionEvent.wakeMask = stateGetWakeMask();
+	} else {
+		return 0x33;
+	}
+	return (unsigned char)stateTransition(&transitionEvent);
+}
+#elif !FW_SINCE(0x00080502)
 /* 0x00080307 tests the states as masks */
 static unsigned char serial2Command0205(struct SerialBuffer *request, struct SerialBuffer *response)
 {
@@ -342,6 +399,15 @@ static unsigned char serial2Command0206(struct SerialBuffer *request, struct Ser
 }
 
 /* 0x0211: writes the test area */
+#if !FW_SINCE(0x00080302)
+static unsigned char serial2Command0211(struct SerialBuffer *request, struct SerialBuffer *response)
+{
+	response->length = 0;
+	if (serial4IsLocked())
+		return 0x20;
+	return scratchPadWrite(SERIAL2_TEST_AREA, SERIAL2_TEST_SIZE, request->data);
+}
+#else
 static unsigned char serial2Command0211(struct SerialBuffer *request, struct SerialBuffer *response)
 {
 	unsigned char result;
@@ -356,6 +422,7 @@ static unsigned char serial2Command0211(struct SerialBuffer *request, struct Ser
 	serial4SetAnswer(SERIAL_ANSWER);
 	return result;
 }
+#endif
 
 #if SERIAL2_ARM
 /* runs transition 0 once when armed and the config allows it */
@@ -374,6 +441,16 @@ static unsigned char serial2Notify0211(void)
 #endif
 
 /* 0x0210: reads the test area */
+#if !FW_SINCE(0x00080302)
+static unsigned char serial2Command0210(struct SerialBuffer *request, struct SerialBuffer *response)
+{
+	if (serial4IsLocked())
+		return 0x20;
+	response->data = serial2Data;
+	response->length = SERIAL2_TEST_SIZE;
+	return scratchPadRead(SERIAL2_TEST_AREA, SERIAL2_TEST_SIZE, serial2Data);
+}
+#else
 static unsigned char serial2Command0210(struct SerialBuffer *request, struct SerialBuffer *response)
 {
 	unsigned char result;
@@ -389,6 +466,7 @@ static unsigned char serial2Command0210(struct SerialBuffer *request, struct Ser
 	serial4SetAnswer(SERIAL_ANSWER);
 	return result;
 }
+#endif
 
 /* drives P7.1 */
 unsigned char serial2SetP71(unsigned char level)

@@ -24,6 +24,12 @@
 #if CHIP_RL78
 #include "serial.h"
 #endif
+#if !FW_SINCE(0x00080302)
+#include <string.h>
+#include "serial.h"
+#include "serial4.h"
+#include "util.h"
+#endif
 
 #if CHIP_RL78
 /* USS-1001: TxD4 on P9.2, RxD4 on P9.3 without a pull-up, the error interrupt UART4's own */
@@ -52,16 +58,30 @@ struct Uart4Config {
 unsigned char uart4Rx[0x80];
 unsigned char uart4Tx[0x80];
 
+#if FW_SINCE(0x00080302)	/* 0x00080003 has two speeds, in uart4Open */
 static const struct Uart4Baud uart4Bauds[4] = {
 	{ 0, 4, 0x19 },
 	{ 1, 4, 0x0c },
 	{ 2, 3, 0x0c },
 	{ 3, 1, 0x11 },
 };
+#endif
 
 /* opens UART4 at one of uart4Bauds' speeds (38400 bit/s when none is baud) */
 int uart4Open(unsigned char baud)
 {
+#if !FW_SINCE(0x00080302)
+	struct Uart4Config config = { 3, 0x0c, 0x0097 };
+
+	/* 0x00080003: baud 3 or 38400 bit/s */
+	if (baud == 3) {
+		config.prescaler = 1;
+		config.divisor = 0x11;
+	} else {
+		config.prescaler = 3;
+		config.divisor = 0x0c;
+	}
+#else
 	unsigned char i;
 	struct Uart4Config config = { 3, 0x0c, 0x0097 };
 
@@ -72,6 +92,7 @@ int uart4Open(unsigned char baud)
 			break;
 		}
 	}
+#endif
 	PM93 = 1;
 #if CHIP_RL78
 	PM9.2 = 1;
@@ -230,6 +251,12 @@ UART4_INTERRUPT void uart4ErrorInterrupt(void)
 	status = SDR21;	/* the byte in error, dropped */
 	status = SSR21;
 	SIR21 = status & 0x07;
+#if !FW_SINCE(0x00080302)
+	if (status & 0x04) {	/* 0x00080003: an overrun restarts the channel */
+		ST2L.1 = 1;
+		SS2L.1 = 1;
+	}
+#endif
 }
 
 #if CHIP_RL78
@@ -286,6 +313,42 @@ UART4_INTERRUPT void uart4SendInterrupt(void)
 #endif
 		task2ISetFlag(2);
 }
+#elif !FW_SINCE(0x00080302)
+/* 0x00080003 finds a command frame's end here, as uart3ReceiveInterrupt: task 2's event
+   0x0400 at the frame's last byte (in text, or at a newline) */
+UART4_INTERRUPT void uart4ReceiveInterrupt(void)
+{
+	struct UartPort *p;
+	unsigned char data;
+
+	p = &uart4;
+	if (serial4.mode == 3) {
+		if ((p->rxWrite + 1 & p->rxMask) != p->rxRead) {
+			data = SDR21;
+			p->rxBuffer[p->rxWrite] = data;
+			p->rxWrite = p->rxWrite + 1 & p->rxMask;
+		}
+	} else if ((p->rxWrite + 1 & p->rxMask) != p->rxRead) {
+		data = SDR21;
+		p->rxBuffer[p->rxWrite] = data;
+		if (SERIAL_IS_BINARY(serial4)) {
+			if (p->rxWrite == SERIAL_FRAME_DATA)
+				memcpy(&serial4.length, &p->rxBuffer[SERIAL_FRAME_LENGTH], 2);
+			if (p->rxWrite >= (serial4.length + (SERIAL_FRAME_DATA + 2) - 1 < p->rxMask ?
+					   serial4.length + (SERIAL_FRAME_DATA + 2) - 1 : p->rxMask))
+				task2ISetFlag(0x0400);
+		} else {
+			if (p->rxWrite == 2 * SERIAL_FRAME_DATA)
+				hexDecode((unsigned char *)&serial4.length,
+					  (char *)&p->rxBuffer[2 * SERIAL_FRAME_LENGTH], 4);
+			if (p->rxWrite >= (serial4.length + 0x10 - 1 < p->rxMask ?
+					   serial4.length + 0x10 - 1 : p->rxMask) ||
+			    p->rxBuffer[p->rxWrite] == '\n')
+				task2ISetFlag(0x0400);
+		}
+		p->rxWrite = p->rxWrite + 1 & p->rxMask;
+	}
+}
 #else
 UART4_INTERRUPT void uart4ReceiveInterrupt(void)
 {
@@ -301,7 +364,9 @@ UART4_INTERRUPT void uart4ReceiveInterrupt(void)
 		timerStart(TIMER(0x0f), 2);
 	}
 }
+#endif
 
+#if !CHIP_RL78	/* 0x00080003's too */
 /* the next byte queued, or, with none left, event 0x0200 of flag 3 */
 UART4_INTERRUPT void uart4SendInterrupt(void)
 {

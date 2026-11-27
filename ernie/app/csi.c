@@ -286,7 +286,7 @@ void csiOpenMsb(void)
 	csi.state = 0;
 	csi.sendCount = 0;
 	csi.receiveCount = 0;
-#if BOARD_DOL1001 && !BOARD_DOL1002
+#if (BOARD_DOL1001 && !BOARD_DOL1002) || !FW_SINCE(0x00080302)
 	SPS0L = 0xf0 & SPS0L;
 #else
 	SPS0L &= 0xf0;

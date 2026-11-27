@@ -51,6 +51,14 @@
 #include "timer.h"
 #include "touch.h"
 
+/* an edge starts the input scan again (where INPUT_SCAN_NOT_MODE1() holds): 0x00080003 runs it
+   every tick (as intp1Interrupt's 0x00080307 does), the later builds hold it 0x1a ticks */
+#if !FW_SINCE(0x00080302)
+#define INTP_SCAN_HOLD()	(inputScan.interval = 1, timerStart(INPUT_SCAN_TIMER, 1))
+#else
+#define INTP_SCAN_HOLD()	inputScanHold(0x1a)
+#endif
+
 #if BOARD_MOTION
 /* the motion sensor's frame timer: a frame read while key 0x0010 is held */
 void tm01Interrupt(void)
@@ -104,7 +112,7 @@ void intp3Interrupt(void)
 		if (pinMonitors.pin[2].config.reload != 0) {
 			pinMonitor2Enable(1);
 			pinMonitors.pin[2].last = 0;
-			inputScanHold(0x1a);
+			INTP_SCAN_HOLD();
 		} else
 			pinMonitors.pin[2].config.handler();
 	}
@@ -136,7 +144,7 @@ void intp2Interrupt(void)
 #if !FW_SINCE(0x00090502)
 		if (INPUT_SCAN_NOT_MODE1())
 #endif
-		inputScanHold(0x1a);
+		INTP_SCAN_HOLD();
 	}
 }
 
@@ -153,7 +161,7 @@ void intp7Interrupt(void)
 #if !FW_SINCE(0x00090502)
 			if (INPUT_SCAN_NOT_MODE1())
 #endif
-			inputScanHold(0x1a);
+			INTP_SCAN_HOLD();
 		} else
 			pinMonitors.pin[2].config.handler();
 	}
@@ -167,7 +175,7 @@ void intp4Interrupt(void)
 		if (pinMonitors.pin[3].config.reload != 0) {
 			pinMonitor3Enable(1);
 			pinMonitors.pin[3].last = 0;
-			inputScanHold(0x1a);
+			INTP_SCAN_HOLD();
 		} else
 			pinMonitors.pin[3].config.handler();
 	}
@@ -199,7 +207,7 @@ void intp4Interrupt(void)
 			pinMonitor3Enable(1);
 			pinMonitors.pin[3].last = 0;
 			if (INPUT_SCAN_NOT_MODE1())
-				inputScanHold(0x1a);
+				INTP_SCAN_HOLD();
 		} else
 			pinMonitors.pin[3].config.handler();
 	}
@@ -217,7 +225,7 @@ void intp4Interrupt(void)
 		if (pinMonitors.pin[3].config.reload != 0) {
 			pinMonitor3Enable(1);
 			pinMonitors.pin[3].last = 0;
-			inputScanHold(0x1a);
+			INTP_SCAN_HOLD();
 		} else
 			pinMonitors.pin[3].config.handler();
 	}
@@ -237,7 +245,7 @@ void intp3Interrupt(void)
 #if !FW_SINCE(0x00090502)
 			if (INPUT_SCAN_NOT_MODE1())
 #endif
-			inputScanHold(0x1a);
+			INTP_SCAN_HOLD();
 		} else
 			pinMonitors.pin[4].config.handler();
 	}
@@ -256,7 +264,7 @@ void intp10Interrupt(void)
 #if !FW_SINCE(0x00090502)
 			if (INPUT_SCAN_NOT_MODE1())
 #endif
-			inputScanHold(0x1a);
+			INTP_SCAN_HOLD();
 		} else
 			pinMonitors.pin[5].config.handler();
 	}
@@ -271,7 +279,7 @@ void intp8Interrupt(void)
 		if (pinMonitors.pin[6].config.reload != 0) {
 			pinMonitor6Enable(1);
 			pinMonitors.pin[6].last = 1;
-			inputScanHold(0x1a);
+			INTP_SCAN_HOLD();
 		} else
 			pinMonitors.pin[6].config.handler();
 	}
@@ -291,7 +299,7 @@ void intp11Interrupt(void)
 #if FW_SINCE(0x00080502)	/* 0x00080307 holds it whatever the scan */
 		if (INPUT_SCAN_NOT_MODE1())
 #endif
-			inputScanHold(0x1a);
+			INTP_SCAN_HOLD();
 	}
 #endif
 }
