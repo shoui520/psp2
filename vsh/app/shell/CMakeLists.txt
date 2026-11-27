@@ -794,6 +794,73 @@ set_source_files_properties(boot.cpp lsdb_start.cpp net.cpp event_server.cpp app
 # the application's row's find (0x8140cc54) stays out of line in the game factory's CreateItem
 set_source_files_properties(src/applauncher_plugin/src/applauncher_iconinfo_game.cpp
 	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=20)
+# Static library and service TUs whose internal helpers Sony keeps out of line (e.g. libSceNpPolling,
+# libSceNpRt, libSceNpImps, musiccore IPC, MTP dispatch, LibWMS)
+set_source_files_properties(
+	np_friend_importer.cpp
+	popup_list.cpp
+	sfo.cpp
+	src/dbsetup/dbrecovery_lib.cpp
+	src/host_collabo/account_link_checker/bind_job.cpp
+	src/liblocation/src/location_service/gps_emulator.cpp
+	src/livearea_plugin/src/livearea_feed.cpp
+	src/livearea_plugin/src/livearea_page_inner.cpp
+	src/mtp/src/mtp_service_dispatch.cpp
+	src/musiccore_plugin/src/musiccore_decoder_manager.cpp
+	src/musiccore_plugin/src/musiccore_ipc_service.cpp
+	src/netctl/net_stun.cpp
+	src/netctl/net_upnp.cpp
+	src/netctl/net_wispr.cpp
+	src/netctl/netctl_core.cpp
+	src/netctl/netctl_icm.cpp
+	src/netctl/netctl_ipc_server.cpp
+	src/np/asm/np_asm_client_vsh.cpp
+	src/np/auth/np_auth_core.cpp
+	src/np/commerce2/np_commerce2_core.cpp
+	src/np/community/np_community_client.cpp
+	src/np/community/np_community_profile.cpp
+	src/np/community/np_score_backend.cpp
+	src/np/community/np_score_ipc_server.cpp
+	src/np/community/np_tus_backend.cpp
+	src/np/community/np_tus_ipc_server.cpp
+	src/np/csla/np_csla.cpp
+	src/np/game_presence/np_game_presence.cpp
+	src/np/imps/np_imps_core_ctl.cpp
+	src/np/imps/np_imps_core_notif.cpp
+	src/np/imps/np_imps_core_session.cpp
+	src/np/imps/np_imps_util_mpstate.cpp
+	src/np/imps/np_imps_util_server.cpp
+	src/np/ipc/jga_msg_server.cpp
+	src/np/ipc/npauth_ipc_server.cpp
+	src/np/ipc/npcommerce2_session_mgr.cpp
+	src/np/ipc/npmanager/ipc_server/npmanager_ipc_server.cpp
+	src/np/ipc/npparty/server/np_party_ipc_server.cpp
+	src/np/ipc/npparty/server/np_party_vsh_service.cpp
+	src/np/ipc/nptrophy/nptrophy_notify.cpp
+	src/np/ipc/rt_netinfo_udpp2p.cpp
+	src/np/manager/np_manager_core.cpp
+	src/np/np_ipc2/np_ipc2_server.cpp
+	src/np/np_push_vsh/service/np_push_ipc_data.cpp
+	src/np/np_push_vsh/service/np_push_ipc_server.cpp
+	src/np/np_websocket/np_websocket_net.cpp
+	src/np/polling/np_polling.cpp
+	src/np/rt/np_rt_basic.cpp
+	src/np/rt/np_rt_core.cpp
+	src/np/rt/np_rt_ext.cpp
+	src/np/rt/np_rt_xmpp.cpp
+	src/np/sns_fb/np_sns_fb_lib.cpp
+	src/np/sns_fb/np_sns_fb_server.cpp
+	src/np/sns_fb/np_sns_fb_util.cpp
+	src/nsx/nsx_whats_new.cpp
+	src/patch_chk_plugin/bgdl_patch_client.cpp
+	src/patch_chk_plugin/game_update.cpp
+	src/shell_svc/src/shell_svc_activity_client.cpp
+	src/sysupchk_plugin/sysupchk_np.cpp
+	src/telephony_plugin/src/sms_pdu_transcoder/src/sms_pdu_transcoder/amsslib/LibWMS.cpp
+	src/topmenu_plugin/src/spawn_process_job.cpp
+	src/topmenu_plugin/src/top_window.cpp
+	src/trigger_mgr/trigger_mgr.cpp
+	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=0)
 # the SDK's start code
 if(FW_VERSION STREQUAL "0x03630011")
 	set(SHELL_CRT0_SDK_VERSION 0x03630011)

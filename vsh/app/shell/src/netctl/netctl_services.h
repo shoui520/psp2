@@ -32,7 +32,7 @@ int sceHttpSetIcmOption(SceInt32 reqId, SceInt32 option);
 int sceErrorHistorySetDefaultFormat(const void *format);
 
 /* SceVshBridge */
-int vshSblSsDecryptWithPortability(int keyType, const void *iv, const void *inBuf, void *outBuf);
+int vshSblSsDecryptWithPortability(SceUInt32 mode, const void *iv, const void *inBuf, void *outBuf);
 
 /* Statically linked HMAC-SHA1 and MD5 helpers in SceShell */
 int sceHmacSha1Digest(const void *key, SceSize keyLen, const void *data, SceSize dataLen,

@@ -39,7 +39,7 @@ int _vshDisplayGetActualViewportConf(SceUInt32 head, SceUInt32 plane,
 int _vshSysconLogReadData(int id, void *buf, const SyscallSizeArgs *args);
 int _vshSysconGetTemperatureLog(SceUInt8 *log);
 int _vshSblSsGetNvsData(int area, void *buf, const SyscallSizeArgs *args);
-int _vshSblSsDecryptWithPortability(int keyType, const void *iv, const void *inBuf, void *outBuf);
+int _vshSblSsDecryptWithPortability(SceUInt32 mode, const void *iv, const void *inBuf, void *outBuf);
 #if defined(FW_TYPE_CEX)
 int _vshNpDrmEbootSigGenPsp(const char *ebootPath, const void *sha256, void *signature,
 			    const VshEbootSigGenArgs *args);
@@ -132,9 +132,9 @@ SceUInt32 vshSblSsGetNvsData(int area, void *buf, SceSize size)
 }
 
 /* 0x81417D20 */
-int vshSblSsDecryptWithPortability(int keyType, const void *iv, const void *inBuf, void *outBuf)
+int vshSblSsDecryptWithPortability(SceUInt32 mode, const void *iv, const void *inBuf, void *outBuf)
 {
-	return _vshSblSsDecryptWithPortability(keyType, iv, inBuf, outBuf);
+	return _vshSblSsDecryptWithPortability(mode, iv, inBuf, outBuf);
 }
 
 #if defined(FW_TYPE_CEX)

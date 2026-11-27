@@ -26,8 +26,6 @@ extern int sceRegMgrGetKeyBin(const char *category, const char *name,
 extern int sceHttpsEnableOptionPrivate(int tmplId, SceUInt32 sslFlags);
 extern int sceHttpsDisableOptionPrivate(int tmplId, SceUInt32 sslFlags);
 extern int vshSblAimgrGetConsoleId(void *consoleId);
-extern int vshSblSsDecryptWithPortability(int keyType, const void *iv,
-					  const void *inBuf, void *outBuf);
 extern int vshSblSsCreatePassPhrase(const void *inData, void *outPhrase);
 }
 
