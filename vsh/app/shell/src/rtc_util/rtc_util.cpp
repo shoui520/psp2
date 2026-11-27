@@ -248,7 +248,7 @@ static const int s_timeZoneIndexMap[RTC_UTIL_TIMEZONE_COUNT] = {
 };
 
 /* 0x81365B74 */
-static const RtcTimeZoneEntry *rtcUtilGetTimeZoneEntry(unsigned int regTimeZone)
+static __attribute__((noinline)) const RtcTimeZoneEntry *rtcUtilGetTimeZoneEntry(unsigned int regTimeZone)
 {
 	if (regTimeZone >= RTC_UTIL_TIMEZONE_COUNT)
 		regTimeZone = RTC_UTIL_DEFAULT_TIMEZONE;
@@ -320,10 +320,10 @@ static int rtcUtilResolveTransitionDate(SceUInt16 targetYear,
 }
 
 /* 0x813654D4: test whether localTime falls inside [dstStart, dstEnd) with adjustment mode */
-static int rtcUtilIsInDstRange(const SceDateTime *localTime,
+static __attribute__((noinline)) int rtcUtilIsInDstRange(const SceDateTime *localTime,
 			       const RtcDstTransitionSpec *startSpec,
 			       const RtcDstTransitionSpec *endSpec,
-			       int adjustMode, bool *outInDst)
+			       int adjustMode, SceBool *outInDst)
 {
 	if (localTime == NULL || startSpec == NULL || endSpec == NULL || outInDst == NULL)
 		return -1;
@@ -383,14 +383,14 @@ static int rtcUtilIsInDstRange(const SceDateTime *localTime,
 
 	int cmpStart = sceRtcCompareTick(&startTick, &currentTick);
 	int cmpEnd = sceRtcCompareTick(&currentTick, &endTick);
-	*outInDst = ((cmpStart == 0 || cmpStart == -1) && cmpEnd == -1);
+	*outInDst = ((cmpStart == 0 || cmpStart == -1) && cmpEnd == -1) ? SCE_TRUE : SCE_FALSE;
 	return 0;
 }
 
 /* 0x81365632: check primary DST range and exclude any Ramadan suspension window */
-static int rtcUtilCheckDstActive(int regTimeZone, const SceDateTime *localTime,
+static __attribute__((noinline)) int rtcUtilCheckDstActive(int regTimeZone, const SceDateTime *localTime,
 				 const RtcTimeZoneEntry *tzEntry,
-				 int adjustMode, bool *outInDst)
+				 int adjustMode, SceBool *outInDst)
 {
 	if (localTime == NULL || tzEntry == NULL || outInDst == NULL)
 		return -1;
@@ -404,7 +404,7 @@ static int rtcUtilCheckDstActive(int regTimeZone, const SceDateTime *localTime,
 		for (unsigned int i = 0; i < RTC_UTIL_DST_SKIP_RULE_COUNT; ++i) {
 			const RtcDstSkipRule *skipRule = rtcUtilGetDstSkipRule(i, regTimeZone);
 			if (skipRule != NULL) {
-				bool inSkipWindow = false;
+				SceBool inSkipWindow = SCE_FALSE;
 				int skipAdjust = 0;
 				if (adjustMode == 1)
 					skipAdjust = 3;
@@ -417,7 +417,7 @@ static int rtcUtilCheckDstActive(int regTimeZone, const SceDateTime *localTime,
 					return -1;
 				}
 				if (inSkipWindow) {
-					*outInDst = false;
+					*outInDst = SCE_FALSE;
 					return 0;
 				}
 			}
@@ -427,7 +427,7 @@ static int rtcUtilCheckDstActive(int regTimeZone, const SceDateTime *localTime,
 }
 
 /* 0x813656E8: resolve effective timezone entry, applying any year-specific exception */
-static int rtcUtilResolveTimeZoneRule(int regTimeZone, const SceDateTime *localTime,
+static __attribute__((noinline)) int rtcUtilResolveTimeZoneRule(int regTimeZone, const SceDateTime *localTime,
 				      RtcTimeZoneEntry *outEntry)
 {
 	const RtcTimeZoneEntry *baseEntry = rtcUtilGetTimeZoneEntry((unsigned int)regTimeZone);
@@ -602,7 +602,7 @@ int shellRtcUtilSync(bool fromCallback)
 	rtcUtilResolveTimeZoneRule(timeZone, &localTime, &resolvedTz);
 
 	if (autoSummerTime == 1 && resolvedTz.hasDst == 1) {
-		bool inDst = false;
+		SceBool inDst = SCE_FALSE;
 		int adjustMode = (summerTime == 1) ? 1 : 2;
 		if (rtcUtilCheckDstActive(timeZone, &localTime, &resolvedTz,
 					  adjustMode, &inDst) == 0) {

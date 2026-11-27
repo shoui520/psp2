@@ -165,8 +165,8 @@ static inline SceUInt64 consoleInfoSwap64(SceUInt64 v)
 	       ((v & 0x00FF000000000000ULL) >> 40) | ((v & 0xFF00000000000000ULL) >> 56);
 }
 
-/* the size of a record file's path */
-#define CONSOLE_INFO_FILE_PATH_SIZE	64
+/* the size of a record file's path (64 bytes + NUL terminator) */
+#define CONSOLE_INFO_FILE_PATH_SIZE	65
 
 /* the record files' mode, and how one is opened to be written (SCE_O_*) */
 #define CONSOLE_INFO_FILE_MODE		6
@@ -200,7 +200,7 @@ public:
 	paf::common::SharedPtr<paf::File> m_file;
 	const char *m_name;
 	SceUInt8 m_recordSize;
-	bool m_created;
+	SceUInt8 m_openCount;
 	int m_opened;
 };
 

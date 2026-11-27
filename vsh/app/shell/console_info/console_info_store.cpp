@@ -54,7 +54,7 @@ static void ensureConsoleInfoDir(void)
 ConsoleInfoFile::ConsoleInfoFile(const char *name, SceUInt8 recordSize)
 	: m_name(name),
 	  m_recordSize(recordSize),
-	  m_created(false),
+	  m_openCount(0),
 	  m_opened(0)
 {
 }
@@ -64,9 +64,8 @@ static int consoleInfoFileClose(ConsoleInfoFile *self)
 {
 	if (self->m_file.get() == NULL)
 		return SCE_ERROR_ERRNO_ESTALE;
-	unsigned int refCount = static_cast<unsigned int>(self->m_created);
-	if (refCount > 1) {
-		self->m_created = static_cast<bool>(refCount - 1);
+	if (self->m_openCount > 1) {
+		self->m_openCount--;
 		return 0;
 	}
 	int ret = self->m_file->Close();
@@ -78,7 +77,7 @@ static int consoleInfoFileClose(ConsoleInfoFile *self)
 static int consoleInfoFileOpen(ConsoleInfoFile *self)
 {
 	if (self->m_file.get() != NULL) {
-		self->m_created = static_cast<bool>(static_cast<unsigned int>(self->m_created) + 1);
+		self->m_openCount++;
 		return 0;
 	}
 
@@ -348,7 +347,7 @@ static int consoleInfoEnqueueJob(ConsoleInfoWriterJob *job)
 }
 
 /* (0x81376F7A) Enqueues an async 32-bit write or saturating add */
-static int consoleInfoEnqueueInt(int op, int index, SceUInt32 value)
+static __attribute__((noinline)) int consoleInfoEnqueueInt(int op, int index, SceUInt32 value)
 {
 	SceUInt32 *copy = static_cast<SceUInt32 *>(operator new(sizeof(SceUInt32)));
 	if (copy == NULL)
@@ -361,7 +360,7 @@ static int consoleInfoEnqueueInt(int op, int index, SceUInt32 value)
 }
 
 /* (0x81377004) Enqueues an async 64-bit write or saturating add */
-static int consoleInfoEnqueueInt64(int op, int index, SceUInt64 value)
+static __attribute__((noinline)) int consoleInfoEnqueueInt64(int op, int index, SceUInt64 value)
 {
 	SceUInt64 *copy = static_cast<SceUInt64 *>(operator new(sizeof(SceUInt64)));
 	if (copy == NULL)
