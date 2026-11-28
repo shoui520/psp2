@@ -16,6 +16,7 @@
 
 #include "musiccore_player_base.h"
 #include "musiccore_db_manager.h"
+#include "src/livespace_db/lsdb_keys.h"
 
 extern "C" {
 void *sce_paf_memset(void *dst, int val, size_t size);

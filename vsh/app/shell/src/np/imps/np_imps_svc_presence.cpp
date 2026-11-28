@@ -11,6 +11,7 @@
 #include <std/stdio.h>
 #include <std/string>
 #include <rtc/rtc.h>
+#include "src/livespace_db/lsdb_keys.h"
 #include "np_imps_svc.h"
 
 /* AppMgr / RegMgr / LSDB / VSH Kernel imports used by NpImpsSvcMyPresence */

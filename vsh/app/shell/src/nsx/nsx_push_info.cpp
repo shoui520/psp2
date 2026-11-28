@@ -16,6 +16,7 @@
 #include <common/string_util.h>
 #include <datetime/datetime.h>
 #include <file/httpfile.h>
+#include "src/livespace_db/lsdb_keys.h"
 #include <file/localfile.h>
 #include <rtc/rtc.h>
 #include <system/system.h>

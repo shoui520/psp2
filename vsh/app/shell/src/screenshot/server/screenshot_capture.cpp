@@ -4,6 +4,7 @@
  * 3.65-CEX: 0x81246A78 - 0x81248435, 0x8142A6E8 - 0x8142A810
  */
 #include "screenshot_server.h"
+#include "src/livespace_db/lsdb_keys.h"
 
 #include <stddef.h>
 #include <scetypes.h>

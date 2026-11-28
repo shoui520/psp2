@@ -10,6 +10,7 @@
 #include <widget/w_scroll_view_base.h>
 #include "../../../../paf/include/rtc/rtc.h"
 #include "../../plugins.h"
+#include "src/livespace_db/lsdb_keys.h"
 #include "patch_chk_internal.h"
 
 using namespace paf;

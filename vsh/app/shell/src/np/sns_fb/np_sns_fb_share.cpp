@@ -12,6 +12,7 @@
 #include <versatileparam/idparam.h>
 #include <common/char_encoding.h>
 #include "../../../plugins.h"
+#include "src/livespace_db/lsdb_keys.h"
 
 /* livearea_plugin localized string resource hashes for Facebook sharing */
 #define FB_STR_PURCHASE_GAME_NORMAL		0x0F5733A2u	/*  257373282 */

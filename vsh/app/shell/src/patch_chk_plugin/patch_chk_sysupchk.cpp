@@ -6,6 +6,7 @@
 #include <scetypes.h>
 #include <plugin.h>
 #include "../../sysupchk.h"
+#include "src/livespace_db/lsdb_keys.h"
 #include "patch_chk_internal.h"
 
 using namespace paf;

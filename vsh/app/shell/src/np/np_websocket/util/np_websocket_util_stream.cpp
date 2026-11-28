@@ -136,6 +136,38 @@ bool WsStream::IsControlOpcode(int opcode)
 	return (opcode & 0x8) != 0;
 }
 
+/* 0x813FDDD8: Parse RFC 6455 reserved header bits (RSV1/RSV2/RSV3) */
+int WsStream::ParseRsvBits(const SceUInt8 *buf, SceSize bufLen, SceSize offset,
+			   bool *outRsvFirst, bool *outRsvSecond, bool *outRsvThird) const
+{
+	if (offset + 1U > bufLen)
+		return 1;
+
+	SceUInt8 headerByte = buf[offset];
+	*outRsvFirst = (headerByte & 0x40U) != 0;
+	*outRsvSecond = (headerByte & 0x20U) != 0;
+	*outRsvThird = (headerByte & 0x10U) != 0;
+	return 0;
+}
+
+/* 0x813FE08A: Extract 4-byte masking key from RFC 6455 frame header */
+int WsStream::ParseMaskKey(const SceUInt8 *buf, SceSize bufLen, SceSize offset,
+			   SceUInt64 payloadLen, int lenCode, SceUInt32 *outMaskKey) const
+{
+	(void)payloadLen;
+	SceSize maskOffset = 2U;
+	if (lenCode == 126)
+		maskOffset = 4U;
+	else if (lenCode == 127)
+		maskOffset = 10U;
+
+	if (offset + maskOffset + 4U > bufLen)
+		return 1;
+
+	sceClibMemcpy_safe(outMaskKey, buf + offset + maskOffset, sizeof(*outMaskKey));
+	return 0;
+}
+
 /* 0x813FDF02: Parse 7-bit, 16-bit, or 64-bit network-order payload length */
 int WsStream::ParsePayloadLength(const SceUInt8 *buf, SceSize bufLen, SceSize offset,
 				 SceUInt64 *outLength, int *outRawLenCode)
@@ -218,6 +250,15 @@ int WsStream::ParseFrameAtIndex(int frameIndex, const SceUInt8 *buf, SceSize buf
 	if (offset + 2U > bufLen)
 		return 1;
 
+	bool rsvFirst = false;
+	bool rsvSecond = false;
+	bool rsvThird = false;
+	ret = ParseRsvBits(buf, bufLen, offset, &rsvFirst, &rsvSecond, &rsvThird);
+	if (ret != 0)
+		return ret;
+	if (rsvFirst || rsvSecond || rsvThird)
+		return SCE_NP_WS_ERROR_PROTOCOL;
+
 	int fin = (buf[offset] & 0x80U) != 0 ? 1 : 0;
 	int opcode = buf[offset] & 0x0F;
 	if (IsControlOpcode(opcode) && fin == 0)
@@ -241,9 +282,9 @@ int WsStream::ParseFrameAtIndex(int frameIndex, const SceUInt8 *buf, SceSize buf
 
 	SceUInt32 maskKey = 0;
 	if (masked != 0) {
-		if (offset + headerLen + 4U > bufLen)
-			return 1;
-		sceClibMemcpy_safe(&maskKey, buf + offset + headerLen, sizeof(maskKey));
+		ret = ParseMaskKey(buf, bufLen, offset, payloadLen, lenCode, &maskKey);
+		if (ret != 0)
+			return ret;
 		headerLen += 4U;
 	}
 

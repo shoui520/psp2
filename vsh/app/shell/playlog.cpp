@@ -16,6 +16,7 @@
 #include <appmgr/appmgr.h>
 #include <regmgr/regmgr.h>
 #include "shell.h"
+#include "src/livespace_db/lsdb_keys.h"
 
 extern "C" {
 extern int sceKernelGetProcessTime(SceKernelSysClock *sysClock);

@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <scetypes.h>
 #include <std/string.h>
+#include "src/livespace_db/lsdb_keys.h"
 #include "patch_chk_internal.h"
 
 using namespace paf;

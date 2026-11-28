@@ -15,6 +15,7 @@
 #include <common/string_util.h>
 #include <file/httpfile.h>
 #include <rtc/rtc.h>
+#include "src/livespace_db/lsdb_keys.h"
 #include "nsx_internal.h"
 
 struct SceKernelSystemSwVersion {
@@ -31,27 +32,29 @@ extern paf::string SceLsdb_88FDC55C(int source);
 extern int SceLsdb_D8DF91EE(paf::rtc::Tick *tick);
 }
 
-const char *const kNsxTagRoot = "nsx";
-const char *const kNsxAttrMinSysVer = "min-sys-ver";
-const char *const kNsxTagSpace = "spc";
-const char *const kNsxAttrId = "id";
-const char *const kNsxTagMaterial = "mtrl";
-const char *const kNsxAttrAnnotation = "anno";
-const char *const kNsxAttrValidFrom = "from";
-const char *const kNsxAttrValidUntil = "until";
-const char *const kNsxAttrLastModified = "lastm";
-const char *const kNsxTagDesc = "desc";
-const char *const kNsxTagUrl = "url";
-const char *const kNsxTagTarget = "target";
-const char *const kNsxAttrTargetType = "type";
-const char *const kNsxTagCountry = "cntry";
-const char *const kNsxAttrMinAge = "agelmt";
-const char *const kNsxAttrMaxAge = "uagelmt";
-const char *const kNsxTagLang = "lang";
-const char *const kNsxAnnoOperator = "operator";
-const char *const kNsxAnnoEmergency = "emergency";
-const char *const kNsxAnnoPicks = "picks";
-const char *const kNsxAnnoEnabledValue = "1";
+const paf::string kNsxTagRoot("nsx");
+const paf::string kNsxAttrMinSysVer("min-sys-ver");
+const paf::string kNsxTagSpace("spc");
+const paf::string kNsxAttrId("id");
+const paf::string kNsxTagMaterial("mtrl");
+const paf::string kNsxAttrMaterialId("id");
+const paf::string kNsxAttrAnnotation("anno");
+const paf::string kNsxAttrValidFrom("from");
+const paf::string kNsxAttrValidUntil("until");
+const paf::string kNsxAttrLastModified("lastm");
+const paf::string kNsxTagDesc("desc");
+const paf::string kNsxTagUrl("url");
+const paf::string kNsxTagTarget("target");
+const paf::string kNsxAttrTargetType("type");
+const paf::string kNsxTagCountry("cntry");
+const paf::string kNsxAttrMinAge("agelmt");
+const paf::string kNsxAttrMaxAge("uagelmt");
+const paf::string kNsxTagLang("lang");
+const paf::string kNsxAnnoOperator("operator");
+const paf::string kNsxAnnoEmergency("emergency");
+const paf::string kNsxAnnoPicks("picks");
+const paf::string kNsxAnnoEnabledValue("1");
+const paf::string kNsxAnnoPicksEnabledValue("1");
 
 /* 0x8122CC58 */
 void nsxFreeMaterialList(paf::vector<NsxMaterialItem *> *materials)

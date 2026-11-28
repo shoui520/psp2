@@ -51,6 +51,11 @@ extern NsxXmlSaxParser *shellXmlSaxCreate(NsxXmlSaxParser *parser, NsxXmlNode *r
 extern NsxXmlSaxParser *shellXmlSaxDestroy(NsxXmlSaxParser *parser);
 extern int shellXmlSaxParse(NsxXmlSaxParser *parser, const char *chunk, SceSize size, bool isFinal);
 extern const paf::string *shellXmlNodeGetAttr(const NsxXmlNode *node, const char *attrName);
+static inline const paf::string *shellXmlNodeGetAttr(const NsxXmlNode *node,
+						     const paf::string &attrName)
+{
+	return shellXmlNodeGetAttr(node, attrName.c_str());
+}
 extern int shellXmlNodeSerialize(paf::string *outXml, const NsxXmlNode *node, SceUInt32 indent);
 
 /* Parsed <mtrl> element (88 bytes) */
@@ -109,27 +114,29 @@ protected:
 };
 
 /* Shared XML tag names (0x815AA460..0x815AA568) */
-extern const char *const kNsxTagRoot;
-extern const char *const kNsxAttrMinSysVer;
-extern const char *const kNsxTagSpace;
-extern const char *const kNsxAttrId;
-extern const char *const kNsxTagMaterial;
-extern const char *const kNsxAttrAnnotation;
-extern const char *const kNsxAttrValidFrom;
-extern const char *const kNsxAttrValidUntil;
-extern const char *const kNsxAttrLastModified;
-extern const char *const kNsxTagDesc;
-extern const char *const kNsxTagUrl;
-extern const char *const kNsxTagTarget;
-extern const char *const kNsxAttrTargetType;
-extern const char *const kNsxTagCountry;
-extern const char *const kNsxAttrMinAge;
-extern const char *const kNsxAttrMaxAge;
-extern const char *const kNsxTagLang;
-extern const char *const kNsxAnnoOperator;
-extern const char *const kNsxAnnoEmergency;
-extern const char *const kNsxAnnoPicks;
-extern const char *const kNsxAnnoEnabledValue;
+extern const paf::string kNsxTagRoot;
+extern const paf::string kNsxAttrMinSysVer;
+extern const paf::string kNsxTagSpace;
+extern const paf::string kNsxAttrId;
+extern const paf::string kNsxTagMaterial;
+extern const paf::string kNsxAttrMaterialId;
+extern const paf::string kNsxAttrAnnotation;
+extern const paf::string kNsxAttrValidFrom;
+extern const paf::string kNsxAttrValidUntil;
+extern const paf::string kNsxAttrLastModified;
+extern const paf::string kNsxTagDesc;
+extern const paf::string kNsxTagUrl;
+extern const paf::string kNsxTagTarget;
+extern const paf::string kNsxAttrTargetType;
+extern const paf::string kNsxTagCountry;
+extern const paf::string kNsxAttrMinAge;
+extern const paf::string kNsxAttrMaxAge;
+extern const paf::string kNsxTagLang;
+extern const paf::string kNsxAnnoOperator;
+extern const paf::string kNsxAnnoEmergency;
+extern const paf::string kNsxAnnoPicks;
+extern const paf::string kNsxAnnoEnabledValue;
+extern const paf::string kNsxAnnoPicksEnabledValue;
 
 /* Shared NSX helpers (nsx_xml_http.cpp) */
 int nsxHttpOpenIfModified(paf::HttpFile *httpFile, const char *url, const SceUInt64 *ifModifiedTick);

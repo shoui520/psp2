@@ -16,6 +16,7 @@
 #include <regmgr/regmgr.h>
 #include "shell.h"
 #include "plugins.h"
+#include "src/livespace_db/lsdb_keys.h"
 
 extern "C" {
 extern int sceKernelCreateCallback(const char *name, SceUInt32 attr,

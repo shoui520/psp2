@@ -972,6 +972,25 @@ int WsNet::DestroyEpoll(SceNetId epollId)
 	return m_impl->DestroyEpoll(epollId);
 }
 
+/* 0x81400A14 */
+int WsNet::ControlResolverEpoll(SceNetId epollId, SceNetEpollEvent *event, int opMode)
+{
+	SceNetId rid = 0;
+	{
+		Push::ScopedLock lock(&m_mutex);
+		if (m_resolverId == 0)
+			return SCE_NP_WS_ERROR_INVALID_STATE;
+		rid = m_resolverId;
+	}
+
+	int epollOp = SCE_NET_EPOLL_CTL_ADD;
+	if (opMode == 2)
+		epollOp = SCE_NET_EPOLL_CTL_MOD;
+	else if (opMode == 3)
+		epollOp = SCE_NET_EPOLL_CTL_DEL;
+	return m_impl->ControlEpoll(epollId, epollOp, rid, event);
+}
+
 /* 0x81400AEA */
 int WsNet::ControlSocketEpoll(SceNetId epollId, SceNetEpollEvent *event, int opMode)
 {

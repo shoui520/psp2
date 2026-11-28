@@ -199,6 +199,7 @@ public:
 
 	SceNetId CreateEpoll(const char *name);
 	int DestroyEpoll(SceNetId epollId);
+	int ControlResolverEpoll(SceNetId epollId, SceNetEpollEvent *event, int opMode);
 	int ControlSocketEpoll(SceNetId epollId, SceNetEpollEvent *event, int opMode);
 	int WaitEpoll(SceNetId epollId, SceNetEpollEvent *events, int maxEvents, int timeoutUsec);
 	int AbortEpoll(SceNetId epollId);
@@ -305,8 +306,12 @@ private:
 	int AdvanceFrameOffset(SceSize currentOffset, SceSize *outNextOffset,
 			       const SceUInt8 *buf, SceSize bufLen) const;
 	static bool IsControlOpcode(int opcode);
+	int ParseRsvBits(const SceUInt8 *buf, SceSize bufLen, SceSize offset,
+			 bool *outRsvFirst, bool *outRsvSecond, bool *outRsvThird) const;
 	static int ParsePayloadLength(const SceUInt8 *buf, SceSize bufLen, SceSize offset,
 				      SceUInt64 *outLength, int *outRawLenCode);
+	int ParseMaskKey(const SceUInt8 *buf, SceSize bufLen, SceSize offset,
+			 SceUInt64 payloadLen, int lenCode, SceUInt32 *outMaskKey) const;
 
 	WsNet *m_net;
 	NpPushAllocator *m_allocator;

@@ -16,6 +16,7 @@
 #include <common/string_util.h>
 #include <datetime/datetime.h>
 #include <dir/dir.h>
+#include "src/livespace_db/lsdb_keys.h"
 #include <file/httpfile.h>
 #include <file/localfile.h>
 #include <job/job.h>
