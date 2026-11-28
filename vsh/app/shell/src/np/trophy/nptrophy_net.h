@@ -370,7 +370,8 @@ public:
 
 	void Reset();
 	int Append(const char *chars, SceSize length);
-	void MarkComplete() { m_completed = 1; }
+	int AppendText(const char *chars, SceSize length);
+	void MarkComplete();
 	int ParseTick(SceRtcTick *outUtc);
 
 private:
@@ -465,9 +466,10 @@ public:
 	TrophyXmlRpcBase();
 	virtual ~TrophyXmlRpcBase();
 
-	void SetTimeouts(const TrophyHttpTimeouts *timeouts) { m_timeouts = *timeouts; }
+	int SetTimeouts(const TrophyHttpTimeouts *timeouts);
 
 protected:
+	int InitBaseDoc();
 	int BeginRequestDoc(TrophyHandle *handle, const SceNpId *npId);
 	int SendRequestDoc(TrophyHandle *handle, TrophyNetClient *netClient, const char *path,
 			   bool useHttps);
@@ -567,7 +569,7 @@ public:
 	int Init(uint32_t maxTrophies);
 	int FindTrophyUnlock(int trophyId, uint64_t *outServerTick, int *outUnlocked) const;
 	bool HasTrophyUnlock(int trophyId) const;
-	void GetLastUpdated(uint64_t *outTick) const { *outTick = m_meta.lastUpdated.tick; }
+	int GetLastUpdated(uint64_t *outTick) const;
 
 	TrophySyncResultTitleMeta m_meta;
 	uint32_t m_unlockCount;

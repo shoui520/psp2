@@ -176,6 +176,7 @@ static int parseHexResultCode(const char *str)
 	return static_cast<int>((code & 0xFFu) | 0x80551800u);
 }
 
+/* 0x812E518E */
 static uint64_t parseUnsignedBase(const char *str, int base)
 {
 	if (str == NULL)
@@ -184,8 +185,14 @@ static uint64_t parseUnsignedBase(const char *str, int base)
 	uint64_t acc = 0;
 	if (base == 16) {
 		while ((sceClibLookCtypeTable(*str) & 0x44) != 0) {
-			int nibble = npTrophyHexDigitValue(*str);
-			acc = (acc << 4) + static_cast<uint64_t>(nibble >= 0 ? nibble : 0);
+			int ch = *str;
+			acc *= 16u;
+			if (ch >= '0' && ch <= '9')
+				acc += static_cast<uint64_t>(ch - '0');
+			else if (ch >= 'A' && ch <= 'F')
+				acc += static_cast<uint64_t>(ch - 'A' + 10);
+			else if (ch >= 'a' && ch <= 'f')
+				acc += static_cast<uint64_t>(ch - 'a' + 10);
 			++str;
 		}
 	} else if (base == 10) {
@@ -311,12 +318,18 @@ static int parseBoolTrueStr(const char *str, int *outValue)
 	return 0;
 }
 
-static void accumulateDecimalDigits(uint32_t *ioValue, const char *chars, SceSize length)
+/* 0x812E5484 */
+static int accumulateDecimalDigits(uint32_t *ioValue, const char *chars, SceSize length)
 {
+	(void)length;
 	uint32_t val = *ioValue;
-	for (SceSize i = 0; i < length && (sceClibLookCtypeTable(chars[i]) & 4) != 0; ++i)
-		val = val * 10u + static_cast<uint32_t>(chars[i] - '0');
+	const char *cursor = chars;
+	while ((sceClibLookCtypeTable(*cursor) & 4) != 0) {
+		val = val * 10u + static_cast<uint32_t>(*cursor - '0');
+		++cursor;
+	}
 	*ioValue = val;
+	return 0;
 }
 
 static int parseRarityAttrs(TrophySyncResultRarity *outRarity, const BxceAttributeList *attrs)
@@ -383,177 +396,132 @@ struct ModifiedPrivacyNode : public TrophyHeapObject {
 	TrophyModifiedPrivacyEntry entry;
 	TrophyXmlDateAccumulator dateAcc;
 
-	ModifiedPrivacyNode() : next(NULL), prev(NULL), dateAcc(true)
-	{
-		sceClibMemset(&entry, 0, sizeof(entry));
-	}
+	ModifiedPrivacyNode();
+	int ParseInfoAttrs(const BxceAttributeList *attrs);
+	int BeginLastUpdated();
+	int AppendLastUpdated(const char *chars, SceSize length);
+	int EndLastUpdated();
 };
+
+ModifiedPrivacyNode::ModifiedPrivacyNode() : next(NULL), prev(NULL), dateAcc(true)
+{
+	sceClibMemset(&entry, 0, sizeof(entry));
+}
+
+/* 0x812E6154 */
+int ModifiedPrivacyNode::ParseInfoAttrs(const BxceAttributeList *attrs)
+{
+	BxceAttr *commAttr = ScebXCe_2AD8DA26(attrs, "npcommid", 8);
+	if (commAttr == NULL)
+		return NP_TROPHY_ERR_XML_PARSE_ERROR;
+	int ret = SceNpCommon_5BC54899(&entry.commId, commAttr->value);
+	if (ret < 0)
+		return ret;
+	BxceAttr *pfAttr = ScebXCe_2AD8DA26(attrs, "pf", 2);
+	if (pfAttr == NULL)
+		return NP_TROPHY_ERR_XML_PARSE_ERROR;
+	ret = parseSinglePlatformName(pfAttr->value, &entry.platform);
+	if (ret < 0)
+		return ret;
+	return 0;
+}
+
+/* 0x812E61B6 */
+int ModifiedPrivacyNode::BeginLastUpdated()
+{
+	dateAcc.Reset();
+	return 0;
+}
+
+/* 0x812E61C2 */
+int ModifiedPrivacyNode::AppendLastUpdated(const char *chars, SceSize length)
+{
+	int ret = dateAcc.Append(chars, length);
+	return (ret >= 0) ? 0 : ret;
+}
+
+/* 0x812E61D4 */
+int ModifiedPrivacyNode::EndLastUpdated()
+{
+	dateAcc.MarkComplete();
+	return 0;
+}
 
 struct ModifiedPrivacyList {
 	ModifiedPrivacyNode *head;
 	ModifiedPrivacyNode *tail;
 
-	ModifiedPrivacyList() : head(NULL), tail(NULL) {}
-	~ModifiedPrivacyList() { Clear(); }
-
-	void Clear()
-	{
-		while (head != NULL) {
-			ModifiedPrivacyNode *node = head;
-			head = node->next;
-			delete node;
-		}
-		tail = NULL;
-	}
-
-	int AppendNew(ModifiedPrivacyNode **outNode)
-	{
-		ModifiedPrivacyNode *node = new ModifiedPrivacyNode();
-		if (node == NULL)
-			return NP_TROPHY_ERR_OUT_OF_MEMORY;
-		node->prev = tail;
-		if (tail != NULL)
-			tail->next = node;
-		if (head == NULL)
-			head = node;
-		tail = node;
-		*outNode = node;
-		return 0;
-	}
-
-	int CopyOut(TrophyModifiedPrivacyEntry **outSlots, uint32_t maxSlots, uint32_t *outCount)
-	{
-		uint32_t count = 0;
-		for (ModifiedPrivacyNode *cur = head; cur != NULL; cur = cur->next) {
-			if (count >= maxSlots)
-				return NP_TROPHY_ERR_INVALID_ARGUMENT;
-			if (cur->entry.commId.IsEmpty())
-				return NP_TROPHY_ERR_XML_PARSE_ERROR;
-			int ret = cur->dateAcc.ParseTick(&cur->entry.lastUpdated);
-			if (ret < 0)
-				return ret;
-			sceClibMemcpy_safe(outSlots[count], &cur->entry, sizeof(cur->entry));
-			++count;
-		}
-		*outCount = count;
-		return 0;
-	}
+	ModifiedPrivacyList();
+	~ModifiedPrivacyList();
+	int AppendNew(ModifiedPrivacyNode **outNode);
+	int CopyOut(TrophyModifiedPrivacyEntry **outSlots, uint32_t maxSlots, uint32_t *outCount);
 };
+
+ModifiedPrivacyList::ModifiedPrivacyList() : head(NULL), tail(NULL) {}
+
+/* 0x812E61E0 */
+ModifiedPrivacyList::~ModifiedPrivacyList()
+{
+	while (head != NULL) {
+		ModifiedPrivacyNode *node = head;
+		if (node->next != NULL)
+			node->next->prev = node->prev;
+		else
+			tail = node->prev;
+		if (node->prev != NULL)
+			node->prev->next = node->next;
+		else
+			head = node->next;
+		node->next = NULL;
+		node->prev = NULL;
+		delete node;
+	}
+}
+
+/* 0x812E6220 */
+int ModifiedPrivacyList::AppendNew(ModifiedPrivacyNode **outNode)
+{
+	ModifiedPrivacyNode *node = new ModifiedPrivacyNode();
+	if (node == NULL)
+		return NP_TROPHY_ERR_OUT_OF_MEMORY;
+	*outNode = node;
+	node->next = NULL;
+	node->prev = tail;
+	if (tail != NULL)
+		tail->next = node;
+	if (head == NULL)
+		head = node;
+	tail = node;
+	return 0;
+}
+
+/* 0x812E62A6 */
+int ModifiedPrivacyList::CopyOut(TrophyModifiedPrivacyEntry **outSlots, uint32_t maxSlots,
+				 uint32_t *outCount)
+{
+	uint32_t count = 0;
+	for (ModifiedPrivacyNode *cur = head; cur != NULL; cur = cur->next) {
+		if (count >= maxSlots)
+			return NP_TROPHY_ERR_INVALID_ARGUMENT;
+		if (cur->entry.commId.IsEmpty())
+			return NP_TROPHY_ERR_XML_PARSE_ERROR;
+		int ret = cur->dateAcc.ParseTick(&cur->entry.lastUpdated);
+		if (ret < 0)
+			return ret;
+		sceClibMemcpy_safe(outSlots[count], &cur->entry, sizeof(cur->entry));
+		++count;
+	}
+	*outCount = count;
+	return 0;
+}
 
 class ModifiedPrivacyXmlParser : public TrophyXmlResponseParserBase {
 public:
-	ModifiedPrivacyXmlParser()
-		: m_state(-1), m_totalCount(0), m_currentNode(NULL)
-	{
-	}
-	virtual ~ModifiedPrivacyXmlParser() {}
-
-	virtual int OnStartElement(const char *name, int length, const BxceAttributeList *attrs)
-	{
-		(void)length;
-		switch (m_state) {
-		case -1:
-			if (sceClibStrncmp(name, "nptrophy", 9) == 0) {
-				int ret = CheckResultAttribute(attrs);
-				if (ret < 0)
-					return ret;
-				m_state = 0;
-			}
-			return 0;
-		case 0:
-			if (sceClibStrncmp(name, "title", 6) == 0)
-				m_state = 1;
-			else if (sceClibStrncmp(name, "list", 5) == 0)
-				m_state = 2;
-			return 0;
-		case 1:
-		case 4:
-			return 0;
-		case 2:
-			if (sceClibStrncmp(name, "info", 5) == 0) {
-				int ret = m_list.AppendNew(&m_currentNode);
-				if (ret < 0)
-					return ret;
-				BxceAttr *commAttr = ScebXCe_2AD8DA26(attrs, "npcommid", 8);
-				if (commAttr == NULL)
-					return NP_TROPHY_ERR_XML_PARSE_ERROR;
-				ret = SceNpCommon_5BC54899(&m_currentNode->entry.commId,
-							   commAttr->value);
-				if (ret < 0)
-					return ret;
-				BxceAttr *pfAttr = ScebXCe_2AD8DA26(attrs, "pf", 2);
-				if (pfAttr == NULL)
-					return NP_TROPHY_ERR_XML_PARSE_ERROR;
-				ret = parseSinglePlatformName(pfAttr->value,
-							      &m_currentNode->entry.platform);
-				if (ret < 0)
-					return ret;
-				m_state = 3;
-			}
-			return 0;
-		case 3:
-			if (sceClibStrncmp(name, "last-updated", 13) == 0) {
-				m_currentNode->dateAcc.Reset();
-				m_state = 4;
-			}
-			return 0;
-		default:
-			return NP_TROPHY_ERR_GENERIC;
-		}
-	}
-
-	virtual int OnEndElement(const char *name, int length)
-	{
-		(void)length;
-		switch (m_state) {
-		case -1:
-			return 0;
-		case 0:
-			if (sceClibStrncmp(name, "nptrophy", 9) == 0)
-				m_state = -1;
-			return 0;
-		case 1:
-			if (sceClibStrncmp(name, "title", 6) == 0)
-				m_state = 0;
-			return 0;
-		case 2:
-			if (sceClibStrncmp(name, "list", 5) == 0)
-				m_state = 0;
-			return 0;
-		case 3:
-			if (sceClibStrncmp(name, "info", 5) == 0)
-				m_state = 2;
-			return 0;
-		case 4:
-			if (sceClibStrncmp(name, "last-updated", 13) == 0) {
-				m_currentNode->dateAcc.MarkComplete();
-				m_state = 3;
-			}
-			return 0;
-		default:
-			return NP_TROPHY_ERR_GENERIC;
-		}
-	}
-
-	virtual int OnCharacters(const char *chars, int length)
-	{
-		switch (m_state) {
-		case -1:
-		case 0:
-		case 2:
-			return 0;
-		case 1:
-			accumulateDecimalDigits(&m_totalCount, chars, static_cast<SceSize>(length));
-			return 0;
-		case 3:
-			m_currentNode = NULL;
-			return 0;
-		case 4:
-			return m_currentNode->dateAcc.Append(chars, static_cast<SceSize>(length));
-		default:
-			return NP_TROPHY_ERR_GENERIC;
-		}
-	}
+	ModifiedPrivacyXmlParser();
+	virtual ~ModifiedPrivacyXmlParser();
+	virtual int OnStartElement(const char *name, int length, const BxceAttributeList *attrs);
+	virtual int OnEndElement(const char *name, int length);
+	virtual int OnCharacters(const char *chars, int length);
 
 	ModifiedPrivacyList m_list;
 	int m_state;
@@ -561,48 +529,174 @@ public:
 	ModifiedPrivacyNode *m_currentNode;
 };
 
+ModifiedPrivacyXmlParser::ModifiedPrivacyXmlParser()
+	: m_state(-1), m_totalCount(0), m_currentNode(NULL)
+{
+}
+
+ModifiedPrivacyXmlParser::~ModifiedPrivacyXmlParser()
+{
+}
+
+int ModifiedPrivacyXmlParser::OnStartElement(const char *name, int length,
+					     const BxceAttributeList *attrs)
+{
+	(void)length;
+	switch (m_state) {
+	case -1:
+		if (sceClibStrncmp(name, "nptrophy", 9) == 0) {
+			int ret = CheckResultAttribute(attrs);
+			if (ret < 0)
+				return ret;
+			m_state = 0;
+		}
+		return 0;
+	case 0:
+		if (sceClibStrncmp(name, "title", 6) == 0)
+			m_state = 1;
+		else if (sceClibStrncmp(name, "list", 5) == 0)
+			m_state = 2;
+		return 0;
+	case 1:
+	case 4:
+		return 0;
+	case 2:
+		if (sceClibStrncmp(name, "info", 5) == 0) {
+			int ret = m_list.AppendNew(&m_currentNode);
+			if (ret < 0)
+				return ret;
+			ret = m_currentNode->ParseInfoAttrs(attrs);
+			if (ret < 0)
+				return ret;
+			m_state = 3;
+		}
+		return 0;
+	case 3:
+		if (sceClibStrncmp(name, "last-updated", 13) == 0) {
+			int ret = m_currentNode->BeginLastUpdated();
+			if (ret < 0)
+				return ret;
+			m_state = 4;
+		}
+		return 0;
+	default:
+		return NP_TROPHY_ERR_GENERIC;
+	}
+}
+
+int ModifiedPrivacyXmlParser::OnEndElement(const char *name, int length)
+{
+	(void)length;
+	switch (m_state) {
+	case -1:
+		return 0;
+	case 0:
+		if (sceClibStrncmp(name, "nptrophy", 9) == 0)
+			m_state = -1;
+		return 0;
+	case 1:
+		if (sceClibStrncmp(name, "title", 6) == 0)
+			m_state = 0;
+		return 0;
+	case 2:
+		if (sceClibStrncmp(name, "list", 5) == 0)
+			m_state = 0;
+		return 0;
+	case 3:
+		if (sceClibStrncmp(name, "info", 5) == 0)
+			m_state = 2;
+		return 0;
+	case 4:
+		if (sceClibStrncmp(name, "last-updated", 13) == 0) {
+			m_currentNode->EndLastUpdated();
+			m_state = 3;
+		}
+		return 0;
+	default:
+		return NP_TROPHY_ERR_GENERIC;
+	}
+}
+
+int ModifiedPrivacyXmlParser::OnCharacters(const char *chars, int length)
+{
+	switch (m_state) {
+	case -1:
+	case 0:
+	case 2:
+		return 0;
+	case 1:
+		return accumulateDecimalDigits(&m_totalCount, chars,
+					       static_cast<SceSize>(length));
+	case 3:
+		m_currentNode = NULL;
+		return 0;
+	case 4:
+		return m_currentNode->AppendLastUpdated(chars, static_cast<SceSize>(length));
+	default:
+		return NP_TROPHY_ERR_GENERIC;
+	}
+}
+
 class ModifiedPrivacyRpc : public TrophyXmlRpcBase {
 public:
+	ModifiedPrivacyRpc();
+	virtual ~ModifiedPrivacyRpc();
 	int Send(TrophyHandle *handle, TrophyNetClient *netClient, const SceNpId *npId,
-		 const SceRtcTick *sinceUtc, const uint32_t *paging, const uint32_t *platformMask)
-	{
-		int ret = BeginRequestDoc(handle, npId);
-		if (ret < 0)
-			return ret;
-		if (sinceUtc != NULL) {
-			ret = m_docBuilder.AppendDateTimeElement(0, "since", sinceUtc);
-			if (ret < 0)
-				return ret;
-		}
-		ret = m_docBuilder.AppendPagingElements(0, paging);
-		if (ret < 0)
-			return ret;
-		if (platformMask != NULL) {
-			ret = m_docBuilder.AppendPlatformMaskElements(0, *platformMask);
-			if (ret < 0)
-				return ret;
-		}
-		return SendRequestDoc(handle, netClient, "/trophy/sec/get_modified_title_privacy",
-				      true);
-	}
-
+		 const SceRtcTick *sinceUtc, const uint32_t *paging, const uint32_t *platformMask);
 	int Receive(TrophyHandle *handle, uint32_t *outCounts,
-		    TrophyModifiedPrivacyEntry **outSlots, uint32_t maxSlots)
-	{
-		ModifiedPrivacyXmlParser parser;
-		int ret = parser.InitParser();
-		if (ret < 0)
-			return ret;
-		ret = ReceiveAndParseResponse(handle, &parser);
-		if (ret < 0)
-			return ret;
-		ret = parser.m_list.CopyOut(outSlots, maxSlots, &outCounts[0]);
-		if (ret < 0)
-			return ret;
-		outCounts[1] = parser.m_totalCount;
-		return 0;
-	}
+		    TrophyModifiedPrivacyEntry **outSlots, uint32_t maxSlots);
 };
+
+/* 0x812E386E */
+ModifiedPrivacyRpc::ModifiedPrivacyRpc()
+{
+}
+
+ModifiedPrivacyRpc::~ModifiedPrivacyRpc()
+{
+}
+
+/* 0x812E38C2 */
+int ModifiedPrivacyRpc::Send(TrophyHandle *handle, TrophyNetClient *netClient, const SceNpId *npId,
+			     const SceRtcTick *sinceUtc, const uint32_t *paging,
+			     const uint32_t *platformMask)
+{
+	int ret = BeginRequestDoc(handle, npId);
+	if (ret < 0)
+		return ret;
+	if (sinceUtc != NULL) {
+		ret = m_docBuilder.AppendDateTimeElement(0, "since", sinceUtc);
+		if (ret < 0)
+			return ret;
+	}
+	ret = m_docBuilder.AppendPagingElements(0, paging);
+	if (ret < 0)
+		return ret;
+	if (platformMask != NULL) {
+		ret = m_docBuilder.AppendPlatformMaskElements(0, *platformMask);
+		if (ret < 0)
+			return ret;
+	}
+	return SendRequestDoc(handle, netClient, "/trophy/sec/get_modified_title_privacy", true);
+}
+
+/* 0x812E393A */
+int ModifiedPrivacyRpc::Receive(TrophyHandle *handle, uint32_t *outCounts,
+				TrophyModifiedPrivacyEntry **outSlots, uint32_t maxSlots)
+{
+	ModifiedPrivacyXmlParser parser;
+	int ret = parser.InitParser();
+	if (ret < 0)
+		return ret;
+	ret = ReceiveAndParseResponse(handle, &parser);
+	if (ret < 0)
+		return ret;
+	ret = parser.m_list.CopyOut(outSlots, maxSlots, &outCounts[0]);
+	if (ret < 0)
+		return ret;
+	outCounts[1] = parser.m_totalCount;
+	return 0;
+}
 
 /* =========================================================================
  * Sync trophies XML parser & RPC (0x812E4168..0x812E4598, 0x812E6324..0x812E6B7E)
@@ -614,22 +708,26 @@ struct SyncRespTrophyNode : public TrophyHeapObject {
 	TrophySyncResultUnlock unlock;
 	TrophyXmlDateAccumulator dateAcc;
 
-	SyncRespTrophyNode() : next(NULL), prev(NULL), dateAcc(true)
-	{
-		sceClibMemset(&unlock, 0, sizeof(unlock));
-	}
+	SyncRespTrophyNode();
 };
+
+SyncRespTrophyNode::SyncRespTrophyNode() : next(NULL), prev(NULL), dateAcc(true)
+{
+	sceClibMemset(&unlock, 0, sizeof(unlock));
+}
 
 struct SyncRespRarityNode : public TrophyHeapObject {
 	SyncRespRarityNode *next;
 	SyncRespRarityNode *prev;
 	TrophySyncResultRarity rarity;
 
-	SyncRespRarityNode() : next(NULL), prev(NULL)
-	{
-		sceClibMemset(&rarity, 0, sizeof(rarity));
-	}
+	SyncRespRarityNode();
 };
+
+SyncRespRarityNode::SyncRespRarityNode() : next(NULL), prev(NULL)
+{
+	sceClibMemset(&rarity, 0, sizeof(rarity));
+}
 
 struct SyncRespTitleNode : public TrophyHeapObject {
 	SyncRespTitleNode *next;
@@ -641,90 +739,120 @@ struct SyncRespTitleNode : public TrophyHeapObject {
 	SyncRespRarityNode *rarityTail;
 	TrophyXmlDateAccumulator lastUpdatedAcc;
 
-	SyncRespTitleNode()
-		: next(NULL), prev(NULL), trophyHead(NULL), trophyTail(NULL),
-		  rarityHead(NULL), rarityTail(NULL), lastUpdatedAcc(true)
-	{
-		sceClibMemset(&meta, 0, sizeof(meta));
-	}
+	SyncRespTitleNode();
+	~SyncRespTitleNode();
+	int AppendTrophy(SyncRespTrophyNode **outNode);
+	int AppendRarity(SyncRespRarityNode **outNode);
+	int CopyToPayload(TrophySyncResultPayload *dst);
+};
 
-	~SyncRespTitleNode()
-	{
-		while (rarityHead != NULL) {
-			SyncRespRarityNode *node = rarityHead;
+SyncRespTitleNode::SyncRespTitleNode()
+	: next(NULL), prev(NULL), trophyHead(NULL), trophyTail(NULL),
+	  rarityHead(NULL), rarityTail(NULL), lastUpdatedAcc(true)
+{
+	sceClibMemset(&meta, 0, sizeof(meta));
+}
+
+/* 0x812E6636 */
+SyncRespTitleNode::~SyncRespTitleNode()
+{
+	while (rarityHead != NULL) {
+		SyncRespRarityNode *node = rarityHead;
+		if (node->next != NULL)
+			node->next->prev = node->prev;
+		else
+			rarityTail = node->prev;
+		if (node->prev != NULL)
+			node->prev->next = node->next;
+		else
 			rarityHead = node->next;
-			delete node;
-		}
-		while (trophyHead != NULL) {
-			SyncRespTrophyNode *node = trophyHead;
+		node->next = NULL;
+		node->prev = NULL;
+		delete node;
+	}
+	while (trophyHead != NULL) {
+		SyncRespTrophyNode *node = trophyHead;
+		if (node->next != NULL)
+			node->next->prev = node->prev;
+		else
+			trophyTail = node->prev;
+		if (node->prev != NULL)
+			node->prev->next = node->next;
+		else
 			trophyHead = node->next;
-			delete node;
-		}
+		node->next = NULL;
+		node->prev = NULL;
+		delete node;
 	}
+}
 
-	int AppendTrophy(SyncRespTrophyNode **outNode)
-	{
-		SyncRespTrophyNode *node = new SyncRespTrophyNode();
-		if (node == NULL)
-			return NP_TROPHY_ERR_OUT_OF_MEMORY;
-		node->prev = trophyTail;
-		if (trophyTail != NULL)
-			trophyTail->next = node;
-		if (trophyHead == NULL)
-			trophyHead = node;
-		trophyTail = node;
-		*outNode = node;
-		return 0;
-	}
+/* 0x812E6324 */
+int SyncRespTitleNode::AppendTrophy(SyncRespTrophyNode **outNode)
+{
+	SyncRespTrophyNode *node = new SyncRespTrophyNode();
+	if (node == NULL)
+		return NP_TROPHY_ERR_OUT_OF_MEMORY;
+	*outNode = node;
+	node->next = NULL;
+	node->prev = trophyTail;
+	if (trophyTail != NULL)
+		trophyTail->next = node;
+	if (trophyHead == NULL)
+		trophyHead = node;
+	trophyTail = node;
+	return 0;
+}
 
-	int AppendRarity(SyncRespRarityNode **outNode)
-	{
-		SyncRespRarityNode *node = new SyncRespRarityNode();
-		if (node == NULL)
-			return NP_TROPHY_ERR_OUT_OF_MEMORY;
-		node->prev = rarityTail;
-		if (rarityTail != NULL)
-			rarityTail->next = node;
-		if (rarityHead == NULL)
-			rarityHead = node;
-		rarityTail = node;
-		*outNode = node;
-		return 0;
-	}
+/* 0x812E64E6 */
+int SyncRespTitleNode::AppendRarity(SyncRespRarityNode **outNode)
+{
+	SyncRespRarityNode *node = new SyncRespRarityNode();
+	if (node == NULL)
+		return NP_TROPHY_ERR_OUT_OF_MEMORY;
+	*outNode = node;
+	node->next = NULL;
+	node->prev = rarityTail;
+	if (rarityTail != NULL)
+		rarityTail->next = node;
+	if (rarityHead == NULL)
+		rarityHead = node;
+	rarityTail = node;
+	return 0;
+}
 
-	int CopyToPayload(TrophySyncResultPayload *dst)
-	{
-		if (meta.commId.IsEmpty())
-			return NP_TROPHY_ERR_XML_PARSE_ERROR;
-		int ret = lastUpdatedAcc.ParseTick(&meta.lastUpdated);
+/* 0x812E6564 */
+int SyncRespTitleNode::CopyToPayload(TrophySyncResultPayload *dst)
+{
+	if (meta.commId.IsEmpty())
+		return NP_TROPHY_ERR_XML_PARSE_ERROR;
+	int ret = lastUpdatedAcc.ParseTick(&meta.lastUpdated);
+	if (ret < 0)
+		return ret;
+
+	dst->m_meta = meta;
+
+	uint32_t unlockIdx = 0;
+	for (SyncRespTrophyNode *cur = trophyHead; cur != NULL; cur = cur->next) {
+		if (unlockIdx >= dst->m_unlockCapacity)
+			return NP_TROPHY_ERR_INVALID_ARGUMENT;
+		ret = cur->dateAcc.ParseTick(&cur->unlock.unlockUtc);
 		if (ret < 0)
 			return ret;
-
-		dst->m_meta = meta;
-
-		uint32_t unlockIdx = 0;
-		for (SyncRespTrophyNode *cur = trophyHead; cur != NULL; cur = cur->next) {
-			if (unlockIdx >= dst->m_unlockCapacity)
-				return NP_TROPHY_ERR_INVALID_ARGUMENT;
-			ret = cur->dateAcc.ParseTick(&cur->unlock.unlockUtc);
-			if (ret < 0)
-				return ret;
-			dst->m_unlocks[unlockIdx] = cur->unlock;
-			++unlockIdx;
-		}
-		dst->m_unlockCount = unlockIdx;
-
-		uint32_t rarityIdx = 0;
-		for (SyncRespRarityNode *cur = rarityHead; cur != NULL; cur = cur->next) {
-			if (rarityIdx >= dst->m_rarityCapacity)
-				return NP_TROPHY_ERR_INVALID_ARGUMENT;
-			dst->m_rarities[rarityIdx] = cur->rarity;
-			++rarityIdx;
-		}
-		dst->m_rarityCount = rarityIdx;
-		return 0;
+		dst->m_unlocks[unlockIdx] = cur->unlock;
+		++unlockIdx;
 	}
-};
+	dst->m_unlockCount = unlockIdx;
+
+	uint32_t rarityIdx = 0;
+	for (SyncRespRarityNode *cur = rarityHead; cur != NULL; cur = cur->next) {
+		if (rarityIdx >= dst->m_rarityCapacity)
+			return NP_TROPHY_ERR_INVALID_ARGUMENT;
+		dst->m_rarities[rarityIdx] = cur->rarity;
+		++rarityIdx;
+	}
+	dst->m_rarityCount = rarityIdx;
+	return 0;
+}
 
 struct SyncRespListParser {
 	SyncRespTitleNode *head;
@@ -735,358 +863,404 @@ struct SyncRespListParser {
 	SyncRespRarityNode *curRarity;
 	uint8_t expectHiddenAttr;
 
-	SyncRespListParser()
-		: head(NULL), tail(NULL), state(-1), curTitle(NULL), curTrophy(NULL),
-		  curRarity(NULL), expectHiddenAttr(0)
-	{
-	}
+	SyncRespListParser();
+	~SyncRespListParser();
+	int AppendTitle(SyncRespTitleNode **outNode);
+	int OnStart(const char *name, const BxceAttributeList *attrs, bool *outEntered);
+	int OnEnd(const char *name, bool *outExited);
+	int OnChars(const char *chars, SceSize length);
+	int CopyOut(TrophySyncResultPayload **outPayloads, uint32_t maxCount, uint32_t *outCount);
+};
 
-	~SyncRespListParser()
-	{
-		while (head != NULL) {
-			SyncRespTitleNode *node = head;
+/* 0x812E677C */
+SyncRespListParser::SyncRespListParser()
+	: head(NULL), tail(NULL), state(-1), curTitle(NULL), curTrophy(NULL),
+	  curRarity(NULL), expectHiddenAttr(0)
+{
+}
+
+/* 0x812E66AA */
+SyncRespListParser::~SyncRespListParser()
+{
+	while (head != NULL) {
+		SyncRespTitleNode *node = head;
+		if (node->next != NULL)
+			node->next->prev = node->prev;
+		else
+			tail = node->prev;
+		if (node->prev != NULL)
+			node->prev->next = node->next;
+		else
 			head = node->next;
-			delete node;
-		}
-		tail = NULL;
+		node->next = NULL;
+		node->prev = NULL;
+		delete node;
 	}
+}
 
-	int AppendTitle(SyncRespTitleNode **outNode)
-	{
-		SyncRespTitleNode *node = new SyncRespTitleNode();
-		if (node == NULL)
-			return NP_TROPHY_ERR_OUT_OF_MEMORY;
-		node->prev = tail;
-		if (tail != NULL)
-			tail->next = node;
-		if (head == NULL)
-			head = node;
-		tail = node;
-		*outNode = node;
-		return 0;
-	}
+/* 0x812E66E6 */
+int SyncRespListParser::AppendTitle(SyncRespTitleNode **outNode)
+{
+	SyncRespTitleNode *node = new SyncRespTitleNode();
+	if (node == NULL)
+		return NP_TROPHY_ERR_OUT_OF_MEMORY;
+	*outNode = node;
+	node->next = NULL;
+	node->prev = tail;
+	if (tail != NULL)
+		tail->next = node;
+	if (head == NULL)
+		head = node;
+	tail = node;
+	return 0;
+}
 
-	int OnStart(const char *name, const BxceAttributeList *attrs, bool *outEntered)
-	{
-		if (outEntered != NULL)
-			*outEntered = false;
+/* 0x812E6792 */
+int SyncRespListParser::OnStart(const char *name, const BxceAttributeList *attrs, bool *outEntered)
+{
+	if (outEntered != NULL)
+		*outEntered = false;
 
-		int ret = 0;
-		switch (state) {
-		case -1:
-			if (sceClibStrncmp(name, "list", 5) == 0)
-				state = 0;
-			break;
-		case 0:
-			if (sceClibStrncmp(name, "info", 5) == 0) {
-				ret = AppendTitle(&curTitle);
-				if (ret < 0)
-					return ret;
-				BxceAttr *commAttr = ScebXCe_2AD8DA26(attrs, "npcommid", 8);
-				if (commAttr == NULL)
-					return NP_TROPHY_ERR_XML_PARSE_ERROR;
-				ret = SceNpCommon_5BC54899(&curTitle->meta.commId,
-							   commAttr->value);
-				if (ret < 0)
-					return ret;
-				BxceAttr *pfAttr = ScebXCe_2AD8DA26(attrs, "pf", 2);
-				if (pfAttr == NULL)
-					return NP_TROPHY_ERR_XML_PARSE_ERROR;
-				ret = parsePlatformMaskStr(pfAttr->value,
-							   &curTitle->meta.platformMask);
-				if (ret < 0)
-					return ret;
-				if (expectHiddenAttr != 0) {
-					BxceAttr *hidAttr = ScebXCe_2AD8DA26(attrs, "hidden", 6);
-					if (hidAttr == NULL)
-						return NP_TROPHY_ERR_XML_PARSE_ERROR;
-					ret = parseBoolTrueStr(hidAttr->value,
-							       &curTitle->meta.hidden);
-					if (ret < 0)
-						return ret;
-				}
-				state = 1;
-			}
-			break;
-		case 1:
-			if (sceClibStrncmp(name, "types", 6) == 0) {
-				ret = parseGradeCountsAttrs(attrs, &curTitle->meta.gradeCounts);
-				if (ret < 0)
-					return ret;
-			} else if (sceClibStrncmp(name, "trophies", 9) == 0) {
-				state = 2;
-			} else if (sceClibStrncmp(name, "last-updated", 13) == 0) {
-				curTitle->lastUpdatedAcc.Reset();
-				state = 4;
-			} else if (sceClibStrncmp(name, "rarities", 9) == 0) {
-				state = 5;
-			}
-			break;
-		case 2:
-			if (sceClibStrncmp(name, "trophy", 7) == 0) {
-				ret = curTitle->AppendTrophy(&curTrophy);
-				if (ret < 0)
-					return ret;
-				BxceAttr *idAttr = ScebXCe_2AD8DA26(attrs, "id", 2);
-				if (idAttr == NULL)
-					return NP_TROPHY_ERR_XML_PARSE_ERROR;
-				ret = parseServerTrophyId(idAttr->value,
-							  &curTrophy->unlock.trophyId);
-				if (ret < 0)
-					return ret;
-				BxceAttr *gradeAttr = ScebXCe_2AD8DA26(attrs, "type", 4);
-				if (gradeAttr == NULL)
-					return NP_TROPHY_ERR_XML_PARSE_ERROR;
-				ret = parseServerTrophyGrade(gradeAttr->value,
-							     &curTrophy->unlock.grade);
-				if (ret < 0)
-					return ret;
-				curTrophy->dateAcc.Reset();
-				state = 3;
-			}
-			break;
-		case 3:
-		case 4:
-		case 6:
-			break;
-		case 5:
-			if (sceClibStrncmp(name, "rarity", 7) == 0) {
-				ret = curTitle->AppendRarity(&curRarity);
-				if (ret < 0)
-					return ret;
-				ret = parseRarityAttrs(&curRarity->rarity, attrs);
-				if (ret < 0)
-					return ret;
-				state = 6;
-			}
-			break;
-		default:
-			return NP_TROPHY_ERR_GENERIC;
-		}
-
-		if (state != -1 && outEntered != NULL)
-			*outEntered = true;
-		return 0;
-	}
-
-	int OnEnd(const char *name, bool *outExited)
-	{
-		if (outExited != NULL)
-			*outExited = false;
-
-		switch (state) {
-		case -1:
-			break;
-		case 0:
-			if (sceClibStrncmp(name, "list", 5) == 0)
-				state = -1;
-			break;
-		case 1:
-			if (sceClibStrncmp(name, "info", 5) == 0) {
-				curTitle = NULL;
-				state = 0;
-			}
-			break;
-		case 2:
-			if (sceClibStrncmp(name, "trophies", 9) == 0)
-				state = 1;
-			break;
-		case 3:
-			if (sceClibStrncmp(name, "trophy", 7) == 0) {
-				curTrophy->dateAcc.MarkComplete();
-				curTrophy = NULL;
-				state = 2;
-			}
-			break;
-		case 4:
-			if (sceClibStrncmp(name, "last-updated", 13) == 0) {
-				curTitle->lastUpdatedAcc.MarkComplete();
-				state = 1;
-			}
-			break;
-		case 5:
-			if (sceClibStrncmp(name, "rarities", 9) == 0)
-				state = 1;
-			break;
-		case 6:
-			if (sceClibStrncmp(name, "rarity", 7) == 0) {
-				curRarity = NULL;
-				state = 5;
-			}
-			break;
-		default:
-			return NP_TROPHY_ERR_GENERIC;
-		}
-
-		if (state == -1 && outExited != NULL)
-			*outExited = true;
-		return 0;
-	}
-
-	int OnChars(const char *chars, SceSize length)
-	{
-		switch (state) {
-		case -1:
-		case 0:
-		case 1:
-		case 2:
-		case 5:
-		case 6:
-			return 0;
-		case 3:
-			return curTrophy->dateAcc.Append(chars, length);
-		case 4:
-			return curTitle->lastUpdatedAcc.Append(chars, length);
-		default:
-			return NP_TROPHY_ERR_GENERIC;
-		}
-	}
-
-	int CopyOut(TrophySyncResultPayload **outPayloads, uint32_t maxCount, uint32_t *outCount)
-	{
-		uint32_t count = 0;
-		for (SyncRespTitleNode *cur = head; cur != NULL; cur = cur->next) {
-			if (count >= maxCount)
-				return NP_TROPHY_ERR_INVALID_ARGUMENT;
-			int ret = cur->CopyToPayload(outPayloads[count]);
+	int ret = 0;
+	switch (state) {
+	case -1:
+		if (sceClibStrncmp(name, "list", 5) == 0)
+			state = 0;
+		break;
+	case 0:
+		if (sceClibStrncmp(name, "info", 5) == 0) {
+			ret = AppendTitle(&curTitle);
 			if (ret < 0)
 				return ret;
-			++count;
+			BxceAttr *commAttr = ScebXCe_2AD8DA26(attrs, "npcommid", 8);
+			if (commAttr == NULL)
+				return NP_TROPHY_ERR_XML_PARSE_ERROR;
+			ret = SceNpCommon_5BC54899(&curTitle->meta.commId, commAttr->value);
+			if (ret < 0)
+				return ret;
+			BxceAttr *pfAttr = ScebXCe_2AD8DA26(attrs, "pf", 2);
+			if (pfAttr == NULL)
+				return NP_TROPHY_ERR_XML_PARSE_ERROR;
+			ret = parsePlatformMaskStr(pfAttr->value, &curTitle->meta.platformMask);
+			if (ret < 0)
+				return ret;
+			if (expectHiddenAttr != 0) {
+				BxceAttr *hidAttr = ScebXCe_2AD8DA26(attrs, "hidden", 6);
+				if (hidAttr == NULL)
+					return NP_TROPHY_ERR_XML_PARSE_ERROR;
+				ret = parseBoolTrueStr(hidAttr->value, &curTitle->meta.hidden);
+				if (ret < 0)
+					return ret;
+			}
+			state = 1;
 		}
-		*outCount = count;
-		return 0;
+		break;
+	case 1:
+		if (sceClibStrncmp(name, "types", 6) == 0) {
+			ret = parseGradeCountsAttrs(attrs, &curTitle->meta.gradeCounts);
+			if (ret < 0)
+				return ret;
+		} else if (sceClibStrncmp(name, "trophies", 9) == 0) {
+			state = 2;
+		} else if (sceClibStrncmp(name, "last-updated", 13) == 0) {
+			curTitle->lastUpdatedAcc.Reset();
+			state = 4;
+		} else if (sceClibStrncmp(name, "rarities", 9) == 0) {
+			state = 5;
+		}
+		break;
+	case 2:
+		if (sceClibStrncmp(name, "trophy", 7) == 0) {
+			ret = curTitle->AppendTrophy(&curTrophy);
+			if (ret < 0)
+				return ret;
+			BxceAttr *idAttr = ScebXCe_2AD8DA26(attrs, "id", 2);
+			if (idAttr == NULL)
+				return NP_TROPHY_ERR_XML_PARSE_ERROR;
+			ret = parseServerTrophyId(idAttr->value, &curTrophy->unlock.trophyId);
+			if (ret < 0)
+				return ret;
+			BxceAttr *gradeAttr = ScebXCe_2AD8DA26(attrs, "type", 4);
+			if (gradeAttr == NULL)
+				return NP_TROPHY_ERR_XML_PARSE_ERROR;
+			ret = parseServerTrophyGrade(gradeAttr->value, &curTrophy->unlock.grade);
+			if (ret < 0)
+				return ret;
+			curTrophy->dateAcc.Reset();
+			state = 3;
+		}
+		break;
+	case 3:
+	case 4:
+	case 6:
+		break;
+	case 5:
+		if (sceClibStrncmp(name, "rarity", 7) == 0) {
+			ret = curTitle->AppendRarity(&curRarity);
+			if (ret < 0)
+				return ret;
+			ret = parseRarityAttrs(&curRarity->rarity, attrs);
+			if (ret < 0)
+				return ret;
+			state = 6;
+		}
+		break;
+	default:
+		return NP_TROPHY_ERR_GENERIC;
 	}
-};
+
+	if (state != -1 && outEntered != NULL)
+		*outEntered = true;
+	return 0;
+}
+
+/* 0x812E6A18 */
+int SyncRespListParser::OnEnd(const char *name, bool *outExited)
+{
+	if (outExited != NULL)
+		*outExited = false;
+
+	switch (state) {
+	case -1:
+		break;
+	case 0:
+		if (sceClibStrncmp(name, "list", 5) == 0)
+			state = -1;
+		break;
+	case 1:
+		if (sceClibStrncmp(name, "info", 5) == 0) {
+			curTitle = NULL;
+			state = 0;
+		}
+		break;
+	case 2:
+		if (sceClibStrncmp(name, "trophies", 9) == 0)
+			state = 1;
+		break;
+	case 3:
+		if (sceClibStrncmp(name, "trophy", 7) == 0) {
+			curTrophy->dateAcc.MarkComplete();
+			curTrophy = NULL;
+			state = 2;
+		}
+		break;
+	case 4:
+		if (sceClibStrncmp(name, "last-updated", 13) == 0) {
+			curTitle->lastUpdatedAcc.MarkComplete();
+			state = 1;
+		}
+		break;
+	case 5:
+		if (sceClibStrncmp(name, "rarities", 9) == 0)
+			state = 1;
+		break;
+	case 6:
+		if (sceClibStrncmp(name, "rarity", 7) == 0) {
+			curRarity = NULL;
+			state = 5;
+		}
+		break;
+	default:
+		return NP_TROPHY_ERR_GENERIC;
+	}
+
+	if (state == -1 && outExited != NULL)
+		*outExited = true;
+	return 0;
+}
+
+/* 0x812E6B24 */
+int SyncRespListParser::OnChars(const char *chars, SceSize length)
+{
+	switch (state) {
+	case -1:
+	case 0:
+	case 1:
+	case 2:
+	case 5:
+	case 6:
+		return 0;
+	case 3:
+		return curTrophy->dateAcc.Append(chars, length);
+	case 4:
+		return curTitle->lastUpdatedAcc.Append(chars, length);
+	default:
+		return NP_TROPHY_ERR_GENERIC;
+	}
+}
+
+/* 0x812E6B7E */
+int SyncRespListParser::CopyOut(TrophySyncResultPayload **outPayloads, uint32_t maxCount,
+				uint32_t *outCount)
+{
+	uint32_t count = 0;
+	for (SyncRespTitleNode *cur = head; cur != NULL; cur = cur->next) {
+		if (count >= maxCount)
+			return NP_TROPHY_ERR_INVALID_ARGUMENT;
+		int ret = cur->CopyToPayload(outPayloads[count]);
+		if (ret < 0)
+			return ret;
+		++count;
+	}
+	*outCount = count;
+	return 0;
+}
 
 class SyncResponseXmlParser : public TrophyXmlResponseParserBase {
 public:
-	SyncResponseXmlParser() : m_state(-1) {}
-	virtual ~SyncResponseXmlParser() {}
-
-	virtual int OnStartElement(const char *name, int length, const BxceAttributeList *attrs)
-	{
-		(void)length;
-		if (m_state == -1) {
-			if (sceClibStrncmp(name, "nptrophy", 9) == 0) {
-				int ret = CheckResultAttribute(attrs);
-				if (ret < 0)
-					return ret;
-				m_state = 0;
-			}
-			return 0;
-		}
-		if (m_state == 0) {
-			bool entered = false;
-			int ret = m_listParser.OnStart(name, attrs, &entered);
-			if (ret < 0)
-				return ret;
-			if (entered)
-				m_state = 1;
-			return 0;
-		}
-		if (m_state == 1)
-			return m_listParser.OnStart(name, attrs, NULL);
-		return NP_TROPHY_ERR_GENERIC;
-	}
-
-	virtual int OnEndElement(const char *name, int length)
-	{
-		(void)length;
-		if (m_state == -1)
-			return 0;
-		if (m_state == 0) {
-			if (sceClibStrncmp(name, "nptrophy", 9) == 0)
-				m_state = -1;
-			return 0;
-		}
-		if (m_state == 1) {
-			bool exited = false;
-			int ret = m_listParser.OnEnd(name, &exited);
-			if (ret < 0)
-				return ret;
-			if (exited)
-				m_state = 0;
-			return 0;
-		}
-		return NP_TROPHY_ERR_GENERIC;
-	}
-
-	virtual int OnCharacters(const char *chars, int length)
-	{
-		if (m_state == -1 || m_state == 0)
-			return 0;
-		if (m_state == 1)
-			return m_listParser.OnChars(chars, static_cast<SceSize>(length));
-		return NP_TROPHY_ERR_GENERIC;
-	}
+	SyncResponseXmlParser();
+	virtual ~SyncResponseXmlParser();
+	virtual int OnStartElement(const char *name, int length, const BxceAttributeList *attrs);
+	virtual int OnEndElement(const char *name, int length);
+	virtual int OnCharacters(const char *chars, int length);
 
 	SyncRespListParser m_listParser;
 	int m_state;
 };
 
-class SyncTrophiesRpc : public TrophyXmlRpcBase {
-public:
-	int Send(TrophyHandle *handle, TrophyNetClient *netClient, const SceNpId *npId,
-		 TrophySyncRequestPayload *const *requests, uint32_t requestCount)
-	{
-		int ret = BeginRequestDoc(handle, npId);
-		if (ret < 0)
-			return ret;
-		ret = m_docBuilder.AppendPsIdElement(0);
-		if (ret < 0)
-			return ret;
+SyncResponseXmlParser::SyncResponseXmlParser() : m_state(-1) {}
 
-		BxceNodeId listNode = 0;
-		ret = m_docBuilder.AppendElement(0, "list", NULL, NULL, 0, &listNode);
-		if (ret < 0)
-			return ret;
+SyncResponseXmlParser::~SyncResponseXmlParser() {}
 
-		for (uint32_t i = 0; i < requestCount; ++i) {
-			const TrophySyncRequestPayload *req = requests[i];
-			BxceNodeId infoNode = 0;
-			ret = m_docBuilder.AppendTitleInfoElement(listNode, &req->GetCommId(), 2,
-								  &infoNode);
+int SyncResponseXmlParser::OnStartElement(const char *name, int length,
+					  const BxceAttributeList *attrs)
+{
+	(void)length;
+	if (m_state == -1) {
+		if (sceClibStrncmp(name, "nptrophy", 9) == 0) {
+			int ret = CheckResultAttribute(attrs);
 			if (ret < 0)
 				return ret;
-			if (req->GetCommSign() != NULL) {
-				ret = m_docBuilder.AppendSignElement(infoNode, req->GetCommSign());
+			m_state = 0;
+		}
+		return 0;
+	}
+	if (m_state == 0) {
+		bool entered = false;
+		int ret = m_listParser.OnStart(name, attrs, &entered);
+		if (ret < 0)
+			return ret;
+		if (entered)
+			m_state = 1;
+		return 0;
+	}
+	if (m_state == 1)
+		return m_listParser.OnStart(name, attrs, NULL);
+	return NP_TROPHY_ERR_GENERIC;
+}
+
+int SyncResponseXmlParser::OnEndElement(const char *name, int length)
+{
+	(void)length;
+	if (m_state == -1)
+		return 0;
+	if (m_state == 0) {
+		if (sceClibStrncmp(name, "nptrophy", 9) == 0)
+			m_state = -1;
+		return 0;
+	}
+	if (m_state == 1) {
+		bool exited = false;
+		int ret = m_listParser.OnEnd(name, &exited);
+		if (ret < 0)
+			return ret;
+		if (exited)
+			m_state = 0;
+		return 0;
+	}
+	return NP_TROPHY_ERR_GENERIC;
+}
+
+int SyncResponseXmlParser::OnCharacters(const char *chars, int length)
+{
+	if (m_state == -1 || m_state == 0)
+		return 0;
+	if (m_state == 1)
+		return m_listParser.OnChars(chars, static_cast<SceSize>(length));
+	return NP_TROPHY_ERR_GENERIC;
+}
+
+class SyncTrophiesRpc : public TrophyXmlRpcBase {
+public:
+	SyncTrophiesRpc();
+	virtual ~SyncTrophiesRpc();
+	int Send(TrophyHandle *handle, TrophyNetClient *netClient, const SceNpId *npId,
+		 TrophySyncRequestPayload *const *requests, uint32_t requestCount);
+	int Receive(TrophyHandle *handle, TrophySyncResultPayload **outResults,
+		    uint32_t maxResults, uint32_t *outResultCount);
+};
+
+/* 0x812E4320 */
+SyncTrophiesRpc::SyncTrophiesRpc()
+{
+}
+
+SyncTrophiesRpc::~SyncTrophiesRpc()
+{
+}
+
+/* 0x812E4374 */
+int SyncTrophiesRpc::Send(TrophyHandle *handle, TrophyNetClient *netClient, const SceNpId *npId,
+			  TrophySyncRequestPayload *const *requests, uint32_t requestCount)
+{
+	int ret = BeginRequestDoc(handle, npId);
+	if (ret < 0)
+		return ret;
+	ret = m_docBuilder.AppendPsIdElement(0);
+	if (ret < 0)
+		return ret;
+
+	BxceNodeId listNode = 0;
+	ret = m_docBuilder.AppendElement(0, "list", NULL, NULL, 0, &listNode);
+	if (ret < 0)
+		return ret;
+
+	for (uint32_t i = 0; i < requestCount; ++i) {
+		const TrophySyncRequestPayload *req = requests[i];
+		BxceNodeId infoNode = 0;
+		ret = m_docBuilder.AppendTitleInfoElement(listNode, &req->GetCommId(), 2,
+							  &infoNode);
+		if (ret < 0)
+			return ret;
+		if (req->GetCommSign() != NULL) {
+			ret = m_docBuilder.AppendSignElement(infoNode, req->GetCommSign());
+			if (ret < 0)
+				return ret;
+		}
+		uint32_t unlockCount = req->GetUnlockCount();
+		if (unlockCount != 0) {
+			BxceNodeId trophiesNode = 0;
+			ret = m_docBuilder.AppendElement(infoNode, "trophies", NULL, NULL,
+							 0, &trophiesNode);
+			if (ret < 0)
+				return ret;
+			const TrophySyncRequestUnlock *unlocks = req->GetUnlocks();
+			for (uint32_t j = 0; j < unlockCount; ++j) {
+				ret = m_docBuilder.AppendTrophyUnlockElement(
+					trophiesNode, unlocks[j].trophyId,
+					unlocks[j].grade, &unlocks[j].unlockUtc);
 				if (ret < 0)
 					return ret;
-			}
-			uint32_t unlockCount = req->GetUnlockCount();
-			if (unlockCount != 0) {
-				BxceNodeId trophiesNode = 0;
-				ret = m_docBuilder.AppendElement(infoNode, "trophies", NULL, NULL,
-								 0, &trophiesNode);
-				if (ret < 0)
-					return ret;
-				const TrophySyncRequestUnlock *unlocks = req->GetUnlocks();
-				for (uint32_t j = 0; j < unlockCount; ++j) {
-					ret = m_docBuilder.AppendTrophyUnlockElement(
-						trophiesNode, unlocks[j].trophyId,
-						unlocks[j].grade, &unlocks[j].unlockUtc);
-					if (ret < 0)
-						return ret;
-				}
 			}
 		}
-
-		return SendRequestDoc(handle, netClient, "/trophy/sec/sync_trophies", true);
 	}
 
-	int Receive(TrophyHandle *handle, TrophySyncResultPayload **outResults,
-		    uint32_t maxResults, uint32_t *outResultCount)
-	{
-		SyncResponseXmlParser parser;
-		int ret = parser.InitParser();
-		if (ret < 0)
-			return ret;
-		ret = ReceiveAndParseResponse(handle, &parser);
-		if (ret < 0)
-			return ret;
-		return parser.m_listParser.CopyOut(outResults, maxResults, outResultCount);
-	}
-};
+	return SendRequestDoc(handle, netClient, "/trophy/sec/sync_trophies", true);
+}
+
+/* 0x812E44A6 */
+int SyncTrophiesRpc::Receive(TrophyHandle *handle, TrophySyncResultPayload **outResults,
+			     uint32_t maxResults, uint32_t *outResultCount)
+{
+	SyncResponseXmlParser parser;
+	int ret = parser.InitParser();
+	if (ret < 0)
+		return ret;
+	ret = ReceiveAndParseResponse(handle, &parser);
+	if (ret < 0)
+		return ret;
+	return parser.m_listParser.CopyOut(outResults, maxResults, outResultCount);
+}
 
 /* Stream wrapper returned by TrophyNetConfSource::OpenOwnedAssetStream (0x812E17B4..0x812E188C) */
 class TrophyNetSourceAssetStream : public TrophyConfSourceStream {
@@ -1583,8 +1757,8 @@ void TrophyXmlDateAccumulator::Reset()
 	m_completed = 0;
 }
 
-/* 0x812E4D52 / 0x812E4DDE */
-int TrophyXmlDateAccumulator::Append(const char *chars, SceSize length)
+/* 0x812E4D52 */
+int TrophyXmlDateAccumulator::AppendText(const char *chars, SceSize length)
 {
 	if (m_text == NULL) {
 		char *fresh = static_cast<char *>(TrophyHeapObject::operator new(length + 1));
@@ -1606,6 +1780,19 @@ int TrophyXmlDateAccumulator::Append(const char *chars, SceSize length)
 	TrophyHeapObject::operator delete(m_text);
 	m_text = grown;
 	return 0;
+}
+
+/* 0x812E4DDE */
+int TrophyXmlDateAccumulator::Append(const char *chars, SceSize length)
+{
+	int ret = AppendText(chars, length);
+	return (ret >= 0) ? 0 : ret;
+}
+
+/* 0x812E4DF0 */
+void TrophyXmlDateAccumulator::MarkComplete()
+{
+	m_completed = 1;
 }
 
 /* 0x812E4DF6 */
@@ -2181,6 +2368,13 @@ int TrophyXmlDocBuilder::AppendPlatformMaskElements(BxceNodeId parent, uint32_t 
  * TrophyXmlRpcBase (0x812E4978..0x812E4C08)
  * ========================================================================= */
 
+/* 0x812E4968 */
+int TrophyXmlRpcBase::SetTimeouts(const TrophyHttpTimeouts *timeouts)
+{
+	m_timeouts = *timeouts;
+	return 0;
+}
+
 /* 0x812E4978 */
 TrophyXmlRpcBase::TrophyXmlRpcBase()
 {
@@ -2194,21 +2388,28 @@ TrophyXmlRpcBase::~TrophyXmlRpcBase()
 		m_request.Close();
 }
 
-/* 0x812E4A34 / 0x812E4AEE */
+/* 0x812E4A34 */
+int TrophyXmlRpcBase::InitBaseDoc()
+{
+	TrophyXmlAttrBuilder rootAttrs;
+	int ret = rootAttrs.Init();
+	if (ret >= 0)
+		ret = rootAttrs.AddAttr("platform", "psp2");
+	if (ret >= 0)
+		ret = rootAttrs.AddAttr("sv", "1.00");
+	if (ret >= 0)
+		ret = m_docBuilder.Init("nptrophy", &rootAttrs, NULL);
+	return ret;
+}
+
+/* 0x812E4AEE */
 int TrophyXmlRpcBase::BeginRequestDoc(TrophyHandle *handle, const SceNpId *npId)
 {
 	void *ticketBuf = NULL;
 	SceSize ticketSize = 0;
 	int ret = TrophyTicketClient::FetchTicketAlloc(handle, &ticketBuf, &ticketSize);
 	if (ret >= 0) {
-		TrophyXmlAttrBuilder rootAttrs;
-		ret = rootAttrs.Init();
-		if (ret >= 0)
-			ret = rootAttrs.AddAttr("platform", "psp2");
-		if (ret >= 0)
-			ret = rootAttrs.AddAttr("sv", "1.00");
-		if (ret >= 0)
-			ret = m_docBuilder.Init("nptrophy", &rootAttrs, NULL);
+		ret = InitBaseDoc();
 		if (ret >= 0)
 			ret = m_docBuilder.AppendTicketAndJid(0, npId, ticketBuf, ticketSize);
 	}
@@ -2528,6 +2729,13 @@ bool TrophySyncResultPayload::HasTrophyUnlock(int trophyId) const
 			return true;
 	}
 	return false;
+}
+
+/* 0x812E4764 */
+int TrophySyncResultPayload::GetLastUpdated(uint64_t *outTick) const
+{
+	*outTick = m_meta.lastUpdated.tick;
+	return 0;
 }
 
 /* 0x812E1D60 */
