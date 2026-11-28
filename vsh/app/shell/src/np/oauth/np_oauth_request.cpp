@@ -5,24 +5,21 @@
 #include "np_oauth_internal.h"
 #include <libkernel/libkernel.h>
 
-NpOAuthScopedLwMutexLockBase::NpOAuthScopedLwMutexLockBase(SceKernelLwMutexWork *mutex)
+NpOAuthScopedLwMutexLock::NpOAuthScopedLwMutexLock(SceKernelLwMutexWork *mutex)
 	: m_mutex(mutex)
 {
 	sceKernelLockLwMutex(m_mutex, 1, NULL);
 }
 
-NpOAuthScopedLwMutexLockBase::~NpOAuthScopedLwMutexLockBase()
-{
-	sceKernelUnlockLwMutex(m_mutex, 1);
-}
-
 NpOAuthScopedLwMutexLock::NpOAuthScopedLwMutexLock(NpOAuthRequest *request)
-	: NpOAuthScopedLwMutexLockBase(request->mutex)
+	: m_mutex(request->mutex)
 {
+	sceKernelLockLwMutex(m_mutex, 1, NULL);
 }
 
 NpOAuthScopedLwMutexLock::~NpOAuthScopedLwMutexLock()
 {
+	sceKernelUnlockLwMutex(m_mutex, 1);
 }
 
 int npOAuthRequestCreate(NpOAuthRequest **outRequest)

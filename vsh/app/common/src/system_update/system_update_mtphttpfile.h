@@ -42,22 +42,47 @@ public:
 	virtual int32_t GetCapability() const;
 	virtual int64_t GetFileSize() const;
 	virtual int32_t Open(const OpenArg *param);
-	virtual int32_t OpenAsync(const OpenArg *param);
+	virtual int32_t OpenAsync(const OpenArg *param)
+	{
+		(void)param;
+		return SCE_PAF_ERROR_FILE_NOT_SUPPORTED;
+	}
 	virtual int32_t Close();
-	virtual int32_t CloseAsync();
+	virtual int32_t CloseAsync()
+	{
+		return SCE_PAF_ERROR_FILE_NOT_SUPPORTED;
+	}
 	virtual bool IsOpened() const;
 	virtual bool IsEof();
 	virtual int32_t Abort();
 	virtual int32_t Read(void *buf, size_t nbyte);
-	virtual int32_t ReadAsync(void *buf, size_t nbyte);
+	virtual int32_t ReadAsync(void *buf, size_t nbyte)
+	{
+		(void)buf;
+		(void)nbyte;
+		return SCE_PAF_ERROR_FILE_NOT_SUPPORTED;
+	}
 	virtual int32_t Write(const void *buf, size_t nbyte);
 	virtual int32_t WriteAsync(const void *buf, size_t nbyte);
 	virtual int64_t Seek(int64_t offset, int32_t whence);
-	virtual int32_t SeekAsync(int64_t offset, int32_t whence);
+	virtual int32_t SeekAsync(int64_t offset, int32_t whence)
+	{
+		(void)offset;
+		(void)whence;
+		return SCE_PAF_ERROR_FILE_NOT_SUPPORTED;
+	}
 	virtual int32_t Flush();
 	virtual int32_t FlushAsync();
-	virtual int32_t WaitAsync(int64_t *result);
-	virtual int32_t PollAsync(int64_t *result);
+	virtual int32_t WaitAsync(int64_t *result)
+	{
+		(void)result;
+		return SCE_PAF_ERROR_FILE_NOT_SUPPORTED;
+	}
+	virtual int32_t PollAsync(int64_t *result)
+	{
+		(void)result;
+		return SCE_PAF_ERROR_FILE_NOT_SUPPORTED;
+	}
 	virtual int32_t Getstat(paf::FileStat *stat);
 	virtual ~MtpHttpFile();
 

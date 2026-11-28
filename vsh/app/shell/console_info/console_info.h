@@ -127,8 +127,15 @@ public:
 	ConsoleInfoEntries(int type, int entrySize);
 	virtual ~ConsoleInfoEntries();
 
-	virtual int Write(void *data);
-	virtual int Commit();
+	virtual int Write(void *data)
+	{
+		*(int *)data = 0;
+		return 0;
+	}
+	virtual int Commit()
+	{
+		return 0;
+	}
 };
 
 /* PLACEHOLDER: the "ns" record (0x810E821C) */

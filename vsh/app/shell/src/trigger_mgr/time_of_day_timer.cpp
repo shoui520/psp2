@@ -44,16 +44,11 @@ static void refreshExpiredStatusIfUnfired(int appIndex, SceUInt32 timerSlot)
 class TimeOfDayTimerFireJob : public TriggerFireJobBase {
 public:
 	TimeOfDayTimerFireJob(const char *appTitleId, SceUInt32 timerSlot);
-	virtual ~TimeOfDayTimerFireJob();
 	virtual int Run();
 };
 
 TimeOfDayTimerFireJob::TimeOfDayTimerFireJob(const char *appTitleId, SceUInt32 timerSlot)
 	: TriggerFireJobBase(appTitleId, timerSlot)
-{
-}
-
-TimeOfDayTimerFireJob::~TimeOfDayTimerFireJob()
 {
 }
 
@@ -123,7 +118,6 @@ public:
 				  const char *targetTitleId,
 				  const TriggerTimeOfDayTimerParam *timerParam,
 				  SceUInt32 timerSlot, bool useCallback);
-	virtual ~RegisterTimeOfDayTimerJob();
 	virtual int Run();
 
 	char m_targetTitleId[12];
@@ -141,10 +135,6 @@ RegisterTimeOfDayTimerJob::RegisterTimeOfDayTimerJob(IPMI::Session *session, Sce
 {
 	sce_paf_strncpy(m_targetTitleId, targetTitleId, TRIGGER_MGR_TITLE_ID_LEN);
 	m_targetTitleId[TRIGGER_MGR_TITLE_ID_LEN] = '\0';
-}
-
-RegisterTimeOfDayTimerJob::~RegisterTimeOfDayTimerJob()
-{
 }
 
 int RegisterTimeOfDayTimerJob::Run()
@@ -248,7 +238,6 @@ class UnregisterTimeOfDayTimerJob : public TriggerIpcJobBase {
 public:
 	UnregisterTimeOfDayTimerJob(IPMI::Session *session, SceUInt32 requestId,
 				    SceUInt32 timerSlot, bool isDaily, bool useCallback);
-	virtual ~UnregisterTimeOfDayTimerJob();
 	virtual int Run();
 
 	bool m_isDaily;
@@ -261,10 +250,6 @@ UnregisterTimeOfDayTimerJob::UnregisterTimeOfDayTimerJob(IPMI::Session *session,
 	: TriggerIpcJobBase("SceTriggerMgrJob", session, requestId, useCallback),
 	  m_isDaily(isDaily),
 	  m_timerSlot(timerSlot)
-{
-}
-
-UnregisterTimeOfDayTimerJob::~UnregisterTimeOfDayTimerJob()
 {
 }
 
@@ -322,7 +307,6 @@ class GetTimeOfDayTimerTimeJob : public TriggerIpcJobBase {
 public:
 	GetTimeOfDayTimerTimeJob(IPMI::Session *session, SceUInt32 requestId,
 				 SceUInt32 timerSlot, bool useCallback);
-	virtual ~GetTimeOfDayTimerTimeJob();
 	void Complete(int result, SceUInt64 scheduledTick, bool expired);
 	virtual int Run();
 
@@ -334,10 +318,6 @@ GetTimeOfDayTimerTimeJob::GetTimeOfDayTimerTimeJob(IPMI::Session *session, SceUI
 	: TriggerIpcJobBase("SceTriggerMgrGetTimeOfDayTimerTimeJob", session, requestId,
 			    useCallback),
 	  m_timerSlot(timerSlot)
-{
-}
-
-GetTimeOfDayTimerTimeJob::~GetTimeOfDayTimerTimeJob()
 {
 }
 
@@ -407,7 +387,6 @@ class GetTimeOfDayTimerLastErrorJob : public TriggerIpcJobBase {
 public:
 	GetTimeOfDayTimerLastErrorJob(IPMI::Session *session, SceUInt32 requestId,
 				      SceUInt32 timerSlot, bool isDaily, bool useCallback);
-	virtual ~GetTimeOfDayTimerLastErrorJob();
 	virtual int Run();
 
 	SceUInt32 m_timerSlot;
@@ -421,10 +400,6 @@ GetTimeOfDayTimerLastErrorJob::GetTimeOfDayTimerLastErrorJob(IPMI::Session *sess
 	: TriggerIpcJobBase("SceTriggerMgrJob", session, requestId, useCallback),
 	  m_timerSlot(timerSlot),
 	  m_isDaily(isDaily)
-{
-}
-
-GetTimeOfDayTimerLastErrorJob::~GetTimeOfDayTimerLastErrorJob()
 {
 }
 
@@ -468,7 +443,6 @@ public:
 			      const char *targetTitleId,
 			      const TriggerDailyTimerParam *timerParam,
 			      SceUInt32 timerSlot, bool useCallback);
-	virtual ~RegisterDailyTimerJob();
 	virtual int Run();
 
 	char m_targetTitleId[12];
@@ -486,10 +460,6 @@ RegisterDailyTimerJob::RegisterDailyTimerJob(IPMI::Session *session, SceUInt32 r
 {
 	sce_paf_strncpy(m_targetTitleId, targetTitleId, TRIGGER_MGR_TITLE_ID_LEN);
 	m_targetTitleId[TRIGGER_MGR_TITLE_ID_LEN] = '\0';
-}
-
-RegisterDailyTimerJob::~RegisterDailyTimerJob()
-{
 }
 
 int RegisterDailyTimerJob::Run()
@@ -595,7 +565,6 @@ class GetDailyTimerInfoJob : public TriggerIpcJobBase {
 public:
 	GetDailyTimerInfoJob(IPMI::Session *session, SceUInt32 requestId,
 			     SceUInt32 timerSlot, bool useCallback);
-	virtual ~GetDailyTimerInfoJob();
 	void Complete(int result, const char *targetTitleId,
 		      const TriggerDailyTimerParam *timerParam, SceInt32 remainingSeconds);
 	virtual int Run();
@@ -607,10 +576,6 @@ GetDailyTimerInfoJob::GetDailyTimerInfoJob(IPMI::Session *session, SceUInt32 req
 					   SceUInt32 timerSlot, bool useCallback)
 	: TriggerIpcJobBase("SceTriggerMgrGetDailyTimerInfoJob", session, requestId, useCallback),
 	  m_timerSlot(timerSlot)
-{
-}
-
-GetDailyTimerInfoJob::~GetDailyTimerInfoJob()
 {
 }
 

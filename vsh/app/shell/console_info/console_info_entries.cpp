@@ -16,16 +16,3 @@ ConsoleInfoEntries::ConsoleInfoEntries(int type, int entrySize)
 ConsoleInfoEntries::~ConsoleInfoEntries()
 {
 }
-
-/* (0x8141038C: a body the build shares) no entry written */
-int ConsoleInfoEntries::Write(void *data)
-{
-	*(int *)data = 0;
-	return 0;
-}
-
-/* (0x81409E2C: one "return 0" the build shares) */
-int ConsoleInfoEntries::Commit()
-{
-	return 0;
-}

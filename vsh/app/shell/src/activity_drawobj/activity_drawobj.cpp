@@ -372,11 +372,6 @@ void ActivityDrawObj::ReleaseAll()
 }
 
 /* 0x81413130 */
-DrawObjBounds ActivityDrawObj::GetBounds() const
-{
-	return DrawObjBounds(m_boundsMin, m_boundsMax);
-}
-
 /* 0x8138BAC4 */
 void ActivityDrawObj::SetTexture(const paf::intrusive_ptr<Surface> &texture, uint32_t index)
 {

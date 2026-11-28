@@ -229,19 +229,14 @@ struct NpCslaCreateRequestOption {
 };
 
 /* RAII LW mutex lock guard matching Sony's vtable-backed scoped lock */
-class NpOAuthScopedLwMutexLockBase {
+class NpOAuthScopedLwMutexLock {
 public:
-	explicit NpOAuthScopedLwMutexLockBase(SceKernelLwMutexWork *mutex);
-	virtual ~NpOAuthScopedLwMutexLockBase();
+	explicit NpOAuthScopedLwMutexLock(SceKernelLwMutexWork *mutex);
+	explicit NpOAuthScopedLwMutexLock(NpOAuthRequest *request);
+	virtual ~NpOAuthScopedLwMutexLock();
 
 protected:
 	SceKernelLwMutexWork *m_mutex;
-};
-
-class NpOAuthScopedLwMutexLock : public NpOAuthScopedLwMutexLockBase {
-public:
-	explicit NpOAuthScopedLwMutexLock(NpOAuthRequest *request);
-	virtual ~NpOAuthScopedLwMutexLock();
 };
 
 /* External C imports from SceNpCommon, SceNpCommonPs4, SceNpManagerTicket, SceHttp, ScePafStdc */

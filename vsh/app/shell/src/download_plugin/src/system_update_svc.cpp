@@ -704,11 +704,6 @@ void SystemUpdateIpmiServer::onSessionClosedByClient(IPMI::Session *pSession)
 	m_sessionCount--;
 }
 
-void SystemUpdateIpmiServer::onSessionKilled(IPMI::Session *pSession)
-{
-	onSessionClosedByClient(pSession);
-}
-
 /* the dispatcher thread's function */
 int Bgdl_8112F1F8(void *arg)
 {

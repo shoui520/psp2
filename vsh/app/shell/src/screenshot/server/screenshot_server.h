@@ -354,7 +354,10 @@ public:
 	virtual int onNewClient(IPMI::Server *server, const IPMI::Session::Config *config,
 				const void *param, SceSize paramSize);
 	virtual void onSessionClosedByClient(IPMI::Session *session);
-	virtual void onSessionKilled(IPMI::Session *session);
+	virtual void onSessionKilled(IPMI::Session *session)
+	{
+		onSessionClosedByClient(session);
+	}
 
 	static void *operator new(size_t size);
 	static void operator delete(void *ptr);

@@ -397,18 +397,28 @@ public:
 	virtual int GetSize(SceOff *outSize) { return m_file.GetSize(outSize); }
 	virtual int Seek(TrophyHandle *handle, SceOff offset, int whence, SceOff *outPos)
 	{
-		return m_file.Seek(handle, offset, whence, outPos);
+		(void)handle;
+		(void)offset;
+		(void)whence;
+		(void)outPos;
+		return -2141907272; /* 0x805516B8 */
 	}
 	virtual int Truncate(TrophyHandle *handle, SceOff length)
 	{
-		return m_file.Truncate(handle, length);
+		(void)handle;
+		(void)length;
+		return -2141907272; /* 0x805516B8 */
 	}
 	virtual int Sync(TrophyHandle *handle) { return m_file.Sync(handle); }
 	virtual int Read(TrophyHandle *handle, void *outBuf, SceSize size, SceSize *outRead);
 	virtual int Write(TrophyHandle *handle, const void *srcBuf, SceSize size,
 			  SceSize *outWritten)
 	{
-		return m_file.Write(handle, srcBuf, size, outWritten);
+		(void)handle;
+		(void)srcBuf;
+		(void)size;
+		(void)outWritten;
+		return -2141907272; /* 0x805516B8 */
 	}
 
 private:

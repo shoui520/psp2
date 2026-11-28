@@ -1525,7 +1525,7 @@ int TrophyMemFile::Truncate(TrophyHandle *handle, SceOff length)
 int TrophyMemFile::Sync(TrophyHandle *handle)
 {
 	(void)handle;
-	return IsOpen() ? 0 : NP_TROPHY_ERR_FILE_NOT_OPEN;
+	return NP_TROPHY_ERR_GENERIC;
 }
 
 int TrophyMemFile::Read(TrophyHandle *handle, void *outBuf, SceSize size, SceSize *outRead)

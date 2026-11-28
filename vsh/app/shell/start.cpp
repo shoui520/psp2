@@ -74,7 +74,11 @@ public:
 	{
 	}
 
-	virtual void *allocate(size_t size, void *userData);
+	virtual void *allocate(size_t size, void *userData)
+	{
+		(void)userData;
+		return sce_paf_malloc(size);
+	}
 
 	virtual void deallocate(void *ptr, void *userData)
 	{
@@ -147,11 +151,6 @@ int main(int argc, char *argv[])
 int shellStartAppDataMount(void)
 {
 	return sceAppMgrAppDataMount(SHELL_APPDATA_MOUNT_ID, &s_appDataMountPoint);
-}
-
-void *ShellXmlAllocator::allocate(size_t size, void *userData)
-{
-	return sce_paf_malloc(size);
 }
 
 int shellStartAppDataUmount(void)

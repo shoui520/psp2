@@ -291,10 +291,14 @@ public:
 	explicit Live2Accessor(const paf::common::SharedPtr<Live2AccessorProxy> &proxy);
 	virtual ~Live2Accessor();
 
-	virtual paf::intrusive_ptr<Live2Record> GetRecord(SceInt64 rowid);
+	virtual paf::intrusive_ptr<Live2Record> GetRecord(SceInt64 rowid)
+	{
+		(void)rowid;
+		return paf::intrusive_ptr<Live2Record>();
+	}
 	virtual bool IsChanged();
-	virtual void FetchCount();
-	virtual void FetchWindow(int index);
+	virtual void FetchCount() {}
+	virtual void FetchWindow(int index) { (void)index; }
 
 	int GetCount();
 	SceInt64 GetRowid(int index);

@@ -786,14 +786,7 @@ public:
 		ctx.setState(Initializing);
 		ctx.getState().Entry(ctx);
 	}
-	virtual void OnEventBbmcPukRequired(TelGeneralLogicStateMachineContext &ctx)
-	{
-		ctx.getState().Exit(ctx);
-		ctx.clearState();
-		ctx.getOwner().HandleBbmcPukRequired();
-		ctx.setState(Booted);
-		ctx.getState().Entry(ctx);
-	}
+	virtual void OnEventBbmcPukRequired(TelGeneralLogicStateMachineContext &ctx);
 	virtual void Default(TelGeneralLogicStateMachineContext &ctx)
 	{
 		ctx.getOwner().HandleUnexpectedTransition();
@@ -988,6 +981,15 @@ void InitializingState::OnEventBbmcNetworkReady(TelGeneralLogicStateMachineConte
 	ctx.clearState();
 	ctx.getOwner().HandleBbmcNetworkReady();
 	ctx.setState(Idle);
+	ctx.getState().Entry(ctx);
+}
+
+void IdleState::OnEventBbmcPukRequired(TelGeneralLogicStateMachineContext &ctx)
+{
+	ctx.getState().Exit(ctx);
+	ctx.clearState();
+	ctx.getOwner().HandleBbmcPukRequired();
+	ctx.setState(Booted);
 	ctx.getState().Entry(ctx);
 }
 

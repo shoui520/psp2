@@ -220,19 +220,13 @@ void triggerMgrCompleteSimpleAsyncJob(TriggerIpcJobBase *job, int result)
 	g_triggerMgrIpcLock.Unlock();
 }
 
-namespace {
-
 /* bXCe allocator backed by SceTriggerMgrHeap (0x812A5888, 0x812A589A) */
 class TriggerXmlAllocator : public bXCe::MemAllocator {
 public:
-	virtual ~TriggerXmlAllocator();
+	virtual ~TriggerXmlAllocator() {}
 	virtual void *allocate(size_t size, void *userData);
 	virtual void deallocate(void *ptr, void *userData);
 };
-
-TriggerXmlAllocator::~TriggerXmlAllocator()
-{
-}
 
 void *TriggerXmlAllocator::allocate(size_t size, void *userData)
 {
@@ -256,7 +250,7 @@ public:
 	};
 
 	IncomingDialogXmlHandler(SceIncomingDialogParam *dialogParam);
-	virtual ~IncomingDialogXmlHandler();
+	virtual ~IncomingDialogXmlHandler() {}
 	virtual int startElement(void *userData, const char *name, int length,
 				 const bXCe::AttributeList *attrList);
 	virtual int endElement(void *userData, const char *name, int length);
@@ -271,10 +265,6 @@ IncomingDialogXmlHandler::IncomingDialogXmlHandler(SceIncomingDialogParam *dialo
 	: m_dialogParam(dialogParam),
 	  m_error(0),
 	  m_stage(STAGE_ROOT)
-{
-}
-
-IncomingDialogXmlHandler::~IncomingDialogXmlHandler()
 {
 }
 
@@ -372,6 +362,8 @@ void IncomingDialogXmlHandler::fatalError(void *userData, int errCode)
 	(void)userData;
 	m_error = errCode;
 }
+
+namespace {
 
 /* Opens the incoming dialog server UI and waits for user response (0x812A28D8) */
 static int showIncomingDialog(const SceIncomingDialogParam *dialogParam)

@@ -171,11 +171,6 @@ int32_t MtpHttpFile::Open(const OpenArg *param)
 	return ret;
 }
 
-int32_t MtpHttpFile::OpenAsync(const OpenArg *param)
-{
-	return SCE_PAF_ERROR_FILE_NOT_SUPPORTED;
-}
-
 int32_t MtpHttpFile::Close()
 {
 	Abort();
@@ -188,11 +183,6 @@ int32_t MtpHttpFile::Close()
 	}
 	m_lock.Unlock();
 	return SCE_PAF_ERROR_FILE_NOT_OPENED;
-}
-
-int32_t MtpHttpFile::CloseAsync()
-{
-	return SCE_PAF_ERROR_FILE_NOT_SUPPORTED;
 }
 
 bool MtpHttpFile::IsOpened() const
@@ -246,11 +236,6 @@ int32_t MtpHttpFile::Read(void *buf, size_t nbyte)
 	} while (done < nbyte && n != 0);
 	m_lock.Unlock();
 	return done;
-}
-
-int32_t MtpHttpFile::ReadAsync(void *buf, size_t nbyte)
-{
-	return SCE_PAF_ERROR_FILE_NOT_SUPPORTED;
 }
 
 int32_t MtpHttpFile::Write(const void *buf, size_t nbyte)
@@ -311,11 +296,6 @@ int64_t MtpHttpFile::Seek(int64_t offset, int32_t whence)
 	return pos;
 }
 
-int32_t MtpHttpFile::SeekAsync(int64_t offset, int32_t whence)
-{
-	return SCE_PAF_ERROR_FILE_NOT_SUPPORTED;
-}
-
 int32_t MtpHttpFile::Flush()
 {
 	return SCE_PAF_ERROR_FILE_READ_ONLY;
@@ -324,16 +304,6 @@ int32_t MtpHttpFile::Flush()
 int32_t MtpHttpFile::FlushAsync()
 {
 	return SCE_PAF_ERROR_FILE_READ_ONLY;
-}
-
-int32_t MtpHttpFile::WaitAsync(int64_t *result)
-{
-	return SCE_PAF_ERROR_FILE_NOT_SUPPORTED;
-}
-
-int32_t MtpHttpFile::PollAsync(int64_t *result)
-{
-	return SCE_PAF_ERROR_FILE_NOT_SUPPORTED;
 }
 
 int32_t MtpHttpFile::Getstat(FileStat *stat)

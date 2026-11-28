@@ -492,7 +492,7 @@ int TrophyTrpFileStream::Truncate(TrophyHandle *handle, SceOff length)
 int TrophyTrpFileStream::Sync(TrophyHandle *handle)
 {
 	(void)handle;
-	return IsOpen() ? 0 : NP_TROPHY_ERR_FILE_NOT_OPEN;
+	return NP_TROPHY_ERR_GENERIC;
 }
 
 int TrophyTrpFileStream::Read(TrophyHandle *handle, void *outBuf, SceSize size, SceSize *outRead)

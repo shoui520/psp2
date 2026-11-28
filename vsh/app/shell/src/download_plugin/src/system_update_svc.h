@@ -191,7 +191,10 @@ public:
 	virtual int onNewClient(IPMI::Server *pServer, const IPMI::Session::Config *pConfig,
 				const void *pParam, SceSize paramSize);
 	__attribute__((noinline)) virtual void onSessionClosedByClient(IPMI::Session *pSession);
-	virtual void onSessionKilled(IPMI::Session *pSession);
+	virtual void onSessionKilled(IPMI::Session *pSession)
+	{
+		onSessionClosedByClient(pSession);
+	}
 
 	IPMI::Server *m_server;
 	int m_reserved;

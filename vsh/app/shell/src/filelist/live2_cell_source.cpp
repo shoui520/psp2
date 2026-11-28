@@ -833,26 +833,10 @@ Live2Accessor::~Live2Accessor()
 	m_proxy->RemoveListener(OnProxyChanged, this);
 }
 
-/* 0x81413118 */
-paf::intrusive_ptr<Live2Record> Live2Accessor::GetRecord(SceInt64 rowid)
-{
-	(void)rowid;
-	return paf::intrusive_ptr<Live2Record>();
-}
-
 /* 0x8134D042 */
 bool Live2Accessor::IsChanged()
 {
 	return m_dirty != 0;
-}
-
-void Live2Accessor::FetchCount()
-{
-}
-
-void Live2Accessor::FetchWindow(int index)
-{
-	(void)index;
 }
 
 /* 0x8134CF8E */

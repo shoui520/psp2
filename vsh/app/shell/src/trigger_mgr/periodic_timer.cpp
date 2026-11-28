@@ -28,16 +28,11 @@ namespace {
 class PeriodicTimerFireJob : public TriggerFireJobBase {
 public:
 	PeriodicTimerFireJob(const char *appTitleId, SceUInt32 timerSlot);
-	virtual ~PeriodicTimerFireJob();
 	virtual int Run();
 };
 
 PeriodicTimerFireJob::PeriodicTimerFireJob(const char *appTitleId, SceUInt32 timerSlot)
 	: TriggerFireJobBase(appTitleId, timerSlot)
-{
-}
-
-PeriodicTimerFireJob::~PeriodicTimerFireJob()
 {
 }
 
@@ -106,7 +101,6 @@ public:
 				 const char *targetTitleId,
 				 const TriggerPeriodicTimerParam *timerParam,
 				 SceUInt32 timerSlot, bool useCallback);
-	virtual ~RegisterPeriodicTimerJob();
 	virtual int Run();
 
 	char m_targetTitleId[12];
@@ -124,10 +118,6 @@ RegisterPeriodicTimerJob::RegisterPeriodicTimerJob(IPMI::Session *session, SceUI
 {
 	sce_paf_strncpy(m_targetTitleId, targetTitleId, TRIGGER_MGR_TITLE_ID_LEN);
 	m_targetTitleId[TRIGGER_MGR_TITLE_ID_LEN] = '\0';
-}
-
-RegisterPeriodicTimerJob::~RegisterPeriodicTimerJob()
-{
 }
 
 int RegisterPeriodicTimerJob::Run()
@@ -241,7 +231,6 @@ class UnregisterPeriodicTimerJob : public TriggerIpcJobBase {
 public:
 	UnregisterPeriodicTimerJob(IPMI::Session *session, SceUInt32 requestId,
 				   SceUInt32 timerSlot, bool useCallback);
-	virtual ~UnregisterPeriodicTimerJob();
 	virtual int Run();
 
 	SceUInt32 m_timerSlot;
@@ -252,10 +241,6 @@ UnregisterPeriodicTimerJob::UnregisterPeriodicTimerJob(IPMI::Session *session,
 						       bool useCallback)
 	: TriggerIpcJobBase("SceTriggerMgrJob", session, requestId, useCallback),
 	  m_timerSlot(timerSlot)
-{
-}
-
-UnregisterPeriodicTimerJob::~UnregisterPeriodicTimerJob()
 {
 }
 
@@ -309,7 +294,6 @@ class GetPeriodicTimerRemainingTimeJob : public TriggerIpcJobBase {
 public:
 	GetPeriodicTimerRemainingTimeJob(IPMI::Session *session, SceUInt32 requestId,
 					 SceUInt32 timerSlot, bool useCallback);
-	virtual ~GetPeriodicTimerRemainingTimeJob();
 	void Complete(int result, SceUInt32 remainingMinutes);
 	virtual int Run();
 
@@ -323,10 +307,6 @@ GetPeriodicTimerRemainingTimeJob::GetPeriodicTimerRemainingTimeJob(IPMI::Session
 	: TriggerIpcJobBase("SceTriggerMgrGetPeriodicTimerRemainingTimeJob",
 			    session, requestId, useCallback),
 	  m_timerSlot(timerSlot)
-{
-}
-
-GetPeriodicTimerRemainingTimeJob::~GetPeriodicTimerRemainingTimeJob()
 {
 }
 
@@ -394,7 +374,6 @@ class GetPeriodicTimerLastErrorJob : public TriggerIpcJobBase {
 public:
 	GetPeriodicTimerLastErrorJob(IPMI::Session *session, SceUInt32 requestId,
 				     SceUInt32 timerSlot, bool useCallback);
-	virtual ~GetPeriodicTimerLastErrorJob();
 	virtual int Run();
 
 	SceUInt32 m_timerSlot;
@@ -405,10 +384,6 @@ GetPeriodicTimerLastErrorJob::GetPeriodicTimerLastErrorJob(IPMI::Session *sessio
 							   SceUInt32 timerSlot, bool useCallback)
 	: TriggerIpcJobBase("SceTriggerMgrJob", session, requestId, useCallback),
 	  m_timerSlot(timerSlot)
-{
-}
-
-GetPeriodicTimerLastErrorJob::~GetPeriodicTimerLastErrorJob()
 {
 }
 

@@ -69,7 +69,10 @@ public:
 			    paf::graph::DrawInfo &info);
 	virtual void Draw(const paf::math::matrix &world, uint32_t color, float alpha);
 	virtual void ReleaseAll();
-	virtual paf::graph::DrawObjBounds GetBounds() const;
+	virtual paf::graph::DrawObjBounds GetBounds() const
+	{
+		return paf::graph::DrawObjBounds(m_boundsMin, m_boundsMax);
+	}
 	virtual void SetTexture(const paf::intrusive_ptr<paf::graph::Surface> &texture,
 				uint32_t index = 0);
 	virtual void GetTexture(paf::intrusive_ptr<paf::graph::Surface> &texture,

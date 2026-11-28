@@ -1178,11 +1178,6 @@ void ScreenShotIpcServer::onSessionClosedByClient(IPMI::Session *session)
 	--m_sessionCount;
 }
 
-void ScreenShotIpcServer::onSessionKilled(IPMI::Session *session)
-{
-	onSessionClosedByClient(session);
-}
-
 } /* namespace screenshot */
 
 /* Top-level shell screenshot APIs (0x81244AF4 - 0x81244C63) */
