@@ -9,6 +9,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "musiccore_mp3_readers.h"
+
 extern "C" {
 int sce_paf_memcmp(const void *lhs, const void *rhs, size_t len);
 void *sce_paf_memcpy(void *dst, const void *src, size_t len);
@@ -183,17 +185,6 @@ int hasSameMpegSampleRate(uint32_t lhsHeader, uint32_t rhsHeader)
     return (getMpegLayer3SampleRate(lhsHeader) == getMpegLayer3SampleRate(rhsHeader)) ? 1 : 0;
 }
 
-struct MpegFrameHeader {
-    uint32_t rawBits;
-    uint8_t isValid;
-    uint8_t pad[3];
-
-    MpegFrameHeader();
-    int parse(uint32_t headerBits);
-    int getBitrate() const;
-    int getSampleRate() const;
-};
-
 /* 0x811EB942 */
 MpegFrameHeader::MpegFrameHeader() : rawBits(0), isValid(0) {}
 
@@ -221,13 +212,6 @@ int MpegFrameHeader::getSampleRate() const
     return getMpegLayer3SampleRate(rawBits);
 }
 
-struct XingHeaderData {
-    uint8_t rawBytes[16];
-    uint8_t isValid;
-
-    int parse(const void *src);
-};
-
 /* 0x811EB9A0 */
 int XingHeaderData::parse(const void *src)
 {
@@ -238,18 +222,6 @@ int XingHeaderData::parse(const void *src)
     isValid = 1;
     return 1;
 }
-
-struct VbriHeaderData {
-    uint8_t rawBytes[26];
-    uint8_t isValid;
-
-    int parse(const void *src);
-    uint32_t getFrameCount() const;
-    uint16_t getTocEntryCount() const;
-    uint16_t getTocScaleFactor() const;
-    uint16_t getTocEntrySize() const;
-    uint16_t getTocFramesPerEntry() const;
-};
 
 /* 0x811EB9E2 */
 int VbriHeaderData::parse(const void *src)
@@ -292,41 +264,8 @@ uint16_t VbriHeaderData::getTocFramesPerEntry() const
     return readBigEndian16(rawBytes + 24);
 }
 
-struct StreamIoInterface {
-    virtual ~StreamIoInterface() {}
-    virtual int isInitialized() = 0;
-    virtual int open() = 0;
-    virtual int close() = 0;
-    virtual int isOpen() = 0;
-    virtual int getSize() = 0;
-    virtual int getPosition() = 0;
-    virtual int setPath(const char *path) = 0;
-    virtual int setPriorityMode(uint32_t priorityMode) = 0;
-    virtual int applyOpenFilePriority(int priorityMode) = 0;
-    virtual int flushCache() = 0;
-    virtual int setIoHint(int hintMode, int hintParam) = 0;
-    virtual void *mapRangeSimple(int offset, int size, int unusedFlag, int *outErr, int *outMapped) = 0;
-    virtual void *mapRangePinned(int offset, uint32_t size, int pinFlag, int *outPinToken,
-                                 int *outErr, uint32_t *outMapped) = 0;
-    virtual int unpinRange(int pinToken, int *outErr) = 0;
-    virtual int getCacheGeometry(int *outBlockCount, uint32_t *outChunkSize) = 0;
-    virtual int checkRangeReadable(int sizeBytes, int *outErr) = 0;
-};
-
+struct StreamIoInterface;
 extern StreamIoInterface *createLocalCacheIo(const char *path, int chunkSize, int blockCount, int readAhead);
-
-struct Mp3FramePacket {
-    uint32_t headerBits;
-    int fileOffset;
-    int frameSize;
-    int sampleRate;
-    uint16_t samplesPerFrame;
-    uint16_t leadingSkipSamples;
-    uint16_t trailingSkipSamples;
-    uint8_t channelMode;
-    uint8_t emphasis;
-    int packetSize;
-};
 
 struct TrackMetadataResult {
     int channels;
@@ -356,149 +295,25 @@ struct Mp3ParserInterface {
     virtual int seekToTimeMs(unsigned int targetMs, Mp3FramePacket *outPacket, int *outErr) = 0;
 };
 
-struct Mp3FrameCursor {
-    virtual ~Mp3FrameCursor();
-    int currentOffset;
-    MpegFrameHeader currentHeader;
-};
-
-struct Mp3Id3v1Reader {
-    void *vtable;
-    StreamIoInterface *io;
-    int status;
-};
-
-struct Mp3Id3v2Reader {
-    uint8_t storage[44];
-};
-
-struct Mp3FrameScanner {
-    StreamIoInterface *io;
-};
-
-struct Mp3FirstFrameInfo {
-    uint8_t storage[32];
-};
-
-struct Mp3NextFrameIter {
-    uint8_t storage[8];
-};
-
-struct Mp3CbrSeeker {
-    uint8_t storage[12];
-};
-
-struct Mp3XingReader {
-    uint8_t storage[56];
-};
-
-struct Mp3XingSeeker {
-    uint8_t storage[16];
-};
-
-struct Mp3VbriReader {
-    uint8_t storage[56];
-};
-
-struct Mp3VbriSeeker {
-    uint8_t storage[16];
-};
-
-struct Mp3CompositeSeeker {
-    uint8_t storage[12];
-};
-
-struct Mp3PacketReader {
-    uint8_t storage[8];
-};
-
-extern void mp3ParserInterfaceInit(Mp3ParserInterface *iface);
-extern void mp3ParserInterfaceDestroy(Mp3ParserInterface *iface);
-extern void mp3FrameCursorInit(Mp3FrameCursor *cursor);
-extern void mp3FrameCursorDestroy(Mp3FrameCursor *cursor);
-
-extern void mp3Id3v1Init(Mp3Id3v1Reader *reader, StreamIoInterface *io);
-extern void mp3Id3v1Destroy(Mp3Id3v1Reader *reader);
-extern int mp3Id3v1Parse(Mp3Id3v1Reader *reader, int *outErr);
-extern int *mp3Id3v1GetState(Mp3Id3v1Reader *reader);
-
-extern void mp3Id3v2Init(Mp3Id3v2Reader *reader, StreamIoInterface *io);
-extern void mp3Id3v2Destroy(Mp3Id3v2Reader *reader);
-extern int mp3Id3v2Parse(Mp3Id3v2Reader *reader, int mode, int *outErr);
-extern int *mp3Id3v2GetState(Mp3Id3v2Reader *reader);
-extern void *mp3Id3v2GetTagHeader(Mp3Id3v2Reader *reader);
-extern int mp3Id3v2GetPayloadSize(void *tagHeader);
-
-extern void mp3FrameScannerInit(Mp3FrameScanner *scanner, StreamIoInterface *io);
-extern int mp3FrameScannerFind(Mp3FrameScanner *scanner, int startOffset, int endOffset,
-                               const MpegFrameHeader *refHeader, int minConsecutive, int audioSize,
-                               int *outOffset, MpegFrameHeader *outHeader, int *outEndFlags, int *outErr);
-
-extern void mp3FirstFrameInit(Mp3FirstFrameInfo *firstFrame, StreamIoInterface *io,
-                              Mp3Id3v2Reader *id3v2, Mp3FrameScanner *scanner);
-extern void mp3FirstFrameDestroy(Mp3FirstFrameInfo *firstFrame);
-extern int mp3FirstFrameEnsure(Mp3FirstFrameInfo *firstFrame);
-extern int *mp3FirstFrameGetOffset(Mp3FirstFrameInfo *firstFrame);
-extern MpegFrameHeader *mp3FirstFrameGetHeader(Mp3FirstFrameInfo *firstFrame);
-
-extern void mp3NextFrameInit(Mp3NextFrameIter *iter, Mp3FrameScanner *scanner);
-extern void mp3NextFrameDestroy(Mp3NextFrameIter *iter);
-extern int mp3NextFrameAdvance(Mp3NextFrameIter *iter, Mp3FrameCursor *cursor, int audioSize,
-                               int *outOffset, MpegFrameHeader *outHeader, int *outEndFlags, int *outErr);
-
-extern void mp3CbrSeekerInit(Mp3CbrSeeker *seeker, Mp3FirstFrameInfo *firstFrame, Mp3FrameScanner *scanner);
-extern void mp3CbrSeekerDestroy(Mp3CbrSeeker *seeker);
-
-extern void mp3XingInit(Mp3XingReader *reader, StreamIoInterface *io, Mp3FirstFrameInfo *firstFrame);
-extern void mp3XingDestroy(Mp3XingReader *reader);
-extern int mp3XingEnsure(Mp3XingReader *reader, int audioSize, int *outErr);
-extern const uint8_t *mp3XingGetRawData(Mp3XingReader *reader);
-extern int mp3XingGetEncoderDelay(Mp3XingReader *reader, int audioSize);
-extern int mp3XingGetEncoderPadding(Mp3XingReader *reader, int audioSize);
-
-extern void mp3XingSeekerInit(Mp3XingSeeker *seeker, Mp3FirstFrameInfo *firstFrame,
-                              Mp3XingReader *xing, Mp3FrameScanner *scanner);
-extern void mp3XingSeekerDestroy(Mp3XingSeeker *seeker);
-
-extern void mp3VbriInit(Mp3VbriReader *reader, StreamIoInterface *io, Mp3FirstFrameInfo *firstFrame);
-extern void mp3VbriDestroy(Mp3VbriReader *reader);
-extern int mp3VbriEnsure(Mp3VbriReader *reader, int audioSize, int *outErr);
-extern const VbriHeaderData *mp3VbriGetData(Mp3VbriReader *reader);
-
-extern void mp3VbriSeekerInit(Mp3VbriSeeker *seeker, Mp3FirstFrameInfo *firstFrame,
-                              Mp3VbriReader *vbri, Mp3FrameScanner *scanner);
-extern void mp3VbriSeekerDestroy(Mp3VbriSeeker *seeker);
-
-extern void mp3CompositeSeekerInit(Mp3CompositeSeeker *seeker, Mp3CbrSeeker *cbr,
-                                   Mp3XingSeeker *xing, Mp3VbriSeeker *vbri);
-extern int mp3CompositeSeek(Mp3CompositeSeeker *seeker, unsigned int targetMs, int audioSize,
-                            int *outOffset, MpegFrameHeader *outHeader, uint8_t *outAtEnd, int *outErr);
-
-extern void mp3PacketReaderInit(Mp3PacketReader *reader, StreamIoInterface *io);
-extern void mp3PacketReaderDestroy(Mp3PacketReader *reader);
-extern int mp3PacketReaderRead(Mp3PacketReader *reader, int offset, unsigned int frameSize,
-                               int sampleRate, int samplesPerFrame, int emphasis,
-                               int channelMode, Mp3FramePacket *outPacket, int *outErr);
-
-class Mp3StreamParser : public Mp3ParserInterface, public Mp3FrameCursor {
+class Mp3StreamParser : public Mp3ParserInterface, public Mp3FrameRecord {
 public:
-    StreamIoInterface *ioStream;
+    CachedStreamIo *ioStream;
     int openStatus;
-    Mp3Id3v1Reader id3v1Reader;
-    Mp3Id3v2Reader id3v2Reader;
+    Id3v1Reader id3v1Reader;
+    Id3v2Reader id3v2Reader;
     Mp3FrameScanner frameScanner;
-    Mp3FirstFrameInfo firstFrame;
-    Mp3NextFrameIter nextFrameIter;
+    Mp3FirstFrameFinder firstFrame;
+    Mp3NextFrameLocator nextFrameIter;
     Mp3CbrSeeker cbrSeeker;
-    Mp3XingReader xingReader;
+    XingTagReader xingReader;
     Mp3XingSeeker xingSeeker;
-    Mp3VbriReader vbriReader;
+    VbriTagReader vbriReader;
     Mp3VbriSeeker vbriSeeker;
-    Mp3CompositeSeeker compositeSeeker;
-    Mp3PacketReader packetReader;
+    Mp3SeekRouter compositeSeeker;
+    Mp3FrameReader packetReader;
     int audioDataSize;
 
-    explicit Mp3StreamParser(StreamIoInterface *io);
+    explicit Mp3StreamParser(CachedStreamIo *io);
     virtual ~Mp3StreamParser();
     int openStream();
     int getStreamPosition();
@@ -514,25 +329,23 @@ public:
 };
 
 /* 0x811EAB1C */
-Mp3StreamParser::Mp3StreamParser(StreamIoInterface *io)
+Mp3StreamParser::Mp3StreamParser(CachedStreamIo *io)
     : ioStream(io),
       openStatus(-1),
+      id3v1Reader(io),
+      id3v2Reader(io),
+      frameScanner(io),
+      firstFrame(io, &id3v2Reader, &frameScanner),
+      nextFrameIter(&frameScanner),
+      cbrSeeker(&firstFrame, &frameScanner),
+      xingReader(io, &firstFrame),
+      xingSeeker(&firstFrame, &xingReader, &frameScanner),
+      vbriReader(io, &firstFrame),
+      vbriSeeker(&firstFrame, &vbriReader, &frameScanner),
+      compositeSeeker(&cbrSeeker, &xingSeeker, &vbriSeeker),
+      packetReader(io),
       audioDataSize(-1)
 {
-    mp3ParserInterfaceInit(this);
-    mp3FrameCursorInit(this);
-    mp3Id3v1Init(&id3v1Reader, ioStream);
-    mp3Id3v2Init(&id3v2Reader, ioStream);
-    mp3FrameScannerInit(&frameScanner, ioStream);
-    mp3FirstFrameInit(&firstFrame, ioStream, &id3v2Reader, &frameScanner);
-    mp3NextFrameInit(&nextFrameIter, &frameScanner);
-    mp3CbrSeekerInit(&cbrSeeker, &firstFrame, &frameScanner);
-    mp3XingInit(&xingReader, ioStream, &firstFrame);
-    mp3XingSeekerInit(&xingSeeker, &firstFrame, &xingReader, &frameScanner);
-    mp3VbriInit(&vbriReader, ioStream, &firstFrame);
-    mp3VbriSeekerInit(&vbriSeeker, &firstFrame, &vbriReader, &frameScanner);
-    mp3CompositeSeekerInit(&compositeSeeker, &cbrSeeker, &xingSeeker, &vbriSeeker);
-    mp3PacketReaderInit(&packetReader, ioStream);
 }
 
 /* 0x811EABF2 / 0x811EAC98 / 0x811EB72E / 0x811EB73C */
@@ -541,18 +354,6 @@ Mp3StreamParser::~Mp3StreamParser()
     if (ioStream != NULL && ioStream->isOpen() == 1 && ioStream->close() >= 0) {
         openStatus = -1;
     }
-    mp3PacketReaderDestroy(&packetReader);
-    mp3VbriSeekerDestroy(&vbriSeeker);
-    mp3VbriDestroy(&vbriReader);
-    mp3XingSeekerDestroy(&xingSeeker);
-    mp3XingDestroy(&xingReader);
-    mp3CbrSeekerDestroy(&cbrSeeker);
-    mp3NextFrameDestroy(&nextFrameIter);
-    mp3FirstFrameDestroy(&firstFrame);
-    mp3Id3v2Destroy(&id3v2Reader);
-    mp3Id3v1Destroy(&id3v1Reader);
-    mp3FrameCursorDestroy(this);
-    mp3ParserInterfaceDestroy(this);
 }
 
 /* 0x811EACA8 */
@@ -577,7 +378,7 @@ int Mp3StreamParser::getStreamPosition()
     if (ioStream == NULL) {
         return 0;
     }
-    return ioStream->getPosition();
+    return reinterpret_cast<int>(ioStream->getPath());
 }
 
 /* 0x811EACE2 */
@@ -588,16 +389,16 @@ int Mp3StreamParser::setIoHint(int mode)
     }
     switch (mode) {
     case 4:
-        ioStream->setIoHint(3, 0);
+        ioStream->setCacheHint(3);
         return 1;
     case 2:
-        ioStream->setIoHint(2, 0);
+        ioStream->setCacheHint(2);
         return 1;
     case 1:
-        ioStream->setIoHint(1, 0);
+        ioStream->setCacheHint(1);
         return 1;
     case 0:
-        ioStream->setIoHint(0, 0);
+        ioStream->setCacheHint(0);
         return 1;
     default:
         return 0;
@@ -608,19 +409,19 @@ int Mp3StreamParser::setIoHint(int mode)
 int Mp3StreamParser::computeAudioDataSize(int *outErr)
 {
     int overhead = 0;
-    if (*mp3Id3v2GetState(&id3v2Reader) == 255 && mp3Id3v2Parse(&id3v2Reader, 0, outErr) == 0) {
+    if (*id3v2Reader.getHeaderPresencePtr() == 255 && id3v2Reader.readTag(0u, outErr) == 0) {
         return 0;
     }
-    if (*mp3Id3v2GetState(&id3v2Reader) == 1) {
-        overhead = mp3Id3v2GetPayloadSize(mp3Id3v2GetTagHeader(&id3v2Reader)) + 10;
+    if (*id3v2Reader.getHeaderPresencePtr() == 1) {
+        overhead = (int)id3v2Reader.getHeaderPtr()->getTagBodySize() + 10;
     }
-    if (*mp3Id3v1GetState(&id3v1Reader) == 255 && mp3Id3v1Parse(&id3v1Reader, outErr) == 0) {
+    if (*id3v1Reader.getTagStatePtr() == 255 && id3v1Reader.probe(outErr) == 0) {
         return 0;
     }
-    if (*mp3Id3v1GetState(&id3v1Reader) == 1) {
+    if (*id3v1Reader.getTagStatePtr() == 1) {
         overhead += 128;
     }
-    int totalSize = ioStream->getSize();
+    int totalSize = ioStream->getFileSize();
     if (totalSize < 0) {
         *outErr = totalSize;
         return 0;
@@ -643,19 +444,19 @@ int Mp3StreamParser::getDurationMs(unsigned int *outDurationMs, int *outErr)
     if (audioDataSize < 0 && computeAudioDataSize(outErr) == 0) {
         return 0;
     }
-    if (mp3FirstFrameEnsure(&firstFrame) == 0) {
+    if (firstFrame.locateFirstFrame(-1, outErr) == 0) {
         if (*outErr == MP3_ERR_EOF) {
             *outErr = MP3_ERR_NO_FRAME;
         }
         return 0;
     }
 
-    MpegFrameHeader *hdr = mp3FirstFrameGetHeader(&firstFrame);
+    MpegFrameHeader *hdr = firstFrame.getFirstHeaderMut();
     unsigned int samplesPerFrame = (unsigned int)getMpegLayer3SamplesPerFrame(hdr->rawBits);
     unsigned int sampleRate = (unsigned int)hdr->getSampleRate();
 
-    if (mp3XingEnsure(&xingReader, audioDataSize, outErr) != 0) {
-        const uint8_t *xingRaw = mp3XingGetRawData(&xingReader);
+    if (xingReader.readHeader(audioDataSize, outErr) != 0) {
+        const uint8_t *xingRaw = xingReader.getHeader()->rawBytes;
         if ((xingRaw[7] & 2u) != 0u && (xingRaw[7] & 1u) != 0u) {
             uint32_t totalFrames = readBigEndian32(xingRaw + 8);
             unsigned int ms = (unsigned int)((((float)totalFrames * (float)samplesPerFrame) / (float)sampleRate) * 1000.0f);
@@ -667,8 +468,8 @@ int Mp3StreamParser::getDurationMs(unsigned int *outDurationMs, int *outErr)
         }
     }
 
-    if (mp3VbriEnsure(&vbriReader, audioDataSize, outErr) != 0) {
-        uint32_t totalFrames = mp3VbriGetData(&vbriReader)->getFrameCount();
+    if (vbriReader.readHeader(audioDataSize, outErr) != 0) {
+        uint32_t totalFrames = vbriReader.getHeader()->getFrameCount();
         unsigned int ms = (unsigned int)((((float)totalFrames * (float)samplesPerFrame) / (float)sampleRate) * 1000.0f);
         *outDurationMs = ms;
         if (ms != 0u) {
@@ -677,7 +478,7 @@ int Mp3StreamParser::getDurationMs(unsigned int *outDurationMs, int *outErr)
         }
     }
 
-    int payloadBytes = audioDataSize - *mp3FirstFrameGetOffset(&firstFrame);
+    int payloadBytes = audioDataSize - firstFrame.getFirstFrameOffset();
     unsigned int bitrate = (unsigned int)hdr->getBitrate();
     *outDurationMs = (unsigned int)((((float)payloadBytes * 8.0f) / (float)bitrate) * 1000.0f);
     *outErr = 0;
@@ -698,13 +499,13 @@ int Mp3StreamParser::getSampleRate(int *outRate, int *outErr)
     if (audioDataSize < 0 && computeAudioDataSize(outErr) == 0) {
         return 0;
     }
-    if (mp3FirstFrameEnsure(&firstFrame) == 0) {
+    if (firstFrame.locateFirstFrame(-1, outErr) == 0) {
         if (*outErr == MP3_ERR_EOF) {
             *outErr = MP3_ERR_NO_FRAME;
         }
         return 0;
     }
-    *outRate = mp3FirstFrameGetHeader(&firstFrame)->getSampleRate();
+    *outRate = firstFrame.getFirstHeaderMut()->getSampleRate();
     *outErr = 0;
     return 1;
 }
@@ -723,13 +524,13 @@ int Mp3StreamParser::getSamplesPerFrame(uint16_t *outSamples, int *outErr)
     if (audioDataSize < 0 && computeAudioDataSize(outErr) == 0) {
         return 0;
     }
-    if (mp3FirstFrameEnsure(&firstFrame) == 0) {
+    if (firstFrame.locateFirstFrame(-1, outErr) == 0) {
         if (*outErr == MP3_ERR_EOF) {
             *outErr = MP3_ERR_NO_FRAME;
         }
         return 0;
     }
-    *outSamples = (uint16_t)getMpegLayer3SamplesPerFrame(mp3FirstFrameGetHeader(&firstFrame)->rawBits);
+    *outSamples = (uint16_t)getMpegLayer3SamplesPerFrame(firstFrame.getFirstHeaderMut()->rawBits);
     *outErr = 0;
     return 1;
 }
@@ -746,25 +547,26 @@ int Mp3StreamParser::readFirstFrame(Mp3FramePacket *outPacket, int *outErr)
         return 0;
     }
     if ((audioDataSize < 0 && computeAudioDataSize(outErr) == 0) ||
-        mp3FirstFrameEnsure(&firstFrame) == 0) {
+        firstFrame.locateFirstFrame(-1, outErr) == 0) {
         return 0;
     }
 
-    int firstOff = *mp3FirstFrameGetOffset(&firstFrame);
-    MpegFrameHeader *firstHdr = mp3FirstFrameGetHeader(&firstFrame);
+    int firstOff = firstFrame.getFirstFrameOffset();
+    MpegFrameHeader *firstHdr = firstFrame.getFirstHeaderMut();
     int foundOffset = -1;
     MpegFrameHeader foundHeader;
-    int endFlags = 0;
+    uint32_t endFlags = 0;
     int leadingSkip = 0;
 
-    if (mp3XingEnsure(&xingReader, audioDataSize, outErr) != 0) {
+    if (xingReader.readHeader(audioDataSize, outErr) != 0) {
         int searchStart = firstOff + (int)getMpegLayer3FrameSize(firstHdr->rawBits);
         int searchEnd = searchStart + 1441;
-        if (mp3FrameScannerFind(&frameScanner, searchStart, searchEnd, firstHdr, 3,
-                                audioDataSize, &foundOffset, &foundHeader, &endFlags, outErr) == 0) {
+        if (frameScanner.findSyncFrame(searchStart, searchEnd, &firstHdr->rawBits, 3,
+                                       audioDataSize, &foundOffset, &foundHeader,
+                                       &endFlags, outErr) == 0) {
             return 0;
         }
-        leadingSkip = mp3XingGetEncoderDelay(&xingReader, audioDataSize);
+        leadingSkip = (int)xingReader.getEncoderDelay(audioDataSize);
         int spf = getMpegLayer3SamplesPerFrame(foundHeader.rawBits);
         if (leadingSkip > spf) {
             leadingSkip = spf;
@@ -772,11 +574,12 @@ int Mp3StreamParser::readFirstFrame(Mp3FramePacket *outPacket, int *outErr)
         if (leadingSkip == 0) {
             leadingSkip = spf >> 1;
         }
-    } else if (mp3VbriEnsure(&vbriReader, audioDataSize, outErr) != 0) {
+    } else if (vbriReader.readHeader(audioDataSize, outErr) != 0) {
         int searchStart = firstOff + (int)getMpegLayer3FrameSize(firstHdr->rawBits);
         int searchEnd = searchStart + 1441;
-        if (mp3FrameScannerFind(&frameScanner, searchStart, searchEnd, firstHdr, 3,
-                                audioDataSize, &foundOffset, &foundHeader, &endFlags, outErr) == 0) {
+        if (frameScanner.findSyncFrame(searchStart, searchEnd, &firstHdr->rawBits, 3,
+                                       audioDataSize, &foundOffset, &foundHeader,
+                                       &endFlags, outErr) == 0) {
             return 0;
         }
         leadingSkip = getMpegLayer3SamplesPerFrame(foundHeader.rawBits) >> 1;
@@ -789,15 +592,15 @@ int Mp3StreamParser::readFirstFrame(Mp3FramePacket *outPacket, int *outErr)
     unsigned int frameSize = getMpegLayer3FrameSize(foundHeader.rawBits);
     int sampleRate = foundHeader.getSampleRate();
     int spf = getMpegLayer3SamplesPerFrame(foundHeader.rawBits);
-    if (mp3PacketReaderRead(&packetReader, foundOffset, frameSize, sampleRate, spf,
-                            (int)(foundHeader.rawBits & 3u),
-                            (int)((foundHeader.rawBits >> 6) & 3u),
-                            outPacket, outErr) == 0) {
+    if (packetReader.readFrameData(foundOffset, frameSize, (uint16_t)sampleRate, (uint16_t)spf,
+                                   (uint8_t)(foundHeader.rawBits & 3u),
+                                   (uint8_t)((foundHeader.rawBits >> 6) & 3u),
+                                   outPacket, outErr) == 0) {
         return 0;
     }
 
-    currentOffset = foundOffset;
-    currentHeader = foundHeader;
+    m_fileOffset = foundOffset;
+    m_header = foundHeader;
     outPacket->leadingSkipSamples = (uint16_t)leadingSkip;
     outPacket->trailingSkipSamples = 0;
     return 1;
@@ -820,31 +623,31 @@ int Mp3StreamParser::readNextFrame(Mp3FramePacket *outPacket, int *outErr)
 
     int nextOffset = -1;
     MpegFrameHeader nextHeader;
-    int endKind = 0;
+    uint32_t endKind = 0;
 
-    if (mp3NextFrameAdvance(&nextFrameIter, this, audioDataSize,
-                            &nextOffset, &nextHeader, &endKind, outErr) == 0) {
+    if (nextFrameIter.locateNextFrame(this, audioDataSize,
+                                      &nextOffset, &nextHeader, &endKind, outErr) == 0) {
         return 0;
     }
 
     unsigned int frameSize = getMpegLayer3FrameSize(nextHeader.rawBits);
     int sampleRate = nextHeader.getSampleRate();
     int spf = getMpegLayer3SamplesPerFrame(nextHeader.rawBits);
-    if (mp3PacketReaderRead(&packetReader, nextOffset, frameSize, sampleRate, spf,
-                            (int)(nextHeader.rawBits & 3u),
-                            (int)((nextHeader.rawBits >> 6) & 3u),
-                            outPacket, outErr) == 0) {
+    if (packetReader.readFrameData(nextOffset, frameSize, (uint16_t)sampleRate, (uint16_t)spf,
+                                   (uint8_t)(nextHeader.rawBits & 3u),
+                                   (uint8_t)((nextHeader.rawBits >> 6) & 3u),
+                                   outPacket, outErr) == 0) {
         return 0;
     }
 
-    if (mp3XingEnsure(&xingReader, audioDataSize, outErr) == 0) {
+    if (xingReader.readHeader(audioDataSize, outErr) == 0) {
         outPacket->trailingSkipSamples = 0;
-    } else if (endKind == 0) {
-        int pad = mp3XingGetEncoderPadding(&xingReader, audioDataSize);
+    } else if (endKind == 0u) {
+        int pad = (int)xingReader.getEncoderPadding(audioDataSize);
         outPacket->trailingSkipSamples = (uint16_t)((pad > spf) ? spf : pad);
-    } else if (endKind == 1) {
-        if (mp3XingEnsure(&xingReader, audioDataSize, outErr) != 0) {
-            int pad = mp3XingGetEncoderPadding(&xingReader, audioDataSize);
+    } else if (endKind == 1u) {
+        if (xingReader.readHeader(audioDataSize, outErr) != 0) {
+            int pad = (int)xingReader.getEncoderPadding(audioDataSize);
             if (pad <= spf) {
                 outPacket->trailingSkipSamples = (uint16_t)pad;
             } else {
@@ -857,8 +660,8 @@ int Mp3StreamParser::readNextFrame(Mp3FramePacket *outPacket, int *outErr)
     }
 
     outPacket->leadingSkipSamples = 0;
-    currentOffset = nextOffset;
-    currentHeader = nextHeader;
+    m_fileOffset = nextOffset;
+    m_header = nextHeader;
     return 1;
 }
 
@@ -883,33 +686,33 @@ int Mp3StreamParser::seekToTimeMs(unsigned int targetMs, Mp3FramePacket *outPack
 
     int seekOffset = -1;
     MpegFrameHeader seekHeader;
-    uint8_t atEnd = 0;
+    bool atEnd = false;
 
-    if (mp3CompositeSeek(&compositeSeeker, targetMs, audioDataSize,
-                         &seekOffset, &seekHeader, &atEnd, outErr) == 0) {
+    if (compositeSeeker.seekToMs(targetMs, audioDataSize,
+                                 &seekOffset, &seekHeader, &atEnd, outErr) == 0) {
         return 0;
     }
 
     unsigned int frameSize = getMpegLayer3FrameSize(seekHeader.rawBits);
     int sampleRate = seekHeader.getSampleRate();
     int spf = getMpegLayer3SamplesPerFrame(seekHeader.rawBits);
-    if (mp3PacketReaderRead(&packetReader, seekOffset, frameSize, sampleRate, spf,
-                            (int)(seekHeader.rawBits & 3u),
-                            (int)((seekHeader.rawBits >> 6) & 3u),
-                            outPacket, outErr) == 0) {
+    if (packetReader.readFrameData(seekOffset, frameSize, (uint16_t)sampleRate, (uint16_t)spf,
+                                   (uint8_t)(seekHeader.rawBits & 3u),
+                                   (uint8_t)((seekHeader.rawBits >> 6) & 3u),
+                                   outPacket, outErr) == 0) {
         return 0;
     }
 
-    if (atEnd != 0 && mp3XingEnsure(&xingReader, audioDataSize, outErr) != 0) {
-        int pad = mp3XingGetEncoderPadding(&xingReader, audioDataSize);
+    if (atEnd && xingReader.readHeader(audioDataSize, outErr) != 0) {
+        int pad = (int)xingReader.getEncoderPadding(audioDataSize);
         outPacket->trailingSkipSamples = (uint16_t)((pad > spf) ? spf : pad);
     } else {
         outPacket->trailingSkipSamples = 0;
     }
 
     outPacket->leadingSkipSamples = 0;
-    currentOffset = seekOffset;
-    currentHeader = seekHeader;
+    m_fileOffset = seekOffset;
+    m_header = seekHeader;
     return 1;
 }
 
@@ -929,24 +732,11 @@ int Mp3StreamParser::checkFrameReadable(const Mp3FramePacket *packet, int *outEr
     return 0;
 }
 
-struct MediaInfoRecord {
-    void *vtable;
-    uint32_t formatFourCC;
-    uint8_t isRetained;
-    char filePath[2051];
-};
-
-extern void mediaInfoRecordInit(MediaInfoRecord *rec, const char *path, uint32_t fourCC);
-extern void mediaInfoRecordDestroy(MediaInfoRecord *rec);
-
-class Mp3MediaInfo {
+class Mp3MediaInfo : public MediaInfoBase {
 public:
-    uint32_t formatFourCC;
-    uint8_t isRetained;
-    char filePath[2051];
     int ioMode;
     Mp3StreamParser *parser;
-    StreamIoInterface *ioStream;
+    CachedStreamIo *ioStream;
 
     Mp3MediaInfo(const char *path, int mode);
     virtual ~Mp3MediaInfo();
@@ -955,13 +745,13 @@ public:
 
 /* 0x811EA894 */
 Mp3MediaInfo::Mp3MediaInfo(const char *path, int mode)
-    : ioMode(mode),
+    : MediaInfoBase(path, FOURCC_MP3),
+      ioMode(mode),
       parser(NULL),
       ioStream(NULL)
 {
-    mediaInfoRecordInit(reinterpret_cast<MediaInfoRecord *>(this), path, FOURCC_MP3);
     if (mode == 16) {
-        ioStream = createLocalCacheIo(filePath, 0x4000, 32, 1);
+        ioStream = reinterpret_cast<CachedStreamIo *>(createLocalCacheIo(m_path, 0x4000, 32, 1));
         if (ioStream != NULL) {
             void *mem = allocFromHeap(sizeof(Mp3StreamParser));
             if (mem != NULL) {
@@ -986,7 +776,6 @@ Mp3MediaInfo::~Mp3MediaInfo()
         delete ioStream;
         ioStream = NULL;
     }
-    mediaInfoRecordDestroy(reinterpret_cast<MediaInfoRecord *>(this));
 }
 
 /* 0x811EA9A6 */
@@ -1123,121 +912,6 @@ int mp3StreamQueryTag(Mp3StreamParser *stream, void *tagOut, void *extraOut)
 }
 
 Mp3ParserInterface::~Mp3ParserInterface() {}
-Mp3FrameCursor::~Mp3FrameCursor() {}
-
-uint32_t bitMaskLow(int bits)
-{
-    return makeBitMask(static_cast<uint8_t>(bits));
-}
-
-uint32_t readBigEndian32(const void *ptr)
-{
-    return readBigEndian32(static_cast<const uint8_t *>(ptr));
-}
-
-uint32_t readBigEndian24(const void *ptr)
-{
-    return readBigEndian24(static_cast<const uint8_t *>(ptr));
-}
-
-uint16_t readBigEndian16(const void *ptr)
-{
-    return readBigEndian16(static_cast<const uint8_t *>(ptr));
-}
-
-int mp3HeaderValidate(uint32_t headerBits, int *outError)
-{
-    return validateMpegLayer3Header(headerBits, outError);
-}
-
-int mp3HeaderSamplesPerFrame(uint32_t headerBits)
-{
-    return getMpegLayer3SamplesPerFrame(headerBits);
-}
-
-int mp3HeaderFrameSize(uint32_t headerBits)
-{
-    return getMpegLayer3FrameSize(headerBits);
-}
-
-int mp3HeaderMatchesRef(uint32_t candidateBits, uint32_t refBits)
-{
-    return hasSameMpegSampleRate(candidateBits, refBits);
-}
-
-uint32_t mp3HeaderBitRate(const void *headerHolder)
-{
-    return (headerHolder != NULL)
-        ? static_cast<uint32_t>(static_cast<const MpegFrameHeader *>(headerHolder)->getBitrate())
-        : 0u;
-}
-
-uint32_t mp3HeaderSampleRate(const void *headerHolder)
-{
-    return (headerHolder != NULL)
-        ? static_cast<uint32_t>(static_cast<const MpegFrameHeader *>(headerHolder)->getSampleRate())
-        : 0u;
-}
-
-struct Mp3HeaderHolder {
-    uint32_t headerBits;
-    uint8_t isValid;
-    uint8_t padValid[3];
-};
-
-void mp3HeaderHolderInit(Mp3HeaderHolder *holder)
-{
-    if (holder != NULL) {
-        holder->headerBits = 0;
-        holder->isValid = 0;
-    }
-}
-
-int mp3HeaderHolderParse(Mp3HeaderHolder *holder, uint32_t headerBits)
-{
-    if (holder == NULL)
-        return 0;
-    int err = 0;
-    int valid = validateMpegLayer3Header(headerBits, &err);
-    holder->headerBits = headerBits;
-    holder->isValid = static_cast<uint8_t>(valid != 0);
-    return valid;
-}
-
-int vbriHeaderParse(VbriHeaderData *hdr, const void *src)
-{
-    return (hdr != NULL) ? hdr->parse(src) : 0;
-}
-
-uint32_t vbriHeaderGetFrameCount(const VbriHeaderData *hdr)
-{
-    return (hdr != NULL) ? readBigEndian32(hdr->rawBytes + 14) : 0u;
-}
-
-uint16_t vbriHeaderGetTocEntries(const VbriHeaderData *hdr)
-{
-    return (hdr != NULL) ? readBigEndian16(hdr->rawBytes + 18) : 0u;
-}
-
-uint16_t vbriHeaderGetTocScale(const VbriHeaderData *hdr)
-{
-    return (hdr != NULL) ? readBigEndian16(hdr->rawBytes + 20) : 0u;
-}
-
-uint16_t vbriHeaderGetTocEntrySize(const VbriHeaderData *hdr)
-{
-    return (hdr != NULL) ? readBigEndian16(hdr->rawBytes + 22) : 0u;
-}
-
-uint16_t vbriHeaderGetTocFramesPerEntry(const VbriHeaderData *hdr)
-{
-    return (hdr != NULL) ? readBigEndian16(hdr->rawBytes + 24) : 0u;
-}
-
-int xingHeaderParse(XingHeaderData *hdr, const void *src)
-{
-    return (hdr != NULL) ? hdr->parse(src) : 0;
-}
 
 } // namespace MusicCore
 } // namespace sce

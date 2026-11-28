@@ -5,6 +5,7 @@
  * Original address range (3.65-CEX): 0x811F360C - 0x811F51FB
  */
 
+#include "musiccore_cache_io_engine.h"
 #include "musiccore_local_cache_io.h"
 #include <kernel.h>
 #include <std/new>
@@ -30,40 +31,6 @@ namespace MusicCore {
 extern void *allocFromHeap(size_t size);
 extern char *allocCharArray(size_t count);
 extern uint32_t *allocUint32Array(size_t count);
-
-/* CacheIo engine interface (implemented in musiccore_cache_io_engine.cpp, 0x81203084+) */
-struct CacheIoConfig {
-    int chunkSize;
-    int blockCount;
-};
-
-typedef int (*CacheIoOpenFn)(const char *path, void *userCtx);
-typedef int (*CacheIoCloseFn)(void *userCtx);
-typedef int64_t (*CacheIoSeekFn)(void *userCtx, int64_t offset, int whence);
-typedef int (*CacheIoReadFn)(void *userCtx, void *dst, size_t size);
-typedef int (*CacheIoGetSizeFn)(const char *path, uint32_t *outSize);
-typedef int (*CacheIoSetThreadPrioFn)(int mode);
-
-extern int cacheIoCreate(uint8_t extraCount, const uint32_t *extraSizes, int streamCount,
-                         const CacheIoConfig *config, uint8_t readAhead,
-                         void (*notifyCb)(), void *notifyArg, int reservedOpt,
-                         void **outHandle);
-extern int cacheIoDestroy(void *handle);
-extern int cacheIoSetCallbacks(void *handle, CacheIoOpenFn openFn, CacheIoCloseFn closeFn,
-                               CacheIoSeekFn seekFn, CacheIoReadFn readFn,
-                               CacheIoGetSizeFn getSizeFn, CacheIoSetThreadPrioFn setPrioFn);
-extern int cacheIoSetPath(void *handle, const char *path);
-extern int cacheIoGetLastError(void *handle, uint32_t *outErr);
-extern int cacheIoOpen(void *handle, void *userCtx);
-extern int cacheIoClose(void *handle);
-extern int cacheIoIsOpen(void *handle, uint8_t *outOpen);
-extern int cacheIoGetFileSize(void *handle, int64_t *outSize);
-extern int cacheIoSetHintMode(void *handle, int engineMode);
-extern uint32_t cacheIoPrefetch(void *handle, uint8_t flags, int offset, int size);
-extern uint32_t cacheIoMapRange(void *handle, int streamIdx, int64_t offset,
-                                int size, uint8_t flags, void **outPtr,
-                                uint32_t *outMappedSize, uint8_t *outEof, int extra);
-extern int cacheIoCheckReadable(void *handle, int streamIdx, const uint32_t *sizeParam);
 
 static const int MC_ERR_INTERNAL = -1879113726;       /* 0x8FFF0002 */
 static const int MC_ERR_INVALID_ARG = -1879113723;    /* 0x8FFF0005 */
@@ -600,24 +567,31 @@ LocalCacheIo::LocalCacheIo(const char *path, int chunkSize, int blockCount, uint
     , m_chunkSize(chunkSize)
     , m_blockCount(blockCount)
 {
-    CacheIoConfig cfg;
-    cfg.chunkSize = chunkSize;
-    cfg.blockCount = blockCount;
+    AsyncRingConfig cfg;
+    cfg.blockSize = static_cast<uint32_t>(chunkSize);
+    cfg.blockCount = static_cast<uint32_t>(blockCount);
 
-    if (cacheIoCreate(0u, NULL, 1, &cfg, readAhead, &noopCacheNotify, NULL, 0, &m_cacheHandle) != 0) {
+    CacheIoEngine *engine = NULL;
+    if (cacheIoCreate(0u, NULL, 1u, &cfg, readAhead, 0, NULL,
+                      reinterpret_cast<void *>(&noopCacheNotify), &engine) != 0) {
         return;
     }
-    if (cacheIoSetCallbacks(m_cacheHandle, &openCallback, &closeCallback,
-                            &seekCallback, &readCallback, &getFileSizeCallback,
-                            &setThreadPriorityCallback) != 0) {
-        cacheIoDestroy(m_cacheHandle);
+    m_cacheHandle = engine;
+    if (cacheIoSetCallbacks(engine,
+                            reinterpret_cast<StreamOpenCallback>(&openCallback),
+                            reinterpret_cast<StreamCloseCallback>(&closeCallback),
+                            reinterpret_cast<StreamSeekCallback>(&seekCallback),
+                            reinterpret_cast<StreamReadCallback>(&readCallback),
+                            reinterpret_cast<StreamStatSizeCallback>(&getFileSizeCallback),
+                            reinterpret_cast<StreamErrorCallback>(&setThreadPriorityCallback)) != 0) {
+        cacheIoDestroy(engine);
         return;
     }
     if (path != NULL && !copyPath(path)) {
         return;
     }
-    if (cacheIoSetPath(m_cacheHandle, m_filePath) != 0) {
-        cacheIoDestroy(m_cacheHandle);
+    if (cacheIoSetStreamPath(engine, m_filePath) != 0) {
+        cacheIoDestroy(engine);
         return;
     }
     m_initialized = 1u;
@@ -636,9 +610,9 @@ LocalCacheIo::LocalCacheIo(const char *path, int chunkSize, int blockCount, uint
     , m_chunkSize(chunkSize)
     , m_blockCount(blockCount)
 {
-    CacheIoConfig cfg;
-    cfg.chunkSize = chunkSize;
-    cfg.blockCount = blockCount;
+    AsyncRingConfig cfg;
+    cfg.blockSize = static_cast<uint32_t>(chunkSize);
+    cfg.blockCount = static_cast<uint32_t>(blockCount);
 
     uint32_t *extraSizes = allocUint32Array((size_t)extraBlockCount);
     if (extraSizes == NULL) {
@@ -648,24 +622,30 @@ LocalCacheIo::LocalCacheIo(const char *path, int chunkSize, int blockCount, uint
         extraSizes[idx] = (uint32_t)extraChunkSize;
     }
 
-    int createErr = cacheIoCreate((uint8_t)extraBlockCount, extraSizes, 1, &cfg, readAhead,
-                                  &noopCacheNotify, NULL, 0, &m_cacheHandle);
+    CacheIoEngine *engine = NULL;
+    int createErr = cacheIoCreate((uint8_t)extraBlockCount, extraSizes, 1u, &cfg, readAhead,
+                                  0, NULL, reinterpret_cast<void *>(&noopCacheNotify), &engine);
     delete[] extraSizes;
     if (createErr != 0) {
         return;
     }
+    m_cacheHandle = engine;
 
-    if (cacheIoSetCallbacks(m_cacheHandle, &openCallback, &closeCallback,
-                            &seekCallback, &readCallback, &getFileSizeCallback,
-                            &setThreadPriorityCallback) != 0) {
-        cacheIoDestroy(m_cacheHandle);
+    if (cacheIoSetCallbacks(engine,
+                            reinterpret_cast<StreamOpenCallback>(&openCallback),
+                            reinterpret_cast<StreamCloseCallback>(&closeCallback),
+                            reinterpret_cast<StreamSeekCallback>(&seekCallback),
+                            reinterpret_cast<StreamReadCallback>(&readCallback),
+                            reinterpret_cast<StreamStatSizeCallback>(&getFileSizeCallback),
+                            reinterpret_cast<StreamErrorCallback>(&setThreadPriorityCallback)) != 0) {
+        cacheIoDestroy(engine);
         return;
     }
     if (path != NULL && !copyPath(path)) {
         return;
     }
-    if (cacheIoSetPath(m_cacheHandle, m_filePath) != 0) {
-        cacheIoDestroy(m_cacheHandle);
+    if (cacheIoSetStreamPath(engine, m_filePath) != 0) {
+        cacheIoDestroy(engine);
         return;
     }
     m_initialized = 1u;
@@ -675,7 +655,7 @@ LocalCacheIo::LocalCacheIo(const char *path, int chunkSize, int blockCount, uint
 LocalCacheIo::~LocalCacheIo()
 {
     if (m_cacheHandle != NULL) {
-        cacheIoDestroy(m_cacheHandle);
+        cacheIoDestroy(static_cast<CacheIoEngine *>(m_cacheHandle));
     }
     if (m_filePath != NULL) {
         delete[] m_filePath;
@@ -696,12 +676,7 @@ int LocalCacheIo::open()
     if (m_initialized == 0u) {
         return -1;
     }
-    int ret = cacheIoOpen(m_cacheHandle, this);
-    if (ret < 0) {
-        uint32_t lastErr = 0;
-        cacheIoGetLastError(m_cacheHandle, &lastErr);
-    }
-    return ret;
+    return cacheIoOpenStream(static_cast<CacheIoEngine *>(m_cacheHandle), this);
 }
 
 /* 0x811F40E8 */
@@ -713,7 +688,7 @@ int LocalCacheIo::close()
     if (m_file.get() == NULL) {
         return 0;
     }
-    return (cacheIoClose(m_cacheHandle) != 0) ? -1 : 0;
+    return (cacheIoCloseStream(static_cast<CacheIoEngine *>(m_cacheHandle)) != 0) ? -1 : 0;
 }
 
 /* 0x811F4110 */
@@ -723,7 +698,7 @@ int LocalCacheIo::isOpen() const
         return 0;
     }
     uint8_t opened = 0;
-    if (cacheIoIsOpen(m_cacheHandle, &opened) != 0) {
+    if (cacheIoIsStreamOpen(static_cast<const CacheIoEngine *>(m_cacheHandle), &opened) != 0) {
         return 0;
     }
     return opened;
@@ -736,7 +711,7 @@ int LocalCacheIo::getFileSize() const
         return -1;
     }
     int64_t sizeVal = -1;
-    if (cacheIoGetFileSize(m_cacheHandle, &sizeVal) != 0) {
+    if (cacheIoGetStreamSize(static_cast<const CacheIoEngine *>(m_cacheHandle), &sizeVal) != 0) {
         return -1;
     }
     return (int)sizeVal;
@@ -749,7 +724,7 @@ int LocalCacheIo::setPath(const char *path)
         return -1;
     }
     copyPath(path);
-    return (cacheIoSetPath(m_cacheHandle, m_filePath) != 0) ? -1 : 0;
+    return (cacheIoSetStreamPath(static_cast<CacheIoEngine *>(m_cacheHandle), m_filePath) != 0) ? -1 : 0;
 }
 
 /* 0x811F420C */
@@ -968,13 +943,14 @@ int LocalCacheIo::setCacheHint(int hintMode)
     } else {
         return 0;
     }
-    return cacheIoSetHintMode(m_cacheHandle, engineMode);
+    return cacheIoSetDirectionHint(static_cast<CacheIoEngine *>(m_cacheHandle), engineMode, 0);
 }
 
 /* 0x811F4DCA */
 void *LocalCacheIo::mapRangeSimple(int offset, int size, int unusedFlag, int *outErr, int extra)
 {
     (void)unusedFlag;
+    (void)extra;
     if (m_initialized == 0u) {
         *outErr = -1;
         return NULL;
@@ -986,8 +962,10 @@ void *LocalCacheIo::mapRangeSimple(int offset, int size, int unusedFlag, int *ou
 
     void *mappedPtr = NULL;
     uint8_t reachedEof = 0;
-    uint32_t engineErr = cacheIoMapRange(m_cacheHandle, 1, (int64_t)offset, size, 0u,
-                                         &mappedPtr, NULL, &reachedEof, extra);
+    PrefetchPinToken *pinToken = NULL;
+    uint32_t engineErr = static_cast<uint32_t>(cacheIoReadAsync(
+        static_cast<CacheIoEngine *>(m_cacheHandle), 1u, (int64_t)offset,
+        static_cast<uint32_t>(size), 0u, &mappedPtr, &pinToken, &reachedEof, NULL));
     if (engineErr != 0u) {
         *outErr = mapCacheEngineError(engineErr);
         return NULL;
@@ -1000,6 +978,7 @@ void *LocalCacheIo::mapRangeSimple(int offset, int size, int unusedFlag, int *ou
 void *LocalCacheIo::mapRange(int offset, int size, uint8_t flags,
                              int *outMappedSize, int *outErr, int extra)
 {
+    (void)extra;
     if (m_initialized == 0u) {
         *outErr = -1;
         return NULL;
@@ -1013,8 +992,10 @@ void *LocalCacheIo::mapRange(int offset, int size, uint8_t flags,
     void *mappedPtr = NULL;
     uint32_t mappedBytes = 0;
     uint8_t reachedEof = 0;
-    uint32_t engineErr = cacheIoMapRange(m_cacheHandle, 1, (int64_t)offset, size, flags,
-                                         &mappedPtr, &mappedBytes, &reachedEof, extra);
+    PrefetchPinToken *pinToken = NULL;
+    uint32_t engineErr = static_cast<uint32_t>(cacheIoReadAsync(
+        static_cast<CacheIoEngine *>(m_cacheHandle), 1u, (int64_t)offset,
+        static_cast<uint32_t>(size), flags, &mappedPtr, &pinToken, &reachedEof, &mappedBytes));
     if (engineErr != 0u) {
         *outErr = mapCacheEngineError(engineErr);
         return NULL;
@@ -1032,8 +1013,11 @@ int LocalCacheIo::checkRangeReadable(int sizeBytes, int *outErr)
         return 0;
     }
 
-    uint32_t querySize = (uint32_t)sizeBytes;
-    int err = cacheIoCheckReadable(m_cacheHandle, 1, &querySize);
+    void *mappedPtr = NULL;
+    uint8_t didIo = 0;
+    uint32_t avail = 0;
+    int err = cacheIoReadSync(static_cast<CacheIoEngine *>(m_cacheHandle),
+                              1u, 0, (uint32_t)sizeBytes, &mappedPtr, &didIo, &avail);
     if (err != 0) {
         *outErr = (err == CACHE_ERR_BAD_PARAM) ? IO_ERR_BAD_RANGE : -1;
         return 0;
@@ -1054,7 +1038,12 @@ int LocalCacheIo::prefetchRange(uint8_t flags, int offset, int size, int *outErr
         return 0;
     }
 
-    uint32_t engineErr = cacheIoPrefetch(m_cacheHandle, flags, offset, size);
+    void *mappedPtr = NULL;
+    uint8_t didIo = 0;
+    uint32_t avail = 0;
+    uint32_t engineErr = static_cast<uint32_t>(cacheIoReadSync(
+        static_cast<CacheIoEngine *>(m_cacheHandle), flags, offset,
+        static_cast<uint32_t>(size), &mappedPtr, &didIo, &avail));
     if (engineErr != 0u) {
         *outErr = mapCacheEngineError(engineErr);
         return 0;

@@ -8,6 +8,7 @@
 #include <std/new>
 #include <stddef.h>
 #include <stdint.h>
+#include "musiccore_mp3_readers.h"
 #include "musiccore_mp4_boxes.h"
 
 namespace sce {
@@ -719,21 +720,8 @@ int Mp4StreamParser::checkSampleReadable(const Mp4FramePacket *packet, int *outE
     return 0;
 }
 
-struct MediaInfoRecord {
-    void *vtable;
-    uint32_t formatFourCC;
-    uint8_t isRetained;
-    char filePath[2051];
-};
-
-extern void mediaInfoRecordInit(MediaInfoRecord *rec, const char *path, uint32_t fourCC);
-extern void mediaInfoRecordDestroy(MediaInfoRecord *rec);
-
-class Mp4MediaInfo {
+class Mp4MediaInfo : public MediaInfoBase {
 public:
-    uint32_t formatFourCC;
-    uint8_t isRetained;
-    char filePath[2051];
     int ioMode;
     Mp4StreamParser *parser;
     StreamIoInterface *ioStream;
@@ -745,13 +733,13 @@ public:
 
 /* 0x811EBA70 */
 Mp4MediaInfo::Mp4MediaInfo(const char *path, int mode)
-    : ioMode(mode),
+    : MediaInfoBase(path, FOURCC_MP4),
+      ioMode(mode),
       parser(NULL),
       ioStream(NULL)
 {
-    mediaInfoRecordInit(reinterpret_cast<MediaInfoRecord *>(this), path, FOURCC_MP4);
     if (mode == 16) {
-        ioStream = createLocalCacheIoEx(filePath, 0x4000, 32, 1, 0x4000, 4);
+        ioStream = createLocalCacheIoEx(m_path, 0x4000, 32, 1, 0x4000, 4);
         if (ioStream != NULL) {
             void *mem = allocFromHeap(sizeof(Mp4StreamParser));
             if (mem != NULL) {
@@ -776,7 +764,6 @@ Mp4MediaInfo::~Mp4MediaInfo()
         delete ioStream;
         ioStream = NULL;
     }
-    mediaInfoRecordDestroy(reinterpret_cast<MediaInfoRecord *>(this));
 }
 
 /* 0x811EBB90 */

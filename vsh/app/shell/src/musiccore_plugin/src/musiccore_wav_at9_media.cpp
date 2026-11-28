@@ -5,6 +5,7 @@
  */
 
 #include "musiccore_local_cache_io.h"
+#include "musiccore_mp3_readers.h"
 #include <kernel.h>
 #include <std/new>
 #include <stddef.h>
@@ -92,20 +93,6 @@ struct At9SmplLoopInfo {
     uint32_t loopStart;
     uint32_t loopEnd;
 };
-
-class MediaInfoBase {
-public:
-    virtual ~MediaInfoBase() {}
-
-protected:
-    uint32_t mediaFourcc;
-    uint8_t initialized;
-    char filePath[2048];
-    uint8_t padPath[3];
-};
-
-extern void mediaInfoBaseInit(MediaInfoBase *self, const char *path, uint32_t fourcc);
-extern void mediaInfoBaseDestroy(MediaInfoBase *self);
 
 static uint16_t readLe16(const uint8_t *src)
 {
@@ -383,12 +370,12 @@ private:
 
 /* 0x811EDBD4 */
 WavMediaInfo::WavMediaInfo(const char *path)
-    : m_cacheIo(NULL)
+    : MediaInfoBase(path, FOURCC_WAV)
+    , m_cacheIo(NULL)
 {
-    mediaInfoBaseInit(this, path, FOURCC_WAV);
     void *mem = allocFromHeap(sizeof(WavCacheIo));
     if (mem != NULL) {
-        m_cacheIo = new (mem) WavCacheIo(filePath, 0x10000, 8, 1, 0, 0);
+        m_cacheIo = new (mem) WavCacheIo(m_path, 0x10000, 8, 1, 0, 0);
     }
     if (m_cacheIo != NULL) {
         m_cacheIo->isInitialized();
@@ -402,7 +389,6 @@ WavMediaInfo::~WavMediaInfo()
         delete m_cacheIo;
         m_cacheIo = NULL;
     }
-    mediaInfoBaseDestroy(this);
 }
 
 static bool isSupportedWavSampleRate(uint32_t sampleRate)
@@ -735,12 +721,13 @@ private:
 
 /* 0x811EE30C */
 At9MediaInfo::At9MediaInfo(const char *path, int loopMode)
-    : m_loopMode(loopMode), m_cacheIo(NULL)
+    : MediaInfoBase(path, FOURCC_AT9)
+    , m_loopMode(loopMode)
+    , m_cacheIo(NULL)
 {
-    mediaInfoBaseInit(this, path, FOURCC_AT9);
     void *mem = allocFromHeap(sizeof(At9CacheIo));
     if (mem != NULL) {
-        m_cacheIo = new (mem) At9CacheIo(filePath, 0x4000, 32, 1, 0, 0);
+        m_cacheIo = new (mem) At9CacheIo(m_path, 0x4000, 32, 1, 0, 0);
     }
     if (m_cacheIo != NULL) {
         m_cacheIo->isInitialized();
@@ -754,7 +741,6 @@ At9MediaInfo::~At9MediaInfo()
         delete m_cacheIo;
         m_cacheIo = NULL;
     }
-    mediaInfoBaseDestroy(this);
 }
 
 static bool lookupAt9BitrateKbps(uint16_t frameBytes, int *outKbps)

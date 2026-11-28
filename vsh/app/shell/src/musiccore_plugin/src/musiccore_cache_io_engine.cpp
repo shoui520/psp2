@@ -9,6 +9,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "musiccore_cache_io_engine.h"
 #include "musiccore_pipeline_types.h"
 
 #include <memory/heap_allocator.h>
@@ -59,25 +60,6 @@ extern void *getWorkerThreadPool();
 extern int workerPoolSpawn(void *pool, int workerKind, void *entryFn, void *arg, SceUID *outThreadId);
 extern int workerPoolJoin(void *pool, SceUID threadId);
 extern int isWorkerThreadValid(SceUID threadId);
-
-/* File I/O callback table registered by CachedStreamIo */
-typedef int (*StreamOpenCallback)(const char *path, void **outHandle, void *userCtx, void *extraCtx);
-typedef int (*StreamCloseCallback)(void *handle, void *userCtx, void *extraCtx);
-typedef int64_t (*StreamSeekCallback)(void *handle, int64_t offset, int whence, void *userCtx, void *extraCtx);
-typedef int (*StreamReadCallback)(void *handle, void *dstBuf, uint32_t size, int isSync,
-                                  void *userCtx, void *extraCtx);
-typedef int (*StreamStatSizeCallback)(const char *path, uint32_t *outSize);
-typedef int (*StreamErrorCallback)(void *handle);
-
-struct AsyncRingConfig {
-    uint32_t blockSize;
-    uint32_t blockCount;
-};
-
-struct PrefetchPinToken {
-    int firstSlot;
-    int secondSlot;
-};
 
 struct PrefetchWorkerArg;
 
@@ -1901,126 +1883,6 @@ int cacheIoReleaseAsyncPin(CacheIoEngine *engine, uint8_t streamId, PrefetchPinT
     if (engine == NULL)
         return CACHE_ERR_INVALID_ARG;
     return engine->releaseAsyncPin(streamId, ioToken);
-}
-
-/* Bridges for LocalCacheIo in musiccore_sync_cache_io.cpp */
-struct CacheIoConfig {
-    int chunkSize;
-    int blockCount;
-};
-
-typedef int (*CacheIoOpenFn)(const char *path, void *userCtx);
-typedef int (*CacheIoCloseFn)(void *userCtx);
-typedef int64_t (*CacheIoSeekFn)(void *userCtx, int64_t offset, int whence);
-typedef int (*CacheIoReadFn)(void *userCtx, void *dst, size_t size);
-typedef int (*CacheIoGetSizeFn)(const char *path, uint32_t *outSize);
-typedef int (*CacheIoSetThreadPrioFn)(int mode);
-
-int cacheIoCreate(uint8_t extraCount, const uint32_t *extraSizes, int streamCount,
-                  const CacheIoConfig *config, uint8_t readAhead,
-                  void (*notifyCb)(), void *notifyArg, int reservedOpt,
-                  void **outHandle)
-{
-    (void)reservedOpt;
-    AsyncRingConfig asyncCfg;
-    asyncCfg.blockSize = (config != NULL) ? static_cast<uint32_t>(config->chunkSize) : 0u;
-    asyncCfg.blockCount = (config != NULL) ? static_cast<uint32_t>(config->blockCount) : 0u;
-    CacheIoEngine *engine = NULL;
-    int ret = cacheIoCreate(extraCount, extraSizes, static_cast<uint8_t>(streamCount),
-                            (config != NULL) ? &asyncCfg : NULL, readAhead,
-                            0, notifyArg, reinterpret_cast<void *>(notifyCb), &engine);
-    if (outHandle != NULL)
-        *outHandle = engine;
-    return ret;
-}
-
-int cacheIoDestroy(void *handle)
-{
-    return cacheIoDestroy(static_cast<CacheIoEngine *>(handle));
-}
-
-int cacheIoSetCallbacks(void *handle, CacheIoOpenFn openFn, CacheIoCloseFn closeFn,
-                        CacheIoSeekFn seekFn, CacheIoReadFn readFn,
-                        CacheIoGetSizeFn getSizeFn, CacheIoSetThreadPrioFn setPrioFn)
-{
-    return cacheIoSetCallbacks(static_cast<CacheIoEngine *>(handle),
-                               reinterpret_cast<StreamOpenCallback>(openFn),
-                               reinterpret_cast<StreamCloseCallback>(closeFn),
-                               reinterpret_cast<StreamSeekCallback>(seekFn),
-                               reinterpret_cast<StreamReadCallback>(readFn),
-                               reinterpret_cast<StreamStatSizeCallback>(getSizeFn),
-                               reinterpret_cast<StreamErrorCallback>(setPrioFn));
-}
-
-int cacheIoSetPath(void *handle, const char *path)
-{
-    return cacheIoSetStreamPath(static_cast<CacheIoEngine *>(handle), path);
-}
-
-int cacheIoGetLastError(void *handle, uint32_t *outErr)
-{
-    (void)handle;
-    if (outErr != NULL)
-        *outErr = 0;
-    return 0;
-}
-
-int cacheIoOpen(void *handle, void *userCtx)
-{
-    return cacheIoOpenStream(static_cast<CacheIoEngine *>(handle), userCtx);
-}
-
-int cacheIoClose(void *handle)
-{
-    return cacheIoCloseStream(static_cast<CacheIoEngine *>(handle));
-}
-
-int cacheIoIsOpen(void *handle, uint8_t *outOpen)
-{
-    return cacheIoIsStreamOpen(static_cast<CacheIoEngine *>(handle), outOpen);
-}
-
-int cacheIoGetFileSize(void *handle, int64_t *outSize)
-{
-    return cacheIoGetStreamSize(static_cast<CacheIoEngine *>(handle), outSize);
-}
-
-int cacheIoSetHintMode(void *handle, int engineMode)
-{
-    return cacheIoSetDirectionHint(static_cast<CacheIoEngine *>(handle), engineMode, 0);
-}
-
-uint32_t cacheIoPrefetch(void *handle, uint8_t flags, int offset, int size)
-{
-    void *mappedPtr = NULL;
-    uint8_t didIo = 0;
-    uint32_t avail = 0;
-    return static_cast<uint32_t>(cacheIoReadSync(
-        static_cast<CacheIoEngine *>(handle), flags, offset, static_cast<uint32_t>(size),
-        &mappedPtr, &didIo, &avail));
-}
-
-uint32_t cacheIoMapRange(void *handle, int streamIdx, int64_t offset,
-                         int size, uint8_t flags, void **outPtr,
-                         uint32_t *outMappedSize, uint8_t *outEof, int extra)
-{
-    (void)extra;
-    PrefetchPinToken *pinToken = NULL;
-    return static_cast<uint32_t>(cacheIoReadAsync(
-        static_cast<CacheIoEngine *>(handle), static_cast<uint8_t>(streamIdx), offset,
-        static_cast<uint32_t>(size), flags, outPtr, &pinToken, outEof, outMappedSize));
-}
-
-int cacheIoCheckReadable(void *handle, int streamIdx, const uint32_t *sizeParam)
-{
-    if (handle == NULL || sizeParam == NULL)
-        return CACHE_ERR_INVALID_ARG;
-    void *mappedPtr = NULL;
-    uint8_t didIo = 0;
-    uint32_t avail = 0;
-    return cacheIoReadSync(static_cast<CacheIoEngine *>(handle),
-                           static_cast<uint8_t>(streamIdx), 0, *sizeParam,
-                           &mappedPtr, &didIo, &avail);
 }
 
 } /* namespace MusicCore */

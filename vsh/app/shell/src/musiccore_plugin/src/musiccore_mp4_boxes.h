@@ -15,9 +15,9 @@ static const uint32_t MP4_BOX_ERR_BAD_PARENT = 0x80280025u;    /* -2144862171 */
 static const uint32_t MP4_BOX_ERR_NOT_FOUND = 0x80280028u;     /* -2144862168 */
 static const uint32_t MP4_IO_ERR_BAD_PARAM = 0x8010AFF1u;      /* -2146390031 */
 
-extern uint32_t readBigEndian32(const void *ptr);
-extern uint32_t readBigEndian24(const void *ptr);
-extern uint16_t readBigEndian16(const void *ptr);
+extern uint32_t readBigEndian32(const uint8_t *bytes);
+extern uint32_t readBigEndian24(const uint8_t *bytes);
+extern uint16_t readBigEndian16(const uint8_t *bytes);
 
 /* Cached multi-stream I/O interface used by MP4 box readers (+24 getFileSize, +68 mapStreamRange) */
 class Mp4CachedIo {
