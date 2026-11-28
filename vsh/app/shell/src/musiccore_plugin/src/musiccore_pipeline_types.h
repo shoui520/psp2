@@ -258,7 +258,7 @@ public:
     virtual int onPipeConsumed(int frameFlags);
     virtual int onPipeUnderflow();
     virtual int onFrameConsumed(int frameFlags);
-    virtual int configureDecoder(const void *configData, uint32_t configSize) = 0;
+    virtual void configureDecoder(const void *configData, uint32_t configSize) = 0;
 };
 
 /* Audio output filter ("SceShellMusicCoreAIF", 92 bytes: FilterBase + PipeInterface) */

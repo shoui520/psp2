@@ -144,7 +144,7 @@ public:
     virtual int openDecoder();
     virtual int closeDecoder();
     virtual int decodeFrame(MediaFrameBuffer *inBuf, MediaFrameBuffer *outBuf);
-    virtual int configureDecoder(const void *configData, uint32_t configSize);
+    virtual void configureDecoder(const void *configData, uint32_t configSize);
 
 private:
     AudiocodecCtrl *m_ctrl;             /* +56 */
@@ -175,11 +175,10 @@ Mp3Decoder::~Mp3Decoder()
     m_ctrl = NULL;
 }
 
-int Mp3Decoder::configureDecoder(const void *configData, uint32_t configSize)
+void Mp3Decoder::configureDecoder(const void *configData, uint32_t configSize)
 {
     (void)configData;
     (void)configSize;
-    return 0;
 }
 
 /* 0x81207F5E */
@@ -323,7 +322,7 @@ public:
     virtual int openDecoder();
     virtual int closeDecoder();
     virtual int decodeFrame(MediaFrameBuffer *inBuf, MediaFrameBuffer *outBuf);
-    virtual int configureDecoder(const void *configData, uint32_t configSize);
+    virtual void configureDecoder(const void *configData, uint32_t configSize);
 
 private:
     AudiocodecCtrl *m_ctrl;             /* +56 */
@@ -373,7 +372,7 @@ Mp4Decoder::~Mp4Decoder()
 }
 
 /* 0x8120834C */
-int Mp4Decoder::configureDecoder(const void *configData, uint32_t configSize)
+void Mp4Decoder::configureDecoder(const void *configData, uint32_t configSize)
 {
     if (configData == NULL || configSize != sizeof(Mp4DecoderConfig)) {
         m_pendingCfg.isSbrEnabled = 0;
@@ -381,11 +380,10 @@ int Mp4Decoder::configureDecoder(const void *configData, uint32_t configSize)
         m_pendingCfg.inputSampleRate = 0;
         m_pendingCfg.parserErrorCode = 0xFFFFFFFFu;
         if (configData == NULL)
-            return DEC_ERR_INVALID_ARG;
+            return;
     }
     const Mp4DecoderConfig *cfg = (const Mp4DecoderConfig *)configData;
     m_pendingCfg = *cfg;
-    return 0;
 }
 
 /* 0x81208382 */
@@ -583,7 +581,7 @@ public:
     virtual int openDecoder();
     virtual int closeDecoder();
     virtual int decodeFrame(MediaFrameBuffer *inBuf, MediaFrameBuffer *outBuf);
-    virtual int configureDecoder(const void *configData, uint32_t configSize);
+    virtual void configureDecoder(const void *configData, uint32_t configSize);
 
 private:
     AudiocodecCtrl *m_ctrl;             /* +56 */
@@ -618,19 +616,18 @@ At9Decoder::~At9Decoder()
 }
 
 /* 0x8120886C */
-int At9Decoder::configureDecoder(const void *configData, uint32_t configSize)
+void At9Decoder::configureDecoder(const void *configData, uint32_t configSize)
 {
     if (configData == NULL || configSize != sizeof(At9DecoderConfig)) {
         m_parserErrorCode = 0xFFFFFFFFu;
         sce_paf_memset(m_at9ConfigBytes, 0, sizeof(m_at9ConfigBytes));
         if (configData == NULL)
-            return DEC_ERR_INVALID_ARG;
+            return;
     }
     const At9DecoderConfig *cfg = (const At9DecoderConfig *)configData;
     m_parserErrorCode = cfg->parserErrorCode;
     uint32_t copyLen = (configSize > 4u) ? 4u : configSize;
     sce_paf_memcpy(m_at9ConfigBytes, cfg->configBytes, copyLen);
-    return 0;
 }
 
 /* 0x812088AC */

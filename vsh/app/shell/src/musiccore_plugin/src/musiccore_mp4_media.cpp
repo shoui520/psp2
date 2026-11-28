@@ -8,6 +8,7 @@
 #include <std/new>
 #include <stddef.h>
 #include <stdint.h>
+#include "musiccore_mp4_boxes.h"
 
 namespace sce {
 namespace MusicCore {
@@ -83,224 +84,7 @@ struct Mp4FramePacket {
     uint16_t trailingSkip;
 };
 
-/* Box data and reader storage structs (implemented in musiccore_mp4_boxes.cpp) */
-struct Mp4BoxNode {
-    uint8_t storage[28];
-};
-
-struct Mp4MvhdBox {
-    uint8_t storage[52];
-};
-
-struct Mp4HdlrBox {
-    uint8_t storage[64];
-};
-
-struct Mp4MdhdBox {
-    uint8_t storage[52];
-};
-
-struct Mp4StsdBox {
-    uint8_t storage[40];
-};
-
-struct Mp4SampleEntryBox {
-    uint8_t storage[40];
-};
-
-struct Mp4Mp4aBox {
-    uint8_t storage[36];
-};
-
-struct Mp4EsdsHeaderBox {
-    uint8_t storage[36];
-};
-
-struct Mp4DecoderConfigBox {
-    uint8_t storage[48];
-};
-
-struct Mp4AudioSpecConfig {
-    uint8_t storage[56];
-};
-
-struct Mp4StblBox {
-    uint8_t storage[28];
-};
-
-struct Mp4SttsBox {
-    uint8_t storage[40];
-};
-
-struct Mp4StszBox {
-    uint8_t storage[44];
-};
-
-struct Mp4StscBox {
-    uint8_t storage[40];
-};
-
-struct Mp4StcoBox {
-    uint8_t storage[40];
-};
-
-struct Mp4BoxReader {
-    uint8_t storage[12];
-};
-
-struct Mp4StsdBoxReader {
-    uint8_t storage[24];
-};
-
-struct Mp4SampleTable {
-    uint8_t storage[100];
-};
-
-extern void mp4BoxReset(void *box);
-
-extern void mp4MoovBoxInit(Mp4BoxNode *box);
-extern void mp4MoovBoxDestroy(Mp4BoxNode *box);
-extern void mp4MoovReaderInit(Mp4BoxReader *reader, StreamIoInterface *io, int mode);
-extern void mp4MoovReaderDestroy(Mp4BoxReader *reader);
-extern int mp4MoovReaderRead(Mp4BoxReader *reader, Mp4BoxNode *outBox, unsigned int *outErr);
-
-extern void mp4MvhdBoxInit(Mp4MvhdBox *box);
-extern void mp4MvhdBoxDestroy(Mp4MvhdBox *box);
-extern void mp4MvhdReaderInit(Mp4BoxReader *reader, StreamIoInterface *io, int mode);
-extern void mp4MvhdReaderDestroy(Mp4BoxReader *reader);
-extern int mp4MvhdReaderRead(Mp4BoxReader *reader, Mp4BoxNode *moov, Mp4MvhdBox *outBox, unsigned int *outErr);
-
-extern void mp4TrakBoxInit(Mp4BoxNode *box);
-extern void mp4TrakBoxDestroy(Mp4BoxNode *box);
-extern void mp4TrakReaderInit(Mp4BoxReader *reader, StreamIoInterface *io, int mode);
-extern void mp4TrakReaderDestroy(Mp4BoxReader *reader);
-extern int mp4TrakReaderCount(Mp4BoxReader *reader, Mp4BoxNode *moov, unsigned int *outErr);
-extern int mp4TrakReaderGet(Mp4BoxReader *reader, Mp4BoxNode *moov, int index, Mp4BoxNode *outBox, unsigned int *outErr);
-
-extern void mp4HdlrBoxInit(Mp4HdlrBox *box);
-extern void mp4HdlrBoxDestroy(Mp4HdlrBox *box);
-extern int mp4HdlrIsSoundTrack(const Mp4HdlrBox *box);
-extern void mp4HdlrReaderInit(Mp4BoxReader *reader, StreamIoInterface *io, int mode);
-extern void mp4HdlrReaderDestroy(Mp4BoxReader *reader);
-extern int mp4HdlrReaderRead(Mp4BoxReader *reader, Mp4BoxNode *trak, Mp4HdlrBox *outBox, unsigned int *outErr);
-
-extern void mp4MdiaBoxInit(Mp4BoxNode *box);
-extern void mp4MdiaBoxDestroy(Mp4BoxNode *box);
-extern void mp4MdiaReaderInit(Mp4BoxReader *reader, StreamIoInterface *io, int mode);
-extern void mp4MdiaReaderDestroy(Mp4BoxReader *reader);
-
-extern void mp4MdhdBoxInit(Mp4MdhdBox *box);
-extern void mp4MdhdBoxDestroy(Mp4MdhdBox *box);
-extern void mp4MdhdReaderInit(Mp4BoxReader *reader);
-extern void mp4MdhdReaderDestroy(Mp4BoxReader *reader);
-extern int mp4MdhdReaderRead(Mp4BoxReader *reader, Mp4BoxNode *mdia, Mp4MdhdBox *outBox, unsigned int *outErr);
-extern unsigned int mp4MdhdGetTimeScale(const Mp4MdhdBox *box);
-extern unsigned int mp4MdhdGetDuration(const Mp4MdhdBox *box);
-
-extern void mp4MinfBoxInit(Mp4BoxNode *box);
-extern void mp4MinfBoxDestroy(Mp4BoxNode *box);
-extern void mp4MinfReaderInit(Mp4BoxReader *reader, StreamIoInterface *io, int mode);
-extern void mp4MinfReaderDestroy(Mp4BoxReader *reader);
-
-extern void mp4SmhdBoxInit(Mp4BoxNode *box);
-extern void mp4SmhdBoxDestroy(Mp4BoxNode *box);
-extern void mp4SmhdReaderInit(Mp4BoxReader *reader, StreamIoInterface *io, int mode);
-extern void mp4SmhdReaderDestroy(Mp4BoxReader *reader);
-extern int mp4ChildBoxRead(Mp4BoxReader *reader, Mp4BoxNode *parent, void *outChild, unsigned int *outErr);
-extern unsigned int mp4BoxGetPayloadSize(const void *box);
-extern unsigned int mp4BoxGetPayloadOffset(const void *box);
-extern unsigned int mp4BoxGetHeaderSize(const void *box);
-extern unsigned int mp4BoxGetEntryCount(const void *box);
-extern unsigned int mp4BoxGetInnerOffset(const void *box);
-
-extern void mp4StblBoxInit(Mp4StblBox *box);
-extern void mp4StblBoxDestroy(Mp4StblBox *box);
-extern void mp4StblReaderInit(Mp4BoxReader *reader, StreamIoInterface *io, int mode);
-extern void mp4StblReaderDestroy(Mp4BoxReader *reader);
-
-extern void mp4StsdBoxInit(Mp4StsdBox *box);
-extern void mp4StsdBoxDestroy(Mp4StsdBox *box);
-extern void mp4StsdReaderInit(Mp4StsdBoxReader *reader, StreamIoInterface *io, int mode);
-extern void mp4StsdReaderDestroy(Mp4StsdBoxReader *reader);
-extern int mp4StsdReaderRead(Mp4StsdBoxReader *reader, Mp4StblBox *stbl, Mp4StsdBox *outBox, unsigned int *outErr);
-extern int mp4StsdReaderFindEntry(Mp4StsdBoxReader *reader, Mp4StsdBox *stsd, const char *handler,
-                                  int index, int entrySize, Mp4SampleEntryBox *outEntry, unsigned int *outErr);
-
-extern void mp4SampleEntryInit(Mp4SampleEntryBox *box);
-extern void mp4SampleEntryDestroy(Mp4SampleEntryBox *box);
-
-extern void mp4Mp4aBoxInit(Mp4Mp4aBox *box);
-extern void mp4Mp4aBoxDestroy(Mp4Mp4aBox *box);
-extern void mp4Mp4aReaderInit(Mp4BoxReader *reader, StreamIoInterface *io, int mode);
-extern void mp4Mp4aReaderDestroy(Mp4BoxReader *reader);
-extern int mp4Mp4aReaderRead(Mp4BoxReader *reader, Mp4SampleEntryBox *entry, Mp4Mp4aBox *outBox, unsigned int *outErr);
-
-extern void mp4EsdsBoxInit(Mp4EsdsHeaderBox *box);
-extern void mp4EsdsBoxDestroy(Mp4EsdsHeaderBox *box);
-extern void mp4EsdsReaderInit(Mp4BoxReader *reader, StreamIoInterface *io, int mode);
-extern void mp4EsdsReaderDestroy(Mp4BoxReader *reader);
-extern int mp4EsdsReaderRead(Mp4BoxReader *reader, unsigned int offset, unsigned int size,
-                             Mp4EsdsHeaderBox *outBox, unsigned int *outErr);
-
-extern void mp4DecoderConfigInit(Mp4DecoderConfigBox *box);
-extern void mp4DecoderConfigDestroy(Mp4DecoderConfigBox *box);
-extern void mp4DecoderConfigReaderInit(Mp4BoxReader *reader, StreamIoInterface *io, int mode);
-extern void mp4DecoderConfigReaderDestroy(Mp4BoxReader *reader);
-extern int mp4DecoderConfigReaderRead(Mp4BoxReader *reader, unsigned int offset, unsigned int size,
-                                      Mp4DecoderConfigBox *outBox, unsigned int *outErr);
-extern int mp4DecoderConfigGetObjectType(const Mp4DecoderConfigBox *box);
-
-extern void mp4AudioSpecConfigInit(Mp4AudioSpecConfig *cfg);
-extern void mp4AudioSpecConfigDestroy(Mp4AudioSpecConfig *cfg);
-extern void mp4AudioSpecConfigReaderInit(Mp4BoxReader *reader, StreamIoInterface *io, int mode);
-extern void mp4AudioSpecConfigReaderDestroy(Mp4BoxReader *reader);
-extern int mp4AudioSpecConfigReaderRead(Mp4BoxReader *reader, unsigned int offset, unsigned int size,
-                                        Mp4AudioSpecConfig *outCfg, unsigned int *outErr);
-extern int mp4AudioSpecConfigHasSbr(const Mp4AudioSpecConfig *cfg);
-extern int mp4AudioSpecConfigGetExtSampleRate(const Mp4AudioSpecConfig *cfg);
-extern int mp4AudioSpecConfigGetBaseSampleRate(const Mp4AudioSpecConfig *cfg);
-extern uint8_t mp4AudioSpecConfigGetChannels(const Mp4AudioSpecConfig *cfg);
-extern int mp4ValidateAudioTrack(const Mp4MdhdBox *mdhd, const Mp4StsdBox *stsd,
-                                 const Mp4DecoderConfigBox *decCfg, const Mp4AudioSpecConfig *asc);
-
-extern void mp4SttsBoxInit(Mp4SttsBox *box);
-extern void mp4SttsBoxDestroy(Mp4SttsBox *box);
-extern void mp4SttsReaderInit(Mp4BoxReader *reader, StreamIoInterface *io, int mode);
-extern void mp4SttsReaderDestroy(Mp4BoxReader *reader);
-extern int mp4SttsReaderRead(Mp4BoxReader *reader, Mp4StblBox *stbl, Mp4SttsBox *outBox, unsigned int *outErr);
-
-extern void mp4StszBoxInit(Mp4StszBox *box);
-extern void mp4StszBoxDestroy(Mp4StszBox *box);
-extern void mp4StszReaderInit(Mp4BoxReader *reader, StreamIoInterface *io, int mode);
-extern void mp4StszReaderDestroy(Mp4BoxReader *reader);
-extern int mp4StszReaderRead(Mp4BoxReader *reader, Mp4StblBox *stbl, Mp4StszBox *outBox, unsigned int *outErr);
-extern unsigned int mp4StszGetSampleCount(const Mp4StszBox *box);
-
-extern void mp4StscBoxInit(Mp4StscBox *box);
-extern void mp4StscBoxDestroy(Mp4StscBox *box);
-extern void mp4StscReaderInit(Mp4BoxReader *reader, StreamIoInterface *io, int mode);
-extern void mp4StscReaderDestroy(Mp4BoxReader *reader);
-extern int mp4StscReaderRead(Mp4BoxReader *reader, Mp4StblBox *stbl, Mp4StscBox *outBox, unsigned int *outErr);
-
-extern void mp4StcoBoxInit(Mp4StcoBox *box);
-extern void mp4StcoBoxDestroy(Mp4StcoBox *box);
-extern void mp4StcoReaderInit(Mp4BoxReader *reader, StreamIoInterface *io, int mode);
-extern void mp4StcoReaderDestroy(Mp4BoxReader *reader);
-extern int mp4StcoReaderRead(Mp4BoxReader *reader, Mp4StblBox *stbl, Mp4StcoBox *outBox, unsigned int *outErr);
-
-extern void mp4SampleTableInit(Mp4SampleTable *tbl, Mp4BoxReader *sttsRdr, Mp4BoxReader *stszRdr,
-                               Mp4BoxReader *stscRdr, Mp4BoxReader *stcoRdr);
-extern void mp4SampleTableDestroy(Mp4SampleTable *tbl);
-extern void mp4SampleTableSetStts(Mp4SampleTable *tbl, Mp4SttsBox *box);
-extern void mp4SampleTableSetStsz(Mp4SampleTable *tbl, Mp4StszBox *box);
-extern void mp4SampleTableSetStsc(Mp4SampleTable *tbl, Mp4StscBox *box);
-extern void mp4SampleTableSetStco(Mp4SampleTable *tbl, Mp4StcoBox *box);
-extern int mp4SampleTableGetSample(Mp4SampleTable *tbl, unsigned int sampleIdx,
-                                   int *outOffset, unsigned int *outSize, int *outTime, int *outErr);
-extern int mp4SampleTableFindByTime(Mp4SampleTable *tbl, unsigned int targetTicks,
-                                    unsigned int *outSampleIdx, int *outErr);
-
-static void normalizeBoxIoError(unsigned int *err)
+static inline void normalizeBoxIoError(unsigned int *err)
 {
     if (*err == (unsigned int)MP4_ERR_EOF || *err == (unsigned int)MP4_ERR_BOX_EOF) {
         *err = (unsigned int)MP4_ERR_CORRUPT;
@@ -312,21 +96,21 @@ public:
     StreamIoInterface *ioStream;
     int openStatus;
     unsigned int currentSampleIndex;
-    Mp4BoxReader mdhdReader;
-    Mp4BoxReader stblReader;
-    Mp4BoxReader sttsReader;
-    Mp4BoxReader stszReader;
-    Mp4BoxReader stscReader;
-    Mp4BoxReader stcoReader;
+    Mp4MdhdBoxReader mdhdReader;
+    Mp4ContainerReader stblReader;
+    Mp4SttsReader sttsReader;
+    Mp4StszReader stszReader;
+    Mp4StscReader stscReader;
+    Mp4StcoReader stcoReader;
     Mp4MdhdBox mdhdBox;
-    Mp4StblBox stblBox;
-    Mp4SttsBox sttsBox;
+    Mp4ContainerBox stblBox;
+    Mp4TableBox sttsBox;
     Mp4StszBox stszBox;
-    Mp4StscBox stscBox;
-    Mp4StcoBox stcoBox;
-    Mp4DecoderConfigBox decoderConfigBox;
-    Mp4AudioSpecConfig audioSpecConfig;
-    Mp4SampleTable sampleTable;
+    Mp4TableBox stscBox;
+    Mp4TableBox stcoBox;
+    Mp4DecoderConfigDescriptor decoderConfigBox;
+    Mp4AudioSpecificConfig audioSpecConfig;
+    Mp4SampleTableNavigator sampleTable;
 
     explicit Mp4StreamParser(StreamIoInterface *io);
     virtual ~Mp4StreamParser();
@@ -334,23 +118,25 @@ public:
     int openStream(unsigned int *outErr);
     int getStreamPosition();
     int setIoHint(int mode);
-    int resolveEffectiveSampleRate() const
+    inline int resolveEffectiveSampleRate() const
     {
         int rate = 0;
-        if (mp4AudioSpecConfigHasSbr(&audioSpecConfig) != 0) {
-            rate = mp4AudioSpecConfigGetExtSampleRate(&audioSpecConfig);
+        if (audioSpecConfig.m_sbrPresentFlag != 0) {
+            rate = static_cast<int>(audioSpecConfig.m_extSampleRate);
         }
         if (rate == 0) {
-            rate = mp4AudioSpecConfigGetBaseSampleRate(&audioSpecConfig);
+            rate = static_cast<int>(audioSpecConfig.getSamplingFrequency());
         }
         return rate;
     }
-    int loadSampleAtIndex(unsigned int sampleIdx, int effectiveRate, Mp4FramePacket *outPacket, int *outErr)
+    inline int loadSampleAtIndex(unsigned int sampleIdx, int effectiveRate, Mp4FramePacket *outPacket, int *outErr)
     {
-        int fileOffset = 0;
-        unsigned int sampleSize = 0;
-        int sampleTime = 0;
-        if (mp4SampleTableGetSample(&sampleTable, sampleIdx, &fileOffset, &sampleSize, &sampleTime, outErr) == 0) {
+        uint32_t fileOffset = 0;
+        uint32_t sampleSize = 0;
+        uint32_t sampleDescIdx = 0;
+        uint32_t err = 0;
+        if (sampleTable.lookupSampleLocation(sampleIdx, &fileOffset, &sampleSize, &sampleDescIdx, &err) == 0) {
+            *outErr = static_cast<int>(err);
             return 0;
         }
         if (sampleSize > 0x7FFFFFFFu) {
@@ -360,7 +146,7 @@ public:
 
         int mappedLen = 0;
         int ioErr = -1;
-        int dataPtr = ioStream->mapRange(fileOffset, sampleSize, 0, &mappedLen, &ioErr, 0);
+        int dataPtr = ioStream->mapRange(static_cast<int>(fileOffset), sampleSize, 0, &mappedLen, &ioErr, 0);
         if (dataPtr == 0) {
             *outErr = (ioErr == MP4_ERR_EOF) ? MP4_ERR_CORRUPT : ioErr;
             return 0;
@@ -369,11 +155,11 @@ public:
         outPacket->frameData = reinterpret_cast<void *>(dataPtr);
         outPacket->frameSize = sampleSize;
         outPacket->sampleRate = effectiveRate;
-        outPacket->samplesPerFrame = (mp4AudioSpecConfigHasSbr(&audioSpecConfig) != 0) ? 2048 : 1024;
+        outPacket->samplesPerFrame = (audioSpecConfig.m_sbrPresentFlag != 0) ? 2048 : 1024;
         outPacket->flags = 0;
         outPacket->leadingSkip = 0;
         outPacket->trailingSkip = 0;
-        outPacket->channelCount = mp4AudioSpecConfigGetChannels(&audioSpecConfig);
+        outPacket->channelCount = audioSpecConfig.getChannelConfig();
         currentSampleIndex = sampleIdx;
         *outErr = 0;
         return 1;
@@ -394,43 +180,28 @@ public:
 Mp4StreamParser::Mp4StreamParser(StreamIoInterface *io)
     : ioStream(io),
       openStatus(-1),
-      currentSampleIndex(0)
+      currentSampleIndex(0),
+      mdhdReader(NULL, 0),
+      stblReader(reinterpret_cast<Mp4CachedIo *>(io), 1),
+      sttsReader(reinterpret_cast<Mp4CachedIo *>(io), 1),
+      stszReader(reinterpret_cast<Mp4CachedIo *>(io), 2),
+      stscReader(reinterpret_cast<Mp4CachedIo *>(io), 3),
+      stcoReader(reinterpret_cast<Mp4CachedIo *>(io), 4),
+      mdhdBox(),
+      stblBox("stbl"),
+      sttsBox("stts"),
+      stszBox(),
+      stscBox("stsc"),
+      stcoBox("stco"),
+      decoderConfigBox(),
+      audioSpecConfig(),
+      sampleTable(&sttsReader, &stszReader, &stscReader, &stcoReader)
 {
-    mp4MdhdReaderInit(&mdhdReader);
-    mp4StblReaderInit(&stblReader, ioStream, 1);
-    mp4SttsReaderInit(&sttsReader, ioStream, 1);
-    mp4StszReaderInit(&stszReader, ioStream, 2);
-    mp4StscReaderInit(&stscReader, ioStream, 3);
-    mp4StcoReaderInit(&stcoReader, ioStream, 4);
-    mp4MdhdBoxInit(&mdhdBox);
-    mp4StblBoxInit(&stblBox);
-    mp4SttsBoxInit(&sttsBox);
-    mp4StszBoxInit(&stszBox);
-    mp4StscBoxInit(&stscBox);
-    mp4StcoBoxInit(&stcoBox);
-    mp4DecoderConfigInit(&decoderConfigBox);
-    mp4AudioSpecConfigInit(&audioSpecConfig);
-    mp4SampleTableInit(&sampleTable, &sttsReader, &stszReader, &stscReader, &stcoReader);
 }
 
 /* 0x811EBD90 / 0x811EBE1E */
 Mp4StreamParser::~Mp4StreamParser()
 {
-    mp4SampleTableDestroy(&sampleTable);
-    mp4AudioSpecConfigDestroy(&audioSpecConfig);
-    mp4DecoderConfigDestroy(&decoderConfigBox);
-    mp4StcoBoxDestroy(&stcoBox);
-    mp4StscBoxDestroy(&stscBox);
-    mp4StszBoxDestroy(&stszBox);
-    mp4SttsBoxDestroy(&sttsBox);
-    mp4StblBoxDestroy(&stblBox);
-    mp4MdhdBoxDestroy(&mdhdBox);
-    mp4StcoReaderDestroy(&stcoReader);
-    mp4StscReaderDestroy(&stscReader);
-    mp4StszReaderDestroy(&stszReader);
-    mp4SttsReaderDestroy(&sttsReader);
-    mp4StblReaderDestroy(&stblReader);
-    mp4MdhdReaderDestroy(&mdhdReader);
 }
 
 /* 0x811EBE30 */
@@ -439,14 +210,14 @@ int Mp4StreamParser::closeStream()
     if (ioStream == NULL) {
         return -1;
     }
-    mp4BoxReset(&decoderConfigBox);
-    mp4BoxReset(&audioSpecConfig);
-    mp4BoxReset(&stcoBox);
-    mp4BoxReset(&stscBox);
-    mp4BoxReset(&stszBox);
-    mp4BoxReset(&sttsBox);
-    mp4BoxReset(&stblBox);
-    mp4BoxReset(&mdhdBox);
+    decoderConfigBox.m_isParsed = 0;
+    audioSpecConfig.m_isParsed = 0;
+    stcoBox.resetParsed();
+    stscBox.resetParsed();
+    stszBox.resetParsed();
+    sttsBox.resetParsed();
+    stblBox.resetParsed();
+    mdhdBox.resetParsed();
 
     int ret = 0;
     if (ioStream->isOpen() == 1) {
@@ -477,39 +248,32 @@ int Mp4StreamParser::openStream(unsigned int *outErr)
     }
     openStatus = openRet;
 
-    Mp4BoxNode moovBox;
-    Mp4BoxReader moovReader;
-    mp4MoovBoxInit(&moovBox);
-    mp4MoovReaderInit(&moovReader, ioStream, 1);
+    Mp4CachedIo *cachedIo = reinterpret_cast<Mp4CachedIo *>(ioStream);
+    Mp4ContainerBox moovBox("moov");
+    Mp4ContainerReader moovReader(cachedIo, 1);
 
     int result = -1;
     bool ok = true;
 
-    if (mp4MoovReaderRead(&moovReader, &moovBox, outErr) == 0) {
+    if (moovReader.readTopContainer(&moovBox, outErr) == 0) {
         normalizeBoxIoError(outErr);
         ok = false;
     }
 
     Mp4MvhdBox mvhdBox;
-    Mp4BoxReader mvhdReader;
-    mp4MvhdBoxInit(&mvhdBox);
-    mp4MvhdReaderInit(&mvhdReader, ioStream, 1);
-    if (ok && mp4MvhdReaderRead(&mvhdReader, &moovBox, &mvhdBox, outErr) == 0) {
+    Mp4MvhdBoxReader mvhdReader(cachedIo, 1);
+    if (ok && mvhdReader.read(&moovBox, &mvhdBox, outErr) == 0) {
         normalizeBoxIoError(outErr);
         ok = false;
     }
 
-    Mp4BoxNode trakBox;
-    Mp4BoxReader trakReader;
-    Mp4HdlrBox hdlrBox;
-    Mp4BoxReader hdlrReader;
-    mp4TrakBoxInit(&trakBox);
-    mp4TrakReaderInit(&trakReader, ioStream, 1);
-    mp4HdlrBoxInit(&hdlrBox);
-    mp4HdlrReaderInit(&hdlrReader, ioStream, 1);
+    Mp4ContainerBox trakBox("trak");
+    Mp4ContainerReader trakReader(cachedIo, 1);
+    Mp4TkhdBox hdlrBox;
+    Mp4TkhdBoxReader hdlrReader(cachedIo, 1);
 
     if (ok) {
-        int trackCount = mp4TrakReaderCount(&trakReader, &moovBox, outErr);
+        int trackCount = static_cast<int>(trakReader.countTracks(&moovBox, outErr));
         if (*outErr != 0) {
             normalizeBoxIoError(outErr);
             ok = false;
@@ -519,17 +283,17 @@ int Mp4StreamParser::openStream(unsigned int *outErr)
         } else {
             bool foundSound = false;
             for (int idx = 1; idx <= trackCount; ++idx) {
-                if (mp4TrakReaderGet(&trakReader, &moovBox, idx, &trakBox, outErr) == 0) {
+                if (trakReader.readTrackAt(&moovBox, static_cast<uint16_t>(idx + 1), &trakBox, outErr) == 0) {
                     normalizeBoxIoError(outErr);
                     ok = false;
                     break;
                 }
-                if (mp4HdlrReaderRead(&hdlrReader, &trakBox, &hdlrBox, outErr) == 0) {
+                if (hdlrReader.read(&trakBox, &hdlrBox, outErr) == 0) {
                     normalizeBoxIoError(outErr);
                     ok = false;
                     break;
                 }
-                if (mp4HdlrIsSoundTrack(&hdlrBox) != 0) {
+                if (hdlrBox.isAudioTrackVolume() != 0) {
                     foundSound = true;
                     break;
                 }
@@ -541,78 +305,72 @@ int Mp4StreamParser::openStream(unsigned int *outErr)
         }
     }
 
-    Mp4BoxNode mdiaBox;
-    Mp4BoxReader mdiaReader;
-    mp4MdiaBoxInit(&mdiaBox);
-    mp4MdiaReaderInit(&mdiaReader, ioStream, 1);
-    if (ok && mp4ChildBoxRead(&mdiaReader, &trakBox, &mdiaBox, outErr) == 0) {
+    Mp4ContainerBox mdiaBox("mdia");
+    Mp4ContainerReader mdiaReader(cachedIo, 1);
+    if (ok && mdiaReader.readChildContainer(&trakBox, &mdiaBox, outErr) == 0) {
         normalizeBoxIoError(outErr);
         ok = false;
     }
-    if (ok && mp4MdhdReaderRead(&mdhdReader, &mdiaBox, &mdhdBox, outErr) == 0) {
-        normalizeBoxIoError(outErr);
-        ok = false;
-    }
-
-    Mp4BoxNode minfBox;
-    Mp4BoxReader minfReader;
-    mp4MinfBoxInit(&minfBox);
-    mp4MinfReaderInit(&minfReader, ioStream, 1);
-    if (ok && mp4ChildBoxRead(&minfReader, &mdiaBox, &minfBox, outErr) == 0) {
+    if (ok && mdhdReader.read(&mdiaBox, &mdhdBox, outErr) == 0) {
         normalizeBoxIoError(outErr);
         ok = false;
     }
 
-    Mp4BoxNode smhdBox;
-    Mp4BoxReader smhdReader;
-    mp4SmhdBoxInit(&smhdBox);
-    mp4SmhdReaderInit(&smhdReader, ioStream, 1);
+    Mp4ContainerBox minfBox("minf");
+    Mp4ContainerReader minfReader(cachedIo, 1);
+    if (ok && minfReader.readChildContainer(&mdiaBox, &minfBox, outErr) == 0) {
+        normalizeBoxIoError(outErr);
+        ok = false;
+    }
+
+    Mp4ContainerBox smhdBox("smhd");
+    Mp4ContainerReader smhdReader(cachedIo, 1);
     if (ok) {
-        if (mp4ChildBoxRead(&smhdReader, &minfBox, &smhdBox, outErr) == 0) {
+        uint32_t smhdPayload = (smhdBox.m_boxSize >= smhdBox.m_headerSize)
+            ? (smhdBox.m_boxSize - smhdBox.m_headerSize) : 0u;
+        if (smhdReader.readChildContainer(&minfBox, &smhdBox, outErr) == 0) {
             normalizeBoxIoError(outErr);
             ok = false;
-        } else if (mp4BoxGetPayloadSize(&smhdBox) != 36u) {
+        } else if (((smhdBox.m_boxSize >= smhdBox.m_headerSize)
+                    ? (smhdBox.m_boxSize - smhdBox.m_headerSize) : 0u) != 36u) {
+            (void)smhdPayload;
             *outErr = (unsigned int)MP4_ERR_CORRUPT;
             ok = false;
-        } else if (mp4ChildBoxRead(&stblReader, &minfBox, &stblBox, outErr) == 0) {
+        } else if (stblReader.readChildContainer(&minfBox, &stblBox, outErr) == 0) {
             normalizeBoxIoError(outErr);
             ok = false;
         }
     }
 
-    Mp4StsdBox stsdBox;
-    Mp4StsdBoxReader stsdReader;
-    mp4StsdBoxInit(&stsdBox);
-    mp4StsdReaderInit(&stsdReader, ioStream, 1);
+    Mp4TableBox stsdBox("stsd");
+    Mp4StsdReader stsdReader(cachedIo, 1);
     if (ok) {
-        if (mp4StsdReaderRead(&stsdReader, &stblBox, &stsdBox, outErr) == 0) {
+        if (stsdReader.read(&stblBox, &stsdBox, outErr) == 0) {
             normalizeBoxIoError(outErr);
             ok = false;
-        } else if (mp4BoxGetEntryCount(&stsdBox) != 1u) {
+        } else if (stsdBox.m_entryCount != 1u) {
             *outErr = (unsigned int)MP4_ERR_UNSUPPORTED;
             ok = false;
         }
     }
 
-    Mp4SampleEntryBox sampleEntry;
-    mp4SampleEntryInit(&sampleEntry);
-    if (ok && mp4StsdReaderFindEntry(&stsdReader, &stsdBox, "soun@", 1, 40, &sampleEntry, outErr) == 0) {
+    Mp4AudioSampleEntryBox sampleEntry;
+    if (ok && stsdReader.readSampleEntry(&stsdBox, "soun@", 1u, 40u, &sampleEntry, outErr) == 0) {
         ok = false;
     }
 
-    Mp4Mp4aBox mp4aBox;
-    Mp4BoxReader mp4aReader;
-    mp4Mp4aBoxInit(&mp4aBox);
-    mp4Mp4aReaderInit(&mp4aReader, ioStream, 1);
+    Mp4EsdsBox mp4aBox;
+    Mp4EsdsBoxReader mp4aReader(cachedIo, 1);
     unsigned int esdsStart = 0;
     unsigned int esdsLen = 0;
     if (ok) {
-        if (mp4Mp4aReaderRead(&mp4aReader, &sampleEntry, &mp4aBox, outErr) == 0) {
+        if (mp4aReader.read(&sampleEntry, &mp4aBox, outErr) == 0) {
             ok = false;
         } else {
-            unsigned int mp4aOff = mp4BoxGetPayloadOffset(&mp4aBox);
-            unsigned int mp4aHdr = mp4BoxGetHeaderSize(&mp4aBox);
-            unsigned int mp4aEnd = mp4aOff + mp4BoxGetPayloadSize(&mp4aBox);
+            unsigned int mp4aOff = mp4aBox.m_fileOffset + mp4aBox.m_headerSize;
+            unsigned int mp4aHdr = mp4aBox.m_headerSize;
+            unsigned int mp4aEnd = mp4aOff +
+                ((mp4aBox.m_boxSize >= mp4aBox.m_headerSize) ? (mp4aBox.m_boxSize - mp4aBox.m_headerSize) : 0u);
             esdsStart = mp4aOff + mp4aHdr;
             if (esdsStart > mp4aEnd) {
                 *outErr = (unsigned int)MP4_ERR_CORRUPT;
@@ -623,19 +381,17 @@ int Mp4StreamParser::openStream(unsigned int *outErr)
         }
     }
 
-    Mp4EsdsHeaderBox esdsBox;
-    Mp4BoxReader esdsReader;
-    mp4EsdsBoxInit(&esdsBox);
-    mp4EsdsReaderInit(&esdsReader, ioStream, 1);
+    Mp4EsDescriptor esdsBox;
+    Mp4EsDescriptorReader esdsReader(cachedIo, 1);
     unsigned int decCfgStart = 0;
     unsigned int decCfgLen = 0;
     if (ok) {
-        if (mp4EsdsReaderRead(&esdsReader, esdsStart, esdsLen, &esdsBox, outErr) == 0) {
+        if (esdsReader.read(esdsStart, esdsLen, &esdsBox, outErr) == 0) {
             ok = false;
         } else {
-            unsigned int esdsOff = mp4BoxGetInnerOffset(&esdsBox);
-            unsigned int esdsHdr = mp4BoxGetHeaderSize(&esdsBox);
-            unsigned int esdsEnd = esdsOff + mp4BoxGetPayloadOffset(&esdsBox);
+            unsigned int esdsOff = esdsBox.m_fileOffset;
+            unsigned int esdsHdr = esdsBox.m_headerSize;
+            unsigned int esdsEnd = esdsOff + esdsBox.m_totalSize;
             decCfgStart = esdsOff + esdsHdr;
             if (decCfgStart > esdsEnd) {
                 *outErr = (unsigned int)MP4_ERR_CORRUPT;
@@ -646,20 +402,19 @@ int Mp4StreamParser::openStream(unsigned int *outErr)
         }
     }
 
-    Mp4BoxReader decCfgReader;
-    mp4DecoderConfigReaderInit(&decCfgReader, ioStream, 1);
+    Mp4DecoderConfigReader decCfgReader(cachedIo, 1);
     unsigned int ascStart = 0;
     unsigned int ascLen = 0;
     if (ok) {
-        if (mp4DecoderConfigReaderRead(&decCfgReader, decCfgStart, decCfgLen, &decoderConfigBox, outErr) == 0) {
+        if (decCfgReader.read(decCfgStart, decCfgLen, &decoderConfigBox, outErr) == 0) {
             ok = false;
-        } else if (mp4DecoderConfigGetObjectType(&decoderConfigBox) != 64) {
+        } else if (decoderConfigBox.m_objectTypeIndication != 64u) {
             *outErr = (unsigned int)MP4_ERR_UNSUPPORTED;
             ok = false;
         } else {
-            unsigned int cfgOff = mp4BoxGetInnerOffset(&decoderConfigBox);
-            unsigned int cfgEnd = cfgOff + mp4BoxGetPayloadOffset(&decoderConfigBox);
-            ascStart = cfgOff + mp4MdhdGetDuration(reinterpret_cast<const Mp4MdhdBox *>(&decoderConfigBox));
+            unsigned int cfgOff = decoderConfigBox.m_fileOffset;
+            unsigned int cfgEnd = cfgOff + decoderConfigBox.m_totalSize;
+            ascStart = cfgOff + decoderConfigBox.m_parsedEndOffset;
             if (ascStart > cfgEnd) {
                 *outErr = (unsigned int)MP4_ERR_CORRUPT;
                 ok = false;
@@ -669,67 +424,44 @@ int Mp4StreamParser::openStream(unsigned int *outErr)
         }
     }
 
-    Mp4BoxReader ascReader;
-    mp4AudioSpecConfigReaderInit(&ascReader, ioStream, 1);
+    Mp4AudioSpecificConfigReader ascReader(cachedIo, 1);
     if (ok) {
-        if (mp4AudioSpecConfigReaderRead(&ascReader, ascStart, ascLen, &audioSpecConfig, outErr) == 0) {
+        if (ascReader.read(ascStart, ascLen, &audioSpecConfig, outErr) == 0) {
             ok = false;
-        } else if (mp4ValidateAudioTrack(&mdhdBox, &stsdBox, &decoderConfigBox, &audioSpecConfig) == 0) {
+        } else if (!isSupportedAacProfile(reinterpret_cast<const Mp4AudioSpecificConfig *>(&stsdBox),
+                                          &audioSpecConfig)) {
             *outErr = (unsigned int)MP4_ERR_UNSUPPORTED;
             ok = false;
         }
     }
 
-    if (ok && mp4SttsReaderRead(&sttsReader, &stblBox, &sttsBox, outErr) == 0) {
+    if (ok && sttsReader.read(&stblBox, &sttsBox, outErr) == 0) {
         normalizeBoxIoError(outErr);
         ok = false;
     }
-    if (ok && mp4StszReaderRead(&stszReader, &stblBox, &stszBox, outErr) == 0) {
+    if (ok && stszReader.read(&stblBox, &stszBox, outErr) == 0) {
         normalizeBoxIoError(outErr);
         ok = false;
     }
-    if (ok && mp4StscReaderRead(&stscReader, &stblBox, &stscBox, outErr) == 0) {
+    if (ok && stscReader.read(&stblBox, &stscBox, outErr) == 0) {
         normalizeBoxIoError(outErr);
         ok = false;
     }
-    if (ok && mp4StcoReaderRead(&stcoReader, &stblBox, &stcoBox, outErr) == 0) {
+    if (ok && stcoReader.read(&stblBox, &stcoBox, outErr) == 0) {
         normalizeBoxIoError(outErr);
         ok = false;
     }
 
     if (ok) {
-        mp4SampleTableSetStts(&sampleTable, &sttsBox);
-        mp4SampleTableSetStsz(&sampleTable, &stszBox);
-        mp4SampleTableSetStsc(&sampleTable, &stscBox);
-        mp4SampleTableSetStco(&sampleTable, &stcoBox);
+        sampleTable.attachStts(&sttsBox);
+        sampleTable.attachStsz(&stszBox);
+        sampleTable.attachStsc(&stscBox);
+        sampleTable.attachStco(&stcoBox);
         result = openRet;
     } else {
         closeStream();
     }
 
-    mp4AudioSpecConfigReaderDestroy(&ascReader);
-    mp4DecoderConfigReaderDestroy(&decCfgReader);
-    mp4EsdsReaderDestroy(&esdsReader);
-    mp4EsdsBoxDestroy(&esdsBox);
-    mp4Mp4aReaderDestroy(&mp4aReader);
-    mp4Mp4aBoxDestroy(&mp4aBox);
-    mp4SampleEntryDestroy(&sampleEntry);
-    mp4StsdReaderDestroy(&stsdReader);
-    mp4StsdBoxDestroy(&stsdBox);
-    mp4SmhdReaderDestroy(&smhdReader);
-    mp4SmhdBoxDestroy(&smhdBox);
-    mp4MinfReaderDestroy(&minfReader);
-    mp4MinfBoxDestroy(&minfBox);
-    mp4MdiaReaderDestroy(&mdiaReader);
-    mp4MdiaBoxDestroy(&mdiaBox);
-    mp4HdlrReaderDestroy(&hdlrReader);
-    mp4HdlrBoxDestroy(&hdlrBox);
-    mp4TrakReaderDestroy(&trakReader);
-    mp4TrakBoxDestroy(&trakBox);
-    mp4MvhdReaderDestroy(&mvhdReader);
-    mp4MvhdBoxDestroy(&mvhdBox);
-    mp4MoovReaderDestroy(&moovReader);
-    mp4MoovBoxDestroy(&moovBox);
     return result;
 }
 
@@ -778,8 +510,8 @@ int Mp4StreamParser::getDurationMs(unsigned int *outDurationMs, int *outErr)
         return 0;
     }
     int rate = resolveEffectiveSampleRate();
-    unsigned int timeScale = mp4MdhdGetTimeScale(&mdhdBox);
-    unsigned int duration = mp4MdhdGetDuration(&mdhdBox);
+    unsigned int timeScale = mdhdBox.m_timescale;
+    unsigned int duration = mdhdBox.m_duration;
     if (rate == 0) {
         *outErr = MP4_ERR_CORRUPT;
         return 0;
@@ -800,7 +532,7 @@ int Mp4StreamParser::getBaseSampleRate(int *outRate, int *outErr)
         *outErr = MP4_ERR_NOT_OPEN;
         return 0;
     }
-    int rate = mp4AudioSpecConfigGetBaseSampleRate(&audioSpecConfig);
+    int rate = static_cast<int>(audioSpecConfig.getSamplingFrequency());
     *outRate = rate;
     if (rate == 0) {
         *outErr = MP4_ERR_CORRUPT;
@@ -822,11 +554,11 @@ int Mp4StreamParser::getSbrSampleRate(int *outRate, int *outErr)
         return 0;
     }
     int rate = 0;
-    if (mp4AudioSpecConfigHasSbr(&audioSpecConfig) != 0) {
-        rate = mp4AudioSpecConfigGetExtSampleRate(&audioSpecConfig);
+    if (audioSpecConfig.m_sbrPresentFlag != 0) {
+        rate = static_cast<int>(audioSpecConfig.m_extSampleRate);
     }
     *outRate = rate;
-    if (rate == 0 && mp4AudioSpecConfigHasSbr(&audioSpecConfig) != 0) {
+    if (rate == 0 && audioSpecConfig.m_sbrPresentFlag != 0) {
         *outErr = MP4_ERR_CORRUPT;
         return 0;
     }
@@ -845,7 +577,7 @@ int Mp4StreamParser::getHasSbr(uint8_t *outHasSbr, int *outErr)
         *outErr = MP4_ERR_NOT_OPEN;
         return 0;
     }
-    *outHasSbr = (uint8_t)mp4AudioSpecConfigHasSbr(&audioSpecConfig);
+    *outHasSbr = audioSpecConfig.m_sbrPresentFlag;
     *outErr = 0;
     return 1;
 }
@@ -861,7 +593,7 @@ int Mp4StreamParser::getSamplesPerFrame(int16_t *outSamples, int *outErr)
         *outErr = MP4_ERR_NOT_OPEN;
         return 0;
     }
-    *outSamples = (mp4AudioSpecConfigHasSbr(&audioSpecConfig) != 0) ? 2048 : 1024;
+    *outSamples = (audioSpecConfig.m_sbrPresentFlag != 0) ? 2048 : 1024;
     *outErr = 0;
     return 1;
 }
@@ -878,7 +610,7 @@ int Mp4StreamParser::readFirstSample(Mp4FramePacket *outPacket, int *outErr)
         return 0;
     }
     int rate = resolveEffectiveSampleRate();
-    if (rate == 0 || mp4StszGetSampleCount(&stszBox) == 0u) {
+    if (rate == 0 || stszBox.m_sampleCount == 0u) {
         *outErr = MP4_ERR_CORRUPT;
         return 0;
     }
@@ -897,7 +629,7 @@ int Mp4StreamParser::readNextSample(int skipCount, Mp4FramePacket *outPacket, in
         return 0;
     }
     int rate = resolveEffectiveSampleRate();
-    unsigned int totalSamples = mp4StszGetSampleCount(&stszBox);
+    unsigned int totalSamples = stszBox.m_sampleCount;
     if (rate == 0 || totalSamples == 0u) {
         *outErr = MP4_ERR_CORRUPT;
         return 0;
@@ -922,7 +654,7 @@ int Mp4StreamParser::readPrevSample(int skipCount, Mp4FramePacket *outPacket, in
         return 0;
     }
     int rate = resolveEffectiveSampleRate();
-    if (rate == 0 || mp4StszGetSampleCount(&stszBox) == 0u) {
+    if (rate == 0 || stszBox.m_sampleCount == 0u) {
         *outErr = MP4_ERR_CORRUPT;
         return 0;
     }
@@ -946,19 +678,18 @@ int Mp4StreamParser::seekToTimeMs(unsigned int targetMs, Mp4FramePacket *outPack
         return 0;
     }
     int rate = resolveEffectiveSampleRate();
-    unsigned int timeScale = mp4MdhdGetTimeScale(&mdhdBox);
-    unsigned int totalSamples = mp4StszGetSampleCount(&stszBox);
+    unsigned int timeScale = mdhdBox.m_timescale;
+    unsigned int totalSamples = stszBox.m_sampleCount;
     if (rate == 0 || timeScale == 0u || totalSamples == 0u) {
         *outErr = MP4_ERR_CORRUPT;
         return 0;
     }
 
     unsigned int targetTicks = (unsigned int)(((float)targetMs / 1000.0f) * (float)timeScale);
-    unsigned int foundIdx = 0;
-    if (mp4SampleTableFindByTime(&sampleTable, targetTicks, &foundIdx, outErr) == 0) {
-        if (*outErr == MP4_ERR_BOX_EOF) {
-            *outErr = MP4_ERR_EOF;
-        }
+    uint32_t foundIdx = 0;
+    uint32_t err = 0;
+    if (sampleTable.lookupSampleByTimestamp(targetTicks, &foundIdx, &err) == 0) {
+        *outErr = (static_cast<int>(err) == MP4_ERR_BOX_EOF) ? MP4_ERR_EOF : static_cast<int>(err);
         return 0;
     }
     if (foundIdx == 0u || foundIdx > totalSamples) {

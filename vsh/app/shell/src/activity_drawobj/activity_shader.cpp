@@ -803,21 +803,19 @@ public:
 	}
 };
 
-template<class VertInst>
-static inline void initVertShader(SharedPtr<VertInst> &holder, ArlInstance *gl,
-				  VertexArraySpec::Predefined layout)
-{
-	holder = SharedPtr<VertInst>(new VertInst);
-	if (holder.get() != NULL) {
-		ProgramState *progState = gl;
-		SharedPtr<VertexArraySpec> spec = ScePafGraphics_4D1E289A(
-			gl, layout, SCE_GXM_INDEX_SOURCE_INDEX_16BIT);
-		holder->m_object.init(*gl, progState->m_patcher, spec,
-				      SharedPtr<VertexArraySpec>(),
-				      SharedPtr<VertexArraySpec>(),
-				      SharedPtr<VertexArraySpec>());
-	}
-}
+#define ACTIVITY_INIT_VERT_SHADER(VertInst, holder, gl, layout)				\
+	do {										\
+		(holder) = SharedPtr<VertInst>(new VertInst);				\
+		if ((holder).get() != NULL) {						\
+			ProgramState *progState = (gl);					\
+			SharedPtr<VertexArraySpec> spec = ScePafGraphics_4D1E289A(	\
+				(gl), (layout), SCE_GXM_INDEX_SOURCE_INDEX_16BIT);	\
+			(holder)->m_object.init(*(gl), progState->m_patcher, spec,	\
+						SharedPtr<VertexArraySpec>(),		\
+						SharedPtr<VertexArraySpec>(),		\
+						SharedPtr<VertexArraySpec>());		\
+		}									\
+	} while (0)
 
 template<class FragInst>
 static inline void initFragShader(SharedPtr<FragInst> &holder, ArlInstance *gl)
@@ -835,27 +833,34 @@ void activityShaderInit(void)
 	if (s_shaderInitCount == 0) {
 		ArlInstance *gl = paf::graph::arl::Gl();
 
-		initVertShader(s_internalVert, gl, VertexArraySpec::ATTRIB0_F3_ATTRIB3_F2);
+		ACTIVITY_INIT_VERT_SHADER(InternalVertInst, s_internalVert, gl,
+					  VertexArraySpec::ATTRIB0_F3_ATTRIB3_F2);
 		initFragShader(s_internalFrag, gl);
-		initVertShader(s_colorOnlyVert, gl, VertexArraySpec::ATTRIB0_F3_ATTRIB3_F2);
+		ACTIVITY_INIT_VERT_SHADER(ColorOnlyVertInst, s_colorOnlyVert, gl,
+					  VertexArraySpec::ATTRIB0_F3_ATTRIB3_F2);
 		initFragShader(s_colorOnlyFrag, gl);
 
-		initVertShader(s_internalPartialVert, gl, VertexArraySpec::ATTRIB0_F3_ATTRIB3_F4);
-		initVertShader(s_colorOnlyPartialVert, gl, VertexArraySpec::ATTRIB0_F3_ATTRIB3_F4);
-		initVertShader(s_partialMaskVert, gl, VertexArraySpec::ATTRIB0_F3_ATTRIB3_F4);
+		ACTIVITY_INIT_VERT_SHADER(InternalPartialVertInst, s_internalPartialVert, gl,
+					  VertexArraySpec::ATTRIB0_F3_ATTRIB3_F4);
+		ACTIVITY_INIT_VERT_SHADER(ColorOnlyPartialVertInst, s_colorOnlyPartialVert, gl,
+					  VertexArraySpec::ATTRIB0_F3_ATTRIB3_F4);
+		ACTIVITY_INIT_VERT_SHADER(PartialMaskVertInst, s_partialMaskVert, gl,
+					  VertexArraySpec::ATTRIB0_F3_ATTRIB3_F4);
 		initFragShader(s_partialMaskFrag, gl);
 
-		initVertShader(s_fullMaskVert, gl,
-			       VertexArraySpec::ATTRIB0_F3_ATTRIB3_F4_ATTRIB4_F2);
+		ACTIVITY_INIT_VERT_SHADER(FullMaskVertInst, s_fullMaskVert, gl,
+					  VertexArraySpec::ATTRIB0_F3_ATTRIB3_F4_ATTRIB4_F2);
 		initFragShader(s_fullMaskFrag, gl);
-		initVertShader(s_internalFullVert, gl,
-			       VertexArraySpec::ATTRIB0_F3_ATTRIB3_F4_ATTRIB4_F2);
-		initVertShader(s_colorOnlyFullVert, gl,
-			       VertexArraySpec::ATTRIB0_F3_ATTRIB3_F4_ATTRIB4_F2);
+		ACTIVITY_INIT_VERT_SHADER(InternalFullVertInst, s_internalFullVert, gl,
+					  VertexArraySpec::ATTRIB0_F3_ATTRIB3_F4_ATTRIB4_F2);
+		ACTIVITY_INIT_VERT_SHADER(ColorOnlyFullVertInst, s_colorOnlyFullVert, gl,
+					  VertexArraySpec::ATTRIB0_F3_ATTRIB3_F4_ATTRIB4_F2);
 
-		initVertShader(s_linkIconVert, gl, VertexArraySpec::ATTRIB0_F3_ATTRIB3_F2);
+		ACTIVITY_INIT_VERT_SHADER(LinkIconVertInst, s_linkIconVert, gl,
+					  VertexArraySpec::ATTRIB0_F3_ATTRIB3_F2);
 		initFragShader(s_linkIconFrag, gl);
-		initVertShader(s_avatorVert, gl, VertexArraySpec::ATTRIB0_F3_ATTRIB3_F2);
+		ACTIVITY_INIT_VERT_SHADER(AvatorVertInst, s_avatorVert, gl,
+					  VertexArraySpec::ATTRIB0_F3_ATTRIB3_F2);
 		initFragShader(s_avatorFrag, gl);
 
 		s_colorOnlyShader = SharedPtr<Shader>(new ActivityColorOnlyShader);
