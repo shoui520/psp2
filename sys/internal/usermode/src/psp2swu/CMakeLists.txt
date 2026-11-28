@@ -375,7 +375,6 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc SOURCES
 	${PAF}/src/timer/timerqueue.cpp
 	${PAF}/src/timer/get_time.cpp
 	${PAF}/src/url/url.cpp
-	${PAF}/src/misc/autotest_tty.cpp
 	${PAF}/src/std/math.c
 	${PAF}/src/std/basic_string.cpp
 	${PAF}/src/common/view.cpp
@@ -750,7 +749,7 @@ set_source_files_properties(
 	${PAF}/src/module/module.cpp
 	${PAF}/src/timer/timerlistener.cpp ${PAF}/src/timer/timerlistenerlist.cpp
 	${PAF}/src/timer/get_time.cpp ${PAF}/src/url/url.cpp ${PAF}/src/rtc/rtc.cpp
-	${PAF}/src/misc/autotest_tty.cpp ${PAF}/src/framework.cpp ${PAF}/src/plugin.cpp
+	${PAF}/src/framework.cpp ${PAF}/src/plugin.cpp
 	${PAF}/src/versatileparam/resourceparam.cpp ${PAF}/src/versatileparam/versatileparam.cpp
 	${PAF}/src/versatileparam/visualparam.cpp
 	${PAF}/src/resource/resource_obj.cpp ${PAF}/src/resource/resource_obj_table.cpp
