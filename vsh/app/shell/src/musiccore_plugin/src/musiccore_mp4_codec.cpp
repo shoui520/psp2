@@ -10,6 +10,8 @@
 #include <stdint.h>
 
 #include "musiccore_codec_decoders.h"
+#include "musiccore_codec_factories.h"
+#include "musiccore_decoder_pipeline.h"
 #include "musiccore_media.h"
 #include "musiccore_pipeline_types.h"
 
@@ -984,22 +986,6 @@ int Mp4Parser::produceFrame(MediaFrameBuffer *outBuf)
 
 /* ===== Mp4Factory (0x811F8C7C - 0x811F8F23) ===== */
 
-class Mp4Factory {
-public:
-    Mp4Factory();
-    virtual ~Mp4Factory();
-
-    virtual uint32_t getHeapSizes(uint32_t *outParserHeap, uint32_t *outDecoderHeap,
-                                  uint32_t *outIoHeap);
-    virtual void initialize();
-    virtual void finalize();
-    virtual PipelineEventListener *createPipeline(int playMode, AudioOpenCallback openCb,
-                                                  AudioCloseCallback closeCb,
-                                                  AudioWriteCallback writeCb,
-                                                  AudioFlushCallback flushCb, void *userContext);
-    virtual void *createMediaInfo(const char *path, int ioPriority);
-};
-
 /* 0x811F8C9C */
 Mp4Factory::Mp4Factory()
 {
@@ -1082,7 +1068,7 @@ PipelineEventListener *Mp4Factory::createPipeline(int playMode, AudioOpenCallbac
         return NULL;
     }
 
-    if (decoderPipelineIsReady(pipeline)
+    if (reinterpret_cast<DecoderPipeline *>(pipeline)->isReady()
         && parser->isInitialized()
         && static_cast<ActiveFilterBase *>(decoder)->isInitialized()
         && audioSink->isInitialized()
@@ -1118,43 +1104,6 @@ static Mp4Factory g_mp4Factory;
 Mp4Factory *getMp4FactoryInstance()
 {
     return &g_mp4Factory;
-}
-
-struct CodecFactory;
-struct DecoderInstance;
-
-DecoderInstance *createMp4Decoder(CodecFactory *factory, int mode, void *outCtx,
-                                  void *startFn, void *enqueueFn, void *stopFn, void *flushFn)
-{
-    Mp4Factory *mp4Factory = (factory != NULL) ? reinterpret_cast<Mp4Factory *>(factory) : &g_mp4Factory;
-    return reinterpret_cast<DecoderInstance *>(mp4Factory->createPipeline(
-        mode, reinterpret_cast<AudioOpenCallback>(startFn),
-        reinterpret_cast<AudioCloseCallback>(stopFn),
-        reinterpret_cast<AudioWriteCallback>(enqueueFn),
-        reinterpret_cast<AudioFlushCallback>(flushFn), outCtx));
-}
-
-CodecFactory *getMp4Factory()
-{
-    return reinterpret_cast<CodecFactory *>(&g_mp4Factory);
-}
-
-int getMp4StackSizes(unsigned int *parserStack, unsigned int *decoderStack, unsigned int *mgrStack)
-{
-    return g_mp4Factory.getHeapSizes(parserStack, decoderStack, mgrStack);
-}
-
-MediaInfoBase *allocMp4MediaInfo(CodecFactory *factory, const char *path)
-{
-    Mp4Factory *mp4Factory = reinterpret_cast<Mp4Factory *>(factory);
-    return (mp4Factory != NULL)
-        ? reinterpret_cast<MediaInfoBase *>(mp4Factory->createMediaInfo(path, 16))
-        : NULL;
-}
-
-int mapMp4ParserError(int errCode)
-{
-    return mapMp4ParserError(static_cast<uint32_t>(errCode));
 }
 
 } /* namespace MusicCore */

@@ -9,6 +9,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "musiccore_decoder_pipeline.h"
 #include "musiccore_heap.h"
 #include "musiccore_sync.h"
 
@@ -58,19 +59,6 @@ static const int PIPELINE_ERR_NOT_READY = 49;
 static const int PIPELINE_ERR_QUEUE_FULL = 66;
 static const int PIPELINE_ERR_QUEUE_EMPTY = 67;
 static const int PIPELINE_ERR_BAD_PARAM = 241;
-
-class ActiveFilterListener {
-public:
-    /* 0x811F60E4 / 0x811F60F2 */
-    virtual ~ActiveFilterListener() {}
-    virtual void onFilterEvent(int eventKind, void *sourceFilter, int statusCode) = 0;
-};
-
-class AudioOutputListener {
-public:
-    virtual ~AudioOutputListener() {}
-    virtual void onPlaybackProgress(int positionMs) = 0;
-};
 
 class ActiveFilterControl {
 public:
@@ -177,23 +165,6 @@ public:
     virtual void onPositionComplete(int positionMs, int errCode) = 0; /* +0x24 (36) */
 };
 
-struct PipelineEventEntry {
-    uint32_t eventCode;
-    int statusCode;
-    uint16_t sourceStage;
-    uint16_t stageFlagsSnapshot;
-};
-
-struct PipelineEventQueue {
-    PipelineEventEntry *entries;
-    int capacity;
-    int headIndex;
-    int tailIndex;
-
-    int push(uint32_t eventCode, int statusCode, uint16_t sourceStage, uint16_t flagsSnapshot);
-    int pop(PipelineEventEntry *outEntry);
-};
-
 /* 0x811F64B6 */
 int PipelineEventQueue::push(uint32_t eventCode, int statusCode,
                              uint16_t sourceStage, uint16_t flagsSnapshot)
@@ -250,75 +221,6 @@ int PipelineEventQueue::pop(PipelineEventEntry *outEntry)
     }
     return 0;
 }
-
-class DecoderPipeline : public ActiveFilterListener, public AudioOutputListener {
-public:
-    DecoderPipeline(ParserFilter *parser, BufRefPipe *pipe,
-                    DecoderFilter *decoder, AudioOutputSink *audioSink);
-    virtual ~DecoderPipeline();
-
-    bool isReady() const;
-
-    int requestStart(void *mediaItem, int startMs, int endMs, int playSpeed);
-    int requestStop();
-    int requestSetSpeed(int playSpeed);
-    int requestQueryMetadata(void *metaOut);
-    int requestGetPosition();
-
-    ParserFilter *getParser() const { return m_parser; }
-    BufRefPipe *getPipe() const { return m_pipe; }
-    DecoderFilter *getDecoder() const { return m_decoder; }
-    AudioOutputSink *getAudioSink() const { return m_audioSink; }
-    void setCallback(PipelineEventCallback *callback) { m_callback = callback; }
-
-    virtual void onFilterEvent(int eventKind, void *sourceFilter, int statusCode);
-    virtual void onPlaybackProgress(int positionMs);
-
-private:
-    static int workerThreadEntry(SceSize argSize, void *argData);
-
-    void runEventLoop();
-    void stopAllStages();
-    void handleCommandInEosStopping(int command);
-    void handleCommandInRunning(int command);
-    void handleCommandInIdle(int command);
-    void handleEventInErrorStopping(uint32_t eventCode, int statusCode, uint16_t sourceStage);
-    void handleEventInSpeedChange(uint32_t eventCode, int statusCode, uint16_t sourceStage);
-    void handleEventInStarting(uint32_t eventCode, int statusCode, uint16_t sourceStage);
-    void handleEventInStopping(uint32_t eventCode, int statusCode, uint16_t sourceStage);
-    void handleEventInRunning(uint32_t eventCode, int statusCode, uint16_t sourceStage);
-    void rejectCommand(int command);
-
-    ParserFilter *m_parser;                   /* +8 */
-    BufRefPipe *m_pipe;                       /* +12 */
-    DecoderFilter *m_decoder;                 /* +16 */
-    AudioOutputSink *m_audioSink;             /* +20 */
-    AudioOutputSink *m_audioControl;          /* +24 */
-    PipelineEventCallback *m_callback;        /* +28 */
-    int m_state;                              /* +32 */
-    int m_workerThreadId;                     /* +36 */
-    SyncMutex m_mutex;                        /* +40 */
-    SyncCond m_cond;                          /* +48 */
-    uint16_t m_stageFlags;                    /* +56 */
-    uint16_t m_padStageFlags;                 /* +58 */
-    int m_pendingCommand;                     /* +60 */
-    void *m_startMediaItem;                   /* +64 */
-    int m_startPositionMs;                    /* +68 */
-    int m_endPositionMs;                      /* +72 */
-    int m_startPlaySpeed;                     /* +76 */
-    int m_pendingSpeed;                       /* +80 */
-    void *m_pendingMetaOut;                   /* +84 */
-    uint16_t m_reservedStateWord;             /* +88 */
-    uint16_t m_padReservedWord;               /* +90 */
-    PipelineEventEntry m_eventStorage[16];    /* +92..+283 */
-    PipelineEventQueue m_eventQueue;          /* +284..+299 */
-    int m_pendingError;                       /* +300 */
-    int m_fallbackPositionMs;                 /* +304 */
-    int m_trackDurationMs;                    /* +308 */
-    DecoderPipeline **m_threadArg;            /* +312 */
-    uint8_t m_usesThreadPool;                 /* +316 */
-    uint8_t m_padTail[3];                     /* +317..+319 */
-};
 
 /* 0x811F714C */
 int DecoderPipeline::workerThreadEntry(SceSize argSize, void *argData)
@@ -1187,96 +1089,5 @@ void DecoderPipeline::onPlaybackProgress(int positionMs)
 
 /* Forwarded C-style pipeline & decoder instance bridges */
 struct PipelineEventListener;
-struct ParserFilterBase;
-struct DecoderFilterBase;
-struct AudioOutputFilter;
-struct PipeInterface;
-struct DecoderInstance;
-struct MediaInfoBase;
-
-void *constructDecoderPipeline(void *mem, int pipelineKind, int codecType,
-                               void *factory, void *audioOut)
-{
-    return new (mem) DecoderPipeline(
-        reinterpret_cast<ParserFilter *>(pipelineKind),
-        reinterpret_cast<BufRefPipe *>(codecType),
-        static_cast<DecoderFilter *>(factory),
-        static_cast<AudioOutputSink *>(audioOut));
-}
-
-int decoderPipelineIsReady(const PipelineEventListener *pipeline)
-{
-    const DecoderPipeline *dp = reinterpret_cast<const DecoderPipeline *>(pipeline);
-    return (dp != NULL && dp->isReady()) ? 1 : 0;
-}
-
-ParserFilterBase *decoderPipelineGetParser(PipelineEventListener *pipeline)
-{
-    DecoderPipeline *dp = reinterpret_cast<DecoderPipeline *>(pipeline);
-    return (dp != NULL) ? reinterpret_cast<ParserFilterBase *>(dp->getParser()) : NULL;
-}
-
-DecoderFilterBase *decoderPipelineGetDecoder(PipelineEventListener *pipeline)
-{
-    DecoderPipeline *dp = reinterpret_cast<DecoderPipeline *>(pipeline);
-    return (dp != NULL) ? reinterpret_cast<DecoderFilterBase *>(dp->getDecoder()) : NULL;
-}
-
-AudioOutputFilter *decoderPipelineGetAudio(PipelineEventListener *pipeline)
-{
-    DecoderPipeline *dp = reinterpret_cast<DecoderPipeline *>(pipeline);
-    return (dp != NULL) ? reinterpret_cast<AudioOutputFilter *>(dp->getAudioSink()) : NULL;
-}
-
-PipeInterface *decoderPipelineGetPipe(PipelineEventListener *pipeline)
-{
-    DecoderPipeline *dp = reinterpret_cast<DecoderPipeline *>(pipeline);
-    return (dp != NULL) ? reinterpret_cast<PipeInterface *>(dp->getPipe()) : NULL;
-}
-
-unsigned int decoderRequestStart(DecoderInstance *decoder, MediaInfoBase *mediaInfo,
-                                 int startMs, int endMs, int playSpeed)
-{
-    DecoderPipeline *dp = reinterpret_cast<DecoderPipeline *>(decoder);
-    return (dp != NULL) ? static_cast<unsigned int>(dp->requestStart(mediaInfo, startMs, endMs, playSpeed)) : 0x8FFF0002u;
-}
-
-unsigned int decoderRequestStop(DecoderInstance *decoder)
-{
-    DecoderPipeline *dp = reinterpret_cast<DecoderPipeline *>(decoder);
-    return (dp != NULL) ? static_cast<unsigned int>(dp->requestStop()) : 0x8FFF0002u;
-}
-
-unsigned int decoderRequestPause(DecoderInstance *decoder)
-{
-    DecoderPipeline *dp = reinterpret_cast<DecoderPipeline *>(decoder);
-    return (dp != NULL) ? static_cast<unsigned int>(dp->requestSetSpeed(0)) : 0x8FFF0002u;
-}
-
-unsigned int decoderRequestSeek(DecoderInstance *decoder, int posMs)
-{
-    DecoderPipeline *dp = reinterpret_cast<DecoderPipeline *>(decoder);
-    return (dp != NULL) ? static_cast<unsigned int>(dp->requestSetSpeed(posMs)) : 0x8FFF0002u;
-}
-
-unsigned int decoderRequestPosition(DecoderInstance *decoder)
-{
-    DecoderPipeline *dp = reinterpret_cast<DecoderPipeline *>(decoder);
-    return (dp != NULL) ? static_cast<unsigned int>(dp->requestGetPosition()) : 0x8FFF0002u;
-}
-
-void *decoderGetParserAdapter(DecoderInstance *decoder)
-{
-    DecoderPipeline *dp = reinterpret_cast<DecoderPipeline *>(decoder);
-    return (dp != NULL) ? static_cast<void *>(dp->getParser()) : NULL;
-}
-
-void decoderSetListener(DecoderInstance *decoder, void *listener)
-{
-    DecoderPipeline *dp = reinterpret_cast<DecoderPipeline *>(decoder);
-    if (dp != NULL)
-        dp->setCallback(static_cast<PipelineEventCallback *>(listener));
-}
-
 } /* namespace MusicCore */
 } /* namespace sce */

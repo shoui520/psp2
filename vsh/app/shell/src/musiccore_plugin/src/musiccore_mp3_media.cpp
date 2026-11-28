@@ -22,7 +22,7 @@ namespace MusicCore {
 
 extern void *allocFromHeap(size_t size);
 extern bool checkCodecServiceReady();
-extern int mapMp3ParserError(int parserErr);
+extern int mapMp3ParserError(uint32_t errCode);
 
 static const uint32_t FOURCC_MP3 = 0x2033504Du;
 

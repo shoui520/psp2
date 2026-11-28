@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "musiccore_audio_output.h"
 #include "musiccore_heap.h"
 #include "musiccore_queue.h"
 
@@ -42,7 +43,6 @@ extern int decoderMgrConfigure(void *decMgr, int sampleRate, int channels, int g
                                int mode, void *audioOut);
 extern int decoderMgrSetCallbacks(void *decMgr, void *onTrackReady, void *onTrackInfo,
                                   void *onBufferReady, void *userData);
-extern int audioOutputSetStateCallback(void *audioOut, void *cb, void *userData);
 
 struct StateMediaSnapshot {
     int stateId;
@@ -400,7 +400,8 @@ int StateManager::start(const StateManagerCallbacks *cbs, const int *audioCfg)
         return MUSICCORE_ERR_FAILED;
 
     m_cbs = *cbs;
-    int ret = audioOutputSetStateCallback((void *)audioCfg, (void *)thunkAudioError, this);
+    int ret = reinterpret_cast<AudioOutput *>(const_cast<int *>(audioCfg))->setPositionCallback(
+        reinterpret_cast<AudioOutput::PositionCallback>(thunkAudioError), this);
     if (ret != 0)
         return ret;
 

@@ -15,7 +15,7 @@ namespace sce {
 namespace MusicCore {
 
 extern void *allocFromHeap(size_t size);
-extern int mapMp4ParserError(int parserErr);
+extern int mapMp4ParserError(uint32_t errCode);
 
 static const uint32_t FOURCC_MP4 = 0x2034504Du;
 

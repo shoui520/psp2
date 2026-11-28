@@ -14,6 +14,7 @@
 
 #include <thread/thread.h>
 
+#include "musiccore_audio_output.h"
 #include "musiccore_queue.h"
 
 namespace sce {
@@ -303,11 +304,6 @@ struct DecoderSession {
     void *m_callbacks[3];
     int m_padAlign;
     unsigned char m_stateMachine[4600];
-};
-
-struct SoundOutExclusiveParam {
-    int version;
-    int configWords[5];
 };
 
 extern unsigned int calcMediaQueueSize(int capacity, int itemSize, int slotCount, int headerSize);

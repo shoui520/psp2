@@ -9,6 +9,8 @@
 #include <std/new>
 #include <stddef.h>
 #include <stdint.h>
+
+#include "musiccore_audio_output.h"
 #include <stdlib.h>
 
 extern "C" {
@@ -266,12 +268,6 @@ extern int stateMachineSeekPending(void *ctx, const uint32_t *seekParams, void *
 extern int stateMachineSwapMedia(void *ctx, void *newMedia, uint8_t hasUriFlag,
                                  uint8_t seekInitial, uint8_t hasNewMedia);
 extern int stateMachineSetPendingMedia(void *ctx, void *newMedia);
-
-extern int audioOutConfigure(void *audioOut, int balance, const void *eq, int normalizer);
-extern int audioOutShutdown(void *audioOut);
-extern int audioOutSetFade(void *audioOut, int targetState, int fadeMs, uint8_t *outPending);
-extern int audioOutSetVolumeRamp(void *audioOut, int targetState, int fadeMs, uint8_t *outPending);
-extern int audioOutSetEqType(void *audioOut, int eqType);
 
 extern int decoderMgrOpenPipeline(void *decMgr, int pipelineKind, int ioMode, int loopCount);
 extern int decoderMgrClosePipeline(void *decMgr);
@@ -539,7 +535,8 @@ int StateStarting::onEnter()
     }
 
     uint8_t rampPending = 0;
-    audioOutSetVolumeRamp(m_owner->m_audioOut, -1, m_owner->m_playParam, &rampPending);
+    static_cast<AudioOutput *>(m_owner->m_audioOut)->setVolumeOrDbFade(
+        0xFFFFFFFFu, m_owner->m_playParam, &rampPending);
     m_owner->m_playParam = -1;
 
     int startPos = getCurrentPosMs();
@@ -598,7 +595,8 @@ int StateStarting::onPlay(int playParam)
         m_owner->m_playParam = playParam;
     }
     uint8_t rampPending = 0;
-    audioOutSetVolumeRamp(m_owner->m_audioOut, -1, m_owner->m_playParam, &rampPending);
+    static_cast<AudioOutput *>(m_owner->m_audioOut)->setVolumeOrDbFade(
+        0xFFFFFFFFu, m_owner->m_playParam, &rampPending);
     m_owner->m_playParam = -1;
     return 0;
 }
@@ -645,7 +643,7 @@ int StateStarting::onSetEqualizer(int eqType, int bandLow, int bandMid)
     if (m_owner == NULL || m_owner->m_audioOut == NULL) {
         return MC_ERR_FAILED;
     }
-    int ret = audioOutSetEqType(m_owner->m_audioOut, eqType);
+    int ret = static_cast<AudioOutput *>(m_owner->m_audioOut)->setEffectType(eqType);
     if (ret == 0) {
         m_owner->m_eqType = eqType;
     }
@@ -1028,7 +1026,7 @@ int StateDeactivating::onEnter()
         return MC_ERR_FAILED;
     }
     if (m_owner->m_audioOut != NULL) {
-        int ret = audioOutShutdown(m_owner->m_audioOut);
+        int ret = static_cast<AudioOutput *>(m_owner->m_audioOut)->closePort();
         if (ret != 0) {
             return ret;
         }
@@ -1098,13 +1096,16 @@ int StateActivating::onEnter()
         eq.bandLow = m_owner->m_eqBandLow;
         eq.bandMid = m_owner->m_eqBandMid;
         eq.bandHigh = m_owner->m_eqBandHigh;
-        int ret = audioOutConfigure(m_owner->m_audioOut, m_owner->m_audioBalance,
-                                    &eq, m_owner->m_audioNormalizer);
+        int ret = static_cast<AudioOutput *>(m_owner->m_audioOut)->openPort(
+            static_cast<unsigned int>(m_owner->m_audioBalance),
+            reinterpret_cast<const AudioEqParam *>(&eq),
+            static_cast<unsigned int>(m_owner->m_audioNormalizer));
         if (ret != 0) {
             return ret;
         }
         uint8_t fadePending = 0;
-        audioOutSetFade(m_owner->m_audioOut, -1, m_owner->m_pendingFadeMs, &fadePending);
+        static_cast<AudioOutput *>(m_owner->m_audioOut)->setScaleFade(
+            -1, m_owner->m_pendingFadeMs, &fadePending);
         m_owner->m_pendingFadeMs = -1;
     }
     m_owner->m_activateToken = NULL;
@@ -1487,7 +1488,8 @@ int StatePlaying::onDeactivate(int fadeMs, uint8_t syncFlag)
         m_owner->m_pendingFadeMs = fadeMs;
     }
     uint8_t fadePending = 0;
-    audioOutSetFade(m_owner->m_audioOut, -2, m_owner->m_pendingFadeMs, &fadePending);
+    static_cast<AudioOutput *>(m_owner->m_audioOut)->setScaleFade(
+        -2, m_owner->m_pendingFadeMs, &fadePending);
     int ret = 0;
     if (fadePending != 1u) {
         ret = stateMachineTransition(m_owner, STATE_STOPPING);
@@ -1532,7 +1534,8 @@ int StatePlaying::onPause(uint8_t resetPos, int fadeParam)
         m_owner->m_playParam = fadeParam;
     }
     uint8_t rampPending = 0;
-    audioOutSetVolumeRamp(m_owner->m_audioOut, -2, m_owner->m_playParam, &rampPending);
+    static_cast<AudioOutput *>(m_owner->m_audioOut)->setVolumeOrDbFade(
+        0xFFFFFFFEu, m_owner->m_playParam, &rampPending);
     int ret = 0;
     if (rampPending != 1u) {
         ret = stateMachineTransition(m_owner, STATE_STOPPING);
@@ -1634,7 +1637,8 @@ int StatePlaying::onSeekAndPlay(const uint32_t *seekParams, int playParam)
             m_owner->m_playParam = playParam;
         }
         uint8_t rampPending = 0;
-        audioOutSetVolumeRamp(m_owner->m_audioOut, -1, m_owner->m_playParam, &rampPending);
+        static_cast<AudioOutput *>(m_owner->m_audioOut)->setVolumeOrDbFade(
+        0xFFFFFFFFu, m_owner->m_playParam, &rampPending);
         m_owner->m_playParam = -1;
     }
     return ret;
@@ -1655,7 +1659,8 @@ int StatePlaying::onSetMediaPlaying(MediaListAccess *media, int shuffleVal)
         m_owner->m_targetState = STATE_PLAYING;
         m_owner->m_playParam = 0;
         uint8_t rampPending = 0;
-        audioOutSetVolumeRamp(m_owner->m_audioOut, -2, 0, &rampPending);
+        static_cast<AudioOutput *>(m_owner->m_audioOut)->setVolumeOrDbFade(
+            0xFFFFFFFEu, 0, &rampPending);
         if (rampPending != 1u) {
             return stateMachineTransition(m_owner, STATE_STOPPING);
         }

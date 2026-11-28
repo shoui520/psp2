@@ -305,13 +305,6 @@ extern PipelineEventListener *createDecoderPipeline(ParserFilterBase *parser,
                                                     DecoderFilterBase *decoder,
                                                     AudioOutputFilter *audioSink);
 
-/* DecoderPipeline helpers (musiccore_decoder_pipeline.cpp) */
-extern int decoderPipelineIsReady(const PipelineEventListener *pipeline);
-extern ParserFilterBase *decoderPipelineGetParser(PipelineEventListener *pipeline);
-extern DecoderFilterBase *decoderPipelineGetDecoder(PipelineEventListener *pipeline);
-extern AudioOutputFilter *decoderPipelineGetAudio(PipelineEventListener *pipeline);
-extern PipeInterface *decoderPipelineGetPipe(PipelineEventListener *pipeline);
-
 } /* namespace MusicCore */
 } /* namespace sce */
 

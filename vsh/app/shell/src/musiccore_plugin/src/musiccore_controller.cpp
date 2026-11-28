@@ -11,6 +11,7 @@
 
 #include <thread/thread.h>
 
+#include "musiccore_audio_output.h"
 #include "musiccore_player_base.h"
 #include "musiccore_db_manager.h"
 
@@ -123,15 +124,6 @@ extern void stopDecoderManager(void *mgr);
 extern void termDecoderManager(void *mgr);
 extern int startDecoderManager(void *mgr, const DecoderCallbacks *cbs, void *audioOut);
 extern void notifyDecoderAudioEvent(void *mgr, int eventType, int eventVal);
-
-extern void initAudioOutput(void *audioOut);
-extern void stopAudioOutput(void *audioOut);
-extern void termAudioOutput(void *audioOut);
-extern int audioOutputSetCallbacks(void *audioOut, void *focusCb, void *errCb, void *userData);
-extern int audioOutputSetPriority(void *audioOut, int priority, int flag);
-extern int audioOutputSetPriorityEx(void *audioOut, int priority, const void *extData, int flag);
-extern int audioOutputStart(void *audioOut, const AudioInitParams *params, int flags);
-extern int audioOutputGetState(void *audioOut, unsigned char channelId);
 
 extern int queryAppFocusState(AppFocusInfo *outInfo, int priority);
 extern int getGlobalTrackTag();
@@ -374,7 +366,7 @@ Controller::Controller(ObjFactory *factory, int *outErr, unsigned int totalBytes
 
     initDecoderManager(m_decoderMgrArena);
     new (m_dbMgrArena) DbManager(36);
-    initAudioOutput(m_audioOutArena);
+    new (m_audioOutArena) AudioOutput();
 
     initDefaultPriorityInfo(&m_lastSystemReport.musicInfo);
     initDefaultPriorityInfo(&m_lastSystemReport.playlistInfo);
@@ -553,7 +545,7 @@ Controller::~Controller()
 {
     if (m_threadId != -1) {
         stopDecoderManager(m_decoderMgrArena);
-        stopAudioOutput(m_audioOutArena);
+        reinterpret_cast<AudioOutput *>(m_audioOutArena)->stopOutput();
         reinterpret_cast<DbManager *>(m_dbMgrArena)->stop();
 
         unsigned char exitPayload = 0;
@@ -591,7 +583,8 @@ Controller::~Controller()
     m_idleTracker.lastStatus = -1;
     m_idleTracker.pausedSinceUs = 0;
 
-    termAudioOutput(m_audioOutArena);
+    reinterpret_cast<AudioOutput *>(m_audioOutArena)->finalize();
+    reinterpret_cast<AudioOutput *>(m_audioOutArena)->~AudioOutput();
     reinterpret_cast<DbManager *>(m_dbMgrArena)->~DbManager();
     termDecoderManager(m_decoderMgrArena);
 }
@@ -782,7 +775,8 @@ int Controller::getStatus(unsigned char channelId, PlayerStatusSnapshot *outStat
 
 int Controller::getAudioState(unsigned char channelId)
 {
-    return audioOutputGetState(m_audioOutArena, channelId);
+    (void)channelId;
+    return 0;
 }
 
 BasePlayer *Controller::findFreePlayer(char kind)
@@ -1284,9 +1278,10 @@ int Controller::handleAudioFocusEvent(CmdNode *node, unsigned char *flags)
         }
         int prio = cand->getPriority();
         if (prio == 0x7FFFFFFF)
-            audioOutputSetPriorityEx(m_audioOutArena, 0x7FFFFFFF, &((ExclusivePlayer *)cand)->exclusiveParam, 0);
+            reinterpret_cast<AudioOutput *>(m_audioOutArena)->setExclusiveBgmPriority(
+                0x7FFFFFFF, &((ExclusivePlayer *)cand)->exclusiveParam, 0);
         else
-            audioOutputSetPriority(m_audioOutArena, prio, 0);
+            reinterpret_cast<AudioOutput *>(m_audioOutArena)->setBgmPriority(prio, 0);
         return 0;
     }
 
@@ -1308,9 +1303,10 @@ int Controller::handleAudioFocusEvent(CmdNode *node, unsigned char *flags)
             return 0;
         }
         if (prio == 0x7FFFFFFF)
-            audioOutputSetPriorityEx(m_audioOutArena, 0x7FFFFFFF, &((ExclusivePlayer *)cand)->exclusiveParam, 0);
+            reinterpret_cast<AudioOutput *>(m_audioOutArena)->setExclusiveBgmPriority(
+                0x7FFFFFFF, &((ExclusivePlayer *)cand)->exclusiveParam, 0);
         else
-            audioOutputSetPriority(m_audioOutArena, prio, 0);
+            reinterpret_cast<AudioOutput *>(m_audioOutArena)->setBgmPriority(prio, 0);
         return 0;
     }
 
@@ -1329,11 +1325,12 @@ int Controller::handleAudioFocusEvent(CmdNode *node, unsigned char *flags)
     if (fallback != NULL) {
         int prio = fallback->getPriority();
         if (prio == 0x7FFFFFFF)
-            audioOutputSetPriorityEx(m_audioOutArena, 0x7FFFFFFF, &((ExclusivePlayer *)fallback)->exclusiveParam, 0);
+            reinterpret_cast<AudioOutput *>(m_audioOutArena)->setExclusiveBgmPriority(
+                0x7FFFFFFF, &((ExclusivePlayer *)fallback)->exclusiveParam, 0);
         else
-            audioOutputSetPriority(m_audioOutArena, prio, 0);
+            reinterpret_cast<AudioOutput *>(m_audioOutArena)->setBgmPriority(prio, 0);
     } else {
-        audioOutputSetPriority(m_audioOutArena, -1, 0);
+        reinterpret_cast<AudioOutput *>(m_audioOutArena)->setBgmPriority(-1, 0);
     }
     return 0;
 }
@@ -1373,13 +1370,14 @@ int Controller::updateAudioFocus()
         }
 
         if (cand->getPriority() == 0x7FFFFFFF)
-            audioOutputSetPriorityEx(m_audioOutArena, effPrio, &((ExclusivePlayer *)cand)->exclusiveParam, 0);
+            reinterpret_cast<AudioOutput *>(m_audioOutArena)->setExclusiveBgmPriority(
+                effPrio, &((ExclusivePlayer *)cand)->exclusiveParam, 0);
         else
-            audioOutputSetPriority(m_audioOutArena, effPrio, 0);
+            reinterpret_cast<AudioOutput *>(m_audioOutArena)->setBgmPriority(effPrio, 0);
     } else if (m_shellSuspended == 1) {
-        audioOutputSetPriority(m_audioOutArena, 128, 0);
+        reinterpret_cast<AudioOutput *>(m_audioOutArena)->setBgmPriority(128, 0);
     } else {
-        audioOutputSetPriority(m_audioOutArena, -1, 0);
+        reinterpret_cast<AudioOutput *>(m_audioOutArena)->setBgmPriority(-1, 0);
     }
     return 0;
 }
@@ -1730,10 +1728,12 @@ int Controller::runMainLoop()
         audioParams.grain = grain & ~1023;
     }
 
-    int initErr = audioOutputStart(m_audioOutArena, &audioParams, 0);
+    int initErr = reinterpret_cast<AudioOutput *>(m_audioOutArena)->initialize(
+        reinterpret_cast<const AudioOutputInitParam *>(&audioParams), 0);
     if (initErr == 0)
-        initErr = audioOutputSetCallbacks(m_audioOutArena, (void *)onAudioFocusCb,
-                                          (void *)onAudioErrorCb, this);
+        initErr = reinterpret_cast<AudioOutput *>(m_audioOutArena)->setCallbacks(
+            reinterpret_cast<AudioOutput::BgmAdoptCallback>(onAudioFocusCb),
+            reinterpret_cast<AudioOutput::FadeCompleteCallback>(onAudioErrorCb), this);
     if (initErr == 0) {
         DecoderCallbacks decCbs;
         decCbs.onEvent = onDecoderEvent;
@@ -1784,7 +1784,7 @@ int Controller::runMainLoop()
         SceShell_D4C7D2B7(2, (void *)onShellSuspendEvent, NULL);
         SceShell_D4C7D2B7(3, (void *)onShellResumeEvent, NULL);
         stopDecoderManager(m_decoderMgrArena);
-        stopAudioOutput(m_audioOutArena);
+        reinterpret_cast<AudioOutput *>(m_audioOutArena)->stopOutput();
         reinterpret_cast<DbManager *>(m_dbMgrArena)->stop();
         for (int i = 0; i < 8; ++i) {
             BasePlayer *p = findPlayerByKindSlot(0, (unsigned char)i, 0);
@@ -2341,7 +2341,7 @@ int Controller::onShellSuspendEvent(int eventType, int eventParam, int eventExtr
     ctrl->m_shellSuspended = 1;
     BasePlayer *active = ctrl->findPlayerByChannel(0xEF, 1);
     if (active == NULL || active->m_playerKind != 2)
-        return audioOutputSetPriority(ctrl->m_audioOutArena, 128, 0);
+        return reinterpret_cast<AudioOutput *>(ctrl->m_audioOutArena)->setBgmPriority(128, 0);
     return active->m_playerKind;
 }
 
@@ -2363,7 +2363,7 @@ int Controller::onShellResumeEvent(int eventType, int eventParam, int eventExtra
         BasePlayer *playlist = ctrl->findPlayerByChannel(ctrl->m_playlistChannelId, 1);
         if (playlist != NULL)
             playlist->setAudioFocus(0);
-        return audioOutputSetPriority(ctrl->m_audioOutArena, -1, 0);
+        return reinterpret_cast<AudioOutput *>(ctrl->m_audioOutArena)->setBgmPriority(-1, 0);
     }
     return active->m_playerKind;
 }

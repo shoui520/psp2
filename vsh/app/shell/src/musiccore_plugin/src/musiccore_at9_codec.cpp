@@ -10,6 +10,8 @@
 #include <stdint.h>
 
 #include "musiccore_codec_decoders.h"
+#include "musiccore_codec_factories.h"
+#include "musiccore_decoder_pipeline.h"
 #include "musiccore_media.h"
 #include "musiccore_pipeline_types.h"
 
@@ -721,19 +723,6 @@ void *At9Parser::getCodecConfig(uint32_t *outSize)
 
 /* ===== At9Factory (0x811FAE28 - 0x811FB0FB) ===== */
 
-class At9Factory {
-public:
-    At9Factory() {}
-    virtual ~At9Factory() {}
-
-    int getBufferSizes(uint32_t *outParserBuf, uint32_t *unusedDecoderBuf, uint32_t *outAudioBuf);
-    PipelineEventListener *createPipeline(int mode, AudioOpenCallback openCb,
-                                          AudioCloseCallback closeCb, AudioWriteCallback writeCb,
-                                          AudioFlushCallback flushCb, void *userContext,
-                                          int loopCount);
-    void *createMediaInfo(const char *path, int loopMode);
-};
-
 static At9Factory g_at9Factory; /* 0x8156F3FC */
 
 /* 0x811FAE28 */
@@ -806,7 +795,7 @@ PipelineEventListener *At9Factory::createPipeline(int mode, AudioOpenCallback op
         return NULL;
     }
 
-    if (decoderPipelineIsReady(pipeline)
+    if (reinterpret_cast<DecoderPipeline *>(pipeline)->isReady()
         && audio->isInitialized()
         && pipe->isInitialized()) {
         static_cast<ActiveFilterBase *>(parser)->setEventListener(pipeline);
@@ -832,36 +821,6 @@ void *At9Factory::createMediaInfo(const char *path, int loopMode)
         return NULL;
     }
     return new (mem) At9MediaInfo(path, loopMode);
-}
-
-struct CodecFactory;
-struct DecoderInstance;
-
-DecoderInstance *createAt9Decoder(CodecFactory *factory, int mode, void *outCtx,
-                                  void *startFn, void *enqueueFn, void *stopFn, void *flushFn,
-                                  int extraParam)
-{
-    At9Factory *at9Factory = (factory != NULL) ? reinterpret_cast<At9Factory *>(factory) : getAt9Factory();
-    return (at9Factory != NULL)
-        ? reinterpret_cast<DecoderInstance *>(at9Factory->createPipeline(
-              mode, reinterpret_cast<AudioOpenCallback>(startFn),
-              reinterpret_cast<AudioCloseCallback>(stopFn),
-              reinterpret_cast<AudioWriteCallback>(enqueueFn),
-              reinterpret_cast<AudioFlushCallback>(flushFn), outCtx, extraParam))
-        : NULL;
-}
-
-int getAt9StackSizes(unsigned int *parserStack, unsigned int *decoderStack, unsigned int *mgrStack)
-{
-    return getAt9Factory()->getBufferSizes(parserStack, decoderStack, mgrStack);
-}
-
-MediaInfoBase *allocAt9MediaInfo(CodecFactory *factory, const char *path)
-{
-    At9Factory *at9Factory = reinterpret_cast<At9Factory *>(factory);
-    return (at9Factory != NULL)
-        ? reinterpret_cast<MediaInfoBase *>(at9Factory->createMediaInfo(path, 0))
-        : NULL;
 }
 
 } /* namespace MusicCore */

@@ -9,6 +9,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "musiccore_codec_factories.h"
+#include "musiccore_decoder_pipeline.h"
 #include "musiccore_media.h"
 #include "musiccore_pipeline_types.h"
 
@@ -590,20 +592,7 @@ int WavParser::produceFrame(MediaFrameBuffer *outBuf)
 
 /* ===== WavFactory (0x811FA248 - 0x811FA3F3) ===== */
 
-class WavFactory {
-public:
-    WavFactory() {}
-    virtual ~WavFactory() {}
-
-    int getBufferSizes(uint32_t *outParserBuf, uint32_t *outDecoderBuf, uint32_t *outAudioBuf);
-    PipelineEventListener *createPipeline(AudioOpenCallback openCb, AudioCloseCallback closeCb,
-                                          AudioWriteCallback writeCb, AudioFlushCallback flushCb,
-                                          void *userContext);
-    int destroyPipeline(PipelineEventListener *pipeline);
-    void *createMediaInfo(const char *path);
-};
-
-static WavFactory g_wavFactory; /* 0x8156F3F8 */
+WavFactory g_wavFactory; /* 0x8156F3F8 */
 
 /* 0x811FA248 */
 int WavFactory::getBufferSizes(uint32_t *outParserBuf, uint32_t *outDecoderBuf, uint32_t *outAudioBuf)
@@ -647,7 +636,7 @@ PipelineEventListener *WavFactory::createPipeline(AudioOpenCallback openCb,
     static_cast<ActiveFilterBase *>(parser)->setEventListener(pipeline);
     audio->setEventListener(pipeline);
 
-    if (audio->isInitialized() && decoderPipelineIsReady(pipeline)) {
+    if (audio->isInitialized() && reinterpret_cast<DecoderPipeline *>(pipeline)->isReady()) {
         return pipeline;
     }
 
@@ -663,9 +652,10 @@ int WavFactory::destroyPipeline(PipelineEventListener *pipeline)
     if (pipeline == NULL) {
         return PARSER_ERR_BAD_PARAM;
     }
-    ParserFilterBase *parser = decoderPipelineGetParser(pipeline);
+    DecoderPipeline *dp = reinterpret_cast<DecoderPipeline *>(pipeline);
+    ParserFilterBase *parser = reinterpret_cast<ParserFilterBase *>(dp->getParser());
     delete parser;
-    AudioOutputFilter *audio = decoderPipelineGetAudio(pipeline);
+    AudioOutputFilter *audio = reinterpret_cast<AudioOutputFilter *>(dp->getAudioSink());
     delete audio;
     delete pipeline;
     return 0;
@@ -679,41 +669,6 @@ void *WavFactory::createMediaInfo(const char *path)
         return NULL;
     }
     return new (mem) WavMediaInfo(path);
-}
-
-struct CodecFactory;
-struct DecoderInstance;
-
-WavFactory gWavFactory;
-
-DecoderInstance *createWavDecoder(CodecFactory *factory, void *outCtx,
-                                  void *startFn, void *enqueueFn, void *stopFn, void *flushFn)
-{
-    WavFactory *wavFactory = (factory != NULL) ? reinterpret_cast<WavFactory *>(factory) : &gWavFactory;
-    return reinterpret_cast<DecoderInstance *>(wavFactory->createPipeline(
-        reinterpret_cast<AudioOpenCallback>(startFn),
-        reinterpret_cast<AudioCloseCallback>(stopFn),
-        reinterpret_cast<AudioWriteCallback>(enqueueFn),
-        reinterpret_cast<AudioFlushCallback>(flushFn), outCtx));
-}
-
-int destroyWavDecoder(CodecFactory *factory, DecoderInstance *decoder)
-{
-    WavFactory *wavFactory = (factory != NULL) ? reinterpret_cast<WavFactory *>(factory) : &gWavFactory;
-    return wavFactory->destroyPipeline(reinterpret_cast<PipelineEventListener *>(decoder));
-}
-
-int getWavStackSizes(unsigned int *parserStack, unsigned int *decoderStack, unsigned int *mgrStack)
-{
-    return gWavFactory.getBufferSizes(parserStack, decoderStack, mgrStack);
-}
-
-MediaInfoBase *allocWavMediaInfo(CodecFactory *factory, const char *path)
-{
-    WavFactory *wavFactory = reinterpret_cast<WavFactory *>(factory);
-    return (wavFactory != NULL)
-        ? reinterpret_cast<MediaInfoBase *>(wavFactory->createMediaInfo(path))
-        : NULL;
 }
 
 } /* namespace MusicCore */

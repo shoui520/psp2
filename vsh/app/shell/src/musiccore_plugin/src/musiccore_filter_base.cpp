@@ -10,6 +10,7 @@
 #include <stdint.h>
 
 #include "musiccore_codec_decoders.h"
+#include "musiccore_decoder_pipeline.h"
 #include "musiccore_pipeline_types.h"
 
 #include <memory/heap_allocator.h>
@@ -50,9 +51,6 @@ enum FilterEventCode {
 extern void *getWorkerThreadPool();
 extern int workerPoolSpawn(void *pool, int workerKind, void *entryFn, void *arg, SceUID *outThreadId);
 extern int workerPoolJoin(void *pool, SceUID threadId);
-
-extern void *constructDecoderPipeline(void *mem, int pipelineKind, int codecType,
-                                      void *factory, void *audioOut);
 
 static int activeFilterThreadEntry(SceSize args, void *argp)
 {
@@ -763,25 +761,19 @@ AudioOutputFilter *createAudioOutputFilter(uint32_t grainBytes, int slotCount,
 }
 
 /* 0x81207814 */
-void *createDecoderPipeline(int pipelineKind, int codecType, void *factory, void *audioOut)
-{
-    void *mem = musiccoreAllocFromPafHeap(320, getLocalHeap());
-    if (mem == NULL)
-        return NULL;
-    return constructDecoderPipeline(mem, pipelineKind, codecType, factory, audioOut);
-}
-
 PipelineEventListener *createDecoderPipeline(ParserFilterBase *parser,
                                              PipeInterface *pipe,
                                              DecoderFilterBase *decoder,
                                              AudioOutputFilter *audioSink)
 {
-    void *mem = musiccoreAllocFromPafHeap(320, getLocalHeap());
+    void *mem = musiccoreAllocFromPafHeap(sizeof(DecoderPipeline), getLocalHeap());
     if (mem == NULL)
         return NULL;
-    return static_cast<PipelineEventListener *>(constructDecoderPipeline(
-        mem, reinterpret_cast<int>(parser), reinterpret_cast<int>(pipe),
-        decoder, audioSink));
+    return reinterpret_cast<PipelineEventListener *>(new (mem) DecoderPipeline(
+        reinterpret_cast<ParserFilter *>(parser),
+        reinterpret_cast<BufRefPipe *>(pipe),
+        reinterpret_cast<DecoderFilter *>(decoder),
+        reinterpret_cast<AudioOutputSink *>(audioSink)));
 }
 
 } /* namespace MusicCore */

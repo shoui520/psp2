@@ -7,6 +7,8 @@
 #include <std/new>
 #include <stddef.h>
 #include <stdint.h>
+
+#include "musiccore_audio_output.h"
 #include <stdlib.h>
 
 #include <thread/thread.h>
@@ -53,8 +55,6 @@ extern int isTrackIdRemoved(int64_t trackId, void *listHandle);
 extern void computePlaybackRange(int seekMode, int speedMode, int step, int durationMs,
                                  int volumeMode, int *outPrev, int *outNext, int *outCur);
 extern int decoderMgrIsSameFormat(void *decMgr, void *mediaInfo);
-extern int audioOutputSetVolume(void *audioOut, int volume, int ramp, unsigned char *outFlag);
-extern int audioOutputSetAlcMode(void *audioOut, int alcMode);
 
 static unsigned char g_stateTransitionTable[64];
 
@@ -1448,7 +1448,8 @@ int StateStopped::onSetVolume(int volume, int ramp)
     if (m_owner == NULL || m_owner->m_audioOut == NULL)
         return MUSICCORE_ERR_FAILED;
     unsigned char applied = 0;
-    int ret = audioOutputSetVolume(m_owner->m_audioOut, volume, ramp, &applied);
+    int ret = static_cast<AudioOutput *>(m_owner->m_audioOut)->setVolumeOrDbFade(
+        static_cast<unsigned int>(volume), ramp, &applied);
     if (ret == 0)
         m_owner->m_audioBalance = volume;
     return ret;
@@ -1458,7 +1459,7 @@ int StateStopped::onSetAudioNormalizer(int alcMode)
 {
     if (m_owner == NULL || m_owner->m_audioOut == NULL)
         return MUSICCORE_ERR_FAILED;
-    int ret = audioOutputSetAlcMode(m_owner->m_audioOut, alcMode);
+    int ret = static_cast<AudioOutput *>(m_owner->m_audioOut)->setAlcMode(alcMode);
     if (ret == 0)
         m_owner->m_audioNormalizer = alcMode;
     return ret;

@@ -127,21 +127,21 @@ ExclusiveMusicPlayer::ExclusiveMusicPlayer(void *controller, int capacity, int *
                                            unsigned int bufSize, int poolOffset)
     : BasePlayer(2, controller, capacity, outErr, bufSize, static_cast<unsigned int>(poolOffset))
 {
-    m_exclusiveParam.version = 5;
-    m_exclusiveParam.configWords[0] = 0;
-    m_exclusiveParam.configWords[1] = 0;
-    m_exclusiveParam.configWords[2] = 0;
-    m_exclusiveParam.configWords[3] = 0;
-    m_exclusiveParam.configWords[4] = 0;
+    m_exclusiveParam.mode = 5;
+    m_exclusiveParam.reserved = 0;
+    m_exclusiveParam.flags = 0;
+    m_exclusiveParam.param = 0;
+    m_exclusiveParam.extraParam = 0;
+    m_exclusiveParam.auxParam = 0;
 
     if (bufSize >= BasePlayer::calcBaseExtraSize(capacity) + 496u) {
         m_subPriority = EXCLUSIVE_PLAYER_PRIORITY;
-        m_exclusiveParam.version = 5;
-        m_exclusiveParam.configWords[0] = 0;
-        m_exclusiveParam.configWords[1] = 0;
-        m_exclusiveParam.configWords[2] = 0;
-        m_exclusiveParam.configWords[3] = 0;
-        m_exclusiveParam.configWords[4] = 0;
+        m_exclusiveParam.mode = 5;
+        m_exclusiveParam.reserved = 0;
+        m_exclusiveParam.flags = 0;
+        m_exclusiveParam.param = 0;
+        m_exclusiveParam.extraParam = 0;
+        m_exclusiveParam.auxParam = 0;
     } else {
         *outErr = MC_ERR_NO_MEMORY;
     }

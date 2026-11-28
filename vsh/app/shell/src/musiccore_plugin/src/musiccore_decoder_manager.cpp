@@ -9,6 +9,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "musiccore_codec_factories.h"
+#include "musiccore_decoder_pipeline.h"
 #include "musiccore_heap.h"
 #include "musiccore_sync.h"
 #include <string.h>
@@ -71,46 +73,6 @@ struct MediaInfoBase {
     uint8_t isRetained;
 };
 
-struct DecoderInstance;
-struct CodecFactory;
-
-extern CodecFactory *getMp3Factory();
-extern CodecFactory *getMp4Factory();
-extern CodecFactory *getAt9Factory();
-extern CodecFactory gWavFactory;
-
-extern int getMp3StackSizes(unsigned int *parserStack, unsigned int *decoderStack, unsigned int *mgrStack);
-extern int getMp4StackSizes(unsigned int *parserStack, unsigned int *decoderStack, unsigned int *mgrStack);
-extern int getAt9StackSizes(unsigned int *parserStack, unsigned int *decoderStack, unsigned int *mgrStack);
-extern int getWavStackSizes(unsigned int *parserStack, unsigned int *decoderStack, unsigned int *mgrStack);
-
-extern DecoderInstance *createMp3Decoder(CodecFactory *factory, int mode, void *outCtx,
-                                         void *startFn, void *enqueueFn, void *stopFn, void *flushFn);
-extern DecoderInstance *createMp4Decoder(CodecFactory *factory, int mode, void *outCtx,
-                                         void *startFn, void *enqueueFn, void *stopFn, void *flushFn);
-extern DecoderInstance *createAt9Decoder(CodecFactory *factory, int mode, void *outCtx,
-                                         void *startFn, void *enqueueFn, void *stopFn, void *flushFn, int extraParam);
-extern DecoderInstance *createWavDecoder(CodecFactory *factory, void *outCtx,
-                                         void *startFn, void *enqueueFn, void *stopFn, void *flushFn);
-
-extern int destroyCodecDecoder(CodecFactory *factory, DecoderInstance *decoder);
-extern int destroyWavDecoder(CodecFactory *factory, DecoderInstance *decoder);
-
-extern MediaInfoBase *allocMp3MediaInfo(CodecFactory *factory, const char *path);
-extern MediaInfoBase *allocMp4MediaInfo(CodecFactory *factory, const char *path);
-extern MediaInfoBase *allocAt9MediaInfo(CodecFactory *factory, const char *path);
-extern MediaInfoBase *allocWavMediaInfo(CodecFactory *factory, const char *path);
-extern void releaseFactoryMediaInfo(CodecFactory *factory, MediaInfoBase **mediaInfo);
-
-extern void decoderSetListener(DecoderInstance *decoder, void *listener);
-extern unsigned int decoderRequestStart(DecoderInstance *decoder, MediaInfoBase *mediaInfo,
-                                        int startMs, int endMs, int playSpeed);
-extern unsigned int decoderRequestStop(DecoderInstance *decoder);
-extern unsigned int decoderRequestPause(DecoderInstance *decoder);
-extern unsigned int decoderRequestSeek(DecoderInstance *decoder, int posMs);
-extern unsigned int decoderRequestPosition(DecoderInstance *decoder);
-extern void *decoderGetParserAdapter(DecoderInstance *decoder);
-
 struct ParserAdapterBase {
     virtual ~ParserAdapterBase() {}
     virtual int onPipeConsumed(int frameFlags) { (void)frameFlags; return 0; }
@@ -167,9 +129,9 @@ static int mapDecoderError(unsigned int decErr)
     }
 }
 
-class ActiveFilterListener {
+class CodecEventListener {
 public:
-    virtual ~ActiveFilterListener() {}
+    virtual ~CodecEventListener() {}
     virtual void onEndOfStream() = 0;
     virtual void onDecodeError(int stage, unsigned int decErr) = 0;
     virtual void onBufferNotice() {}
@@ -180,7 +142,7 @@ public:
     virtual void onPositionReady(int posMs, int status) = 0;
 };
 
-class CodecAdapter : public ActiveFilterListener {
+class CodecAdapter : public CodecEventListener {
 public:
     typedef int (*MediaReadyCallback)(void *ctx, void *userCtx);
     typedef int (*ErrorCallback)(void *ctx, int err);
@@ -196,7 +158,7 @@ public:
     ErrorCallback errorCb;
     EndOfStreamCallback eosCb;
     void *eventCbCtx;
-    DecoderInstance *decoder;
+    DecoderPipeline *decoder;
     SyncMutex waitMutex;
     SyncCond waitCond;
     int lastPositionMs;
@@ -334,7 +296,7 @@ int CodecAdapter::startPlay(MediaInfoBase *mediaInfo, int startMs, int endMs,
 
     waitMutex.lock();
     pendingUserCtx = userCtx;
-    unsigned int decErr = decoderRequestStart(decoder, mediaInfo, startMs, endMs, playSpeed);
+    unsigned int decErr = static_cast<unsigned int>(decoder->requestStart(mediaInfo, startMs, endMs, playSpeed));
     if (decErr != 0) {
         waitMutex.unlock();
         return mapDecoderError(decErr);
@@ -356,7 +318,7 @@ int CodecAdapter::pausePlay()
     if (decoder == NULL) {
         return MUSICCORE_ERR_FAILED;
     }
-    if (decoderRequestPause(decoder) != 0) {
+    if (decoder->requestSetSpeed(0) != 0) {
         return mapDecoderError((unsigned int)lastAsyncStatus);
     }
     return 0;
@@ -370,7 +332,7 @@ int CodecAdapter::stopPlay()
     }
 
     waitMutex.lock();
-    unsigned int decErr = decoderRequestStop(decoder);
+    unsigned int decErr = static_cast<unsigned int>(decoder->requestStop());
     if (decErr != 0) {
         waitMutex.unlock();
         return mapDecoderError(decErr);
@@ -391,7 +353,7 @@ int CodecAdapter::seekPlay(int mode, int posMs)
     }
 
     waitMutex.lock();
-    unsigned int decErr = decoderRequestSeek(decoder, posMs);
+    unsigned int decErr = static_cast<unsigned int>(decoder->requestSetSpeed(posMs));
     if (decErr != 0) {
         waitMutex.unlock();
         return mapDecoderError(decErr);
@@ -414,7 +376,7 @@ int CodecAdapter::getPosition(int *outPosMs)
     }
 
     waitMutex.lock();
-    if (decoderRequestPosition(decoder) != 0) {
+    if (decoder->requestGetPosition() != 0) {
         waitMutex.unlock();
         return MUSICCORE_ERR_FAILED;
     }
@@ -451,7 +413,7 @@ int CodecAdapter::queryCachedInfo(const char *path, MediaInfoBase **outInfo)
     if (decoder == NULL) {
         return MUSICCORE_ERR_FAILED;
     }
-    ParserAdapterBase *parser = static_cast<ParserAdapterBase *>(decoderGetParserAdapter(decoder));
+    ParserAdapterBase *parser = reinterpret_cast<ParserAdapterBase *>(decoder->getParser());
     if (parser == NULL) {
         return MUSICCORE_ERR_FAILED;
     }
@@ -553,10 +515,11 @@ CodecAdapterAt9::~CodecAdapterAt9() {}
 /* 0x811EA39C */
 int CodecAdapterAt9::queryStackSizes(unsigned int *parserStack, unsigned int *decoderStack, unsigned int *mgrStack)
 {
-    if (getAt9Factory() == NULL) {
+    At9Factory *factory = getAt9Factory();
+    if (factory == NULL) {
         return 0;
     }
-    return getAt9StackSizes(parserStack, decoderStack, mgrStack);
+    return factory->getBufferSizes(parserStack, decoderStack, mgrStack);
 }
 
 /* 0x811EA3B8 */
@@ -574,16 +537,19 @@ int CodecAdapterAt9::openDecoder(int sourceMode, int extraParam)
         return MUSICCORE_ERR_BAD_PARAM;
     }
 
-    CodecFactory *factory = getAt9Factory();
+    At9Factory *factory = getAt9Factory();
     if (factory == NULL) {
         return MUSICCORE_ERR_NO_MEMORY;
     }
-    decoder = createAt9Decoder(factory, ioMode, outputCtx, outputStartFn,
-                               outputEnqueueFn, outputStopFn, outputFlushFn, extraParam);
+    decoder = reinterpret_cast<DecoderPipeline *>(factory->createPipeline(
+        ioMode, reinterpret_cast<AudioOpenCallback>(outputStartFn),
+        reinterpret_cast<AudioCloseCallback>(outputStopFn),
+        reinterpret_cast<AudioWriteCallback>(outputEnqueueFn),
+        reinterpret_cast<AudioFlushCallback>(outputFlushFn), outputCtx, extraParam));
     if (decoder == NULL) {
         return MUSICCORE_ERR_NO_MEMORY;
     }
-    decoderSetListener(decoder, this);
+    decoder->setCallback(reinterpret_cast<PipelineEventCallback *>(this));
     return 0;
 }
 
@@ -593,19 +559,19 @@ int CodecAdapterAt9::closeDecoder()
     if (decoder == NULL) {
         return 0;
     }
-    CodecFactory *factory = getAt9Factory();
+    At9Factory *factory = getAt9Factory();
     if (factory == NULL) {
         return MUSICCORE_ERR_NO_MEMORY;
     }
     waitMutex.lock();
-    decoderRequestStop(decoder);
+    decoder->requestStop();
     waitCond.wait(&waitMutex, 2u, NULL);
     int status = mapDecoderError((unsigned int)lastAsyncStatus);
     waitMutex.unlock();
     if (status != 0) {
         return status;
     }
-    int ret = destroyCodecDecoder(factory, decoder);
+    int ret = getMp3Factory()->destroyPipeline(reinterpret_cast<PipelineEventListener *>(decoder));
     decoder = NULL;
     return ret;
 }
@@ -639,10 +605,11 @@ CodecAdapterMp3::~CodecAdapterMp3() {}
 /* 0x811EA4FC */
 int CodecAdapterMp3::queryStackSizes(unsigned int *parserStack, unsigned int *decoderStack, unsigned int *mgrStack)
 {
-    if (getMp3Factory() == NULL) {
+    Mp3Factory *factory = getMp3Factory();
+    if (factory == NULL) {
         return 0;
     }
-    return getMp3StackSizes(parserStack, decoderStack, mgrStack);
+    return factory->getBufferSizes(parserStack, decoderStack, mgrStack);
 }
 
 /* 0x811EA518 */
@@ -661,16 +628,19 @@ int CodecAdapterMp3::openDecoder(int sourceMode, int extraParam)
         return MUSICCORE_ERR_BAD_PARAM;
     }
 
-    CodecFactory *factory = getMp3Factory();
+    Mp3Factory *factory = getMp3Factory();
     if (factory == NULL) {
         return MUSICCORE_ERR_NO_MEMORY;
     }
-    decoder = createMp3Decoder(factory, ioMode, outputCtx, outputStartFn,
-                               outputEnqueueFn, outputStopFn, outputFlushFn);
+    decoder = reinterpret_cast<DecoderPipeline *>(factory->createPipeline(
+        ioMode, reinterpret_cast<AudioOpenCallback>(outputStartFn),
+        reinterpret_cast<AudioCloseCallback>(outputStopFn),
+        reinterpret_cast<AudioWriteCallback>(outputEnqueueFn),
+        reinterpret_cast<AudioFlushCallback>(outputFlushFn), outputCtx));
     if (decoder == NULL) {
         return MUSICCORE_ERR_NO_MEMORY;
     }
-    decoderSetListener(decoder, this);
+    decoder->setCallback(reinterpret_cast<PipelineEventCallback *>(this));
     return 0;
 }
 
@@ -680,19 +650,19 @@ int CodecAdapterMp3::closeDecoder()
     if (decoder == NULL) {
         return 0;
     }
-    CodecFactory *factory = getMp3Factory();
+    Mp3Factory *factory = getMp3Factory();
     if (factory == NULL) {
         return MUSICCORE_ERR_NO_MEMORY;
     }
     waitMutex.lock();
-    decoderRequestStop(decoder);
+    decoder->requestStop();
     waitCond.wait(&waitMutex, 2u, NULL);
     int status = mapDecoderError((unsigned int)lastAsyncStatus);
     waitMutex.unlock();
     if (status != 0) {
         return status;
     }
-    int ret = destroyCodecDecoder(factory, decoder);
+    int ret = factory->destroyPipeline(reinterpret_cast<PipelineEventListener *>(decoder));
     decoder = NULL;
     return ret;
 }
@@ -726,10 +696,11 @@ CodecAdapterMp4::~CodecAdapterMp4() {}
 /* 0x811EA658 */
 int CodecAdapterMp4::queryStackSizes(unsigned int *parserStack, unsigned int *decoderStack, unsigned int *mgrStack)
 {
-    if (getMp4Factory() == NULL) {
+    Mp4Factory *factory = getMp4FactoryInstance();
+    if (factory == NULL) {
         return 0;
     }
-    return getMp4StackSizes(parserStack, decoderStack, mgrStack);
+    return static_cast<int>(factory->getHeapSizes(parserStack, decoderStack, mgrStack));
 }
 
 /* 0x811EA674 */
@@ -748,16 +719,19 @@ int CodecAdapterMp4::openDecoder(int sourceMode, int extraParam)
         return MUSICCORE_ERR_BAD_PARAM;
     }
 
-    CodecFactory *factory = getMp4Factory();
+    Mp4Factory *factory = getMp4FactoryInstance();
     if (factory == NULL) {
         return MUSICCORE_ERR_NO_MEMORY;
     }
-    decoder = createMp4Decoder(factory, ioMode, outputCtx, outputStartFn,
-                               outputEnqueueFn, outputStopFn, outputFlushFn);
+    decoder = reinterpret_cast<DecoderPipeline *>(factory->createPipeline(
+        ioMode, reinterpret_cast<AudioOpenCallback>(outputStartFn),
+        reinterpret_cast<AudioCloseCallback>(outputStopFn),
+        reinterpret_cast<AudioWriteCallback>(outputEnqueueFn),
+        reinterpret_cast<AudioFlushCallback>(outputFlushFn), outputCtx));
     if (decoder == NULL) {
         return MUSICCORE_ERR_NO_MEMORY;
     }
-    decoderSetListener(decoder, this);
+    decoder->setCallback(reinterpret_cast<PipelineEventCallback *>(this));
     return 0;
 }
 
@@ -767,19 +741,19 @@ int CodecAdapterMp4::closeDecoder()
     if (decoder == NULL) {
         return 0;
     }
-    CodecFactory *factory = getMp4Factory();
+    Mp4Factory *factory = getMp4FactoryInstance();
     if (factory == NULL) {
         return MUSICCORE_ERR_NO_MEMORY;
     }
     waitMutex.lock();
-    decoderRequestStop(decoder);
+    decoder->requestStop();
     waitCond.wait(&waitMutex, 2u, NULL);
     int status = mapDecoderError((unsigned int)lastAsyncStatus);
     waitMutex.unlock();
     if (status != 0) {
         return status;
     }
-    int ret = destroyCodecDecoder(factory, decoder);
+    int ret = getMp3Factory()->destroyPipeline(reinterpret_cast<PipelineEventListener *>(decoder));
     decoder = NULL;
     return ret;
 }
@@ -813,7 +787,7 @@ CodecAdapterWav::~CodecAdapterWav() {}
 /* 0x811EA7B4 */
 int CodecAdapterWav::queryStackSizes(unsigned int *parserStack, unsigned int *decoderStack, unsigned int *mgrStack)
 {
-    return getWavStackSizes(parserStack, decoderStack, mgrStack);
+    return g_wavFactory.getBufferSizes(parserStack, decoderStack, mgrStack);
 }
 
 /* 0x811EA7C6 */
@@ -824,12 +798,15 @@ int CodecAdapterWav::openDecoder(int sourceMode, int extraParam)
     if (decoder != NULL) {
         return 0;
     }
-    decoder = createWavDecoder(&gWavFactory, outputCtx, outputStartFn,
-                               outputEnqueueFn, outputStopFn, outputFlushFn);
+    decoder = reinterpret_cast<DecoderPipeline *>(g_wavFactory.createPipeline(
+        reinterpret_cast<AudioOpenCallback>(outputStartFn),
+        reinterpret_cast<AudioCloseCallback>(outputStopFn),
+        reinterpret_cast<AudioWriteCallback>(outputEnqueueFn),
+        reinterpret_cast<AudioFlushCallback>(outputFlushFn), outputCtx));
     if (decoder == NULL) {
         return MUSICCORE_ERR_NO_MEMORY;
     }
-    decoderSetListener(decoder, this);
+    decoder->setCallback(reinterpret_cast<PipelineEventCallback *>(this));
     return 0;
 }
 
@@ -840,14 +817,14 @@ int CodecAdapterWav::closeDecoder()
         return 0;
     }
     waitMutex.lock();
-    decoderRequestStop(decoder);
+    decoder->requestStop();
     waitCond.wait(&waitMutex, 2u, NULL);
     int status = mapDecoderError((unsigned int)lastAsyncStatus);
     waitMutex.unlock();
     if (status != 0) {
         return status;
     }
-    int ret = destroyWavDecoder(&gWavFactory, decoder);
+    int ret = g_wavFactory.destroyPipeline(reinterpret_cast<PipelineEventListener *>(decoder));
     decoder = NULL;
     return ret;
 }
@@ -1131,19 +1108,21 @@ int DecoderManager::releaseMediaInfo(MediaInfoBase **mediaInfoPtr, uint8_t relea
         return MUSICCORE_ERR_INVALID_ARG;
     }
 
-    CodecFactory *factory = NULL;
+    void *factory = NULL;
     if (media->formatFourCC == FOURCC_MP3) {
         factory = getMp3Factory();
     } else if (media->formatFourCC == FOURCC_MP4) {
-        factory = getMp4Factory();
+        factory = getMp4FactoryInstance();
     } else if (media->formatFourCC == FOURCC_WAV) {
-        factory = &gWavFactory;
+        factory = &g_wavFactory;
     } else if (media->formatFourCC == FOURCC_AT9) {
         factory = getAt9Factory();
     }
 
     if (factory != NULL) {
-        releaseFactoryMediaInfo(factory, mediaInfoPtr);
+        void *ptr = *mediaInfoPtr;
+        getMp3Factory()->destroyMediaInfo(&ptr);
+        *mediaInfoPtr = NULL;
     } else {
         delete media;
         *mediaInfoPtr = NULL;
@@ -1245,21 +1224,21 @@ int DecoderManager::createMediaInfo(const char *path, int hintCodec, uint8_t doP
 
         switch (selected->codecType) {
         case CODEC_FORMAT_WAV:
-            media = allocWavMediaInfo(&gWavFactory, path);
+            media = reinterpret_cast<MediaInfoBase *>(g_wavFactory.createMediaInfo(path));
             break;
         case CODEC_FORMAT_MP3:
             if (getMp3Factory() != NULL) {
-                media = allocMp3MediaInfo(getMp3Factory(), path);
+                media = reinterpret_cast<MediaInfoBase *>(getMp3Factory()->createMediaInfo(path, 16));
             }
             break;
         case CODEC_FORMAT_MP4:
-            if (getMp4Factory() != NULL) {
-                media = allocMp4MediaInfo(getMp4Factory(), path);
+            if (getMp4FactoryInstance() != NULL) {
+                media = reinterpret_cast<MediaInfoBase *>(getMp4FactoryInstance()->createMediaInfo(path, 16));
             }
             break;
         case CODEC_FORMAT_AT9:
             if (getAt9Factory() != NULL) {
-                media = allocAt9MediaInfo(getAt9Factory(), path);
+                media = reinterpret_cast<MediaInfoBase *>(getAt9Factory()->createMediaInfo(path, 0));
             }
             break;
         default:
