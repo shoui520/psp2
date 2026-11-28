@@ -250,7 +250,7 @@ static const DbColumnBinding kContentItemTableColumns[2] = {
 
 class MediaEntryNode {
 public:
-    virtual ~MediaEntryNode() {}
+    virtual ~MediaEntryNode();
     virtual size_t getAllocatedSize() const = 0;
 
     int m_entryKind;            /* +4: 1=URI, 2=DB query */
@@ -258,13 +258,15 @@ public:
     MediaEntryNode *m_next;     /* +12 */
 };
 
+MediaEntryNode::~MediaEntryNode() {}
+
 class DbQueryEntryNode : public MediaEntryNode {
 public:
     DbQueryEntryNode(const char *sqlQuery, int tableCategory, int initialIndex,
                      int64_t anchorId, unsigned int allocSize, int headerOffset,
                      int extraOption, int sortMode);
-    virtual ~DbQueryEntryNode() {}
-    virtual size_t getAllocatedSize() const { return sizeof(DbQueryEntryNode); }
+    virtual ~DbQueryEntryNode();
+    virtual size_t getAllocatedSize() const;
 
     char m_sqlQuery[2049];      /* +16..+2064 */
     uint8_t m_padQuery[3];      /* +2065..+2067 */
@@ -297,11 +299,18 @@ DbQueryEntryNode::DbQueryEntryNode(const char *sqlQuery, int tableCategory, int 
     }
 }
 
+DbQueryEntryNode::~DbQueryEntryNode() {}
+
+size_t DbQueryEntryNode::getAllocatedSize() const
+{
+    return sizeof(DbQueryEntryNode);
+}
+
 class UriEntryNode : public MediaEntryNode {
 public:
     UriEntryNode(const char *uriPath, int loopMode, unsigned int allocSize, int headerOffset);
-    virtual ~UriEntryNode() {}
-    virtual size_t getAllocatedSize() const { return m_allocSize; }
+    virtual ~UriEntryNode();
+    virtual size_t getAllocatedSize() const;
 
     int m_codecSubType;         /* +16 */
     int m_status;               /* +20 */
@@ -364,6 +373,13 @@ UriEntryNode::UriEntryNode(const char *uriPath, int loopMode, unsigned int alloc
     m_trackId = -2;
 }
 
+UriEntryNode::~UriEntryNode() {}
+
+size_t UriEntryNode::getAllocatedSize() const
+{
+    return m_allocSize;
+}
+
 class MediaEntryPool {
 public:
     MediaEntryPool(int minCapacity, unsigned int arenaBytes);
@@ -372,7 +388,7 @@ public:
     void *reserveSlot(int neededBytes);
     void appendNode(MediaEntryNode *node);
     MediaEntryNode *getNodeAt(unsigned int index);
-    unsigned int getNodeCount() const { return m_nodeCount; }
+    unsigned int getNodeCount() const;
 
 private:
     void *m_arenaStart;         /* +4 */
@@ -382,6 +398,11 @@ private:
     unsigned int m_nodeCount;   /* +20 */
     int m_poolSerial;           /* +24 */
 };
+
+unsigned int MediaEntryPool::getNodeCount() const
+{
+    return m_nodeCount;
+}
 
 /* 0x811F3468 */
 MediaEntryPool::MediaEntryPool(int minCapacity, unsigned int arenaBytes)
@@ -622,7 +643,7 @@ public:
 
     virtual void *acquireOrderList(void *ownerList, int *outPrevOwnerId, SceUInt *timeout);
     virtual void releaseOrderList(void *bufferPtr, uint8_t clearOwner);
-    virtual int getMaxItems() const { return m_maxItems; }
+    virtual int getMaxItems() const;
 
 private:
     uint8_t *m_slotsBase;          /* +4 */
@@ -632,6 +653,11 @@ private:
     SceUID m_slotSema;             /* +20 */
     paf::thread::Mutex m_lock;     /* +24 */
 };
+
+int OrderListFactory::getMaxItems() const
+{
+    return m_maxItems;
+}
 
 /* 0x811F29E2 */
 unsigned int OrderListFactory::calcTotalSize(int maxItems, int slotCount,
@@ -710,7 +736,7 @@ struct MetadataOutputRequest {
 class MediaItem {
 public:
     MediaItem();
-    virtual ~MediaItem() {}
+    virtual ~MediaItem();
 
     void reset();
     void copyFrom(const MediaItem &other);
@@ -749,6 +775,8 @@ MediaItem::MediaItem()
 {
     reset();
 }
+
+MediaItem::~MediaItem() {}
 
 void MediaItem::reset()
 {
@@ -925,43 +953,29 @@ public:
 
     virtual int checkOrderListStatus(int *outPrevId, uint8_t *outAllocated);
     virtual int releaseOrderList(uint8_t clearOwner);
-    virtual int getListId() const { return m_listId; }
-    virtual MediaEntryPool *getEntryPool() { return m_entryPool; }
+    virtual int getListId() const;
+    virtual MediaEntryPool *getEntryPool();
     virtual int navigateTo(int navTarget, uint8_t *outValid);
     virtual int resolveErrorNavigation(int unused, int repeatMode, int direction,
                                        unsigned int *ioAttempts, int *ioErr,
                                        uint8_t *outWrappedAll, uint8_t *outWrappedOne);
     virtual int refreshAndKeepTrack(int64_t initialRowId, int64_t fallbackRowId,
-                                    int64_t *outKeptRowId)
-    {
-        (void)initialRowId;
-        (void)fallbackRowId;
-        (void)outKeptRowId;
-        return 0;
-    }
-    virtual void setEntryTrackId(int index, int64_t trackId)
-    {
-        (void)index;
-        (void)trackId;
-    }
+                                    int64_t *outKeptRowId);
+    virtual void setEntryTrackId(int index, int64_t trackId);
     virtual int checkChangedFlag(uint8_t *outChanged, uint8_t queryLive);
     virtual int checkValid();
     virtual int checkPlayableAt(int index, int *outStatus) = 0;
     virtual int getListStatus(MediaListStatus *outStatus);
-    virtual int getTableCategory() const { return m_tableCategory; }
-    virtual unsigned int getItemCount() const { return m_itemCount; }
-    virtual int getCurrentIndex() const { return m_currentIndex; }
-    virtual int64_t getAnchorId() const { return m_anchorId; }
+    virtual int getTableCategory() const;
+    virtual unsigned int getItemCount() const;
+    virtual int getCurrentIndex() const;
+    virtual int64_t getAnchorId() const;
     virtual int rebuildOrderList(int shuffleMode, int64_t anchorRowId,
                                  uint8_t *outChanged, uint8_t forceRebuild);
-    virtual int unlockOrderList(uint8_t clearOwner)
-    {
-        (void)clearOwner;
-        return 0;
-    }
+    virtual int unlockOrderList(uint8_t clearOwner);
     virtual int refreshOrderBuffer(int shuffleMode, int64_t anchorRowId);
     virtual int fetchItemMetadata(int64_t musicId, const char *path, MetadataOutputRequest *outMeta);
-    virtual int getOrderedIndex(unsigned int orderPos) const { return static_cast<int>(orderPos); }
+    virtual int getOrderedIndex(unsigned int orderPos) const;
     virtual int loadItemAt(int navTarget, MediaItem *outItem, int unused, int64_t expectedRowId) = 0;
     virtual int saveItemChanges(MediaItem *origItem, MediaItem *updatedItem) = 0;
 
@@ -1023,6 +1037,62 @@ MediaListBase::MediaListBase(MediaEntryPool *entryPool, OrderListFactory *orderF
 
 MediaListBase::~MediaListBase()
 {
+}
+
+int MediaListBase::getListId() const
+{
+    return m_listId;
+}
+
+MediaEntryPool *MediaListBase::getEntryPool()
+{
+    return m_entryPool;
+}
+
+int MediaListBase::refreshAndKeepTrack(int64_t initialRowId, int64_t fallbackRowId,
+                                       int64_t *outKeptRowId)
+{
+    (void)initialRowId;
+    (void)fallbackRowId;
+    (void)outKeptRowId;
+    return 0;
+}
+
+void MediaListBase::setEntryTrackId(int index, int64_t trackId)
+{
+    (void)index;
+    (void)trackId;
+}
+
+int MediaListBase::getTableCategory() const
+{
+    return m_tableCategory;
+}
+
+unsigned int MediaListBase::getItemCount() const
+{
+    return m_itemCount;
+}
+
+int MediaListBase::getCurrentIndex() const
+{
+    return m_currentIndex;
+}
+
+int64_t MediaListBase::getAnchorId() const
+{
+    return m_anchorId;
+}
+
+int MediaListBase::unlockOrderList(uint8_t clearOwner)
+{
+    (void)clearOwner;
+    return 0;
+}
+
+int MediaListBase::getOrderedIndex(unsigned int orderPos) const
+{
+    return static_cast<int>(orderPos);
 }
 
 int MediaListBase::checkOrderListStatus(int *outPrevId, uint8_t *outAllocated)
@@ -1494,7 +1564,7 @@ int MediaItem::readMetadata(MetadataOutputRequest *outMeta)
 class UriMediaList : public MediaListBase {
 public:
     UriMediaList(MediaEntryPool *entryPool, int shuffleMode, OrderListFactory *orderFactory);
-    virtual ~UriMediaList() {}
+    virtual ~UriMediaList();
 
     virtual void setEntryTrackId(int index, int64_t trackId);
     virtual int checkPlayableAt(int index, int *outStatus);
@@ -1539,6 +1609,8 @@ UriMediaList::UriMediaList(MediaEntryPool *entryPool, int shuffleMode, OrderList
     m_isReady = 1;
     m_listLock.Unlock();
 }
+
+UriMediaList::~UriMediaList() {}
 
 /* 0x811F1DAC */
 int UriMediaList::checkPlayableAt(int index, int *outStatus)
@@ -1715,35 +1787,39 @@ struct MetadataRecordCache {
     SceRtcTick cachedCtime;
     SceRtcTick cachedMtime;
 
-    MetadataRecordCache()
-        : cachedMusicId(-1)
-        , record(NULL)
-        , padRecord(0)
-        , lock("SceShellMusicCoreRcdExclsv", 0)
-    {
-        cachedCtime.tick = 0;
-        cachedMtime.tick = 0;
-    }
+    MetadataRecordCache();
+    ~MetadataRecordCache();
+    void dropRecord();
+};
 
-    ~MetadataRecordCache()
-    {
+MetadataRecordCache::MetadataRecordCache()
+    : cachedMusicId(-1)
+    , record(NULL)
+    , padRecord(0)
+    , lock("SceShellMusicCoreRcdExclsv", 0)
+{
+    cachedCtime.tick = 0;
+    cachedMtime.tick = 0;
+}
+
+MetadataRecordCache::~MetadataRecordCache()
+{
+    if (record != NULL) {
+        record->Release();
+        record = NULL;
+    }
+}
+
+void MetadataRecordCache::dropRecord()
+{
+    if (cachedMusicId != -1) {
         if (record != NULL) {
             record->Release();
             record = NULL;
         }
+        cachedMusicId = -1;
     }
-
-    void dropRecord()
-    {
-        if (cachedMusicId != -1) {
-            if (record != NULL) {
-                record->Release();
-                record = NULL;
-            }
-            cachedMusicId = -1;
-        }
-    }
-};
+}
 
 /* 0x811EF1E8 */
 static int readRecordTextColumn(dbutil::Record *record, int columnIdx, char *dstBuf, SceSize dstCap)

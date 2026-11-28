@@ -115,7 +115,7 @@ public:
     explicit Mp4BoxBase(const char *fourcc);
     virtual ~Mp4BoxBase();
 
-    virtual uint32_t getContentOffset() const { return m_headerSize; }
+    virtual uint32_t getContentOffset() const;
 
     void resetParsed();
     bool isParsed() const;
@@ -140,6 +140,11 @@ Mp4BoxBase::Mp4BoxBase(const char *fourcc)
 /* 0x811FFC28 / 0x811FFC36 */
 Mp4BoxBase::~Mp4BoxBase()
 {
+}
+
+uint32_t Mp4BoxBase::getContentOffset() const
+{
+    return m_headerSize;
 }
 
 /* 0x811FFC4C */
@@ -315,7 +320,7 @@ public:
     Mp4FullBox(const char *fourcc, uint8_t version);
     virtual ~Mp4FullBox();
 
-    virtual uint32_t getContentOffset() const { return m_fullHeaderSize; }
+    virtual uint32_t getContentOffset() const;
 
     uint8_t m_version;         /* +24 */
     uint8_t m_flags[3];        /* +25..+27 */
@@ -336,6 +341,11 @@ Mp4FullBox::Mp4FullBox(const char *fourcc, uint8_t version)
 /* 0x812009A0 / 0x812009BC */
 Mp4FullBox::~Mp4FullBox()
 {
+}
+
+uint32_t Mp4FullBox::getContentOffset() const
+{
+    return m_fullHeaderSize;
 }
 
 class Mp4FullBoxReader : public Mp4BoxReaderBase {
@@ -554,9 +564,9 @@ public:
     Mp4AudioSpecificConfig();
     virtual ~Mp4AudioSpecificConfig();
 
-    uint32_t getAudioObjectType() const { return m_audioObjectType; }
-    uint32_t getSamplingFrequency() const { return m_samplingFrequency; }
-    uint8_t getChannelConfig() const { return m_channelConfig; }
+    uint32_t getAudioObjectType() const;
+    uint32_t getSamplingFrequency() const;
+    uint8_t getChannelConfig() const;
 
     uint8_t m_rawHeaderBytes[4];   /* +28..+31 */
     uint32_t m_audioObjectType;    /* +32 */
@@ -584,6 +594,21 @@ Mp4AudioSpecificConfig::Mp4AudioSpecificConfig()
 /* 0x811FF95C / 0x811FF978 */
 Mp4AudioSpecificConfig::~Mp4AudioSpecificConfig()
 {
+}
+
+uint32_t Mp4AudioSpecificConfig::getAudioObjectType() const
+{
+    return m_audioObjectType;
+}
+
+uint32_t Mp4AudioSpecificConfig::getSamplingFrequency() const
+{
+    return m_samplingFrequency;
+}
+
+uint8_t Mp4AudioSpecificConfig::getChannelConfig() const
+{
+    return m_channelConfig;
 }
 
 class Mp4AudioSpecificConfigReader : public Mp4DecoderSpecificInfoReader {
@@ -995,7 +1020,7 @@ public:
     Mp4AudioSampleEntryBox();
     virtual ~Mp4AudioSampleEntryBox();
 
-    virtual uint32_t getContentOffset() const { return m_sampleEntryEnd + 20u; }
+    virtual uint32_t getContentOffset() const;
 
     uint16_t m_sampleRateHi; /* +32 */
     uint16_t m_padRate;      /* +34 */
@@ -1014,6 +1039,11 @@ Mp4AudioSampleEntryBox::Mp4AudioSampleEntryBox()
 /* 0x811FFF84 / 0x811FFFA0 */
 Mp4AudioSampleEntryBox::~Mp4AudioSampleEntryBox()
 {
+}
+
+uint32_t Mp4AudioSampleEntryBox::getContentOffset() const
+{
+    return m_sampleEntryEnd + 20u;
 }
 
 class Mp4AudioSampleEntryReader : public Mp4SampleEntryReader {
@@ -1081,116 +1111,144 @@ int Mp4AudioSampleEntryReader::read(const Mp4BoxBase *parentBox, uint16_t occurr
 
 class Mp4ContainerBox : public Mp4BoxBase {
 public:
-    explicit Mp4ContainerBox(const char *fourcc)
-        : Mp4BoxBase(fourcc)
-        , m_childrenOffset(0)
-    {
-    }
-    virtual ~Mp4ContainerBox() {}
+    explicit Mp4ContainerBox(const char *fourcc);
+    virtual ~Mp4ContainerBox();
 
     uint32_t m_childrenOffset; /* +24 */
 };
 
+Mp4ContainerBox::Mp4ContainerBox(const char *fourcc)
+    : Mp4BoxBase(fourcc)
+    , m_childrenOffset(0)
+{
+}
+
+Mp4ContainerBox::~Mp4ContainerBox() {}
+
 class Mp4ContainerReader : public Mp4BoxReaderBase {
 public:
-    Mp4ContainerReader(Mp4CachedIo *io, int streamIdx)
-        : Mp4BoxReaderBase(io, streamIdx)
-    {
-    }
-    virtual ~Mp4ContainerReader() {}
+    Mp4ContainerReader(Mp4CachedIo *io, int streamIdx);
+    virtual ~Mp4ContainerReader();
 
-    /* 0x81200654 (dinf/mdia/minf/stbl) */
-    int readChildContainer(const Mp4BoxBase *parentBox, Mp4ContainerBox *outBox, uint32_t *outErr)
-    {
-        if (!parentBox->isParsed()) {
-            *outErr = MP4_ERR_BAD_PARENT;
-            return 0;
-        }
-        if (locateChildBox(parentBox, 1u, outBox, outErr) == 0) {
-            return 0;
-        }
-        outBox->m_isParsed = 1;
-        outBox->m_childrenOffset = outBox->m_headerSize;
-        *outErr = 0;
-        return 1;
-    }
-
-    /* 0x81200E88 (moov) */
-    int readTopContainer(Mp4ContainerBox *outBox, uint32_t *outErr)
-    {
-        if (locateChildBox(NULL, 1u, outBox, outErr) == 0) {
-            return 0;
-        }
-        outBox->m_isParsed = 1;
-        outBox->m_childrenOffset = outBox->m_headerSize;
-        *outErr = 0;
-        return 1;
-    }
-
-    /* 0x81202F88 (trak count) */
-    uint16_t countTracks(const Mp4BoxBase *moovBox, uint32_t *outErr)
-    {
-        if (!moovBox->isParsed()) {
-            *outErr = MP4_ERR_BAD_PARENT;
-            return 0;
-        }
-        Mp4ContainerBox trakProto("trak");
-        return countChildBoxes(moovBox, &trakProto, outErr);
-    }
-
-    /* 0x8120300C (trak by index) */
+    int readChildContainer(const Mp4BoxBase *parentBox, Mp4ContainerBox *outBox, uint32_t *outErr);
+    int readTopContainer(Mp4ContainerBox *outBox, uint32_t *outErr);
+    uint16_t countTracks(const Mp4BoxBase *moovBox, uint32_t *outErr);
     int readTrackAt(const Mp4BoxBase *moovBox, uint16_t trackIndex,
-                    Mp4ContainerBox *outTrak, uint32_t *outErr)
-    {
-        if (!moovBox->isParsed()) {
-            *outErr = MP4_ERR_BAD_PARENT;
-            return 0;
-        }
-        if (locateChildBox(moovBox, trackIndex, outTrak, outErr) == 0) {
-            return 0;
-        }
-        outTrak->m_isParsed = 1;
-        outTrak->m_childrenOffset = outTrak->m_headerSize;
-        *outErr = 0;
-        return 1;
-    }
+                    Mp4ContainerBox *outTrak, uint32_t *outErr);
 };
+
+Mp4ContainerReader::Mp4ContainerReader(Mp4CachedIo *io, int streamIdx)
+    : Mp4BoxReaderBase(io, streamIdx)
+{
+}
+
+Mp4ContainerReader::~Mp4ContainerReader() {}
+
+/* 0x81200654 (dinf/mdia/minf/stbl) */
+int Mp4ContainerReader::readChildContainer(const Mp4BoxBase *parentBox, Mp4ContainerBox *outBox, uint32_t *outErr)
+{
+    if (!parentBox->isParsed()) {
+        *outErr = MP4_ERR_BAD_PARENT;
+        return 0;
+    }
+    if (locateChildBox(parentBox, 1u, outBox, outErr) == 0) {
+        return 0;
+    }
+    outBox->m_isParsed = 1;
+    outBox->m_childrenOffset = outBox->m_headerSize;
+    *outErr = 0;
+    return 1;
+}
+
+/* 0x81200E88 (moov) */
+int Mp4ContainerReader::readTopContainer(Mp4ContainerBox *outBox, uint32_t *outErr)
+{
+    if (locateChildBox(NULL, 1u, outBox, outErr) == 0) {
+        return 0;
+    }
+    outBox->m_isParsed = 1;
+    outBox->m_childrenOffset = outBox->m_headerSize;
+    *outErr = 0;
+    return 1;
+}
+
+/* 0x81202F88 (trak count) */
+uint16_t Mp4ContainerReader::countTracks(const Mp4BoxBase *moovBox, uint32_t *outErr)
+{
+    if (!moovBox->isParsed()) {
+        *outErr = MP4_ERR_BAD_PARENT;
+        return 0;
+    }
+    Mp4ContainerBox trakProto("trak");
+    return countChildBoxes(moovBox, &trakProto, outErr);
+}
+
+/* 0x8120300C (trak by index) */
+int Mp4ContainerReader::readTrackAt(const Mp4BoxBase *moovBox, uint16_t trackIndex,
+                                    Mp4ContainerBox *outTrak, uint32_t *outErr)
+{
+    if (!moovBox->isParsed()) {
+        *outErr = MP4_ERR_BAD_PARENT;
+        return 0;
+    }
+    if (locateChildBox(moovBox, trackIndex, outTrak, outErr) == 0) {
+        return 0;
+    }
+    outTrak->m_isParsed = 1;
+    outTrak->m_childrenOffset = outTrak->m_headerSize;
+    *outErr = 0;
+    return 1;
+}
 
 class Mp4EsdsBox : public Mp4FullBox {
 public:
-    Mp4EsdsBox() : Mp4FullBox("esds", 0u), m_descriptorOffset(0) {}
-    virtual ~Mp4EsdsBox() {}
+    Mp4EsdsBox();
+    virtual ~Mp4EsdsBox();
 
     uint32_t m_descriptorOffset; /* +32 */
 };
 
+Mp4EsdsBox::Mp4EsdsBox()
+    : Mp4FullBox("esds", 0u)
+    , m_descriptorOffset(0)
+{
+}
+
+Mp4EsdsBox::~Mp4EsdsBox() {}
+
 class Mp4EsdsBoxReader : public Mp4FullBoxReader {
 public:
-    Mp4EsdsBoxReader(Mp4CachedIo *io, int streamIdx)
-        : Mp4FullBoxReader(io, streamIdx)
-    {
-    }
-    virtual ~Mp4EsdsBoxReader() {}
+    Mp4EsdsBoxReader(Mp4CachedIo *io, int streamIdx);
+    virtual ~Mp4EsdsBoxReader();
 
-    /* 0x81200750 */
-    int read(const Mp4BoxBase *parentBox, Mp4EsdsBox *outBox, uint32_t *outErr)
-    {
-        if (!parentBox->isParsed()) {
-            *outErr = MP4_ERR_BAD_PARENT;
-            return 0;
-        }
-        if (readFullBoxHeader(parentBox, 1u, outBox, outErr) == 0) {
-            if (*outErr == IO_ERR_BAD_PARAM) {
-                *outErr = 0xFFFFFFFFu;
-            }
-            return 0;
-        }
-        outBox->m_isParsed = 1;
-        outBox->m_descriptorOffset = outBox->m_fullHeaderSize;
-        *outErr = 0;
-        return 1;
-    }
+    int read(const Mp4BoxBase *parentBox, Mp4EsdsBox *outBox, uint32_t *outErr);
 };
+
+Mp4EsdsBoxReader::Mp4EsdsBoxReader(Mp4CachedIo *io, int streamIdx)
+    : Mp4FullBoxReader(io, streamIdx)
+{
+}
+
+Mp4EsdsBoxReader::~Mp4EsdsBoxReader() {}
+
+/* 0x81200750 */
+int Mp4EsdsBoxReader::read(const Mp4BoxBase *parentBox, Mp4EsdsBox *outBox, uint32_t *outErr)
+{
+    if (!parentBox->isParsed()) {
+        *outErr = MP4_ERR_BAD_PARENT;
+        return 0;
+    }
+    if (readFullBoxHeader(parentBox, 1u, outBox, outErr) == 0) {
+        if (*outErr == IO_ERR_BAD_PARAM) {
+            *outErr = 0xFFFFFFFFu;
+        }
+        return 0;
+    }
+    outBox->m_isParsed = 1;
+    outBox->m_descriptorOffset = outBox->m_fullHeaderSize;
+    *outErr = 0;
+    return 1;
+}
 
 /* ===== mdhd, mvhd, tkhd Boxes & Readers ===== */
 
@@ -1224,46 +1282,55 @@ Mp4MdhdBox::~Mp4MdhdBox()
 
 class Mp4MdhdBoxReader : public Mp4FullBoxReader {
 public:
-    Mp4MdhdBoxReader(Mp4CachedIo *io, int streamIdx) : Mp4FullBoxReader(io, streamIdx) {}
-    virtual ~Mp4MdhdBoxReader() {}
+    Mp4MdhdBoxReader(Mp4CachedIo *io, int streamIdx);
+    virtual ~Mp4MdhdBoxReader();
 
-    /* 0x81200B8C */
-    int read(const Mp4BoxBase *parentBox, Mp4MdhdBox *outBox, uint32_t *outErr)
-    {
-        if (!parentBox->isParsed()) {
-            *outErr = MP4_ERR_BAD_PARENT;
-            return 0;
-        }
-        if (readFullBoxHeader(parentBox, 1u, outBox, outErr) == 0) {
-            return 0;
-        }
-        if (outBox->m_version != 0u) {
-            *outErr = MP4_ERR_UNSUPPORTED;
-            return 0;
-        }
-        if (outBox->m_boxSize != outBox->m_fullHeaderSize + 20u) {
-            *outErr = MP4_ERR_CORRUPT;
-            return 0;
-        }
-
-        uint32_t mapErr = 0xFFFFFFFFu;
-        const uint8_t *body = (const uint8_t *)m_io->mapStreamRange(
-            m_streamIdx, outBox->m_fileOffset + outBox->m_fullHeaderSize, 20u, &mapErr);
-        if (body == NULL) {
-            *outErr = mapErr;
-            return 0;
-        }
-
-        outBox->m_creationTime = readBigEndian32(body);
-        outBox->m_modificationTime = readBigEndian32(body + 4);
-        outBox->m_timescale = readBigEndian32(body + 8);
-        outBox->m_duration = readBigEndian32(body + 12);
-        outBox->m_isParsed = 1;
-        outBox->m_parsedEndOffset = outBox->m_fullHeaderSize + 20u;
-        *outErr = 0;
-        return 1;
-    }
+    int read(const Mp4BoxBase *parentBox, Mp4MdhdBox *outBox, uint32_t *outErr);
 };
+
+Mp4MdhdBoxReader::Mp4MdhdBoxReader(Mp4CachedIo *io, int streamIdx)
+    : Mp4FullBoxReader(io, streamIdx)
+{
+}
+
+Mp4MdhdBoxReader::~Mp4MdhdBoxReader() {}
+
+/* 0x81200B8C */
+int Mp4MdhdBoxReader::read(const Mp4BoxBase *parentBox, Mp4MdhdBox *outBox, uint32_t *outErr)
+{
+    if (!parentBox->isParsed()) {
+        *outErr = MP4_ERR_BAD_PARENT;
+        return 0;
+    }
+    if (readFullBoxHeader(parentBox, 1u, outBox, outErr) == 0) {
+        return 0;
+    }
+    if (outBox->m_version != 0u) {
+        *outErr = MP4_ERR_UNSUPPORTED;
+        return 0;
+    }
+    if (outBox->m_boxSize != outBox->m_fullHeaderSize + 20u) {
+        *outErr = MP4_ERR_CORRUPT;
+        return 0;
+    }
+
+    uint32_t mapErr = 0xFFFFFFFFu;
+    const uint8_t *body = (const uint8_t *)m_io->mapStreamRange(
+        m_streamIdx, outBox->m_fileOffset + outBox->m_fullHeaderSize, 20u, &mapErr);
+    if (body == NULL) {
+        *outErr = mapErr;
+        return 0;
+    }
+
+    outBox->m_creationTime = readBigEndian32(body);
+    outBox->m_modificationTime = readBigEndian32(body + 4);
+    outBox->m_timescale = readBigEndian32(body + 8);
+    outBox->m_duration = readBigEndian32(body + 12);
+    outBox->m_isParsed = 1;
+    outBox->m_parsedEndOffset = outBox->m_fullHeaderSize + 20u;
+    *outErr = 0;
+    return 1;
+}
 
 class Mp4MvhdBox : public Mp4FullBox {
 public:
@@ -1295,71 +1362,80 @@ Mp4MvhdBox::~Mp4MvhdBox()
 
 class Mp4MvhdBoxReader : public Mp4FullBoxReader {
 public:
-    Mp4MvhdBoxReader(Mp4CachedIo *io, int streamIdx) : Mp4FullBoxReader(io, streamIdx) {}
-    virtual ~Mp4MvhdBoxReader() {}
+    Mp4MvhdBoxReader(Mp4CachedIo *io, int streamIdx);
+    virtual ~Mp4MvhdBoxReader();
 
-    /* 0x81200F7C */
-    int read(const Mp4BoxBase *parentBox, Mp4MvhdBox *outBox, uint32_t *outErr)
-    {
-        if (!parentBox->isParsed()) {
-            *outErr = MP4_ERR_BAD_PARENT;
-            return 0;
-        }
-        if (readFullBoxHeader(parentBox, 1u, outBox, outErr) == 0) {
-            return 0;
-        }
-        if (outBox->m_version != 0u) {
-            *outErr = MP4_ERR_UNSUPPORTED;
-            return 0;
-        }
-        if (outBox->m_boxSize != outBox->m_fullHeaderSize + 96u) {
-            *outErr = MP4_ERR_CORRUPT;
-            return 0;
-        }
-
-        uint32_t mapErr = 0xFFFFFFFFu;
-        const uint8_t *body = (const uint8_t *)m_io->mapStreamRange(
-            m_streamIdx, outBox->m_fileOffset + outBox->m_fullHeaderSize, 96u, &mapErr);
-        if (body == NULL) {
-            *outErr = mapErr;
-            return 0;
-        }
-
-        outBox->m_creationTime = readBigEndian32(body);
-        outBox->m_modificationTime = readBigEndian32(body + 4);
-        outBox->m_timescale = readBigEndian32(body + 8);
-        outBox->m_duration = readBigEndian32(body + 12);
-
-        bool fieldsOk = true;
-        if (sce_paf_memcmp(body + 16, g_mvhdExpectedRate, 4u) != 0) {
-            fieldsOk = false;
-        }
-        if (sce_paf_memcmp(body + 20, g_mvhdExpectedVolume, 2u) != 0) {
-            fieldsOk = false;
-        }
-        if (sce_paf_memcmp(body + 22, g_zeroBytes2, 2u) != 0) {
-            fieldsOk = false;
-        }
-        if (sce_paf_memcmp(body + 24, g_zeroBytes8, 8u) != 0) {
-            fieldsOk = false;
-        }
-        if (sce_paf_memcmp(body + 32, g_unityMatrix36, 36u) != 0) {
-            fieldsOk = false;
-        }
-        if (sce_paf_memcmp(body + 68, g_zeroBytes24, 24u) != 0) {
-            fieldsOk = false;
-        }
-        if (!fieldsOk) {
-            *outErr = MP4_ERR_CORRUPT;
-            return 0;
-        }
-
-        outBox->m_isParsed = 1;
-        outBox->m_parsedEndOffset = outBox->m_fullHeaderSize + 96u;
-        *outErr = 0;
-        return 1;
-    }
+    int read(const Mp4BoxBase *parentBox, Mp4MvhdBox *outBox, uint32_t *outErr);
 };
+
+Mp4MvhdBoxReader::Mp4MvhdBoxReader(Mp4CachedIo *io, int streamIdx)
+    : Mp4FullBoxReader(io, streamIdx)
+{
+}
+
+Mp4MvhdBoxReader::~Mp4MvhdBoxReader() {}
+
+/* 0x81200F7C */
+int Mp4MvhdBoxReader::read(const Mp4BoxBase *parentBox, Mp4MvhdBox *outBox, uint32_t *outErr)
+{
+    if (!parentBox->isParsed()) {
+        *outErr = MP4_ERR_BAD_PARENT;
+        return 0;
+    }
+    if (readFullBoxHeader(parentBox, 1u, outBox, outErr) == 0) {
+        return 0;
+    }
+    if (outBox->m_version != 0u) {
+        *outErr = MP4_ERR_UNSUPPORTED;
+        return 0;
+    }
+    if (outBox->m_boxSize != outBox->m_fullHeaderSize + 96u) {
+        *outErr = MP4_ERR_CORRUPT;
+        return 0;
+    }
+
+    uint32_t mapErr = 0xFFFFFFFFu;
+    const uint8_t *body = (const uint8_t *)m_io->mapStreamRange(
+        m_streamIdx, outBox->m_fileOffset + outBox->m_fullHeaderSize, 96u, &mapErr);
+    if (body == NULL) {
+        *outErr = mapErr;
+        return 0;
+    }
+
+    outBox->m_creationTime = readBigEndian32(body);
+    outBox->m_modificationTime = readBigEndian32(body + 4);
+    outBox->m_timescale = readBigEndian32(body + 8);
+    outBox->m_duration = readBigEndian32(body + 12);
+
+    bool fieldsOk = true;
+    if (sce_paf_memcmp(body + 16, g_mvhdExpectedRate, 4u) != 0) {
+        fieldsOk = false;
+    }
+    if (sce_paf_memcmp(body + 20, g_mvhdExpectedVolume, 2u) != 0) {
+        fieldsOk = false;
+    }
+    if (sce_paf_memcmp(body + 22, g_zeroBytes2, 2u) != 0) {
+        fieldsOk = false;
+    }
+    if (sce_paf_memcmp(body + 24, g_zeroBytes8, 8u) != 0) {
+        fieldsOk = false;
+    }
+    if (sce_paf_memcmp(body + 32, g_unityMatrix36, 36u) != 0) {
+        fieldsOk = false;
+    }
+    if (sce_paf_memcmp(body + 68, g_zeroBytes24, 24u) != 0) {
+        fieldsOk = false;
+    }
+    if (!fieldsOk) {
+        *outErr = MP4_ERR_CORRUPT;
+        return 0;
+    }
+
+    outBox->m_isParsed = 1;
+    outBox->m_parsedEndOffset = outBox->m_fullHeaderSize + 96u;
+    *outErr = 0;
+    return 1;
+}
 
 class Mp4TkhdBox : public Mp4FullBox {
 public:
@@ -1404,203 +1480,189 @@ int Mp4TkhdBox::isAudioTrackVolume() const
 
 class Mp4TkhdBoxReader : public Mp4FullBoxReader {
 public:
-    Mp4TkhdBoxReader(Mp4CachedIo *io, int streamIdx) : Mp4FullBoxReader(io, streamIdx) {}
-    virtual ~Mp4TkhdBoxReader() {}
+    Mp4TkhdBoxReader(Mp4CachedIo *io, int streamIdx);
+    virtual ~Mp4TkhdBoxReader();
 
-    /* 0x81202C5A */
-    int read(const Mp4BoxBase *parentBox, Mp4TkhdBox *outBox, uint32_t *outErr)
-    {
-        if (!parentBox->isParsed()) {
-            *outErr = MP4_ERR_BAD_PARENT;
-            return 0;
-        }
-        if (readFullBoxHeader(parentBox, 1u, outBox, outErr) == 0) {
-            if (*outErr == IO_ERR_BAD_PARAM) {
-                *outErr = 0xFFFFFFFFu;
-            }
-            return 0;
-        }
-        if (outBox->m_version != 0u) {
-            *outErr = MP4_ERR_UNSUPPORTED;
-            return 0;
-        }
-        if (outBox->m_boxSize != outBox->m_fullHeaderSize + 80u) {
-            *outErr = MP4_ERR_CORRUPT;
-            return 0;
-        }
-
-        uint32_t mapErr = 0xFFFFFFFFu;
-        const uint8_t *body = (const uint8_t *)m_io->mapStreamRange(
-            m_streamIdx, outBox->m_fileOffset + outBox->m_fullHeaderSize, 80u, &mapErr);
-        if (body == NULL) {
-            *outErr = mapErr;
-            return 0;
-        }
-
-        outBox->m_creationTime = readBigEndian32(body);
-        outBox->m_modificationTime = readBigEndian32(body + 4);
-        outBox->m_trackId = readBigEndian32(body + 8);
-        outBox->m_duration = readBigEndian32(body + 16);
-        (void)sce_paf_memcmp(g_zeroBytes12, body + 20, 12u);
-
-        if (sce_paf_memcmp(g_tkhdAudioVolume, body + 32, 2u) == 0) {
-            sce_paf_memcpy(outBox->m_volumeBytes, g_tkhdAudioVolume, 2u);
-        } else if (sce_paf_memcmp(g_zeroBytes2, body + 32, 2u) == 0) {
-            sce_paf_memcpy(outBox->m_volumeBytes, g_zeroBytes2, 2u);
-        } else {
-            *outErr = MP4_ERR_CORRUPT;
-            return 0;
-        }
-
-        if (sce_paf_memcmp(g_zeroBytes2, body + 34, 2u) != 0
-            || sce_paf_memcmp(g_unityMatrix36, body + 36, 36u) != 0) {
-            *outErr = MP4_ERR_CORRUPT;
-            return 0;
-        }
-
-        if (sce_paf_memcmp(g_tkhdWidth320, body + 72, 4u) == 0) {
-            sce_paf_memcpy(outBox->m_dimensionBytes, g_tkhdWidth320, 4u);
-        } else if (sce_paf_memcmp(g_zeroBytes4, body + 72, 4u) == 0) {
-            sce_paf_memcpy(outBox->m_dimensionBytes, g_zeroBytes4, 4u);
-        }
-
-        if (sce_paf_memcmp(g_tkhdHeight240, body + 76, 4u) == 0) {
-            sce_paf_memcpy(outBox->m_dimensionBytes, g_tkhdHeight240, 4u);
-        } else if (sce_paf_memcmp(g_zeroBytes4, body + 76, 4u) == 0) {
-            sce_paf_memcpy(outBox->m_dimensionBytes, g_zeroBytes4, 4u);
-        }
-
-        outBox->m_isParsed = 1;
-        outBox->m_parsedEndOffset = outBox->m_fullHeaderSize + 80u;
-        *outErr = 0;
-        return 1;
-    }
+    int read(const Mp4BoxBase *parentBox, Mp4TkhdBox *outBox, uint32_t *outErr);
 };
+
+Mp4TkhdBoxReader::Mp4TkhdBoxReader(Mp4CachedIo *io, int streamIdx)
+    : Mp4FullBoxReader(io, streamIdx)
+{
+}
+
+Mp4TkhdBoxReader::~Mp4TkhdBoxReader() {}
+
+/* 0x81202C5A */
+int Mp4TkhdBoxReader::read(const Mp4BoxBase *parentBox, Mp4TkhdBox *outBox, uint32_t *outErr)
+{
+    if (!parentBox->isParsed()) {
+        *outErr = MP4_ERR_BAD_PARENT;
+        return 0;
+    }
+    if (readFullBoxHeader(parentBox, 1u, outBox, outErr) == 0) {
+        if (*outErr == IO_ERR_BAD_PARAM) {
+            *outErr = 0xFFFFFFFFu;
+        }
+        return 0;
+    }
+    if (outBox->m_version != 0u) {
+        *outErr = MP4_ERR_UNSUPPORTED;
+        return 0;
+    }
+    if (outBox->m_boxSize != outBox->m_fullHeaderSize + 80u) {
+        *outErr = MP4_ERR_CORRUPT;
+        return 0;
+    }
+
+    uint32_t mapErr = 0xFFFFFFFFu;
+    const uint8_t *body = (const uint8_t *)m_io->mapStreamRange(
+        m_streamIdx, outBox->m_fileOffset + outBox->m_fullHeaderSize, 80u, &mapErr);
+    if (body == NULL) {
+        *outErr = mapErr;
+        return 0;
+    }
+
+    outBox->m_creationTime = readBigEndian32(body);
+    outBox->m_modificationTime = readBigEndian32(body + 4);
+    outBox->m_trackId = readBigEndian32(body + 8);
+    outBox->m_duration = readBigEndian32(body + 16);
+    (void)sce_paf_memcmp(g_zeroBytes12, body + 20, 12u);
+
+    if (sce_paf_memcmp(g_tkhdAudioVolume, body + 32, 2u) == 0) {
+        sce_paf_memcpy(outBox->m_volumeBytes, g_tkhdAudioVolume, 2u);
+    } else if (sce_paf_memcmp(g_zeroBytes2, body + 32, 2u) == 0) {
+        sce_paf_memcpy(outBox->m_volumeBytes, g_zeroBytes2, 2u);
+    } else {
+        *outErr = MP4_ERR_CORRUPT;
+        return 0;
+    }
+
+    if (sce_paf_memcmp(g_zeroBytes2, body + 34, 2u) != 0
+        || sce_paf_memcmp(g_unityMatrix36, body + 36, 36u) != 0) {
+        *outErr = MP4_ERR_CORRUPT;
+        return 0;
+    }
+
+    if (sce_paf_memcmp(g_tkhdWidth320, body + 72, 4u) == 0) {
+        sce_paf_memcpy(outBox->m_dimensionBytes, g_tkhdWidth320, 4u);
+    } else if (sce_paf_memcmp(g_zeroBytes4, body + 72, 4u) == 0) {
+        sce_paf_memcpy(outBox->m_dimensionBytes, g_zeroBytes4, 4u);
+    }
+
+    if (sce_paf_memcmp(g_tkhdHeight240, body + 76, 4u) == 0) {
+        sce_paf_memcpy(outBox->m_dimensionBytes, g_tkhdHeight240, 4u);
+    } else if (sce_paf_memcmp(g_zeroBytes4, body + 76, 4u) == 0) {
+        sce_paf_memcpy(outBox->m_dimensionBytes, g_zeroBytes4, 4u);
+    }
+
+    outBox->m_isParsed = 1;
+    outBox->m_parsedEndOffset = outBox->m_fullHeaderSize + 80u;
+    *outErr = 0;
+    return 1;
+}
 
 /* ===== stco, stsc, stsd, stsz, stts Boxes & Readers ===== */
 
 class Mp4TableBox : public Mp4FullBox {
 public:
-    explicit Mp4TableBox(const char *fourcc)
-        : Mp4FullBox(fourcc, 0u)
-        , m_entryCount(0)
-        , m_tableOffset(0)
-    {
-    }
-    virtual ~Mp4TableBox() {}
+    explicit Mp4TableBox(const char *fourcc);
+    virtual ~Mp4TableBox();
 
     uint32_t m_entryCount;  /* +32 */
     uint32_t m_tableOffset; /* +36 */
 };
 
+Mp4TableBox::Mp4TableBox(const char *fourcc)
+    : Mp4FullBox(fourcc, 0u)
+    , m_entryCount(0)
+    , m_tableOffset(0)
+{
+}
+
+Mp4TableBox::~Mp4TableBox() {}
+
 class Mp4StcoReader : public Mp4FullBoxReader {
 public:
-    Mp4StcoReader(Mp4CachedIo *io, int streamIdx) : Mp4FullBoxReader(io, streamIdx) {}
-    virtual ~Mp4StcoReader() {}
+    Mp4StcoReader(Mp4CachedIo *io, int streamIdx);
+    virtual ~Mp4StcoReader();
 
-    /* 0x81201DF4 */
-    int read(const Mp4BoxBase *parentBox, Mp4TableBox *outBox, uint32_t *outErr)
-    {
-        if (!parentBox->isParsed()) {
-            *outErr = MP4_ERR_BAD_PARENT;
-            return 0;
-        }
-        if (readFullBoxHeader(parentBox, 1u, outBox, outErr) == 0) {
-            return 0;
-        }
-        if (outBox->m_boxSize < outBox->m_fullHeaderSize + 4u) {
-            *outErr = MP4_ERR_CORRUPT;
-            return 0;
-        }
-
-        uint32_t mapErr = 0xFFFFFFFFu;
-        const uint8_t *cntPtr = (const uint8_t *)m_io->mapStreamRange(
-            m_streamIdx, outBox->m_fileOffset + outBox->m_fullHeaderSize, 4u, &mapErr);
-        if (cntPtr == NULL) {
-            *outErr = mapErr;
-            return 0;
-        }
-
-        uint32_t count = readBigEndian32(cntPtr);
-        if (outBox->m_boxSize != outBox->m_fullHeaderSize + 4u * count + 4u) {
-            *outErr = MP4_ERR_CORRUPT;
-            return 0;
-        }
-
-        outBox->m_entryCount = count;
-        outBox->m_tableOffset = outBox->m_fullHeaderSize + 4u;
-        outBox->m_isParsed = 1;
-        *outErr = 0;
-        return 1;
-    }
-
-    /* 0x81201ED2 */
-    uint32_t getChunkOffset(const Mp4TableBox *stco, uint32_t chunkIndex, uint32_t *outErr)
-    {
-        if (!stco->isParsed()) {
-            *outErr = MP4_ERR_NOT_READY;
-            return 0;
-        }
-        if (chunkIndex == 0u || chunkIndex > stco->m_entryCount) {
-            *outErr = IO_ERR_BAD_PARAM;
-            return 0;
-        }
-
-        uint32_t mapErr = 0xFFFFFFFFu;
-        uint32_t off = stco->m_fileOffset + stco->m_tableOffset + 4u * (chunkIndex - 1u);
-        const uint8_t *entryPtr = (const uint8_t *)m_io->mapStreamRange(m_streamIdx, off, 4u, &mapErr);
-        if (entryPtr == NULL) {
-            *outErr = mapErr;
-            return 0;
-        }
-        *outErr = 0;
-        return readBigEndian32(entryPtr);
-    }
+    int read(const Mp4BoxBase *parentBox, Mp4TableBox *outBox, uint32_t *outErr);
+    uint32_t getChunkOffset(const Mp4TableBox *stco, uint32_t chunkIndex, uint32_t *outErr);
 };
+
+Mp4StcoReader::Mp4StcoReader(Mp4CachedIo *io, int streamIdx)
+    : Mp4FullBoxReader(io, streamIdx)
+{
+}
+
+Mp4StcoReader::~Mp4StcoReader() {}
+
+/* 0x81201DF4 */
+int Mp4StcoReader::read(const Mp4BoxBase *parentBox, Mp4TableBox *outBox, uint32_t *outErr)
+{
+    if (!parentBox->isParsed()) {
+        *outErr = MP4_ERR_BAD_PARENT;
+        return 0;
+    }
+    if (readFullBoxHeader(parentBox, 1u, outBox, outErr) == 0) {
+        return 0;
+    }
+    if (outBox->m_boxSize < outBox->m_fullHeaderSize + 4u) {
+        *outErr = MP4_ERR_CORRUPT;
+        return 0;
+    }
+
+    uint32_t mapErr = 0xFFFFFFFFu;
+    const uint8_t *cntPtr = (const uint8_t *)m_io->mapStreamRange(
+        m_streamIdx, outBox->m_fileOffset + outBox->m_fullHeaderSize, 4u, &mapErr);
+    if (cntPtr == NULL) {
+        *outErr = mapErr;
+        return 0;
+    }
+
+    uint32_t count = readBigEndian32(cntPtr);
+    if (outBox->m_boxSize != outBox->m_fullHeaderSize + 4u * count + 4u) {
+        *outErr = MP4_ERR_CORRUPT;
+        return 0;
+    }
+
+    outBox->m_entryCount = count;
+    outBox->m_tableOffset = outBox->m_fullHeaderSize + 4u;
+    outBox->m_isParsed = 1;
+    *outErr = 0;
+    return 1;
+}
+
+/* 0x81201ED2 */
+uint32_t Mp4StcoReader::getChunkOffset(const Mp4TableBox *stco, uint32_t chunkIndex, uint32_t *outErr)
+{
+    if (!stco->isParsed()) {
+        *outErr = MP4_ERR_NOT_READY;
+        return 0;
+    }
+    if (chunkIndex == 0u || chunkIndex > stco->m_entryCount) {
+        *outErr = IO_ERR_BAD_PARAM;
+        return 0;
+    }
+
+    uint32_t mapErr = 0xFFFFFFFFu;
+    uint32_t off = stco->m_fileOffset + stco->m_tableOffset + 4u * (chunkIndex - 1u);
+    const uint8_t *entryPtr = (const uint8_t *)m_io->mapStreamRange(m_streamIdx, off, 4u, &mapErr);
+    if (entryPtr == NULL) {
+        *outErr = mapErr;
+        return 0;
+    }
+    *outErr = 0;
+    return readBigEndian32(entryPtr);
+}
 
 class Mp4StscReader : public Mp4FullBoxReader {
 public:
-    Mp4StscReader(Mp4CachedIo *io, int streamIdx) : Mp4FullBoxReader(io, streamIdx) {}
-    virtual ~Mp4StscReader() {}
+    Mp4StscReader(Mp4CachedIo *io, int streamIdx);
+    virtual ~Mp4StscReader();
 
-    /* 0x81202038 */
-    int read(const Mp4BoxBase *parentBox, Mp4TableBox *outBox, uint32_t *outErr)
-    {
-        if (!parentBox->isParsed()) {
-            *outErr = MP4_ERR_BAD_PARENT;
-            return 0;
-        }
-        if (readFullBoxHeader(parentBox, 1u, outBox, outErr) == 0) {
-            if (*outErr == IO_ERR_BAD_PARAM) {
-                *outErr = 0xFFFFFFFFu;
-            }
-            return 0;
-        }
-        if (outBox->m_boxSize < outBox->m_fullHeaderSize + 4u) {
-            *outErr = MP4_ERR_CORRUPT;
-            return 0;
-        }
-
-        uint32_t mapErr = 0xFFFFFFFFu;
-        const uint8_t *cntPtr = (const uint8_t *)m_io->mapStreamRange(
-            m_streamIdx, outBox->m_fileOffset + outBox->m_fullHeaderSize, 4u, &mapErr);
-        if (cntPtr == NULL) {
-            *outErr = mapErr;
-            return 0;
-        }
-
-        uint32_t count = readBigEndian32(cntPtr);
-        if (outBox->m_boxSize != outBox->m_fullHeaderSize + 12u * count + 4u) {
-            *outErr = MP4_ERR_CORRUPT;
-            return 0;
-        }
-
-        outBox->m_entryCount = count;
-        outBox->m_tableOffset = outBox->m_fullHeaderSize + 4u;
-        outBox->m_isParsed = 1;
-        *outErr = 0;
-        return 1;
-    }
+    int read(const Mp4BoxBase *parentBox, Mp4TableBox *outBox, uint32_t *outErr);
 
     inline uint32_t readEntryField(const Mp4TableBox *stsc, uint32_t entryIndex,
                                    uint32_t fieldOffset, uint32_t *outErr)
@@ -1630,6 +1692,52 @@ public:
     uint32_t getSampleDescIndex(const Mp4TableBox *stsc, uint32_t idx, uint32_t *err);
 };
 
+Mp4StscReader::Mp4StscReader(Mp4CachedIo *io, int streamIdx)
+    : Mp4FullBoxReader(io, streamIdx)
+{
+}
+
+Mp4StscReader::~Mp4StscReader() {}
+
+/* 0x81202038 */
+int Mp4StscReader::read(const Mp4BoxBase *parentBox, Mp4TableBox *outBox, uint32_t *outErr)
+{
+    if (!parentBox->isParsed()) {
+        *outErr = MP4_ERR_BAD_PARENT;
+        return 0;
+    }
+    if (readFullBoxHeader(parentBox, 1u, outBox, outErr) == 0) {
+        if (*outErr == IO_ERR_BAD_PARAM) {
+            *outErr = 0xFFFFFFFFu;
+        }
+        return 0;
+    }
+    if (outBox->m_boxSize < outBox->m_fullHeaderSize + 4u) {
+        *outErr = MP4_ERR_CORRUPT;
+        return 0;
+    }
+
+    uint32_t mapErr = 0xFFFFFFFFu;
+    const uint8_t *cntPtr = (const uint8_t *)m_io->mapStreamRange(
+        m_streamIdx, outBox->m_fileOffset + outBox->m_fullHeaderSize, 4u, &mapErr);
+    if (cntPtr == NULL) {
+        *outErr = mapErr;
+        return 0;
+    }
+
+    uint32_t count = readBigEndian32(cntPtr);
+    if (outBox->m_boxSize != outBox->m_fullHeaderSize + 12u * count + 4u) {
+        *outErr = MP4_ERR_CORRUPT;
+        return 0;
+    }
+
+    outBox->m_entryCount = count;
+    outBox->m_tableOffset = outBox->m_fullHeaderSize + 4u;
+    outBox->m_isParsed = 1;
+    *outErr = 0;
+    return 1;
+}
+
 /* 0x8120212E */
 uint32_t Mp4StscReader::getFirstChunk(const Mp4TableBox *stsc, uint32_t idx, uint32_t *err)
 {
@@ -1650,214 +1758,208 @@ uint32_t Mp4StscReader::getSampleDescIndex(const Mp4TableBox *stsc, uint32_t idx
 
 class Mp4StsdReader : public Mp4FullBoxReader {
 public:
-    Mp4StsdReader(Mp4CachedIo *io, int streamIdx)
-        : Mp4FullBoxReader(io, streamIdx)
-        , m_audioEntryReader(io, streamIdx)
-    {
-    }
-    virtual ~Mp4StsdReader() {}
+    Mp4StsdReader(Mp4CachedIo *io, int streamIdx);
+    virtual ~Mp4StsdReader();
 
-    /* 0x81202408 */
-    int read(const Mp4BoxBase *parentBox, Mp4TableBox *outBox, uint32_t *outErr)
-    {
-        if (!parentBox->isParsed()) {
-            *outErr = MP4_ERR_BAD_PARENT;
-            return 0;
-        }
-        if (readFullBoxHeader(parentBox, 1u, outBox, outErr) == 0) {
-            return 0;
-        }
-        if (outBox->m_boxSize < outBox->m_fullHeaderSize + 4u) {
-            *outErr = MP4_ERR_CORRUPT;
-            return 0;
-        }
-
-        uint32_t mapErr = 0xFFFFFFFFu;
-        const uint8_t *cntPtr = (const uint8_t *)m_io->mapStreamRange(
-            m_streamIdx, outBox->m_fileOffset + outBox->m_fullHeaderSize, 4u, &mapErr);
-        if (cntPtr == NULL) {
-            *outErr = mapErr;
-            return 0;
-        }
-
-        uint32_t count = readBigEndian32(cntPtr);
-        outBox->m_entryCount = count;
-        if (count != 1u) {
-            *outErr = MP4_ERR_UNSUPPORTED;
-            return 0;
-        }
-
-        const uint8_t *codecTag = (const uint8_t *)m_io->mapStreamRange(
-            m_streamIdx, outBox->m_fileOffset + outBox->m_fullHeaderSize + 8u, 4u, &mapErr);
-        if (codecTag == NULL) {
-            *outErr = mapErr;
-            return 0;
-        }
-
-        if (sce_paf_memcmp(codecTag, "mp4a", 4u) == 0) {
-            outBox->m_isParsed = 1;
-            outBox->m_tableOffset = outBox->m_fullHeaderSize + 4u;
-            *outErr = 0;
-            return 1;
-        }
-        if (sce_paf_memcmp(codecTag, "samr", 4u) == 0 || sce_paf_memcmp(codecTag, "drms", 4u) == 0) {
-            *outErr = MP4_ERR_UNSUPPORTED;
-            return 0;
-        }
-
-        *outErr = MP4_ERR_CORRUPT;
-        return 0;
-    }
-
-    /* 0x81202550 */
+    int read(const Mp4BoxBase *parentBox, Mp4TableBox *outBox, uint32_t *outErr);
     int readSampleEntry(const Mp4TableBox *stsd, const char *handlerType, uint32_t entryIndex,
-                        size_t entryStructSize, Mp4AudioSampleEntryBox *outEntry, uint32_t *outErr)
-    {
-        if (entryIndex == 0u || entryIndex > stsd->m_entryCount) {
-            *outErr = IO_ERR_BAD_PARAM;
-            return 0;
-        }
-        if (sce_paf_memcmp(handlerType, "soun", 4u) != 0 || entryStructSize != 40u) {
-            *outErr = IO_ERR_BAD_PARAM;
-            return 0;
-        }
-        if (m_audioEntryReader.read(stsd, (uint16_t)entryIndex, outEntry, outErr) == 0) {
-            return 0;
-        }
-        *outErr = 0;
-        return 1;
-    }
+                        size_t entryStructSize, Mp4AudioSampleEntryBox *outEntry, uint32_t *outErr);
 
 private:
     Mp4AudioSampleEntryReader m_audioEntryReader; /* +12 */
 };
 
+Mp4StsdReader::Mp4StsdReader(Mp4CachedIo *io, int streamIdx)
+    : Mp4FullBoxReader(io, streamIdx)
+    , m_audioEntryReader(io, streamIdx)
+{
+}
+
+Mp4StsdReader::~Mp4StsdReader() {}
+
+/* 0x81202408 */
+int Mp4StsdReader::read(const Mp4BoxBase *parentBox, Mp4TableBox *outBox, uint32_t *outErr)
+{
+    if (!parentBox->isParsed()) {
+        *outErr = MP4_ERR_BAD_PARENT;
+        return 0;
+    }
+    if (readFullBoxHeader(parentBox, 1u, outBox, outErr) == 0) {
+        return 0;
+    }
+    if (outBox->m_boxSize < outBox->m_fullHeaderSize + 4u) {
+        *outErr = MP4_ERR_CORRUPT;
+        return 0;
+    }
+
+    uint32_t mapErr = 0xFFFFFFFFu;
+    const uint8_t *cntPtr = (const uint8_t *)m_io->mapStreamRange(
+        m_streamIdx, outBox->m_fileOffset + outBox->m_fullHeaderSize, 4u, &mapErr);
+    if (cntPtr == NULL) {
+        *outErr = mapErr;
+        return 0;
+    }
+
+    uint32_t count = readBigEndian32(cntPtr);
+    outBox->m_entryCount = count;
+    if (count != 1u) {
+        *outErr = MP4_ERR_UNSUPPORTED;
+        return 0;
+    }
+
+    const uint8_t *codecTag = (const uint8_t *)m_io->mapStreamRange(
+        m_streamIdx, outBox->m_fileOffset + outBox->m_fullHeaderSize + 8u, 4u, &mapErr);
+    if (codecTag == NULL) {
+        *outErr = mapErr;
+        return 0;
+    }
+
+    if (sce_paf_memcmp(codecTag, "mp4a", 4u) == 0) {
+        outBox->m_isParsed = 1;
+        outBox->m_tableOffset = outBox->m_fullHeaderSize + 4u;
+        *outErr = 0;
+        return 1;
+    }
+    if (sce_paf_memcmp(codecTag, "samr", 4u) == 0 || sce_paf_memcmp(codecTag, "drms", 4u) == 0) {
+        *outErr = MP4_ERR_UNSUPPORTED;
+        return 0;
+    }
+
+    *outErr = MP4_ERR_CORRUPT;
+    return 0;
+}
+
+/* 0x81202550 */
+int Mp4StsdReader::readSampleEntry(const Mp4TableBox *stsd, const char *handlerType, uint32_t entryIndex,
+                                   size_t entryStructSize, Mp4AudioSampleEntryBox *outEntry, uint32_t *outErr)
+{
+    if (entryIndex == 0u || entryIndex > stsd->m_entryCount) {
+        *outErr = IO_ERR_BAD_PARAM;
+        return 0;
+    }
+    if (sce_paf_memcmp(handlerType, "soun", 4u) != 0 || entryStructSize != 40u) {
+        *outErr = IO_ERR_BAD_PARAM;
+        return 0;
+    }
+    if (m_audioEntryReader.read(stsd, (uint16_t)entryIndex, outEntry, outErr) == 0) {
+        return 0;
+    }
+    *outErr = 0;
+    return 1;
+}
+
 class Mp4StszBox : public Mp4FullBox {
 public:
-    Mp4StszBox() : Mp4FullBox("stsz", 0u), m_fixedSampleSize(0), m_sampleCount(0), m_tableOffset(0) {}
-    virtual ~Mp4StszBox() {}
+    Mp4StszBox();
+    virtual ~Mp4StszBox();
 
     uint32_t m_fixedSampleSize; /* +32 */
     uint32_t m_sampleCount;     /* +36 */
     uint32_t m_tableOffset;     /* +40 */
 };
 
+Mp4StszBox::Mp4StszBox()
+    : Mp4FullBox("stsz", 0u)
+    , m_fixedSampleSize(0)
+    , m_sampleCount(0)
+    , m_tableOffset(0)
+{
+}
+
+Mp4StszBox::~Mp4StszBox() {}
+
 class Mp4StszReader : public Mp4FullBoxReader {
 public:
-    Mp4StszReader(Mp4CachedIo *io, int streamIdx) : Mp4FullBoxReader(io, streamIdx) {}
-    virtual ~Mp4StszReader() {}
+    Mp4StszReader(Mp4CachedIo *io, int streamIdx);
+    virtual ~Mp4StszReader();
 
-    /* 0x812026B4 */
-    int read(const Mp4BoxBase *parentBox, Mp4StszBox *outBox, uint32_t *outErr)
-    {
-        if (!parentBox->isParsed()) {
-            *outErr = MP4_ERR_BAD_PARENT;
-            return 0;
-        }
-        if (readFullBoxHeader(parentBox, 1u, outBox, outErr) == 0) {
-            return 0;
-        }
-        if (outBox->m_boxSize < outBox->m_fullHeaderSize + 8u) {
-            *outErr = MP4_ERR_CORRUPT;
-            return 0;
-        }
-
-        uint32_t mapErr = 0xFFFFFFFFu;
-        const uint8_t *hdr = (const uint8_t *)m_io->mapStreamRange(
-            m_streamIdx, outBox->m_fileOffset + outBox->m_fullHeaderSize, 8u, &mapErr);
-        if (hdr == NULL) {
-            *outErr = mapErr;
-            return 0;
-        }
-
-        uint32_t fixedSize = readBigEndian32(hdr);
-        uint32_t sampleCount = readBigEndian32(hdr + 4);
-        if (fixedSize != 0u) {
-            if (outBox->m_boxSize != outBox->m_fullHeaderSize + 8u) {
-                *outErr = MP4_ERR_CORRUPT;
-                return 0;
-            }
-        } else if (outBox->m_boxSize != outBox->m_fullHeaderSize + 4u * sampleCount + 8u) {
-            *outErr = MP4_ERR_CORRUPT;
-            return 0;
-        }
-
-        outBox->m_fixedSampleSize = fixedSize;
-        outBox->m_sampleCount = sampleCount;
-        outBox->m_tableOffset = outBox->m_fullHeaderSize + 8u;
-        outBox->m_isParsed = 1;
-        *outErr = 0;
-        return 1;
-    }
-
-    /* 0x812027C0 */
-    uint32_t getSampleSize(const Mp4StszBox *stsz, uint32_t sampleIndex, uint32_t *outErr)
-    {
-        if (!stsz->isParsed()) {
-            *outErr = MP4_ERR_NOT_READY;
-            return 0;
-        }
-        if (sampleIndex == 0u || sampleIndex > stsz->m_sampleCount) {
-            *outErr = IO_ERR_BAD_PARAM;
-            return 0;
-        }
-        if (stsz->m_fixedSampleSize != 0u) {
-            *outErr = 0;
-            return stsz->m_fixedSampleSize;
-        }
-
-        uint32_t mapErr = 0xFFFFFFFFu;
-        uint32_t off = stsz->m_fileOffset + stsz->m_tableOffset + 4u * (sampleIndex - 1u);
-        const uint8_t *ptr = (const uint8_t *)m_io->mapStreamRange(m_streamIdx, off, 4u, &mapErr);
-        if (ptr == NULL) {
-            *outErr = mapErr;
-            return 0;
-        }
-        *outErr = 0;
-        return readBigEndian32(ptr);
-    }
+    int read(const Mp4BoxBase *parentBox, Mp4StszBox *outBox, uint32_t *outErr);
+    uint32_t getSampleSize(const Mp4StszBox *stsz, uint32_t sampleIndex, uint32_t *outErr);
 };
+
+Mp4StszReader::Mp4StszReader(Mp4CachedIo *io, int streamIdx)
+    : Mp4FullBoxReader(io, streamIdx)
+{
+}
+
+Mp4StszReader::~Mp4StszReader() {}
+
+/* 0x812026B4 */
+int Mp4StszReader::read(const Mp4BoxBase *parentBox, Mp4StszBox *outBox, uint32_t *outErr)
+{
+    if (!parentBox->isParsed()) {
+        *outErr = MP4_ERR_BAD_PARENT;
+        return 0;
+    }
+    if (readFullBoxHeader(parentBox, 1u, outBox, outErr) == 0) {
+        return 0;
+    }
+    if (outBox->m_boxSize < outBox->m_fullHeaderSize + 8u) {
+        *outErr = MP4_ERR_CORRUPT;
+        return 0;
+    }
+
+    uint32_t mapErr = 0xFFFFFFFFu;
+    const uint8_t *hdr = (const uint8_t *)m_io->mapStreamRange(
+        m_streamIdx, outBox->m_fileOffset + outBox->m_fullHeaderSize, 8u, &mapErr);
+    if (hdr == NULL) {
+        *outErr = mapErr;
+        return 0;
+    }
+
+    uint32_t fixedSize = readBigEndian32(hdr);
+    uint32_t sampleCount = readBigEndian32(hdr + 4);
+    if (fixedSize != 0u) {
+        if (outBox->m_boxSize != outBox->m_fullHeaderSize + 8u) {
+            *outErr = MP4_ERR_CORRUPT;
+            return 0;
+        }
+    } else if (outBox->m_boxSize != outBox->m_fullHeaderSize + 4u * sampleCount + 8u) {
+        *outErr = MP4_ERR_CORRUPT;
+        return 0;
+    }
+
+    outBox->m_fixedSampleSize = fixedSize;
+    outBox->m_sampleCount = sampleCount;
+    outBox->m_tableOffset = outBox->m_fullHeaderSize + 8u;
+    outBox->m_isParsed = 1;
+    *outErr = 0;
+    return 1;
+}
+
+/* 0x812027C0 */
+uint32_t Mp4StszReader::getSampleSize(const Mp4StszBox *stsz, uint32_t sampleIndex, uint32_t *outErr)
+{
+    if (!stsz->isParsed()) {
+        *outErr = MP4_ERR_NOT_READY;
+        return 0;
+    }
+    if (sampleIndex == 0u || sampleIndex > stsz->m_sampleCount) {
+        *outErr = IO_ERR_BAD_PARAM;
+        return 0;
+    }
+    if (stsz->m_fixedSampleSize != 0u) {
+        *outErr = 0;
+        return stsz->m_fixedSampleSize;
+    }
+
+    uint32_t mapErr = 0xFFFFFFFFu;
+    uint32_t off = stsz->m_fileOffset + stsz->m_tableOffset + 4u * (sampleIndex - 1u);
+    const uint8_t *ptr = (const uint8_t *)m_io->mapStreamRange(m_streamIdx, off, 4u, &mapErr);
+    if (ptr == NULL) {
+        *outErr = mapErr;
+        return 0;
+    }
+    *outErr = 0;
+    return readBigEndian32(ptr);
+}
 
 class Mp4SttsReader : public Mp4FullBoxReader {
 public:
-    Mp4SttsReader(Mp4CachedIo *io, int streamIdx) : Mp4FullBoxReader(io, streamIdx) {}
-    virtual ~Mp4SttsReader() {}
+    Mp4SttsReader(Mp4CachedIo *io, int streamIdx);
+    virtual ~Mp4SttsReader();
 
-    /* 0x81202934 */
-    int read(const Mp4BoxBase *parentBox, Mp4TableBox *outBox, uint32_t *outErr)
-    {
-        if (!parentBox->isParsed()) {
-            *outErr = MP4_ERR_BAD_PARENT;
-            return 0;
-        }
-        if (readFullBoxHeader(parentBox, 1u, outBox, outErr) == 0) {
-            return 0;
-        }
-        if (outBox->m_boxSize < outBox->m_fullHeaderSize + 4u) {
-            *outErr = MP4_ERR_CORRUPT;
-            return 0;
-        }
-
-        uint32_t mapErr = 0xFFFFFFFFu;
-        const uint8_t *cntPtr = (const uint8_t *)m_io->mapStreamRange(
-            m_streamIdx, outBox->m_fileOffset + outBox->m_fullHeaderSize, 4u, &mapErr);
-        if (cntPtr == NULL) {
-            *outErr = mapErr;
-            return 0;
-        }
-
-        uint32_t count = readBigEndian32(cntPtr);
-        if (outBox->m_boxSize != outBox->m_fullHeaderSize + 8u * count + 4u) {
-            *outErr = MP4_ERR_CORRUPT;
-            return 0;
-        }
-
-        outBox->m_entryCount = count;
-        outBox->m_tableOffset = outBox->m_fullHeaderSize + 4u;
-        outBox->m_isParsed = 1;
-        *outErr = 0;
-        return 1;
-    }
+    int read(const Mp4BoxBase *parentBox, Mp4TableBox *outBox, uint32_t *outErr);
 
     inline uint32_t readEntryField(const Mp4TableBox *stts, uint32_t entryIndex,
                                    uint32_t fieldOffset, uint32_t *outErr)
@@ -1886,6 +1988,49 @@ public:
     uint32_t getSampleDelta(const Mp4TableBox *stts, uint32_t idx, uint32_t *err);
 };
 
+Mp4SttsReader::Mp4SttsReader(Mp4CachedIo *io, int streamIdx)
+    : Mp4FullBoxReader(io, streamIdx)
+{
+}
+
+Mp4SttsReader::~Mp4SttsReader() {}
+
+/* 0x81202934 */
+int Mp4SttsReader::read(const Mp4BoxBase *parentBox, Mp4TableBox *outBox, uint32_t *outErr)
+{
+    if (!parentBox->isParsed()) {
+        *outErr = MP4_ERR_BAD_PARENT;
+        return 0;
+    }
+    if (readFullBoxHeader(parentBox, 1u, outBox, outErr) == 0) {
+        return 0;
+    }
+    if (outBox->m_boxSize < outBox->m_fullHeaderSize + 4u) {
+        *outErr = MP4_ERR_CORRUPT;
+        return 0;
+    }
+
+    uint32_t mapErr = 0xFFFFFFFFu;
+    const uint8_t *cntPtr = (const uint8_t *)m_io->mapStreamRange(
+        m_streamIdx, outBox->m_fileOffset + outBox->m_fullHeaderSize, 4u, &mapErr);
+    if (cntPtr == NULL) {
+        *outErr = mapErr;
+        return 0;
+    }
+
+    uint32_t count = readBigEndian32(cntPtr);
+    if (outBox->m_boxSize != outBox->m_fullHeaderSize + 8u * count + 4u) {
+        *outErr = MP4_ERR_CORRUPT;
+        return 0;
+    }
+
+    outBox->m_entryCount = count;
+    outBox->m_tableOffset = outBox->m_fullHeaderSize + 4u;
+    outBox->m_isParsed = 1;
+    *outErr = 0;
+    return 1;
+}
+
 /* 0x81202A12 */
 uint32_t Mp4SttsReader::getSampleCount(const Mp4TableBox *stts, uint32_t idx, uint32_t *err)
 {
@@ -1909,7 +2054,7 @@ public:
     void attachStts(Mp4TableBox *stts);
     void attachStsz(Mp4StszBox *stsz);
     void attachStsc(Mp4TableBox *stsc);
-    void attachStco(Mp4TableBox *stco) { m_stcoBox = stco; m_cachedChunkIdx = 0; m_cachedChunkOffset = 0; }
+    void attachStco(Mp4TableBox *stco);
 
     int lookupChunkOffset(uint32_t chunkIndex, uint32_t *outOffset, uint32_t *outErr);
     int sumSampleSizes(uint32_t firstSample, uint32_t lastSample, uint32_t *outTotalBytes,
@@ -2021,6 +2166,13 @@ void Mp4SampleTableNavigator::attachStsc(Mp4TableBox *stsc)
     m_stscSampleDescIdx = 0;
     m_stscFirstSample = 0;
     m_stscNextFirstChunk = 0;
+}
+
+void Mp4SampleTableNavigator::attachStco(Mp4TableBox *stco)
+{
+    m_stcoBox = stco;
+    m_cachedChunkIdx = 0;
+    m_cachedChunkOffset = 0;
 }
 
 /* 0x812014BE */
@@ -2528,18 +2680,10 @@ void mp4TrakReaderInit(Mp4BoxReader *reader, StreamIoInterface *io, int mode) { 
 void mp4TrakReaderDestroy(Mp4BoxReader *reader) { if (reader != NULL) reinterpret_cast<Mp4ContainerReader *>(reader)->~Mp4ContainerReader(); }
 int mp4TrakReaderCount(Mp4BoxReader *reader, Mp4BoxNode *moov, unsigned int *outErr)
 {
-    if (reader == NULL)
-        return 0;
-    int count = 0;
-    Mp4ContainerBox probe("trak");
-    while (reinterpret_cast<Mp4ContainerReader *>(reader)->readTrackAt(
-               reinterpret_cast<const Mp4BoxBase *>(moov), static_cast<uint16_t>(count + 1),
-               &probe, outErr) != 0) {
-        ++count;
-    }
-    if (outErr != NULL)
-        *outErr = 0;
-    return count;
+    return (reader != NULL)
+        ? static_cast<int>(reinterpret_cast<Mp4ContainerReader *>(reader)->countTracks(
+              reinterpret_cast<const Mp4BoxBase *>(moov), outErr))
+        : 0;
 }
 int mp4TrakReaderGet(Mp4BoxReader *reader, Mp4BoxNode *moov, int index, Mp4BoxNode *outBox, unsigned int *outErr)
 {

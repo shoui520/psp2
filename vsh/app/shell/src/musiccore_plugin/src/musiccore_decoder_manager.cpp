@@ -73,11 +73,11 @@ extern void syncCondDestroy(SyncCond *cond);
 extern int syncCondWait(SyncCond *cond, SyncMutex *mtx, unsigned int mask, unsigned int timeout);
 extern int syncCondSignal(SyncCond *cond, unsigned int mask);
 
-extern int workerThreadCreate(const char *name, SceUID *outThid, SceKernelThreadEntry entry,
-                              int priority, SceSize stackSize);
-extern int workerThreadStart(SceUID thid, SceSize argSize, void *argData);
-extern int workerThreadWaitEnd(SceUID thid);
-extern int workerThreadDelete(SceUID thid);
+extern int createWorkerThread(const char *name, SceUID *outThreadId, SceKernelThreadEntry entry,
+                              int initPriority, SceSize stackSize);
+extern int startWorkerThread(SceUID threadId, SceSize argSize, void *argData);
+extern int joinWorkerThread(SceUID threadId);
+extern int deleteWorkerThread(SceUID threadId);
 
 struct MediaInfoBase {
     virtual ~MediaInfoBase() {}
@@ -552,301 +552,329 @@ void CodecAdapter::onPositionReady(int posMs, int status)
 
 class CodecAdapterAt9 : public CodecAdapter {
 public:
-    /* 0x811EA348 */
-    CodecAdapterAt9(const char *mutexName, const char *condName)
-        : CodecAdapter(mutexName, condName)
-    {}
+    CodecAdapterAt9(const char *mutexName, const char *condName);
+    virtual ~CodecAdapterAt9();
+    static int queryStackSizes(unsigned int *parserStack, unsigned int *decoderStack, unsigned int *mgrStack);
+    virtual int openDecoder(int sourceMode, int extraParam);
+    virtual int closeDecoder();
+    virtual int matchesMediaInfo(const MediaInfoBase *mediaInfo);
+};
 
-    /* 0x811EA360 / 0x811EA37C */
-    virtual ~CodecAdapterAt9() {}
+/* 0x811EA348 */
+CodecAdapterAt9::CodecAdapterAt9(const char *mutexName, const char *condName)
+    : CodecAdapter(mutexName, condName)
+{}
 
-    /* 0x811EA39C */
-    static int queryStackSizes(unsigned int *parserStack, unsigned int *decoderStack, unsigned int *mgrStack)
-    {
-        if (getAt9Factory() == NULL) {
-            return 0;
-        }
-        return getAt9StackSizes(parserStack, decoderStack, mgrStack);
-    }
+/* 0x811EA360 / 0x811EA37C */
+CodecAdapterAt9::~CodecAdapterAt9() {}
 
-    /* 0x811EA3B8 */
-    virtual int openDecoder(int sourceMode, int extraParam)
-    {
-        if (decoder != NULL) {
-            return 0;
-        }
-        int ioMode;
-        if (sourceMode == 2) {
-            ioMode = 5;
-        } else if (sourceMode == 3) {
-            ioMode = 16;
-        } else {
-            return MUSICCORE_ERR_BAD_PARAM;
-        }
-
-        CodecFactory *factory = getAt9Factory();
-        if (factory == NULL) {
-            return MUSICCORE_ERR_NO_MEMORY;
-        }
-        decoder = createAt9Decoder(factory, ioMode, outputCtx, outputStartFn,
-                                   outputEnqueueFn, outputStopFn, outputFlushFn, extraParam);
-        if (decoder == NULL) {
-            return MUSICCORE_ERR_NO_MEMORY;
-        }
-        decoderSetListener(decoder, this);
+/* 0x811EA39C */
+int CodecAdapterAt9::queryStackSizes(unsigned int *parserStack, unsigned int *decoderStack, unsigned int *mgrStack)
+{
+    if (getAt9Factory() == NULL) {
         return 0;
     }
+    return getAt9StackSizes(parserStack, decoderStack, mgrStack);
+}
 
-    /* 0x811EA42A */
-    virtual int closeDecoder()
-    {
-        if (decoder == NULL) {
-            return 0;
-        }
-        CodecFactory *factory = getAt9Factory();
-        if (factory == NULL) {
-            return MUSICCORE_ERR_NO_MEMORY;
-        }
-        syncMutexLock(&waitMutex);
-        decoderRequestStop(decoder);
-        syncCondWait(&waitCond, &waitMutex, 2u, 0);
-        int status = mapDecoderError((unsigned int)lastAsyncStatus);
-        syncMutexUnlock(&waitMutex);
-        if (status != 0) {
-            return status;
-        }
-        int ret = destroyCodecDecoder(factory, decoder);
-        decoder = NULL;
-        return ret;
+/* 0x811EA3B8 */
+int CodecAdapterAt9::openDecoder(int sourceMode, int extraParam)
+{
+    if (decoder != NULL) {
+        return 0;
+    }
+    int ioMode;
+    if (sourceMode == 2) {
+        ioMode = 5;
+    } else if (sourceMode == 3) {
+        ioMode = 16;
+    } else {
+        return MUSICCORE_ERR_BAD_PARAM;
     }
 
-    /* 0x811EA48C */
-    virtual int matchesMediaInfo(const MediaInfoBase *mediaInfo)
-    {
-        return (mediaInfo != NULL && mediaInfo->formatFourCC == FOURCC_AT9) ? 1 : 0;
+    CodecFactory *factory = getAt9Factory();
+    if (factory == NULL) {
+        return MUSICCORE_ERR_NO_MEMORY;
     }
-};
+    decoder = createAt9Decoder(factory, ioMode, outputCtx, outputStartFn,
+                               outputEnqueueFn, outputStopFn, outputFlushFn, extraParam);
+    if (decoder == NULL) {
+        return MUSICCORE_ERR_NO_MEMORY;
+    }
+    decoderSetListener(decoder, this);
+    return 0;
+}
+
+/* 0x811EA42A */
+int CodecAdapterAt9::closeDecoder()
+{
+    if (decoder == NULL) {
+        return 0;
+    }
+    CodecFactory *factory = getAt9Factory();
+    if (factory == NULL) {
+        return MUSICCORE_ERR_NO_MEMORY;
+    }
+    syncMutexLock(&waitMutex);
+    decoderRequestStop(decoder);
+    syncCondWait(&waitCond, &waitMutex, 2u, 0);
+    int status = mapDecoderError((unsigned int)lastAsyncStatus);
+    syncMutexUnlock(&waitMutex);
+    if (status != 0) {
+        return status;
+    }
+    int ret = destroyCodecDecoder(factory, decoder);
+    decoder = NULL;
+    return ret;
+}
+
+/* 0x811EA48C */
+int CodecAdapterAt9::matchesMediaInfo(const MediaInfoBase *mediaInfo)
+{
+    return (mediaInfo != NULL && mediaInfo->formatFourCC == FOURCC_AT9) ? 1 : 0;
+}
 
 /* ===== CodecAdapterMp3 (0x811EA4A8 - 0x811EA603) ===== */
 
 class CodecAdapterMp3 : public CodecAdapter {
 public:
-    /* 0x811EA4A8 */
-    CodecAdapterMp3(const char *mutexName, const char *condName)
-        : CodecAdapter(mutexName, condName)
-    {}
+    CodecAdapterMp3(const char *mutexName, const char *condName);
+    virtual ~CodecAdapterMp3();
+    static int queryStackSizes(unsigned int *parserStack, unsigned int *decoderStack, unsigned int *mgrStack);
+    virtual int openDecoder(int sourceMode, int extraParam);
+    virtual int closeDecoder();
+    virtual int matchesMediaInfo(const MediaInfoBase *mediaInfo);
+};
 
-    /* 0x811EA4C0 / 0x811EA4DC */
-    virtual ~CodecAdapterMp3() {}
+/* 0x811EA4A8 */
+CodecAdapterMp3::CodecAdapterMp3(const char *mutexName, const char *condName)
+    : CodecAdapter(mutexName, condName)
+{}
 
-    /* 0x811EA4FC */
-    static int queryStackSizes(unsigned int *parserStack, unsigned int *decoderStack, unsigned int *mgrStack)
-    {
-        if (getMp3Factory() == NULL) {
-            return 0;
-        }
-        return getMp3StackSizes(parserStack, decoderStack, mgrStack);
-    }
+/* 0x811EA4C0 / 0x811EA4DC */
+CodecAdapterMp3::~CodecAdapterMp3() {}
 
-    /* 0x811EA518 */
-    virtual int openDecoder(int sourceMode, int extraParam)
-    {
-        (void)extraParam;
-        if (decoder != NULL) {
-            return 0;
-        }
-        int ioMode;
-        if (sourceMode == 2) {
-            ioMode = 5;
-        } else if (sourceMode == 3) {
-            ioMode = 16;
-        } else {
-            return MUSICCORE_ERR_BAD_PARAM;
-        }
-
-        CodecFactory *factory = getMp3Factory();
-        if (factory == NULL) {
-            return MUSICCORE_ERR_NO_MEMORY;
-        }
-        decoder = createMp3Decoder(factory, ioMode, outputCtx, outputStartFn,
-                                   outputEnqueueFn, outputStopFn, outputFlushFn);
-        if (decoder == NULL) {
-            return MUSICCORE_ERR_NO_MEMORY;
-        }
-        decoderSetListener(decoder, this);
+/* 0x811EA4FC */
+int CodecAdapterMp3::queryStackSizes(unsigned int *parserStack, unsigned int *decoderStack, unsigned int *mgrStack)
+{
+    if (getMp3Factory() == NULL) {
         return 0;
     }
+    return getMp3StackSizes(parserStack, decoderStack, mgrStack);
+}
 
-    /* 0x811EA584 */
-    virtual int closeDecoder()
-    {
-        if (decoder == NULL) {
-            return 0;
-        }
-        CodecFactory *factory = getMp3Factory();
-        if (factory == NULL) {
-            return MUSICCORE_ERR_NO_MEMORY;
-        }
-        syncMutexLock(&waitMutex);
-        decoderRequestStop(decoder);
-        syncCondWait(&waitCond, &waitMutex, 2u, 0);
-        int status = mapDecoderError((unsigned int)lastAsyncStatus);
-        syncMutexUnlock(&waitMutex);
-        if (status != 0) {
-            return status;
-        }
-        int ret = destroyCodecDecoder(factory, decoder);
-        decoder = NULL;
-        return ret;
+/* 0x811EA518 */
+int CodecAdapterMp3::openDecoder(int sourceMode, int extraParam)
+{
+    (void)extraParam;
+    if (decoder != NULL) {
+        return 0;
+    }
+    int ioMode;
+    if (sourceMode == 2) {
+        ioMode = 5;
+    } else if (sourceMode == 3) {
+        ioMode = 16;
+    } else {
+        return MUSICCORE_ERR_BAD_PARAM;
     }
 
-    /* 0x811EA5E6 */
-    virtual int matchesMediaInfo(const MediaInfoBase *mediaInfo)
-    {
-        return (mediaInfo != NULL && mediaInfo->formatFourCC == FOURCC_MP3) ? 1 : 0;
+    CodecFactory *factory = getMp3Factory();
+    if (factory == NULL) {
+        return MUSICCORE_ERR_NO_MEMORY;
     }
-};
+    decoder = createMp3Decoder(factory, ioMode, outputCtx, outputStartFn,
+                               outputEnqueueFn, outputStopFn, outputFlushFn);
+    if (decoder == NULL) {
+        return MUSICCORE_ERR_NO_MEMORY;
+    }
+    decoderSetListener(decoder, this);
+    return 0;
+}
+
+/* 0x811EA584 */
+int CodecAdapterMp3::closeDecoder()
+{
+    if (decoder == NULL) {
+        return 0;
+    }
+    CodecFactory *factory = getMp3Factory();
+    if (factory == NULL) {
+        return MUSICCORE_ERR_NO_MEMORY;
+    }
+    syncMutexLock(&waitMutex);
+    decoderRequestStop(decoder);
+    syncCondWait(&waitCond, &waitMutex, 2u, 0);
+    int status = mapDecoderError((unsigned int)lastAsyncStatus);
+    syncMutexUnlock(&waitMutex);
+    if (status != 0) {
+        return status;
+    }
+    int ret = destroyCodecDecoder(factory, decoder);
+    decoder = NULL;
+    return ret;
+}
+
+/* 0x811EA5E6 */
+int CodecAdapterMp3::matchesMediaInfo(const MediaInfoBase *mediaInfo)
+{
+    return (mediaInfo != NULL && mediaInfo->formatFourCC == FOURCC_MP3) ? 1 : 0;
+}
 
 /* ===== CodecAdapterMp4 (0x811EA604 - 0x811EA75F) ===== */
 
 class CodecAdapterMp4 : public CodecAdapter {
 public:
-    /* 0x811EA604 */
-    CodecAdapterMp4(const char *mutexName, const char *condName)
-        : CodecAdapter(mutexName, condName)
-    {}
+    CodecAdapterMp4(const char *mutexName, const char *condName);
+    virtual ~CodecAdapterMp4();
+    static int queryStackSizes(unsigned int *parserStack, unsigned int *decoderStack, unsigned int *mgrStack);
+    virtual int openDecoder(int sourceMode, int extraParam);
+    virtual int closeDecoder();
+    virtual int matchesMediaInfo(const MediaInfoBase *mediaInfo);
+};
 
-    /* 0x811EA61C / 0x811EA638 */
-    virtual ~CodecAdapterMp4() {}
+/* 0x811EA604 */
+CodecAdapterMp4::CodecAdapterMp4(const char *mutexName, const char *condName)
+    : CodecAdapter(mutexName, condName)
+{}
 
-    /* 0x811EA658 */
-    static int queryStackSizes(unsigned int *parserStack, unsigned int *decoderStack, unsigned int *mgrStack)
-    {
-        if (getMp4Factory() == NULL) {
-            return 0;
-        }
-        return getMp4StackSizes(parserStack, decoderStack, mgrStack);
-    }
+/* 0x811EA61C / 0x811EA638 */
+CodecAdapterMp4::~CodecAdapterMp4() {}
 
-    /* 0x811EA674 */
-    virtual int openDecoder(int sourceMode, int extraParam)
-    {
-        (void)extraParam;
-        if (decoder != NULL) {
-            return 0;
-        }
-        int ioMode;
-        if (sourceMode == 2) {
-            ioMode = 5;
-        } else if (sourceMode == 3) {
-            ioMode = 16;
-        } else {
-            return MUSICCORE_ERR_BAD_PARAM;
-        }
-
-        CodecFactory *factory = getMp4Factory();
-        if (factory == NULL) {
-            return MUSICCORE_ERR_NO_MEMORY;
-        }
-        decoder = createMp4Decoder(factory, ioMode, outputCtx, outputStartFn,
-                                   outputEnqueueFn, outputStopFn, outputFlushFn);
-        if (decoder == NULL) {
-            return MUSICCORE_ERR_NO_MEMORY;
-        }
-        decoderSetListener(decoder, this);
+/* 0x811EA658 */
+int CodecAdapterMp4::queryStackSizes(unsigned int *parserStack, unsigned int *decoderStack, unsigned int *mgrStack)
+{
+    if (getMp4Factory() == NULL) {
         return 0;
     }
+    return getMp4StackSizes(parserStack, decoderStack, mgrStack);
+}
 
-    /* 0x811EA6E0 */
-    virtual int closeDecoder()
-    {
-        if (decoder == NULL) {
-            return 0;
-        }
-        CodecFactory *factory = getMp4Factory();
-        if (factory == NULL) {
-            return MUSICCORE_ERR_NO_MEMORY;
-        }
-        syncMutexLock(&waitMutex);
-        decoderRequestStop(decoder);
-        syncCondWait(&waitCond, &waitMutex, 2u, 0);
-        int status = mapDecoderError((unsigned int)lastAsyncStatus);
-        syncMutexUnlock(&waitMutex);
-        if (status != 0) {
-            return status;
-        }
-        int ret = destroyCodecDecoder(factory, decoder);
-        decoder = NULL;
-        return ret;
+/* 0x811EA674 */
+int CodecAdapterMp4::openDecoder(int sourceMode, int extraParam)
+{
+    (void)extraParam;
+    if (decoder != NULL) {
+        return 0;
+    }
+    int ioMode;
+    if (sourceMode == 2) {
+        ioMode = 5;
+    } else if (sourceMode == 3) {
+        ioMode = 16;
+    } else {
+        return MUSICCORE_ERR_BAD_PARAM;
     }
 
-    /* 0x811EA742 */
-    virtual int matchesMediaInfo(const MediaInfoBase *mediaInfo)
-    {
-        return (mediaInfo != NULL && mediaInfo->formatFourCC == FOURCC_MP4) ? 1 : 0;
+    CodecFactory *factory = getMp4Factory();
+    if (factory == NULL) {
+        return MUSICCORE_ERR_NO_MEMORY;
     }
-};
+    decoder = createMp4Decoder(factory, ioMode, outputCtx, outputStartFn,
+                               outputEnqueueFn, outputStopFn, outputFlushFn);
+    if (decoder == NULL) {
+        return MUSICCORE_ERR_NO_MEMORY;
+    }
+    decoderSetListener(decoder, this);
+    return 0;
+}
+
+/* 0x811EA6E0 */
+int CodecAdapterMp4::closeDecoder()
+{
+    if (decoder == NULL) {
+        return 0;
+    }
+    CodecFactory *factory = getMp4Factory();
+    if (factory == NULL) {
+        return MUSICCORE_ERR_NO_MEMORY;
+    }
+    syncMutexLock(&waitMutex);
+    decoderRequestStop(decoder);
+    syncCondWait(&waitCond, &waitMutex, 2u, 0);
+    int status = mapDecoderError((unsigned int)lastAsyncStatus);
+    syncMutexUnlock(&waitMutex);
+    if (status != 0) {
+        return status;
+    }
+    int ret = destroyCodecDecoder(factory, decoder);
+    decoder = NULL;
+    return ret;
+}
+
+/* 0x811EA742 */
+int CodecAdapterMp4::matchesMediaInfo(const MediaInfoBase *mediaInfo)
+{
+    return (mediaInfo != NULL && mediaInfo->formatFourCC == FOURCC_MP4) ? 1 : 0;
+}
 
 /* ===== CodecAdapterWav (0x811EA760 - 0x811EA893) ===== */
 
 class CodecAdapterWav : public CodecAdapter {
 public:
-    /* 0x811EA760 */
-    CodecAdapterWav(const char *mutexName, const char *condName)
-        : CodecAdapter(mutexName, condName)
-    {}
+    CodecAdapterWav(const char *mutexName, const char *condName);
+    virtual ~CodecAdapterWav();
+    static int queryStackSizes(unsigned int *parserStack, unsigned int *decoderStack, unsigned int *mgrStack);
+    virtual int openDecoder(int sourceMode, int extraParam);
+    virtual int closeDecoder();
+    virtual int matchesMediaInfo(const MediaInfoBase *mediaInfo);
+};
 
-    /* 0x811EA778 / 0x811EA794 */
-    virtual ~CodecAdapterWav() {}
+/* 0x811EA760 */
+CodecAdapterWav::CodecAdapterWav(const char *mutexName, const char *condName)
+    : CodecAdapter(mutexName, condName)
+{}
 
-    /* 0x811EA7B4 */
-    static int queryStackSizes(unsigned int *parserStack, unsigned int *decoderStack, unsigned int *mgrStack)
-    {
-        return getWavStackSizes(parserStack, decoderStack, mgrStack);
-    }
+/* 0x811EA778 / 0x811EA794 */
+CodecAdapterWav::~CodecAdapterWav() {}
 
-    /* 0x811EA7C6 */
-    virtual int openDecoder(int sourceMode, int extraParam)
-    {
-        (void)sourceMode;
-        (void)extraParam;
-        if (decoder != NULL) {
-            return 0;
-        }
-        decoder = createWavDecoder(&gWavFactory, outputCtx, outputStartFn,
-                                   outputEnqueueFn, outputStopFn, outputFlushFn);
-        if (decoder == NULL) {
-            return MUSICCORE_ERR_NO_MEMORY;
-        }
-        decoderSetListener(decoder, this);
+/* 0x811EA7B4 */
+int CodecAdapterWav::queryStackSizes(unsigned int *parserStack, unsigned int *decoderStack, unsigned int *mgrStack)
+{
+    return getWavStackSizes(parserStack, decoderStack, mgrStack);
+}
+
+/* 0x811EA7C6 */
+int CodecAdapterWav::openDecoder(int sourceMode, int extraParam)
+{
+    (void)sourceMode;
+    (void)extraParam;
+    if (decoder != NULL) {
         return 0;
     }
-
-    /* 0x811EA812 */
-    virtual int closeDecoder()
-    {
-        if (decoder == NULL) {
-            return 0;
-        }
-        syncMutexLock(&waitMutex);
-        decoderRequestStop(decoder);
-        syncCondWait(&waitCond, &waitMutex, 2u, 0);
-        int status = mapDecoderError((unsigned int)lastAsyncStatus);
-        syncMutexUnlock(&waitMutex);
-        if (status != 0) {
-            return status;
-        }
-        int ret = destroyWavDecoder(&gWavFactory, decoder);
-        decoder = NULL;
-        return ret;
+    decoder = createWavDecoder(&gWavFactory, outputCtx, outputStartFn,
+                               outputEnqueueFn, outputStopFn, outputFlushFn);
+    if (decoder == NULL) {
+        return MUSICCORE_ERR_NO_MEMORY;
     }
+    decoderSetListener(decoder, this);
+    return 0;
+}
 
-    /* 0x811EA876 */
-    virtual int matchesMediaInfo(const MediaInfoBase *mediaInfo)
-    {
-        return (mediaInfo != NULL && mediaInfo->formatFourCC == FOURCC_WAV) ? 1 : 0;
+/* 0x811EA812 */
+int CodecAdapterWav::closeDecoder()
+{
+    if (decoder == NULL) {
+        return 0;
     }
-};
+    syncMutexLock(&waitMutex);
+    decoderRequestStop(decoder);
+    syncCondWait(&waitCond, &waitMutex, 2u, 0);
+    int status = mapDecoderError((unsigned int)lastAsyncStatus);
+    syncMutexUnlock(&waitMutex);
+    if (status != 0) {
+        return status;
+    }
+    int ret = destroyWavDecoder(&gWavFactory, decoder);
+    decoder = NULL;
+    return ret;
+}
+
+/* 0x811EA876 */
+int CodecAdapterWav::matchesMediaInfo(const MediaInfoBase *mediaInfo)
+{
+    return (mediaInfo != NULL && mediaInfo->formatFourCC == FOURCC_WAV) ? 1 : 0;
+}
 
 /* ===== Parser Adapter Semaphore (0x811E9AB4) ===== */
 
@@ -869,445 +897,467 @@ public:
     void *eventCbCtx;
     int reserved;
 
-    /* 0x811E91C4 */
-    DecoderManager()
-        : activeCodec(NULL),
-          activeCodecType(CODEC_FORMAT_UNKNOWN),
-          outputCtx(NULL),
-          outputStartFn(NULL),
-          outputStopFn(NULL),
-          outputEnqueueFn(NULL),
-          outputFlushFn(NULL),
-          mediaReadyCb(NULL),
-          errorCb(NULL),
-          eosCb(NULL),
-          eventCbCtx(NULL),
-          reserved(0)
-    {}
+    DecoderManager();
+    virtual ~DecoderManager();
 
-    /* 0x811E91F0 / 0x811E91FE */
-    virtual ~DecoderManager() {}
-
-    /* 0x811E9212 */
-    static void getThreadSpecs(ThreadSpec *outSpecs, unsigned int *inOutCount)
-    {
-        if (outSpecs == NULL || *inOutCount < 4u) {
-            *inOutCount = 0;
-            return;
-        }
-
-        unsigned int maxParser = 0;
-        unsigned int maxDecoder = 0;
-        unsigned int maxMgr = 0;
-        unsigned int parserStack = 0;
-        unsigned int decoderStack = 0;
-        unsigned int mgrStack = 0;
-
-        CodecAdapterMp3::queryStackSizes(&parserStack, &decoderStack, &mgrStack);
-        if (parserStack > maxParser) { maxParser = parserStack; }
-        if (decoderStack > maxDecoder) { maxDecoder = decoderStack; }
-        if (mgrStack > maxMgr) { maxMgr = mgrStack; }
-
-        CodecAdapterMp4::queryStackSizes(&parserStack, &decoderStack, &mgrStack);
-        if (parserStack > maxParser) { maxParser = parserStack; }
-        if (decoderStack > maxDecoder) { maxDecoder = decoderStack; }
-        if (mgrStack > maxMgr) { maxMgr = mgrStack; }
-
-        CodecAdapterWav::queryStackSizes(&parserStack, &decoderStack, &mgrStack);
-        if (parserStack > maxParser) { maxParser = parserStack; }
-        if (decoderStack > maxDecoder) { maxDecoder = decoderStack; }
-        if (mgrStack > maxMgr) { maxMgr = mgrStack; }
-
-        CodecAdapterAt9::queryStackSizes(&parserStack, &decoderStack, &mgrStack);
-        if (parserStack > maxParser) { maxParser = parserStack; }
-        if (decoderStack > maxDecoder) { maxDecoder = decoderStack; }
-        if (mgrStack > maxMgr) { maxMgr = mgrStack; }
-
-        outSpecs[0].name = "SceShellMusicCoreCacheIo";
-        outSpecs[0].priority = 0x100000F1;
-        outSpecs[0].stackSize = 0x2000u;
-
-        outSpecs[1].name = "SceShellMusicCoreParser";
-        outSpecs[1].priority = 0x100000F0;
-        outSpecs[1].stackSize = maxParser;
-
-        outSpecs[2].name = "SceShellMusicCoreDecoder";
-        outSpecs[2].priority = 0x100000EE;
-        outSpecs[2].stackSize = maxDecoder;
-
-        outSpecs[3].name = "SceShellMusicCoreDecoderManager";
-        outSpecs[3].priority = 0x100000E9;
-        outSpecs[3].stackSize = maxMgr;
-
-        *inOutCount = 4u;
-    }
-
-    /* 0x811E934E */
-    int setOutputCallbacks(void *outCtx, void *startFn, void *enqueueFn, void *stopFn, void *flushFn)
-    {
-        outputCtx = outCtx;
-        outputStartFn = startFn;
-        outputStopFn = stopFn;
-        outputEnqueueFn = enqueueFn;
-        outputFlushFn = flushFn;
-        return 0;
-    }
-
-    /* 0x811E9362 */
+    static void getThreadSpecs(ThreadSpec *outSpecs, unsigned int *inOutCount);
+    int setOutputCallbacks(void *outCtx, void *startFn, void *enqueueFn, void *stopFn, void *flushFn);
     int setEventCallbacks(CodecAdapter::MediaReadyCallback readyCb,
                           CodecAdapter::ErrorCallback errCb,
                           CodecAdapter::EndOfStreamCallback endCb,
-                          void *cbCtx)
-    {
-        mediaReadyCb = readyCb;
-        errorCb = errCb;
-        eosCb = endCb;
-        eventCbCtx = cbCtx;
+                          void *cbCtx);
+    int openCodec(int codecType, int sourceMode, int extraParam);
+    int closeCodec();
+    static bool probeSourcePath(const char *path, int *outSourceKind);
+    static int releaseMediaInfo(MediaInfoBase **mediaInfoPtr, uint8_t releaseSemaphore);
+    static int createMediaInfo(const char *path, int hintCodec, uint8_t doParse,
+                               CodecAdapter *existingCodec, MediaInfoBase **outMediaInfo,
+                               int parseMode, int parseFlags);
+    int checkMediaCompat(const MediaInfoBase *mediaInfo);
+    int startMedia(MediaInfoBase *mediaInfo, int startMs, int endMs,
+                   int playSpeed, void *userCtx);
+    int stopMedia();
+    int seekMedia(int mode, int posMs);
+};
+
+/* 0x811E91C4 */
+DecoderManager::DecoderManager()
+    : activeCodec(NULL),
+      activeCodecType(CODEC_FORMAT_UNKNOWN),
+      outputCtx(NULL),
+      outputStartFn(NULL),
+      outputStopFn(NULL),
+      outputEnqueueFn(NULL),
+      outputFlushFn(NULL),
+      mediaReadyCb(NULL),
+      errorCb(NULL),
+      eosCb(NULL),
+      eventCbCtx(NULL),
+      reserved(0)
+{}
+
+/* 0x811E91F0 / 0x811E91FE */
+DecoderManager::~DecoderManager() {}
+
+/* 0x811E9212 */
+void DecoderManager::getThreadSpecs(ThreadSpec *outSpecs, unsigned int *inOutCount)
+{
+    if (outSpecs == NULL || *inOutCount < 4u) {
+        *inOutCount = 0;
+        return;
+    }
+
+    unsigned int maxParser = 0;
+    unsigned int maxDecoder = 0;
+    unsigned int maxMgr = 0;
+    unsigned int parserStack = 0;
+    unsigned int decoderStack = 0;
+    unsigned int mgrStack = 0;
+
+    CodecAdapterMp3::queryStackSizes(&parserStack, &decoderStack, &mgrStack);
+    if (parserStack > maxParser) { maxParser = parserStack; }
+    if (decoderStack > maxDecoder) { maxDecoder = decoderStack; }
+    if (mgrStack > maxMgr) { maxMgr = mgrStack; }
+
+    CodecAdapterMp4::queryStackSizes(&parserStack, &decoderStack, &mgrStack);
+    if (parserStack > maxParser) { maxParser = parserStack; }
+    if (decoderStack > maxDecoder) { maxDecoder = decoderStack; }
+    if (mgrStack > maxMgr) { maxMgr = mgrStack; }
+
+    CodecAdapterWav::queryStackSizes(&parserStack, &decoderStack, &mgrStack);
+    if (parserStack > maxParser) { maxParser = parserStack; }
+    if (decoderStack > maxDecoder) { maxDecoder = decoderStack; }
+    if (mgrStack > maxMgr) { maxMgr = mgrStack; }
+
+    CodecAdapterAt9::queryStackSizes(&parserStack, &decoderStack, &mgrStack);
+    if (parserStack > maxParser) { maxParser = parserStack; }
+    if (decoderStack > maxDecoder) { maxDecoder = decoderStack; }
+    if (mgrStack > maxMgr) { maxMgr = mgrStack; }
+
+    outSpecs[0].name = "SceShellMusicCoreCacheIo";
+    outSpecs[0].priority = 0x100000F1;
+    outSpecs[0].stackSize = 0x2000u;
+
+    outSpecs[1].name = "SceShellMusicCoreParser";
+    outSpecs[1].priority = 0x100000F0;
+    outSpecs[1].stackSize = maxParser;
+
+    outSpecs[2].name = "SceShellMusicCoreDecoder";
+    outSpecs[2].priority = 0x100000EE;
+    outSpecs[2].stackSize = maxDecoder;
+
+    outSpecs[3].name = "SceShellMusicCoreDecoderManager";
+    outSpecs[3].priority = 0x100000E9;
+    outSpecs[3].stackSize = maxMgr;
+
+    *inOutCount = 4u;
+}
+
+/* 0x811E934E */
+int DecoderManager::setOutputCallbacks(void *outCtx, void *startFn, void *enqueueFn, void *stopFn, void *flushFn)
+{
+    outputCtx = outCtx;
+    outputStartFn = startFn;
+    outputStopFn = stopFn;
+    outputEnqueueFn = enqueueFn;
+    outputFlushFn = flushFn;
+    return 0;
+}
+
+/* 0x811E9362 */
+int DecoderManager::setEventCallbacks(CodecAdapter::MediaReadyCallback readyCb,
+                                      CodecAdapter::ErrorCallback errCb,
+                                      CodecAdapter::EndOfStreamCallback endCb,
+                                      void *cbCtx)
+{
+    mediaReadyCb = readyCb;
+    errorCb = errCb;
+    eosCb = endCb;
+    eventCbCtx = cbCtx;
+    return 0;
+}
+
+/* 0x811E9370 */
+int DecoderManager::openCodec(int codecType, int sourceMode, int extraParam)
+{
+    if (activeCodec != NULL) {
         return 0;
     }
-
-    /* 0x811E9370 */
-    int openCodec(int codecType, int sourceMode, int extraParam)
-    {
-        if (activeCodec != NULL) {
-            return 0;
-        }
-        if (outputCtx == NULL || outputStartFn == NULL ||
-            outputEnqueueFn == NULL || outputStopFn == NULL) {
-            return MUSICCORE_ERR_FAILED;
-        }
-        if (mediaReadyCb == NULL || errorCb == NULL || eosCb == NULL) {
-            return MUSICCORE_ERR_FAILED;
-        }
-
-        CodecAdapter *codec = NULL;
-        switch (codecType) {
-        case CODEC_FORMAT_WAV: {
-            void *mem = allocFromHeap(sizeof(CodecAdapterWav));
-            if (mem != NULL) {
-                codec = new (mem) CodecAdapterWav("SceShellMusicCoreCodecWav", "SceShellMusicCoreCodecWav");
-            }
-            activeCodec = codec;
-            activeCodecType = CODEC_FORMAT_WAV;
-            break;
-        }
-        case CODEC_FORMAT_MP3: {
-            void *mem = allocFromHeap(sizeof(CodecAdapterMp3));
-            if (mem != NULL) {
-                codec = new (mem) CodecAdapterMp3("SceShellMusicCoreCodecMp3", "SceShellMusicCoreCodecMp3");
-            }
-            activeCodec = codec;
-            activeCodecType = CODEC_FORMAT_MP3;
-            break;
-        }
-        case CODEC_FORMAT_MP4: {
-            void *mem = allocFromHeap(sizeof(CodecAdapterMp4));
-            if (mem != NULL) {
-                codec = new (mem) CodecAdapterMp4("SceShellMusicCoreCodecMp4", "SceShellMusicCoreCodecMp4");
-            }
-            activeCodec = codec;
-            activeCodecType = CODEC_FORMAT_MP4;
-            break;
-        }
-        case CODEC_FORMAT_AT9: {
-            void *mem = allocFromHeap(sizeof(CodecAdapterAt9));
-            if (mem != NULL) {
-                codec = new (mem) CodecAdapterAt9("SceShellMusicCoreCodecAt9", "SceShellMusicCoreCodecAt9");
-            }
-            activeCodec = codec;
-            activeCodecType = CODEC_FORMAT_AT9;
-            break;
-        }
-        default:
-            return MUSICCORE_ERR_UNSUPPORTED;
-        }
-
-        if (activeCodec == NULL) {
-            activeCodecType = CODEC_FORMAT_UNKNOWN;
-            return MUSICCORE_ERR_NO_MEMORY;
-        }
-
-        int ret = activeCodec->setOutputCallbacks(outputCtx, outputStartFn, outputEnqueueFn,
-                                                  outputStopFn, outputFlushFn);
-        if (ret != 0) {
-            delete activeCodec;
-            activeCodec = NULL;
-            activeCodecType = CODEC_FORMAT_UNKNOWN;
-            return ret;
-        }
-
-        ret = activeCodec->setEventCallbacks(mediaReadyCb, errorCb, eosCb, eventCbCtx);
-        if (ret != 0) {
-            delete activeCodec;
-            activeCodec = NULL;
-            activeCodecType = CODEC_FORMAT_UNKNOWN;
-            return ret;
-        }
-
-        ret = activeCodec->openDecoder(sourceMode, extraParam);
-        if (ret != 0) {
-            delete activeCodec;
-            activeCodec = NULL;
-            activeCodecType = CODEC_FORMAT_UNKNOWN;
-        }
-        return ret;
+    if (outputCtx == NULL || outputStartFn == NULL ||
+        outputEnqueueFn == NULL || outputStopFn == NULL) {
+        return MUSICCORE_ERR_FAILED;
+    }
+    if (mediaReadyCb == NULL || errorCb == NULL || eosCb == NULL) {
+        return MUSICCORE_ERR_FAILED;
     }
 
-    /* 0x811E9510 */
-    int closeCodec()
-    {
-        if (activeCodec == NULL) {
-            return 0;
+    CodecAdapter *codec = NULL;
+    switch (codecType) {
+    case CODEC_FORMAT_WAV: {
+        void *mem = allocFromHeap(sizeof(CodecAdapterWav));
+        if (mem != NULL) {
+            codec = new (mem) CodecAdapterWav("SceShellMusicCoreCodecWav", "SceShellMusicCoreCodecWav");
         }
-        int ret = activeCodec->closeDecoder();
+        activeCodec = codec;
+        activeCodecType = CODEC_FORMAT_WAV;
+        break;
+    }
+    case CODEC_FORMAT_MP3: {
+        void *mem = allocFromHeap(sizeof(CodecAdapterMp3));
+        if (mem != NULL) {
+            codec = new (mem) CodecAdapterMp3("SceShellMusicCoreCodecMp3", "SceShellMusicCoreCodecMp3");
+        }
+        activeCodec = codec;
+        activeCodecType = CODEC_FORMAT_MP3;
+        break;
+    }
+    case CODEC_FORMAT_MP4: {
+        void *mem = allocFromHeap(sizeof(CodecAdapterMp4));
+        if (mem != NULL) {
+            codec = new (mem) CodecAdapterMp4("SceShellMusicCoreCodecMp4", "SceShellMusicCoreCodecMp4");
+        }
+        activeCodec = codec;
+        activeCodecType = CODEC_FORMAT_MP4;
+        break;
+    }
+    case CODEC_FORMAT_AT9: {
+        void *mem = allocFromHeap(sizeof(CodecAdapterAt9));
+        if (mem != NULL) {
+            codec = new (mem) CodecAdapterAt9("SceShellMusicCoreCodecAt9", "SceShellMusicCoreCodecAt9");
+        }
+        activeCodec = codec;
+        activeCodecType = CODEC_FORMAT_AT9;
+        break;
+    }
+    default:
+        return MUSICCORE_ERR_UNSUPPORTED;
+    }
+
+    if (activeCodec == NULL) {
+        activeCodecType = CODEC_FORMAT_UNKNOWN;
+        return MUSICCORE_ERR_NO_MEMORY;
+    }
+
+    int ret = activeCodec->setOutputCallbacks(outputCtx, outputStartFn, outputEnqueueFn,
+                                              outputStopFn, outputFlushFn);
+    if (ret != 0) {
         delete activeCodec;
         activeCodec = NULL;
         activeCodecType = CODEC_FORMAT_UNKNOWN;
         return ret;
     }
 
-    /* 0x811E953A */
-    static bool probeSourcePath(const char *path, int *outSourceKind)
-    {
-        if (path == NULL) {
-            return false;
-        }
-        if (sce_paf_strncmp(path, "sd0:", sce_paf_strlen("sd0:")) == 0) {
-            *outSourceKind = MEDIA_SOURCE_LOCAL;
-            return checkLocalMediaPath(path);
-        }
-        if (sce_paf_strncmp(path, "http:", sce_paf_strlen("http:")) == 0) {
-            *outSourceKind = MEDIA_SOURCE_HTTP;
-            return false;
-        }
-        if (sce_paf_strncmp(path, "vs0:", sce_paf_strlen("vs0:")) == 0 ||
-            sce_paf_strncmp(path, "ur0:", sce_paf_strlen("ur0:")) == 0 ||
-            sce_paf_strncmp(path, "ux0:", sce_paf_strlen("ux0:")) == 0) {
-            *outSourceKind = MEDIA_SOURCE_LOCAL;
-        } else {
-            *outSourceKind = MEDIA_SOURCE_LOCAL;
-        }
-        return checkLocalMediaPath(path);
+    ret = activeCodec->setEventCallbacks(mediaReadyCb, errorCb, eosCb, eventCbCtx);
+    if (ret != 0) {
+        delete activeCodec;
+        activeCodec = NULL;
+        activeCodecType = CODEC_FORMAT_UNKNOWN;
+        return ret;
     }
 
-    /* 0x811E9606 */
-    static int releaseMediaInfo(MediaInfoBase **mediaInfoPtr, uint8_t releaseSemaphore)
-    {
-        MediaInfoBase *media = *mediaInfoPtr;
-        if (media == NULL) {
-            return MUSICCORE_ERR_INVALID_ARG;
-        }
+    ret = activeCodec->openDecoder(sourceMode, extraParam);
+    if (ret != 0) {
+        delete activeCodec;
+        activeCodec = NULL;
+        activeCodecType = CODEC_FORMAT_UNKNOWN;
+    }
+    return ret;
+}
 
-        CodecFactory *factory = NULL;
-        if (media->formatFourCC == FOURCC_MP3) {
-            factory = getMp3Factory();
-        } else if (media->formatFourCC == FOURCC_MP4) {
-            factory = getMp4Factory();
-        } else if (media->formatFourCC == FOURCC_WAV) {
-            factory = &gWavFactory;
-        } else if (media->formatFourCC == FOURCC_AT9) {
-            factory = getAt9Factory();
-        }
-
-        if (factory != NULL) {
-            releaseFactoryMediaInfo(factory, mediaInfoPtr);
-        } else {
-            delete media;
-            *mediaInfoPtr = NULL;
-        }
-
-        if (releaseSemaphore == 1) {
-            gParserAdapterSemaphore.Release();
-        }
+/* 0x811E9510 */
+int DecoderManager::closeCodec()
+{
+    if (activeCodec == NULL) {
         return 0;
     }
+    int ret = activeCodec->closeDecoder();
+    delete activeCodec;
+    activeCodec = NULL;
+    activeCodecType = CODEC_FORMAT_UNKNOWN;
+    return ret;
+}
 
-    /* 0x811E96F0 */
-    static int createMediaInfo(const char *path, int hintCodec, uint8_t doParse,
-                               CodecAdapter *existingCodec, MediaInfoBase **outMediaInfo,
-                               int parseMode, int parseFlags)
-    {
-        if (path == NULL) {
-            return MUSICCORE_ERR_BAD_PARAM;
-        }
+/* 0x811E953A */
+bool DecoderManager::probeSourcePath(const char *path, int *outSourceKind)
+{
+    if (path == NULL) {
+        return false;
+    }
+    if (sce_paf_strncmp(path, "sd0:", sce_paf_strlen("sd0:")) == 0) {
+        *outSourceKind = MEDIA_SOURCE_LOCAL;
+        return checkLocalMediaPath(path);
+    }
+    if (sce_paf_strncmp(path, "http:", sce_paf_strlen("http:")) == 0) {
+        *outSourceKind = MEDIA_SOURCE_HTTP;
+        return false;
+    }
+    if (sce_paf_strncmp(path, "vs0:", sce_paf_strlen("vs0:")) == 0 ||
+        sce_paf_strncmp(path, "ur0:", sce_paf_strlen("ur0:")) == 0 ||
+        sce_paf_strncmp(path, "ux0:", sce_paf_strlen("ux0:")) == 0) {
+        *outSourceKind = MEDIA_SOURCE_LOCAL;
+    } else {
+        *outSourceKind = MEDIA_SOURCE_LOCAL;
+    }
+    return checkLocalMediaPath(path);
+}
 
-        MediaInfoBase *media = NULL;
-        if (existingCodec != NULL) {
-            existingCodec->queryCachedInfo(path, &media);
-            if (media != NULL) {
-                *outMediaInfo = media;
-                return 0;
-            }
-        }
+/* 0x811E9606 */
+int DecoderManager::releaseMediaInfo(MediaInfoBase **mediaInfoPtr, uint8_t releaseSemaphore)
+{
+    MediaInfoBase *media = *mediaInfoPtr;
+    if (media == NULL) {
+        return MUSICCORE_ERR_INVALID_ARG;
+    }
 
-        int sourceKind = MEDIA_SOURCE_INVALID;
-        if (!probeSourcePath(path, &sourceKind)) {
-            return MUSICCORE_ERR_NOT_FOUND;
-        }
+    CodecFactory *factory = NULL;
+    if (media->formatFourCC == FOURCC_MP3) {
+        factory = getMp3Factory();
+    } else if (media->formatFourCC == FOURCC_MP4) {
+        factory = getMp4Factory();
+    } else if (media->formatFourCC == FOURCC_WAV) {
+        factory = &gWavFactory;
+    } else if (media->formatFourCC == FOURCC_AT9) {
+        factory = getAt9Factory();
+    }
 
-        CodecProbeEntry probeTable[4];
-        memcpy(probeTable, kDefaultCodecProbeTable, sizeof(probeTable));
-        int nextOrder = 0;
+    if (factory != NULL) {
+        releaseFactoryMediaInfo(factory, mediaInfoPtr);
+    } else {
+        delete media;
+        *mediaInfoPtr = NULL;
+    }
 
-        if (hintCodec != CODEC_FORMAT_UNKNOWN) {
-            for (unsigned int i = 0; i < 4u; ++i) {
-                if (probeTable[i].codecType == hintCodec) {
-                    if (probeTable[i].order == -1) {
-                        probeTable[i].order = nextOrder++;
-                    }
-                    break;
-                }
-            }
-        }
+    if (releaseSemaphore == 1) {
+        gParserAdapterSemaphore.Release();
+    }
+    return 0;
+}
 
-        if (doParse == 1) {
-            const char *ext = sce_paf_strrchr(path, '.');
-            if (ext != NULL) {
-                int extCodec = CODEC_FORMAT_UNKNOWN;
-                if (sce_paf_strcasecmp(ext, ".mp3") == 0) {
-                    extCodec = CODEC_FORMAT_MP3;
-                } else if (sce_paf_strcasecmp(ext, ".mp4") == 0 ||
-                           sce_paf_strcasecmp(ext, ".m4a") == 0 ||
-                           sce_paf_strcasecmp(ext, ".3gp") == 0) {
-                    extCodec = CODEC_FORMAT_MP4;
-                } else if (sce_paf_strcasecmp(ext, ".wav") == 0) {
-                    extCodec = CODEC_FORMAT_WAV;
-                } else if (sce_paf_strcasecmp(ext, ".at9") == 0) {
-                    extCodec = CODEC_FORMAT_AT9;
-                }
+/* 0x811E96F0 */
+int DecoderManager::createMediaInfo(const char *path, int hintCodec, uint8_t doParse,
+                                    CodecAdapter *existingCodec, MediaInfoBase **outMediaInfo,
+                                    int parseMode, int parseFlags)
+{
+    if (path == NULL) {
+        return MUSICCORE_ERR_BAD_PARAM;
+    }
 
-                if (extCodec != CODEC_FORMAT_UNKNOWN) {
-                    for (unsigned int i = 0; i < 4u; ++i) {
-                        if (probeTable[i].codecType == extCodec) {
-                            if (probeTable[i].order == -1) {
-                                probeTable[i].order = nextOrder++;
-                            }
-                            break;
-                        }
-                    }
-                }
-            }
-
-            for (unsigned int i = 0; i < 4u; ++i) {
-                if (probeTable[i].order == -1) {
-                    probeTable[i].order = nextOrder++;
-                }
-            }
-        }
-
-        gParserAdapterSemaphore.Acquire();
-        int err = 0;
-
-        for (unsigned int step = 0; step < 4u; ++step) {
-            CodecProbeEntry *selected = NULL;
-            for (unsigned int i = 0; i < 4u; ++i) {
-                if (probeTable[i].tried == 0 && probeTable[i].order == (int)step) {
-                    selected = &probeTable[i];
-                    break;
-                }
-            }
-            if (selected == NULL) {
-                continue;
-            }
-
-            switch (selected->codecType) {
-            case CODEC_FORMAT_WAV:
-                media = allocWavMediaInfo(&gWavFactory, path);
-                break;
-            case CODEC_FORMAT_MP3:
-                if (getMp3Factory() != NULL) {
-                    media = allocMp3MediaInfo(getMp3Factory(), path);
-                }
-                break;
-            case CODEC_FORMAT_MP4:
-                if (getMp4Factory() != NULL) {
-                    media = allocMp4MediaInfo(getMp4Factory(), path);
-                }
-                break;
-            case CODEC_FORMAT_AT9:
-                if (getAt9Factory() != NULL) {
-                    media = allocAt9MediaInfo(getAt9Factory(), path);
-                }
-                break;
-            default:
-                break;
-            }
-
-            if (media != NULL && doParse == 1) {
-                int parseRet = media->parseInfo(parseMode, parseFlags);
-                if (parseRet != 0) {
-                    releaseMediaInfo(&media, 0);
-                    err = mapDecoderError((unsigned int)parseRet);
-                    if (err != MUSICCORE_ERR_FORMAT) {
-                        break;
-                    }
-                } else {
-                    break;
-                }
-            }
-            selected->tried = 1;
-        }
-
+    MediaInfoBase *media = NULL;
+    if (existingCodec != NULL) {
+        existingCodec->queryCachedInfo(path, &media);
         if (media != NULL) {
             *outMediaInfo = media;
             return 0;
         }
-
-        if (err == 0) {
-            err = MUSICCORE_ERR_FAILED;
-        }
-        if (*outMediaInfo == NULL) {
-            gParserAdapterSemaphore.Release();
-        }
-        return err;
     }
 
-    /* 0x811E9A0E */
-    int checkMediaCompat(const MediaInfoBase *mediaInfo)
-    {
-        if (activeCodec == NULL) {
-            return 0;
-        }
-        return activeCodec->matchesMediaInfo(mediaInfo);
+    int sourceKind = MEDIA_SOURCE_INVALID;
+    if (!probeSourcePath(path, &sourceKind)) {
+        return MUSICCORE_ERR_NOT_FOUND;
     }
 
-    /* 0x811E9A20 */
-    int startMedia(MediaInfoBase *mediaInfo, int startMs, int endMs,
-                   int playSpeed, void *userCtx)
-    {
-        MediaInfoBase *localMedia = mediaInfo;
-        if (localMedia == NULL) {
-            return MUSICCORE_ERR_INVALID_ARG;
+    CodecProbeEntry probeTable[4];
+    memcpy(probeTable, kDefaultCodecProbeTable, sizeof(probeTable));
+    int nextOrder = 0;
+
+    if (hintCodec != CODEC_FORMAT_UNKNOWN) {
+        for (unsigned int i = 0; i < 4u; ++i) {
+            if (probeTable[i].codecType == hintCodec) {
+                if (probeTable[i].order == -1) {
+                    probeTable[i].order = nextOrder++;
+                }
+                break;
+            }
         }
-        if (activeCodec == NULL) {
-            releaseMediaInfo(&localMedia, 1);
-            return MUSICCORE_ERR_FAILED;
-        }
-        int ret = activeCodec->startPlay(localMedia, startMs, endMs, playSpeed, userCtx);
-        if (localMedia->isRetained == 0) {
-            releaseMediaInfo(&localMedia, 1);
-        }
-        return ret;
     }
 
-    /* 0x811E9A88 */
-    int stopMedia()
-    {
-        if (activeCodec == NULL) {
-            return MUSICCORE_ERR_FAILED;
+    if (doParse == 1) {
+        const char *ext = sce_paf_strrchr(path, '.');
+        if (ext != NULL) {
+            int extCodec = CODEC_FORMAT_UNKNOWN;
+            if (sce_paf_strcasecmp(ext, ".mp3") == 0) {
+                extCodec = CODEC_FORMAT_MP3;
+            } else if (sce_paf_strcasecmp(ext, ".mp4") == 0 ||
+                       sce_paf_strcasecmp(ext, ".m4a") == 0 ||
+                       sce_paf_strcasecmp(ext, ".3gp") == 0) {
+                extCodec = CODEC_FORMAT_MP4;
+            } else if (sce_paf_strcasecmp(ext, ".wav") == 0) {
+                extCodec = CODEC_FORMAT_WAV;
+            } else if (sce_paf_strcasecmp(ext, ".at9") == 0) {
+                extCodec = CODEC_FORMAT_AT9;
+            }
+
+            if (extCodec != CODEC_FORMAT_UNKNOWN) {
+                for (unsigned int i = 0; i < 4u; ++i) {
+                    if (probeTable[i].codecType == extCodec) {
+                        if (probeTable[i].order == -1) {
+                            probeTable[i].order = nextOrder++;
+                        }
+                        break;
+                    }
+                }
+            }
         }
-        return activeCodec->stopPlay();
+
+        for (unsigned int i = 0; i < 4u; ++i) {
+            if (probeTable[i].order == -1) {
+                probeTable[i].order = nextOrder++;
+            }
+        }
     }
 
-    /* 0x811E9A9E */
-    int seekMedia(int mode, int posMs)
-    {
-        if (activeCodec == NULL) {
-            return MUSICCORE_ERR_FAILED;
+    gParserAdapterSemaphore.Acquire();
+    int err = 0;
+
+    for (unsigned int step = 0; step < 4u; ++step) {
+        CodecProbeEntry *selected = NULL;
+        for (unsigned int i = 0; i < 4u; ++i) {
+            if (probeTable[i].tried == 0 && probeTable[i].order == (int)step) {
+                selected = &probeTable[i];
+                break;
+            }
         }
-        return activeCodec->seekPlay(mode, posMs);
+        if (selected == NULL) {
+            continue;
+        }
+
+        switch (selected->codecType) {
+        case CODEC_FORMAT_WAV:
+            media = allocWavMediaInfo(&gWavFactory, path);
+            break;
+        case CODEC_FORMAT_MP3:
+            if (getMp3Factory() != NULL) {
+                media = allocMp3MediaInfo(getMp3Factory(), path);
+            }
+            break;
+        case CODEC_FORMAT_MP4:
+            if (getMp4Factory() != NULL) {
+                media = allocMp4MediaInfo(getMp4Factory(), path);
+            }
+            break;
+        case CODEC_FORMAT_AT9:
+            if (getAt9Factory() != NULL) {
+                media = allocAt9MediaInfo(getAt9Factory(), path);
+            }
+            break;
+        default:
+            break;
+        }
+
+        if (media != NULL && doParse == 1) {
+            int parseRet = media->parseInfo(parseMode, parseFlags);
+            if (parseRet != 0) {
+                releaseMediaInfo(&media, 0);
+                err = mapDecoderError((unsigned int)parseRet);
+                if (err != MUSICCORE_ERR_FORMAT) {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+        selected->tried = 1;
     }
-};
+
+    if (media != NULL) {
+        *outMediaInfo = media;
+        return 0;
+    }
+
+    if (err == 0) {
+        err = MUSICCORE_ERR_FAILED;
+    }
+    if (*outMediaInfo == NULL) {
+        gParserAdapterSemaphore.Release();
+    }
+    return err;
+}
+
+/* 0x811E9A0E */
+int DecoderManager::checkMediaCompat(const MediaInfoBase *mediaInfo)
+{
+    if (activeCodec == NULL) {
+        return 0;
+    }
+    return activeCodec->matchesMediaInfo(mediaInfo);
+}
+
+/* 0x811E9A20 */
+int DecoderManager::startMedia(MediaInfoBase *mediaInfo, int startMs, int endMs,
+                               int playSpeed, void *userCtx)
+{
+    MediaInfoBase *localMedia = mediaInfo;
+    if (localMedia == NULL) {
+        return MUSICCORE_ERR_INVALID_ARG;
+    }
+    if (activeCodec == NULL) {
+        releaseMediaInfo(&localMedia, 1);
+        return MUSICCORE_ERR_FAILED;
+    }
+    int ret = activeCodec->startPlay(localMedia, startMs, endMs, playSpeed, userCtx);
+    if (localMedia->isRetained == 0) {
+        releaseMediaInfo(&localMedia, 1);
+    }
+    return ret;
+}
+
+/* 0x811E9A88 */
+int DecoderManager::stopMedia()
+{
+    if (activeCodec == NULL) {
+        return MUSICCORE_ERR_FAILED;
+    }
+    return activeCodec->stopPlay();
+}
+
+/* 0x811E9A9E */
+int DecoderManager::seekMedia(int mode, int posMs)
+{
+    if (activeCodec == NULL) {
+        return MUSICCORE_ERR_FAILED;
+    }
+    return activeCodec->seekPlay(mode, posMs);
+}
 
 /* ===== WorkerThreadPool (0x811E9AF0 - 0x811E9ECF) ===== */
 
@@ -1327,10 +1377,102 @@ public:
     static const int MAX_SLOTS = 5;
     WorkerThreadSlot slots[MAX_SLOTS];
 
-    /* 0x811E9AF0 */
-    WorkerThreadPool()
-    {
+    WorkerThreadPool();
+    virtual ~WorkerThreadPool();
+
+    static WorkerThreadPool *getInstance();
+    int initialize(const ThreadSpec *specs, unsigned int count);
+    int finalize();
+    int startWorker(int kind, int (*taskFn)(void *, void *), void *taskCtx, void *taskParam, SceUID *outThid);
+    int joinWorker(SceUID thid);
+    static int workerThreadEntry(SceSize argSize, void *argData);
+};
+
+/* 0x811E9AF0 */
+WorkerThreadPool::WorkerThreadPool()
+{
+    for (int i = 0; i < MAX_SLOTS; ++i) {
+        slots[i].kind = 4;
+        slots[i].name = NULL;
+        slots[i].priority = 0;
+        slots[i].stackSize = 0;
+        slots[i].threadId = -1;
+        slots[i].taskFn = NULL;
+        slots[i].taskCtx = NULL;
+        slots[i].taskParam = NULL;
+    }
+}
+
+/* 0x811E9B34 / 0x811E9B68 */
+WorkerThreadPool::~WorkerThreadPool()
+{
+    for (int i = 0; i < MAX_SLOTS; ++i) {
+        if (slots[i].threadId != -1) {
+            deleteWorkerThread(slots[i].threadId);
+            slots[i].threadId = -1;
+        }
+    }
+}
+
+/* 0x811E9BAA */
+int WorkerThreadPool::initialize(const ThreadSpec *specs, unsigned int count)
+{
+    if (count > (unsigned int)MAX_SLOTS) {
+        return MUSICCORE_ERR_INVALID_ARG;
+    }
+
+    SceUID createdIds[MAX_SLOTS];
+    for (int i = 0; i < MAX_SLOTS; ++i) {
+        createdIds[i] = -1;
+    }
+
+    int err = 0;
+    for (int i = 0; i < MAX_SLOTS; ++i) {
+        if (err != 0) {
+            break;
+        }
+        int specIdx = (i >= 4) ? 0 : i;
+        if (slots[i].threadId == -1) {
+            err = createWorkerThread(specs[specIdx].name, &createdIds[i],
+                                     &WorkerThreadPool::workerThreadEntry,
+                                     specs[specIdx].priority, specs[specIdx].stackSize);
+        } else {
+            err = MUSICCORE_ERR_BAD_STATE;
+        }
+    }
+
+    if (err == 0) {
         for (int i = 0; i < MAX_SLOTS; ++i) {
+            if (createdIds[i] != -1) {
+                int specIdx = (i >= 4) ? 0 : i;
+                slots[i].kind = specIdx;
+                slots[i].name = specs[specIdx].name;
+                slots[i].priority = specs[specIdx].priority;
+                slots[i].stackSize = specs[specIdx].stackSize;
+                slots[i].threadId = createdIds[i];
+            }
+        }
+    } else {
+        for (int i = 0; i < MAX_SLOTS; ++i) {
+            if (createdIds[i] != -1) {
+                deleteWorkerThread(createdIds[i]);
+                slots[i].kind = 4;
+                slots[i].name = NULL;
+                slots[i].priority = 0;
+                slots[i].stackSize = 0;
+                slots[i].threadId = -1;
+            }
+        }
+    }
+    return err;
+}
+
+/* 0x811E9CFA */
+int WorkerThreadPool::finalize()
+{
+    for (int i = 0; i < MAX_SLOTS; ++i) {
+        if (slots[i].threadId != -1) {
+            deleteWorkerThread(slots[i].threadId);
             slots[i].kind = 4;
             slots[i].name = NULL;
             slots[i].priority = 0;
@@ -1341,167 +1483,82 @@ public:
             slots[i].taskParam = NULL;
         }
     }
+    return 0;
+}
 
-    /* 0x811E9B34 / 0x811E9B68 */
-    virtual ~WorkerThreadPool()
-    {
-        for (int i = 0; i < MAX_SLOTS; ++i) {
-            if (slots[i].threadId != -1) {
-                workerThreadDelete(slots[i].threadId);
-                slots[i].threadId = -1;
-            }
+/* 0x811E9D4A */
+int WorkerThreadPool::startWorker(int kind, int (*taskFn)(void *, void *), void *taskCtx, void *taskParam, SceUID *outThid)
+{
+    if (taskFn == NULL || taskCtx == NULL || taskParam == NULL || outThid == NULL || kind >= 4) {
+        return MUSICCORE_ERR_INVALID_ARG;
+    }
+
+    int recreateIdx = -1;
+    if (kind == 0) {
+        if (slots[0].threadId == -1) {
+            recreateIdx = 0;
+        } else if (slots[0].taskFn != NULL && slots[4].threadId == -1) {
+            recreateIdx = 4;
+        }
+    } else if (slots[kind].threadId == -1) {
+        recreateIdx = kind;
+    }
+
+    if (recreateIdx >= 0 && recreateIdx < MAX_SLOTS && slots[recreateIdx].kind == kind) {
+        int ret = createWorkerThread(slots[recreateIdx].name, &slots[recreateIdx].threadId,
+                                     &WorkerThreadPool::workerThreadEntry,
+                                     slots[recreateIdx].priority, slots[recreateIdx].stackSize);
+        if (ret != 0 || slots[recreateIdx].threadId == -1) {
+            return ret;
         }
     }
 
-    /* 0x811E9BA0 */
-    static WorkerThreadPool *getInstance();
-
-    /* 0x811E9BAA */
-    int initialize(const ThreadSpec *specs, unsigned int count)
-    {
-        if (count > (unsigned int)MAX_SLOTS) {
-            return MUSICCORE_ERR_INVALID_ARG;
-        }
-
-        SceUID createdIds[MAX_SLOTS];
-        for (int i = 0; i < MAX_SLOTS; ++i) {
-            createdIds[i] = -1;
-        }
-
-        int err = 0;
-        for (int i = 0; i < MAX_SLOTS; ++i) {
-            if (err != 0) {
-                break;
-            }
-            int specIdx = (i >= 4) ? 0 : i;
-            if (slots[i].threadId == -1) {
-                err = workerThreadCreate(specs[specIdx].name, &createdIds[i],
-                                         &WorkerThreadPool::workerThreadEntry,
-                                         specs[specIdx].priority, specs[specIdx].stackSize);
+    for (int i = 0; i < MAX_SLOTS; ++i) {
+        if (slots[i].kind == kind && slots[i].threadId != -1 && slots[i].taskFn == NULL) {
+            slots[i].taskFn = taskFn;
+            slots[i].taskCtx = taskCtx;
+            slots[i].taskParam = taskParam;
+            int ret = startWorkerThread(slots[i].threadId, sizeof(WorkerThreadSlot), &slots[i]);
+            if (ret != 0) {
+                slots[i].taskFn = NULL;
+                slots[i].taskCtx = NULL;
+                slots[i].taskParam = NULL;
             } else {
-                err = MUSICCORE_ERR_BAD_STATE;
+                *outThid = slots[i].threadId;
             }
+            return ret;
         }
-
-        if (err == 0) {
-            for (int i = 0; i < MAX_SLOTS; ++i) {
-                if (createdIds[i] != -1) {
-                    int specIdx = (i >= 4) ? 0 : i;
-                    slots[i].kind = specIdx;
-                    slots[i].name = specs[specIdx].name;
-                    slots[i].priority = specs[specIdx].priority;
-                    slots[i].stackSize = specs[specIdx].stackSize;
-                    slots[i].threadId = createdIds[i];
-                }
-            }
-        } else {
-            for (int i = 0; i < MAX_SLOTS; ++i) {
-                if (createdIds[i] != -1) {
-                    workerThreadDelete(createdIds[i]);
-                    slots[i].kind = 4;
-                    slots[i].name = NULL;
-                    slots[i].priority = 0;
-                    slots[i].stackSize = 0;
-                    slots[i].threadId = -1;
-                }
-            }
-        }
-        return err;
     }
+    return MUSICCORE_ERR_FAILED;
+}
 
-    /* 0x811E9CFA */
-    int finalize()
-    {
-        for (int i = 0; i < MAX_SLOTS; ++i) {
-            if (slots[i].threadId != -1) {
-                workerThreadDelete(slots[i].threadId);
-                slots[i].kind = 4;
-                slots[i].name = NULL;
-                slots[i].priority = 0;
-                slots[i].stackSize = 0;
-                slots[i].threadId = -1;
-                slots[i].taskFn = NULL;
-                slots[i].taskCtx = NULL;
-                slots[i].taskParam = NULL;
-            }
+/* 0x811E9E56 */
+int WorkerThreadPool::joinWorker(SceUID thid)
+{
+    for (int i = 0; i < MAX_SLOTS; ++i) {
+        if (slots[i].threadId == thid && slots[i].taskFn != NULL) {
+            joinWorkerThread(thid);
+            slots[i].taskFn = NULL;
+            slots[i].taskCtx = NULL;
+            slots[i].taskParam = NULL;
+            return 0;
         }
-        return 0;
     }
+    return MUSICCORE_ERR_FAILED;
+}
 
-    /* 0x811E9D4A */
-    int startWorker(int kind, int (*taskFn)(void *, void *), void *taskCtx, void *taskParam, SceUID *outThid)
-    {
-        if (taskFn == NULL || taskCtx == NULL || taskParam == NULL || outThid == NULL || kind >= 4) {
-            return MUSICCORE_ERR_INVALID_ARG;
-        }
-
-        int recreateIdx = -1;
-        if (kind == 0) {
-            if (slots[0].threadId == -1) {
-                recreateIdx = 0;
-            } else if (slots[0].taskFn != NULL && slots[4].threadId == -1) {
-                recreateIdx = 4;
-            }
-        } else if (slots[kind].threadId == -1) {
-            recreateIdx = kind;
-        }
-
-        if (recreateIdx >= 0 && recreateIdx < MAX_SLOTS && slots[recreateIdx].kind == kind) {
-            int ret = workerThreadCreate(slots[recreateIdx].name, &slots[recreateIdx].threadId,
-                                         &WorkerThreadPool::workerThreadEntry,
-                                         slots[recreateIdx].priority, slots[recreateIdx].stackSize);
-            if (ret != 0 || slots[recreateIdx].threadId == -1) {
-                return ret;
-            }
-        }
-
-        for (int i = 0; i < MAX_SLOTS; ++i) {
-            if (slots[i].kind == kind && slots[i].threadId != -1 && slots[i].taskFn == NULL) {
-                slots[i].taskFn = taskFn;
-                slots[i].taskCtx = taskCtx;
-                slots[i].taskParam = taskParam;
-                int ret = workerThreadStart(slots[i].threadId, sizeof(WorkerThreadSlot), &slots[i]);
-                if (ret != 0) {
-                    slots[i].taskFn = NULL;
-                    slots[i].taskCtx = NULL;
-                    slots[i].taskParam = NULL;
-                } else {
-                    *outThid = slots[i].threadId;
-                }
-                return ret;
-            }
-        }
-        return MUSICCORE_ERR_FAILED;
+/* 0x811E9E8A */
+int WorkerThreadPool::workerThreadEntry(SceSize argSize, void *argData)
+{
+    if (argData == NULL || argSize != sizeof(WorkerThreadSlot)) {
+        return -1;
     }
-
-    /* 0x811E9E56 */
-    int joinWorker(SceUID thid)
-    {
-        for (int i = 0; i < MAX_SLOTS; ++i) {
-            if (slots[i].threadId == thid && slots[i].taskFn != NULL) {
-                workerThreadWaitEnd(thid);
-                slots[i].taskFn = NULL;
-                slots[i].taskCtx = NULL;
-                slots[i].taskParam = NULL;
-                return 0;
-            }
-        }
-        return MUSICCORE_ERR_FAILED;
+    WorkerThreadSlot *slot = static_cast<WorkerThreadSlot *>(argData);
+    if (slot->taskFn == NULL) {
+        return -1;
     }
-
-    /* 0x811E9E8A */
-    static int workerThreadEntry(SceSize argSize, void *argData)
-    {
-        if (argData == NULL || argSize != sizeof(WorkerThreadSlot)) {
-            return -1;
-        }
-        WorkerThreadSlot *slot = static_cast<WorkerThreadSlot *>(argData);
-        if (slot->taskFn == NULL) {
-            return -1;
-        }
-        return slot->taskFn(slot->taskCtx, slot->taskParam);
-    }
-};
+    return slot->taskFn(slot->taskCtx, slot->taskParam);
+}
 
 static WorkerThreadPool gWorkerThreadPool;
 
