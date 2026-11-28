@@ -1373,10 +1373,16 @@ static int getSystemTitleIdList(char *outServiceIdList, SceUInt32 *outCount)
 	return 0;
 }
 
-static int enqueueCoreIpcJob(IPMI::Session *session, SceUInt32 requestId, job::JobItem *rawJob)
+/* Async job enqueue helpers for GetPolicy, GetAppInfo, GetServiceInfo (0x812A51F4-0x812A5636) */
+/* 0x812A51F4 */
+static int enqueueGetPolicyJob(IPMI::Session *session, SceUInt32 requestId, bool useCallback)
 {
-	common::SharedPtr<job::JobItem> jobRef(rawJob);
-	if (rawJob == NULL || jobRef.get() == NULL)
+	void *mem = triggerMgrHeapAlloc(sizeof(GetPolicyJob));
+	GetPolicyJob *job = NULL;
+	if (mem != NULL)
+		job = new (mem) GetPolicyJob(session, requestId, useCallback);
+	common::SharedPtr<job::JobItem> jobRef(job);
+	if (job == NULL || jobRef.get() == NULL)
 		return TRIGGER_MGR_ERROR_NO_MEMORY;
 
 	g_triggerMgrIpcLock.Lock();
@@ -1390,16 +1396,7 @@ static int enqueueCoreIpcJob(IPMI::Session *session, SceUInt32 requestId, job::J
 	return 0;
 }
 
-/* Async job enqueue helpers for GetPolicy, GetAppInfo, GetServiceInfo (0x812A51F4-0x812A5636) */
-static int enqueueGetPolicyJob(IPMI::Session *session, SceUInt32 requestId, bool useCallback)
-{
-	void *mem = triggerMgrHeapAlloc(sizeof(GetPolicyJob));
-	GetPolicyJob *job = NULL;
-	if (mem != NULL)
-		job = new (mem) GetPolicyJob(session, requestId, useCallback);
-	return enqueueCoreIpcJob(session, requestId, job);
-}
-
+/* 0x812A53A6 */
 static int enqueueGetAppInfoJob(IPMI::Session *session, SceUInt32 requestId,
 				const char *titleId, SceUInt32 language, bool useCallback)
 {
@@ -1407,9 +1404,22 @@ static int enqueueGetAppInfoJob(IPMI::Session *session, SceUInt32 requestId,
 	GetAppInfoJob *job = NULL;
 	if (mem != NULL)
 		job = new (mem) GetAppInfoJob(session, requestId, titleId, language, useCallback);
-	return enqueueCoreIpcJob(session, requestId, job);
+	common::SharedPtr<job::JobItem> jobRef(job);
+	if (job == NULL || jobRef.get() == NULL)
+		return TRIGGER_MGR_ERROR_NO_MEMORY;
+
+	g_triggerMgrIpcLock.Lock();
+	TriggerIpcJobSlot *slot = triggerMgrAllocIpcSlot(session, requestId, jobRef);
+	g_triggerMgrIpcLock.Unlock();
+
+	if (slot == NULL)
+		return TRIGGER_MGR_ERROR_BUSY;
+
+	g_triggerMgrJobQueue->Enqueue(jobRef);
+	return 0;
 }
 
+/* 0x812A5636 */
 static int enqueueGetServiceInfoJob(IPMI::Session *session, SceUInt32 requestId,
 				    const char *serviceId, SceUInt32 language, bool useCallback)
 {
@@ -1418,7 +1428,19 @@ static int enqueueGetServiceInfoJob(IPMI::Session *session, SceUInt32 requestId,
 	if (mem != NULL)
 		job = new (mem) GetServiceInfoJob(
 			session, requestId, serviceId, language, useCallback);
-	return enqueueCoreIpcJob(session, requestId, job);
+	common::SharedPtr<job::JobItem> jobRef(job);
+	if (job == NULL || jobRef.get() == NULL)
+		return TRIGGER_MGR_ERROR_NO_MEMORY;
+
+	g_triggerMgrIpcLock.Lock();
+	TriggerIpcJobSlot *slot = triggerMgrAllocIpcSlot(session, requestId, jobRef);
+	g_triggerMgrIpcLock.Unlock();
+
+	if (slot == NULL)
+		return TRIGGER_MGR_ERROR_BUSY;
+
+	g_triggerMgrJobQueue->Enqueue(jobRef);
+	return 0;
 }
 
 static int enqueueSvcCtrlJob(int command, SvcCtrlJob::SvcCtrlResultCallback callback,

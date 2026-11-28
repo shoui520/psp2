@@ -697,24 +697,6 @@ int GetDailyTimerInfoJob::Run()
 	return 0;
 }
 
-static int enqueueTimeOfDayIpcJob(IPMI::Session *session, SceUInt32 requestId,
-				  job::JobItem *rawJob)
-{
-	common::SharedPtr<job::JobItem> jobRef(rawJob);
-	if (rawJob == NULL || jobRef.get() == NULL)
-		return TRIGGER_MGR_ERROR_NO_MEMORY;
-
-	g_triggerMgrIpcLock.Lock();
-	TriggerIpcJobSlot *slot = triggerMgrAllocIpcSlot(session, requestId, jobRef);
-	g_triggerMgrIpcLock.Unlock();
-
-	if (slot == NULL)
-		return TRIGGER_MGR_ERROR_BUSY;
-
-	g_triggerMgrJobQueue->Enqueue(jobRef);
-	return 0;
-}
-
 } /* anonymous namespace */
 
 /* Cron callback invoked on the ShellCron thread for time-of-day and daily timers (0x812A8414) */
@@ -833,6 +815,7 @@ int triggerTimeOfDayTimerSetWakeUpForApp(int appIndex, bool wakeUp)
 }
 
 /* Time-of-day IPC enqueue entry points (0x812A8828-0x812A8DEC) */
+/* 0x812A8828 */
 int triggerTimeOfDayTimerEnqueueRegister(IPMI::Session *session, SceUInt32 requestId,
 					 const char *targetTitleId,
 					 const TriggerTimeOfDayTimerParam *timerParam,
@@ -843,9 +826,22 @@ int triggerTimeOfDayTimerEnqueueRegister(IPMI::Session *session, SceUInt32 reque
 	if (mem != NULL)
 		job = new (mem) RegisterTimeOfDayTimerJob(
 			session, requestId, targetTitleId, timerParam, timerSlot, useCallback);
-	return enqueueTimeOfDayIpcJob(session, requestId, job);
+	common::SharedPtr<job::JobItem> jobRef(job);
+	if (job == NULL || jobRef.get() == NULL)
+		return TRIGGER_MGR_ERROR_NO_MEMORY;
+
+	g_triggerMgrIpcLock.Lock();
+	TriggerIpcJobSlot *slot = triggerMgrAllocIpcSlot(session, requestId, jobRef);
+	g_triggerMgrIpcLock.Unlock();
+
+	if (slot == NULL)
+		return TRIGGER_MGR_ERROR_BUSY;
+
+	g_triggerMgrJobQueue->Enqueue(jobRef);
+	return 0;
 }
 
+/* 0x812A8A6C */
 int triggerTimeOfDayTimerEnqueueUnregister(IPMI::Session *session, SceUInt32 requestId,
 					   SceUInt32 timerSlot, bool useCallback)
 {
@@ -854,9 +850,22 @@ int triggerTimeOfDayTimerEnqueueUnregister(IPMI::Session *session, SceUInt32 req
 	if (mem != NULL)
 		job = new (mem) UnregisterTimeOfDayTimerJob(
 			session, requestId, timerSlot, false, useCallback);
-	return enqueueTimeOfDayIpcJob(session, requestId, job);
+	common::SharedPtr<job::JobItem> jobRef(job);
+	if (job == NULL || jobRef.get() == NULL)
+		return TRIGGER_MGR_ERROR_NO_MEMORY;
+
+	g_triggerMgrIpcLock.Lock();
+	TriggerIpcJobSlot *slot = triggerMgrAllocIpcSlot(session, requestId, jobRef);
+	g_triggerMgrIpcLock.Unlock();
+
+	if (slot == NULL)
+		return TRIGGER_MGR_ERROR_BUSY;
+
+	g_triggerMgrJobQueue->Enqueue(jobRef);
+	return 0;
 }
 
+/* 0x812A8C2E */
 int triggerTimeOfDayTimerEnqueueGetTime(IPMI::Session *session, SceUInt32 requestId,
 					SceUInt32 timerSlot, bool useCallback)
 {
@@ -865,9 +874,22 @@ int triggerTimeOfDayTimerEnqueueGetTime(IPMI::Session *session, SceUInt32 reques
 	if (mem != NULL)
 		job = new (mem) GetTimeOfDayTimerTimeJob(
 			session, requestId, timerSlot, useCallback);
-	return enqueueTimeOfDayIpcJob(session, requestId, job);
+	common::SharedPtr<job::JobItem> jobRef(job);
+	if (job == NULL || jobRef.get() == NULL)
+		return TRIGGER_MGR_ERROR_NO_MEMORY;
+
+	g_triggerMgrIpcLock.Lock();
+	TriggerIpcJobSlot *slot = triggerMgrAllocIpcSlot(session, requestId, jobRef);
+	g_triggerMgrIpcLock.Unlock();
+
+	if (slot == NULL)
+		return TRIGGER_MGR_ERROR_BUSY;
+
+	g_triggerMgrJobQueue->Enqueue(jobRef);
+	return 0;
 }
 
+/* 0x812A8DEC */
 int triggerTimeOfDayTimerEnqueueGetLastError(IPMI::Session *session, SceUInt32 requestId,
 					     SceUInt32 timerSlot, bool useCallback)
 {
@@ -876,10 +898,23 @@ int triggerTimeOfDayTimerEnqueueGetLastError(IPMI::Session *session, SceUInt32 r
 	if (mem != NULL)
 		job = new (mem) GetTimeOfDayTimerLastErrorJob(
 			session, requestId, timerSlot, false, useCallback);
-	return enqueueTimeOfDayIpcJob(session, requestId, job);
+	common::SharedPtr<job::JobItem> jobRef(job);
+	if (job == NULL || jobRef.get() == NULL)
+		return TRIGGER_MGR_ERROR_NO_MEMORY;
+
+	g_triggerMgrIpcLock.Lock();
+	TriggerIpcJobSlot *slot = triggerMgrAllocIpcSlot(session, requestId, jobRef);
+	g_triggerMgrIpcLock.Unlock();
+
+	if (slot == NULL)
+		return TRIGGER_MGR_ERROR_BUSY;
+
+	g_triggerMgrJobQueue->Enqueue(jobRef);
+	return 0;
 }
 
 /* Daily timer IPC enqueue entry points (0x812A8FAE-0x812A9544) */
+/* 0x812A8FAE */
 int triggerDailyTimerEnqueueRegister(IPMI::Session *session, SceUInt32 requestId,
 				     const char *targetTitleId,
 				     const TriggerDailyTimerParam *timerParam,
@@ -890,9 +925,22 @@ int triggerDailyTimerEnqueueRegister(IPMI::Session *session, SceUInt32 requestId
 	if (mem != NULL)
 		job = new (mem) RegisterDailyTimerJob(
 			session, requestId, targetTitleId, timerParam, timerSlot, useCallback);
-	return enqueueTimeOfDayIpcJob(session, requestId, job);
+	common::SharedPtr<job::JobItem> jobRef(job);
+	if (job == NULL || jobRef.get() == NULL)
+		return TRIGGER_MGR_ERROR_NO_MEMORY;
+
+	g_triggerMgrIpcLock.Lock();
+	TriggerIpcJobSlot *slot = triggerMgrAllocIpcSlot(session, requestId, jobRef);
+	g_triggerMgrIpcLock.Unlock();
+
+	if (slot == NULL)
+		return TRIGGER_MGR_ERROR_BUSY;
+
+	g_triggerMgrJobQueue->Enqueue(jobRef);
+	return 0;
 }
 
+/* 0x812A91C2 */
 int triggerDailyTimerEnqueueUnregister(IPMI::Session *session, SceUInt32 requestId,
 				       SceUInt32 timerSlot, bool useCallback)
 {
@@ -901,7 +949,19 @@ int triggerDailyTimerEnqueueUnregister(IPMI::Session *session, SceUInt32 request
 	if (mem != NULL)
 		job = new (mem) UnregisterTimeOfDayTimerJob(
 			session, requestId, timerSlot, true, useCallback);
-	return enqueueTimeOfDayIpcJob(session, requestId, job);
+	common::SharedPtr<job::JobItem> jobRef(job);
+	if (job == NULL || jobRef.get() == NULL)
+		return TRIGGER_MGR_ERROR_NO_MEMORY;
+
+	g_triggerMgrIpcLock.Lock();
+	TriggerIpcJobSlot *slot = triggerMgrAllocIpcSlot(session, requestId, jobRef);
+	g_triggerMgrIpcLock.Unlock();
+
+	if (slot == NULL)
+		return TRIGGER_MGR_ERROR_BUSY;
+
+	g_triggerMgrJobQueue->Enqueue(jobRef);
+	return 0;
 }
 
 int triggerDailyTimerEnqueueGetInfo(IPMI::Session *session, SceUInt32 requestId,
@@ -912,7 +972,19 @@ int triggerDailyTimerEnqueueGetInfo(IPMI::Session *session, SceUInt32 requestId,
 	if (mem != NULL)
 		job = new (mem) GetDailyTimerInfoJob(
 			session, requestId, timerSlot, useCallback);
-	return enqueueTimeOfDayIpcJob(session, requestId, job);
+	common::SharedPtr<job::JobItem> jobRef(job);
+	if (job == NULL || jobRef.get() == NULL)
+		return TRIGGER_MGR_ERROR_NO_MEMORY;
+
+	g_triggerMgrIpcLock.Lock();
+	TriggerIpcJobSlot *slot = triggerMgrAllocIpcSlot(session, requestId, jobRef);
+	g_triggerMgrIpcLock.Unlock();
+
+	if (slot == NULL)
+		return TRIGGER_MGR_ERROR_BUSY;
+
+	g_triggerMgrJobQueue->Enqueue(jobRef);
+	return 0;
 }
 
 int triggerDailyTimerEnqueueGetLastError(IPMI::Session *session, SceUInt32 requestId,
@@ -923,5 +995,17 @@ int triggerDailyTimerEnqueueGetLastError(IPMI::Session *session, SceUInt32 reque
 	if (mem != NULL)
 		job = new (mem) GetTimeOfDayTimerLastErrorJob(
 			session, requestId, timerSlot, true, useCallback);
-	return enqueueTimeOfDayIpcJob(session, requestId, job);
+	common::SharedPtr<job::JobItem> jobRef(job);
+	if (job == NULL || jobRef.get() == NULL)
+		return TRIGGER_MGR_ERROR_NO_MEMORY;
+
+	g_triggerMgrIpcLock.Lock();
+	TriggerIpcJobSlot *slot = triggerMgrAllocIpcSlot(session, requestId, jobRef);
+	g_triggerMgrIpcLock.Unlock();
+
+	if (slot == NULL)
+		return TRIGGER_MGR_ERROR_BUSY;
+
+	g_triggerMgrJobQueue->Enqueue(jobRef);
+	return 0;
 }
