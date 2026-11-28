@@ -1456,8 +1456,14 @@ void Lv1StatusActivityVisualizer::UpdatePanel(paf::ui::Widget *listItem,
 	}
 }
 
-/* 0x8134FAAC */
+/* 0x81350306 */
 void Lv1StatusActivityVisualizer::OnRecordUpdated()
+{
+	UpdateCard();
+}
+
+/* 0x8134FAAC */
+void Lv1StatusActivityVisualizer::UpdateCard()
 {
 	paf::intrusive_ptr<Live2Record> rec = m_record;
 	if (rec.get() == NULL || rec->GetRecordKind() != LIVE2_RECORD_STATUS)

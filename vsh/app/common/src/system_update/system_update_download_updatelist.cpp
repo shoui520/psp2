@@ -9,6 +9,7 @@
 #include <std/stdlib.h>
 #include <file/httpfile.h>
 #include <libnetctl.h>
+#include <updater_core/updater_core.h>
 
 #include "system_update_download_updatelist.h"
 #include "system_update_file.h"
@@ -319,7 +320,7 @@ SystemUpdateResult Bgdl_8112FFEA(SystemUpdateData *data, string *url, SceInt64 *
 			haveAny = true;
 		} else {
 			int kind = 0;
-			int ret = Bgdl_8137C2A6(image->type, &kind);
+			int ret = sceUpdaterNetworkCheckBaseVersion((SceUInt32)image->type, &kind);
 
 			if (ret != 0) {
 				result.error = SYSTEM_UPDATE_ERROR;
@@ -391,7 +392,7 @@ SystemUpdateResult SystemUpdateListDownloadJob::CheckType(int type)
 	SystemUpdateResult result;
 	int error = 0;
 	int kind = 0;
-	int ret = Bgdl_8137C22E(type, &kind);
+	int ret = sceUpdaterNetworkPreCheckVersion((SceUInt32)type, &kind);
 
 	if (ret != 0) {
 		error = Bgdl_81130840(ret, NULL);
@@ -523,7 +524,7 @@ SystemUpdateResult SystemUpdateListJob::CheckType(int type)
 	SystemUpdateResult result;
 	int error = 0;
 	int kind = 0;
-	int ret = Bgdl_8137C22E(type, &kind);
+	int ret = sceUpdaterNetworkPreCheckVersion((SceUInt32)type, &kind);
 
 	if (ret != 0) {
 		error = Bgdl_81130840(ret, NULL);

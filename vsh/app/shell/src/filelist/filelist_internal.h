@@ -783,6 +783,7 @@ public:
 	paf::graph::TextObj *GetVoteCountTextObj(paf::ui::Widget *panel);
 	paf::graph::TextObj *GetCommentCountTextObj(paf::ui::Widget *panel);
 
+	void UpdateCard();
 	void ShowBusy();
 	void HideBusy();
 	void StopBusyIndicator(paf::ui::Widget *panel);
@@ -959,6 +960,7 @@ public:
 						  paf::ui::Event *event);
 	virtual void UpdateUnreadBadge();
 
+	void UpdateCard();
 	void StartCommentBusyOnButton(paf::ui::Widget *optionButton);
 	void ShowCommentBusy();
 	void StopCommentBusyOnButton(paf::ui::Widget *optionButton);

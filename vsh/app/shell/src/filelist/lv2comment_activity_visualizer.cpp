@@ -368,8 +368,14 @@ void Lv2CommentActivityVisualizer::StopCommentBusyOnButton(paf::ui::Widget *opti
 	}
 }
 
-/* 0x8135C684 / 0x8135CCA0 */
+/* 0x8135CCA0 */
 void Lv2CommentActivityVisualizer::OnRecordUpdated()
+{
+	UpdateCard();
+}
+
+/* 0x8135C684 */
+void Lv2CommentActivityVisualizer::UpdateCard()
 {
 	paf::intrusive_ptr<Live2Record> rec = m_record;
 	if (rec.get() == NULL || rec->GetRecordKind() != LIVE2_RECORD_COMMENT)

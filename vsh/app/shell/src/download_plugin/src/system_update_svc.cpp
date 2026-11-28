@@ -21,6 +21,7 @@
 #include <ipmi/server.h>
 #include <ipmi/session.h>
 #include <regmgr/regmgr.h>
+#include <updater_core/updater_core.h>
 
 #include "src/livespace_db/livespace_db_internal.h"
 #include "src/trigger_mgr/trigger_mgr.h"
@@ -115,13 +116,14 @@ int SystemUpdateSvc::Bgdl_8112D508(Plugin *plugin, DownloadPluginObject *object)
 	m_object = object;
 	m_ctrl = NULL;
 
-	m_infoPath.assign(Bgdl_8137C40C(Bgdl_8137C448()));
+	sceUpdaterPartitionSetUp();
+	m_infoPath.assign(sceUpdaterGetWorkingDirectory());
 	m_infoPath += "/";
 	m_infoPath += "PupInfo";
 
 	m_registLock = new thread::RMutex("SceDonwloadUpdateRegistTask", 0);
 	m_seqLock = new thread::Mutex("SceDownloadUpdateSvcSeq", 0);
-	m_ctrl = new SystemUpdateCtrl(0, m_infoPath.c_str(), Bgdl_8137C484(0));
+	m_ctrl = new SystemUpdateCtrl(0, m_infoPath.c_str(), sceUpdaterGetPupPath());
 	m_state = 2;
 	m_autoUpdate = 0;
 

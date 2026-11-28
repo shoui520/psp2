@@ -15,6 +15,7 @@
 #include <regmgr/regmgr.h>
 #include <vshbridge/vshbridge.h>
 #include <ss_mgr/ss_mgr.h>
+#include <updater_core/updater_core.h>
 
 #include <system_update/system_update_registry.h>
 #include "system_update_version.h"
@@ -183,12 +184,12 @@ SystemUpdateResult Bgdl_81132EDA(int type, string *url)
 		bool cex = ret == 1;
 
 		if (ret >= 0) {
-			SystemUpdateVersionInfo info;
+			SceUpdaterDeviceInfo info;
 
-			if (Bgdl_8137C396(&info) >= 0) {
+			if (sceUpdaterGetDeviceInfo(&info) >= 0) {
 				bool hasServer = false;
 
-				if (!cex || info.flag == 0) {
+				if (!cex || info.m_qaf == 0) {
 					if (sceRegMgrGetKeyStr("/CONFIG/SYSTEM/UPDATE", "server_url", buf,
 							       sizeof(buf)) == 0)
 						server += buf;

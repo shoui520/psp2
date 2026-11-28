@@ -72,7 +72,7 @@ struct SceKernelSwVersionInfo {
 
 extern "C" {
 extern int sceUpdaterGetPupInformation(const char *fileName, void *information);
-extern int sceUpdaterNetworkPreCheckVersion(SceUInt32 version, int *result);
+extern int sceUpdaterCheckNewerThanSystemVersion(SceUInt32 version, int *result);
 }
 
 static inline int updaterCoreGetPupVersion(const char *pupPath, SysupchkPupVersionInfo *outInfo)
@@ -82,7 +82,7 @@ static inline int updaterCoreGetPupVersion(const char *pupPath, SysupchkPupVersi
 
 static inline int updaterCoreCheckRequiredVersion(SceUInt32 requiredVersion, int *outNeedsUpdate)
 {
-	return sceUpdaterNetworkPreCheckVersion(requiredVersion, outNeedsUpdate);
+	return sceUpdaterCheckNewerThanSystemVersion(requiredVersion, outNeedsUpdate);
 }
 
 extern "C" {

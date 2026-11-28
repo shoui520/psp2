@@ -8,6 +8,7 @@
 #include <scetypes.h>
 #include <std/new>
 #include <bXCe/bxce_internal.h>
+#include <updater_core/updater_core.h>
 #include <vshbridge/vshbridge.h>
 
 #include "system_update_registry.h"
@@ -25,7 +26,7 @@ int Bgdl_81135CA0(bool *ok)
 /* whether an update of the version type applies: on a retail console only to another version */
 int Bgdl_81135CA8(int type, bool *ok)
 {
-	SystemUpdateVersionInfo info;
+	SceUpdaterDeviceInfo info;
 	bool any = false;
 	int ret;
 
@@ -33,10 +34,10 @@ int Bgdl_81135CA8(int type, bool *ok)
 	ret = vshSblAimgrIsCEX();
 	if (ret >= 0) {
 		if (ret == 1) {
-			ret = Bgdl_8137C396(&info);
+			ret = sceUpdaterGetDeviceInfo(&info);
 			any = false;
 			if (ret == 0)
-				any = info.flag != 1;
+				any = info.m_qaf != 1;
 		} else {
 			any = true;
 		}
@@ -44,7 +45,7 @@ int Bgdl_81135CA8(int type, bool *ok)
 	if (ret >= 0) {
 		if (any) {
 			*ok = true;
-		} else if (type == info.version) {
+		} else if ((SceUInt32)type == info.m_version) {
 			*ok = false;
 			return 0;
 		} else {
@@ -57,12 +58,12 @@ int Bgdl_81135CA8(int type, bool *ok)
 /* whether the version type is newer than the console's */
 int Bgdl_81135D24(int type, bool *ok)
 {
-	SystemUpdateVersionInfo info;
+	SceUpdaterDeviceInfo info;
 	int ret;
 
 	*ok = false;
-	ret = Bgdl_8137C396(&info);
-	if (ret == 0 && (SceUInt32)type > (SceUInt32)info.version)
+	ret = sceUpdaterGetDeviceInfo(&info);
+	if (ret == 0 && (SceUInt32)type > info.m_version)
 		*ok = true;
 	return ret;
 }

@@ -10,6 +10,7 @@
 #include <std/string.h>
 #include <file/localfile.h>
 #include <kernel/iofilemgr.h>
+#include <updater_core/updater_core.h>
 
 #include "system_update_file.h"
 
@@ -47,7 +48,7 @@ int Bgdl_81130840(int error, const char *path)
 	int ret;
 
 	if (path == NULL)
-		path = Bgdl_8137C484(0);
+		path = sceUpdaterGetPupPath();
 
 	string where(path);
 

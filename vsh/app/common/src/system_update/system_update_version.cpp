@@ -18,12 +18,11 @@
 #include <kernel/iofilemgr_stat.h>
 #include <ss_mgr/ss_mgr.h>
 #include <update_mgr/update_mgr.h>
+#include <updater_core/updater_core.h>
 #include <vshbridge/vshbridge.h>
 
 #include "system_update_registry.h"
 #include "system_update_version.h"
-
-extern "C" int sceSblQafMgrIsAllowNonQAPup(void);
 
 using namespace paf;
 
@@ -94,7 +93,7 @@ int Bgdl_81135E8C(string version)
 string Bgdl_811360AA(void)
 {
 	char text[24];
-	SystemUpdateVersionInfo version;
+	SceUpdaterDeviceInfo version;
 	SceKernelSystemSwVersion info;
 
 	info.size = sizeof(info);
@@ -104,9 +103,9 @@ string Bgdl_811360AA(void)
 	int major = 0xFF;
 	int minor = 0xFFF;
 
-	if (Bgdl_8137C396(&version) >= 0) {
-		major = (SceUInt32)version.version >> 24;
-		minor = ((SceUInt32)version.version >> 12) & 0xFFF;
+	if (sceUpdaterGetDeviceInfo(&version) >= 0) {
+		major = version.m_version >> 24;
+		minor = (version.m_version >> 12) & 0xFFF;
 	}
 	sce_paf_snprintf(text, sizeof(text), "%x.%03x", major, minor);
 	return string(text);
@@ -224,118 +223,6 @@ void Bgdl_811363E4(bool enabled, const char *file, int line, const char *fmt, ..
 		sce_paf_printf_dummy();
 	}
 	va_end(ap);
-}
-
-#define SYSTEM_UPDATE_ERROR_INVALID_PTR		((int)0x80180006)
-#define SYSTEM_UPDATE_ERROR_MKDIR_FAILED	((int)0x801800A7)
-#define SYSTEM_UPDATE_ERROR_SPKG_NOT_PERMITTED	((int)0x801804E1)
-#define SYSTEM_UPDATE_ERROR_SPKG_INVALID_ARG	((int)0x801804E2)
-#define SYSTEM_UPDATE_ERROR_SPKG_IO		((int)0x801804E3)
-#define SYSTEM_UPDATE_ERROR_SPKG_TRY_AGAIN	((int)0x801804E4)
-#define SYSTEM_UPDATE_ERROR_SPKG_NO_MEMORY	((int)0x801804E5)
-
-static int mapSpkgError(int err)
-{
-	switch (err) {
-	case SCE_SBL_US_ERROR_NOT_PERMITTED:
-		return SYSTEM_UPDATE_ERROR_SPKG_NOT_PERMITTED;
-	case SCE_SBL_US_ERROR_INVALID_ARGUMENT:
-		return SYSTEM_UPDATE_ERROR_SPKG_INVALID_ARG;
-	case SCE_SBL_US_ERROR_IO:
-		return SYSTEM_UPDATE_ERROR_SPKG_IO;
-	case SCE_SBL_US_ERROR_TRY_AGAIN:
-		return SYSTEM_UPDATE_ERROR_SPKG_TRY_AGAIN;
-	case SCE_SBL_US_ERROR_NO_MEMORY:
-		return SYSTEM_UPDATE_ERROR_SPKG_NO_MEMORY;
-	default:
-		return err;
-	}
-}
-
-/* (0x8137C396 -> 0x8137C4CC) */
-int Bgdl_8137C396(SystemUpdateVersionInfo *info)
-{
-	if (info == NULL)
-		return SYSTEM_UPDATE_ERROR_INVALID_PTR;
-
-	SceSblUsSpkgInfo spkg;
-	int ret = sceSblUsGetSpkgInfo(SCE_SBL_US_SPKG_TYPE_SYSTEM, &spkg);
-	if (ret != 0)
-		return mapSpkgError(ret);
-
-	info->version = (int)spkg.version;
-	info->reserved = 0;
-	info->flag = (sceSblQafMgrIsAllowNonQAPup() == 0) ? 1 : 0;
-	info->targetType = (vshSblAimgrIsCEX() == 1) ? 2 : 1;
-	return 0;
-}
-
-/* (0x8137C22E -> 0x8137CCE8) */
-int Bgdl_8137C22E(int version, int *allowed)
-{
-	if (allowed == NULL)
-		return SYSTEM_UPDATE_ERROR_INVALID_PTR;
-
-	if (vshSblAimgrIsCEX() != 1) {
-		*allowed = 1;
-		return 0;
-	}
-
-	*allowed = 0;
-	if (sceSblQafMgrIsAllowNonQAPup() != 0) {
-		*allowed = 1;
-		return 0;
-	}
-
-	SceSblUsSpkgInfo spkg;
-	int ret = sceSblUsGetSpkgInfo(SCE_SBL_US_SPKG_TYPE_SYSTEM, &spkg);
-	if (ret != 0)
-		return mapSpkgError(ret);
-
-	*allowed = ((unsigned int)version >= spkg.version) ? 1 : 0;
-	return 0;
-}
-
-/* (0x8137C2A6 -> 0x8137CDE8) */
-int Bgdl_8137C2A6(int version, int *isEqual)
-{
-	if (isEqual == NULL)
-		return SYSTEM_UPDATE_ERROR_INVALID_PTR;
-
-	*isEqual = 0;
-
-	SceSblUsSpkgInfo spkg;
-	int ret = sceSblUsGetSpkgInfo(SCE_SBL_US_SPKG_TYPE_SYSTEM, &spkg);
-	if (ret != 0)
-		return mapSpkgError(ret);
-
-	*isEqual = ((unsigned int)version == spkg.version) ? 1 : 0;
-	return 0;
-}
-
-/* (0x8137C40C -> 0x8137C5BC) */
-const char *Bgdl_8137C40C(void *paths)
-{
-	(void)paths;
-	return "ud0:/PSP2UPDATE";
-}
-
-/* (0x8137C448 -> 0x8137C5C6) */
-void *Bgdl_8137C448(void)
-{
-	SceIoStat stat;
-	if (sceIoGetstat("ud0:/PSP2UPDATE", &stat) == 0)
-		return NULL;
-	if (sceIoMkdir("ud0:/PSP2UPDATE", 6) >= 0)
-		return NULL;
-	return (void *)SYSTEM_UPDATE_ERROR_MKDIR_FAILED;
-}
-
-/* (0x8137C484 -> 0x8137C63A) */
-const char *Bgdl_8137C484(int unused)
-{
-	(void)unused;
-	return "ud0:/PSP2UPDATE/PSP2UPDAT.PUP";
 }
 
 /* (0x81132A2C) */
