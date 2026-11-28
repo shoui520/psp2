@@ -93,15 +93,27 @@ ScrollBarStyleParam::ScrollBarStyleParam()
 	m_min_size = 0.0f;
 	m_anim_time = 150.0f;
 	m_anim_func = 0;
+#ifdef PAF_BUILD_2014
+	m_obj[ScrollBar::OBJ_BASE].Init();
+#endif
 	m_obj[ScrollBar::OBJ_BASE].m_name = "base_obj";
 	m_obj[ScrollBar::OBJ_BASE].m_index = ScrollBar::OBJ_BASE;
 	m_drawobj_param_list.push_back(&m_obj[ScrollBar::OBJ_BASE]);
+#ifdef PAF_BUILD_2014
+	m_obj[ScrollBar::OBJ_SLIDER].Init();
+#endif
 	m_obj[ScrollBar::OBJ_SLIDER].m_name = "slider_obj";
 	m_obj[ScrollBar::OBJ_SLIDER].m_index = ScrollBar::OBJ_SLIDER;
 	m_drawobj_param_list.push_back(&m_obj[ScrollBar::OBJ_SLIDER]);
+#ifdef PAF_BUILD_2014
+	m_obj[ScrollBar::OBJ_JET_TAIL].Init();
+#endif
 	m_obj[ScrollBar::OBJ_JET_TAIL].m_name = "jet_tail_obj";
 	m_obj[ScrollBar::OBJ_JET_TAIL].m_index = ScrollBar::OBJ_JET_TAIL;
 	m_drawobj_param_list.push_back(&m_obj[ScrollBar::OBJ_JET_TAIL]);
+#ifdef PAF_BUILD_2014
+	m_obj[ScrollBar::OBJ_SLIDER_GLOW].Init();
+#endif
 	m_obj[ScrollBar::OBJ_SLIDER_GLOW].m_name = "slider_glow_obj";
 	m_obj[ScrollBar::OBJ_SLIDER_GLOW].m_index = ScrollBar::OBJ_SLIDER_GLOW;
 	m_drawobj_param_list.push_back(&m_obj[ScrollBar::OBJ_SLIDER_GLOW]);

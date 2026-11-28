@@ -168,9 +168,15 @@ ProgressBarTouchParam::ProgressBarTouchParam()
 
 ProgressBarTouchStyleParam::ProgressBarTouchStyleParam()
 {
+#ifdef PAF_BUILD_2014
+	m_slider_obj[0].Init();
+#endif
 	m_slider_obj[0].m_name = "slider_obj";
 	m_slider_obj[0].m_index = ProgressBarTouch::OBJ_SLIDER;
 	m_drawobj_param_list.push_back(&m_slider_obj[0]);
+#ifdef PAF_BUILD_2014
+	m_slider_obj[1].Init();
+#endif
 	m_slider_obj[1].m_name = "slider_glow_obj";
 	m_slider_obj[1].m_index = ProgressBarTouch::OBJ_SLIDER_GLOW;
 	m_drawobj_param_list.push_back(&m_slider_obj[1]);

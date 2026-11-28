@@ -40,6 +40,9 @@ extern const char *const s_plane_objs[] = {
 
 PlaneStyleParam::PlaneStyleParam()
 {
+#ifdef PAF_BUILD_2014
+	m_plane_param.Init();
+#endif
 	m_plane_param.m_name = s_plane_objs[0];
 	m_plane_param.m_index = 0;
 	m_drawobj_param_list.push_back(&m_plane_param);

@@ -177,9 +177,15 @@ TextParam::TextParam()
 
 TextStyleParam::TextStyleParam() : m_adjust(NULL)
 {
+#ifdef PAF_BUILD_2014
+	m_plane_param.Init();
+#endif
 	m_plane_param.m_name = "planeobj";
 	m_plane_param.m_index = Text::OBJ_PLANE;
 	m_drawobj_param_list.push_back(&m_plane_param);
+#ifdef PAF_BUILD_2014
+	m_text_param.Init();
+#endif
 	m_text_param.m_name = "textobj";
 	m_text_param.m_index = Text::OBJ_TEXT;
 	m_drawobj_param_list.push_back(&m_text_param);

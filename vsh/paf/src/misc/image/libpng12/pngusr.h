@@ -29,6 +29,8 @@
 
 #define malloc	sce_paf_malloc
 #define free	sce_paf_free
+#define memcpy	sce_paf_memcpy
+#define memset	sce_paf_memset
 #define memcmp	sce_paf_memcmp
 #define strlen	sce_paf_strlen
 #define abs	sce_paf_abs

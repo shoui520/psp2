@@ -662,7 +662,7 @@ void DocumentWidget::CreateCheckerSurface(intrusive_ptr<graph::Surface> &out_sur
 							      1, 1, true));
 	int32_t width = surf->GetWidth();
 	int32_t height = surf->GetHeight();
-	uint32_t *pixels = static_cast<uint32_t *>(sce_paf_malloc(4 * width * height));
+	uint32_t *pixels = new uint32_t[width * height];
 
 	for (int32_t row = 0; row < height; ++row) {
 		for (int32_t col = 0; col < width; ++col) {
@@ -672,7 +672,7 @@ void DocumentWidget::CreateCheckerSurface(intrusive_ptr<graph::Surface> &out_sur
 	}
 
 	surf->Copy(0, pixels, ImageOrder_Linear, 0, -1);
-	sce_paf_free(pixels);
+	delete[] pixels;
 	out_surface = surf;
 }
 

@@ -323,7 +323,7 @@ list<_Ty, _Ax>::list(const list &other)
    out-of-line copy for (PAF_LIST_INLINE_DTOR) */
 #ifdef PAF_BUILD_2014
 #define PAF_LIST_DESTROY_ALL \
-	if (head != NULL) { \
+	{ \
 		_Node *node = head->next; \
  \
 		if (node != head) { \
@@ -383,48 +383,28 @@ template<class _Ty, class _Ax>
 inline void
 list<_Ty, _Ax>::push_front(const _Ty &val)
 {
-	if (head == NULL)
-		return;
-
 	_Node *node = (_Node *)operator new(sizeof(_Node));
 
-	if (node != NULL)
-		PAF_PLACEMENT_NEW_COPY(&node->value, _Ty, val);
-	else
-		node = head;
-	if (node != head) {
-		node->prev = head;
-		node->next = head->next;
-
-		_Node *first = head;
-		size_type size = count + 1;
-
-		first->next->prev = node;
-		first->next = node;
-		count = size;
-	}
+	PAF_PLACEMENT_NEW_COPY(&node->value, _Ty, val);
+	node->prev = head;
+	node->next = head->next;
+	head->next->prev = node;
+	head->next = node;
+	++count;
 }
 
 template<class _Ty, class _Ax>
 inline void
 list<_Ty, _Ax>::push_back(const _Ty &val)
 {
-	if (head == NULL)
-		return;
-
 	_Node *node = (_Node *)operator new(sizeof(_Node));
 
-	if (node != NULL)
-		PAF_PLACEMENT_NEW_COPY(&node->value, _Ty, val);
-	else
-		node = head;
-	if (node != head) {
-		node->prev = head->prev;
-		node->next = head;
-		head->prev->next = node;
-		head->prev = node;
-		++count;
-	}
+	PAF_PLACEMENT_NEW_COPY(&node->value, _Ty, val);
+	node->prev = head->prev;
+	node->next = head;
+	head->prev->next = node;
+	head->prev = node;
+	++count;
 }
 #else
 template<class _Ty, class _Ax>

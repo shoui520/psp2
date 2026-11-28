@@ -171,6 +171,17 @@ public:
 	{
 		_Elem *dst = alloc.allocate(count + len + 1);
 
+#ifdef PAF_BUILD_2014
+		size_type size = count + len;
+
+		_Traits::copy(dst, ptr, count);
+		_Traits::copy(dst + count, src, len);
+		dst[count + len] = 0;
+		if (ptr != &empty_string)
+			alloc.deallocate(ptr, count + 1);
+		ptr = dst;
+		count = size;
+#else
 		if (dst == NULL)
 			alloc.report_failure();
 		if (dst != NULL) {
@@ -184,6 +195,7 @@ public:
 			ptr = dst;
 			count = size;
 		}
+#endif
 		return *this;
 	}
 
@@ -458,6 +470,9 @@ public:
 };
 
 template<class _Elem, class _Traits, class _Ax>
+#ifdef PAF_BUILD_2014
+inline
+#endif
 basic_string<_Elem, _Traits, _Ax> &
 basic_string<_Elem, _Traits, _Ax>::assign(const _Elem *src, size_type len)
 {
@@ -467,6 +482,12 @@ basic_string<_Elem, _Traits, _Ax>::assign(const _Elem *src, size_type len)
 		if (len != 0 && src != NULL && *src != 0) {
 			_Elem *dst = alloc.allocate(len + 1);
 
+#ifdef PAF_BUILD_2014
+			ptr = dst;
+			count = len;
+			_Traits::copy(dst, src, len);
+			ptr[len] = 0;
+#else
 			if (dst != NULL) {
 				ptr = dst;
 				count = len;
@@ -477,6 +498,7 @@ basic_string<_Elem, _Traits, _Ax>::assign(const _Elem *src, size_type len)
 				ptr = &empty_string;
 				count = 0;
 			}
+#endif
 		} else {
 			ptr = &empty_string;
 			count = 0;
@@ -486,6 +508,9 @@ basic_string<_Elem, _Traits, _Ax>::assign(const _Elem *src, size_type len)
 }
 
 template<class _Elem, class _Traits, class _Ax>
+#ifdef PAF_BUILD_2014
+inline
+#endif
 basic_string<_Elem, _Traits, _Ax> &
 basic_string<_Elem, _Traits, _Ax>::assign(const _Myt &src)
 {
@@ -495,6 +520,11 @@ basic_string<_Elem, _Traits, _Ax>::assign(const _Myt &src)
 		if (src.count != 0) {
 			_Elem *dst = alloc.allocate(src.count + 1);
 
+#ifdef PAF_BUILD_2014
+			ptr = dst;
+			count = src.count;
+			_Traits::copy(dst, src.ptr, src.count + 1);
+#else
 			if (dst != NULL) {
 				ptr = dst;
 				count = src.count;
@@ -504,6 +534,7 @@ basic_string<_Elem, _Traits, _Ax>::assign(const _Myt &src)
 				ptr = &empty_string;
 				count = 0;
 			}
+#endif
 		} else {
 			ptr = &empty_string;
 			count = 0;
@@ -535,6 +566,12 @@ basic_string<_Elem, _Traits, _Ax>::assign(const _Myt &src, size_type pos, size_t
 	if (size != 0) {
 		_Elem *dst = alloc.allocate(size + 1);
 
+#ifdef PAF_BUILD_2014
+		ptr = dst;
+		count = size;
+		_Traits::copy(dst, src.ptr + pos, size);
+		ptr[size] = 0;
+#else
 		if (dst != NULL) {
 			ptr = dst;
 			count = size;
@@ -545,6 +582,7 @@ basic_string<_Elem, _Traits, _Ax>::assign(const _Myt &src, size_type pos, size_t
 			count = 0;
 			ptr = &empty_string;
 		}
+#endif
 	} else {
 		count = 0;
 		ptr = &empty_string;
@@ -561,6 +599,12 @@ basic_string<_Elem, _Traits, _Ax>::assign(_Elem ch)
 	if (ch != 0) {
 		_Elem *dst = alloc.allocate(2);
 
+#ifdef PAF_BUILD_2014
+		ptr = dst;
+		count = 1;
+		dst[0] = ch;
+		ptr[1] = 0;
+#else
 		if (dst != NULL) {
 			ptr = dst;
 			count = 1;
@@ -571,6 +615,7 @@ basic_string<_Elem, _Traits, _Ax>::assign(_Elem ch)
 			ptr = &empty_string;
 			count = 0;
 		}
+#endif
 	} else {
 		ptr = &empty_string;
 		count = 0;
@@ -587,6 +632,18 @@ basic_string<_Elem, _Traits, _Ax>::append(size_type len, _Elem ch)
 {
 	_Elem *dst = alloc.allocate(count + len + 1);
 
+#ifdef PAF_BUILD_2014
+	size_type size = count + len;
+
+	_Traits::copy(dst, ptr, count);
+	for (size_type i = 0; i < len; ++i)
+		dst[count + i] = ch;
+	dst[count + len] = 0;
+	if (ptr != &empty_string)
+		alloc.deallocate(ptr, count + 1);
+	ptr = dst;
+	count = size;
+#else
 	if (dst != NULL) {
 		size_type size = count + len;
 
@@ -601,6 +658,7 @@ basic_string<_Elem, _Traits, _Ax>::append(size_type len, _Elem ch)
 	} else {
 		alloc.report_failure();
 	}
+#endif
 	return *this;
 }
 
@@ -617,6 +675,18 @@ basic_string<_Elem, _Traits, _Ax>::erase(size_type pos, size_type len)
 
 	_Elem *dst = alloc.allocate(count - len + 1);
 
+#ifdef PAF_BUILD_2014
+	size_type size = count;
+	size_type tail = size - pos - len;
+
+	_Traits::copy(dst, ptr, pos);
+	_Traits::copy(dst + pos, ptr + pos + len, tail);
+	dst[size - len] = 0;
+	if (ptr != &empty_string)
+		alloc.deallocate(ptr, count + 1);
+	ptr = dst;
+	count = size - len;
+#else
 	if (dst == NULL)
 		alloc.report_failure();
 	if (dst != NULL) {
@@ -631,6 +701,7 @@ basic_string<_Elem, _Traits, _Ax>::erase(size_type pos, size_type len)
 		ptr = dst;
 		count = size - len;
 	}
+#endif
 	return *this;
 }
 
@@ -645,6 +716,18 @@ basic_string<_Elem, _Traits, _Ax>::insert(size_type pos, const _Elem *src, size_
 
 	_Elem *dst = alloc.allocate(count + len + 1);
 
+#ifdef PAF_BUILD_2014
+	size_type size = count + len;
+
+	_Traits::copy(dst, ptr, pos);
+	_Traits::copy(dst + pos, src, len);
+	_Traits::copy(dst + pos + len, ptr + pos, count - pos);
+	dst[count + len] = 0;
+	if (ptr != &empty_string)
+		alloc.deallocate(ptr, count + 1);
+	ptr = dst;
+	count = size;
+#else
 	if (dst != NULL) {
 		size_type size = count + len;
 
@@ -659,6 +742,7 @@ basic_string<_Elem, _Traits, _Ax>::insert(size_type pos, const _Elem *src, size_
 	} else {
 		alloc.report_failure();
 	}
+#endif
 	return *this;
 }
 
@@ -673,6 +757,23 @@ basic_string<_Elem, _Traits, _Ax>::insert(size_type pos, size_type len, _Elem ch
 
 	_Elem *dst = alloc.allocate(count + len + 1);
 
+#ifdef PAF_BUILD_2014
+	size_type size = count + len;
+
+	_Traits::copy(dst, ptr, pos);
+	if (len != 0) {
+		_Elem *fill = dst + pos;
+
+		for (size_type n = len; n != 0; --n)
+			*fill++ = ch;
+	}
+	_Traits::copy(dst + (pos + len), ptr + pos, count - pos);
+	dst[count + len] = 0;
+	if (ptr != &empty_string)
+		alloc.deallocate(ptr, count + 1);
+	ptr = dst;
+	count = size;
+#else
 	if (dst != NULL) {
 		size_type size = count + len;
 
@@ -692,6 +793,7 @@ basic_string<_Elem, _Traits, _Ax>::insert(size_type pos, size_type len, _Elem ch
 	} else {
 		alloc.report_failure();
 	}
+#endif
 	return *this;
 }
 
@@ -894,6 +996,24 @@ operator+(const basic_string<_Elem, _Traits, _Ax> &left, _Elem right)
 template<> char basic_string<char>::empty_string;
 template<> wchar_t basic_string<wchar_t>::empty_string;
 
+#ifdef PAF_BUILD_2014
+template<>
+inline basic_string<wchar_t> &
+basic_string<wchar_t>::append(const wchar_t *src, size_type len)
+{
+	wchar_t *dst = alloc.allocate(count + len + 1);
+	size_type size = count + len;
+
+	char_traits<wchar_t>::copy(dst, ptr, count);
+	char_traits<wchar_t>::copy(dst + count, src, len);
+	dst[count + len] = 0;
+	if (ptr != &empty_string)
+		alloc.deallocate(ptr, count + 1);
+	ptr = dst;
+	count = size;
+	return *this;
+}
+#else
 /* Sony's build calls the wide append everywhere rather than inlining it. */
 template<>
 inline __attribute__((noinline)) basic_string<wchar_t> &
@@ -901,10 +1021,8 @@ basic_string<wchar_t>::append(const wchar_t *src, size_type len)
 {
 	wchar_t *dst = alloc.allocate(count + len + 1);
 
-#ifndef PAF_BUILD_2014
 	if (dst == NULL)
 		ScePafStdc_D608246A();
-#endif
 	if (dst != NULL) {
 		size_type size = count + len;
 
@@ -918,6 +1036,7 @@ basic_string<wchar_t>::append(const wchar_t *src, size_type len)
 	}
 	return *this;
 }
+#endif
 
 /* Sony's build calls the char append of repeated characters everywhere rather than inlining it. */
 template<>

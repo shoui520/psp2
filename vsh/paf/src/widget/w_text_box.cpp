@@ -176,11 +176,15 @@ int32_t TextBox::SetCaretBlink()
 
 	m_text->GetCaretVisible(visible);
 	if (visible && ScePafWidget_56384DA3(this, ANIM_CARET_BLINK) == 0) {
+#ifdef PAF_BUILD_2014
+		SetCaretAlpha(1.0f);
+#else
 		math::v4 color;
 
 		m_text->GetCaretColor(color);
 		color.set_w(1.0f);
 		m_text->SetCaretColor(color);
+#endif
 		SetAnimListener(ANIM_CARET_BLINK | ANIM_OPTION_LOOP,
 				new AnimListener(new Timer(Text::c_caretBlinkIdleMsec), this, NULL, NULL, NULL), 0);
 		SetAnimListener(ANIM_CARET_BLINK | ANIM_OPTION_LOOP,
@@ -287,6 +291,19 @@ int32_t TextBox::KillCaretScroll()
 	return 0;
 }
 
+#ifdef PAF_BUILD_2014
+inline __attribute__((always_inline)) int32_t TextBox::KillCaretBlink()
+{
+	bool visible;
+
+	m_text->GetCaretVisible(visible);
+	if (visible && ScePafWidget_56384DA3(this, ANIM_CARET_BLINK) != 0) {
+		KillAnim(ANIM_CARET_BLINK);
+		SetCaretAlpha(1.0f);
+	}
+	return 0;
+}
+#else
 int32_t TextBox::KillCaretBlink()
 {
 	bool visible;
@@ -302,6 +319,7 @@ int32_t TextBox::KillCaretBlink()
 	}
 	return 0;
 }
+#endif
 
 uint32_t TextBox::ChangeState(uint32_t state, int32_t ev_type)
 {
@@ -1446,6 +1464,9 @@ const char TextBoxStyleParam::m_param_name[] = "style_text_box";
 
 TextBoxStyleParam::TextBoxStyleParam()
 {
+#ifdef PAF_BUILD_2014
+	m_glow_param.Init();
+#endif
 	m_glow_param.m_name = "glowobj";
 	m_glow_param.m_index = TextBox::OBJ_GLOW;
 	m_drawobj_param_list.push_back(&m_glow_param);

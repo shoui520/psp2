@@ -4417,7 +4417,7 @@ int32_t ListView::HandleKeycodeEvent(Event *e)
 void ListView::UpdateAfterChildren()
 {
 	ScrollViewBase::UpdateAfterChildren();
-	Sync();
+	ScePafWidget_697CD413();
 }
 #endif
 

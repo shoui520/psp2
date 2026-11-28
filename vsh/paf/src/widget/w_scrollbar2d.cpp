@@ -79,9 +79,15 @@ ScrollBar2dStyleParam::ScrollBar2dStyleParam()
 {
 	m_anim_time = 150.0f;
 	m_anim_func = 0;
+#ifdef PAF_BUILD_2014
+	m_base_obj.Init();
+#endif
 	m_base_obj.m_name = "base_obj";
 	m_base_obj.m_index = ScrollBar2d::OBJ_BASE;
 	m_drawobj_param_list.push_back(&m_base_obj);
+#ifdef PAF_BUILD_2014
+	m_slider_obj.Init();
+#endif
 	m_slider_obj.m_name = "slider_obj";
 	m_slider_obj.m_index = ScrollBar2d::OBJ_SLIDER;
 	m_drawobj_param_list.push_back(&m_slider_obj);

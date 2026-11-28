@@ -182,6 +182,9 @@ static inline __attribute__((always_inline)) void AddObjParam(WidgetStyleParam *
 							      graph::DrawObjParam *param,
 							      const char *name, int32_t index)
 {
+#ifdef PAF_BUILD_2014
+	param->Init();
+#endif
 	param->m_name = name;
 	param->m_index = index;
 	style->m_drawobj_param_list.push_back(param);

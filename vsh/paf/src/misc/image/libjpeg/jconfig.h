@@ -17,3 +17,9 @@ typedef unsigned char boolean;
 
 /* the fast integer DCT by default: default_decompress_parms and jpeg_set_defaults store 1 */
 #define JDCT_DEFAULT	JDCT_IFAST
+
+#ifdef PAF_BUILD_2014
+#include <std/string.h>
+#define memcpy		sce_paf_memcpy
+#define memset		sce_paf_memset
+#endif

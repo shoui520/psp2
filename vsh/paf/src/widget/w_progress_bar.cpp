@@ -303,24 +303,45 @@ ProgressBarStyleParam::ProgressBarStyleParam()
 	m_signal_anim_time = 300.0f;
 	m_shadow_param.m_offset = math::v2(0.0f, 0.0f);
 	m_shadow_param.m_margin = math::v2(0.0f, 0.0f);
+#ifdef PAF_BUILD_2014
+	m_obj[ProgressBar::OBJ_BASE].Init();
+#endif
 	m_obj[ProgressBar::OBJ_BASE].m_name = "base_obj";
 	m_obj[ProgressBar::OBJ_BASE].m_index = ProgressBar::OBJ_BASE;
 	m_drawobj_param_list.push_back(&m_obj[ProgressBar::OBJ_BASE]);
+#ifdef PAF_BUILD_2014
+	m_obj[ProgressBar::OBJ_BAR_FORE].Init();
+#endif
 	m_obj[ProgressBar::OBJ_BAR_FORE].m_name = "bar_fore_obj";
 	m_obj[ProgressBar::OBJ_BAR_FORE].m_index = ProgressBar::OBJ_BAR_FORE;
 	m_drawobj_param_list.push_back(&m_obj[ProgressBar::OBJ_BAR_FORE]);
+#ifdef PAF_BUILD_2014
+	m_obj[ProgressBar::OBJ_BAR_BACK].Init();
+#endif
 	m_obj[ProgressBar::OBJ_BAR_BACK].m_name = "bar_back_obj";
 	m_obj[ProgressBar::OBJ_BAR_BACK].m_index = ProgressBar::OBJ_BAR_BACK;
 	m_drawobj_param_list.push_back(&m_obj[ProgressBar::OBJ_BAR_BACK]);
+#ifdef PAF_BUILD_2014
+	m_obj[ProgressBar::OBJ_SIGNAL].Init();
+#endif
 	m_obj[ProgressBar::OBJ_SIGNAL].m_name = "signal_obj";
 	m_obj[ProgressBar::OBJ_SIGNAL].m_index = ProgressBar::OBJ_SIGNAL;
 	m_drawobj_param_list.push_back(&m_obj[ProgressBar::OBJ_SIGNAL]);
+#ifdef PAF_BUILD_2014
+	m_glow_obj.Init();
+#endif
 	m_glow_obj.m_name = "glow_obj";
 	m_glow_obj.m_index = ProgressBar::OBJ_GLOW;
 	m_drawobj_param_list.push_back(&m_glow_obj);
+#ifdef PAF_BUILD_2014
+	m_shadow_obj[0].Init();
+#endif
 	m_shadow_obj[0].m_name = "base_shadow_obj";
 	m_shadow_obj[0].m_index = ProgressBar::OBJ_BASE_SHADOW;
 	m_drawobj_param_list.push_back(&m_shadow_obj[0]);
+#ifdef PAF_BUILD_2014
+	m_shadow_obj[1].Init();
+#endif
 	m_shadow_obj[1].m_name = "bar_shadow_obj";
 	m_shadow_obj[1].m_index = ProgressBar::OBJ_BAR_SHADOW;
 	m_drawobj_param_list.push_back(&m_shadow_obj[1]);

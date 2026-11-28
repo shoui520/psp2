@@ -25,6 +25,9 @@ SpeechBalloon::SpeechBalloon(Widget *parent, CreateParam *param)
 
 SpeechBalloonStyleParam::SpeechBalloonStyleParam()
 {
+#ifdef PAF_BUILD_2014
+	m_shadow_obj.Init();
+#endif
 	m_shadow_obj.m_name = "shadow_obj";
 	m_shadow_obj.m_index = SpeechBalloon::OBJ_SHADOW;
 	m_drawobj_param_list.push_back(&m_shadow_obj);

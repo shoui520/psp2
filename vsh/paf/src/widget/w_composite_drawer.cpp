@@ -184,6 +184,9 @@ int32_t CompositeDrawerStyleParam::Read(const cxml::Element *elem)
 			else if (sce_paf_strcmp(name, "textobj") == 0)
 				param = new graph::TextObjParam;
 			if (param != NULL) {
+#ifdef PAF_BUILD_2014
+				param->Init();
+#endif
 				param->m_index = m_drawobj_param_list.size();
 				param->m_name = "";
 				m_drawobj_param_list.push_back(param);

@@ -117,9 +117,15 @@ ImageSlideBarStyleParam::ImageSlideBarStyleParam()
 {
 	m_anim_time = 150.0f;
 	m_anim_func = 0;
+#ifdef PAF_BUILD_2014
+	m_base_obj.Init();
+#endif
 	m_base_obj.m_name = "base_obj";
 	m_base_obj.m_index = ImageSlideBar::OBJ_BASE;
 	m_drawobj_param_list.push_back(&m_base_obj);
+#ifdef PAF_BUILD_2014
+	m_bar_obj.Init();
+#endif
 	m_bar_obj.m_name = "bar_obj";
 	m_bar_obj.m_index = ImageSlideBar::OBJ_BAR;
 	m_drawobj_param_list.push_back(&m_bar_obj);

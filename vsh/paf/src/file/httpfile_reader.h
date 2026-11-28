@@ -458,7 +458,9 @@ public:
 
 	virtual ~FileIoCallThread()
 	{
+#ifndef PAF_BUILD_2014
 		delete m_call;
+#endif
 	}
 
 	virtual void EntryFunction()

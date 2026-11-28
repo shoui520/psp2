@@ -520,15 +520,27 @@ DirectBarParam::DirectBarParam()
 
 DirectBarStyleParam::DirectBarStyleParam()
 {
+#ifdef PAF_BUILD_2014
+	m_bg_obj.Init();
+#endif
 	m_bg_obj.m_name = "bg_obj";
 	m_bg_obj.m_index = DirectBar::OBJ_BG;
 	m_drawobj_param_list.push_back(&m_bg_obj);
+#ifdef PAF_BUILD_2014
+	m_label_obj.Init();
+#endif
 	m_label_obj.m_name = "label_obj";
 	m_label_obj.m_index = DirectBar::OBJ_LABEL;
 	m_drawobj_param_list.push_back(&m_label_obj);
+#ifdef PAF_BUILD_2014
+	m_balloon_obj.Init();
+#endif
 	m_balloon_obj.m_name = "balloon_obj";
 	m_balloon_obj.m_index = DirectBar::OBJ_BALLOON;
 	m_drawobj_param_list.push_back(&m_balloon_obj);
+#ifdef PAF_BUILD_2014
+	m_launchbtn_obj.Init();
+#endif
 	m_launchbtn_obj.m_name = "launchbtn_obj";
 	m_launchbtn_obj.m_index = DirectBar::OBJ_LAUNCHBTN;
 	m_drawobj_param_list.push_back(&m_launchbtn_obj);

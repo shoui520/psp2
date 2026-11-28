@@ -1025,7 +1025,7 @@ int32_t MapJsRequest::SerializeFullPayload(char **out_buf, uint32_t *out_len,
 	if (markers != NULL) {
 		fit_bounds = markers->m_fit_bounds;
 		selected = markers->m_selected_index;
-		marker_json = static_cast<char *>(sce_paf_malloc(102400));
+		marker_json = new char[102400];
 		if (marker_json == NULL)
 			return 3;
 		sce_paf_memset(marker_json, 0, 102400);
@@ -1055,7 +1055,7 @@ int32_t MapJsRequest::SerializeFullPayload(char **out_buf, uint32_t *out_len,
 		}
 	}
 
-	char *payload = static_cast<char *>(sce_paf_malloc(102400));
+	char *payload = new char[102400];
 
 	if (payload == NULL)
 		return 3;
@@ -1124,16 +1124,16 @@ int32_t MapJsRequest::SerializeFullPayload(char **out_buf, uint32_t *out_len,
 	}
 
 	if (written == -1) {
-		sce_paf_free(payload);
+		delete[] payload;
 		*out_buf = NULL;
 		*out_len = 0;
 		if (marker_json != NULL)
-			sce_paf_free(marker_json);
+			delete[] marker_json;
 		return 1;
 	}
 
 	if (marker_json != NULL)
-		sce_paf_free(marker_json);
+		delete[] marker_json;
 	*out_buf = payload;
 	*out_len = (uint32_t)(written + 30);
 	return 0;
@@ -1155,7 +1155,7 @@ int32_t MapJsRequest::SerializePolyline(char **out_buf, uint32_t *out_len)
 	if (m_polyline == NULL)
 		return 1;
 
-	char *points_json = static_cast<char *>(sce_paf_malloc(102400));
+	char *points_json = new char[102400];
 
 	if (points_json == NULL)
 		return 3;
@@ -1175,7 +1175,7 @@ int32_t MapJsRequest::SerializePolyline(char **out_buf, uint32_t *out_len)
 			m_polyline->m_points[idx].m_longitude);
 	}
 
-	char *payload = static_cast<char *>(sce_paf_malloc(102400));
+	char *payload = new char[102400];
 
 	if (payload == NULL)
 		return 3;
@@ -1194,13 +1194,13 @@ int32_t MapJsRequest::SerializePolyline(char **out_buf, uint32_t *out_len)
 		m_polyline->m_z_index, m_polyline->m_id, points_json);
 
 	if (written == -1) {
-		sce_paf_free(payload);
+		delete[] payload;
 		*out_buf = NULL;
 		*out_len = 0;
 		return 1;
 	}
 
-	sce_paf_free(points_json);
+	delete[] points_json;
 	*out_buf = payload;
 	*out_len = (uint32_t)(written + 30);
 	return 0;
@@ -1208,7 +1208,7 @@ int32_t MapJsRequest::SerializePolyline(char **out_buf, uint32_t *out_len)
 
 int32_t MapJsRequest::SerializeCircle(char **out_buf, uint32_t *out_len)
 {
-	char *payload = static_cast<char *>(sce_paf_malloc(102400));
+	char *payload = new char[102400];
 
 	if (payload == NULL)
 		return 3;
@@ -1241,7 +1241,7 @@ int32_t MapJsRequest::SerializeCircle(char **out_buf, uint32_t *out_len)
 
 int32_t MapJsRequest::SerializeZoomCommand(char **out_buf, uint32_t *out_len)
 {
-	char *payload = static_cast<char *>(sce_paf_malloc(102400));
+	char *payload = new char[102400];
 
 	if (payload == NULL)
 		return 3;
@@ -1300,12 +1300,12 @@ int32_t MapJsRequest::SerializeZoomCommand(char **out_buf, uint32_t *out_len)
 
 int32_t MapJsRequest::SerializeDirectionSteps(char **out_buf, uint32_t *out_len)
 {
-	char *steps_json = static_cast<char *>(sce_paf_malloc(1));
+	char *steps_json = new char[1];
 
 	sce_paf_memset(steps_json, 0, 1);
 
 	if (m_dir_step_list != NULL) {
-		sce_paf_free(steps_json);
+		delete[] steps_json;
 
 		const char *step_fmt =
 			"{&quot;points&quot;:&quot;%s&quot;,&quot;levels&quot;:&quot;%s&quot;,"
@@ -1330,7 +1330,7 @@ int32_t MapJsRequest::SerializeDirectionSteps(char **out_buf, uint32_t *out_len)
 						      step.m_coord.m_longitude);
 		}
 
-		steps_json = static_cast<char *>(sce_paf_malloc((size_t)(total_len + 1)));
+		steps_json = new char[(size_t)(total_len + 1)];
 		sce_paf_memset(steps_json, 0, (size_t)(total_len + 1));
 
 		int32_t offset = 0;
@@ -1351,7 +1351,7 @@ int32_t MapJsRequest::SerializeDirectionSteps(char **out_buf, uint32_t *out_len)
 		}
 	}
 
-	char *payload = static_cast<char *>(sce_paf_malloc(102400));
+	char *payload = new char[102400];
 
 	if (payload == NULL)
 		return 3;
@@ -1371,7 +1371,7 @@ int32_t MapJsRequest::SerializeDirectionSteps(char **out_buf, uint32_t *out_len)
 		m_from_coord.m_latitude, m_from_coord.m_longitude,
 		m_to_coord.m_latitude, m_to_coord.m_longitude, steps_json);
 
-	sce_paf_free(steps_json);
+	delete[] steps_json;
 	*out_buf = payload;
 	*out_len = (uint32_t)(written + 30);
 	return 0;

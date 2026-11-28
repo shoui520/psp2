@@ -56,6 +56,9 @@ ScrollBarTouchParam::ScrollBarTouchParam()
 
 ScrollBarTouchStyleParam::ScrollBarTouchStyleParam()
 {
+#ifdef PAF_BUILD_2014
+	m_base_glow_obj.Init();
+#endif
 	m_base_glow_obj.m_name = "base_glow_obj";
 	m_base_glow_obj.m_index = ScrollBarTouch::OBJ_BASE_GLOW;
 	m_drawobj_param_list.push_back(&m_base_glow_obj);

@@ -111,6 +111,9 @@ void CornerButtonStyleParam::InitParam()
 #endif
 {
 	m_layout_type = 0;
+#ifdef PAF_BUILD_2014
+	m_corner_obj.Init();
+#endif
 	m_corner_obj.m_name = s_corner_button_objs[0];
 	m_corner_obj.m_index = CornerButton::OBJ_CORNER;
 	m_drawobj_param_list.push_back(&m_corner_obj);

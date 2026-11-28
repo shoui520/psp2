@@ -96,9 +96,15 @@ void ImageButtonStyleParam::InitParam()
 	m_layout_type_x = 0;
 	m_layout_type_y = 0;
 	m_image_margin = 0.0f;
+#ifdef PAF_BUILD_2014
+	m_image_obj.Init();
+#endif
 	m_image_obj.m_name = s_image_button_objs[0];
 	m_image_obj.m_index = ImageButton::OBJ_IMAGE;
 	m_drawobj_param_list.push_back(&m_image_obj);
+#ifdef PAF_BUILD_2014
+	m_image_back_obj.Init();
+#endif
 	m_image_back_obj.m_name = s_image_button_objs[1];
 	m_image_back_obj.m_index = ImageButton::OBJ_IMAGE_BACK;
 	m_drawobj_param_list.push_back(&m_image_back_obj);

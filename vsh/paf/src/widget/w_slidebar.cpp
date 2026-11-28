@@ -143,15 +143,27 @@ SlideBarStyleParam::SlideBarStyleParam()
 {
 	m_anim_time = 150.0f;
 	m_anim_func = 0;
+#ifdef PAF_BUILD_2014
+	m_obj[SlideBar::OBJ_BASE].Init();
+#endif
 	m_obj[SlideBar::OBJ_BASE].m_name = "base_obj";
 	m_obj[SlideBar::OBJ_BASE].m_index = SlideBar::OBJ_BASE;
 	m_drawobj_param_list.push_back(&m_obj[SlideBar::OBJ_BASE]);
+#ifdef PAF_BUILD_2014
+	m_obj[SlideBar::OBJ_BAR].Init();
+#endif
 	m_obj[SlideBar::OBJ_BAR].m_name = "bar_obj";
 	m_obj[SlideBar::OBJ_BAR].m_index = SlideBar::OBJ_BAR;
 	m_drawobj_param_list.push_back(&m_obj[SlideBar::OBJ_BAR]);
+#ifdef PAF_BUILD_2014
+	m_obj[SlideBar::OBJ_SLIDER].Init();
+#endif
 	m_obj[SlideBar::OBJ_SLIDER].m_name = "slider_obj";
 	m_obj[SlideBar::OBJ_SLIDER].m_index = SlideBar::OBJ_SLIDER;
 	m_drawobj_param_list.push_back(&m_obj[SlideBar::OBJ_SLIDER]);
+#ifdef PAF_BUILD_2014
+	m_obj[SlideBar::OBJ_SLIDER_GLOW].Init();
+#endif
 	m_obj[SlideBar::OBJ_SLIDER_GLOW].m_name = "slider_glow_obj";
 	m_obj[SlideBar::OBJ_SLIDER_GLOW].m_index = SlideBar::OBJ_SLIDER_GLOW;
 	m_drawobj_param_list.push_back(&m_obj[SlideBar::OBJ_SLIDER_GLOW]);

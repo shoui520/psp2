@@ -1036,6 +1036,9 @@ ScrollViewBaseParam::ScrollViewBaseParam()
 ScrollViewBaseStyleParam::ScrollViewBaseStyleParam()
 	: m_vertical_bar_margin(6.0f, 6.0f, 8.0f, 0.0f), m_horizontal_bar_margin(6.0f, 6.0f, 8.0f, 0.0f)
 {
+#ifdef PAF_BUILD_2014
+	m_bg_obj.Init();
+#endif
 	m_bg_obj.m_name = "bg_obj";
 	m_bg_obj.m_index = ScrollViewBase::OBJ_BG;
 	m_drawobj_param_list.push_back(&m_bg_obj);
