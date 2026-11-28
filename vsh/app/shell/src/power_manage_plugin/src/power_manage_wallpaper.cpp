@@ -75,35 +75,7 @@ public:
 	{
 	}
 
-	bool LoadSurfaceFromFile(const char *path)
-	{
-		int32_t openError = 0;
-		paf::common::SharedPtr<paf::File> file =
-			paf::LocalFile::Open(path, 0x10001U, 0xF000U, &openError);
-		if (file.get() == NULL || !file->IsOpened())
-			return false;
-
-		paf::graph::Surface::LoadOption loadOption;
-		loadOption.decode_heap = paf::Framework::Instance()->GetDecodeHeap();
-		loadOption.direct_load = true;
-		loadOption.reserved5 = true;
-
-		unsigned int retries = 0;
-		for (;;) {
-			m_surface = paf::graph::Surface::Load(g_powerManagePlugin->m_surface_pool,
-							      file, &loadOption);
-			if (m_surface.get() != NULL)
-				break;
-			if (loadOption.error != kSurfaceBusyRetryError)
-				break;
-			if (++retries > kSurfaceLoadMaxRetries)
-				break;
-			paf::thread::Sleep(kSurfaceLoadRetrySleepMs);
-		}
-
-		file->Close();
-		return m_surface.get() != NULL;
-	}
+	bool LoadSurfaceFromFile(const char *path);
 
 	virtual int Run()
 	{
@@ -163,6 +135,37 @@ public:
 	int m_texHeight;
 	paf::intrusive_ptr<paf::graph::Surface> m_surface;
 };
+
+/* 0x812402A4 */
+bool KeyLockImageJob::LoadSurfaceFromFile(const char *path)
+{
+	int32_t openError = 0;
+	paf::common::SharedPtr<paf::File> file =
+		paf::LocalFile::Open(path, 0x10001U, 0xF000U, &openError);
+	if (file.get() == NULL || !file->IsOpened())
+		return false;
+
+	paf::graph::Surface::LoadOption loadOption;
+	loadOption.decode_heap = paf::Framework::Instance()->GetDecodeHeap();
+	loadOption.direct_load = true;
+	loadOption.reserved5 = true;
+
+	unsigned int retries = 0;
+	for (;;) {
+		m_surface = paf::graph::Surface::Load(g_powerManagePlugin->m_surface_pool,
+						      file, &loadOption);
+		if (m_surface.get() != NULL)
+			break;
+		if (loadOption.error != kSurfaceBusyRetryError)
+			break;
+		if (++retries > kSurfaceLoadMaxRetries)
+			break;
+		paf::thread::Sleep(kSurfaceLoadRetrySleepMs);
+	}
+
+	file->Close();
+	return m_surface.get() != NULL;
+}
 
 /* --- KeyLockWallpaperMgr --- */
 

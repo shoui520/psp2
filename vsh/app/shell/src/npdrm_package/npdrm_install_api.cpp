@@ -400,6 +400,7 @@ static int configurePipelineSlots(NpDrmInstallContext *ctx, void *slotMem, SceSi
 	return 0;
 }
 
+/* 0x8136F32C */
 static int configurePipelineBuffers(NpDrmInstallContext *ctx, void *chunkHeap, SceSize heapSize,
 	SceSize chunkSize, SceUInt32 flags)
 {
@@ -435,6 +436,7 @@ static int configurePipelineBuffers(NpDrmInstallContext *ctx, void *chunkHeap, S
 	return 0;
 }
 
+/* 0x8136E472 */
 static int openInstallContextInternal(NpDrmInstallContext *ctx, const char *dirPath,
 	SceUInt32 flags, SceMode mode)
 {
@@ -460,6 +462,7 @@ static int openInstallContextInternal(NpDrmInstallContext *ctx, const char *dirP
 	return ctx->slotIndex;
 }
 
+/* 0x8136F01C */
 static void printThreadedPerfLog(NpDrmInstallContext *ctx)
 {
 	if ((ctx->pkgMeta.openFlags & NPDRM_OPEN_FLAG_PERF_LOG) == 0 || ctx->threadPool == NULL) {

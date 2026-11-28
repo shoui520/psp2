@@ -463,7 +463,7 @@ int npComm2SendCredsAction(SceUInt32 serviceType, int httpTemplate, int *httpCon
 	return 0;
 }
 
-/* 0x812C02B4 & 0x812C0A90 (shared helper for startReg / crGuestSess form body) */
+/* 0x812C02B4 (startReg form body with optional serviceEntity) */
 static int encodeAccountLocaleDobBody(int sendBody, int httpReq, SceUInt64 *outBodyLen,
 				      int protoVer, const char *country, const char *language,
 				      int birthYear, int birthMonth, int birthDay,
@@ -715,6 +715,75 @@ int npComm2SendVerifyDobAction(SceUInt32 serviceType, int httpTemplate, int *htt
 	return 0;
 }
 
+/* 0x812C0A90 (crGuestSess form body) */
+static int encodeGuestSessBody(int sendBody, int httpReq, SceUInt64 *outBodyLen,
+			       int protoVer, const char *country, const char *language,
+			       int birthYear, int birthMonth, int birthDay,
+			       const char *consoleId)
+{
+	const char *prefixes[2] = { "account.", NULL };
+	char buf[16];
+	SceUInt64 total = 0;
+
+	int ret = emitUintFormParam(sendBody, httpReq, FORM_KEY_VERSION,
+				    static_cast<unsigned int>(protoVer), 0);
+	if (ret < 0)
+		return ret;
+	total += static_cast<SceUInt64>(ret);
+
+	SceSize countryLen = sceClibStrnlen(country, 16u);
+	SceSize idx = 0;
+	for (; idx < countryLen && idx < 16u; ++idx)
+		buf[idx] = static_cast<char>(sceClibToupper(country[idx]));
+	buf[(idx == 16u) ? 15u : idx] = '\0';
+	ret = emitPrefixedFormParam(sendBody, httpReq, prefixes, 1u, FORM_KEY_COUNTRY,
+				    buf, sceClibStrnlen(buf, 0x400u), 1);
+	if (ret < 0)
+		return ret;
+	total += static_cast<SceUInt64>(ret);
+
+	SceSize langLen = sceClibStrnlen(language, 16u);
+	idx = 0;
+	for (; idx < langLen && idx < 16u; ++idx)
+		buf[idx] = static_cast<char>(sceClibTolower(language[idx]));
+	buf[(idx == 16u) ? 15u : idx] = '\0';
+	ret = emitPrefixedFormParam(sendBody, httpReq, prefixes, 1u, FORM_KEY_LANGUAGE,
+				    buf, sceClibStrnlen(buf, 0x400u), 1);
+	if (ret < 0)
+		return ret;
+	total += static_cast<SceUInt64>(ret);
+
+	sceClibSnprintf(buf, sizeof(buf), "%u", birthYear);
+	ret = emitPrefixedFormParam(sendBody, httpReq, prefixes, 1u, FORM_KEY_YOB,
+				    buf, sceClibStrnlen(buf, 0x400u), 1);
+	if (ret < 0)
+		return ret;
+	total += static_cast<SceUInt64>(ret);
+
+	sceClibSnprintf(buf, sizeof(buf), "%u", birthMonth);
+	ret = emitPrefixedFormParam(sendBody, httpReq, prefixes, 1u, FORM_KEY_MOB,
+				    buf, sceClibStrnlen(buf, 0x400u), 1);
+	if (ret < 0)
+		return ret;
+	total += static_cast<SceUInt64>(ret);
+
+	sceClibSnprintf(buf, sizeof(buf), "%u", birthDay);
+	ret = emitPrefixedFormParam(sendBody, httpReq, prefixes, 1u, FORM_KEY_DOB,
+				    buf, sceClibStrnlen(buf, 0x400u), 1);
+	if (ret < 0)
+		return ret;
+	total += static_cast<SceUInt64>(ret);
+
+	ret = emitStringFormParam(sendBody, httpReq, FORM_KEY_CONSOLE_ID, consoleId, 1);
+	if (ret < 0)
+		return ret;
+	total += static_cast<SceUInt64>(ret);
+
+	if (sendBody != 1)
+		*outBodyLen = total;
+	return 0;
+}
+
 /* 0x812C0D0A */
 int npComm2SendGuestSessAction(SceUInt32 serviceType, int httpTemplate, int *httpConn,
 			       SceUInt16 op, int *outHttpReq, int protoVer,
@@ -725,9 +794,9 @@ int npComm2SendGuestSessAction(SceUInt32 serviceType, int httpTemplate, int *htt
 	SceUInt64 bodyLen = 0;
 
 	for (int pass = 0; pass < 2; ++pass) {
-		int ret = encodeAccountLocaleDobBody((pass != 0) ? 1 : 0, *outHttpReq, &bodyLen,
-						     protoVer, country, language, birthYear,
-						     birthMonth, birthDay, consoleId, NULL);
+		int ret = encodeGuestSessBody((pass != 0) ? 1 : 0, *outHttpReq, &bodyLen,
+					      protoVer, country, language, birthYear,
+					      birthMonth, birthDay, consoleId);
 		if (ret < 0)
 			return ret;
 		if (pass == 0) {

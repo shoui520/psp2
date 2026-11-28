@@ -314,6 +314,7 @@ static int npOAuthBuildUrl(char *outUrl, SceSize outUrlSize, const char *scheme,
 	return ret;
 }
 
+/* 0x813A794A */
 static int npOAuthBuildPasswordTokenBody(NpOAuthRequest *request, const char *clientId,
 					 const char *clientSecret, const char *username,
 					 const char *password, char *outBody, int outBodySize)
@@ -542,6 +543,7 @@ static int npOAuthRequestNpssoToken(NpOAuthRequest *request, const char *console
 	return ret;
 }
 
+/* 0x813A82F6 */
 static int npOAuthBuildAuthorizeQuery(const char *clientId, const char *redirectUri,
 				      const char *scope, char *outQuery, int outQuerySize)
 {
@@ -662,6 +664,7 @@ static int npOAuthRequestAuthCode(NpOAuthRequest *request, const char *consoleTo
 	return ret;
 }
 
+/* 0x813A89E4 */
 static int npOAuthExecuteAuthCodeGrant(NpOAuthRequest *request, const char *clientId,
 				       const char *redirectUri, const char *scope,
 				       SceNpAuthorizationCode *outCode, int *outIssuerId)

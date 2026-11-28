@@ -552,6 +552,30 @@ static const char *const kThemeLangTagNames[LSDB_THEME_LANGUAGES] = {
 	"m_ch", "m_zh", "m_fi", "m_sv", "m_da", "m_no", "m_pl", "m_pt_br", "m_en_gb", "m_tr",
 };
 
+/* (0x813BC14E) */
+HomeProperty::HomeProperty()
+{
+	for (int i = 0; i < LSDB_THEME_PAGES; i++) {
+		m_bgParam[i].m_waveType = -1;
+		m_bgParam[i].m_fontColor = (unsigned int)-1;
+		m_bgParam[i].m_fontShadow = true;
+	}
+
+	IconParam *const icons[] = {
+		&m_browser, &m_video, &m_music,
+		&m_ps3Link, &m_party, &m_trophy,
+		&m_map, &m_near, &m_hostCollabo,
+		&m_welcomePark, &m_ps4Link, &m_friend,
+		&m_email, &m_calendar, &m_store,
+		&m_message, &m_parental, &m_camera,
+		&m_settings, &m_power,
+	};
+	for (unsigned int i = 0; i < sizeof(icons) / sizeof(icons[0]); i++) {
+		icons[i]->m_pagePos = -1;
+		icons[i]->m_iconPos = -1;
+	}
+}
+
 /* (0x813BC4E6) */
 InfomationProperty::InfomationProperty()
 	: m_contentVer(0)
@@ -562,26 +586,6 @@ InfomationProperty::InfomationProperty()
 LsdbThemeInfo::LsdbThemeInfo()
 	: m_slot(-1), m_status(0), m_lastModifiedTime(0)
 {
-	for (int i = 0; i < LSDB_THEME_PAGES; i++) {
-		m_homeProperty.m_bgParam[i].m_waveType = -1;
-		m_homeProperty.m_bgParam[i].m_fontColor = (unsigned int)-1;
-		m_homeProperty.m_bgParam[i].m_fontShadow = true;
-	}
-
-	IconParam *const icons[] = {
-		&m_homeProperty.m_browser, &m_homeProperty.m_video, &m_homeProperty.m_music,
-		&m_homeProperty.m_ps3Link, &m_homeProperty.m_party, &m_homeProperty.m_trophy,
-		&m_homeProperty.m_map, &m_homeProperty.m_near, &m_homeProperty.m_hostCollabo,
-		&m_homeProperty.m_welcomePark, &m_homeProperty.m_ps4Link, &m_homeProperty.m_friend,
-		&m_homeProperty.m_email, &m_homeProperty.m_calendar, &m_homeProperty.m_store,
-		&m_homeProperty.m_message, &m_homeProperty.m_parental, &m_homeProperty.m_camera,
-		&m_homeProperty.m_settings, &m_homeProperty.m_power,
-	};
-	for (unsigned int i = 0; i < sizeof(icons) / sizeof(icons[0]); i++) {
-		icons[i]->m_pagePos = -1;
-		icons[i]->m_iconPos = -1;
-	}
-
 	m_startScreenProperty.m_dateColor = 0;
 	m_startScreenProperty.m_dateLayout = -1;
 	m_startScreenProperty.m_notifyBgColor = 0;
@@ -600,6 +604,19 @@ static unsigned int themeSwapRgbaColor(unsigned int rawColor)
 	       (rawColor & 0xFF00U) | ((rawColor >> 16) & 0xFFU);
 }
 
+/* (0x813BC600) */
+static bool themeCheckFormatVersion(const paf::string &verStr)
+{
+	if (verStr.size() != 5)
+		return false;
+	const char *s = verStr.c_str();
+	if (s[0] < '0' || s[0] > '9' || s[1] < '0' || s[1] > '9' || s[2] != '.' ||
+	    s[3] < '0' || s[3] > '9' || s[4] < '0' || s[4] > '9')
+		return false;
+	int ver = (s[0] - '0') * 1000 + (s[1] - '0') * 100 + (s[3] - '0') * 10 + (s[4] - '0');
+	return ver == 99 || ver == 100;
+}
+
 /* (0x813BC670) */
 static int themeParseVersionNumber(const paf::string &verStr)
 {
@@ -610,6 +627,13 @@ static int themeParseVersionNumber(const paf::string &verStr)
 	    s[3] < '0' || s[3] > '9' || s[4] < '0' || s[4] > '9')
 		return -1;
 	return (s[0] - '0') * 1000 + (s[1] - '0') * 100 + (s[3] - '0') * 10 + (s[4] - '0');
+}
+
+/* (0x813BC6DE) */
+static bool themeCheckFormatVersionForLoadOption(const paf::string &verStr)
+{
+	int ver = themeParseVersionNumber(verStr);
+	return ver == 99 || ver == 100;
 }
 
 /* (0x813BD3D6) relative filename check: no '/', at most 32 bytes */
@@ -709,6 +733,22 @@ static bool themeParseBackgroundParam(int formatVer, NsxXmlNode &node,
 	return true;
 }
 
+/* (0x813BD718) */
+static bool themeParseBackgroundParamList(LsdbThemeInfo *info, int formatVer, NsxXmlNode &node)
+{
+	int bgIdx = 0;
+	for (paf::list<NsxXmlNode>::iterator bgIt = node.children.begin();
+	     bgIt != node.children.end(); ++bgIt) {
+		if (bgIt->name == "BackgroundParam" && bgIdx < LSDB_THEME_PAGES) {
+			if (!themeParseBackgroundParam(formatVer, *bgIt,
+						       &info->m_homeProperty.m_bgParam[bgIdx]))
+				return false;
+			++bgIdx;
+		}
+	}
+	return true;
+}
+
 /* (0x813BD77E) */
 static bool themeParseHomeProperty(LsdbThemeInfo *info, int formatVer, NsxXmlNode &node)
 {
@@ -716,16 +756,8 @@ static bool themeParseHomeProperty(LsdbThemeInfo *info, int formatVer, NsxXmlNod
 	for (paf::list<NsxXmlNode>::iterator it = node.children.begin();
 	     it != node.children.end(); ++it) {
 		if (it->name == "m_bgParam") {
-			int bgIdx = 0;
-			for (paf::list<NsxXmlNode>::iterator bgIt = it->children.begin();
-			     bgIt != it->children.end(); ++bgIt) {
-				if (bgIt->name == "BackgroundParam" && bgIdx < LSDB_THEME_PAGES) {
-					if (!themeParseBackgroundParam(formatVer, *bgIt,
-								       &home.m_bgParam[bgIdx]))
-						return false;
-					++bgIdx;
-				}
-			}
+			if (!themeParseBackgroundParamList(info, formatVer, *it))
+				return false;
 		} else if (it->name == "m_browser") {
 			if (!themeParseIconParam(info, *it, &home.m_browser, true)) return false;
 		} else if (it->name == "m_video") {
@@ -784,7 +816,28 @@ static bool themeParseHomeProperty(LsdbThemeInfo *info, int formatVer, NsxXmlNod
 	return true;
 }
 
-/* (0x813BDD66 & 0x813BDE32) */
+/* (0x813BDD66) */
+static bool themeParseThemeTextParam(NsxXmlNode &node, LsdbThemeText *outText)
+{
+	for (paf::list<NsxXmlNode>::iterator langIt = node.children.begin();
+	     langIt != node.children.end(); ++langIt) {
+		for (int idx = 0; idx < LSDB_THEME_LANGUAGES; idx++) {
+			if (langIt->name == kThemeLangTagNames[idx]) {
+				if (!langIt->text.empty()) {
+					if (langIt->text.size() > 128U)
+						return false;
+					paf::wstring converted;
+					common::Utf8ToUtf16(langIt->text, &converted, 0);
+					outText->m_language[idx] = converted;
+				}
+				break;
+			}
+		}
+	}
+	return true;
+}
+
+/* (0x813BDE32) */
 static bool themeParseThemeText(Locale locale, bool loadAllLangs, NsxXmlNode &node,
 				LsdbThemeText *outText)
 {
@@ -798,21 +851,8 @@ static bool themeParseThemeText(Locale locale, bool loadAllLangs, NsxXmlNode &no
 			outText->m_default = converted;
 		} else if (it->name == "m_param") {
 			if (loadAllLangs) {
-				for (paf::list<NsxXmlNode>::iterator langIt = it->children.begin();
-				     langIt != it->children.end(); ++langIt) {
-					for (int idx = 0; idx < LSDB_THEME_LANGUAGES; idx++) {
-						if (langIt->name == kThemeLangTagNames[idx]) {
-							if (!langIt->text.empty()) {
-								if (langIt->text.size() > 128U)
-									return false;
-								paf::wstring converted;
-								common::Utf8ToUtf16(langIt->text, &converted, 0);
-								outText->m_language[idx] = converted;
-							}
-							break;
-						}
-					}
-				}
+				if (!themeParseThemeTextParam(*it, outText))
+					return false;
 			} else {
 				int langIdx = (int)locale;
 				if (langIdx >= 0 && langIdx < LSDB_THEME_LANGUAGES) {
@@ -956,6 +996,66 @@ common::SharedPtr<LsdbThemeInfo> &ShellThemeReader::GetThemeInfo()
 	return m_info;
 }
 
+/* (0x813BE5A2) */
+static bool themeParseRootChildren(LsdbThemeInfo *info, Locale locale, int formatVer,
+				   bool loadAllLangs, NsxXmlNode &rootNode, bool isFinal)
+{
+	paf::list<NsxXmlNode>::iterator it = rootNode.children.begin();
+	while (it != rootNode.children.end()) {
+		if (!isFinal && rootNode.children.size() == 1)
+			break;
+		bool ok = true;
+		if (it->name == "StartScreenProperty")
+			ok = themeParseStartScreenProperty(info, *it);
+		else if (it->name == "InfomationBarProperty")
+			ok = themeParseInfomationBarProperty(info, formatVer, *it);
+		else if (it->name == "InfomationProperty")
+			ok = themeParseInfomationProperty(info, locale, loadAllLangs, *it);
+		else if (it->name == "HomeProperty")
+			ok = themeParseHomeProperty(info, formatVer, *it);
+		if (!ok)
+			return false;
+		paf::list<NsxXmlNode>::iterator nextIt = it;
+		++nextIt;
+		rootNode.children.erase(it);
+		it = nextIt;
+	}
+	return true;
+}
+
+/* (0x813BE6E2) */
+static bool themeParseRootElement(LsdbThemeInfo *info, int *outFormatVer, bool loadOption,
+				  NsxXmlNode &rootNode)
+{
+	if (rootNode.name != "theme")
+		return false;
+
+	bool hasFormatVer = false;
+	for (paf::map<paf::string, paf::string>::iterator attrIt = rootNode.attrs.begin();
+	     attrIt != rootNode.attrs.end(); ++attrIt) {
+		if (attrIt->first == "format-ver") {
+			bool valid = loadOption
+				? themeCheckFormatVersionForLoadOption(attrIt->second)
+				: themeCheckFormatVersion(attrIt->second);
+			if (!valid)
+				return false;
+			info->m_contentPath = attrIt->second;
+			int ver = themeParseVersionNumber(attrIt->second);
+			info->m_status = ver;
+			*outFormatVer = ver;
+			hasFormatVer = true;
+		} else if (attrIt->first == "package") {
+			char *endPtr = NULL;
+			unsigned int pkg = (unsigned int)sce_paf_strtol(
+				attrIt->second.c_str(), &endPtr, 10);
+			if (endPtr == NULL || *endPtr != '\0' || pkg > 1U)
+				return false;
+			info->m_slot = (int)pkg;
+		}
+	}
+	return hasFormatVer && info->m_slot != -1;
+}
+
 /* (0x813BE860) */
 int ShellThemeReader::Load()
 {
@@ -1007,68 +1107,19 @@ int ShellThemeReader::Load()
 
 		if (!checkedHeader) {
 			checkedHeader = true;
-			if (rootNode.name != "theme") {
-				m_info.reset();
-				shellXmlSaxDestroy(&saxParser);
-				return kThemeReaderErrorParseFailed;
-			}
-			bool hasFormatVer = false;
-			for (paf::map<paf::string, paf::string>::iterator aIt =
-				     rootNode.attrs.begin();
-			     aIt != rootNode.attrs.end(); ++aIt) {
-				if (aIt->first == "format-ver") {
-					int ver = themeParseVersionNumber(aIt->second);
-					if (ver != 99 && ver != 100) {
-						m_info.reset();
-						shellXmlSaxDestroy(&saxParser);
-						return kThemeReaderErrorParseFailed;
-					}
-					m_info->m_contentPath = aIt->second;
-					m_info->m_status = ver;
-					m_state = ver;
-					hasFormatVer = true;
-				} else if (aIt->first == "package") {
-					char *endPtr = NULL;
-					unsigned int pkg = (unsigned int)sce_paf_strtol(
-						aIt->second.c_str(), &endPtr, 10);
-					if (endPtr == NULL || *endPtr != '\0' || pkg > 1U) {
-						m_info.reset();
-						shellXmlSaxDestroy(&saxParser);
-						return kThemeReaderErrorParseFailed;
-					}
-					m_info->m_slot = (int)pkg;
-				}
-			}
-			if (!hasFormatVer || m_info->m_slot == -1) {
+			if (!themeParseRootElement(m_info.get(), &m_state, m_loadOption,
+						   rootNode)) {
 				m_info.reset();
 				shellXmlSaxDestroy(&saxParser);
 				return kThemeReaderErrorParseFailed;
 			}
 		}
 
-		paf::list<NsxXmlNode>::iterator it = rootNode.children.begin();
-		while (it != rootNode.children.end()) {
-			if (!isFinal && rootNode.children.size() == 1)
-				break;
-			bool ok = true;
-			if (it->name == "StartScreenProperty")
-				ok = themeParseStartScreenProperty(m_info.get(), *it);
-			else if (it->name == "InfomationBarProperty")
-				ok = themeParseInfomationBarProperty(m_info.get(), m_state, *it);
-			else if (it->name == "InfomationProperty")
-				ok = themeParseInfomationProperty(m_info.get(), m_locale,
-								  m_loadOption, *it);
-			else if (it->name == "HomeProperty")
-				ok = themeParseHomeProperty(m_info.get(), m_state, *it);
-			if (!ok) {
-				m_info.reset();
-				shellXmlSaxDestroy(&saxParser);
-				return kThemeReaderErrorParseFailed;
-			}
-			paf::list<NsxXmlNode>::iterator nextIt = it;
-			++nextIt;
-			rootNode.children.erase(it);
-			it = nextIt;
+		if (!themeParseRootChildren(m_info.get(), m_locale, m_state, m_loadOption,
+					    rootNode, isFinal)) {
+			m_info.reset();
+			shellXmlSaxDestroy(&saxParser);
+			return kThemeReaderErrorParseFailed;
 		}
 	}
 

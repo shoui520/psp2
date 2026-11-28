@@ -352,6 +352,8 @@ struct IconParam {
 #define LSDB_THEME_PAGES	10
 
 struct HomeProperty {
+	HomeProperty();
+
 	/* the icon of a system application (or of the power button, type 6) */
 	const IconParam *GetIconParam(const char *titleId, int type) const;
 

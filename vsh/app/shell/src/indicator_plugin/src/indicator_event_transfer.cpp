@@ -279,7 +279,7 @@ int IndicatorEventTransferItem::SetText(ui::Widget *widget, IDParam id)
 }
 
 /* the item's second line, the event's description, made when the widget has none
-   (0x811763E2) */
+   (0x811763E0) */
 int IndicatorEventTransferItem::SetSubText(ui::Widget *widget, IDParam id)
 {
 	if (widget == NULL || !widget->IsInherit(ui::CompositeDrawer::TypeName()))

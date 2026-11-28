@@ -96,8 +96,28 @@ struct PartyNewIndicatorState {
 		  actType(2),
 		  newFlag(true),
 		  execMode(0),
-		  pending(false),
-		  lastRowid(0)
+		  lastRowid(0),
+		  pending(false)
+	{
+	}
+
+	explicit PartyNewIndicatorState(SceUInt32 resourceHash)
+		: titleId(NP_PARTY_TITLE_ID),
+		  itemId("0"),
+		  msgType(256),
+		  msgKeyName(""),
+		  msgResourceHash(resourceHash),
+		  actType(2),
+		  newFlag(true),
+		  iconPath(NP_PARTY_ICON_PATH),
+		  titleText(""),
+		  descText(""),
+		  execTitleId(NP_PARTY_TITLE_ID),
+		  execArg(""),
+		  timeUpdated(""),
+		  execMode(0),
+		  lastRowid(0),
+		  pending(false)
 	{
 	}
 
@@ -157,38 +177,12 @@ static int s_partyPushHandle = 0;						/* 0x81548A34 */
 static paf::job::JobQueue *s_partyNiJobQueue = NULL;				/* 0x81548A38 */
 static SceUInt32 s_partyImpsListenerId = 0;					/* 0x81548A3C */
 
-static PartyNewIndicatorState s_partyNiTemplates[3];				/* 0x81548A40..0x81548D0F */
-static bool s_partyNiTemplatesInitialized = false;
-
-static void initPartyNiTemplate(PartyNewIndicatorState *tmpl, SceUInt32 msgHash)
-{
-	tmpl->titleId = NP_PARTY_TITLE_ID;
-	tmpl->itemId = "0";
-	tmpl->msgType = 256;
-	tmpl->msgKeyName = "";
-	tmpl->msgResourceHash = msgHash;
-	tmpl->actType = 2;
-	tmpl->newFlag = true;
-	tmpl->iconPath = NP_PARTY_ICON_PATH;
-	for (int i = 0; i < 9; ++i)
-		tmpl->msgArgs[i] = "";
-	tmpl->titleText = "";
-	tmpl->descText = "";
-	tmpl->execTitleId = NP_PARTY_TITLE_ID;
-	tmpl->execArg = "";
-	tmpl->timeUpdated = "";
-	tmpl->execMode = 0;
-}
-
-static void ensurePartyNiTemplatesInitialized(void)
-{
-	if (s_partyNiTemplatesInitialized)
-		return;
-	initPartyNiTemplate(&s_partyNiTemplates[0], NP_PARTY_MSG_ONE_FRIEND_HASH);
-	initPartyNiTemplate(&s_partyNiTemplates[1], NP_PARTY_MSG_MULTI_FRIEND_HASH);
-	initPartyNiTemplate(&s_partyNiTemplates[2], NP_PARTY_MSG_FRIEND_JOINED_HASH);
-	s_partyNiTemplatesInitialized = true;
-}
+/* 0x81548A40..0x81548D0F (static init 0x813882D4, atexit dtor 0x813881E4) */
+static PartyNewIndicatorState s_partyNiTemplates[3] = {
+	PartyNewIndicatorState(NP_PARTY_MSG_ONE_FRIEND_HASH),
+	PartyNewIndicatorState(NP_PARTY_MSG_MULTI_FRIEND_HASH),
+	PartyNewIndicatorState(NP_PARTY_MSG_FRIEND_JOINED_HASH),
+};
 
 /* 0x8138863C */
 static void partyVshContextReset(NpPartyVshContext *ctx)
@@ -379,7 +373,6 @@ static int notifyFriendJoinedParty(const char *onlineId)
 	if (onlineId[0] == '\0')
 		return 0;
 
-	ensurePartyNiTemplatesInitialized();
 	PartyNewIndicatorState notice = s_partyNiTemplates[2];
 	notice.msgArgs[0] = onlineId;
 	paf::string launchUri(NP_PARTY_PRESENCE_URI_PREFIX);
@@ -544,7 +537,6 @@ public:
 		if (m_accumulatedCount == 0 && m_friendsInPartyCount == 0)
 			return 0;
 
-		ensurePartyNiTemplatesInitialized();
 		if (m_friendsInPartyCount == 1 && !m_singleFriendOnlineId.empty()) {
 			PartyNewIndicatorState notice = s_partyNiTemplates[0];
 			notice.msgArgs[0] = m_singleFriendOnlineId;
@@ -573,118 +565,8 @@ public:
 	}
 
 private:
-	/* 0x813875A6 */
-	int ParseResponseJson(const char *json, SceSize jsonSize)
-	{
-		PartyJsonAllocator allocator;
-		sce::Json::Initializer initializer;
-		sce::Json::InitParameter initParam(&allocator, NULL, 1024);
-		initializer.initialize(&initParam);
-
-		PartyJsonNullDefaults nullDefaults;
-		nullDefaults.booleanValue.set(false);
-		nullDefaults.integerValue.set(static_cast<int64_t>(-99));
-		nullDefaults.uintegerValue.set(static_cast<uint64_t>(99));
-		nullDefaults.realValue.set(-0.99);
-		nullDefaults.stringValue.set(sce::Json::String("invalid string"));
-		nullDefaults.nullValue.set(sce::Json::kValueTypeNull);
-
-		sce::Json::Value root;
-		sce::Json::Array sessions;
-		sce::Json::Array friends;
-
-		root.clear();
-		root.setNullAccessCallBack(partyJsonNullAccessCallback, &nullDefaults);
-		int ret = sce::Json::Parser::parse(root, json, jsonSize);
-		if (ret != 0)
-			return ret;
-
-		(void)root["start"].getInteger();
-		int pageSize = static_cast<int>(root["size"].getInteger());
-		int totalResults = static_cast<int>(root["totalResults"].getInteger());
-		if (m_totalResults == 0)
-			m_totalResults = totalResults;
-		m_pageSize = pageSize;
-		m_accumulatedCount += pageSize;
-
-		sessions = root["sessions"].getArray();
-		int sessionIndex = 0;
-		for (sce::Json::Array::iterator it = sessions.begin();
-		     it != sessions.end(); ++it, ++sessionIndex) {
-			friends = (*it)["friends"].getArray();
-			int friendsInSession = static_cast<int>(friends.size());
-			m_friendsInPartyCount += friendsInSession;
-			if (m_totalResults == 1 && friendsInSession == 1 && sessionIndex == 0) {
-				sce::Json::Array::iterator friendIt = friends.begin();
-				if (friendIt->getType() == sce::Json::kValueTypeObject) {
-					const char *onlineId =
-						(*friendIt)["onlineId"].getString().c_str();
-					SceSize onlineIdLen =
-						(onlineId != NULL) ? sce_paf_strlen(onlineId) : 0;
-					m_singleFriendOnlineId.assign(onlineId, onlineIdLen);
-				}
-			}
-		}
-
-		initializer.terminate();
-		return 0;
-	}
-
-	/* 0x813878DC */
-	int ExecuteRequest()
-	{
-		m_requestId = -1;
-		int ret = SceNpWebApi_0D910413(m_webApiLibCtx, NP_PARTY_WEBAPI_SERVICE_GROUP,
-					       m_apiPath, NP_PARTY_WEBAPI_METHOD_GET,
-					       NULL, 0, &m_requestId);
-		if (ret < 0)
-			return ret;
-
-		NpWebApiResponseInfo response;
-		sce_paf_memset(&response, 0, sizeof(response));
-		ret = sceNpWebApiSendRequest2(m_requestId, NULL, 0, &response);
-		if (ret >= 0 && response.httpStatus == 200) {
-			SceSize responseCapacity = NP_PARTY_WEBAPI_DEFAULT_BUF_SIZE;
-			char contentLengthText[256];
-			sce_paf_memset(contentLengthText, 0, sizeof(contentLengthText));
-			ret = sceNpWebApiGetHttpResponseHeaderValue(
-				m_requestId, "Content-Length",
-				contentLengthText, sizeof(contentLengthText));
-			if (ret == 0) {
-				int parsedLength = sce_paf_atoi(contentLengthText);
-				if (parsedLength > 0)
-					responseCapacity = static_cast<SceSize>(parsedLength);
-			} else if (ret == NP_PARTY_WEBAPI_ERR_HEADER_NOT_FOUND) {
-				ret = 0;
-			}
-
-			char *buffer = new char[responseCapacity];
-			if (buffer != NULL) {
-				sce_paf_memset(buffer, 0, responseCapacity);
-				SceSize totalRead = 0;
-				while (totalRead < responseCapacity) {
-					int readRet = sceNpWebApiReadData(
-						m_requestId, buffer + totalRead,
-						responseCapacity - totalRead);
-					ret = readRet;
-					if (readRet == 0)
-						break;
-					if (readRet < 0)
-						break;
-					totalRead += static_cast<SceSize>(readRet);
-				}
-				if (ret >= 0)
-					ret = ParseResponseJson(buffer, totalRead);
-				delete[] buffer;
-			}
-		}
-
-		if (m_requestId >= 0) {
-			sceNpWebApiDeleteRequest(m_requestId);
-			m_requestId = -1;
-		}
-		return ret;
-	}
+	int ParseResponseJson(const char *json, SceSize jsonSize);
+	int ExecuteRequest();
 
 	int m_webApiLibCtx;
 	SceInt64 m_requestId;
@@ -695,6 +577,119 @@ private:
 	int m_friendsInPartyCount;
 	paf::string m_singleFriendOnlineId;
 };
+
+/* 0x813875A6 */
+int PartyGetFriendsInPartyJob::ParseResponseJson(const char *json, SceSize jsonSize)
+{
+	PartyJsonAllocator allocator;
+	sce::Json::Initializer initializer;
+	sce::Json::InitParameter initParam(&allocator, NULL, 1024);
+	initializer.initialize(&initParam);
+
+	PartyJsonNullDefaults nullDefaults;
+	nullDefaults.booleanValue.set(false);
+	nullDefaults.integerValue.set(static_cast<int64_t>(-99));
+	nullDefaults.uintegerValue.set(static_cast<uint64_t>(99));
+	nullDefaults.realValue.set(-0.99);
+	nullDefaults.stringValue.set(sce::Json::String("invalid string"));
+	nullDefaults.nullValue.set(sce::Json::kValueTypeNull);
+
+	sce::Json::Value root;
+	sce::Json::Array sessions;
+	sce::Json::Array friends;
+
+	root.clear();
+	root.setNullAccessCallBack(partyJsonNullAccessCallback, &nullDefaults);
+	int ret = sce::Json::Parser::parse(root, json, jsonSize);
+	if (ret != 0)
+		return ret;
+
+	(void)root["start"].getInteger();
+	int pageSize = static_cast<int>(root["size"].getInteger());
+	int totalResults = static_cast<int>(root["totalResults"].getInteger());
+	if (m_totalResults == 0)
+		m_totalResults = totalResults;
+	m_pageSize = pageSize;
+	m_accumulatedCount += pageSize;
+
+	sessions = root["sessions"].getArray();
+	int sessionIndex = 0;
+	for (sce::Json::Array::iterator it = sessions.begin();
+	     it != sessions.end(); ++it, ++sessionIndex) {
+		friends = (*it)["friends"].getArray();
+		int friendsInSession = static_cast<int>(friends.size());
+		m_friendsInPartyCount += friendsInSession;
+		if (m_totalResults == 1 && friendsInSession == 1 && sessionIndex == 0) {
+			sce::Json::Array::iterator friendIt = friends.begin();
+			if (friendIt->getType() == sce::Json::kValueTypeObject) {
+				const char *onlineId =
+					(*friendIt)["onlineId"].getString().c_str();
+				SceSize onlineIdLen =
+					(onlineId != NULL) ? sce_paf_strlen(onlineId) : 0;
+				m_singleFriendOnlineId.assign(onlineId, onlineIdLen);
+			}
+		}
+	}
+
+	initializer.terminate();
+	return 0;
+}
+
+/* 0x813878DC */
+int PartyGetFriendsInPartyJob::ExecuteRequest()
+{
+	m_requestId = -1;
+	int ret = SceNpWebApi_0D910413(m_webApiLibCtx, NP_PARTY_WEBAPI_SERVICE_GROUP,
+				       m_apiPath, NP_PARTY_WEBAPI_METHOD_GET,
+				       NULL, 0, &m_requestId);
+	if (ret < 0)
+		return ret;
+
+	NpWebApiResponseInfo response;
+	sce_paf_memset(&response, 0, sizeof(response));
+	ret = sceNpWebApiSendRequest2(m_requestId, NULL, 0, &response);
+	if (ret >= 0 && response.httpStatus == 200) {
+		SceSize responseCapacity = NP_PARTY_WEBAPI_DEFAULT_BUF_SIZE;
+		char contentLengthText[256];
+		sce_paf_memset(contentLengthText, 0, sizeof(contentLengthText));
+		ret = sceNpWebApiGetHttpResponseHeaderValue(
+			m_requestId, "Content-Length",
+			contentLengthText, sizeof(contentLengthText));
+		if (ret == 0) {
+			int parsedLength = sce_paf_atoi(contentLengthText);
+			if (parsedLength > 0)
+				responseCapacity = static_cast<SceSize>(parsedLength);
+		} else if (ret == NP_PARTY_WEBAPI_ERR_HEADER_NOT_FOUND) {
+			ret = 0;
+		}
+
+		char *buffer = new char[responseCapacity];
+		if (buffer != NULL) {
+			sce_paf_memset(buffer, 0, responseCapacity);
+			SceSize totalRead = 0;
+			while (totalRead < responseCapacity) {
+				int readRet = sceNpWebApiReadData(
+					m_requestId, buffer + totalRead,
+					responseCapacity - totalRead);
+				ret = readRet;
+				if (readRet == 0)
+					break;
+				if (readRet < 0)
+					break;
+				totalRead += static_cast<SceSize>(readRet);
+			}
+			if (ret >= 0)
+				ret = ParseResponseJson(buffer, totalRead);
+			delete[] buffer;
+		}
+	}
+
+	if (m_requestId >= 0) {
+		sceNpWebApiDeleteRequest(m_requestId);
+		m_requestId = -1;
+	}
+	return ret;
+}
 
 /* Job: leave current session via NP WebAPI DELETE when party app stops (0x8138750E..0x813875A5) */
 class PartyLeaveSessionJob : public paf::job::JobItem {
@@ -762,8 +757,6 @@ static void onImpsMyOnlineStatusChanged(int onlineStatus, void *userArg)
 /* 0x81385A6E */
 static int initPartyNewIndicatorSystem(void)
 {
-	ensurePartyNiTemplatesInitialized();
-
 	NewEventAccessor *accessor = new NewEventAccessor();
 	if (accessor != NULL)
 		SceLsdb_919C0934(accessor);

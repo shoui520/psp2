@@ -821,7 +821,9 @@ set_source_files_properties(
 	shell_handler_table.cpp
 	shell_util_server.cpp
 	shutter_sound_server.cpp
+	start.cpp
 	theme.cpp
+	src/bgapputil/bgapputil_server.cpp
 	src/dbsetup/dbsetup_lib.cpp
 	src/dbsetup/dbrecovery_lib.cpp
 	src/esecron/src/esehttp.cpp
@@ -834,8 +836,10 @@ set_source_files_properties(
 	src/liblocation/src/location_service/provider_gps_sm.cpp
 	src/livearea_plugin/src/livearea_feed.cpp
 	src/livearea_plugin/src/livearea_page_inner.cpp
+	src/mtp/src/mtp_marlin_service.cpp
 	src/mtp/src/mtp_server.cpp
 	src/mtp/src/mtp_service_dispatch.cpp
+	src/mtp/src/mtp_storage_usb_handler.cpp
 	src/mtp/src/mtp_wrapper.cpp
 	src/musiccore_plugin/src/musiccore_audio_output.cpp
 	src/musiccore_plugin/src/musiccore_cache_io_engine.cpp
@@ -851,8 +855,10 @@ set_source_files_properties(
 	src/musiccore_plugin/src/musiccore_mp3_readers.cpp
 	src/musiccore_plugin/src/musiccore_mp4_boxes.cpp
 	src/musiccore_plugin/src/musiccore_mp4_media.cpp
+	src/musiccore_plugin/src/musiccore_player_base.cpp
 	src/musiccore_plugin/src/musiccore_plugin.cpp
 	src/musiccore_plugin/src/musiccore_queue.cpp
+	src/musiccore_plugin/src/musiccore_state_impls.cpp
 	src/musiccore_plugin/src/musiccore_state_machine.cpp
 	src/musiccore_plugin/src/musiccore_sync_cache_io.cpp
 	src/musiccore_plugin/src/musiccore_wav_at9_media.cpp
@@ -901,18 +907,28 @@ set_source_files_properties(
 	src/np/manager/np_manager_core.cpp
 	src/np/np_ipc2/np_ipc2_server.cpp
 	src/np/np_ipc2/np_ipc2_service_server.cpp
+	src/np/np_push_vsh/core/np_push_callout.cpp
 	src/np/np_push_vsh/core/np_push_connection.cpp
+	src/np/np_push_vsh/core/np_push_context.cpp
 	src/np/np_push_vsh/core/np_push_ctl.cpp
+	src/np/np_push_vsh/core/np_push_get_server_addr_trans.cpp
 	src/np/np_push_vsh/core/np_push_packet.cpp
 	src/np/np_push_vsh/core/np_push_request.cpp
+	src/np/np_push_vsh/core/np_push_session.cpp
+	src/np/np_push_vsh/core/np_push_session_cmd.cpp
+	src/np/np_push_vsh/core/np_push_user_context.cpp
 	src/np/np_push_vsh/core/np_push_user_request.cpp
 	src/np/np_push_vsh/service/np_push_dispatcher.cpp
+	src/np/np_push_vsh/service/np_push_ipc_context.cpp
 	src/np/np_push_vsh/service/np_push_ipc_data.cpp
 	src/np/np_push_vsh/service/np_push_ipc_server.cpp
 	src/np/np_websocket/np_websocket_connection.cpp
 	src/np/np_websocket/np_websocket_handshake.cpp
 	src/np/np_websocket/np_websocket_net.cpp
 	src/np/np_websocket/util/np_websocket_util_stream.cpp
+	src/np/oauth/np_oauth_request.cpp
+	src/np/oauth/np_oauth_response.cpp
+	src/np/oauth/np_oauth_vsh.cpp
 	src/np/polling/np_polling.cpp
 	src/np/roster/np_roster_client.cpp
 	src/np/roster/np_roster_xml.cpp
@@ -920,6 +936,7 @@ set_source_files_properties(
 	src/np/rt/np_rt_core.cpp
 	src/np/rt/np_rt_ext.cpp
 	src/np/rt/np_rt_stanza.cpp
+	src/np/rt/np_rt_util.cpp
 	src/np/rt/np_rt_xmpp.cpp
 	src/np/sns_fb/np_sns_fb_lib.cpp
 	src/np/sns_fb/np_sns_fb_server.cpp
@@ -938,10 +955,15 @@ set_source_files_properties(
 	src/npdrm_package/npdrm_install_api.cpp
 	src/nsx/nsx_clock_updater.cpp
 	src/nsx/nsx_whats_new.cpp
+	src/nsx/nsx_xml_http.cpp
 	src/photo_export/photo_export_convert.cpp
 	src/picture_file_creator/picture_encoder.cpp
 	src/picture_file_creator/picture_exif_writer.cpp
 	src/power_manage_plugin/src/power_manage_auth.cpp
+	src/power_manage_plugin/src/power_manage_keylock.cpp
+	src/power_manage_plugin/src/power_manage_menu.cpp
+	src/power_manage_plugin/src/power_manage_plugin.cpp
+	src/power_manage_plugin/src/power_manage_wallpaper.cpp
 	promoter_util_server.cpp
 	src/patch_chk_plugin/bgdl_patch_client.cpp
 	src/patch_chk_plugin/game_update.cpp
@@ -956,17 +978,28 @@ set_source_files_properties(
 	src/telephony_plugin/src/common/src/tel_message_thread.cpp
 	src/telephony_plugin/src/common/src/tel_operator_profile.cpp
 	src/telephony_plugin/src/common/src/tel_phone_number_util.cpp
+	src/telephony_plugin/src/general/tel_general_logic_action.cpp
 	src/telephony_plugin/src/general/tel_general_logic_gui.cpp
+	src/telephony_plugin/src/general/tel_general_logic_mediator.cpp
 	src/telephony_plugin/src/general/tel_general_logic_mediator2.cpp
+	src/telephony_plugin/src/general/tel_general_logic_netctl.cpp
 	src/telephony_plugin/src/sms/tel_sms_logic_mediator.cpp
 	src/telephony_plugin/src/sms_pdu_transcoder/src/sms_pdu_transcoder/amsslib/LibWMS.cpp
 	src/teleport/teleport_app_helper.cpp
 	src/teleport/teleport_http_protocol.cpp
 	src/theme_plugin/src/theme_plugin.cpp
+	src/topmenu_plugin/src/app_check_job.cpp
 	src/topmenu_plugin/src/debugger_check_job.cpp
+	src/topmenu_plugin/src/install_job.cpp
 	src/topmenu_plugin/src/online_storage_delete_launcher.cpp
+	src/topmenu_plugin/src/psm_update_job.cpp
+	src/topmenu_plugin/src/remove_savedata_job.cpp
 	src/topmenu_plugin/src/spawn_process_job.cpp
 	src/topmenu_plugin/src/top_window.cpp
+	src/topmenu_plugin/src/top_window_base.cpp
+	src/topmenu_plugin/src/topmenu_app_error.cpp
+	src/topmenu_plugin/src/update_addcont_license_job.cpp
+	src/topmenu_plugin/src/update_license_job.cpp
 	src/trigger_mgr/time_of_day_timer.cpp
 	src/trigger_mgr/trigger_mgr.cpp
 	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=0)
@@ -1007,7 +1040,7 @@ set_source_files_properties(
 	${PSP2_SRC}/sys/internal/usermode/src/updater_core/pup_controller.cpp
 	${PSP2_SRC}/sys/internal/usermode/src/updater_core/update_utility.cpp
 	${PSP2_SRC}/sys/internal/usermode/src/updater_core/segment_analysis.cpp
-	PROPERTIES COMPILE_DEFINITIONS "PSP2_STRIP_UNUSED;sceClibMemcpy=sceClibMemcpy_safe")
+	PROPERTIES COMPILE_DEFINITIONS "PSP2_STRIP_UNUSED;UPDATER_CORE_2014;sceClibMemcpy=sceClibMemcpy_safe;SceLibKernel_A7819967=sceKernelLockLwMutex;SceLibKernel_499EA781=sceKernelUnlockLwMutex")
 # User-mode build of appmgr FAT/exFAT formatter
 set_source_files_properties(
 	${PSP2_SRC}/sys/internal/kernel/src/appmgr/fat_format.c
