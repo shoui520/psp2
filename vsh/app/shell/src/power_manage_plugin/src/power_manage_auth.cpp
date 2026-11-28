@@ -56,7 +56,7 @@ static const SceUInt32 kMsgPasscodeMismatchHash = 0xD772818FU;		/* -680354417 */
 static const SceInt32 kAuthTimeoutTimerId = 0x01000000;
 static const SceUInt32 kAuthAllInputDevices = 127;
 
-static const wchar_t *getPowerManageString(SceUInt32 hash)
+static inline const wchar_t *getPowerManageString(SceUInt32 hash)
 {
 	paf::Plugin *plugin = paf::Plugin::Find("power_manage_plugin");
 	return plugin->GetString(paf::IDParam(hash));

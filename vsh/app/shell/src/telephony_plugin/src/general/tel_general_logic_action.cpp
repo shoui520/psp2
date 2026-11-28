@@ -7,7 +7,12 @@
 #include <std/new>
 #include <std/string.h>
 #include <scetypes.h>
+#include "src/livespace_db/lsdb_keys.h"
 #include "tel_general_internal.h"
+
+extern "C" {
+int SceNetInternal_7493FB0C(int mode, int flags);
+}
 
 namespace telephony {
 
@@ -960,11 +965,18 @@ void TelGeneralLogicAction::HandleMediatorInternalLivespaceReady()
 		CheckAndNotifyComFirmwareUpdate();
 }
 
+/* 0x81264AD2 */
 void TelGeneralLogicAction::HandleMediatorInternalDeactivateTelReg()
 {
-	if (m_netCtl != NULL) {
-		int activationState = 0;
-		m_netCtl->SetSimActivationState(&activationState);
+	TelEventInfo ev(0, -1, -1);
+	GetEvent(&ev);
+	if (ev.GetEventArg() == 2) {
+		SceNetInternal_7493FB0C(0, 0);
+		if (m_lpmManager != NULL)
+			m_lpmManager->SetLowPowerModeImmediate(true);
+		HandleMediatorInternalResume();
+		if (m_lpmManager != NULL)
+			m_lpmManager->ApplyCurrentAttributes();
 	}
 }
 
@@ -1479,8 +1491,8 @@ void TelGeneralLogicAction::ActionGetNetworkScanInfo()
 	SetApiResult(TEL_API_GET_NETWORK_SCAN_INFO, TelephonyResult(TEL_OK));
 }
 
-/* 0x81268350: API 30 SetNetRegisterAuto */
-void TelGeneralLogicAction::ActionSetNetRegisterAuto()
+/* 0x8126824E */
+TelephonyResult TelGeneralLogicAction::RegisterNetworkAutoAndSave()
 {
 	TelephonyResult res(TEL_ERR_NOT_INITIALIZED);
 	if (m_bbmcAdapter != NULL)
@@ -1490,10 +1502,17 @@ void TelGeneralLogicAction::ActionSetNetRegisterAuto()
 		TelAttributeManager *attrMgr = TelAttributeManager::GetInstance();
 		if (attrMgr != NULL) {
 			TelAttributeValue modeAttr(TEL_ATTR_NETWORK_SELECTION);
-			modeAttr.SetInt(0);
-			attrMgr->SetAttribute(modeAttr);
+			modeAttr.SetInt(1);
+			res = attrMgr->SetAttribute(modeAttr);
 		}
 	}
+	return res;
+}
+
+/* 0x81268350: API 30 SetNetRegisterAuto */
+void TelGeneralLogicAction::ActionSetNetRegisterAuto()
+{
+	TelephonyResult res = RegisterNetworkAutoAndSave();
 
 	SetApiResult(TEL_API_SET_NET_REGISTER_AUTO, res);
 	TelEventInfo doneEv(res.IsSuccess() ? TEL_EV_BBMC_NET_REGISTER_FIN

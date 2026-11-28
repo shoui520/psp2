@@ -724,6 +724,7 @@ private:
 	TelephonyResult ApplyDataRoamingControl();
 	TelephonyResult ApplyRssiThresholds();
 	TelephonyResult ApplyNetworkSelection();
+	TelephonyResult RegisterNetworkAutoAndSave();
 	TelephonyResult SaveApnToRegistry(const TelephonyOperator &apnCredentials,
 					  int billingPlan, bool writeBillingPlan);
 	void CheckAndNotifyComFirmwareUpdate();
@@ -1142,11 +1143,16 @@ public:
 	virtual void OnNotify(const TelEventInfo &event);
 	virtual void OnHandleEvent(const TelEventInfo &event);
 
-	/* Internal helpers implemented in tel_general_logic_mediator2.cpp */
+	/* Internal helpers implemented in tel_general_logic_mediator.cpp / mediator2.cpp */
+	TelephonyResult GetSignalLevel(TelAntennaLevelThreshold *outLevel);
+	TelephonyResult GetNetworkInfo(TelNetworkInfo *outInfo);
+	TelephonyResult GetRoamingInfo(TelRoamingInfo *outRoaming);
 	void BroadcastGeneralInfo();
 	void RefreshNetworkAndBearerCache();
 	void HandleInternalAsyncApi(const TelEventInfo &event);
 	void DispatchMediatorEvent(const TelEventInfo &event);
+	TelephonyResult LookupOperatorProfileVersion(int operatorId, paf::string *outVersion);
+	TelephonyResult BuildDiagnosticReport(paf::string *outReport);
 	TelephonyResult ReadNetworkReportLine(paf::string *outLine);
 
 	static int PowerCallback(int notifyId, int notifyCount, int powerInfo, void *common);

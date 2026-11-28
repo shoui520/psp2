@@ -8,10 +8,13 @@
 #include <scetypes.h>
 #include <kernel/processmgr.h>
 #include "shell.h"
+#include "src/livespace_db/lsdb_keys.h"
 #include "tel_general_internal.h"
 
 extern "C" {
 int sceAppMgrGetStatusByAppId(SceUID appId, void *status);
+SceUInt32 vshIdStorageReadLeaf(SceSize leaf, void *buf);
+int sceKernelGetSystemSwVersion(void *swInfo);
 }
 
 namespace telephony {
@@ -22,27 +25,128 @@ struct TelAppStatusQuery {
 	char titleId[116];
 };
 
+/* Layout of sceKernelGetSystemSwVersion output (0x28 bytes) */
+struct TelDiagSwVersionInfo {
+	SceSize size;
+	char versionString[28];
+	SceUInt32 versionCode;
+	SceUInt32 reserved;
+};
+
+/* IdStorage leaf 0x113 (modem/operator diagnostics, 512 bytes) */
+struct TelDiagModemLeaf {
+	char modemId[32];
+	SceUInt8 headerBytes[20];
+	SceInt32 antennaDispType;	/* +0x34 */
+	SceUInt8 middleBytes[80];
+	SceInt32 targetOperatorCode;	/* +0x88 */
+	SceUInt8 tailBytes[372];
+};
+
+/* IdStorage leaf 0x115 (product / target operator code, 512 bytes) */
+struct TelDiagProductLeaf {
+	char productCode[15];
+	SceUInt8 operatorDigitAscii;	/* +0x0F */
+	SceUInt8 tailBytes[496];
+};
+
 static const int kPowerCbResumeComplete = 0x40000;
 
 /* ------------------------------------------------------------------
- * Network report line reader (0x8125A9B4)
+ * Diagnostic report builder & line reader (0x8125A192..0x8125AAB3)
  * ------------------------------------------------------------------ */
 
+/* 0x8125A192 */
+TelephonyResult TelGeneralLogicMediator::LookupOperatorProfileVersion(int operatorId,
+								      paf::string *outVersion)
+{
+	TelephonyPlmn emptyPlmn;
+	TelOperatorProfileFactory factory(operatorId, emptyPlmn, 1);
+	paf::vector<TelOperatorProfile> profiles;
+	TelephonyResult res = factory.LoadProfiles(&profiles);
+	if (res.IsSuccess() && !profiles.empty()) {
+		paf::string version;
+		profiles[0].GetVersion(&version);
+		if (!version.empty())
+			*outVersion = version;
+	}
+	return res;
+}
+
+/* 0x8125A2A8 */
+TelephonyResult TelGeneralLogicMediator::BuildDiagnosticReport(paf::string *outReport)
+{
+	TelephonyResult res(TEL_OK);
+	paf::string profileVer = telFormatString("%s %s", __DATE__, __TIME__);
+	LookupOperatorProfileVersion(1, &profileVer);
+
+	TelDiagProductLeaf productLeaf;
+	if (vshIdStorageReadLeaf(0x115U, &productLeaf) == 0 &&
+	    productLeaf.operatorDigitAscii >= '0' && productLeaf.operatorDigitAscii <= '9') {
+		LookupOperatorProfileVersion((int)(productLeaf.operatorDigitAscii - '0'),
+					     &profileVer);
+	}
+
+	TelDiagSwVersionInfo swInfo;
+	swInfo.size = sizeof(swInfo);
+	const char *swText = "";
+	if (sceKernelGetSystemSwVersion(&swInfo) == 0)
+		swText = swInfo.versionString;
+
+	paf::string swVersionStr(swText);
+	outReport->append(telFormatString("SystemSoftwareVersion: vsh%s_[%s]\n",
+					  swVersionStr.c_str(), profileVer.c_str()));
+
+	paf::string netReport;
+	if (m_bbmcAdapter != NULL)
+		res = m_bbmcAdapter->GetNetworkStatusReport(&netReport);
+	outReport->append(netReport);
+
+	paf::string devReport;
+	if (m_bbmcAdapter != NULL)
+		res = m_bbmcAdapter->GetDeviceInfoReport(&devReport);
+	outReport->append(devReport);
+
+	TelDiagModemLeaf modemLeaf;
+	if (vshIdStorageReadLeaf(0x113U, &modemLeaf) == 0) {
+		outReport->append(telFormatString("Target Operator:%d\n",
+						  modemLeaf.targetOperatorCode));
+		outReport->append(telFormatString("Antenna Disp Type:%d\n",
+						  modemLeaf.antennaDispType));
+	}
+
+	SceUInt8 rawProductLeaf[512];
+	if (vshIdStorageReadLeaf(0x115U, rawProductLeaf) != 0) {
+		outReport->append(telFormatString("Product:unknown\n"));
+		outReport->append(telFormatString("Product target operator:unknown\n"));
+	} else {
+		bool hasValidByte = false;
+		for (SceSize idx = 0; idx < sizeof(rawProductLeaf); ++idx) {
+			if (rawProductLeaf[idx] != 0xFFU) {
+				hasValidByte = true;
+				break;
+			}
+		}
+		if (hasValidByte) {
+			char productName[16];
+			sce_paf_memset(productName, 0, 13);
+			sce_paf_strncpy(productName, (const char *)rawProductLeaf, 12);
+			outReport->append(telFormatString("Product:%s\n", productName));
+		} else {
+			outReport->append(telFormatString("Product:(invalid)\n"));
+		}
+		outReport->append(telFormatString("Product target operator:%x\n",
+						  (unsigned int)rawProductLeaf[15]));
+	}
+	return res;
+}
+
+/* 0x8125A9B4 */
 TelephonyResult TelGeneralLogicMediator::ReadNetworkReportLine(paf::string *outLine)
 {
 	*outLine = "";
 	if (m_networkReportCache.empty() && m_networkReportOffset == 0) {
-		paf::string netReport;
-		paf::string devReport;
-		if (m_bbmcAdapter != NULL) {
-			m_bbmcAdapter->GetNetworkStatusReport(&netReport);
-			m_bbmcAdapter->GetDeviceInfoReport(&devReport);
-		}
-		m_networkReportCache = netReport;
-		if (!devReport.empty()) {
-			m_networkReportCache.append("\n");
-			m_networkReportCache.append(devReport.c_str());
-		}
+		BuildDiagnosticReport(&m_networkReportCache);
 	}
 
 	if (m_networkReportOffset >= m_networkReportCache.size()) {

@@ -533,6 +533,57 @@ TelephonyResult TelGeneralLogicMediator::ChangePinCode(const TelPinCode &oldPin,
 	return res;
 }
 
+/* 0x812575CA */
+TelephonyResult TelGeneralLogicMediator::GetSignalLevel(TelAntennaLevelThreshold *outLevel)
+{
+	m_smcMutex.Lock();
+	if (outLevel != NULL)
+		m_action.signalLevel = *outLevel;
+	m_action.SetCurrentApiId(TEL_API_GET_SIGNAL_LEVEL);
+	TelBbmcSharedData::SetStaticInt(524328, TEL_API_GET_SIGNAL_LEVEL);
+	m_stateMachine.GetSignalLevel();
+	TelephonyResult res = m_action.GetApiResult(TEL_API_GET_SIGNAL_LEVEL);
+	TelBbmcSharedData::SetStaticInt(524328, TEL_API_GET_SIGNAL_LEVEL + 64);
+	if (res.IsSuccess() && outLevel != NULL)
+		*outLevel = m_action.signalLevel;
+	m_smcMutex.Unlock();
+	return res;
+}
+
+/* 0x8125768A */
+TelephonyResult TelGeneralLogicMediator::GetNetworkInfo(TelNetworkInfo *outInfo)
+{
+	m_smcMutex.Lock();
+	if (outInfo != NULL)
+		m_action.networkInfo = *outInfo;
+	m_action.SetCurrentApiId(TEL_API_GET_NETWORK_INFO);
+	TelBbmcSharedData::SetStaticInt(524328, TEL_API_GET_NETWORK_INFO);
+	m_stateMachine.GetNetworkInfo();
+	TelephonyResult res = m_action.GetApiResult(TEL_API_GET_NETWORK_INFO);
+	TelBbmcSharedData::SetStaticInt(524328, TEL_API_GET_NETWORK_INFO + 64);
+	if (res.IsSuccess() && outInfo != NULL)
+		*outInfo = m_action.networkInfo;
+	m_smcMutex.Unlock();
+	return res;
+}
+
+/* 0x812577AC */
+TelephonyResult TelGeneralLogicMediator::GetRoamingInfo(TelRoamingInfo *outRoaming)
+{
+	m_smcMutex.Lock();
+	if (outRoaming != NULL)
+		m_action.roamingInfo = *outRoaming;
+	m_action.SetCurrentApiId(TEL_API_GET_ROAMING_INFO);
+	TelBbmcSharedData::SetStaticInt(524328, TEL_API_GET_ROAMING_INFO);
+	m_stateMachine.GetRoamingInfo();
+	TelephonyResult res = m_action.GetApiResult(TEL_API_GET_ROAMING_INFO);
+	TelBbmcSharedData::SetStaticInt(524328, TEL_API_GET_ROAMING_INFO + 64);
+	if (res.IsSuccess() && outRoaming != NULL)
+		*outRoaming = m_action.roamingInfo;
+	m_smcMutex.Unlock();
+	return res;
+}
+
 /* 0x81257B9C */
 TelephonyResult TelGeneralLogicMediator::SetEventCallback(TelGeneralEventCallback callback,
 							  void *userData)

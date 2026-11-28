@@ -496,13 +496,56 @@ static void onNetCtlEvent(int prevState, int curState, int event, int errorCode,
 	}
 }
 
+/* --- PowerManageEventServer inline helpers (inlined by Sony into interface callbacks & ctor) --- */
+
+inline void PowerManageEventServer::AddListener(int eventCode, PowerEventCallback callback,
+						void *userData)
+{
+	PowerEventListenerEntry *entry = new PowerEventListenerEntry(callback, userData);
+	paf::map<int, PowerEventListenerList *>::iterator it = m_listeners.find(eventCode);
+	if (it == m_listeners.end()) {
+		PowerEventListenerList *list = new PowerEventListenerList();
+		list->m_entries.push_back(entry);
+		m_listeners[eventCode] = list;
+		return;
+	}
+	PowerEventListenerList *list = it->second;
+	if (list != NULL)
+		list->m_entries.push_back(entry);
+}
+
+inline void PowerManageEventServer::RemoveListener(int eventCode, PowerEventCallback callback,
+						   void *userData)
+{
+	paf::map<int, PowerEventListenerList *>::iterator mapIt = m_listeners.find(eventCode);
+	if (mapIt == m_listeners.end() || mapIt->second == NULL)
+		return;
+
+	PowerEventListenerList *list = mapIt->second;
+	for (paf::list<PowerEventListenerEntry *>::iterator it = list->m_entries.begin();
+	     it != list->m_entries.end(); ++it) {
+		PowerEventListenerEntry *entry = *it;
+		if (entry->m_callback == callback && entry->m_userData == userData) {
+			if (list->m_dispatching) {
+				entry->m_pendingRemove = true;
+			} else {
+				list->m_entries.erase(it);
+				delete entry;
+			}
+			return;
+		}
+	}
+}
+
 /* --- Interface table functions --- */
 
+/* 0x812351B6 */
 static void ifaceAddPowerEventListener(PowerEventCallback callback, void *userData)
 {
 	g_powerManage->m_eventServer.AddListener(0, callback, userData);
 }
 
+/* 0x8123530E */
 static void ifaceRemovePowerEventListener(PowerEventCallback callback, void *userData)
 {
 	g_powerManage->m_eventServer.RemoveListener(0, callback, userData);
@@ -727,6 +770,7 @@ static AuthInterface *ifaceGetAuthInterface(void)
 
 /* --- PowerManageEventServer --- */
 
+/* 0x81236888 */
 PowerManageEventServer::PowerManageEventServer()
 {
 	AddListener(0, OnDispatchKeyHandler, &m_keyStack);
@@ -740,45 +784,6 @@ PowerManageEventServer::~PowerManageEventServer()
 		delete it->second;
 	}
 	m_listeners.clear();
-}
-
-void PowerManageEventServer::AddListener(int eventCode, PowerEventCallback callback,
-					 void *userData)
-{
-	PowerEventListenerEntry *entry = new PowerEventListenerEntry(callback, userData);
-	paf::map<int, PowerEventListenerList *>::iterator it = m_listeners.find(eventCode);
-	if (it == m_listeners.end()) {
-		PowerEventListenerList *list = new PowerEventListenerList();
-		list->m_entries.push_back(entry);
-		m_listeners[eventCode] = list;
-		return;
-	}
-	PowerEventListenerList *list = it->second;
-	if (list != NULL)
-		list->m_entries.push_back(entry);
-}
-
-void PowerManageEventServer::RemoveListener(int eventCode, PowerEventCallback callback,
-					    void *userData)
-{
-	paf::map<int, PowerEventListenerList *>::iterator mapIt = m_listeners.find(eventCode);
-	if (mapIt == m_listeners.end() || mapIt->second == NULL)
-		return;
-
-	PowerEventListenerList *list = mapIt->second;
-	for (paf::list<PowerEventListenerEntry *>::iterator it = list->m_entries.begin();
-	     it != list->m_entries.end(); ++it) {
-		PowerEventListenerEntry *entry = *it;
-		if (entry->m_callback == callback && entry->m_userData == userData) {
-			if (list->m_dispatching) {
-				entry->m_pendingRemove = true;
-			} else {
-				list->m_entries.erase(it);
-				delete entry;
-			}
-			return;
-		}
-	}
 }
 
 void PowerManageEventServer::Dispatch(int eventCode)
