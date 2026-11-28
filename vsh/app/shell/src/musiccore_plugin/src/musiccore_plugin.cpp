@@ -1064,7 +1064,8 @@ int shellMusicSetBgm(bool on)
 	return musicCoreSetSystemPause(on ? 1 : 0);
 }
 
-static int musicCoreSendSimpleCmd(const MusicCoreClientCtx *ctx, SceUInt16 cmdId)
+/* 0x811CD0E0 */
+int musicCoreCmdOpen(const MusicCoreClientCtx *ctx)
 {
 	if (ctx->channel > 2)
 		return (int)0x80100D01;
@@ -1074,15 +1075,26 @@ static int musicCoreSendSimpleCmd(const MusicCoreClientCtx *ctx, SceUInt16 cmdId
 		return 0;
 	payload[3] = (SceUInt32)ctx->pid;
 	payload[4] = (SceUInt32)ctx->appId;
-	SceUInt32 packed = ((SceUInt32)cmdId << 16) | ctx->channel;
+	SceUInt32 packed = ((SceUInt32)10 << 16) | ctx->channel;
 	return s_musicCoreMain->SendCmd(packed, ctx->seqId, packed,
 		payload, sizeof(payload));
 }
 
-/* 0x811CD0E0 */
-int musicCoreCmdOpen(const MusicCoreClientCtx *ctx) { return musicCoreSendSimpleCmd(ctx, 10); }
 /* 0x811CD18E */
-int musicCoreCmdClose(const MusicCoreClientCtx *ctx) { return musicCoreSendSimpleCmd(ctx, 11); }
+int musicCoreCmdClose(const MusicCoreClientCtx *ctx)
+{
+	if (ctx->channel > 2)
+		return (int)0x80100D01;
+	SceUInt32 payload[5];
+	sce_paf_memset(payload, 0, sizeof(payload));
+	if (s_musicCoreMain == NULL)
+		return 0;
+	payload[3] = (SceUInt32)ctx->pid;
+	payload[4] = (SceUInt32)ctx->appId;
+	SceUInt32 packed = ((SceUInt32)11 << 16) | ctx->channel;
+	return s_musicCoreMain->SendCmd(packed, ctx->seqId, packed,
+		payload, sizeof(payload));
+}
 
 /* 0x811CD23C */
 int musicCoreGetCurrentUri(const MusicCoreClientCtx *ctx, char *outUri)
@@ -1160,7 +1172,20 @@ int musicCoreCmdExOpen(const MusicCoreClientCtx *ctx, const void *openParam)
 }
 
 /* 0x811CD480 */
-int musicCoreCmdExClose(const MusicCoreClientCtx *ctx) { return musicCoreSendSimpleCmd(ctx, 23); }
+int musicCoreCmdExClose(const MusicCoreClientCtx *ctx)
+{
+	if (ctx->channel > 2)
+		return (int)0x80100D01;
+	SceUInt32 payload[5];
+	sce_paf_memset(payload, 0, sizeof(payload));
+	if (s_musicCoreMain == NULL)
+		return 0;
+	payload[3] = (SceUInt32)ctx->pid;
+	payload[4] = (SceUInt32)ctx->appId;
+	SceUInt32 packed = ((SceUInt32)23 << 16) | ctx->channel;
+	return s_musicCoreMain->SendCmd(packed, ctx->seqId, packed,
+		payload, sizeof(payload));
+}
 
 /* 0x811CD52E */
 int musicCoreCmdSetAvrcp(const MusicCoreClientCtx *ctx, SceUInt8 enable)
@@ -1369,9 +1394,36 @@ int musicCoreGetParam(const MusicCoreClientCtx *ctx, int paramId, int *outVal)
 }
 
 /* 0x811CDC54 */
-int musicCoreDbSync(const MusicCoreClientCtx *ctx) { return musicCoreSendSimpleCmd(ctx, 20); }
+int musicCoreDbSync(const MusicCoreClientCtx *ctx)
+{
+	if (ctx->channel > 2)
+		return (int)0x80100D01;
+	SceUInt32 payload[5];
+	sce_paf_memset(payload, 0, sizeof(payload));
+	if (s_musicCoreMain == NULL)
+		return 0;
+	payload[3] = (SceUInt32)ctx->pid;
+	payload[4] = (SceUInt32)ctx->appId;
+	SceUInt32 packed = ((SceUInt32)20 << 16) | ctx->channel;
+	return s_musicCoreMain->SendCmd(packed, ctx->seqId, packed,
+		payload, sizeof(payload));
+}
+
 /* 0x811CDD02 */
-int musicCoreDbOpen(const MusicCoreClientCtx *ctx) { return musicCoreSendSimpleCmd(ctx, 15); }
+int musicCoreDbOpen(const MusicCoreClientCtx *ctx)
+{
+	if (ctx->channel > 2)
+		return (int)0x80100D01;
+	SceUInt32 payload[5];
+	sce_paf_memset(payload, 0, sizeof(payload));
+	if (s_musicCoreMain == NULL)
+		return 0;
+	payload[3] = (SceUInt32)ctx->pid;
+	payload[4] = (SceUInt32)ctx->appId;
+	SceUInt32 packed = ((SceUInt32)15 << 16) | ctx->channel;
+	return s_musicCoreMain->SendCmd(packed, ctx->seqId, packed,
+		payload, sizeof(payload));
+}
 
 /* 0x811CDDB0 */
 int musicCoreDbSuspend(const MusicCoreClientCtx *ctx, SceUInt8 flag)
@@ -1391,9 +1443,36 @@ int musicCoreDbSuspend(const MusicCoreClientCtx *ctx, SceUInt8 flag)
 }
 
 /* 0x811CDE6C */
-int musicCoreDbClose(const MusicCoreClientCtx *ctx) { return musicCoreSendSimpleCmd(ctx, 17); }
+int musicCoreDbClose(const MusicCoreClientCtx *ctx)
+{
+	if (ctx->channel > 2)
+		return (int)0x80100D01;
+	SceUInt32 payload[5];
+	sce_paf_memset(payload, 0, sizeof(payload));
+	if (s_musicCoreMain == NULL)
+		return 0;
+	payload[3] = (SceUInt32)ctx->pid;
+	payload[4] = (SceUInt32)ctx->appId;
+	SceUInt32 packed = ((SceUInt32)17 << 16) | ctx->channel;
+	return s_musicCoreMain->SendCmd(packed, ctx->seqId, packed,
+		payload, sizeof(payload));
+}
+
 /* 0x811CDF1A */
-int musicCoreDbDetach(const MusicCoreClientCtx *ctx) { return musicCoreSendSimpleCmd(ctx, 18); }
+int musicCoreDbDetach(const MusicCoreClientCtx *ctx)
+{
+	if (ctx->channel > 2)
+		return (int)0x80100D01;
+	SceUInt32 payload[5];
+	sce_paf_memset(payload, 0, sizeof(payload));
+	if (s_musicCoreMain == NULL)
+		return 0;
+	payload[3] = (SceUInt32)ctx->pid;
+	payload[4] = (SceUInt32)ctx->appId;
+	SceUInt32 packed = ((SceUInt32)18 << 16) | ctx->channel;
+	return s_musicCoreMain->SendCmd(packed, ctx->seqId, packed,
+		payload, sizeof(payload));
+}
 
 /* 0x811CDFC8 */
 int musicCoreDbQuery(const MusicCoreClientCtx *ctx, const void *data)
@@ -1450,10 +1529,20 @@ int musicCoreCmdResetChannel(const MusicCoreClientCtx *ctx)
 	MusicCoreClientCtx copy = *ctx;
 	if (copy.channel > 2)
 		return (int)0x80100D01;
-	int ret = musicCoreSendSimpleCmd(&copy, 17);
+	int ret = musicCoreDbClose(&copy);
 	if (ret != 0)
 		return ret;
-	return musicCoreSendSimpleCmd(ctx, 21);
+	if (ctx->channel > 2)
+		return (int)0x80100D01;
+	SceUInt32 payload[5];
+	sce_paf_memset(payload, 0, sizeof(payload));
+	if (s_musicCoreMain == NULL)
+		return 0;
+	payload[3] = (SceUInt32)ctx->pid;
+	payload[4] = (SceUInt32)ctx->appId;
+	SceUInt32 packed = ((SceUInt32)21 << 16) | ctx->channel;
+	return s_musicCoreMain->SendCmd(packed, ctx->seqId, packed,
+		payload, sizeof(payload));
 }
 
 struct ShellAppEventInfo {

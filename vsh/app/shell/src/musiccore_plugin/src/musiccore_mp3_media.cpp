@@ -188,74 +188,109 @@ struct MpegFrameHeader {
     uint8_t isValid;
     uint8_t pad[3];
 
-    /* 0x811EB942 */
-    MpegFrameHeader() : rawBits(0), isValid(0) {}
-
-    /* 0x811EB94A */
-    int parse(uint32_t headerBits)
-    {
-        int reason = 0xFFFF;
-        if (validateMpegLayer3Header(headerBits, &reason) == 0) {
-            return 0;
-        }
-        rawBits = headerBits;
-        isValid = 1;
-        return 1;
-    }
-
-    /* 0x811EB98C */
-    int getBitrate() const { return getMpegLayer3Bitrate(rawBits); }
-
-    /* 0x811EB996 */
-    int getSampleRate() const { return getMpegLayer3SampleRate(rawBits); }
+    MpegFrameHeader();
+    int parse(uint32_t headerBits);
+    int getBitrate() const;
+    int getSampleRate() const;
 };
+
+/* 0x811EB942 */
+MpegFrameHeader::MpegFrameHeader() : rawBits(0), isValid(0) {}
+
+/* 0x811EB94A */
+int MpegFrameHeader::parse(uint32_t headerBits)
+{
+    int reason = 0xFFFF;
+    if (validateMpegLayer3Header(headerBits, &reason) == 0) {
+        return 0;
+    }
+    rawBits = headerBits;
+    isValid = 1;
+    return 1;
+}
+
+/* 0x811EB98C */
+int MpegFrameHeader::getBitrate() const
+{
+    return getMpegLayer3Bitrate(rawBits);
+}
+
+/* 0x811EB996 */
+int MpegFrameHeader::getSampleRate() const
+{
+    return getMpegLayer3SampleRate(rawBits);
+}
 
 struct XingHeaderData {
     uint8_t rawBytes[16];
     uint8_t isValid;
 
-    /* 0x811EB9A0 */
-    int parse(const void *src)
-    {
-        if (sce_paf_memcmp(src, "Xing", 4u) != 0 && sce_paf_memcmp(src, "Info", 4u) != 0) {
-            return 0;
-        }
-        sce_paf_memcpy(rawBytes, src, sizeof(rawBytes));
-        isValid = 1;
-        return 1;
-    }
+    int parse(const void *src);
 };
+
+/* 0x811EB9A0 */
+int XingHeaderData::parse(const void *src)
+{
+    if (sce_paf_memcmp(src, "Xing", 4u) != 0 && sce_paf_memcmp(src, "Info", 4u) != 0) {
+        return 0;
+    }
+    sce_paf_memcpy(rawBytes, src, sizeof(rawBytes));
+    isValid = 1;
+    return 1;
+}
 
 struct VbriHeaderData {
     uint8_t rawBytes[26];
     uint8_t isValid;
 
-    /* 0x811EB9E2 */
-    int parse(const void *src)
-    {
-        if (sce_paf_memcmp(src, "VBRI", 4u) != 0) {
-            return 0;
-        }
-        sce_paf_memcpy(rawBytes, src, sizeof(rawBytes));
-        isValid = 1;
-        return 1;
-    }
-
-    /* 0x811EB910 */
-    uint32_t getFrameCount() const { return readBigEndian32(rawBytes + 14); }
-
-    /* 0x811EB91A */
-    uint16_t getTocEntryCount() const { return readBigEndian16(rawBytes + 18); }
-
-    /* 0x811EB924 */
-    uint16_t getTocScaleFactor() const { return readBigEndian16(rawBytes + 20); }
-
-    /* 0x811EB92E */
-    uint16_t getTocEntrySize() const { return readBigEndian16(rawBytes + 22); }
-
-    /* 0x811EB938 */
-    uint16_t getTocFramesPerEntry() const { return readBigEndian16(rawBytes + 24); }
+    int parse(const void *src);
+    uint32_t getFrameCount() const;
+    uint16_t getTocEntryCount() const;
+    uint16_t getTocScaleFactor() const;
+    uint16_t getTocEntrySize() const;
+    uint16_t getTocFramesPerEntry() const;
 };
+
+/* 0x811EB9E2 */
+int VbriHeaderData::parse(const void *src)
+{
+    if (sce_paf_memcmp(src, "VBRI", 4u) != 0) {
+        return 0;
+    }
+    sce_paf_memcpy(rawBytes, src, sizeof(rawBytes));
+    isValid = 1;
+    return 1;
+}
+
+/* 0x811EB910 */
+uint32_t VbriHeaderData::getFrameCount() const
+{
+    return readBigEndian32(rawBytes + 14);
+}
+
+/* 0x811EB91A */
+uint16_t VbriHeaderData::getTocEntryCount() const
+{
+    return readBigEndian16(rawBytes + 18);
+}
+
+/* 0x811EB924 */
+uint16_t VbriHeaderData::getTocScaleFactor() const
+{
+    return readBigEndian16(rawBytes + 20);
+}
+
+/* 0x811EB92E */
+uint16_t VbriHeaderData::getTocEntrySize() const
+{
+    return readBigEndian16(rawBytes + 22);
+}
+
+/* 0x811EB938 */
+uint16_t VbriHeaderData::getTocFramesPerEntry() const
+{
+    return readBigEndian16(rawBytes + 24);
+}
 
 struct StreamIoInterface {
     virtual ~StreamIoInterface() {}
@@ -463,162 +498,166 @@ public:
     Mp3PacketReader packetReader;
     int audioDataSize;
 
-    /* 0x811EAB1C */
-    explicit Mp3StreamParser(StreamIoInterface *io)
-        : ioStream(io),
-          openStatus(-1),
-          audioDataSize(-1)
-    {
-        mp3ParserInterfaceInit(this);
-        mp3FrameCursorInit(this);
-        mp3Id3v1Init(&id3v1Reader, ioStream);
-        mp3Id3v2Init(&id3v2Reader, ioStream);
-        mp3FrameScannerInit(&frameScanner, ioStream);
-        mp3FirstFrameInit(&firstFrame, ioStream, &id3v2Reader, &frameScanner);
-        mp3NextFrameInit(&nextFrameIter, &frameScanner);
-        mp3CbrSeekerInit(&cbrSeeker, &firstFrame, &frameScanner);
-        mp3XingInit(&xingReader, ioStream, &firstFrame);
-        mp3XingSeekerInit(&xingSeeker, &firstFrame, &xingReader, &frameScanner);
-        mp3VbriInit(&vbriReader, ioStream, &firstFrame);
-        mp3VbriSeekerInit(&vbriSeeker, &firstFrame, &vbriReader, &frameScanner);
-        mp3CompositeSeekerInit(&compositeSeeker, &cbrSeeker, &xingSeeker, &vbriSeeker);
-        mp3PacketReaderInit(&packetReader, ioStream);
-    }
+    explicit Mp3StreamParser(StreamIoInterface *io);
+    virtual ~Mp3StreamParser();
+    int openStream();
+    int getStreamPosition();
+    int setIoHint(int mode);
+    int computeAudioDataSize(int *outErr);
+    int getDurationMs(unsigned int *outDurationMs, int *outErr);
+    int getSampleRate(int *outRate, int *outErr);
+    int getSamplesPerFrame(uint16_t *outSamples, int *outErr);
+    virtual int readFirstFrame(Mp3FramePacket *outPacket, int *outErr);
+    virtual int readNextFrame(Mp3FramePacket *outPacket, int *outErr);
+    virtual int seekToTimeMs(unsigned int targetMs, Mp3FramePacket *outPacket, int *outErr);
+    int checkFrameReadable(const Mp3FramePacket *packet, int *outErr);
+};
 
-    /* 0x811EABF2 / 0x811EAC98 / 0x811EB72E / 0x811EB73C */
-    virtual ~Mp3StreamParser()
-    {
-        if (ioStream != NULL && ioStream->isOpen() == 1 && ioStream->close() >= 0) {
-            openStatus = -1;
-        }
-        mp3PacketReaderDestroy(&packetReader);
-        mp3VbriSeekerDestroy(&vbriSeeker);
-        mp3VbriDestroy(&vbriReader);
-        mp3XingSeekerDestroy(&xingSeeker);
-        mp3XingDestroy(&xingReader);
-        mp3CbrSeekerDestroy(&cbrSeeker);
-        mp3NextFrameDestroy(&nextFrameIter);
-        mp3FirstFrameDestroy(&firstFrame);
-        mp3Id3v2Destroy(&id3v2Reader);
-        mp3Id3v1Destroy(&id3v1Reader);
-        mp3FrameCursorDestroy(this);
-        mp3ParserInterfaceDestroy(this);
-    }
+/* 0x811EAB1C */
+Mp3StreamParser::Mp3StreamParser(StreamIoInterface *io)
+    : ioStream(io),
+      openStatus(-1),
+      audioDataSize(-1)
+{
+    mp3ParserInterfaceInit(this);
+    mp3FrameCursorInit(this);
+    mp3Id3v1Init(&id3v1Reader, ioStream);
+    mp3Id3v2Init(&id3v2Reader, ioStream);
+    mp3FrameScannerInit(&frameScanner, ioStream);
+    mp3FirstFrameInit(&firstFrame, ioStream, &id3v2Reader, &frameScanner);
+    mp3NextFrameInit(&nextFrameIter, &frameScanner);
+    mp3CbrSeekerInit(&cbrSeeker, &firstFrame, &frameScanner);
+    mp3XingInit(&xingReader, ioStream, &firstFrame);
+    mp3XingSeekerInit(&xingSeeker, &firstFrame, &xingReader, &frameScanner);
+    mp3VbriInit(&vbriReader, ioStream, &firstFrame);
+    mp3VbriSeekerInit(&vbriSeeker, &firstFrame, &vbriReader, &frameScanner);
+    mp3CompositeSeekerInit(&compositeSeeker, &cbrSeeker, &xingSeeker, &vbriSeeker);
+    mp3PacketReaderInit(&packetReader, ioStream);
+}
 
-    /* 0x811EACA8 */
-    int openStream()
-    {
-        if (ioStream == NULL) {
-            return -1;
-        }
-        if (openStatus >= 0) {
-            return openStatus;
-        }
-        int ret = ioStream->open();
-        if (ret >= 0) {
-            openStatus = ret;
-        }
-        return ret;
+/* 0x811EABF2 / 0x811EAC98 / 0x811EB72E / 0x811EB73C */
+Mp3StreamParser::~Mp3StreamParser()
+{
+    if (ioStream != NULL && ioStream->isOpen() == 1 && ioStream->close() >= 0) {
+        openStatus = -1;
     }
+    mp3PacketReaderDestroy(&packetReader);
+    mp3VbriSeekerDestroy(&vbriSeeker);
+    mp3VbriDestroy(&vbriReader);
+    mp3XingSeekerDestroy(&xingSeeker);
+    mp3XingDestroy(&xingReader);
+    mp3CbrSeekerDestroy(&cbrSeeker);
+    mp3NextFrameDestroy(&nextFrameIter);
+    mp3FirstFrameDestroy(&firstFrame);
+    mp3Id3v2Destroy(&id3v2Reader);
+    mp3Id3v1Destroy(&id3v1Reader);
+    mp3FrameCursorDestroy(this);
+    mp3ParserInterfaceDestroy(this);
+}
 
-    /* 0x811EACD0 */
-    int getStreamPosition()
-    {
-        if (ioStream == NULL) {
-            return 0;
-        }
-        return ioStream->getPosition();
+/* 0x811EACA8 */
+int Mp3StreamParser::openStream()
+{
+    if (ioStream == NULL) {
+        return -1;
     }
-
-    /* 0x811EACE2 */
-    int setIoHint(int mode)
-    {
-        if (ioStream == NULL) {
-            return 0;
-        }
-        switch (mode) {
-        case 4:
-            ioStream->setIoHint(3, 0);
-            return 1;
-        case 2:
-            ioStream->setIoHint(2, 0);
-            return 1;
-        case 1:
-            ioStream->setIoHint(1, 0);
-            return 1;
-        case 0:
-            ioStream->setIoHint(0, 0);
-            return 1;
-        default:
-            return 0;
-        }
+    if (openStatus >= 0) {
+        return openStatus;
     }
+    int ret = ioStream->open();
+    if (ret >= 0) {
+        openStatus = ret;
+    }
+    return ret;
+}
 
-    /* 0x811EAD36 */
-    int computeAudioDataSize(int *outErr)
-    {
-        int overhead = 0;
-        if (*mp3Id3v2GetState(&id3v2Reader) == 255 && mp3Id3v2Parse(&id3v2Reader, 0, outErr) == 0) {
-            return 0;
-        }
-        if (*mp3Id3v2GetState(&id3v2Reader) == 1) {
-            overhead = mp3Id3v2GetPayloadSize(mp3Id3v2GetTagHeader(&id3v2Reader)) + 10;
-        }
-        if (*mp3Id3v1GetState(&id3v1Reader) == 255 && mp3Id3v1Parse(&id3v1Reader, outErr) == 0) {
-            return 0;
-        }
-        if (*mp3Id3v1GetState(&id3v1Reader) == 1) {
-            overhead += 128;
-        }
-        int totalSize = ioStream->getSize();
-        if (totalSize < 0) {
-            *outErr = totalSize;
-            return 0;
-        }
-        audioDataSize = totalSize - overhead;
+/* 0x811EACD0 */
+int Mp3StreamParser::getStreamPosition()
+{
+    if (ioStream == NULL) {
+        return 0;
+    }
+    return ioStream->getPosition();
+}
+
+/* 0x811EACE2 */
+int Mp3StreamParser::setIoHint(int mode)
+{
+    if (ioStream == NULL) {
+        return 0;
+    }
+    switch (mode) {
+    case 4:
+        ioStream->setIoHint(3, 0);
         return 1;
+    case 2:
+        ioStream->setIoHint(2, 0);
+        return 1;
+    case 1:
+        ioStream->setIoHint(1, 0);
+        return 1;
+    case 0:
+        ioStream->setIoHint(0, 0);
+        return 1;
+    default:
+        return 0;
+    }
+}
+
+/* 0x811EAD36 */
+int Mp3StreamParser::computeAudioDataSize(int *outErr)
+{
+    int overhead = 0;
+    if (*mp3Id3v2GetState(&id3v2Reader) == 255 && mp3Id3v2Parse(&id3v2Reader, 0, outErr) == 0) {
+        return 0;
+    }
+    if (*mp3Id3v2GetState(&id3v2Reader) == 1) {
+        overhead = mp3Id3v2GetPayloadSize(mp3Id3v2GetTagHeader(&id3v2Reader)) + 10;
+    }
+    if (*mp3Id3v1GetState(&id3v1Reader) == 255 && mp3Id3v1Parse(&id3v1Reader, outErr) == 0) {
+        return 0;
+    }
+    if (*mp3Id3v1GetState(&id3v1Reader) == 1) {
+        overhead += 128;
+    }
+    int totalSize = ioStream->getSize();
+    if (totalSize < 0) {
+        *outErr = totalSize;
+        return 0;
+    }
+    audioDataSize = totalSize - overhead;
+    return 1;
+}
+
+/* 0x811EADCC */
+int Mp3StreamParser::getDurationMs(unsigned int *outDurationMs, int *outErr)
+{
+    if (ioStream == NULL) {
+        *outErr = -1;
+        return 0;
+    }
+    if (ioStream->isOpen() == 0) {
+        *outErr = MP3_ERR_NOT_OPEN;
+        return 0;
+    }
+    if (audioDataSize < 0 && computeAudioDataSize(outErr) == 0) {
+        return 0;
+    }
+    if (mp3FirstFrameEnsure(&firstFrame) == 0) {
+        if (*outErr == MP3_ERR_EOF) {
+            *outErr = MP3_ERR_NO_FRAME;
+        }
+        return 0;
     }
 
-    /* 0x811EADCC */
-    int getDurationMs(unsigned int *outDurationMs, int *outErr)
-    {
-        if (ioStream == NULL) {
-            *outErr = -1;
-            return 0;
-        }
-        if (ioStream->isOpen() == 0) {
-            *outErr = MP3_ERR_NOT_OPEN;
-            return 0;
-        }
-        if (audioDataSize < 0 && computeAudioDataSize(outErr) == 0) {
-            return 0;
-        }
-        if (mp3FirstFrameEnsure(&firstFrame) == 0) {
-            if (*outErr == MP3_ERR_EOF) {
-                *outErr = MP3_ERR_NO_FRAME;
-            }
-            return 0;
-        }
+    MpegFrameHeader *hdr = mp3FirstFrameGetHeader(&firstFrame);
+    unsigned int samplesPerFrame = (unsigned int)getMpegLayer3SamplesPerFrame(hdr->rawBits);
+    unsigned int sampleRate = (unsigned int)hdr->getSampleRate();
 
-        MpegFrameHeader *hdr = mp3FirstFrameGetHeader(&firstFrame);
-        unsigned int samplesPerFrame = (unsigned int)getMpegLayer3SamplesPerFrame(hdr->rawBits);
-        unsigned int sampleRate = (unsigned int)hdr->getSampleRate();
-
-        if (mp3XingEnsure(&xingReader, audioDataSize, outErr) != 0) {
-            const uint8_t *xingRaw = mp3XingGetRawData(&xingReader);
-            if ((xingRaw[7] & 2u) != 0u && (xingRaw[7] & 1u) != 0u) {
-                uint32_t totalFrames = readBigEndian32(xingRaw + 8);
-                unsigned int ms = (unsigned int)((((float)totalFrames * (float)samplesPerFrame) / (float)sampleRate) * 1000.0f);
-                *outDurationMs = ms;
-                if (ms != 0u) {
-                    *outErr = 0;
-                    return 1;
-                }
-            }
-        }
-
-        if (mp3VbriEnsure(&vbriReader, audioDataSize, outErr) != 0) {
-            uint32_t totalFrames = mp3VbriGetData(&vbriReader)->getFrameCount();
+    if (mp3XingEnsure(&xingReader, audioDataSize, outErr) != 0) {
+        const uint8_t *xingRaw = mp3XingGetRawData(&xingReader);
+        if ((xingRaw[7] & 2u) != 0u && (xingRaw[7] & 1u) != 0u) {
+            uint32_t totalFrames = readBigEndian32(xingRaw + 8);
             unsigned int ms = (unsigned int)((((float)totalFrames * (float)samplesPerFrame) / (float)sampleRate) * 1000.0f);
             *outDurationMs = ms;
             if (ms != 0u) {
@@ -626,259 +665,269 @@ public:
                 return 1;
             }
         }
-
-        int payloadBytes = audioDataSize - *mp3FirstFrameGetOffset(&firstFrame);
-        unsigned int bitrate = (unsigned int)hdr->getBitrate();
-        *outDurationMs = (unsigned int)((((float)payloadBytes * 8.0f) / (float)bitrate) * 1000.0f);
-        *outErr = 0;
-        return 1;
     }
 
-    /* 0x811EAFB4 */
-    int getSampleRate(int *outRate, int *outErr)
-    {
-        if (ioStream == NULL) {
-            *outErr = -1;
-            return 0;
-        }
-        if (ioStream->isOpen() == 0) {
-            *outErr = MP3_ERR_NOT_OPEN;
-            return 0;
-        }
-        if (audioDataSize < 0 && computeAudioDataSize(outErr) == 0) {
-            return 0;
-        }
-        if (mp3FirstFrameEnsure(&firstFrame) == 0) {
-            if (*outErr == MP3_ERR_EOF) {
-                *outErr = MP3_ERR_NO_FRAME;
-            }
-            return 0;
-        }
-        *outRate = mp3FirstFrameGetHeader(&firstFrame)->getSampleRate();
-        *outErr = 0;
-        return 1;
-    }
-
-    /* 0x811EB034 */
-    int getSamplesPerFrame(uint16_t *outSamples, int *outErr)
-    {
-        if (ioStream == NULL) {
-            *outErr = -1;
-            return 0;
-        }
-        if (ioStream->isOpen() == 0) {
-            *outErr = MP3_ERR_NOT_OPEN;
-            return 0;
-        }
-        if (audioDataSize < 0 && computeAudioDataSize(outErr) == 0) {
-            return 0;
-        }
-        if (mp3FirstFrameEnsure(&firstFrame) == 0) {
-            if (*outErr == MP3_ERR_EOF) {
-                *outErr = MP3_ERR_NO_FRAME;
-            }
-            return 0;
-        }
-        *outSamples = (uint16_t)getMpegLayer3SamplesPerFrame(mp3FirstFrameGetHeader(&firstFrame)->rawBits);
-        *outErr = 0;
-        return 1;
-    }
-
-    /* 0x811EB0B6 */
-    virtual int readFirstFrame(Mp3FramePacket *outPacket, int *outErr)
-    {
-        if (ioStream == NULL) {
-            *outErr = -1;
-            return 0;
-        }
-        if (ioStream->isOpen() == 0) {
-            *outErr = MP3_ERR_NOT_OPEN;
-            return 0;
-        }
-        if ((audioDataSize < 0 && computeAudioDataSize(outErr) == 0) ||
-            mp3FirstFrameEnsure(&firstFrame) == 0) {
-            return 0;
-        }
-
-        int firstOff = *mp3FirstFrameGetOffset(&firstFrame);
-        MpegFrameHeader *firstHdr = mp3FirstFrameGetHeader(&firstFrame);
-        int foundOffset = -1;
-        MpegFrameHeader foundHeader;
-        int endFlags = 0;
-        int leadingSkip = 0;
-
-        if (mp3XingEnsure(&xingReader, audioDataSize, outErr) != 0) {
-            int searchStart = firstOff + (int)getMpegLayer3FrameSize(firstHdr->rawBits);
-            int searchEnd = searchStart + 1441;
-            if (mp3FrameScannerFind(&frameScanner, searchStart, searchEnd, firstHdr, 3,
-                                    audioDataSize, &foundOffset, &foundHeader, &endFlags, outErr) == 0) {
-                return 0;
-            }
-            leadingSkip = mp3XingGetEncoderDelay(&xingReader, audioDataSize);
-            int spf = getMpegLayer3SamplesPerFrame(foundHeader.rawBits);
-            if (leadingSkip > spf) {
-                leadingSkip = spf;
-            }
-            if (leadingSkip == 0) {
-                leadingSkip = spf >> 1;
-            }
-        } else if (mp3VbriEnsure(&vbriReader, audioDataSize, outErr) != 0) {
-            int searchStart = firstOff + (int)getMpegLayer3FrameSize(firstHdr->rawBits);
-            int searchEnd = searchStart + 1441;
-            if (mp3FrameScannerFind(&frameScanner, searchStart, searchEnd, firstHdr, 3,
-                                    audioDataSize, &foundOffset, &foundHeader, &endFlags, outErr) == 0) {
-                return 0;
-            }
-            leadingSkip = getMpegLayer3SamplesPerFrame(foundHeader.rawBits) >> 1;
-        } else {
-            foundOffset = firstOff;
-            foundHeader = *firstHdr;
-            leadingSkip = getMpegLayer3SamplesPerFrame(foundHeader.rawBits) >> 1;
-        }
-
-        unsigned int frameSize = getMpegLayer3FrameSize(foundHeader.rawBits);
-        int sampleRate = foundHeader.getSampleRate();
-        int spf = getMpegLayer3SamplesPerFrame(foundHeader.rawBits);
-        if (mp3PacketReaderRead(&packetReader, foundOffset, frameSize, sampleRate, spf,
-                                (int)(foundHeader.rawBits & 3u),
-                                (int)((foundHeader.rawBits >> 6) & 3u),
-                                outPacket, outErr) == 0) {
-            return 0;
-        }
-
-        currentOffset = foundOffset;
-        currentHeader = foundHeader;
-        outPacket->leadingSkipSamples = (uint16_t)leadingSkip;
-        outPacket->trailingSkipSamples = 0;
-        return 1;
-    }
-
-    /* 0x811EB38E */
-    virtual int readNextFrame(Mp3FramePacket *outPacket, int *outErr)
-    {
-        if (ioStream == NULL) {
-            *outErr = -1;
-            return 0;
-        }
-        if (ioStream->isOpen() == 0) {
-            *outErr = MP3_ERR_NOT_OPEN;
-            return 0;
-        }
-        if (audioDataSize < 0 && computeAudioDataSize(outErr) == 0) {
-            return 0;
-        }
-
-        int nextOffset = -1;
-        MpegFrameHeader nextHeader;
-        int endKind = 0;
-
-        if (mp3NextFrameAdvance(&nextFrameIter, this, audioDataSize,
-                                &nextOffset, &nextHeader, &endKind, outErr) == 0) {
-            return 0;
-        }
-
-        unsigned int frameSize = getMpegLayer3FrameSize(nextHeader.rawBits);
-        int sampleRate = nextHeader.getSampleRate();
-        int spf = getMpegLayer3SamplesPerFrame(nextHeader.rawBits);
-        if (mp3PacketReaderRead(&packetReader, nextOffset, frameSize, sampleRate, spf,
-                                (int)(nextHeader.rawBits & 3u),
-                                (int)((nextHeader.rawBits >> 6) & 3u),
-                                outPacket, outErr) == 0) {
-            return 0;
-        }
-
-        if (mp3XingEnsure(&xingReader, audioDataSize, outErr) == 0) {
-            outPacket->trailingSkipSamples = 0;
-        } else if (endKind == 0) {
-            int pad = mp3XingGetEncoderPadding(&xingReader, audioDataSize);
-            outPacket->trailingSkipSamples = (uint16_t)((pad > spf) ? spf : pad);
-        } else if (endKind == 1) {
-            if (mp3XingEnsure(&xingReader, audioDataSize, outErr) != 0) {
-                int pad = mp3XingGetEncoderPadding(&xingReader, audioDataSize);
-                if (pad <= spf) {
-                    outPacket->trailingSkipSamples = (uint16_t)pad;
-                } else {
-                    int rem = pad - spf;
-                    outPacket->trailingSkipSamples = (uint16_t)((rem > spf) ? spf : rem);
-                }
-            }
-        } else {
-            outPacket->trailingSkipSamples = 0;
-        }
-
-        outPacket->leadingSkipSamples = 0;
-        currentOffset = nextOffset;
-        currentHeader = nextHeader;
-        return 1;
-    }
-
-    /* 0x811EB548 */
-    virtual int seekToTimeMs(unsigned int targetMs, Mp3FramePacket *outPacket, int *outErr)
-    {
-        if (ioStream == NULL) {
-            *outErr = -1;
-            return 0;
-        }
-        if (ioStream->isOpen() == 0) {
-            *outErr = MP3_ERR_NOT_OPEN;
-            return 0;
-        }
-        if (targetMs > 0x7FFFFFFFu) {
-            *outErr = MP3_ERR_BAD_SEEK;
-            return 0;
-        }
-        if (audioDataSize < 0 && computeAudioDataSize(outErr) == 0) {
-            return 0;
-        }
-
-        int seekOffset = -1;
-        MpegFrameHeader seekHeader;
-        uint8_t atEnd = 0;
-
-        if (mp3CompositeSeek(&compositeSeeker, targetMs, audioDataSize,
-                             &seekOffset, &seekHeader, &atEnd, outErr) == 0) {
-            return 0;
-        }
-
-        unsigned int frameSize = getMpegLayer3FrameSize(seekHeader.rawBits);
-        int sampleRate = seekHeader.getSampleRate();
-        int spf = getMpegLayer3SamplesPerFrame(seekHeader.rawBits);
-        if (mp3PacketReaderRead(&packetReader, seekOffset, frameSize, sampleRate, spf,
-                                (int)(seekHeader.rawBits & 3u),
-                                (int)((seekHeader.rawBits >> 6) & 3u),
-                                outPacket, outErr) == 0) {
-            return 0;
-        }
-
-        if (atEnd != 0 && mp3XingEnsure(&xingReader, audioDataSize, outErr) != 0) {
-            int pad = mp3XingGetEncoderPadding(&xingReader, audioDataSize);
-            outPacket->trailingSkipSamples = (uint16_t)((pad > spf) ? spf : pad);
-        } else {
-            outPacket->trailingSkipSamples = 0;
-        }
-
-        outPacket->leadingSkipSamples = 0;
-        currentOffset = seekOffset;
-        currentHeader = seekHeader;
-        return 1;
-    }
-
-    /* 0x811EB6CC */
-    int checkFrameReadable(const Mp3FramePacket *packet, int *outErr)
-    {
-        if (ioStream == NULL) {
-            *outErr = -1;
-            return 0;
-        }
-        int ioErr = -1;
-        if (ioStream->checkRangeReadable(packet->packetSize, &ioErr) != 0) {
+    if (mp3VbriEnsure(&vbriReader, audioDataSize, outErr) != 0) {
+        uint32_t totalFrames = mp3VbriGetData(&vbriReader)->getFrameCount();
+        unsigned int ms = (unsigned int)((((float)totalFrames * (float)samplesPerFrame) / (float)sampleRate) * 1000.0f);
+        *outDurationMs = ms;
+        if (ms != 0u) {
             *outErr = 0;
             return 1;
         }
-        *outErr = ioErr;
+    }
+
+    int payloadBytes = audioDataSize - *mp3FirstFrameGetOffset(&firstFrame);
+    unsigned int bitrate = (unsigned int)hdr->getBitrate();
+    *outDurationMs = (unsigned int)((((float)payloadBytes * 8.0f) / (float)bitrate) * 1000.0f);
+    *outErr = 0;
+    return 1;
+}
+
+/* 0x811EAFB4 */
+int Mp3StreamParser::getSampleRate(int *outRate, int *outErr)
+{
+    if (ioStream == NULL) {
+        *outErr = -1;
         return 0;
     }
-};
+    if (ioStream->isOpen() == 0) {
+        *outErr = MP3_ERR_NOT_OPEN;
+        return 0;
+    }
+    if (audioDataSize < 0 && computeAudioDataSize(outErr) == 0) {
+        return 0;
+    }
+    if (mp3FirstFrameEnsure(&firstFrame) == 0) {
+        if (*outErr == MP3_ERR_EOF) {
+            *outErr = MP3_ERR_NO_FRAME;
+        }
+        return 0;
+    }
+    *outRate = mp3FirstFrameGetHeader(&firstFrame)->getSampleRate();
+    *outErr = 0;
+    return 1;
+}
+
+/* 0x811EB034 */
+int Mp3StreamParser::getSamplesPerFrame(uint16_t *outSamples, int *outErr)
+{
+    if (ioStream == NULL) {
+        *outErr = -1;
+        return 0;
+    }
+    if (ioStream->isOpen() == 0) {
+        *outErr = MP3_ERR_NOT_OPEN;
+        return 0;
+    }
+    if (audioDataSize < 0 && computeAudioDataSize(outErr) == 0) {
+        return 0;
+    }
+    if (mp3FirstFrameEnsure(&firstFrame) == 0) {
+        if (*outErr == MP3_ERR_EOF) {
+            *outErr = MP3_ERR_NO_FRAME;
+        }
+        return 0;
+    }
+    *outSamples = (uint16_t)getMpegLayer3SamplesPerFrame(mp3FirstFrameGetHeader(&firstFrame)->rawBits);
+    *outErr = 0;
+    return 1;
+}
+
+/* 0x811EB0B6 */
+int Mp3StreamParser::readFirstFrame(Mp3FramePacket *outPacket, int *outErr)
+{
+    if (ioStream == NULL) {
+        *outErr = -1;
+        return 0;
+    }
+    if (ioStream->isOpen() == 0) {
+        *outErr = MP3_ERR_NOT_OPEN;
+        return 0;
+    }
+    if ((audioDataSize < 0 && computeAudioDataSize(outErr) == 0) ||
+        mp3FirstFrameEnsure(&firstFrame) == 0) {
+        return 0;
+    }
+
+    int firstOff = *mp3FirstFrameGetOffset(&firstFrame);
+    MpegFrameHeader *firstHdr = mp3FirstFrameGetHeader(&firstFrame);
+    int foundOffset = -1;
+    MpegFrameHeader foundHeader;
+    int endFlags = 0;
+    int leadingSkip = 0;
+
+    if (mp3XingEnsure(&xingReader, audioDataSize, outErr) != 0) {
+        int searchStart = firstOff + (int)getMpegLayer3FrameSize(firstHdr->rawBits);
+        int searchEnd = searchStart + 1441;
+        if (mp3FrameScannerFind(&frameScanner, searchStart, searchEnd, firstHdr, 3,
+                                audioDataSize, &foundOffset, &foundHeader, &endFlags, outErr) == 0) {
+            return 0;
+        }
+        leadingSkip = mp3XingGetEncoderDelay(&xingReader, audioDataSize);
+        int spf = getMpegLayer3SamplesPerFrame(foundHeader.rawBits);
+        if (leadingSkip > spf) {
+            leadingSkip = spf;
+        }
+        if (leadingSkip == 0) {
+            leadingSkip = spf >> 1;
+        }
+    } else if (mp3VbriEnsure(&vbriReader, audioDataSize, outErr) != 0) {
+        int searchStart = firstOff + (int)getMpegLayer3FrameSize(firstHdr->rawBits);
+        int searchEnd = searchStart + 1441;
+        if (mp3FrameScannerFind(&frameScanner, searchStart, searchEnd, firstHdr, 3,
+                                audioDataSize, &foundOffset, &foundHeader, &endFlags, outErr) == 0) {
+            return 0;
+        }
+        leadingSkip = getMpegLayer3SamplesPerFrame(foundHeader.rawBits) >> 1;
+    } else {
+        foundOffset = firstOff;
+        foundHeader = *firstHdr;
+        leadingSkip = getMpegLayer3SamplesPerFrame(foundHeader.rawBits) >> 1;
+    }
+
+    unsigned int frameSize = getMpegLayer3FrameSize(foundHeader.rawBits);
+    int sampleRate = foundHeader.getSampleRate();
+    int spf = getMpegLayer3SamplesPerFrame(foundHeader.rawBits);
+    if (mp3PacketReaderRead(&packetReader, foundOffset, frameSize, sampleRate, spf,
+                            (int)(foundHeader.rawBits & 3u),
+                            (int)((foundHeader.rawBits >> 6) & 3u),
+                            outPacket, outErr) == 0) {
+        return 0;
+    }
+
+    currentOffset = foundOffset;
+    currentHeader = foundHeader;
+    outPacket->leadingSkipSamples = (uint16_t)leadingSkip;
+    outPacket->trailingSkipSamples = 0;
+    return 1;
+}
+
+/* 0x811EB38E */
+int Mp3StreamParser::readNextFrame(Mp3FramePacket *outPacket, int *outErr)
+{
+    if (ioStream == NULL) {
+        *outErr = -1;
+        return 0;
+    }
+    if (ioStream->isOpen() == 0) {
+        *outErr = MP3_ERR_NOT_OPEN;
+        return 0;
+    }
+    if (audioDataSize < 0 && computeAudioDataSize(outErr) == 0) {
+        return 0;
+    }
+
+    int nextOffset = -1;
+    MpegFrameHeader nextHeader;
+    int endKind = 0;
+
+    if (mp3NextFrameAdvance(&nextFrameIter, this, audioDataSize,
+                            &nextOffset, &nextHeader, &endKind, outErr) == 0) {
+        return 0;
+    }
+
+    unsigned int frameSize = getMpegLayer3FrameSize(nextHeader.rawBits);
+    int sampleRate = nextHeader.getSampleRate();
+    int spf = getMpegLayer3SamplesPerFrame(nextHeader.rawBits);
+    if (mp3PacketReaderRead(&packetReader, nextOffset, frameSize, sampleRate, spf,
+                            (int)(nextHeader.rawBits & 3u),
+                            (int)((nextHeader.rawBits >> 6) & 3u),
+                            outPacket, outErr) == 0) {
+        return 0;
+    }
+
+    if (mp3XingEnsure(&xingReader, audioDataSize, outErr) == 0) {
+        outPacket->trailingSkipSamples = 0;
+    } else if (endKind == 0) {
+        int pad = mp3XingGetEncoderPadding(&xingReader, audioDataSize);
+        outPacket->trailingSkipSamples = (uint16_t)((pad > spf) ? spf : pad);
+    } else if (endKind == 1) {
+        if (mp3XingEnsure(&xingReader, audioDataSize, outErr) != 0) {
+            int pad = mp3XingGetEncoderPadding(&xingReader, audioDataSize);
+            if (pad <= spf) {
+                outPacket->trailingSkipSamples = (uint16_t)pad;
+            } else {
+                int rem = pad - spf;
+                outPacket->trailingSkipSamples = (uint16_t)((rem > spf) ? spf : rem);
+            }
+        }
+    } else {
+        outPacket->trailingSkipSamples = 0;
+    }
+
+    outPacket->leadingSkipSamples = 0;
+    currentOffset = nextOffset;
+    currentHeader = nextHeader;
+    return 1;
+}
+
+/* 0x811EB548 */
+int Mp3StreamParser::seekToTimeMs(unsigned int targetMs, Mp3FramePacket *outPacket, int *outErr)
+{
+    if (ioStream == NULL) {
+        *outErr = -1;
+        return 0;
+    }
+    if (ioStream->isOpen() == 0) {
+        *outErr = MP3_ERR_NOT_OPEN;
+        return 0;
+    }
+    if (targetMs > 0x7FFFFFFFu) {
+        *outErr = MP3_ERR_BAD_SEEK;
+        return 0;
+    }
+    if (audioDataSize < 0 && computeAudioDataSize(outErr) == 0) {
+        return 0;
+    }
+
+    int seekOffset = -1;
+    MpegFrameHeader seekHeader;
+    uint8_t atEnd = 0;
+
+    if (mp3CompositeSeek(&compositeSeeker, targetMs, audioDataSize,
+                         &seekOffset, &seekHeader, &atEnd, outErr) == 0) {
+        return 0;
+    }
+
+    unsigned int frameSize = getMpegLayer3FrameSize(seekHeader.rawBits);
+    int sampleRate = seekHeader.getSampleRate();
+    int spf = getMpegLayer3SamplesPerFrame(seekHeader.rawBits);
+    if (mp3PacketReaderRead(&packetReader, seekOffset, frameSize, sampleRate, spf,
+                            (int)(seekHeader.rawBits & 3u),
+                            (int)((seekHeader.rawBits >> 6) & 3u),
+                            outPacket, outErr) == 0) {
+        return 0;
+    }
+
+    if (atEnd != 0 && mp3XingEnsure(&xingReader, audioDataSize, outErr) != 0) {
+        int pad = mp3XingGetEncoderPadding(&xingReader, audioDataSize);
+        outPacket->trailingSkipSamples = (uint16_t)((pad > spf) ? spf : pad);
+    } else {
+        outPacket->trailingSkipSamples = 0;
+    }
+
+    outPacket->leadingSkipSamples = 0;
+    currentOffset = seekOffset;
+    currentHeader = seekHeader;
+    return 1;
+}
+
+/* 0x811EB6CC */
+int Mp3StreamParser::checkFrameReadable(const Mp3FramePacket *packet, int *outErr)
+{
+    if (ioStream == NULL) {
+        *outErr = -1;
+        return 0;
+    }
+    int ioErr = -1;
+    if (ioStream->checkRangeReadable(packet->packetSize, &ioErr) != 0) {
+        *outErr = 0;
+        return 1;
+    }
+    *outErr = ioErr;
+    return 0;
+}
 
 struct MediaInfoRecord {
     void *vtable;
@@ -899,122 +948,126 @@ public:
     Mp3StreamParser *parser;
     StreamIoInterface *ioStream;
 
-    /* 0x811EA894 */
-    Mp3MediaInfo(const char *path, int mode)
-        : ioMode(mode),
-          parser(NULL),
-          ioStream(NULL)
-    {
-        mediaInfoRecordInit(reinterpret_cast<MediaInfoRecord *>(this), path, FOURCC_MP3);
-        if (mode == 16) {
-            ioStream = createLocalCacheIo(filePath, 0x4000, 32, 1);
-            if (ioStream != NULL) {
-                void *mem = allocFromHeap(sizeof(Mp3StreamParser));
-                if (mem != NULL) {
-                    parser = new (mem) Mp3StreamParser(ioStream);
-                }
-                if (parser == NULL) {
-                    delete ioStream;
-                    ioStream = NULL;
-                }
-            }
-        }
-    }
-
-    /* 0x811EA924 / 0x811EA962 */
-    virtual ~Mp3MediaInfo()
-    {
-        if (parser != NULL) {
-            delete parser;
-            parser = NULL;
-        }
-        if (ioStream != NULL) {
-            delete ioStream;
-            ioStream = NULL;
-        }
-        mediaInfoRecordDestroy(reinterpret_cast<MediaInfoRecord *>(this));
-    }
-
-    /* 0x811EA9A6 */
-    virtual int parseMetadata(TrackMetadataResult *outMeta)
-    {
-        outMeta->hasCodecSubType = 0;
-        outMeta->hasCodecProfile = 0;
-        outMeta->hasSampleRate = 0;
-        outMeta->hasDuration = 0;
-        outMeta->hasBitRate = 0;
-        outMeta->hasChannels = 0;
-
-        if (parser == NULL || !checkCodecServiceReady()) {
-            return 33;
-        }
-        if (parser->openStream() != 0) {
-            return 17;
-        }
-
-        Mp3FramePacket firstPacket;
-        int parserErr = 0;
-        if (parser->readFirstFrame(&firstPacket, &parserErr) == 1) {
-            if (firstPacket.channelMode <= 2u) {
-                outMeta->channels = 2;
-                outMeta->hasChannels = 1;
-            } else if (firstPacket.channelMode <= 3u) {
-                outMeta->channels = 1;
-                outMeta->hasChannels = 1;
-            } else {
-                parserErr = -1;
-            }
-
-            if (parserErr == 0 && parser->checkFrameReadable(&firstPacket, &parserErr) == 1) {
-                int durOk = parser->getDurationMs(&outMeta->durationMs, &parserErr);
-                outMeta->hasDuration = (uint8_t)durOk;
-                if (durOk == 1) {
-                    int rateOk = parser->getSampleRate(&outMeta->sampleRate, &parserErr);
-                    outMeta->hasSampleRate = (uint8_t)rateOk;
-                    if (rateOk == 1) {
-                        outMeta->codecProfile = 12;
-                        outMeta->hasCodecProfile = 1;
-                        outMeta->codecSubType = 7;
-                        outMeta->hasCodecSubType = 1;
-                        parserErr = 0;
-                    }
-                }
-            }
-        }
-
-        int result;
-        switch (parserErr) {
-        case 0:
-            return 0;
-        case -1:
-            result = -1;
-            break;
-        case MP3_ERR_UNSUPPORTED:
-            result = 81;
-            break;
-        case MP3_ERR_READ_IO:
-            result = 19;
-            break;
-        case MP3_ERR_OPEN_IO:
-            result = 20;
-            break;
-        default:
-            result = mapMp3ParserError(parserErr);
-            if (result == 0) {
-                return 0;
-            }
-            break;
-        }
-
-        outMeta->hasChannels = 0;
-        outMeta->hasBitRate = 0;
-        outMeta->hasDuration = 0;
-        outMeta->hasSampleRate = 0;
-        outMeta->hasCodecProfile = 0;
-        outMeta->hasCodecSubType = 0;
-        return result;
-    }
+    Mp3MediaInfo(const char *path, int mode);
+    virtual ~Mp3MediaInfo();
+    virtual int parseMetadata(TrackMetadataResult *outMeta);
 };
+
+/* 0x811EA894 */
+Mp3MediaInfo::Mp3MediaInfo(const char *path, int mode)
+    : ioMode(mode),
+      parser(NULL),
+      ioStream(NULL)
+{
+    mediaInfoRecordInit(reinterpret_cast<MediaInfoRecord *>(this), path, FOURCC_MP3);
+    if (mode == 16) {
+        ioStream = createLocalCacheIo(filePath, 0x4000, 32, 1);
+        if (ioStream != NULL) {
+            void *mem = allocFromHeap(sizeof(Mp3StreamParser));
+            if (mem != NULL) {
+                parser = new (mem) Mp3StreamParser(ioStream);
+            }
+            if (parser == NULL) {
+                delete ioStream;
+                ioStream = NULL;
+            }
+        }
+    }
+}
+
+/* 0x811EA924 / 0x811EA962 */
+Mp3MediaInfo::~Mp3MediaInfo()
+{
+    if (parser != NULL) {
+        delete parser;
+        parser = NULL;
+    }
+    if (ioStream != NULL) {
+        delete ioStream;
+        ioStream = NULL;
+    }
+    mediaInfoRecordDestroy(reinterpret_cast<MediaInfoRecord *>(this));
+}
+
+/* 0x811EA9A6 */
+int Mp3MediaInfo::parseMetadata(TrackMetadataResult *outMeta)
+{
+    outMeta->hasCodecSubType = 0;
+    outMeta->hasCodecProfile = 0;
+    outMeta->hasSampleRate = 0;
+    outMeta->hasDuration = 0;
+    outMeta->hasBitRate = 0;
+    outMeta->hasChannels = 0;
+
+    if (parser == NULL || !checkCodecServiceReady()) {
+        return 33;
+    }
+    if (parser->openStream() != 0) {
+        return 17;
+    }
+
+    Mp3FramePacket firstPacket;
+    int parserErr = 0;
+    if (parser->readFirstFrame(&firstPacket, &parserErr) == 1) {
+        if (firstPacket.channelMode <= 2u) {
+            outMeta->channels = 2;
+            outMeta->hasChannels = 1;
+        } else if (firstPacket.channelMode <= 3u) {
+            outMeta->channels = 1;
+            outMeta->hasChannels = 1;
+        } else {
+            parserErr = -1;
+        }
+
+        if (parserErr == 0 && parser->checkFrameReadable(&firstPacket, &parserErr) == 1) {
+            int durOk = parser->getDurationMs(&outMeta->durationMs, &parserErr);
+            outMeta->hasDuration = (uint8_t)durOk;
+            if (durOk == 1) {
+                int rateOk = parser->getSampleRate(&outMeta->sampleRate, &parserErr);
+                outMeta->hasSampleRate = (uint8_t)rateOk;
+                if (rateOk == 1) {
+                    outMeta->codecProfile = 12;
+                    outMeta->hasCodecProfile = 1;
+                    outMeta->codecSubType = 7;
+                    outMeta->hasCodecSubType = 1;
+                    parserErr = 0;
+                }
+            }
+        }
+    }
+
+    int result;
+    switch (parserErr) {
+    case 0:
+        return 0;
+    case -1:
+        result = -1;
+        break;
+    case MP3_ERR_UNSUPPORTED:
+        result = 81;
+        break;
+    case MP3_ERR_READ_IO:
+        result = 19;
+        break;
+    case MP3_ERR_OPEN_IO:
+        result = 20;
+        break;
+    default:
+        result = mapMp3ParserError(parserErr);
+        if (result == 0) {
+            return 0;
+        }
+        break;
+    }
+
+    outMeta->hasChannels = 0;
+    outMeta->hasBitRate = 0;
+    outMeta->hasDuration = 0;
+    outMeta->hasSampleRate = 0;
+    outMeta->hasCodecProfile = 0;
+    outMeta->hasCodecSubType = 0;
+    return result;
+}
 
 void *mp3MediaInfoConstruct(void *mem, const char *path, int ioPriority)
 {
