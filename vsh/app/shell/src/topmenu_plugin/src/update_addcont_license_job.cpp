@@ -28,24 +28,7 @@ static int onSignInCallback(int notifyId, int notifyCount, int notifyArg, void *
 class UpdateAddContLicenseJob : public paf::job::JobItem {
 public:
 	UpdateAddContLicenseJob(const char *titleId, SceInt32 launchAppId,
-				SceInt32 existingFlags, SceInt32 extraFlags)
-		: paf::job::JobItem("UpdateAddContLicenseJob", NULL),
-		  m_titleId(titleId != NULL ? titleId : ""),
-		  m_launchAppId(launchAppId),
-		  m_existingFlags(existingFlags),
-		  m_extraFlags(extraFlags),
-		  m_waitDialogId(-1),
-		  m_signInDone(0),
-		  m_busyHeld(false),
-		  m_signInEnded(false)
-	{
-		paf::thread::RMutex::main_thread_mutex.Lock();
-		if (!m_busyHeld) {
-			topmenuBeginBusy();
-			m_busyHeld = true;
-		}
-		paf::thread::RMutex::main_thread_mutex.Unlock();
-	}
+				SceInt32 existingFlags, SceInt32 extraFlags);
 
 	virtual ~UpdateAddContLicenseJob()
 	{
@@ -222,6 +205,27 @@ public:
 };
 
 typedef char UpdateAddContLicenseJobSizeCheck[sizeof(UpdateAddContLicenseJob) == 64 ? 1 : -1];
+
+/* (0x8129F13A) */
+UpdateAddContLicenseJob::UpdateAddContLicenseJob(const char *titleId, SceInt32 launchAppId,
+						 SceInt32 existingFlags, SceInt32 extraFlags)
+	: paf::job::JobItem("UpdateAddContLicenseJob", NULL),
+	  m_titleId(titleId != NULL ? titleId : ""),
+	  m_launchAppId(launchAppId),
+	  m_existingFlags(existingFlags),
+	  m_extraFlags(extraFlags),
+	  m_waitDialogId(-1),
+	  m_signInDone(0),
+	  m_busyHeld(false),
+	  m_signInEnded(false)
+{
+	paf::thread::RMutex::main_thread_mutex.Lock();
+	if (!m_busyHeld) {
+		topmenuBeginBusy();
+		m_busyHeld = true;
+	}
+	paf::thread::RMutex::main_thread_mutex.Unlock();
+}
 
 } /* namespace */
 

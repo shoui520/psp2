@@ -65,28 +65,7 @@ public:
 	/* 0x8128622C */
 	AppDataPromoteJob(const LsdbAppInfoPtr &appInfo,
 			  TopmenuPromoteDoneCallback doneCallback,
-			  void *userData, bool isLaunchPromote)
-		: paf::job::JobItem("AppDataPromoteJob", NULL),
-		  m_appInfo(appInfo),
-		  m_isLaunchPromote(isLaunchPromote),
-		  m_waitDialogId(-1),
-		  m_doneCallback(doneCallback),
-		  m_userData(userData),
-		  m_didBeginPromote(false),
-		  m_promoteTitleId(),
-		  m_installError(),
-		  m_hadPatchInstalled(false)
-	{
-		paf::thread::RMutex::main_thread_mutex.Lock();
-		CommonGuiLayoutDialogParam dialogParam;
-		dialogParam.resourcePlugin = g_topmenuPlugin;
-		dialogParam.priority = 34;
-		dialogParam.layout = SceCommonGuiDialog_2A68B4A4;
-		dialogParam.text = paf::wstring(
-			g_topmenuPlugin->GetString(paf::IDParam(PROMOTE_MSG_PREPARING_ID)));
-		m_waitDialogId = SceCommonGuiDialog_CCFCD9A6(&dialogParam);
-		paf::thread::RMutex::main_thread_mutex.Unlock();
-	}
+			  void *userData, bool isLaunchPromote);
 
 	/* 0x8128643A / 0x81286552 */
 	virtual ~AppDataPromoteJob()
@@ -269,6 +248,32 @@ private:
 };
 
 typedef char AppDataPromoteJobSizeCheck[sizeof(AppDataPromoteJob) == 140 ? 1 : -1];
+
+/* 0x8128622C */
+AppDataPromoteJob::AppDataPromoteJob(const LsdbAppInfoPtr &appInfo,
+				     TopmenuPromoteDoneCallback doneCallback,
+				     void *userData, bool isLaunchPromote)
+	: paf::job::JobItem("AppDataPromoteJob", NULL),
+	  m_appInfo(appInfo),
+	  m_isLaunchPromote(isLaunchPromote),
+	  m_waitDialogId(-1),
+	  m_doneCallback(doneCallback),
+	  m_userData(userData),
+	  m_didBeginPromote(false),
+	  m_promoteTitleId(),
+	  m_installError(),
+	  m_hadPatchInstalled(false)
+{
+	paf::thread::RMutex::main_thread_mutex.Lock();
+	CommonGuiLayoutDialogParam dialogParam;
+	dialogParam.resourcePlugin = g_topmenuPlugin;
+	dialogParam.priority = 34;
+	dialogParam.layout = SceCommonGuiDialog_2A68B4A4;
+	dialogParam.text = paf::wstring(
+		g_topmenuPlugin->GetString(paf::IDParam(PROMOTE_MSG_PREPARING_ID)));
+	m_waitDialogId = SceCommonGuiDialog_CCFCD9A6(&dialogParam);
+	paf::thread::RMutex::main_thread_mutex.Unlock();
+}
 
 } /* namespace */
 

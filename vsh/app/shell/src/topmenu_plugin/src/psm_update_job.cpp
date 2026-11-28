@@ -71,35 +71,7 @@ typedef char PsmAnimJobSizeCheck[sizeof(PsmAnimJob) == 40 ? 1 : -1];
 /* (0x8129ACBE..0x8129B435) Enqueue BGDL PSM runtime task and trigger sysupchk if required */
 class PsmUpdateJob : public paf::job::JobItem {
 public:
-	PsmUpdateJob(const paf::string &titleId, SceInt32 pageKey)
-		: paf::job::JobItem("PsmUpdateJob", NULL),
-		  m_waitDialogId(-1),
-		  m_busyHeld(false),
-		  m_pageKey(pageKey),
-		  m_titleId(titleId),
-		  m_iconPath(""),
-		  m_appInfo()
-	{
-		paf::thread::RMutex::main_thread_mutex.Lock();
-		paf::thread::RMutex::main_thread_mutex.Lock();
-
-		CommonGuiLayoutDialogParam param;
-		param.resourcePlugin = g_topmenuPlugin;
-		param.priority = 33;
-		param.layout = SceCommonGuiDialog_2A68B4A4;
-		const wchar_t *waitStr =
-			g_topmenuPlugin->GetString(paf::IDParam(MSG_PSM_UPDATING_WAIT));
-		param.text = (waitStr != NULL) ? waitStr : L"";
-		m_waitDialogId = SceCommonGuiDialog_CCFCD9A6(&param);
-
-		paf::thread::RMutex::main_thread_mutex.Unlock();
-
-		if (!m_busyHeld) {
-			topmenuBeginBusy();
-			m_busyHeld = true;
-		}
-		paf::thread::RMutex::main_thread_mutex.Unlock();
-	}
+	PsmUpdateJob(const paf::string &titleId, SceInt32 pageKey);
 
 	virtual ~PsmUpdateJob()
 	{
@@ -166,6 +138,37 @@ public:
 };
 
 typedef char PsmUpdateJobSizeCheck[sizeof(PsmUpdateJob) == 72 ? 1 : -1];
+
+/* (0x8129ACBE) */
+PsmUpdateJob::PsmUpdateJob(const paf::string &titleId, SceInt32 pageKey)
+	: paf::job::JobItem("PsmUpdateJob", NULL),
+	  m_waitDialogId(-1),
+	  m_busyHeld(false),
+	  m_pageKey(pageKey),
+	  m_titleId(titleId),
+	  m_iconPath(""),
+	  m_appInfo()
+{
+	paf::thread::RMutex::main_thread_mutex.Lock();
+	paf::thread::RMutex::main_thread_mutex.Lock();
+
+	CommonGuiLayoutDialogParam param;
+	param.resourcePlugin = g_topmenuPlugin;
+	param.priority = 33;
+	param.layout = SceCommonGuiDialog_2A68B4A4;
+	const wchar_t *waitStr =
+		g_topmenuPlugin->GetString(paf::IDParam(MSG_PSM_UPDATING_WAIT));
+	param.text = (waitStr != NULL) ? waitStr : L"";
+	m_waitDialogId = SceCommonGuiDialog_CCFCD9A6(&param);
+
+	paf::thread::RMutex::main_thread_mutex.Unlock();
+
+	if (!m_busyHeld) {
+		topmenuBeginBusy();
+		m_busyHeld = true;
+	}
+	paf::thread::RMutex::main_thread_mutex.Unlock();
+}
 
 } /* namespace */
 

@@ -16,6 +16,7 @@
 #include "../../../game/game_plugin/game_plugin.h"
 #include "../../../../paf/include/rtc/rtc.h"
 #include "../applauncher_plugin/src/applauncher_changeinfo.h"
+#include "src/livespace_db/lsdb_keys.h"
 #include "patch_chk_internal.h"
 
 using namespace paf;

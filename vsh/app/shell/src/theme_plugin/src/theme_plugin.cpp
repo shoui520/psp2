@@ -27,6 +27,7 @@
 #include <widget/w_scene.h>
 #include <widget/w_list_view.h>
 #include <widget/w_list_item.h>
+#include "src/livespace_db/lsdb_keys.h"
 
 #include "shell.h"
 #include "plugins.h"

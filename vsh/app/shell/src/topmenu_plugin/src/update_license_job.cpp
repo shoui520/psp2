@@ -54,21 +54,7 @@ public:
 
 class UpdateLicenseJob : public paf::job::JobItem {
 public:
-	explicit UpdateLicenseJob(const LsdbAppInfoPtr *appInfo)
-		: paf::job::JobItem("UpdateLicenseJob", NULL),
-		  m_appInfo(*appInfo),
-		  m_waitDialogId(-1),
-		  m_signInDone(0),
-		  m_busyHeld(false),
-		  m_signInEnded(false)
-	{
-		paf::thread::RMutex::main_thread_mutex.Lock();
-		if (!m_busyHeld) {
-			topmenuBeginBusy();
-			m_busyHeld = true;
-		}
-		paf::thread::RMutex::main_thread_mutex.Unlock();
-	}
+	explicit UpdateLicenseJob(const LsdbAppInfoPtr *appInfo);
 
 	virtual ~UpdateLicenseJob()
 	{
@@ -236,6 +222,23 @@ public:
 };
 
 typedef char UpdateLicenseJobSizeCheck[sizeof(UpdateLicenseJob) == 48 ? 1 : -1];
+
+/* (0x812A05BE) */
+UpdateLicenseJob::UpdateLicenseJob(const LsdbAppInfoPtr *appInfo)
+	: paf::job::JobItem("UpdateLicenseJob", NULL),
+	  m_appInfo(*appInfo),
+	  m_waitDialogId(-1),
+	  m_signInDone(0),
+	  m_busyHeld(false),
+	  m_signInEnded(false)
+{
+	paf::thread::RMutex::main_thread_mutex.Lock();
+	if (!m_busyHeld) {
+		topmenuBeginBusy();
+		m_busyHeld = true;
+	}
+	paf::thread::RMutex::main_thread_mutex.Unlock();
+}
 
 } /* namespace */
 

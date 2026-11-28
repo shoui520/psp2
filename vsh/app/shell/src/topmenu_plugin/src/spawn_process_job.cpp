@@ -583,29 +583,7 @@ static SceInt32 launchAppWithLsdbInfo(SceInt32 *outAppId, const LsdbAppInfoPtr *
 /* SpawnProcessJob (80 bytes, 0x8129BD02..0x8129E6D2) */
 class SpawnProcessJob : public paf::job::JobItem {
 public:
-	SpawnProcessJob(TopmenuProcessBase *proc, SceInt32 launchAppId, SceInt32 checkFlags)
-		: paf::job::JobItem("SpawnProcessJob", NULL),
-		  m_process(proc),
-		  m_appInfo(*topmenuProcessGetAppInfo(proc)),
-		  m_launchAppId(launchAppId),
-		  m_checkFlags(checkFlags),
-		  m_attrFlags(),
-		  m_isBgLaunch(proc->m_enabled),
-		  m_updatedNotify(false),
-		  m_notifyValue(0),
-		  m_spawnedAppId(-1),
-		  m_bootTimeStartUs(0)
-	{
-		m_attrFlags.hasFlagBitSeven = false;
-		m_attrFlags.flagBitEight = 0;
-		m_attrFlags.flagBitNine = 0;
-		if (proc != NULL && proc->m_owner != NULL) {
-			TopmenuAppProcess *owner = proc->m_owner;
-			m_attrFlags.hasFlagBitSeven = owner->m_bgLayerOpt.useCustomColor;
-			m_attrFlags.flagBitEight = owner->m_bgLayerOpt.style;
-			m_attrFlags.flagBitNine = static_cast<SceInt32>(owner->m_bgLayerOpt.color);
-		}
-	}
+	SpawnProcessJob(TopmenuProcessBase *proc, SceInt32 launchAppId, SceInt32 checkFlags);
 
 	virtual ~SpawnProcessJob()
 	{
@@ -933,25 +911,7 @@ static int onPromoteRetryCallback(const paf::string *titleId)
 /* SpawnBgProcessJob (48 bytes, 0x8129E75A..0x8129E960) */
 class SpawnBgProcessJob : public paf::job::JobItem {
 public:
-	SpawnBgProcessJob(const LsdbAppInfoPtr *appInfo, SceInt32 launchAppId)
-		: paf::job::JobItem("SpawnBgProcessJob", NULL),
-		  m_appInfo(*appInfo),
-		  m_launchAppId(launchAppId),
-		  m_creatorAppId(-1),
-		  m_spawnedAppId(-1)
-	{
-		const char *titleName = sceLsdbGetName(&m_appInfo);
-		if (m_launchAppId != -1 &&
-		    (sce_paf_strcmp(titleName, "NPXS10083") == 0 ||
-		     sce_paf_strcmp(titleName, "NPXS10084") == 0)) {
-			SceAppMgrAppStatus launchStatus;
-			if (sceAppMgrGetStatusByAppId(m_launchAppId, &launchStatus) == 0) {
-				SceAppMgrAppStatus existingStatus;
-				sceAppMgrGetStatusByName(titleName, &existingStatus);
-				m_creatorAppId = launchStatus.launchSourceAppId;
-			}
-		}
-	}
+	SpawnBgProcessJob(const LsdbAppInfoPtr *appInfo, SceInt32 launchAppId);
 
 	virtual ~SpawnBgProcessJob() {}
 
@@ -1008,6 +968,53 @@ public:
 };
 
 typedef char SpawnBgProcessJobSizeCheck[sizeof(SpawnBgProcessJob) == 48 ? 1 : -1];
+
+/* (0x8129BD02) */
+SpawnProcessJob::SpawnProcessJob(TopmenuProcessBase *proc, SceInt32 launchAppId,
+				 SceInt32 checkFlags)
+	: paf::job::JobItem("SpawnProcessJob", NULL),
+	  m_process(proc),
+	  m_appInfo(*topmenuProcessGetAppInfo(proc)),
+	  m_launchAppId(launchAppId),
+	  m_checkFlags(checkFlags),
+	  m_attrFlags(),
+	  m_isBgLaunch(proc->m_enabled),
+	  m_updatedNotify(false),
+	  m_notifyValue(0),
+	  m_spawnedAppId(-1),
+	  m_bootTimeStartUs(0)
+{
+	m_attrFlags.hasFlagBitSeven = false;
+	m_attrFlags.flagBitEight = 0;
+	m_attrFlags.flagBitNine = 0;
+	if (proc != NULL && proc->m_owner != NULL) {
+		TopmenuAppProcess *owner = proc->m_owner;
+		m_attrFlags.hasFlagBitSeven = owner->m_bgLayerOpt.useCustomColor;
+		m_attrFlags.flagBitEight = owner->m_bgLayerOpt.style;
+		m_attrFlags.flagBitNine = static_cast<SceInt32>(owner->m_bgLayerOpt.color);
+	}
+}
+
+/* (0x8129E75A) */
+SpawnBgProcessJob::SpawnBgProcessJob(const LsdbAppInfoPtr *appInfo, SceInt32 launchAppId)
+	: paf::job::JobItem("SpawnBgProcessJob", NULL),
+	  m_appInfo(*appInfo),
+	  m_launchAppId(launchAppId),
+	  m_creatorAppId(-1),
+	  m_spawnedAppId(-1)
+{
+	const char *titleName = sceLsdbGetName(&m_appInfo);
+	if (m_launchAppId != -1 &&
+	    (sce_paf_strcmp(titleName, "NPXS10083") == 0 ||
+	     sce_paf_strcmp(titleName, "NPXS10084") == 0)) {
+		SceAppMgrAppStatus launchStatus;
+		if (sceAppMgrGetStatusByAppId(m_launchAppId, &launchStatus) == 0) {
+			SceAppMgrAppStatus existingStatus;
+			sceAppMgrGetStatusByName(titleName, &existingStatus);
+			m_creatorAppId = launchStatus.launchSourceAppId;
+		}
+	}
+}
 
 /* (0x8129EB32) Open a temporary LSDB client to read a single title's metadata */
 static int queryLsdbTitleInfo(const char *titleId, LsdbAppInfoPtr *outInfo)

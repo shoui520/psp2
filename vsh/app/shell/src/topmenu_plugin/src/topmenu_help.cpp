@@ -33,13 +33,7 @@ enum TopmenuHelpResourceId {
 /* 0x81294B24..0x81294C02 */
 class SetRegKeyJob : public paf::job::JobItem {
 public:
-	SetRegKeyJob(const char *category, const char *keyName, int value)
-		: paf::job::JobItem("SetRegKeyJob", NULL),
-		  m_category(category),
-		  m_keyName(keyName),
-		  m_value(value)
-	{
-	}
+	SetRegKeyJob(const char *category, const char *keyName, int value);
 
 	virtual ~SetRegKeyJob() {}
 
@@ -59,6 +53,15 @@ private:
 	const char *m_keyName;
 	int m_value;
 };
+
+/* 0x81294B24 */
+SetRegKeyJob::SetRegKeyJob(const char *category, const char *keyName, int value)
+	: paf::job::JobItem("SetRegKeyJob", NULL),
+	  m_category(category),
+	  m_keyName(keyName),
+	  m_value(value)
+{
+}
 
 static int enqueueSetRegKeyJob(paf::common::SharedPtr<paf::job::JobItem> *outJob,
 			       const char *category, const char *keyName, int value)

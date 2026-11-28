@@ -412,11 +412,6 @@ void TelGeneralLogicMediator::OnNotify(const TelEventInfo &event)
 	PostMessage(event);
 }
 
-void TelGeneralLogicMediator::OnHandleEvent(const TelEventInfo &event)
-{
-	DispatchMediatorEvent(event);
-}
-
 /* ------------------------------------------------------------------
  * Dedicated mediator event handlers (0x8125BE8A..0x8125D35D, 0x8125D736)
  * ------------------------------------------------------------------ */
@@ -738,7 +733,7 @@ void TelGeneralLogicMediator::HandleInternalAsyncApi(const TelEventInfo &event)
 }
 
 /* 0x8125D7E4: main event switch routing BBMC, attribute, and internal events into SMC */
-void TelGeneralLogicMediator::DispatchMediatorEvent(const TelEventInfo &event)
+void TelGeneralLogicMediator::OnHandleEvent(const TelEventInfo &event)
 {
 	int eventId = event.GetEventId();
 

@@ -804,8 +804,8 @@ public:
 };
 
 template<class VertInst>
-static void initVertShader(SharedPtr<VertInst> &holder, ArlInstance *gl,
-			   VertexArraySpec::Predefined layout)
+static inline void initVertShader(SharedPtr<VertInst> &holder, ArlInstance *gl,
+				  VertexArraySpec::Predefined layout)
 {
 	holder = SharedPtr<VertInst>(new VertInst);
 	if (holder.get() != NULL) {
@@ -820,7 +820,7 @@ static void initVertShader(SharedPtr<VertInst> &holder, ArlInstance *gl,
 }
 
 template<class FragInst>
-static void initFragShader(SharedPtr<FragInst> &holder, ArlInstance *gl)
+static inline void initFragShader(SharedPtr<FragInst> &holder, ArlInstance *gl)
 {
 	holder = SharedPtr<FragInst>(new FragInst);
 	if (holder.get() != NULL) {

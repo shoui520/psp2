@@ -1150,7 +1150,6 @@ public:
 	void BroadcastGeneralInfo();
 	void RefreshNetworkAndBearerCache();
 	void HandleInternalAsyncApi(const TelEventInfo &event);
-	void DispatchMediatorEvent(const TelEventInfo &event);
 	TelephonyResult LookupOperatorProfileVersion(int operatorId, paf::string *outVersion);
 	TelephonyResult BuildDiagnosticReport(paf::string *outReport);
 	TelephonyResult ReadNetworkReportLine(paf::string *outLine);

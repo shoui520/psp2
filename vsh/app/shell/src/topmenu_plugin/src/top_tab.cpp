@@ -3,6 +3,7 @@
  * and header strip interaction, 0x81281F18-0x81282C3B).
  */
 #include "topmenu_internal.h"
+#include "src/livespace_db/lsdb_keys.h"
 #include <appmgr.h>
 
 namespace {

@@ -45,22 +45,7 @@ public:
 class RemoveSavedataJob : public paf::job::JobItem {
 public:
 	RemoveSavedataJob(const LsdbAppInfoPtr *appInfo, SceInt32 launchAppId,
-			  SceInt32 existingFlags, SceInt32 extraFlags)
-		: paf::job::JobItem("RemoveSavedataJob", NULL),
-		  m_appInfo(*appInfo),
-		  m_launchAppId(launchAppId),
-		  m_existingFlags(existingFlags),
-		  m_extraFlags(extraFlags),
-		  m_waitDialogId(-1),
-		  m_busyHeld(false)
-	{
-		paf::thread::RMutex::main_thread_mutex.Lock();
-		if (!m_busyHeld) {
-			topmenuBeginBusy();
-			m_busyHeld = true;
-		}
-		paf::thread::RMutex::main_thread_mutex.Unlock();
-	}
+			  SceInt32 existingFlags, SceInt32 extraFlags);
 
 	virtual ~RemoveSavedataJob()
 	{
@@ -164,6 +149,25 @@ public:
 };
 
 typedef char RemoveSavedataJobSizeCheck[sizeof(RemoveSavedataJob) == 56 ? 1 : -1];
+
+/* (0x812A0DA6) */
+RemoveSavedataJob::RemoveSavedataJob(const LsdbAppInfoPtr *appInfo, SceInt32 launchAppId,
+				     SceInt32 existingFlags, SceInt32 extraFlags)
+	: paf::job::JobItem("RemoveSavedataJob", NULL),
+	  m_appInfo(*appInfo),
+	  m_launchAppId(launchAppId),
+	  m_existingFlags(existingFlags),
+	  m_extraFlags(extraFlags),
+	  m_waitDialogId(-1),
+	  m_busyHeld(false)
+{
+	paf::thread::RMutex::main_thread_mutex.Lock();
+	if (!m_busyHeld) {
+		topmenuBeginBusy();
+		m_busyHeld = true;
+	}
+	paf::thread::RMutex::main_thread_mutex.Unlock();
+}
 
 } /* namespace */
 
