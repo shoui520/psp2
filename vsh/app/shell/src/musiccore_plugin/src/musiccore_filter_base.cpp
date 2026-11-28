@@ -10,6 +10,7 @@
 #include <stdint.h>
 
 #include "musiccore_codec_decoders.h"
+#include "musiccore_decoder_manager.h"
 #include "musiccore_decoder_pipeline.h"
 #include "musiccore_pipeline_types.h"
 
@@ -48,10 +49,6 @@ enum FilterEventCode {
     FILTER_EVENT_RESUMED = 4
 };
 
-extern void *getWorkerThreadPool();
-extern int workerPoolSpawn(void *pool, int workerKind, void *entryFn, void *arg, SceUID *outThreadId);
-extern int workerPoolJoin(void *pool, SceUID threadId);
-
 static int activeFilterThreadEntry(SceSize args, void *argp)
 {
     (void)args;
@@ -79,8 +76,9 @@ ActiveFilterBase::ActiveFilterBase(int workerKind, const char *threadName)
     m_workerSelfArg = (ActiveFilterBase **)musiccoreAllocFromPafHeap(sizeof(ActiveFilterBase *), getLocalHeap());
     if (m_workerSelfArg != NULL) {
         *m_workerSelfArg = this;
-        if (workerPoolSpawn(getWorkerThreadPool(), workerKind, (void *)activeFilterThreadEntry,
-                            m_workerSelfArg, &m_workerId) != 0) {
+        if (WorkerThreadPool::getInstance()->startWorker(
+                workerKind, reinterpret_cast<int (*)(void *, void *)>(activeFilterThreadEntry),
+                m_workerSelfArg, NULL, &m_workerId) != 0) {
             m_workerId = -1;
             localFree(m_workerSelfArg);
             m_workerSelfArg = NULL;
@@ -97,7 +95,7 @@ ActiveFilterBase::~ActiveFilterBase()
     m_lock.unlock();
 
     if (m_useWorkerPool == 1)
-        workerPoolJoin(getWorkerThreadPool(), m_workerId);
+        WorkerThreadPool::getInstance()->joinWorker(m_workerId);
     else
         joinAndDeleteWorkerThread(m_workerId);
 

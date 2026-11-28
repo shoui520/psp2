@@ -11,6 +11,8 @@
 #include <stdint.h>
 
 #include "musiccore_audio_output.h"
+#include "musiccore_decoder_manager.h"
+#include "musiccore_state_machine.h"
 #include <stdlib.h>
 
 extern "C" {
@@ -60,45 +62,6 @@ static const uint16_t WAIT_START_DONE = 0x1200u;      /* 4608 */
 static const uint16_t WAIT_STOP_DONE = 0x1201u;       /* 4609 */
 static const uint16_t WAIT_ACTIVATE_DONE = 0x1204u;   /* 4612 */
 static const uint16_t WAIT_DEACTIVATE_DONE = 0x1205u; /* 4613 */
-
-struct TrackInfoData {
-    void *vtablePtr;
-    int codecType;
-    int contentKind;
-    int padAlign;
-    int64_t playlistId;
-    int64_t trackId;
-    int64_t trackItemId;
-    char mediaPath[2048];
-    int sourceKind;
-    int sampleRate;
-    int codecFormat;
-    int bitRate;
-    int channels;
-    int durationMs;
-    int playAttemptCount;
-    int fileSizeHigh;
-    int resumePositionMs;
-    int playCount;
-    int loopCount;
-    int slotSerial;
-    void *ownerList;
-    void *mediaInfo;
-    uint8_t mediaInfoShared;
-    uint8_t padTail[3];
-};
-
-struct MediaListStatus {
-    void *vtablePtr;
-    int playState;
-    int trackOrderIndex;
-    int padAlign;
-    int64_t currentTrackId;
-    int prevTrackIdx;
-    int nextTrackIdx;
-    int listMode;
-    int listFlags;
-};
 
 struct DecoderStartParams {
     int64_t trackId;
@@ -259,22 +222,7 @@ struct StateMachineContext {
     void *m_activateToken;                 /* +4596 */
 };
 
-extern int stateMachineTransition(void *ctx, int targetStateId);
-extern void stateMachineClearTrackFlag();
-extern void stateMachinePopulateMetadata(void *ctx, const void *info, void *metaBufs);
-extern int stateMachineSeekActive(void *ctx, const uint32_t *seekParams, void *media, uint8_t isNewMedia);
-extern int stateMachineSeekPending(void *ctx, const uint32_t *seekParams, void *media,
-                                   uint8_t *outHasPending, uint8_t isNewMedia);
-extern int stateMachineSwapMedia(void *ctx, void *newMedia, uint8_t hasUriFlag,
-                                 uint8_t seekInitial, uint8_t hasNewMedia);
-extern int stateMachineSetPendingMedia(void *ctx, void *newMedia);
-
-extern int decoderMgrOpenPipeline(void *decMgr, int pipelineKind, int ioMode, int loopCount);
-extern int decoderMgrClosePipeline(void *decMgr);
-extern int decoderMgrIsSameFormat(void *decMgr, void *mediaInfo);
-extern int decoderMgrStart(void *decMgr, void *mediaInfo, int startMs, int endMs, int playSpeed, void *userCtx);
-extern int decoderMgrStop(void *decMgr);
-extern int decoderMgrSetReverseDir(void *decMgr, int isReverse);
+extern void clearRejectedIdList();
 
 extern void computePlaybackRange(int seekMode, int speedMode, int step, int durationMs,
                                  int volumeMode, int *outPrev, int *outNext, int *outCur);
@@ -283,44 +231,6 @@ extern int trackInfoMoveTo(void *src, void *dst, int moveFlag);
 extern void trackInfoResetCounters(void *info);
 
 /* ===== PlaybackStateBase (0x811FCF14 - 0x811FCFBB) ===== */
-
-class PlaybackStateBase {
-public:
-    PlaybackStateBase(StateMachineContext *owner, int stateId, int *outErr);
-    virtual ~PlaybackStateBase();
-
-    virtual int onEnter();
-    virtual int onExit();
-    virtual int onActivate(const ActivateStateSnapshot *snap, int fadeMs);
-    virtual int onDeactivate(int fadeMs, uint8_t syncFlag);
-    virtual int onSetMedia(MediaListAccess *media, int shuffleVal, uint8_t pauseFlag);
-    virtual int onPlay(int playParam);
-    virtual int onPause(uint8_t resetPos, int fadeParam);
-    virtual int onStop();
-    virtual int onSeek(const uint32_t *seekParams);
-    virtual int onSetRepeat(int repeatVal);
-    virtual int onSetShuffle(int shuffleVal);
-    virtual int onSetVolume(int vol, int ramp);
-    virtual int onSetEqualizer(int eqType, int bandLow, int bandMid);
-    virtual int onSetAudioNormalizer(int mode);
-    virtual int onSuspendForDb(uint8_t suspendFlag);
-    virtual int onCancel();
-    virtual int onSeekAndPlay(const uint32_t *seekParams, int playParam);
-    virtual int onSetMediaPlaying(MediaListAccess *media, int shuffleVal);
-    virtual int onTrackInfo();
-    virtual int onAudioError(int errCode);
-    virtual int onTrackReady();
-    virtual int onBufferReady();
-    virtual int onStreamEnd();
-    virtual int onAudioPortEvent(uint8_t portFlag);
-    virtual int shouldDeferCmd(uint16_t cmdCode, uint16_t *outWaitCode);
-    virtual int getCurrentPosMs();
-    virtual void setCachedPosMs(int posMs);
-
-protected:
-    StateMachineContext *m_owner; /* +4 */
-    int m_stateId;                /* +8 */
-};
 
 /* 0x811FCF14 */
 PlaybackStateBase::PlaybackStateBase(StateMachineContext *owner, int stateId, int *outErr)
@@ -455,23 +365,6 @@ void PlaybackStateBase::setCachedPosMs(int posMs)
 
 /* ===== StateStarting (stateId = 3, 0x811FBEEC - 0x811FC30F) ===== */
 
-class StateStarting : public PlaybackStateBase {
-public:
-    StateStarting(StateMachineContext *owner, int *outErr);
-    virtual ~StateStarting();
-
-    virtual int onEnter();
-    virtual int onPlay(int playParam);
-    virtual int onPause(uint8_t resetPos, int fadeParam);
-    virtual int onStop();
-    virtual int onSetShuffle(int shuffleVal);
-    virtual int onSetEqualizer(int eqType, int bandLow, int bandMid);
-    virtual int onTrackInfo();
-    virtual int onTrackReady();
-    virtual int onAudioPortEvent(uint8_t portFlag);
-    virtual int shouldDeferCmd(uint16_t cmdCode, uint16_t *outWaitCode);
-};
-
 /* 0x811FBEEC */
 StateStarting::StateStarting(StateMachineContext *owner, int *outErr)
     : PlaybackStateBase(owner, STATE_STARTING, outErr)
@@ -495,7 +388,7 @@ int StateStarting::onEnter()
 
     if (m_owner->m_needDecoderRestart == 1u) {
         m_owner->m_needDecoderRestart = 0;
-        int closeRet = decoderMgrClosePipeline(m_owner->m_decoderMgr);
+        int closeRet = static_cast<DecoderManager *>(m_owner->m_decoderMgr)->closeCodec();
         if (closeRet != 0) {
             return closeRet;
         }
@@ -527,8 +420,7 @@ int StateStarting::onEnter()
             return MC_ERR_BAD_CODEC;
         }
 
-        int openRet = decoderMgrOpenPipeline(m_owner->m_decoderMgr, pipelineKind, ioMode,
-                                             m_owner->m_activeTrackInfo.loopCount);
+        int openRet = static_cast<DecoderManager *>(m_owner->m_decoderMgr)->openCodec(pipelineKind, ioMode, m_owner->m_activeTrackInfo.loopCount);
         if (openRet != 0) {
             return openRet;
         }
@@ -569,8 +461,7 @@ int StateStarting::onEnter()
         m_owner->m_activeTrackInfo.mediaInfoShared = 1;
     }
 
-    int startRet = decoderMgrStart(m_owner->m_decoderMgr, m_owner->m_activeTrackInfo.mediaInfo,
-                                   startPos, endPos, m_owner->m_volumeMode, m_owner->m_decoderStartCfg);
+    int startRet = static_cast<DecoderManager *>(m_owner->m_decoderMgr)->startMedia(static_cast<MediaInfoBase *>(m_owner->m_activeTrackInfo.mediaInfo), startPos, endPos, m_owner->m_volumeMode, m_owner->m_decoderStartCfg);
     if (startRet != 0) {
         return startRet;
     }
@@ -656,7 +547,7 @@ int StateStarting::onTrackInfo()
     if (m_owner == NULL) {
         return MC_ERR_FAILED;
     }
-    return stateMachineTransition(m_owner, m_owner->m_targetState);
+    return reinterpret_cast<StateMachine *>(m_owner)->transitionTo(m_owner->m_targetState);
 }
 
 /* 0x811FC294 */
@@ -665,7 +556,7 @@ int StateStarting::onTrackReady()
     if (m_owner == NULL) {
         return MC_ERR_FAILED;
     }
-    return stateMachineTransition(m_owner, STATE_STOPPED);
+    return reinterpret_cast<StateMachine *>(m_owner)->transitionTo(STATE_STOPPED);
 }
 
 /* 0x811FC2AA */
@@ -701,22 +592,6 @@ int StateStarting::shouldDeferCmd(uint16_t cmdCode, uint16_t *outWaitCode)
 
 /* ===== StateStopping (stateId = 6, 0x811FC310 - 0x811FCA7F) ===== */
 
-class StateStopping : public PlaybackStateBase {
-public:
-    StateStopping(StateMachineContext *owner, int *outErr);
-    virtual ~StateStopping();
-
-    virtual int onEnter();
-    virtual int onDeactivate(int fadeMs, uint8_t syncFlag);
-    virtual int onSetMedia(MediaListAccess *media, int shuffleVal, uint8_t pauseFlag);
-    virtual int onStop();
-    virtual int onSeek(const uint32_t *seekParams);
-    virtual int onSetRepeat(int repeatVal);
-    virtual int onSuspendForDb(uint8_t suspendFlag);
-    virtual int onAudioError(int errCode);
-    virtual int shouldDeferCmd(uint16_t cmdCode, uint16_t *outWaitCode);
-};
-
 /* 0x811FC310 */
 StateStopping::StateStopping(StateMachineContext *owner, int *outErr)
     : PlaybackStateBase(owner, STATE_STOPPING, outErr)
@@ -734,7 +609,7 @@ int StateStopping::onEnter()
     if (m_owner == NULL) {
         return MC_ERR_FAILED;
     }
-    return decoderMgrStop(m_owner->m_decoderMgr);
+    return static_cast<DecoderManager *>(m_owner->m_decoderMgr)->stopMedia();
 }
 
 /* 0x811FC37E */
@@ -761,7 +636,7 @@ int StateStopping::onSetMedia(MediaListAccess *media, int shuffleVal, uint8_t pa
         return MC_ERR_INVALID_ARG;
     }
     m_owner->m_shuffleSeed = shuffleVal;
-    int ret = stateMachineSetPendingMedia(m_owner, media);
+    int ret = reinterpret_cast<StateMachine *>(m_owner)->setPendingMedia(reinterpret_cast<MediaListInterface *>(media));
     if (ret == 0 && pauseFlag == 1u) {
         m_owner->m_targetState = STATE_STOPPED;
         m_owner->m_stopRequested = 1;
@@ -806,7 +681,7 @@ int StateStopping::onSeek(const uint32_t *seekParams)
                               &listLocked, 0);
     }
 
-    int ret = stateMachineSeekPending(m_owner, localParams, targetMedia, &hasPending, 0);
+    int ret = reinterpret_cast<StateMachine *>(m_owner)->seekPendingMedia(localParams, reinterpret_cast<MediaListInterface *>(targetMedia), &hasPending, 0);
     if (listLocked == 1u) {
         targetMedia->unlockList(0);
     }
@@ -851,7 +726,7 @@ int StateStopping::onSuspendForDb(uint8_t suspendFlag)
     seekParams[4] = 0xFFFFFFFFu;
 
     uint8_t hasPending = 0;
-    int ret = stateMachineSeekPending(m_owner, seekParams, targetMedia, &hasPending, 0);
+    int ret = reinterpret_cast<StateMachine *>(m_owner)->seekPendingMedia(seekParams, reinterpret_cast<MediaListInterface *>(targetMedia), &hasPending, 0);
     if (listLocked == 1u) {
         targetMedia->unlockList(0);
     }
@@ -877,7 +752,7 @@ int StateStopping::onAudioError(int errCode)
     m_owner->m_hasPendingError = 0;
 
     if (m_owner->m_pendingMedia != NULL) {
-        int swapRet = stateMachineSwapMedia(m_owner, m_owner->m_pendingMedia, 1, 0, 1);
+        int swapRet = reinterpret_cast<StateMachine *>(m_owner)->swapActiveMedia(reinterpret_cast<MediaListInterface *>(m_owner->m_pendingMedia), 1, 0, 1);
         if (swapRet != 0) {
             void *oldMedia = m_owner->m_pendingMedia;
             m_owner->onMediaChanged(0, NULL, 0, NULL, &oldMedia, 1);
@@ -899,7 +774,7 @@ int StateStopping::onAudioError(int errCode)
         } else {
             m_owner->m_lastErrorType = 0;
             TrackInfoData metaCopy = m_owner->m_activeTrackInfo;
-            stateMachinePopulateMetadata(m_owner, &metaCopy, m_owner->m_metaBufs);
+            reinterpret_cast<StateMachine *>(m_owner)->populateMetadataSafe(&metaCopy, reinterpret_cast<TrackMetadataBuffers *>(m_owner->m_metaBufs));
             nextState = STATE_STARTING;
         }
     }
@@ -922,7 +797,7 @@ int StateStopping::onAudioError(int errCode)
 
         if (m_owner->m_dbRemovedError == 1u && m_owner->m_lastDbErr == MC_ERR_DB_REMOVED
             && m_owner->m_pendingMedia == NULL) {
-            stateMachineSwapMedia(m_owner, NULL, 0, 0, 0);
+            reinterpret_cast<StateMachine *>(m_owner)->swapActiveMedia(reinterpret_cast<MediaListInterface *>(NULL), 0, 0, 0);
         }
 
         if (m_owner->m_deactivateRequested == 1u) {
@@ -958,8 +833,7 @@ int StateStopping::onAudioError(int errCode)
             nextState = STATE_STOPPED;
             m_owner->m_hasPendingError = 6;
         } else {
-            int sameFmt = decoderMgrIsSameFormat(m_owner->m_decoderMgr,
-                                                 m_owner->m_activeTrackInfo.mediaInfo);
+            int sameFmt = static_cast<DecoderManager *>(m_owner->m_decoderMgr)->checkMediaCompat(static_cast<const MediaInfoBase *>(m_owner->m_activeTrackInfo.mediaInfo));
             m_owner->m_needDecoderRestart = (sameFmt != 1) ? 1u : 0u;
         }
     }
@@ -981,7 +855,7 @@ int StateStopping::onAudioError(int errCode)
     m_owner->m_lastDbErr = 0;
     m_owner->m_extraSeekErr = 0;
 
-    int transRet = stateMachineTransition(m_owner, nextState);
+    int transRet = reinterpret_cast<StateMachine *>(m_owner)->transitionTo(nextState);
     return (transRet == 0) ? extraSeekErr : transRet;
 }
 
@@ -997,16 +871,6 @@ int StateStopping::shouldDeferCmd(uint16_t cmdCode, uint16_t *outWaitCode)
 }
 
 /* ===== StateDeactivating (stateId = 8, 0x811FCA80 - 0x811FCB4F) ===== */
-
-class StateDeactivating : public PlaybackStateBase {
-public:
-    StateDeactivating(StateMachineContext *owner, int *outErr);
-    virtual ~StateDeactivating();
-
-    virtual int onEnter();
-    virtual int onBufferReady();
-    virtual int shouldDeferCmd(uint16_t cmdCode, uint16_t *outWaitCode);
-};
 
 /* 0x811FCA80 */
 StateDeactivating::StateDeactivating(StateMachineContext *owner, int *outErr)
@@ -1031,7 +895,7 @@ int StateDeactivating::onEnter()
             return ret;
         }
     }
-    int ret = decoderMgrClosePipeline(m_owner->m_decoderMgr);
+    int ret = static_cast<DecoderManager *>(m_owner->m_decoderMgr)->closeCodec();
     if (ret == 0) {
         ret = m_owner->onDeactivatedHook(m_owner->m_activateToken);
         if (ret == 0) {
@@ -1047,7 +911,7 @@ int StateDeactivating::onBufferReady()
     if (m_owner == NULL) {
         return MC_ERR_FAILED;
     }
-    return stateMachineTransition(m_owner, STATE_IDLE);
+    return reinterpret_cast<StateMachine *>(m_owner)->transitionTo(STATE_IDLE);
 }
 
 /* 0x811FCB36 */
@@ -1061,17 +925,6 @@ int StateDeactivating::shouldDeferCmd(uint16_t cmdCode, uint16_t *outWaitCode)
 }
 
 /* ===== StateActivating (stateId = 1, 0x811FCB50 - 0x811FCD47) ===== */
-
-class StateActivating : public PlaybackStateBase {
-public:
-    StateActivating(StateMachineContext *owner, int *outErr);
-    virtual ~StateActivating();
-
-    virtual int onEnter();
-    virtual int onSetShuffle(int shuffleVal);
-    virtual int onStreamEnd();
-    virtual int shouldDeferCmd(uint16_t cmdCode, uint16_t *outWaitCode);
-};
 
 /* 0x811FCB50 */
 StateActivating::StateActivating(StateMachineContext *owner, int *outErr)
@@ -1143,7 +996,7 @@ int StateActivating::onStreamEnd()
             return MC_ERR_FAILED;
         }
     }
-    stateMachineTransition(m_owner, nextState);
+    reinterpret_cast<StateMachine *>(m_owner)->transitionTo(nextState);
     return 0;
 }
 
@@ -1169,18 +1022,6 @@ int StateActivating::shouldDeferCmd(uint16_t cmdCode, uint16_t *outWaitCode)
 
 /* ===== StateReady (stateId = 2, 0x811FCD48 - 0x811FCF13) ===== */
 
-class StateReady : public PlaybackStateBase {
-public:
-    StateReady(StateMachineContext *owner, int *outErr);
-    virtual ~StateReady();
-
-    virtual int onSetMedia(MediaListAccess *media, int shuffleVal, uint8_t pauseFlag);
-    virtual int onPlay(int playParam);
-    virtual int onPause(uint8_t resetPos, int fadeParam);
-    virtual int onSeekAndPlay(const uint32_t *seekParams, int playParam);
-    virtual int onSetMediaPlaying(MediaListAccess *media, int shuffleVal);
-};
-
 /* 0x811FCD48 */
 StateReady::StateReady(StateMachineContext *owner, int *outErr)
     : PlaybackStateBase(owner, STATE_READY, outErr)
@@ -1202,8 +1043,8 @@ int StateReady::onSetMedia(MediaListAccess *media, int shuffleVal, uint8_t pause
         return MC_ERR_INVALID_ARG;
     }
     m_owner->m_shuffleSeed = shuffleVal;
-    stateMachineSetPendingMedia(m_owner, media);
-    int ret = stateMachineSwapMedia(m_owner, media, 1, 1, 1);
+    reinterpret_cast<StateMachine *>(m_owner)->setPendingMedia(reinterpret_cast<MediaListInterface *>(media));
+    int ret = reinterpret_cast<StateMachine *>(m_owner)->swapActiveMedia(reinterpret_cast<MediaListInterface *>(media), 1, 1, 1);
     if (ret != 0) {
         return ret;
     }
@@ -1223,7 +1064,7 @@ int StateReady::onSetMedia(MediaListAccess *media, int shuffleVal, uint8_t pause
         return MC_ERR_FAILED;
     }
 
-    stateMachineTransition(m_owner, nextState);
+    reinterpret_cast<StateMachine *>(m_owner)->transitionTo(nextState);
     return 0;
 }
 
@@ -1259,7 +1100,7 @@ int StateReady::onSeekAndPlay(const uint32_t *seekParams, int playParam)
     if (m_owner == NULL) {
         return MC_ERR_FAILED;
     }
-    int ret = stateMachineSeekActive(m_owner, seekParams, m_owner->m_activeMedia, 0);
+    int ret = reinterpret_cast<StateMachine *>(m_owner)->seekActiveMedia(seekParams, reinterpret_cast<MediaListInterface *>(m_owner->m_activeMedia), 0);
     if (ret == 0) {
         m_owner->m_targetState = STATE_PLAYING;
         m_owner->m_playParam = playParam;
@@ -1277,27 +1118,18 @@ int StateReady::onSetMediaPlaying(MediaListAccess *media, int shuffleVal)
         return MC_ERR_INVALID_ARG;
     }
     m_owner->m_shuffleSeed = shuffleVal;
-    stateMachineSetPendingMedia(m_owner, media);
-    int ret = stateMachineSwapMedia(m_owner, media, 1, 1, 1);
+    reinterpret_cast<StateMachine *>(m_owner)->setPendingMedia(reinterpret_cast<MediaListInterface *>(media));
+    int ret = reinterpret_cast<StateMachine *>(m_owner)->swapActiveMedia(reinterpret_cast<MediaListInterface *>(media), 1, 1, 1);
     if (ret == 0) {
         m_owner->m_targetState = STATE_PLAYING;
         m_owner->m_playParam = 0;
         m_owner->m_needDecoderRestart = 1;
-        stateMachineTransition(m_owner, STATE_STARTING);
+        reinterpret_cast<StateMachine *>(m_owner)->transitionTo(STATE_STARTING);
     }
     return ret;
 }
 
 /* ===== StateIdle (stateId = 0, 0x811FCFBC - 0x811FD517) ===== */
-
-class StateIdle : public PlaybackStateBase {
-public:
-    StateIdle(StateMachineContext *owner, int *outErr);
-    virtual ~StateIdle();
-
-    virtual int onEnter();
-    virtual int onActivate(const ActivateStateSnapshot *snap, int fadeMs);
-};
 
 /* 0x811FCFBC */
 StateIdle::StateIdle(StateMachineContext *owner, int *outErr)
@@ -1411,19 +1243,19 @@ int StateIdle::onActivate(const ActivateStateSnapshot *snap, int fadeMs)
             int64_t trackKey = media->getCurrentTrackKey();
             media->lockList(snap->shuffleMode, trackKey, &listLocked, 0);
 
-            int seekRet = stateMachineSeekActive(m_owner, seekParams, media, 0);
+            int seekRet = reinterpret_cast<StateMachine *>(m_owner)->seekActiveMedia(seekParams, reinterpret_cast<MediaListInterface *>(media), 0);
             if (listLocked == 1u) {
                 media->unlockList(0);
             }
 
             if (seekRet == 0) {
-                seekRet = stateMachineSwapMedia(m_owner, media, 0, 0, 0);
+                seekRet = reinterpret_cast<StateMachine *>(m_owner)->swapActiveMedia(reinterpret_cast<MediaListInterface *>(media), 0, 0, 0);
                 if (seekRet != 0) {
                     void *oldMedia = media;
                     m_owner->onMediaChanged(0, NULL, 0, NULL, &oldMedia, 0);
                 }
             } else {
-                int swapRet = stateMachineSwapMedia(m_owner, media, 0, 0, 0);
+                int swapRet = reinterpret_cast<StateMachine *>(m_owner)->swapActiveMedia(reinterpret_cast<MediaListInterface *>(media), 0, 0, 0);
                 if (swapRet != 0) {
                     void *oldMedia = media;
                     m_owner->onMediaChanged(0, NULL, 0, NULL, &oldMedia, 0);
@@ -1439,29 +1271,10 @@ int StateIdle::onActivate(const ActivateStateSnapshot *snap, int fadeMs)
     if (fadeMs != -1) {
         m_owner->m_pendingFadeMs = fadeMs;
     }
-    return stateMachineTransition(m_owner, STATE_ACTIVATING);
+    return reinterpret_cast<StateMachine *>(m_owner)->transitionTo(STATE_ACTIVATING);
 }
 
 /* ===== StatePlaying (stateId = 4, 0x811FD518 - 0x811FDB5B) ===== */
-
-class StatePlaying : public PlaybackStateBase {
-public:
-    StatePlaying(StateMachineContext *owner, int *outErr);
-    virtual ~StatePlaying();
-
-    virtual int onDeactivate(int fadeMs, uint8_t syncFlag);
-    virtual int onSetMedia(MediaListAccess *media, int shuffleVal, uint8_t pauseFlag);
-    virtual int onPause(uint8_t resetPos, int fadeParam);
-    virtual int onSeek(const uint32_t *seekParams);
-    virtual int onCancel();
-    virtual int onSuspendForDb(uint8_t suspendFlag);
-    virtual int onSeekAndPlay(const uint32_t *seekParams, int playParam);
-    virtual int onSetMediaPlaying(MediaListAccess *media, int shuffleVal);
-    virtual int onAudioError(int errCode);
-    virtual int onAudioPortEvent(uint8_t portFlag);
-    virtual int getCurrentPosMs();
-    virtual void setCachedPosMs(int posMs);
-};
 
 /* 0x811FD518 */
 StatePlaying::StatePlaying(StateMachineContext *owner, int *outErr)
@@ -1492,7 +1305,7 @@ int StatePlaying::onDeactivate(int fadeMs, uint8_t syncFlag)
         -2, m_owner->m_pendingFadeMs, &fadePending);
     int ret = 0;
     if (fadePending != 1u) {
-        ret = stateMachineTransition(m_owner, STATE_STOPPING);
+        ret = reinterpret_cast<StateMachine *>(m_owner)->transitionTo(STATE_STOPPING);
     }
     m_owner->m_pendingFadeMs = -1;
     return ret;
@@ -1508,13 +1321,13 @@ int StatePlaying::onSetMedia(MediaListAccess *media, int shuffleVal, uint8_t pau
         return MC_ERR_INVALID_ARG;
     }
     m_owner->m_shuffleSeed = shuffleVal;
-    int ret = stateMachineSetPendingMedia(m_owner, media);
+    int ret = reinterpret_cast<StateMachine *>(m_owner)->setPendingMedia(reinterpret_cast<MediaListInterface *>(media));
     if (ret == 0) {
         if (pauseFlag == 1u) {
             m_owner->m_targetState = STATE_STOPPED;
             m_owner->m_stopRequested = 1;
         }
-        return stateMachineTransition(m_owner, STATE_STOPPING);
+        return reinterpret_cast<StateMachine *>(m_owner)->transitionTo(STATE_STOPPING);
     }
     return ret;
 }
@@ -1538,7 +1351,7 @@ int StatePlaying::onPause(uint8_t resetPos, int fadeParam)
         0xFFFFFFFEu, m_owner->m_playParam, &rampPending);
     int ret = 0;
     if (rampPending != 1u) {
-        ret = stateMachineTransition(m_owner, STATE_STOPPING);
+        ret = reinterpret_cast<StateMachine *>(m_owner)->transitionTo(STATE_STOPPING);
     }
     m_owner->m_playParam = -1;
     return ret;
@@ -1557,15 +1370,15 @@ int StatePlaying::onSeek(const uint32_t *seekParams)
     }
 
     uint8_t needStop = 0;
-    int ret = stateMachineSeekPending(m_owner, localParams, m_owner->m_activeMedia, &needStop, 0);
+    int ret = reinterpret_cast<StateMachine *>(m_owner)->seekPendingMedia(localParams, reinterpret_cast<MediaListInterface *>(m_owner->m_activeMedia), &needStop, 0);
     if (ret != 0) {
         return ret;
     }
     if (needStop == 1u) {
-        return stateMachineTransition(m_owner, STATE_STOPPING);
+        return reinterpret_cast<StateMachine *>(m_owner)->transitionTo(STATE_STOPPING);
     }
     if (localParams[1] != 0x80000000u) {
-        ret = decoderMgrSetReverseDir(m_owner->m_decoderMgr, (m_owner->m_volumeMode < 0) ? 1 : 0);
+        ret = static_cast<DecoderManager *>(m_owner->m_decoderMgr)->seekMedia((m_owner->m_volumeMode < 0) ? 1 : 0, 0);
         if (ret != 0) {
             return ret;
         }
@@ -1608,18 +1421,18 @@ int StatePlaying::onSuspendForDb(uint8_t suspendFlag)
     seekParams[4] = 0xFFFFFFFFu;
 
     uint8_t needStop = 0;
-    int ret = stateMachineSeekPending(m_owner, seekParams, m_owner->m_activeMedia, &needStop, 0);
+    int ret = reinterpret_cast<StateMachine *>(m_owner)->seekPendingMedia(seekParams, reinterpret_cast<MediaListInterface *>(m_owner->m_activeMedia), &needStop, 0);
     if (ret == MC_ERR_DB_REMOVED) {
         m_owner->m_dbRemovedError = 1;
         m_owner->m_lastDbErr = MC_ERR_DB_REMOVED;
-        return stateMachineTransition(m_owner, STATE_STOPPING);
+        return reinterpret_cast<StateMachine *>(m_owner)->transitionTo(STATE_STOPPING);
     }
     if (ret != 0) {
         m_owner->m_seekFailed = 1;
-        return stateMachineTransition(m_owner, STATE_STOPPING);
+        return reinterpret_cast<StateMachine *>(m_owner)->transitionTo(STATE_STOPPING);
     }
     if (needStop == 1u) {
-        return stateMachineTransition(m_owner, STATE_STOPPING);
+        return reinterpret_cast<StateMachine *>(m_owner)->transitionTo(STATE_STOPPING);
     }
     return 0;
 }
@@ -1654,7 +1467,7 @@ int StatePlaying::onSetMediaPlaying(MediaListAccess *media, int shuffleVal)
         return MC_ERR_INVALID_ARG;
     }
     m_owner->m_shuffleSeed = shuffleVal;
-    int ret = stateMachineSetPendingMedia(m_owner, media);
+    int ret = reinterpret_cast<StateMachine *>(m_owner)->setPendingMedia(reinterpret_cast<MediaListInterface *>(media));
     if (ret == 0) {
         m_owner->m_targetState = STATE_PLAYING;
         m_owner->m_playParam = 0;
@@ -1662,7 +1475,7 @@ int StatePlaying::onSetMediaPlaying(MediaListAccess *media, int shuffleVal)
         static_cast<AudioOutput *>(m_owner->m_audioOut)->setVolumeOrDbFade(
             0xFFFFFFFEu, 0, &rampPending);
         if (rampPending != 1u) {
-            return stateMachineTransition(m_owner, STATE_STOPPING);
+            return reinterpret_cast<StateMachine *>(m_owner)->transitionTo(STATE_STOPPING);
         }
     }
     return ret;
@@ -1687,7 +1500,7 @@ int StatePlaying::onAudioError(int errCode)
         if (contentKind == 2) {
             m_owner->m_hasPendingError = 2;
             m_owner->m_targetState = STATE_STOPPED;
-            return stateMachineTransition(m_owner, STATE_STOPPED);
+            return reinterpret_cast<StateMachine *>(m_owner)->transitionTo(STATE_STOPPED);
         }
         m_owner->m_activeTrackInfo.contentKind = contentKind;
     }
@@ -1699,26 +1512,25 @@ int StatePlaying::onAudioError(int errCode)
     seekParams[3] = (uint32_t)m_owner->m_speedMode;
     seekParams[4] = 0xFFFFFFFFu;
 
-    int seekRet = stateMachineSeekActive(m_owner, seekParams, m_owner->m_activeMedia, 0);
+    int seekRet = reinterpret_cast<StateMachine *>(m_owner)->seekActiveMedia(seekParams, reinterpret_cast<MediaListInterface *>(m_owner->m_activeMedia), 0);
     int nextState = STATE_STOPPED;
     if (seekRet == 0) {
-        int sameFmt = decoderMgrIsSameFormat(m_owner->m_decoderMgr,
-                                             m_owner->m_activeTrackInfo.mediaInfo);
+        int sameFmt = static_cast<DecoderManager *>(m_owner->m_decoderMgr)->checkMediaCompat(static_cast<const MediaInfoBase *>(m_owner->m_activeTrackInfo.mediaInfo));
         m_owner->m_needDecoderRestart = (sameFmt != 1) ? 1u : 0u;
         nextState = STATE_STARTING;
     } else if (seekRet == MC_ERR_END_FWD) {
         m_owner->m_hasPendingError = 6;
-        stateMachineClearTrackFlag();
+        clearRejectedIdList();
         seekParams[0] = 0xFFFFFFFBu;
-        stateMachineSeekActive(m_owner, seekParams, m_owner->m_activeMedia, 0);
+        reinterpret_cast<StateMachine *>(m_owner)->seekActiveMedia(seekParams, reinterpret_cast<MediaListInterface *>(m_owner->m_activeMedia), 0);
         m_owner->m_targetState = STATE_STOPPED;
         seekRet = 0;
         nextState = STATE_STOPPED;
     } else if (seekRet == MC_ERR_END_REV) {
         m_owner->m_hasPendingError = 7;
-        stateMachineClearTrackFlag();
+        clearRejectedIdList();
         seekParams[0] = 0xFFFFFFFBu;
-        stateMachineSeekActive(m_owner, seekParams, m_owner->m_activeMedia, 0);
+        reinterpret_cast<StateMachine *>(m_owner)->seekActiveMedia(seekParams, reinterpret_cast<MediaListInterface *>(m_owner->m_activeMedia), 0);
         m_owner->m_targetState = STATE_STOPPED;
         seekRet = 0;
         nextState = STATE_STOPPED;
@@ -1728,7 +1540,7 @@ int StatePlaying::onAudioError(int errCode)
         nextState = STATE_STOPPED;
     }
 
-    int transRet = stateMachineTransition(m_owner, nextState);
+    int transRet = reinterpret_cast<StateMachine *>(m_owner)->transitionTo(nextState);
     return (transRet != 0) ? transRet : seekRet;
 }
 
@@ -1737,7 +1549,7 @@ int StatePlaying::onAudioPortEvent(uint8_t portFlag)
 {
     if (portFlag == 1u
         && (m_owner->m_targetState == STATE_STOPPED || m_owner->m_deactivateRequested == 1u)) {
-        return stateMachineTransition(m_owner, STATE_STOPPING);
+        return reinterpret_cast<StateMachine *>(m_owner)->transitionTo(STATE_STOPPING);
     }
     return 0;
 }
@@ -1758,110 +1570,6 @@ void StatePlaying::setCachedPosMs(int posMs)
     if (m_owner != NULL) {
         m_owner->m_cachedPosMs = posMs;
     }
-}
-
-void stateBaseConstruct(void *state, void *owner, int stateId, void *sharedTable)
-{
-    (void)sharedTable;
-    int err = 0;
-    new (state) PlaybackStateBase(static_cast<StateMachineContext *>(owner), stateId, &err);
-}
-
-void stateBaseDestruct(void *state)
-{
-    if (state != NULL)
-        static_cast<PlaybackStateBase *>(state)->~PlaybackStateBase();
-}
-
-void stateIdleConstruct(void *state, void *owner, void *sharedTable)
-{
-    (void)sharedTable;
-    int err = 0;
-    new (state) StateIdle(static_cast<StateMachineContext *>(owner), &err);
-}
-
-void stateIdleDestruct(void *state)
-{
-    if (state != NULL)
-        static_cast<StateIdle *>(state)->~StateIdle();
-}
-
-void stateInitConstruct(void *state, void *owner, void *sharedTable)
-{
-    (void)sharedTable;
-    int err = 0;
-    new (state) StateActivating(static_cast<StateMachineContext *>(owner), &err);
-}
-
-void stateInitDestruct(void *state)
-{
-    if (state != NULL)
-        static_cast<StateActivating *>(state)->~StateActivating();
-}
-
-void stateReadyConstruct(void *state, void *owner, void *sharedTable)
-{
-    (void)sharedTable;
-    int err = 0;
-    new (state) StateReady(static_cast<StateMachineContext *>(owner), &err);
-}
-
-void stateReadyDestruct(void *state)
-{
-    if (state != NULL)
-        static_cast<StateReady *>(state)->~StateReady();
-}
-
-void stateStartingConstruct(void *state, void *owner, void *sharedTable)
-{
-    (void)sharedTable;
-    int err = 0;
-    new (state) StateStarting(static_cast<StateMachineContext *>(owner), &err);
-}
-
-void stateStartingDestruct(void *state)
-{
-    if (state != NULL)
-        static_cast<StateStarting *>(state)->~StateStarting();
-}
-
-void statePlayingConstruct(void *state, void *owner, void *sharedTable)
-{
-    (void)sharedTable;
-    int err = 0;
-    new (state) StatePlaying(static_cast<StateMachineContext *>(owner), &err);
-}
-
-void statePlayingDestruct(void *state)
-{
-    if (state != NULL)
-        static_cast<StatePlaying *>(state)->~StatePlaying();
-}
-
-void statePausedConstruct(void *state, void *owner, void *sharedTable)
-{
-    (void)sharedTable;
-    int err = 0;
-    new (state) StateStopping(static_cast<StateMachineContext *>(owner), &err);
-}
-
-void statePausedDestruct(void *state)
-{
-    if (state != NULL)
-        static_cast<StateStopping *>(state)->~StateStopping();
-}
-
-void stateStoppingConstruct(void *state, void *owner, void *sharedTable)
-{
-    (void)sharedTable;
-    int err = 0;
-    new (state) StateDeactivating(static_cast<StateMachineContext *>(owner), &err);
-}
-
-void stateStoppingDestruct(void *state)
-{
-    if (state != NULL)
-        static_cast<StateDeactivating *>(state)->~StateDeactivating();
 }
 
 } /* namespace MusicCore */

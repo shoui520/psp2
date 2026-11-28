@@ -10,6 +10,7 @@
 #include <thread/thread.h>
 
 #include "musiccore_player_base.h"
+#include "musiccore_state_machine.h"
 #include "musiccore_db_manager.h"
 
 extern "C" {
@@ -64,8 +65,6 @@ struct SeekCmdPayload {
 };
 
 extern unsigned int calcMediaQueueSize(int capacity, int a, int b, int c);
-extern int decoderGetCurrentPos(void *decoderState);
-extern int64_t decoderGetCurrentTrackId(void *decoderState);
 extern void *workBufGetRegion(void *workBuf, int index);
 extern void computePlaybackRange(int repeatMode, int shuffleMode, int step, int totalTracks,
                                  int speedMode, int *outPrev, int *outNext, int *outCur);
@@ -490,13 +489,13 @@ int BasePlayer::flushTimeCallback()
     rep.playerKind = (unsigned char)m_playerKind;
 
     int pos = (m_decoder != NULL)
-                  ? decoderGetCurrentPos(m_decoder->m_stateMachine)
+                  ? reinterpret_cast<StateMachine *>(m_decoder->m_stateMachine)->getCurrentPosMs()
                   : m_offlineState.positionMs;
     if (pos == -1 || pos == -2 || pos == -3 || pos == -4)
         return 0;
 
     int64_t trackId = (m_decoder != NULL)
-                          ? decoderGetCurrentTrackId(m_decoder->m_stateMachine)
+                          ? reinterpret_cast<StateMachine *>(m_decoder->m_stateMachine)->getCurrentTrackId()
                           : m_offlineState.trackId;
     if (trackId == -2)
         trackId = -1;
@@ -515,7 +514,7 @@ int BasePlayer::getStatus(PlayerStatusSnapshot *outSnap, int *outPos, unsigned c
 
     *outPosValid = 1;
     int pos = (m_decoder != NULL)
-                  ? decoderGetCurrentPos(m_decoder->m_stateMachine)
+                  ? reinterpret_cast<StateMachine *>(m_decoder->m_stateMachine)->getCurrentPosMs()
                   : m_offlineState.positionMs;
     if (pos == -1 || pos == -2 || pos == -3 || pos == -4)
         *outPosValid = 0;

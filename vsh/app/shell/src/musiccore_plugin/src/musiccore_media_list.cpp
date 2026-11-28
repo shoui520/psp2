@@ -17,6 +17,8 @@
 #include <stdlib.h>
 #include <thread/thread.h>
 
+#include "musiccore_decoder_manager.h"
+
 extern "C" {
 void *sce_paf_memset(void *dst, int ch, SceSize len);
 void *sce_paf_memcpy(void *dst, const void *src, SceSize len);
@@ -82,11 +84,6 @@ struct MediaInfoHandle {
     uint32_t mediaFourcc;
     uint8_t sharedFlag;
 };
-
-extern void decoderManagerReleaseMediaInfo(MediaInfoHandle **ioHandle, int forceRelease);
-extern int decoderManagerProbeTrack(const char *path, int codecHint, uint8_t parseMeta,
-                                    int ioPriority, MediaInfoHandle **outMediaInfo,
-                                    TrackMetadataResult *outMeta, int loopMode);
 
 /* Database connection provider interface owned by DbManager */
 class DbConnectionProvider {
@@ -854,13 +851,13 @@ int MediaItem::probe(int ioPriority, uint8_t parseMeta)
         if (parseMeta != 1u || m_mediaInfo->sharedFlag != 0u) {
             return 0;
         }
-        decoderManagerReleaseMediaInfo(&m_mediaInfo, 1);
-        if (m_mediaInfo == NULL) {
-            m_mediaInfoShared = 0;
-        }
+        MediaInfoBase *relMedia = reinterpret_cast<MediaInfoBase *>(m_mediaInfo);
+        DecoderManager::releaseMediaInfo(&relMedia, 1u);
+        m_mediaInfo = NULL;
+        m_mediaInfoShared = 0;
     }
 
-    MediaInfoHandle *probedInfo = NULL;
+    MediaInfoBase *probedBase = NULL;
     TrackMetadataResult meta;
     meta.hasChannels = 0;
     meta.hasBitRate = 0;
@@ -870,8 +867,10 @@ int MediaItem::probe(int ioPriority, uint8_t parseMeta)
     meta.hasCodecSubType = 0;
 
     int probeHint = mapCodecSubTypeToProbeHint(m_codecSubType);
-    int ret = decoderManagerProbeTrack(m_contentPath, probeHint, parseMeta, ioPriority,
-                                       &probedInfo, &meta, m_loopMode);
+    int ret = DecoderManager::createMediaInfo(m_contentPath, probeHint, parseMeta,
+                                              reinterpret_cast<CodecAdapter *>(ioPriority),
+                                              &probedBase, reinterpret_cast<int>(&meta), m_loopMode);
+    MediaInfoHandle *probedInfo = reinterpret_cast<MediaInfoHandle *>(probedBase);
 
     if (parseMeta == 1u) {
         if (meta.hasChannels == 1u && m_channels != meta.channels) {
@@ -913,7 +912,9 @@ int MediaItem::probe(int ioPriority, uint8_t parseMeta)
     }
 
     if (probedInfo != NULL && probedInfo->sharedFlag == 0u) {
-        decoderManagerReleaseMediaInfo(&probedInfo, 1);
+        MediaInfoBase *relProbed = reinterpret_cast<MediaInfoBase *>(probedInfo);
+        DecoderManager::releaseMediaInfo(&relProbed, 1u);
+        probedInfo = NULL;
     }
 
     if (ret == MC_ERR_IO_ERROR || ret == MC_ERR_NOT_FOUND || ret == MC_ERR_CORRUPT) {
@@ -1508,7 +1509,9 @@ int MediaItem::releaseToList(uint8_t commitChanges)
     }
 
     if (m_mediaInfo != NULL && m_mediaInfoShared == 0u) {
-        decoderManagerReleaseMediaInfo(&m_mediaInfo, 1);
+        MediaInfoBase *relMedia = reinterpret_cast<MediaInfoBase *>(m_mediaInfo);
+        DecoderManager::releaseMediaInfo(&relMedia, 1u);
+        m_mediaInfo = NULL;
     }
 
     m_ownerList->releaseItemSlot(this);
@@ -3001,11 +3004,6 @@ void trackInfoResetCounters(void *trackInfo)
 int isTrackIdRemoved(int64_t trackId, void *listHandle)
 {
     return isIdRejected(trackId, static_cast<unsigned int>(reinterpret_cast<uintptr_t>(listHandle)));
-}
-
-void stateMachineClearTrackFlag()
-{
-    clearRejectedIdList();
 }
 
 void *createUriMediaList(void *slotMem)

@@ -11,6 +11,7 @@
 
 #include "musiccore_codec_decoders.h"
 #include "musiccore_codec_factories.h"
+#include "musiccore_decoder_manager.h"
 #include "musiccore_decoder_pipeline.h"
 #include "musiccore_media.h"
 #include "musiccore_pipeline_types.h"
@@ -50,7 +51,6 @@ static const int MODE_LOCAL_PLAY = 1;
 static const int MODE_STREAM_PLAY = 5;
 static const int MODE_DIRECT_PLAY = 16;
 
-extern void decoderManagerReleaseMediaInfo(MediaInfoHandle **ioHandle, int forceRelease);
 
 struct At9PacketOut {
     void *frameBuffer;        /* +0 */
@@ -214,13 +214,13 @@ At9Parser::~At9Parser()
 {
     if (m_nextMedia != NULL) {
         MediaInfoHandle *nextHandle = reinterpret_cast<MediaInfoHandle *>(m_nextMedia);
-        decoderManagerReleaseMediaInfo(&nextHandle, 1);
+        { MediaInfoBase *relMedia = reinterpret_cast<MediaInfoBase *>(nextHandle); DecoderManager::releaseMediaInfo(&relMedia, 1u); nextHandle = NULL; }
         m_nextMedia = NULL;
         m_nextCacheIo = NULL;
     }
     if (m_activeMedia != NULL) {
         MediaInfoHandle *curHandle = reinterpret_cast<MediaInfoHandle *>(m_activeMedia);
-        decoderManagerReleaseMediaInfo(&curHandle, 1);
+        { MediaInfoBase *relMedia = reinterpret_cast<MediaInfoBase *>(curHandle); DecoderManager::releaseMediaInfo(&relMedia, 1u); curHandle = NULL; }
         m_activeMedia = NULL;
         m_activeCacheIo = NULL;
     }
@@ -261,7 +261,7 @@ int At9Parser::setMediaInfo(MediaInfoHandle *handle)
     At9MediaInfo *mediaInfo = reinterpret_cast<At9MediaInfo *>(handle);
     if (mediaInfo->m_cacheIo == NULL) {
         MediaInfoHandle *badHandle = reinterpret_cast<MediaInfoHandle *>(mediaInfo);
-        decoderManagerReleaseMediaInfo(&badHandle, 1);
+        { MediaInfoBase *relMedia = reinterpret_cast<MediaInfoBase *>(badHandle); DecoderManager::releaseMediaInfo(&relMedia, 1u); badHandle = NULL; }
         return -1;
     }
 
@@ -284,7 +284,7 @@ int At9Parser::setMediaInfo(MediaInfoHandle *handle)
         }
         if (m_activeMedia != NULL) {
             MediaInfoHandle *oldHandle = reinterpret_cast<MediaInfoHandle *>(m_activeMedia);
-            decoderManagerReleaseMediaInfo(&oldHandle, 1);
+            { MediaInfoBase *relMedia = reinterpret_cast<MediaInfoBase *>(oldHandle); DecoderManager::releaseMediaInfo(&relMedia, 1u); oldHandle = NULL; }
             m_activeMedia = NULL;
         }
         m_activeCacheIo = NULL;
@@ -309,7 +309,7 @@ int At9Parser::setMediaInfo(MediaInfoHandle *handle)
     if (m_nextCacheIo != NULL) {
         if (m_nextMedia != NULL) {
             MediaInfoHandle *nextHandle = reinterpret_cast<MediaInfoHandle *>(m_nextMedia);
-            decoderManagerReleaseMediaInfo(&nextHandle, 1);
+            { MediaInfoBase *relMedia = reinterpret_cast<MediaInfoBase *>(nextHandle); DecoderManager::releaseMediaInfo(&relMedia, 1u); nextHandle = NULL; }
             m_nextMedia = NULL;
         }
         m_nextCacheIo = NULL;

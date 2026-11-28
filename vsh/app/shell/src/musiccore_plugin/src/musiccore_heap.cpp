@@ -11,6 +11,7 @@
 #include <memory/heap_allocator.h>
 #include <std/new>
 
+#include "musiccore_decoder_manager.h"
 #include "musiccore_heap.h"
 
 extern "C" {
@@ -34,11 +35,6 @@ static const SceSize MUSICCORE_MEDIUM_BUF_SIZE = 32832;
 
 namespace sce {
 namespace MusicCore {
-
-extern void *getAudioCodecManager();
-extern int initAudioCodecManager(void *mgr, void *paramBuf, int paramCount);
-extern int termAudioCodecManager(void *mgr);
-extern int queryAudioCodecParams(void *outBuf, int *inOutCount);
 
 static paf::memory::HeapAllocator *g_localHeap = NULL;
 
@@ -277,17 +273,15 @@ void initLocalHeap()
 
     BufferPool::getInstance()->init();
 
-    int paramCount = 4;
-    unsigned char paramBuf[48];
-    queryAudioCodecParams(paramBuf, &paramCount);
-    void *codecMgr = getAudioCodecManager();
-    initAudioCodecManager(codecMgr, paramBuf, paramCount);
+    unsigned int paramCount = 4u;
+    ThreadSpec specs[4];
+    DecoderManager::getThreadSpecs(specs, &paramCount);
+    WorkerThreadPool::getInstance()->initialize(specs, paramCount);
 }
 
 void termLocalHeap()
 {
-    void *codecMgr = getAudioCodecManager();
-    termAudioCodecManager(codecMgr);
+    WorkerThreadPool::getInstance()->finalize();
     BufferPool::getInstance()->term();
     if (g_localHeap != NULL) {
         delete g_localHeap;

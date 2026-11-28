@@ -9,17 +9,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "musiccore_decoder_manager.h"
 #include "musiccore_decoder_pipeline.h"
 #include "musiccore_heap.h"
 #include "musiccore_sync.h"
 
 namespace sce {
 namespace MusicCore {
-
-extern void *getWorkerThreadPool();
-extern int workerThreadPoolStart(void *pool, int slotType, void *entryFn,
-                                 size_t argSize, void *argData, int *outWorkerId);
-extern void workerThreadPoolJoin(void *pool, int workerId);
 
 /* Pipeline stage completion masks (0x81545000, 0x81545002, 0x81545004) */
 static uint16_t g_runningStageMask = 0x0110u;
@@ -287,10 +283,9 @@ DecoderPipeline::DecoderPipeline(ParserFilter *parser, BufRefPipe *pipe,
     m_threadArg = (DecoderPipeline **)localAlloc(sizeof(DecoderPipeline *));
     if (m_threadArg != NULL) {
         *m_threadArg = this;
-        void *pool = getWorkerThreadPool();
-        if (workerThreadPoolStart(pool, 3, (void *)&DecoderPipeline::workerThreadEntry,
-                                  sizeof(DecoderPipeline *), m_threadArg,
-                                  &m_workerThreadId) != 0) {
+        if (WorkerThreadPool::getInstance()->startWorker(
+                3, reinterpret_cast<int (*)(void *, void *)>(&DecoderPipeline::workerThreadEntry),
+                m_threadArg, NULL, &m_workerThreadId) != 0) {
             m_workerThreadId = -1;
             delete m_threadArg;
             m_threadArg = NULL;
@@ -308,8 +303,7 @@ DecoderPipeline::~DecoderPipeline()
     m_mutex.unlock();
 
     if (m_usesThreadPool == 1u) {
-        void *pool = getWorkerThreadPool();
-        workerThreadPoolJoin(pool, m_workerThreadId);
+        WorkerThreadPool::getInstance()->joinWorker(m_workerThreadId);
     } else {
         joinWorkerThread(m_workerThreadId);
     }

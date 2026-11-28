@@ -11,6 +11,7 @@
 
 #include "musiccore_codec_decoders.h"
 #include "musiccore_codec_factories.h"
+#include "musiccore_decoder_manager.h"
 #include "musiccore_decoder_pipeline.h"
 #include "musiccore_media.h"
 #include "musiccore_pipeline_types.h"
@@ -42,7 +43,6 @@ static const int MODE_LOCAL_PLAY = 1;
 static const int MODE_STREAM_PLAY = 5;
 static const int MODE_DIRECT_PLAY = 16;
 
-extern void decoderManagerReleaseMediaInfo(MediaInfoHandle **ioHandle, int forceRelease);
 
 struct ParserPacketOut {
     void *frameData;            /* +0 */
@@ -190,14 +190,14 @@ Mp3Parser::~Mp3Parser()
             m_activeStream = NULL;
         }
         MediaInfoHandle *nextHandle = reinterpret_cast<MediaInfoHandle *>(m_nextMedia);
-        decoderManagerReleaseMediaInfo(&nextHandle, 1);
+        { MediaInfoBase *relMedia = reinterpret_cast<MediaInfoBase *>(nextHandle); DecoderManager::releaseMediaInfo(&relMedia, 1u); nextHandle = NULL; }
         m_nextMedia = NULL;
         m_nextCacheIo = NULL;
         m_nextStream = NULL;
     }
     if (m_activeMedia != NULL) {
         MediaInfoHandle *curHandle = reinterpret_cast<MediaInfoHandle *>(m_activeMedia);
-        decoderManagerReleaseMediaInfo(&curHandle, 1);
+        { MediaInfoBase *relMedia = reinterpret_cast<MediaInfoBase *>(curHandle); DecoderManager::releaseMediaInfo(&relMedia, 1u); curHandle = NULL; }
         m_activeMedia = NULL;
         m_activeCacheIo = NULL;
         m_activeStream = NULL;
@@ -280,7 +280,7 @@ int Mp3Parser::setMediaInfo(MediaInfoHandle *handle)
         }
         if (m_activeMedia != NULL) {
             MediaInfoHandle *oldHandle = reinterpret_cast<MediaInfoHandle *>(m_activeMedia);
-            decoderManagerReleaseMediaInfo(&oldHandle, 1);
+            { MediaInfoBase *relMedia = reinterpret_cast<MediaInfoBase *>(oldHandle); DecoderManager::releaseMediaInfo(&relMedia, 1u); oldHandle = NULL; }
             m_activeMedia = NULL;
         }
         if (m_nextStream == m_activeStream) {
@@ -312,7 +312,7 @@ int Mp3Parser::setMediaInfo(MediaInfoHandle *handle)
     if (m_nextStream != NULL) {
         if (m_nextMedia != NULL) {
             MediaInfoHandle *nextHandle = reinterpret_cast<MediaInfoHandle *>(m_nextMedia);
-            decoderManagerReleaseMediaInfo(&nextHandle, 1);
+            { MediaInfoBase *relMedia = reinterpret_cast<MediaInfoBase *>(nextHandle); DecoderManager::releaseMediaInfo(&relMedia, 1u); nextHandle = NULL; }
             m_nextMedia = NULL;
         }
         m_nextStream = NULL;
@@ -367,7 +367,7 @@ int Mp3Parser::prefetchMediaInfo(MediaInfoHandle *handle)
             m_nextMedia = NULL;
         } else if (m_nextMedia != NULL) {
             MediaInfoHandle *oldNext = reinterpret_cast<MediaInfoHandle *>(m_nextMedia);
-            decoderManagerReleaseMediaInfo(&oldNext, 1);
+            { MediaInfoBase *relMedia = reinterpret_cast<MediaInfoBase *>(oldNext); DecoderManager::releaseMediaInfo(&relMedia, 1u); oldNext = NULL; }
             m_nextMedia = NULL;
         }
         m_nextStream = NULL;

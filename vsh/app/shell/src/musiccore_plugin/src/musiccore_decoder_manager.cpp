@@ -10,8 +10,10 @@
 #include <stdint.h>
 
 #include "musiccore_codec_factories.h"
+#include "musiccore_decoder_manager.h"
 #include "musiccore_decoder_pipeline.h"
 #include "musiccore_heap.h"
+#include "musiccore_mp3_readers.h"
 #include "musiccore_sync.h"
 #include <string.h>
 
@@ -28,7 +30,6 @@ namespace sce {
 namespace MusicCore {
 
 extern void *allocFromHeap(size_t size);
-extern bool checkLocalMediaPath(const char *path);
 
 static const int MUSICCORE_ERR_FAILED = -1879113726;       /* 0x8FFF0002 */
 static const int MUSICCORE_ERR_NO_MEMORY = -1879113724;    /* 0x8FFF0004 */
@@ -64,32 +65,6 @@ extern int createWorkerThread(const char *name, SceUID *outThreadId, SceKernelTh
 extern int startWorkerThread(SceUID threadId, SceSize argSize, void *argData);
 extern int joinWorkerThread(SceUID threadId);
 extern int deleteWorkerThread(SceUID threadId);
-
-struct MediaInfoBase {
-    virtual ~MediaInfoBase() {}
-    virtual int parseInfo(int parseMode, int parseFlags) = 0;
-
-    uint32_t formatFourCC;
-    uint8_t isRetained;
-};
-
-struct ParserAdapterBase {
-    virtual ~ParserAdapterBase() {}
-    virtual int onPipeConsumed(int frameFlags) { (void)frameFlags; return 0; }
-    virtual int onPipeUnderflow() { return 0; }
-    virtual int onFrameConsumed(int frameFlags) { (void)frameFlags; return 0; }
-    virtual int runLoop() { return 0; }
-    virtual int openStream() { return 0; }
-    virtual int closeStream() { return 0; }
-    virtual int produceFrame(void *outPkt) { (void)outPkt; return 0; }
-    virtual int findCachedMediaInfo(const char *path, MediaInfoBase **outInfo) = 0;
-};
-
-struct ThreadSpec {
-    const char *name;
-    int priority;
-    SceSize stackSize;
-};
 
 struct CodecProbeEntry {
     uint8_t tried;
@@ -128,110 +103,6 @@ static int mapDecoderError(unsigned int decErr)
         return MUSICCORE_ERR_FAILED;
     }
 }
-
-class CodecEventListener {
-public:
-    virtual ~CodecEventListener() {}
-    virtual void onEndOfStream() = 0;
-    virtual void onDecodeError(int stage, unsigned int decErr) = 0;
-    virtual void onBufferNotice() {}
-    virtual void onOpenComplete(int status, int param) = 0;
-    virtual void onStopComplete(int status) = 0;
-    virtual void onPauseComplete(int status) = 0;
-    virtual void onSeekComplete(int status) = 0;
-    virtual void onPositionReady(int posMs, int status) = 0;
-};
-
-class CodecAdapter : public CodecEventListener {
-public:
-    typedef int (*MediaReadyCallback)(void *ctx, void *userCtx);
-    typedef int (*ErrorCallback)(void *ctx, int err);
-    typedef int (*EndOfStreamCallback)(void *ctx);
-
-    void *outputCtx;
-    void *outputStartFn;
-    void *outputStopFn;
-    void *outputEnqueueFn;
-    void *outputFlushFn;
-    MediaReadyCallback mediaReadyCb;
-    void *pendingUserCtx;
-    ErrorCallback errorCb;
-    EndOfStreamCallback eosCb;
-    void *eventCbCtx;
-    DecoderPipeline *decoder;
-    SyncMutex waitMutex;
-    SyncCond waitCond;
-    int lastPositionMs;
-    int lastAsyncStatus;
-    int lastAsyncParam;
-    uint8_t lastEventType;
-    uint8_t padActive[3];
-
-    /* 0x811E9ED0 */
-    CodecAdapter(const char *mutexName, const char *condName);
-
-    /* 0x811E9F2C / 0x811E9F58 */
-    virtual ~CodecAdapter();
-
-    /* 0x811EA23E */
-    virtual void onEndOfStream();
-
-    /* 0x811EA24A */
-    virtual void onDecodeError(int stage, unsigned int decErr);
-
-    /* 0x811EA266 */
-    virtual void onOpenComplete(int status, int param);
-
-    /* 0x811EA298 */
-    virtual void onStopComplete(int status);
-
-    /* 0x811EA2C2 */
-    virtual void onPauseComplete(int status);
-
-    /* 0x811EA2EC */
-    virtual void onSeekComplete(int status);
-
-    /* 0x811EA316 */
-    virtual void onPositionReady(int posMs, int status);
-
-    /* Pure virtual codec factory hooks */
-    virtual int openDecoder(int mode, int extraParam) = 0;
-    virtual int closeDecoder() = 0;
-
-    /* 0x811EA016 */
-    virtual int startPlay(MediaInfoBase *mediaInfo, int startMs, int endMs, int playSpeed, void *userCtx);
-
-    /* 0x811EA0A8 */
-    virtual int pausePlay();
-
-    /* 0x811EA0CE */
-    virtual int stopPlay();
-
-    /* 0x811EA120 */
-    virtual int seekPlay(int mode, int posMs);
-
-    /* 0x811EA176 */
-    virtual int getPosition(int *outPosMs);
-
-    /* 0x811EA1D8 */
-    virtual int isOpened();
-
-    /* 0x811EA1E8 */
-    virtual int getMetadata(MediaInfoBase *mediaInfo, int *outVal);
-
-    /* 0x811EA206 */
-    virtual int queryCachedInfo(const char *path, MediaInfoBase **outInfo);
-
-    /* Pure virtual format fourCC matcher */
-    virtual int matchesMediaInfo(const MediaInfoBase *mediaInfo) = 0;
-
-    /* 0x811E9F88 */
-    int setOutputCallbacks(void *outCtx, void *startFn, void *enqueueFn, void *stopFn, void *flushFn);
-
-    /* 0x811E9F9C */
-    int setEventCallbacks(MediaReadyCallback readyCb, ErrorCallback errCb,
-                          EndOfStreamCallback endCb, void *cbCtx);
-};
 
 /* 0x811E9ED0 */
 CodecAdapter::CodecAdapter(const char *mutexName, const char *condName)
@@ -579,7 +450,7 @@ int CodecAdapterAt9::closeDecoder()
 /* 0x811EA48C */
 int CodecAdapterAt9::matchesMediaInfo(const MediaInfoBase *mediaInfo)
 {
-    return (mediaInfo != NULL && mediaInfo->formatFourCC == FOURCC_AT9) ? 1 : 0;
+    return (mediaInfo != NULL && mediaInfo->m_mediaFourcc == FOURCC_AT9) ? 1 : 0;
 }
 
 /* ===== CodecAdapterMp3 (0x811EA4A8 - 0x811EA603) ===== */
@@ -670,7 +541,7 @@ int CodecAdapterMp3::closeDecoder()
 /* 0x811EA5E6 */
 int CodecAdapterMp3::matchesMediaInfo(const MediaInfoBase *mediaInfo)
 {
-    return (mediaInfo != NULL && mediaInfo->formatFourCC == FOURCC_MP3) ? 1 : 0;
+    return (mediaInfo != NULL && mediaInfo->m_mediaFourcc == FOURCC_MP3) ? 1 : 0;
 }
 
 /* ===== CodecAdapterMp4 (0x811EA604 - 0x811EA75F) ===== */
@@ -761,7 +632,7 @@ int CodecAdapterMp4::closeDecoder()
 /* 0x811EA742 */
 int CodecAdapterMp4::matchesMediaInfo(const MediaInfoBase *mediaInfo)
 {
-    return (mediaInfo != NULL && mediaInfo->formatFourCC == FOURCC_MP4) ? 1 : 0;
+    return (mediaInfo != NULL && mediaInfo->m_mediaFourcc == FOURCC_MP4) ? 1 : 0;
 }
 
 /* ===== CodecAdapterWav (0x811EA760 - 0x811EA893) ===== */
@@ -832,7 +703,7 @@ int CodecAdapterWav::closeDecoder()
 /* 0x811EA876 */
 int CodecAdapterWav::matchesMediaInfo(const MediaInfoBase *mediaInfo)
 {
-    return (mediaInfo != NULL && mediaInfo->formatFourCC == FOURCC_WAV) ? 1 : 0;
+    return (mediaInfo != NULL && mediaInfo->m_mediaFourcc == FOURCC_WAV) ? 1 : 0;
 }
 
 /* ===== Parser Adapter Semaphore (0x811E9AB4) ===== */
@@ -840,44 +711,6 @@ int CodecAdapterWav::matchesMediaInfo(const MediaInfoBase *mediaInfo)
 static paf::thread::Semaphore gParserAdapterSemaphore("SceShellMusicCorePAdapterNum", 2, 2, 0);
 
 /* ===== DecoderManager (0x811E91C4 - 0x811E9AB3) ===== */
-
-class DecoderManager {
-public:
-    CodecAdapter *activeCodec;
-    int activeCodecType;
-    void *outputCtx;
-    void *outputStartFn;
-    void *outputStopFn;
-    void *outputEnqueueFn;
-    void *outputFlushFn;
-    CodecAdapter::MediaReadyCallback mediaReadyCb;
-    CodecAdapter::ErrorCallback errorCb;
-    CodecAdapter::EndOfStreamCallback eosCb;
-    void *eventCbCtx;
-    int reserved;
-
-    DecoderManager();
-    virtual ~DecoderManager();
-
-    static void getThreadSpecs(ThreadSpec *outSpecs, unsigned int *inOutCount);
-    int setOutputCallbacks(void *outCtx, void *startFn, void *enqueueFn, void *stopFn, void *flushFn);
-    int setEventCallbacks(CodecAdapter::MediaReadyCallback readyCb,
-                          CodecAdapter::ErrorCallback errCb,
-                          CodecAdapter::EndOfStreamCallback endCb,
-                          void *cbCtx);
-    int openCodec(int codecType, int sourceMode, int extraParam);
-    int closeCodec();
-    static bool probeSourcePath(const char *path, int *outSourceKind);
-    static int releaseMediaInfo(MediaInfoBase **mediaInfoPtr, uint8_t releaseSemaphore);
-    static int createMediaInfo(const char *path, int hintCodec, uint8_t doParse,
-                               CodecAdapter *existingCodec, MediaInfoBase **outMediaInfo,
-                               int parseMode, int parseFlags);
-    int checkMediaCompat(const MediaInfoBase *mediaInfo);
-    int startMedia(MediaInfoBase *mediaInfo, int startMs, int endMs,
-                   int playSpeed, void *userCtx);
-    int stopMedia();
-    int seekMedia(int mode, int posMs);
-};
 
 /* 0x811E91C4 */
 DecoderManager::DecoderManager()
@@ -1084,7 +917,7 @@ bool DecoderManager::probeSourcePath(const char *path, int *outSourceKind)
     }
     if (sce_paf_strncmp(path, "sd0:", sce_paf_strlen("sd0:")) == 0) {
         *outSourceKind = MEDIA_SOURCE_LOCAL;
-        return checkLocalMediaPath(path);
+        return path[0] != '\0';
     }
     if (sce_paf_strncmp(path, "http:", sce_paf_strlen("http:")) == 0) {
         *outSourceKind = MEDIA_SOURCE_HTTP;
@@ -1097,7 +930,7 @@ bool DecoderManager::probeSourcePath(const char *path, int *outSourceKind)
     } else {
         *outSourceKind = MEDIA_SOURCE_LOCAL;
     }
-    return checkLocalMediaPath(path);
+    return path[0] != '\0';
 }
 
 /* 0x811E9606 */
@@ -1109,13 +942,13 @@ int DecoderManager::releaseMediaInfo(MediaInfoBase **mediaInfoPtr, uint8_t relea
     }
 
     void *factory = NULL;
-    if (media->formatFourCC == FOURCC_MP3) {
+    if (media->m_mediaFourcc == FOURCC_MP3) {
         factory = getMp3Factory();
-    } else if (media->formatFourCC == FOURCC_MP4) {
+    } else if (media->m_mediaFourcc == FOURCC_MP4) {
         factory = getMp4FactoryInstance();
-    } else if (media->formatFourCC == FOURCC_WAV) {
+    } else if (media->m_mediaFourcc == FOURCC_WAV) {
         factory = &g_wavFactory;
-    } else if (media->formatFourCC == FOURCC_AT9) {
+    } else if (media->m_mediaFourcc == FOURCC_AT9) {
         factory = getAt9Factory();
     }
 
@@ -1246,7 +1079,8 @@ int DecoderManager::createMediaInfo(const char *path, int hintCodec, uint8_t doP
         }
 
         if (media != NULL && doParse == 1) {
-            int parseRet = media->parseInfo(parseMode, parseFlags);
+            typedef int (*ParseInfoFn)(MediaInfoBase *, int, int);
+            int parseRet = (*reinterpret_cast<ParseInfoFn **>(media))[2](media, parseMode, parseFlags);
             if (parseRet != 0) {
                 releaseMediaInfo(&media, 0);
                 err = mapDecoderError((unsigned int)parseRet);
@@ -1296,7 +1130,7 @@ int DecoderManager::startMedia(MediaInfoBase *mediaInfo, int startMs, int endMs,
         return MUSICCORE_ERR_FAILED;
     }
     int ret = activeCodec->startPlay(localMedia, startMs, endMs, playSpeed, userCtx);
-    if (localMedia->isRetained == 0) {
+    if (localMedia->m_sharedFlag == 0) {
         releaseMediaInfo(&localMedia, 1);
     }
     return ret;
@@ -1321,33 +1155,6 @@ int DecoderManager::seekMedia(int mode, int posMs)
 }
 
 /* ===== WorkerThreadPool (0x811E9AF0 - 0x811E9ECF) ===== */
-
-struct WorkerThreadSlot {
-    int kind;
-    const char *name;
-    int priority;
-    SceSize stackSize;
-    SceUID threadId;
-    int (*taskFn)(void *ctx, void *param);
-    void *taskCtx;
-    void *taskParam;
-};
-
-class WorkerThreadPool {
-public:
-    static const int MAX_SLOTS = 5;
-    WorkerThreadSlot slots[MAX_SLOTS];
-
-    WorkerThreadPool();
-    virtual ~WorkerThreadPool();
-
-    static WorkerThreadPool *getInstance();
-    int initialize(const ThreadSpec *specs, unsigned int count);
-    int finalize();
-    int startWorker(int kind, int (*taskFn)(void *, void *), void *taskCtx, void *taskParam, SceUID *outThid);
-    int joinWorker(SceUID thid);
-    static int workerThreadEntry(SceSize argSize, void *argData);
-};
 
 /* 0x811E9AF0 */
 WorkerThreadPool::WorkerThreadPool()
@@ -1527,168 +1334,6 @@ static WorkerThreadPool gWorkerThreadPool;
 WorkerThreadPool *WorkerThreadPool::getInstance()
 {
     return &gWorkerThreadPool;
-}
-
-struct MediaInfoHandle;
-struct TrackMetadataResult;
-
-void *getAudioCodecManager()
-{
-    return WorkerThreadPool::getInstance();
-}
-
-int initAudioCodecManager(void *mgr, void *paramBuf, int paramCount)
-{
-    WorkerThreadPool *pool = static_cast<WorkerThreadPool *>(mgr);
-    return (pool != NULL)
-        ? pool->initialize(static_cast<const ThreadSpec *>(paramBuf), static_cast<unsigned int>(paramCount))
-        : -1;
-}
-
-int termAudioCodecManager(void *mgr)
-{
-    WorkerThreadPool *pool = static_cast<WorkerThreadPool *>(mgr);
-    return (pool != NULL) ? pool->finalize() : -1;
-}
-
-int queryAudioCodecParams(void *outBuf, int *inOutCount)
-{
-    unsigned int count = (inOutCount != NULL) ? static_cast<unsigned int>(*inOutCount) : 0u;
-    DecoderManager::getThreadSpecs(static_cast<ThreadSpec *>(outBuf), &count);
-    if (inOutCount != NULL)
-        *inOutCount = static_cast<int>(count);
-    return 0;
-}
-
-void *getWorkerThreadPool()
-{
-    return WorkerThreadPool::getInstance();
-}
-
-int workerPoolSpawn(void *pool, int workerKind, void *entryFn, void *arg, SceUID *outThreadId)
-{
-    WorkerThreadPool *tp = static_cast<WorkerThreadPool *>(pool);
-    return (tp != NULL)
-        ? tp->startWorker(workerKind, reinterpret_cast<int (*)(void *, void *)>(entryFn), arg, NULL, outThreadId)
-        : -1;
-}
-
-int workerPoolJoin(void *pool, SceUID threadId)
-{
-    WorkerThreadPool *tp = static_cast<WorkerThreadPool *>(pool);
-    return (tp != NULL) ? tp->joinWorker(threadId) : -1;
-}
-
-int workerThreadPoolStart(void *pool, int slotType, void *entryFn,
-                          size_t argSize, void *argData, int *outWorkerId)
-{
-    (void)argSize;
-    WorkerThreadPool *tp = static_cast<WorkerThreadPool *>(pool);
-    return (tp != NULL)
-        ? tp->startWorker(slotType, reinterpret_cast<int (*)(void *, void *)>(entryFn),
-                          argData, NULL, outWorkerId)
-        : -1;
-}
-
-void workerThreadPoolJoin(void *pool, int workerId)
-{
-    WorkerThreadPool *tp = static_cast<WorkerThreadPool *>(pool);
-    if (tp != NULL)
-        tp->joinWorker(workerId);
-}
-
-bool checkLocalMediaPath(const char *path)
-{
-    return path != NULL && path[0] != '\0';
-}
-
-void decoderMgrConstruct(void *mem)
-{
-    new (mem) DecoderManager();
-}
-
-void decoderMgrDestruct(void *mgr)
-{
-    if (mgr != NULL)
-        static_cast<DecoderManager *>(mgr)->~DecoderManager();
-}
-
-int decoderMgrConfigure(void *mgr, int outCtx, int startFn, int enqueueFn, int stopFn, void *flushFn)
-{
-    return (mgr != NULL)
-        ? static_cast<DecoderManager *>(mgr)->setOutputCallbacks(
-              reinterpret_cast<void *>(outCtx), reinterpret_cast<void *>(startFn),
-              reinterpret_cast<void *>(enqueueFn), reinterpret_cast<void *>(stopFn), flushFn)
-        : -1;
-}
-
-int decoderMgrSetCallbacks(void *mgr, void *readyCb, void *errCb, void *eosCb, void *ctx)
-{
-    return (mgr != NULL)
-        ? static_cast<DecoderManager *>(mgr)->setEventCallbacks(
-              reinterpret_cast<CodecAdapter::MediaReadyCallback>(readyCb),
-              reinterpret_cast<CodecAdapter::ErrorCallback>(errCb),
-              reinterpret_cast<CodecAdapter::EndOfStreamCallback>(eosCb), ctx)
-        : -1;
-}
-
-int decoderMgrIsSameFormat(void *mgr, void *mediaInfo)
-{
-    return (mgr != NULL)
-        ? static_cast<DecoderManager *>(mgr)->checkMediaCompat(static_cast<const MediaInfoBase *>(mediaInfo))
-        : 0;
-}
-
-int decoderMgrOpenPipeline(void *mgr, int pipelineKind, int ioMode, int loopCount)
-{
-    return (mgr != NULL)
-        ? static_cast<DecoderManager *>(mgr)->openCodec(pipelineKind, ioMode, loopCount)
-        : -1;
-}
-
-int decoderMgrClosePipeline(void *mgr)
-{
-    return (mgr != NULL) ? static_cast<DecoderManager *>(mgr)->closeCodec() : 0;
-}
-
-int decoderMgrStart(void *mgr, void *mediaInfo, int startMs, int endMs, int playSpeed, void *userCtx)
-{
-    return (mgr != NULL)
-        ? static_cast<DecoderManager *>(mgr)->startMedia(
-              static_cast<MediaInfoBase *>(mediaInfo), startMs, endMs, playSpeed, userCtx)
-        : -1;
-}
-
-int decoderMgrStop(void *mgr)
-{
-    return (mgr != NULL) ? static_cast<DecoderManager *>(mgr)->stopMedia() : -1;
-}
-
-int decoderMgrSetReverseDir(void *mgr, int isReverse)
-{
-    return (mgr != NULL) ? static_cast<DecoderManager *>(mgr)->seekMedia(isReverse, 0) : -1;
-}
-
-int decoderManagerProbeTrack(const char *path, int codecHint, uint8_t parseMeta,
-                             int reservedOpt, MediaInfoHandle **outHandle,
-                             TrackMetadataResult *outMeta, int flags)
-{
-    MediaInfoBase *media = NULL;
-    int ret = DecoderManager::createMediaInfo(path, codecHint, parseMeta,
-                                              reinterpret_cast<CodecAdapter *>(reservedOpt),
-                                              &media, reinterpret_cast<int>(outMeta), flags);
-    if (outHandle != NULL)
-        *outHandle = reinterpret_cast<MediaInfoHandle *>(media);
-    return ret;
-}
-
-void decoderManagerReleaseMediaInfo(MediaInfoHandle **ioHandle, int forceRelease)
-{
-    if (ioHandle == NULL || *ioHandle == NULL)
-        return;
-    MediaInfoBase *media = reinterpret_cast<MediaInfoBase *>(*ioHandle);
-    DecoderManager::releaseMediaInfo(&media, static_cast<uint8_t>(forceRelease));
-    *ioHandle = NULL;
 }
 
 } // namespace MusicCore

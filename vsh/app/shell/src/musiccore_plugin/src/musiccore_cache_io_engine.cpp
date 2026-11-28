@@ -10,6 +10,7 @@
 #include <stdint.h>
 
 #include "musiccore_cache_io_engine.h"
+#include "musiccore_decoder_manager.h"
 #include "musiccore_heap.h"
 #include "musiccore_pipeline_types.h"
 
@@ -49,11 +50,6 @@ enum CacheDirectionMode {
     CACHE_DIR_FORWARD = 1,
     CACHE_DIR_REVERSE = 2
 };
-
-/* Worker pool helpers (musiccore_decoder_manager.cpp) */
-extern void *getWorkerThreadPool();
-extern int workerPoolSpawn(void *pool, int workerKind, void *entryFn, void *arg, SceUID *outThreadId);
-extern int workerPoolJoin(void *pool, SceUID threadId);
 
 struct PrefetchWorkerArg;
 
@@ -334,7 +330,7 @@ int CacheIoEngine::destroyAsyncWorkers()
         }
         for (uint8_t idx = 0; idx < m_asyncStreamCount; ++idx) {
             if (isValidWorkerThreadId(m_asyncThreadIds[idx]) != 0) {
-                workerPoolJoin(getWorkerThreadPool(), m_asyncThreadIds[idx]);
+                WorkerThreadPool::getInstance()->joinWorker(m_asyncThreadIds[idx]);
             }
         }
     }
@@ -391,8 +387,9 @@ int CacheIoEngine::initAsyncWorkers(const AsyncRingConfig *asyncConfigs)
             arg->engine = this;
             arg->streamId = (uint8_t)(idx + 1);
         }
-        if (workerPoolSpawn(getWorkerThreadPool(), 0, (void *)prefetchWorkerEntry,
-                            arg, &m_asyncThreadIds[idx]) != 0) {
+        if (WorkerThreadPool::getInstance()->startWorker(
+                0, reinterpret_cast<int (*)(void *, void *)>(prefetchWorkerEntry),
+                arg, NULL, &m_asyncThreadIds[idx]) != 0) {
             if (arg != NULL)
                 localFree(arg);
             m_asyncThreadIds[idx] = -1;

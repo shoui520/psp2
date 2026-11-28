@@ -11,6 +11,7 @@
 
 #include "musiccore_codec_decoders.h"
 #include "musiccore_codec_factories.h"
+#include "musiccore_decoder_manager.h"
 #include "musiccore_decoder_pipeline.h"
 #include "musiccore_media.h"
 #include "musiccore_pipeline_types.h"
@@ -47,7 +48,6 @@ static const uint32_t MP4_PARSER_HEAP_SIZE = 54272u;
 static const uint32_t MP4_DECODER_HEAP_SIZE = 74752u;
 static const uint32_t MP4_IO_HEAP_SIZE = 0x4000u;
 
-extern void decoderManagerReleaseMediaInfo(MediaInfoHandle **ioHandle, int forceRelease);
 
 struct ParserPacketOut {
     void *frameData;            /* +0 */
@@ -269,7 +269,7 @@ Mp4Parser::~Mp4Parser()
             m_activeStream = NULL;
         }
         MediaInfoHandle *nextHandle = reinterpret_cast<MediaInfoHandle *>(m_nextMedia);
-        decoderManagerReleaseMediaInfo(&nextHandle, 1);
+        { MediaInfoBase *relMedia = reinterpret_cast<MediaInfoBase *>(nextHandle); DecoderManager::releaseMediaInfo(&relMedia, 1u); nextHandle = NULL; }
         m_nextMedia = NULL;
         m_nextCacheIo = NULL;
         m_nextStream = NULL;
@@ -277,7 +277,7 @@ Mp4Parser::~Mp4Parser()
 
     if (m_activeMedia != NULL) {
         MediaInfoHandle *curHandle = reinterpret_cast<MediaInfoHandle *>(m_activeMedia);
-        decoderManagerReleaseMediaInfo(&curHandle, 1);
+        { MediaInfoBase *relMedia = reinterpret_cast<MediaInfoBase *>(curHandle); DecoderManager::releaseMediaInfo(&relMedia, 1u); curHandle = NULL; }
         m_activeMedia = NULL;
         m_activeCacheIo = NULL;
         m_activeStream = NULL;
@@ -357,7 +357,7 @@ int Mp4Parser::setMediaInfo(MediaInfoHandle *handle)
 
         if (m_activeMedia != NULL) {
             MediaInfoHandle *oldHandle = reinterpret_cast<MediaInfoHandle *>(m_activeMedia);
-            decoderManagerReleaseMediaInfo(&oldHandle, 1);
+            { MediaInfoBase *relMedia = reinterpret_cast<MediaInfoBase *>(oldHandle); DecoderManager::releaseMediaInfo(&relMedia, 1u); oldHandle = NULL; }
             m_activeMedia = NULL;
         }
         if (m_nextStream == m_activeStream) {
@@ -388,7 +388,7 @@ int Mp4Parser::setMediaInfo(MediaInfoHandle *handle)
 
         if (m_nextMedia != NULL) {
             MediaInfoHandle *oldNext = reinterpret_cast<MediaInfoHandle *>(m_nextMedia);
-            decoderManagerReleaseMediaInfo(&oldNext, 1);
+            { MediaInfoBase *relMedia = reinterpret_cast<MediaInfoBase *>(oldNext); DecoderManager::releaseMediaInfo(&relMedia, 1u); oldNext = NULL; }
             m_nextMedia = NULL;
         }
         m_nextStream = NULL;
@@ -447,7 +447,7 @@ int Mp4Parser::prefetchMediaInfo(MediaInfoHandle *handle)
             m_nextMedia = NULL;
         } else if (m_nextMedia != NULL) {
             MediaInfoHandle *oldNext = reinterpret_cast<MediaInfoHandle *>(m_nextMedia);
-            decoderManagerReleaseMediaInfo(&oldNext, 1);
+            { MediaInfoBase *relMedia = reinterpret_cast<MediaInfoBase *>(oldNext); DecoderManager::releaseMediaInfo(&relMedia, 1u); oldNext = NULL; }
             m_nextMedia = NULL;
         }
         m_nextStream = NULL;

@@ -10,6 +10,7 @@
 #include <stdint.h>
 
 #include "musiccore_codec_factories.h"
+#include "musiccore_decoder_manager.h"
 #include "musiccore_decoder_pipeline.h"
 #include "musiccore_media.h"
 #include "musiccore_pipeline_types.h"
@@ -40,7 +41,6 @@ static const int IO_ERR_READ_FAIL = -2146394108;     /* 0x8010A004 */
 static const int WAVE_ERR_UNSUPPORTED = -2144862159; /* 0x80280031 */
 static const int WAVE_ERR_CORRUPT = -2144862158;     /* 0x80280032 */
 
-extern void decoderManagerReleaseMediaInfo(MediaInfoHandle **ioHandle, int forceRelease);
 
 struct WavPcmPacketOut {
     void *pcmBuffer;        /* +0 */
@@ -171,13 +171,13 @@ WavParser::~WavParser()
 {
     if (m_nextMedia != NULL) {
         MediaInfoHandle *nextHandle = reinterpret_cast<MediaInfoHandle *>(m_nextMedia);
-        decoderManagerReleaseMediaInfo(&nextHandle, 1);
+        { MediaInfoBase *relMedia = reinterpret_cast<MediaInfoBase *>(nextHandle); DecoderManager::releaseMediaInfo(&relMedia, 1u); nextHandle = NULL; }
         m_nextMedia = NULL;
         m_nextCacheIo = NULL;
     }
     if (m_activeMedia != NULL) {
         MediaInfoHandle *curHandle = reinterpret_cast<MediaInfoHandle *>(m_activeMedia);
-        decoderManagerReleaseMediaInfo(&curHandle, 1);
+        { MediaInfoBase *relMedia = reinterpret_cast<MediaInfoBase *>(curHandle); DecoderManager::releaseMediaInfo(&relMedia, 1u); curHandle = NULL; }
         m_activeMedia = NULL;
         m_activeCacheIo = NULL;
     }
@@ -231,7 +231,7 @@ int WavParser::setMediaInfo(MediaInfoHandle *handle)
     WavMediaInfo *mediaInfo = reinterpret_cast<WavMediaInfo *>(handle);
     if (mediaInfo->m_cacheIo == NULL) {
         MediaInfoHandle *badHandle = reinterpret_cast<MediaInfoHandle *>(mediaInfo);
-        decoderManagerReleaseMediaInfo(&badHandle, 1);
+        { MediaInfoBase *relMedia = reinterpret_cast<MediaInfoBase *>(badHandle); DecoderManager::releaseMediaInfo(&relMedia, 1u); badHandle = NULL; }
         return -1;
     }
 
@@ -254,7 +254,7 @@ int WavParser::setMediaInfo(MediaInfoHandle *handle)
         }
         if (m_activeMedia != NULL) {
             MediaInfoHandle *oldHandle = reinterpret_cast<MediaInfoHandle *>(m_activeMedia);
-            decoderManagerReleaseMediaInfo(&oldHandle, 1);
+            { MediaInfoBase *relMedia = reinterpret_cast<MediaInfoBase *>(oldHandle); DecoderManager::releaseMediaInfo(&relMedia, 1u); oldHandle = NULL; }
             m_activeMedia = NULL;
         }
         m_activeCacheIo = NULL;
@@ -278,7 +278,7 @@ int WavParser::setMediaInfo(MediaInfoHandle *handle)
     if (m_nextCacheIo != NULL) {
         if (m_nextMedia != NULL) {
             MediaInfoHandle *nextHandle = reinterpret_cast<MediaInfoHandle *>(m_nextMedia);
-            decoderManagerReleaseMediaInfo(&nextHandle, 1);
+            { MediaInfoBase *relMedia = reinterpret_cast<MediaInfoBase *>(nextHandle); DecoderManager::releaseMediaInfo(&relMedia, 1u); nextHandle = NULL; }
             m_nextMedia = NULL;
         }
         m_nextCacheIo = NULL;

@@ -14,6 +14,7 @@
 #include "musiccore_audio_output.h"
 #include "musiccore_player_base.h"
 #include "musiccore_db_manager.h"
+#include "musiccore_state_manager.h"
 
 extern "C" {
 void *sce_paf_memset(void *dst, int val, size_t size);
@@ -118,12 +119,6 @@ struct InternalMsgHeader {
 extern int makeChannelId(char type, char slot);
 extern int getChannelType(char channelId);
 extern int getChannelSlot(unsigned char channelId);
-
-extern void initDecoderManager(void *mgr);
-extern void stopDecoderManager(void *mgr);
-extern void termDecoderManager(void *mgr);
-extern int startDecoderManager(void *mgr, const DecoderCallbacks *cbs, void *audioOut);
-extern void notifyDecoderAudioEvent(void *mgr, int eventType, int eventVal);
 
 extern int queryAppFocusState(AppFocusInfo *outInfo, int priority);
 extern int getGlobalTrackTag();
@@ -364,7 +359,7 @@ Controller::Controller(ObjFactory *factory, int *outErr, unsigned int totalBytes
     m_ackWaiter.mutex = &m_ackMutex;
     m_ackWaiter.signalCount = 0;
 
-    initDecoderManager(m_decoderMgrArena);
+    new (m_decoderMgrArena) StateManager();
     new (m_dbMgrArena) DbManager(36);
     new (m_audioOutArena) AudioOutput();
 
@@ -544,7 +539,7 @@ int Controller::sendCommand(uint64_t cmdHeader, const void *inBuf, unsigned int 
 Controller::~Controller()
 {
     if (m_threadId != -1) {
-        stopDecoderManager(m_decoderMgrArena);
+        reinterpret_cast<StateManager *>(m_decoderMgrArena)->stop();
         reinterpret_cast<AudioOutput *>(m_audioOutArena)->stopOutput();
         reinterpret_cast<DbManager *>(m_dbMgrArena)->stop();
 
@@ -586,7 +581,7 @@ Controller::~Controller()
     reinterpret_cast<AudioOutput *>(m_audioOutArena)->finalize();
     reinterpret_cast<AudioOutput *>(m_audioOutArena)->~AudioOutput();
     reinterpret_cast<DbManager *>(m_dbMgrArena)->~DbManager();
-    termDecoderManager(m_decoderMgrArena);
+    reinterpret_cast<StateManager *>(m_decoderMgrArena)->~StateManager();
 }
 
 BasePlayer *Controller::findPlayerByChannel(unsigned char channelId, unsigned char requireOpen)
@@ -1460,7 +1455,7 @@ int Controller::handleControllerCmd(CmdNode *node, void *outResult, unsigned cha
         if (node->inBuf == NULL)
             return MUSICCORE_ERR_INVALID_ARG;
         const int *args = (const int *)node->inBuf;
-        notifyDecoderAudioEvent(m_decoderMgrArena, args[1], args[2]);
+        reinterpret_cast<StateManager *>(m_decoderMgrArena)->onAudioPortEvent(args[1], args[2], 0, 0, 1);
         return 0;
     }
 
@@ -1739,7 +1734,9 @@ int Controller::runMainLoop()
         decCbs.onEvent = onDecoderEvent;
         decCbs.onMessage = onDecoderMessage;
         decCbs.userData = this;
-        initErr = startDecoderManager(m_decoderMgrArena, &decCbs, m_audioOutArena);
+        initErr = reinterpret_cast<StateManager *>(m_decoderMgrArena)->start(
+            reinterpret_cast<const StateManagerCallbacks *>(&decCbs),
+            reinterpret_cast<const int *>(m_audioOutArena));
     }
     if (initErr == 0) {
         DbCallbacks dbCbs;
@@ -1783,7 +1780,7 @@ int Controller::runMainLoop()
     if (initErr != 0) {
         SceShell_D4C7D2B7(2, (void *)onShellSuspendEvent, NULL);
         SceShell_D4C7D2B7(3, (void *)onShellResumeEvent, NULL);
-        stopDecoderManager(m_decoderMgrArena);
+        reinterpret_cast<StateManager *>(m_decoderMgrArena)->stop();
         reinterpret_cast<AudioOutput *>(m_audioOutArena)->stopOutput();
         reinterpret_cast<DbManager *>(m_dbMgrArena)->stop();
         for (int i = 0; i < 8; ++i) {

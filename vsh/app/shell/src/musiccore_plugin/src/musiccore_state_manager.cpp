@@ -9,8 +9,11 @@
 #include <stdint.h>
 
 #include "musiccore_audio_output.h"
+#include "musiccore_decoder_manager.h"
 #include "musiccore_heap.h"
 #include "musiccore_queue.h"
+#include "musiccore_state_machine.h"
+#include "musiccore_state_manager.h"
 
 extern "C" {
 void *sce_paf_memset(void *dst, int val, size_t size);
@@ -29,159 +32,6 @@ static const int MUSICCORE_ERR_QUEUE_TIMEOUT = -1879113714; /* 0x8FFF000E */
 
 namespace sce {
 namespace MusicCore {
-
-extern void stateMachineInit(void *sm, void *owner);
-extern void stateMachineTerm(void *sm);
-extern int stateMachineAttach(void *sm, void *audioOut, void *decoderMgr, void *sharedSync);
-extern int stateMachineDispatch(void *sm, uint16_t cmdCode, const void *reqBuf,
-                                void *outMediaState, void *outResultTail, unsigned char *outFlags);
-extern int stateMachineShouldDeferCmd(void *sm, uint16_t cmdCode, uint16_t *outWaitCode);
-
-extern void decoderMgrConstruct(void *decMgr);
-extern void decoderMgrDestruct(void *decMgr);
-extern int decoderMgrConfigure(void *decMgr, int sampleRate, int channels, int grain,
-                               int mode, void *audioOut);
-extern int decoderMgrSetCallbacks(void *decMgr, void *onTrackReady, void *onTrackInfo,
-                                  void *onBufferReady, void *userData);
-
-struct StateMediaSnapshot {
-    int stateId;
-    int playState;
-    int64_t playlistId;
-    int64_t trackId;
-    int64_t trackItemId;
-    int trackOrderIndex;
-    int trackIndex;
-    int positionMs;
-    int currentTrackNum;
-    int totalTracks;
-    int durationMs;
-    int sampleRate;
-    int bitRate;
-    int channels;
-    int codecType;
-    void *mediaHandle;
-    int repeatMode;
-    int shuffleMode;
-    int seekMode;
-    int speedMode;
-    int volumeMode;
-    int audioBalance;
-    int eqType;
-    int eqBandLow;
-    int eqBandMid;
-    int eqBandHigh;
-    int audioNormalizer;
-    int sourceType;
-    int lastErrorType;
-    int hasPendingError;
-    int extraErr;
-    int targetState;
-    int pendingFadeMs;
-    int playParam;
-};
-
-struct StateCmdPayload {
-    StateMediaSnapshot media;
-    int padMedia;
-    int fadeMs;
-    void *newMediaHandle;
-    int resetPos;
-    int seekTarget;
-    int seekVolumeMode;
-    int seekMode;
-    int seekSpeedMode;
-    int seekStep;
-    int repeatValue;
-    int shuffleValue;
-    int padShuffle;
-    int errorCode;
-    int volumeLevel;
-    int volumeRamp;
-    int eqType;
-    int eqBandLow;
-    int eqBandMid;
-    int eqBandHigh;
-    int normalizerMode;
-    int playParamVal;
-    uint32_t origParam;
-    uint32_t origCmdHi;
-    void *metaBufs;
-    unsigned char suspendFlag;
-    unsigned char syncFlag;
-    unsigned char portFlag;
-    unsigned char padTail;
-};
-
-struct StateResultEvent {
-    uint64_t cmdHdr;
-    int errCode;
-    int padErr;
-    StateMediaSnapshot media;
-    uint32_t origParam;
-    uint32_t origCmdHi;
-    unsigned char extraFlags[8];
-};
-
-struct StateQueueNode {
-    void *vtable;
-    int padAlign;
-    uint64_t cmdHdr;
-    void *inBuf;
-    unsigned int inSize;
-};
-
-struct StateManagerCallbacks {
-    void (*onResult)(const StateResultEvent *ev, void *userData);
-    int (*onMessage)(const void *msg, void *userData, int timeout);
-    void *userData;
-};
-
-struct DecoderTrackInfoMsg {
-    int headerLow;
-    int headerHigh;
-    int64_t playlistId;
-    int64_t trackId;
-    int trackIndex;
-    int positionMs;
-    int currentTrackNum;
-    int totalTracks;
-    int durationMs;
-    int sampleRate;
-    int bitRate;
-    int channels;
-    int codecType;
-    int sourceType;
-    int volumeMode;
-};
-
-struct StateNotifyMsg {
-    uint32_t param;
-    uint32_t cmdHi;
-    int errorCode;
-    int notifyKind;
-    int notifySubCode;
-    int padAlign;
-    StateMediaSnapshot media;
-    int padMedia;
-    int extraVal;
-    int padTail;
-};
-
-struct StateMediaChangedMsg {
-    uint32_t param;
-    uint32_t cmdHi;
-    int padHeader;
-    unsigned char hasNewMedia;
-    unsigned char padHasNew[3];
-    void *newMedia;
-    unsigned char hasUriFlag;
-    unsigned char padHasUri[3];
-    StateMediaSnapshot media;
-    void *oldMedia;
-    unsigned char decrementUri;
-    unsigned char padDecrement[3];
-};
 
 static void initDefaultMediaSnapshot(StateMediaSnapshot *st)
 {
@@ -221,102 +71,6 @@ static uint64_t makeStateCmdHeader(uint16_t cmdCode, uint32_t origParam, uint32_
     return ((uint64_t)hi << 32) | (uint64_t)origParam;
 }
 
-class StateMachineOwner {
-public:
-    virtual int onTrackReadyCallback() = 0;
-    virtual int onAudioErrorCallback(int errCode) = 0;
-    virtual int forwardNotifyMetadata() = 0;
-    virtual int onBufferReadyCallback() = 0;
-    virtual int onTrackInfoCallback(const DecoderTrackInfoMsg *info) = 0;
-    virtual int onStreamEndCallback(int val) = 0;
-    virtual int onMediaChangedCallback(unsigned char hasNewMedia, void *newMedia,
-                                       unsigned char hasUriFlag, const StateMediaSnapshot *state,
-                                       void **ioOldMedia, unsigned char decrementUri) = 0;
-};
-
-class StateManager : public StateMachineOwner {
-public:
-    StateManager();
-
-    virtual int onTrackReadyCallback();
-    virtual int onAudioErrorCallback(int errCode);
-    virtual int forwardNotifyMetadata();
-    virtual int onBufferReadyCallback();
-    virtual int onTrackInfoCallback(const DecoderTrackInfoMsg *info);
-    virtual int onStreamEndCallback(int val);
-    virtual int onMediaChangedCallback(unsigned char hasNewMedia, void *newMedia,
-                                       unsigned char hasUriFlag, const StateMediaSnapshot *state,
-                                       void **ioOldMedia, unsigned char decrementUri);
-
-    virtual ~StateManager();
-
-    virtual int start(const StateManagerCallbacks *cbs, const int *audioCfg);
-    virtual int stop();
-
-    virtual int activate(const StateMediaSnapshot *initState, void *metaBufs, int fadeMs,
-                         uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
-    virtual int deactivate(int fadeMs, uint32_t origParam, uint32_t origCmdHi,
-                           unsigned char isAsync, unsigned char syncFlag);
-    virtual int seek(const int *seekParams, uint32_t origParam, uint32_t origCmdHi,
-                     unsigned char isAsync);
-    virtual int play(int playParam, uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
-    virtual int pause(unsigned char resetPos, int fadeParam, uint32_t origParam, uint32_t origCmdHi,
-                      unsigned char isAsync);
-    virtual int stopPlayback(uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
-    virtual int setRepeat(int repeatVal, uint32_t origParam, uint32_t origCmdHi,
-                          unsigned char isAsync);
-    virtual int setShuffle(int shuffleVal, uint32_t origParam, uint32_t origCmdHi,
-                           unsigned char isAsync);
-    virtual int cancel(uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
-    virtual int setMedia(void *mediaHandle, uint32_t origParam, uint32_t origCmdHi, int shuffleVal,
-                         unsigned char isAsync, int unusedFlag, unsigned char pauseFlag);
-    virtual int setVolume(int vol, int ramp, uint32_t origParam, uint32_t origCmdHi,
-                          unsigned char isAsync);
-    virtual int setEqualizer(int eqType, int bandLow, int bandMid, int bandHigh,
-                             uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
-    virtual int setAudioNormalizer(int mode, uint32_t origParam, uint32_t origCmdHi,
-                                   unsigned char isAsync);
-    virtual int seekAndPlay(const int *seekParams, int playParam, uint32_t origParam,
-                            uint32_t origCmdHi, unsigned char isAsync);
-    virtual int setMediaPlaying(void *mediaHandle, uint32_t origParam, uint32_t origCmdHi,
-                                int shuffleVal, unsigned char isAsync);
-    virtual int onTrackReady(uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
-    virtual int onAudioError(int errCode, uint32_t origParam, uint32_t origCmdHi,
-                             unsigned char isAsync);
-    virtual int onTrackInfo(uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
-    virtual int onBufferReady(uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
-    virtual int onStreamEnd(uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync);
-    virtual int onAudioPortEvent(int flagA, int flagB, uint32_t origParam, uint32_t origCmdHi,
-                                 unsigned char isAsync);
-    virtual int suspendForDb(uint32_t origParam, uint32_t origCmdHi, unsigned char suspendFlag,
-                             unsigned char isAsync);
-
-    int enqueueCmd(uint64_t cmdHdr, const StateCmdPayload *req);
-
-    int checkAndDeferNode(StateQueueNode *node, unsigned char *outDeferred);
-    int runThreadLoop();
-    static int threadEntry(SceSize args, void *argp);
-
-    static int thunkTrackReady(StateManager *self);
-    static int thunkTrackInfo(StateManager *self);
-    static int thunkBufferReady(StateManager *self);
-    static int thunkAudioError(StateManager *self, int errCode);
-
-private:
-    SceUID m_initSema;
-    SceUID m_threadId;
-    CmdQueue *m_cmdQueue;
-    StateManagerCallbacks m_cbs;
-    int m_padAlign;
-    struct StateMachineStorage {
-        unsigned char head[116];
-        void *activeMedia;
-        unsigned char tail[4600 - 120];
-    } m_stateMachine;
-    unsigned char m_decoderMgrStorage[56];
-    uint64_t m_sharedSyncStorage[8];
-};
-
 StateManager::StateManager()
     : m_initSema(-1),
       m_threadId(-1),
@@ -327,9 +81,9 @@ StateManager::StateManager()
     m_cbs.onMessage = NULL;
     m_cbs.userData = NULL;
 
-    stateMachineInit(&m_stateMachine, this);
-    decoderMgrConstruct(m_decoderMgrStorage);
-    sce_paf_memset(m_sharedSyncStorage, 0, sizeof(m_sharedSyncStorage));
+    new (&m_stateMachine) StateMachine(this);
+    new (m_decoderMgrArena) DecoderManager();
+    sce_paf_memset(m_sharedSyncArena, 0, sizeof(m_sharedSyncArena));
 
     SceUID sema = sceKernelCreateSema("SceShellMusicCoreStateMgrWait", 0, 0, 1, NULL);
     if (sema >= 0)
@@ -341,8 +95,8 @@ StateManager::~StateManager()
     stop();
     if (m_initSema >= 0)
         sceKernelDeleteSema(m_initSema);
-    decoderMgrDestruct(m_decoderMgrStorage);
-    stateMachineTerm(&m_stateMachine);
+    reinterpret_cast<DecoderManager *>(m_decoderMgrArena)->~DecoderManager();
+    reinterpret_cast<StateMachine *>(&m_stateMachine)->~StateMachine();
 }
 
 int StateManager::enqueueCmd(uint64_t cmdHdr, const StateCmdPayload *req)
@@ -386,8 +140,8 @@ int StateManager::stop()
         m_cmdQueue = NULL;
     }
 
-    decoderMgrSetCallbacks(m_decoderMgrStorage, NULL, NULL, NULL, NULL);
-    decoderMgrConfigure(m_decoderMgrStorage, 0, 0, 0, 0, NULL);
+    reinterpret_cast<DecoderManager *>(m_decoderMgrArena)->setEventCallbacks(NULL, NULL, NULL, NULL);
+    reinterpret_cast<DecoderManager *>(m_decoderMgrArena)->setOutputCallbacks(NULL, NULL, NULL, NULL, NULL);
     m_cbs.onResult = NULL;
     m_cbs.onMessage = NULL;
     m_cbs.userData = NULL;
@@ -405,18 +159,22 @@ int StateManager::start(const StateManagerCallbacks *cbs, const int *audioCfg)
     if (ret != 0)
         return ret;
 
-    ret = decoderMgrConfigure(m_decoderMgrStorage, audioCfg[0], audioCfg[1], audioCfg[2],
-                              audioCfg[3], (void *)audioCfg);
+    ret = reinterpret_cast<DecoderManager *>(m_decoderMgrArena)->setOutputCallbacks(
+        reinterpret_cast<void *>(audioCfg[0]), reinterpret_cast<void *>(audioCfg[1]),
+        reinterpret_cast<void *>(audioCfg[2]), reinterpret_cast<void *>(audioCfg[3]),
+        const_cast<int *>(audioCfg));
     if (ret != 0)
         return ret;
 
-    ret = decoderMgrSetCallbacks(m_decoderMgrStorage, (void *)thunkTrackReady,
-                                 (void *)thunkTrackInfo, (void *)thunkBufferReady, this);
+    ret = reinterpret_cast<DecoderManager *>(m_decoderMgrArena)->setEventCallbacks(
+        reinterpret_cast<CodecAdapter::MediaReadyCallback>(thunkTrackReady),
+        reinterpret_cast<CodecAdapter::ErrorCallback>(thunkTrackInfo),
+        reinterpret_cast<CodecAdapter::EndOfStreamCallback>(thunkBufferReady), this);
     if (ret != 0)
         return ret;
 
-    ret = stateMachineAttach(&m_stateMachine, (void *)audioCfg,
-                             m_decoderMgrStorage, m_sharedSyncStorage);
+    ret = reinterpret_cast<StateMachine *>(&m_stateMachine)->attach(
+        const_cast<int *>(audioCfg), m_decoderMgrArena, m_sharedSyncArena);
     if (ret != 0)
         return ret;
 
@@ -718,7 +476,7 @@ int StateManager::checkAndDeferNode(StateQueueNode *node, unsigned char *outDefe
     *outDeferred = 0;
     uint16_t waitCode = 0x1100u;
     uint16_t cmdCode = (uint16_t)(node->cmdHdr >> 48);
-    int defer = stateMachineShouldDeferCmd(&m_stateMachine, cmdCode, &waitCode);
+    int defer = reinterpret_cast<StateMachine *>(&m_stateMachine)->shouldDeferCmd(cmdCode, &waitCode);
     *outDeferred = (unsigned char)defer;
     if (defer == 0)
         return 0;
@@ -804,8 +562,9 @@ int StateManager::runThreadLoop()
                 outTail[2] = -1;
                 unsigned char outFlags[4];
                 outFlags[0] = 0;
-                stateMachineDispatch(&m_stateMachine, 0x1102u, &deactReq,
-                                     &outMedia, outTail, outFlags);
+                reinterpret_cast<StateMachine *>(&m_stateMachine)->dispatchCmd(
+                    0x1102u, reinterpret_cast<const StateDispatchReq *>(&deactReq),
+                    reinterpret_cast<StateSnapshotOut *>(&outMedia), outTail, outFlags);
                 if (outMedia.stateId == 0)
                     return 0;
                 isIdle = false;
@@ -818,8 +577,9 @@ int StateManager::runThreadLoop()
         initDefaultMediaSnapshot(&ev.media);
 
         uint16_t cmdCode = (uint16_t)(cmdHdr >> 48);
-        int err = stateMachineDispatch(&m_stateMachine, cmdCode, &req,
-                                       &ev.media, &ev.media.targetState, ev.extraFlags);
+        int err = reinterpret_cast<StateMachine *>(&m_stateMachine)->dispatchCmd(
+            cmdCode, reinterpret_cast<const StateDispatchReq *>(&req),
+            reinterpret_cast<StateSnapshotOut *>(&ev.media), &ev.media.targetState, ev.extraFlags);
         ev.cmdHdr = cmdHdr;
         ev.errCode = err;
         ev.origParam = req.origParam;
@@ -840,8 +600,9 @@ int StateManager::runThreadLoop()
             outTail[2] = -1;
             unsigned char outFlags[4];
             outFlags[0] = 0;
-            stateMachineDispatch(&m_stateMachine, 0x1102u, &deactReq,
-                                 &outMedia, outTail, outFlags);
+            reinterpret_cast<StateMachine *>(&m_stateMachine)->dispatchCmd(
+                0x1102u, reinterpret_cast<const StateDispatchReq *>(&deactReq),
+                reinterpret_cast<StateSnapshotOut *>(&outMedia), outTail, outFlags);
             if (outMedia.stateId == 0)
                 return 0;
             isIdle = false;
@@ -1001,40 +762,6 @@ int StateManager::thunkBufferReady(StateManager *self)
 int StateManager::thunkAudioError(StateManager *self, int errCode)
 {
     return self->onAudioErrorCallback(errCode);
-}
-
-struct DecoderCallbacks;
-
-void initDecoderManager(void *mgr)
-{
-    new (mgr) StateManager();
-}
-
-void stopDecoderManager(void *mgr)
-{
-    if (mgr != NULL)
-        static_cast<StateManager *>(mgr)->stop();
-}
-
-void termDecoderManager(void *mgr)
-{
-    if (mgr != NULL)
-        static_cast<StateManager *>(mgr)->~StateManager();
-}
-
-int startDecoderManager(void *mgr, const DecoderCallbacks *cbs, void *audioOut)
-{
-    return (mgr != NULL)
-        ? static_cast<StateManager *>(mgr)->start(
-              reinterpret_cast<const StateManagerCallbacks *>(cbs),
-              static_cast<const int *>(audioOut))
-        : -1;
-}
-
-void notifyDecoderAudioEvent(void *mgr, int eventType, int eventVal)
-{
-    if (mgr != NULL)
-        static_cast<StateManager *>(mgr)->onAudioPortEvent(eventType, eventVal, 0, 0, 1);
 }
 
 } /* namespace MusicCore */

@@ -16,6 +16,7 @@
 
 #include "musiccore_player_base.h"
 #include "musiccore_db_manager.h"
+#include "musiccore_state_machine.h"
 #include "src/livespace_db/lsdb_keys.h"
 
 extern "C" {
@@ -62,12 +63,6 @@ extern void invalidateAllMediaCaches();
 extern void *mediaListGetEntry(void *listObj, int index);
 extern int64_t queryTrackIdByPath(const char *path);
 extern void mediaListUpdateTrackId(void *media, int index, int64_t trackId);
-extern int dbSeekSpecialTarget(void *media, int64_t playlistId, int targetIndex, int seekStep,
-                               int *ioShuffleSeed, int *outFlag, int isSpecial,
-                               void *outTrackInfo, unsigned char *outHasTrack);
-extern int dbSeekNormalTarget(int seekCmd, void *media, unsigned char isNew, int seekStep,
-                              int targetIndex, int *ioShuffleSeed, int *outStep, int unusedFlag,
-                              char *outFlag, void *outTrackInfo, int *outExtra, int updateFlag);
 extern int mediaListFillTrackInfo(void *trackInfo, int trackIdx, void *media);
 extern void trackInfoReleaseResources(void *trackInfo, int flag);
 extern void *createUriMediaList(void *slotMem);
@@ -998,8 +993,10 @@ int DbManager::handleSeekMedia(const DbSeekMediaReq *req, DbResultEvent *outEv)
     int seekCmd = req->seekCmd;
     if (((unsigned int)seekCmd >> 16) == 0xFFFCu) {
         int isSpecial = ((seekCmd & 0xFFFF) != 0) ? 1 : 0;
-        ret = dbSeekSpecialTarget(media, req->trackItemId, req->targetIndex, req->seekStep,
-                                  &shuffleSeed, NULL, isSpecial, &trackInfo, &hasTrack);
+        ret = dbSeekSpecialTarget(static_cast<MediaListInterface *>(media), req->trackItemId,
+                                  req->targetIndex, req->seekStep, &shuffleSeed, NULL,
+                                  reinterpret_cast<void *>(isSpecial), 0, 0,
+                                  reinterpret_cast<TrackInfoData *>(&trackInfo), &hasTrack);
         if (ret != 0) {
             outEv->dbStatus = ret;
             if (ret == MUSICCORE_ERR_DB_REMOVED)
@@ -1013,11 +1010,13 @@ int DbManager::handleSeekMedia(const DbSeekMediaReq *req, DbResultEvent *outEv)
         hasTrack = 0;
         ret = 0;
     } else {
-        char normalFlag = 0;
+        unsigned char normalFlag = 0;
         int extraVal = 0;
-        ret = dbSeekNormalTarget(seekCmd, media, req->isNewMedia, req->seekStep,
-                                 req->targetIndex, &shuffleSeed, &outEv->seekStep, 0,
-                                 &normalFlag, &trackInfo, &extraVal, 1);
+        ret = dbSeekNormalTarget(static_cast<unsigned int>(seekCmd),
+                                 static_cast<MediaListInterface *>(media), req->isNewMedia,
+                                 req->seekStep, req->targetIndex, &shuffleSeed, &outEv->seekStep,
+                                 NULL, &normalFlag,
+                                 reinterpret_cast<TrackInfoData *>(&trackInfo), &extraVal, 1);
         if (ret != 0) {
             outEv->dbStatus = ret;
             hasTrack = 0;
