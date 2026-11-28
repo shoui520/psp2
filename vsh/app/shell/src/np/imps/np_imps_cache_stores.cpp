@@ -123,8 +123,48 @@ bool npImpsCacheArrayContains(const SceNpId *npId, const SceNpId *array, SceUInt
 	return false;
 }
 
+/* 0x813082F8 */
+int npImpsCacheAllocFriendHandleArray(SceUInt32 count, NpImpsCacheFriendPtr **outArray)
+{
+	SceSize byteCount = sizeof(NpImpsCacheFriendPtr) * count;
+	void *mem = npImpsCacheMalloc(byteCount);
+	if (mem == NULL)
+		return NP_IMPS_SVC_ERROR_OUT_OF_MEMORY;
+	NpImpsCacheFriendPtr *arr = reinterpret_cast<NpImpsCacheFriendPtr *>(mem);
+	for (SceUInt32 pos = 0; pos < count; ++pos)
+		arr[pos] = NULL;
+	*outArray = arr;
+	return 0;
+}
+
+/* 0x8130833E */
+void npImpsCacheFreeFriendHandleArray(SceUInt32 count, NpImpsCacheFriendPtr *array)
+{
+	for (SceUInt32 pos = 0; pos < count; ++pos) {
+		if (array[pos] != NULL)
+			array[pos]->Release();
+	}
+	npImpsCacheFree(array);
+}
+
+/* 0x81308366 */
+int npImpsCacheAllocNpIdArray(SceUInt32 count, SceNpId **outArray)
+{
+	SceSize byteCount = sizeof(SceNpId) * count;
+	void *mem = npImpsCacheMalloc(byteCount);
+	if (mem == NULL)
+		return NP_IMPS_SVC_ERROR_OUT_OF_MEMORY;
+	*outArray = reinterpret_cast<SceNpId *>(mem);
+	return 0;
+}
+
+/* 0x81308394 */
+NpImpsCacheEvent::NpImpsCacheEvent()
+{
+}
+
 /* --------------------------------------------------------------------------
- * NpImpsCacheRosterData (0x813076D4..0x8130795B)
+ * NpImpsCacheRosterData (0x813076BE..0x8130795B)
  * -------------------------------------------------------------------------- */
 NpImpsCacheRosterData::NpImpsCacheRosterData()
 	: m_relation(0),
@@ -132,6 +172,18 @@ NpImpsCacheRosterData::NpImpsCacheRosterData()
 {
 	sce_paf_memset(&m_npId, 0, sizeof(m_npId));
 	m_updateDate = 0;
+}
+
+/* 0x813076BE */
+NpImpsCacheRosterData::~NpImpsCacheRosterData()
+{
+}
+
+/* 0x813076D4 */
+void NpImpsCacheRosterData::SetRelationAndDate(int relation, const paf::rtc::Tick *date)
+{
+	m_relation = relation;
+	m_updateDate = *date;
 }
 
 /* 0x8130771C */
@@ -396,6 +448,7 @@ int NpImpsCacheFriendEntryImpl::UpdatePresenceForPlatform(NpImpsSvcPresenceData 
 		return NP_IMPS_SVC_ERROR_INVALID_ARGUMENT;
 
 	NpImpsSvcPresenceData *incoming = *newPresence;
+	incoming->FormatLastOnlineTickForLog();
 	NpImpsSvcPresenceData *existing = FindPlatformPresenceLocked(platform);
 	if (existing == NULL) {
 		NpImpsSvcPresenceData emptyPresence;
@@ -763,8 +816,9 @@ int NpImpsCacheFriendEntryImpl::FreeAllocatedString(void *ptr, void (*freeFn)(vo
 }
 
 /* --------------------------------------------------------------------------
- * NpImpsCacheFriendStoreImpl (0x81301CA0..0x813043B3)
+ * NpImpsCacheFriendStoreImpl (0x81301C5C..0x813043B3)
  * -------------------------------------------------------------------------- */
+/* 0x81301C5C */
 NpImpsCacheFriendStoreImpl::NpImpsCacheFriendStoreImpl(NpImpsCacheStoreSink *sink,
 						       paf::thread::RMutex *dataMutex)
 	: m_sink(sink),
@@ -955,15 +1009,27 @@ void NpImpsCacheFriendStoreImpl::CopyAcceptedNpIds(SceUInt32 startIndex, SceNpId
 	m_mutex->Unlock();
 }
 
-/* 0x81303282 */
-SceUInt32 NpImpsCacheFriendStoreImpl::GetPendingCount(SceUInt8 *outLoaded)
+/* 0x813031D8 */
+SceUInt32 NpImpsCacheFriendStoreImpl::CountByRelation(SceUInt8 *outLoaded, int relation)
 {
 	m_mutex->Lock();
-	SceUInt32 count = CountByRelationLocked(NP_IMPS_CACHE_REL_PENDING_OUT);
+	SceUInt32 total = 0;
+	if (m_loaded != 0) {
+		for (SceUInt32 pos = 0; pos < m_count; ++pos) {
+			if (m_entries[pos].entry->GetRelation() == relation)
+				++total;
+		}
+	}
 	if (outLoaded != NULL)
 		*outLoaded = m_loaded;
 	m_mutex->Unlock();
-	return count;
+	return total;
+}
+
+/* 0x81303282 */
+SceUInt32 NpImpsCacheFriendStoreImpl::GetPendingCount(SceUInt8 *outLoaded)
+{
+	return CountByRelation(outLoaded, NP_IMPS_CACHE_REL_PENDING_OUT);
 }
 
 /* 0x813033FC */
@@ -980,12 +1046,7 @@ void NpImpsCacheFriendStoreImpl::CopyPendingNpIds(SceUInt32 startIndex, SceNpId 
 /* 0x81303414 */
 SceUInt32 NpImpsCacheFriendStoreImpl::GetRequestedCount(SceUInt8 *outLoaded)
 {
-	m_mutex->Lock();
-	SceUInt32 count = CountByRelationLocked(NP_IMPS_CACHE_REL_REQUESTED_IN);
-	if (outLoaded != NULL)
-		*outLoaded = m_loaded;
-	m_mutex->Unlock();
-	return count;
+	return CountByRelation(outLoaded, NP_IMPS_CACHE_REL_REQUESTED_IN);
 }
 
 /* 0x8130341E */
@@ -1368,179 +1429,329 @@ int NpImpsCacheFriendStoreImpl::GetNpIdAt(SceUInt32 index, SceNpId *outNpId)
 	return 0;
 }
 
-/* 0x8130232A: diff and apply full roster friend list */
-int NpImpsCacheFriendStoreImpl::ApplyFullList(
-	const NpImpsCacheRefVector<NpImpsCacheRosterData> *fetched,
-	NpImpsCacheNpIdSet *outRemovedAccepted,
-	NpImpsCacheNpIdSet *outRemovedPending,
-	NpImpsCacheNpIdSet *outRemovedRequested,
-	NpImpsCacheRefVector<NpImpsCacheFriendEntryImpl> *outAdded,
-	NpImpsCacheRefVector<NpImpsCacheFriendEntryImpl> *outUpdated,
-	bool *outFirstLoad)
+/* 0x81301CB4 */
+int NpImpsCacheFriendStoreImpl::AddEntryLocked(
+	NpImpsCacheRosterData **rosterData,
+	NpImpsCacheRefVector<NpImpsCacheFriendEntryImpl> *outAdded)
+{
+	NpImpsCacheFriendEntryImpl *created = NULL;
+	NpImpsCacheRosterData *heldRoster = *rosterData;
+	if (heldRoster != NULL)
+		heldRoster->AddRef();
+	int ret = NpImpsCacheFriendEntryImpl::Create(&created, &heldRoster, m_mutex);
+	if (heldRoster != NULL)
+		heldRoster->Release();
+
+	if (ret >= 0) {
+		if (m_count < 100u) {
+			SceUInt32 prevCount = m_count;
+			const SceNpId *npId = (*rosterData)->GetNpId();
+			int insRet = InsertLocked(npId, created);
+			if (insRet < 0 || prevCount == m_count) {
+				ret = NP_IMPS_SVC_ERROR_OUT_OF_MEMORY;
+			} else {
+				created->SetIsNew(1);
+			}
+		}
+		if (ret >= 0 && outAdded != NULL) {
+			SceUInt32 prevOut = outAdded->Size();
+			outAdded->PushBack(created);
+			if (prevOut == outAdded->Size())
+				ret = NP_IMPS_SVC_ERROR_OUT_OF_MEMORY;
+		}
+	}
+
+	if (created != NULL)
+		created->Release();
+	return ret;
+}
+
+/* 0x81301DD8 */
+int NpImpsCacheFriendStoreImpl::UpdateEntryLocked(
+	SceUInt32 slotIndex, NpImpsCacheRosterData **rosterData,
+	NpImpsCacheRefVector<NpImpsCacheFriendEntryImpl> *outUpdated)
 {
 	m_mutex->Lock();
-	bool wasLoaded = (m_loaded != 0);
+	NpImpsCacheFriendEntryImpl *existing = m_entries[slotIndex].entry;
+	SceNpId existingId;
+	existing->GetNpId(&existingId);
+	const SceNpId *incomingId = (*rosterData)->GetNpId();
 
-	/* Collect removed friends that are no longer in fetched list */
-	NpImpsCacheNpIdSet toRemove;
-	for (SceUInt32 pos = 0; pos < m_count; ++pos) {
-		if (!npImpsCacheRosterListContains(&m_entries[pos].npId, fetched)) {
-			int ins = toRemove.Insert(&m_entries[pos].npId);
-			if (ins < 0) {
-				m_mutex->Unlock();
-				return ins;
+	int ret = 0;
+	if (sce_paf_memcmp(&existingId, incomingId, 20u) == 0 &&
+	    existing->GetRelation() != (*rosterData)->GetRelation()) {
+		NpImpsCacheFriendEntryImpl *replacement = NULL;
+		NpImpsCacheRosterData *heldRoster = *rosterData;
+		if (heldRoster != NULL)
+			heldRoster->AddRef();
+		ret = NpImpsCacheFriendEntryImpl::Create(&replacement, &heldRoster, m_mutex);
+		if (heldRoster != NULL)
+			heldRoster->Release();
+
+		if (ret >= 0) {
+			replacement->SetIsNew(1);
+			EraseLocked(&existingId);
+			SceUInt32 prevCount = m_count;
+			InsertLocked(incomingId, replacement);
+			if (prevCount == m_count) {
+				ret = NP_IMPS_SVC_ERROR_OUT_OF_MEMORY;
+			} else if (outUpdated != NULL) {
+				SceUInt32 prevOut = outUpdated->Size();
+				outUpdated->PushBack(replacement);
+				if (prevOut == outUpdated->Size())
+					ret = NP_IMPS_SVC_ERROR_OUT_OF_MEMORY;
 			}
 		}
+		if (replacement != NULL)
+			replacement->Release();
 	}
 
-	for (SceUInt32 pos = 0; pos < toRemove.Size(); ++pos) {
-		const SceNpId *removedId = toRemove.At(pos);
-		NpImpsCacheFriendEntryImpl *existing = FindLocked(removedId);
-		if (existing != NULL) {
-			int rel = existing->GetRelation();
-			EraseLocked(removedId);
-			if (rel == NP_IMPS_CACHE_REL_ACCEPTED && outRemovedAccepted != NULL)
-				outRemovedAccepted->Insert(removedId);
-			else if (rel == NP_IMPS_CACHE_REL_PENDING_OUT && outRemovedPending != NULL)
-				outRemovedPending->Insert(removedId);
-			else if (rel == NP_IMPS_CACHE_REL_REQUESTED_IN && outRemovedRequested != NULL)
-				outRemovedRequested->Insert(removedId);
-		}
-	}
+	m_mutex->Unlock();
+	return ret;
+}
 
-	/* Add new friends and update existing ones */
+/* 0x8130201E */
+int NpImpsCacheFriendStoreImpl::ApplyAddedAndUpdated(
+	const NpImpsCacheRefVector<NpImpsCacheRosterData> *fetched,
+	NpImpsCacheRefVector<NpImpsCacheFriendEntryImpl> *outAdded,
+	NpImpsCacheRefVector<NpImpsCacheFriendEntryImpl> *outUpdated)
+{
+	m_mutex->Lock();
+	int ret = 0;
 	for (SceUInt32 pos = 0; pos < fetched->Size(); ++pos) {
-		NpImpsCacheRosterData *rosterItem = fetched->At(pos);
-		if (rosterItem == NULL)
+		NpImpsCacheRosterData *item = fetched->At(pos);
+		if (item == NULL)
 			continue;
-		const SceNpId *npId = rosterItem->GetNpId();
-		NpImpsCacheFriendEntryImpl *existing = FindLocked(npId);
-		if (existing == NULL) {
-			NpImpsCacheFriendEntryImpl *created = NULL;
-			int ret = NpImpsCacheFriendEntryImpl::Create(&created, &rosterItem, m_mutex);
-			if (ret < 0) {
+		item->AddRef();
+		const SceNpId *npId = item->GetNpId();
+		SceUInt32 slotIdx = LowerBoundLocked(npId);
+		bool exists = (slotIdx < m_count &&
+			       npImpsCacheCompareNpId(&m_entries[slotIdx].npId, npId) == 0);
+		item->Release();
+
+		if (exists) {
+			slotIdx = LowerBoundLocked(npId);
+			if (slotIdx >= m_count ||
+			    npImpsCacheCompareNpId(&m_entries[slotIdx].npId, npId) != 0) {
 				m_mutex->Unlock();
-				return ret;
+				return NP_IMPS_SVC_ERROR_INTERNAL;
 			}
-			ret = InsertLocked(npId, created);
-			if (ret < 0) {
-				created->Release();
-				m_mutex->Unlock();
-				return ret;
-			}
-			if (outAdded != NULL)
-				outAdded->PushBack(created);
-			created->Release();
+			NpImpsCacheRosterData *held = item;
+			held->AddRef();
+			ret = UpdateEntryLocked(slotIdx, &held, outUpdated);
+			held->Release();
+			if (ret < 0)
+				break;
 		} else {
-			int prevRel = existing->GetRelation();
-			int nextRel = rosterItem->GetRelation();
-			if (prevRel != nextRel) {
-				existing->UpdateRosterData(nextRel, rosterItem->GetDate());
-				if (outUpdated != NULL)
-					outUpdated->PushBack(existing);
+			NpImpsCacheRosterData *held = item;
+			held->AddRef();
+			ret = AddEntryLocked(&held, outAdded);
+			held->Release();
+			if (ret < 0)
+				break;
+		}
+	}
+	m_mutex->Unlock();
+	return ret;
+}
+
+/* 0x8130215A */
+int NpImpsCacheFriendStoreImpl::CollectAndRemoveMissing(
+	const NpImpsCacheRefVector<NpImpsCacheRosterData> *fetched,
+	NpImpsCacheNpIdSet *outRemovedAll,
+	NpImpsCacheNpIdSet *outRemovedAccepted,
+	NpImpsCacheNpIdSet *outRemovedPendingOrReq)
+{
+	m_mutex->Lock();
+	for (SceUInt32 pos = 0; pos < m_count; ++pos) {
+		const SceNpId *npId = &m_entries[pos].npId;
+		if (!npImpsCacheRosterListContains(npId, fetched)) {
+			if (outRemovedAll != NULL && outRemovedAll->Insert(npId) <= 0) {
+				m_mutex->Unlock();
+				return NP_IMPS_SVC_ERROR_OUT_OF_MEMORY;
+			}
+			int rel = m_entries[pos].entry->GetRelation();
+			if (rel == NP_IMPS_CACHE_REL_ACCEPTED) {
+				if (outRemovedAccepted != NULL &&
+				    outRemovedAccepted->Insert(npId) <= 0) {
+					m_mutex->Unlock();
+					return NP_IMPS_SVC_ERROR_OUT_OF_MEMORY;
+				}
+			} else if (rel == NP_IMPS_CACHE_REL_PENDING_OUT ||
+				   rel == NP_IMPS_CACHE_REL_REQUESTED_IN) {
+				if (outRemovedPendingOrReq != NULL &&
+				    outRemovedPendingOrReq->Insert(npId) <= 0) {
+					m_mutex->Unlock();
+					return NP_IMPS_SVC_ERROR_OUT_OF_MEMORY;
+				}
 			}
 		}
 	}
 
-	m_loaded = 1;
-	if (outFirstLoad != NULL)
-		*outFirstLoad = !wasLoaded;
+	if (outRemovedAll != NULL) {
+		for (SceUInt32 pos = 0; pos < outRemovedAll->Size(); ++pos)
+			EraseLocked(outRemovedAll->At(pos));
+	}
 
 	m_mutex->Unlock();
 	return 0;
 }
 
-/* 0x8130253C: incremental add/update from push or local action */
+/* 0x8130232A: diff and apply full roster friend list */
+int NpImpsCacheFriendStoreImpl::ApplyFullList(
+	const NpImpsCacheRefVector<NpImpsCacheRosterData> *fetched,
+	NpImpsCacheNpIdSet *outRemovedAll,
+	NpImpsCacheNpIdSet *outRemovedAccepted,
+	NpImpsCacheNpIdSet *outRemovedPendingOrReq,
+	NpImpsCacheRefVector<NpImpsCacheFriendEntryImpl> *outAdded,
+	NpImpsCacheRefVector<NpImpsCacheFriendEntryImpl> *outUpdated,
+	bool *outFirstLoad)
+{
+	m_mutex->Lock();
+	m_mutex->Lock();
+	SceUInt8 wasLoaded = m_loaded;
+	m_mutex->Unlock();
+
+	int ret = CollectAndRemoveMissing(fetched, outRemovedAll, outRemovedAccepted,
+					  outRemovedPendingOrReq);
+	if (ret >= 0) {
+		ret = ApplyAddedAndUpdated(fetched, outAdded, outUpdated);
+		if (ret >= 0) {
+			m_loaded = 1;
+			if (outFirstLoad != NULL)
+				*outFirstLoad = (wasLoaded == 0);
+		}
+	}
+
+	m_mutex->Unlock();
+	return ret;
+}
+
+/* 0x813023B8 */
+void NpImpsCacheFriendStoreImpl::CollectPendingAndRequested(const NpImpsCacheNpIdSet *npIds,
+							    NpImpsCacheNpIdSet *outSet)
+{
+	for (SceUInt32 pos = 0; pos < npIds->Size(); ++pos) {
+		const SceNpId *npId = npIds->At(pos);
+		NpImpsCacheFriendEntryImpl *entry = FindLocked(npId);
+		if (entry != NULL) {
+			int rel = entry->GetRelation();
+			if (rel == NP_IMPS_CACHE_REL_PENDING_OUT ||
+			    rel == NP_IMPS_CACHE_REL_REQUESTED_IN) {
+				outSet->Insert(npId);
+			}
+		}
+	}
+}
+
+/* 0x8130247C */
+void NpImpsCacheFriendStoreImpl::CollectAccepted(const NpImpsCacheNpIdSet *npIds,
+						 NpImpsCacheNpIdSet *outSet)
+{
+	for (SceUInt32 pos = 0; pos < npIds->Size(); ++pos) {
+		const SceNpId *npId = npIds->At(pos);
+		NpImpsCacheFriendEntryImpl *entry = FindLocked(npId);
+		if (entry != NULL && entry->GetRelation() == NP_IMPS_CACHE_REL_ACCEPTED)
+			outSet->Insert(npId);
+	}
+}
+
+/* 0x813028CE: incremental add/update from push or local action */
 int NpImpsCacheFriendStoreImpl::AddOrUpdateList(
 	const NpImpsCacheRefVector<NpImpsCacheRosterData> *items)
 {
 	m_mutex->Lock();
 	NpImpsCacheRefVector<NpImpsCacheFriendEntryImpl> added;
 	NpImpsCacheRefVector<NpImpsCacheFriendEntryImpl> updated;
-	int firstError = 0;
+	int ret = 0;
 
 	for (SceUInt32 pos = 0; pos < items->Size(); ++pos) {
 		NpImpsCacheRosterData *rosterItem = items->At(pos);
 		if (rosterItem == NULL)
 			continue;
 		const SceNpId *npId = rosterItem->GetNpId();
-		NpImpsCacheFriendEntryImpl *existing = FindLocked(npId);
-		if (existing == NULL) {
-			NpImpsCacheFriendEntryImpl *created = NULL;
-			int ret = NpImpsCacheFriendEntryImpl::Create(&created, &rosterItem, m_mutex);
-			if (ret < 0) {
-				if (firstError == 0)
-					firstError = ret;
-				continue;
-			}
-			ret = InsertLocked(npId, created);
-			if (ret < 0) {
-				if (firstError == 0)
-					firstError = ret;
-			} else {
-				added.PushBack(created);
-			}
-			created->Release();
-		} else {
-			if (existing->GetRelation() != rosterItem->GetRelation()) {
-				existing->UpdateRosterData(rosterItem->GetRelation(),
-							   rosterItem->GetDate());
-				updated.PushBack(existing);
-			}
-		}
+		SceUInt32 slotIdx = LowerBoundLocked(npId);
+		bool exists = (slotIdx < m_count &&
+			       npImpsCacheCompareNpId(&m_entries[slotIdx].npId, npId) == 0);
+		NpImpsCacheRosterData *held = rosterItem;
+		held->AddRef();
+		if (exists)
+			ret = UpdateEntryLocked(slotIdx, &held, &updated);
+		else
+			ret = AddEntryLocked(&held, &added);
+		held->Release();
+		if (ret < 0)
+			break;
 	}
 
-	if (m_sink != NULL) {
-		if (added.Size() > 0) {
-			int ret = m_sink->NotifyFriendListAdded(&added);
-			if (ret < 0 && firstError == 0)
-				firstError = ret;
-		}
-		if (updated.Size() > 0) {
-			int ret = m_sink->NotifyFriendListUpdated(&updated);
-			if (ret < 0 && firstError == 0)
-				firstError = ret;
-		}
+	if (ret >= 0 && m_sink != NULL) {
+		if (updated.Size() != 0)
+			ret = m_sink->NotifyFriendListUpdated(&updated);
+		if (ret >= 0 && added.Size() != 0)
+			ret = m_sink->NotifyFriendListAdded(&added);
 	}
 
 	m_mutex->Unlock();
-	return firstError;
+	return ret;
 }
 
-/* 0x81302740: incremental remove */
+/* 0x8130253C: incremental remove */
 int NpImpsCacheFriendStoreImpl::RemoveList(const NpImpsCacheNpIdSet *npIds)
 {
 	m_mutex->Lock();
 	NpImpsCacheNpIdSet removedAccepted;
-	NpImpsCacheNpIdSet removedPending;
-	NpImpsCacheNpIdSet removedRequested;
+	NpImpsCacheNpIdSet removedPendingOrReq;
 
-	for (SceUInt32 pos = 0; pos < npIds->Size(); ++pos) {
-		const SceNpId *npId = npIds->At(pos);
-		NpImpsCacheFriendEntryImpl *existing = FindLocked(npId);
-		if (existing != NULL) {
-			int rel = existing->GetRelation();
-			EraseLocked(npId);
-			if (rel == NP_IMPS_CACHE_REL_ACCEPTED)
-				removedAccepted.Insert(npId);
-			else if (rel == NP_IMPS_CACHE_REL_PENDING_OUT)
-				removedPending.Insert(npId);
-			else if (rel == NP_IMPS_CACHE_REL_REQUESTED_IN)
-				removedRequested.Insert(npId);
-		}
-	}
+	CollectAccepted(npIds, &removedAccepted);
+	CollectPendingAndRequested(npIds, &removedPendingOrReq);
+
+	for (SceUInt32 pos = 0; pos < npIds->Size(); ++pos)
+		EraseLocked(npIds->At(pos));
 
 	int ret = 0;
 	if (m_sink != NULL) {
 		if (removedAccepted.Size() > 0)
 			ret = m_sink->NotifyFriendsRemoved(&removedAccepted);
-		if (ret >= 0 && removedPending.Size() > 0)
-			ret = m_sink->NotifyFriendRequestsRemoved(&removedPending);
-		if (ret >= 0 && removedRequested.Size() > 0)
-			ret = m_sink->NotifyFriendContextRemoved(&removedRequested);
+		if (ret >= 0 && removedPendingOrReq.Size() > 0)
+			ret = m_sink->NotifyFriendRequestsRemoved(&removedPendingOrReq);
 	}
 
 	m_mutex->Unlock();
+	return ret;
+}
+
+/* 0x81302EC6: fetch full friend list from roster and apply */
+int NpImpsCacheFriendStoreImpl::FetchAndApply(
+	NpImpsCacheNpIdSet *outRemovedAll,
+	NpImpsCacheNpIdSet *outRemovedAccepted,
+	NpImpsCacheNpIdSet *outRemovedPendingOrReq,
+	NpImpsCacheRefVector<NpImpsCacheFriendEntryImpl> *outAdded,
+	NpImpsCacheRefVector<NpImpsCacheFriendEntryImpl> *outUpdated,
+	bool *outFirstLoad)
+{
+	NpImpsCacheRefVector<NpImpsCacheRosterData> fetched;
+	int ret = npImpsCacheFetchFriendListFromRoster(&fetched);
+	if (ret >= 0) {
+		Lock();
+		m_mutex->Lock();
+		m_mutex->Lock();
+		SceUInt8 wasLoaded = m_loaded;
+		m_mutex->Unlock();
+
+		ret = CollectAndRemoveMissing(&fetched, outRemovedAll, outRemovedAccepted,
+					      outRemovedPendingOrReq);
+		if (ret >= 0) {
+			ret = ApplyAddedAndUpdated(&fetched, outAdded, outUpdated);
+			if (ret >= 0) {
+				m_loaded = 1;
+				if (outFirstLoad != NULL)
+					*outFirstLoad = (wasLoaded == 0);
+			}
+		}
+		m_mutex->Unlock();
+		if (ret < 0)
+			Unlock();
+	}
 	return ret;
 }
 

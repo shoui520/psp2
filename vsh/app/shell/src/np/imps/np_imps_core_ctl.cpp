@@ -1546,7 +1546,46 @@ static int npImpsCtlFlushAllDone(NpImpsCtlContext *ctx)
 }
 
 static int npImpsCtxFindBySessionId(int sessionId, NpImpsCtlContext **outCtx, SceUInt8 allowClosing);
-static int npImpsCtxReleaseInternal(NpImpsCtlContext *ctx, bool markClosing);
+static int npImpsCtxRelease(NpImpsCtlContext *ctx);
+static int npImpsCtxClose(NpImpsCtlContext *ctx);
+
+/* 0x8131CA26 */
+static int npImpsCtlInitSessionTx(NpImpsCtlContext *ctx)
+{
+	sceClibMemset(&ctx->sessionIdentity, 0, sizeof(ctx->sessionIdentity));
+	npImpsTxQueueInit(&ctx->txQueue, &ctx->mutex);
+	ctx->sessionIdentity.sessionId = 0;
+	return 0;
+}
+
+/* 0x8131CA4A */
+static int npImpsCtlTermSessionTx(NpImpsCtlContext *ctx)
+{
+	if (ctx->sessionIdentity.sessionId != 0)
+		npImpsCoreDestroySession(ctx->sessionIdentity.sessionId, NP_IMPS_CORE_ERR_INTERNAL);
+	npImpsCtlTxClearAll(&ctx->txQueue);
+	return 0;
+}
+
+/* 0x8131C95C */
+static int npImpsCtlCreateMessageTx(NpImpsCtlContext *ctx, int requestId,
+				    NpImpsSessionSendDoneCallback callback, void *userArg,
+				    NpImpsCtlTxNode **outNode)
+{
+	return npImpsCtlTxCreate(&ctx->txQueue, requestId, callback, userArg, outNode);
+}
+
+/* 0x8131C970 */
+static int npImpsCtlRemoveMessageTx(NpImpsCtlContext *ctx, NpImpsCtlTxNode *node)
+{
+	return npImpsCtlTxRemoveById(&ctx->txQueue, node->header.requestId);
+}
+
+/* 0x8131C9BE */
+static int npImpsCtlFailPendingMessageTx(NpImpsCtlContext *ctx, int requestId, int errorCode)
+{
+	return npImpsCtlTxFailPendingById(&ctx->txQueue, requestId, errorCode);
+}
 
 /* 0x8131CB14 */
 static void npImpsCtlOnCoreSendMsgDone(const NpImpsSessionIdentity *session, int txId, int result,
@@ -1564,7 +1603,7 @@ static void npImpsCtlOnCoreSendMsgDone(const NpImpsSessionIdentity *session, int
 		npImpsCtlPipeSend(&ctx->msgPipeId, &msg, NULL);
 	}
 	if (ctx != NULL)
-		npImpsCtxReleaseInternal(ctx, false);
+		npImpsCtxRelease(ctx);
 }
 
 /* 0x8131CA6A */
@@ -1598,7 +1637,7 @@ static int npImpsCtlRejectUnexpectedMsg(NpImpsCtlContext *ctx, const NpImpsCtlMs
 	if (msg->kind == NP_IMPS_CTL_MSG_CLIENT_UPDATE)
 		npImpsCtlClientMgrFailByReqId(&ctx->clientMgr, msg->body.requestId, errorCode);
 	else if (msg->kind == NP_IMPS_CTL_MSG_SEND_MESSAGE)
-		npImpsCtlTxFailPendingById(&ctx->txQueue, msg->body.requestId, errorCode);
+		npImpsCtlFailPendingMessageTx(ctx, msg->body.requestId, errorCode);
 	return 0;
 }
 
@@ -1727,7 +1766,7 @@ static int npImpsCtlPostCoreSessionEvent(const NpImpsSessionIdentity *session, i
 			ret = 0;
 	}
 	if (ctx != NULL)
-		npImpsCtxReleaseInternal(ctx, false);
+		npImpsCtxRelease(ctx);
 	return ret;
 }
 
@@ -1750,18 +1789,21 @@ static void npImpsCtlBridgeOnPrivacy(const NpImpsSessionIdentity *session, int a
 	npImpsCtlNotifyPrivacy(session, action, privacyList);
 }
 
+/* 0x8131E796 */
 static void npImpsCtlBridgeOnMessage(const NpImpsSessionIdentity *session,
 				     NpRtMessageStanza *stanza)
 {
 	npImpsCtlNotifyMessageStanza(session, stanza);
 }
 
+/* 0x8131E79E */
 static void npImpsCtlBridgeOnPresence(const NpImpsSessionIdentity *session,
 				      NpRtPresenceStanza *stanza)
 {
 	npImpsCtlNotifyPresenceStanza(session, stanza);
 }
 
+/* 0x8131E7A6 */
 static void npImpsCtlBridgeOnPolling(const NpImpsSessionIdentity *session, int updateKind,
 				     const SceRtcTick *timestamp)
 {
@@ -1804,11 +1846,10 @@ static int npImpsCtlUnregisterCoreBridge(void)
 	return ret;
 }
 
-/* 0x8131E5DA */
-int npImpsCoreRegisterCallbacks(const NpImpsCoreCallbacks *callbacks, int *outCallbackId)
+/* 0x8131E318 */
+static int npImpsCtlListenerAlloc(const NpImpsCoreCallbacks *callbacks,
+				  NpImpsCtlListenerNode **outNode)
 {
-	if (npImpsCtlIsStarted() != 0)
-		return NP_IMPS_CTL_ERR_ALREADY_STARTED;
 	if (s_ctlListenerCount >= NP_IMPS_CTL_MAX_LISTENERS)
 		return NP_IMPS_CORE_ERR_CB_FULL;
 
@@ -1834,8 +1875,23 @@ int npImpsCoreRegisterCallbacks(const NpImpsCoreCallbacks *callbacks, int *outCa
 		s_ctlListenerHead = node;
 	s_ctlListenerTail = node;
 
-	*outCallbackId = node->listenerId;
+	*outNode = node;
 	return 0;
+}
+
+/* 0x8131E5DA */
+int npImpsCoreRegisterCallbacks(const NpImpsCoreCallbacks *callbacks, int *outCallbackId)
+{
+	if (npImpsCtlIsStarted() != 0)
+		return NP_IMPS_CTL_ERR_ALREADY_STARTED;
+
+	NpImpsCtlListenerNode *node = NULL;
+	int ret = npImpsCtlListenerAlloc(callbacks, &node);
+	if (ret >= 0) {
+		*outCallbackId = node->listenerId;
+		return 0;
+	}
+	return ret;
 }
 
 /* 0x8131E626 */
@@ -1898,9 +1954,7 @@ static void npImpsCtxFree(NpImpsCtlContext *ctx)
 		ctx->workerThreadPtr = NULL;
 	}
 
-	if (ctx->sessionIdentity.sessionId != 0)
-		npImpsCoreDestroySession(ctx->sessionIdentity.sessionId, NP_IMPS_CORE_ERR_INTERNAL);
-	npImpsCtlTxClearAll(&ctx->txQueue);
+	npImpsCtlTermSessionTx(ctx);
 	npRtCalloutCancel(&ctx->timeoutTimer);
 	npImpsCtlPipeDestroy(&ctx->msgPipeId);
 	npRtImpsFreePresenceUpdate(ctx->cachedPresence, NULL);
@@ -1935,9 +1989,7 @@ static int npImpsCtxCreate(NpImpsCtlContext **outCtx)
 	}
 
 	npRtCalloutInit(&ctx->timeoutTimer);
-	sceClibMemset(&ctx->sessionIdentity, 0, sizeof(ctx->sessionIdentity));
-	npImpsTxQueueInit(&ctx->txQueue, &ctx->mutex);
-	ctx->sessionIdentity.sessionId = 0;
+	npImpsCtlInitSessionTx(ctx);
 
 	s_nextCtxId++;
 	if (s_nextCtxId == 0)
@@ -2031,8 +2083,8 @@ static int npImpsCtxFindBySessionId(int sessionId, NpImpsCtlContext **outCtx, Sc
 	return npImpsCtxFindInternal(true, sessionId, outCtx, allowClosing);
 }
 
-/* 0x8131BC72 / 0x8131BD36 */
-static int npImpsCtxReleaseInternal(NpImpsCtlContext *ctx, bool markClosing)
+/* 0x8131BC72 */
+static int npImpsCtxRelease(NpImpsCtlContext *ctx)
 {
 	if (s_ctxMgrInit == 0)
 		return NP_IMPS_CORE_ERR_NOT_INITIALIZED;
@@ -2045,8 +2097,49 @@ static int npImpsCtxReleaseInternal(NpImpsCtlContext *ctx, bool markClosing)
 	int ret = 0;
 	int ctxLock = npImpsCtxLock(ctx);
 	if (ctxLock >= 0) {
-		if (markClosing)
-			ctx->flags |= NP_IMPS_CTX_FLAG_CLOSING;
+		ctx->refCount--;
+		if (ctx->refCount == 0 && (ctx->flags & NP_IMPS_CTX_FLAG_CLOSING) != 0) {
+			if ((ctx->flags & NP_IMPS_CTX_FLAG_LINKED) != 0) {
+				if (ctx->next != NULL)
+					ctx->next->prev = ctx->prev;
+				else
+					s_ctxListTail = ctx->prev;
+				if (ctx->prev != NULL)
+					ctx->prev->next = ctx->next;
+				else
+					s_ctxListHead = ctx->next;
+				ctx->next = NULL;
+				ctx->prev = NULL;
+				ctx->flags &= ~NP_IMPS_CTX_FLAG_LINKED;
+			}
+			toFree = ctx;
+		}
+		npImpsCtxUnlock(ctx, ctxLock);
+	} else {
+		ret = ctxLock;
+	}
+
+	npImpsCtlMutexUnlock(globalLock);
+	if (toFree != NULL)
+		npImpsCtxFree(toFree);
+	return ret;
+}
+
+/* 0x8131BD36 */
+static int npImpsCtxClose(NpImpsCtlContext *ctx)
+{
+	if (s_ctxMgrInit == 0)
+		return NP_IMPS_CORE_ERR_NOT_INITIALIZED;
+
+	int globalLock = npImpsCtlMutexLock();
+	if (globalLock < 0)
+		return globalLock;
+
+	NpImpsCtlContext *toFree = NULL;
+	int ret = 0;
+	int ctxLock = npImpsCtxLock(ctx);
+	if (ctxLock >= 0) {
+		ctx->flags |= NP_IMPS_CTX_FLAG_CLOSING;
 		ctx->refCount--;
 		if (ctx->refCount == 0 && (ctx->flags & NP_IMPS_CTX_FLAG_CLOSING) != 0) {
 			if ((ctx->flags & NP_IMPS_CTX_FLAG_LINKED) != 0) {
@@ -2107,6 +2200,21 @@ static int npImpsCtlThreadEntry(SceSize args, void *argp)
 	return 0;
 }
 
+/* 0x8131E7B0 */
+static int npImpsCtlCreateThread(SceUID *outThreadId, const NpPollingThreadParam *threadParam)
+{
+	SceUID tid = sceKernelCreateThread("SceNpImpsCtl", npImpsCtlThreadEntry,
+					   threadParam->priority, threadParam->stackSize,
+					   0, threadParam->cpuAffinityMask, NULL);
+	if (tid >= 0) {
+		*outThreadId = tid;
+		return 0;
+	}
+	if (tid != -1)
+		sceKernelDeleteThread(tid);
+	return tid;
+}
+
 static int npImpsCtxMgrInit(const NpPollingThreadParam *threadParam)
 {
 	if (s_ctxMgrInit != 0)
@@ -2118,16 +2226,8 @@ static int npImpsCtxMgrInit(const NpPollingThreadParam *threadParam)
 	s_ctxCount = 0;
 	s_nextCtxId = 0;
 
-	SceUID tid = sceKernelCreateThread("SceNpImpsCtl", npImpsCtlThreadEntry,
-					   threadParam->priority, threadParam->stackSize,
-					   0, threadParam->cpuAffinityMask, NULL);
-	if (tid < 0) {
-		if (tid != -1)
-			sceKernelDeleteThread(tid);
-		return tid;
-	}
-	s_ctlThreadId = tid;
-	return 0;
+	int ret = npImpsCtlCreateThread(&s_ctlThreadId, threadParam);
+	return (ret >= 0) ? 0 : ret;
 }
 
 static int npImpsCtxMgrTerm(void)
@@ -2136,7 +2236,7 @@ static int npImpsCtxMgrTerm(void)
 		return NP_IMPS_CORE_ERR_NOT_INITIALIZED;
 
 	while (s_ctxListHead != NULL)
-		npImpsCtxReleaseInternal(s_ctxListHead, true);
+		npImpsCtxClose(s_ctxListHead);
 
 	npRtJoinAndDeleteThread(&s_ctlThreadId);
 	s_ctxCount = 0;
@@ -2933,8 +3033,8 @@ static int npImpsCtlEnqueueMessage(NpImpsCtlContext *ctx, const SceNpId *targetN
 	if (ret >= 0)
 		ret = npImpsCoreAllocTransactionId(&txId);
 	if (ret >= 0) {
-		ret = npImpsCtlTxCreate(&ctx->txQueue, txId, npImpsCtlSendMsgAdapter,
-					reinterpret_cast<void *>(callback), &txNode);
+		ret = npImpsCtlCreateMessageTx(ctx, txId, npImpsCtlSendMsgAdapter,
+					       reinterpret_cast<void *>(callback), &txNode);
 	}
 	if (ret >= 0) {
 		txNode->txKind = 0;
@@ -2958,18 +3058,31 @@ static int npImpsCtlEnqueueMessage(NpImpsCtlContext *ctx, const SceNpId *targetN
 	}
 
 	if (txNode != NULL)
-		npImpsCtlTxRemoveById(&ctx->txQueue, txNode->header.requestId);
+		npImpsCtlRemoveMessageTx(ctx, txNode);
 	if (cloned != NULL)
 		npRtImpsFreeMessage(cloned, NULL);
 	return ret;
 }
 
-/* 0x8131C4E8 / 0x8131C54A */
-static int npImpsCtlSendSimpleCmd(NpImpsCtlContext *ctx, int msgKind)
+/* 0x8131C4E8 */
+static int npImpsCtlSendSignOutCmd(NpImpsCtlContext *ctx)
 {
 	NpImpsCtlMsg msg;
 	sceClibMemset(&msg, 0, sizeof(msg));
-	msg.kind = msgKind;
+	msg.kind = NP_IMPS_CTL_MSG_SIGN_OUT;
+	SceUInt32 allowedMask = 0x1FFFu;
+	int ret = npImpsCtlPostCommand(ctx, &allowedMask, &msg, 0);
+	if (ret == NP_IMPS_CTL_ERR_BAD_STATE)
+		return NP_IMPS_CTL_ERR_SIGNED_OUT;
+	return (ret >= 0) ? 0 : ret;
+}
+
+/* 0x8131C54A */
+static int npImpsCtlSendSignInCmd(NpImpsCtlContext *ctx)
+{
+	NpImpsCtlMsg msg;
+	sceClibMemset(&msg, 0, sizeof(msg));
+	msg.kind = NP_IMPS_CTL_MSG_SIGN_IN;
 	SceUInt32 allowedMask = 0x1FFFu;
 	int ret = npImpsCtlPostCommand(ctx, &allowedMask, &msg, 0);
 	if (ret == NP_IMPS_CTL_ERR_BAD_STATE)
@@ -3080,7 +3193,7 @@ int npImpsCtlStartDefault(void)
 		ret = npImpsCtxStartWorker(ctx);
 	if (ret < 0) {
 		if (ctx != NULL)
-			npImpsCtxReleaseInternal(ctx, true);
+			npImpsCtxClose(ctx);
 		return ret;
 	}
 
@@ -3110,7 +3223,7 @@ int npImpsCoreConnectProcess(SceUID processId, NpImpsCoreConnectCallback callbac
 					 npImpsCtlClientConnectAdapter,
 					 reinterpret_cast<void *>(callback), NULL);
 	if (ctx != NULL)
-		npImpsCtxReleaseInternal(ctx, false);
+		npImpsCtxRelease(ctx);
 	return (ret >= 0) ? 0 : ret;
 }
 
@@ -3135,7 +3248,7 @@ int npImpsCoreDisconnectProcess(SceUID processId)
 	if (ret >= 0)
 		ret = npImpsCtlRemoveClient(ctx, processId, &remaining);
 	if (ctx != NULL)
-		npImpsCtxReleaseInternal(ctx, false);
+		npImpsCtxRelease(ctx);
 	return (ret >= 0) ? 0 : ret;
 }
 
@@ -3150,7 +3263,7 @@ int npImpsCoreResyncSession(void)
 	if (ret >= 0)
 		ret = npImpsCtlCancelAllClients(ctx);
 	if (ctx != NULL)
-		npImpsCtxReleaseInternal(ctx, false);
+		npImpsCtxRelease(ctx);
 	return (ret >= 0) ? 0 : ret;
 }
 
@@ -3165,7 +3278,7 @@ int npImpsCoreUpdatePresence(const NpImpsCorePresenceUpdate *update)
 	if (ret >= 0)
 		ret = npImpsCtlEnqueuePresence(ctx, update);
 	if (ctx != NULL)
-		npImpsCtxReleaseInternal(ctx, false);
+		npImpsCtxRelease(ctx);
 	return (ret >= 0) ? 0 : ret;
 }
 
@@ -3183,7 +3296,7 @@ int npImpsCoreSendInGameMessage(const SceNpId *targetNpId, const NpImpsCoreMessa
 	if (ret >= 0)
 		ret = npImpsCtlEnqueueMessage(ctx, targetNpId, msg, callback, outTransactionId);
 	if (ctx != NULL)
-		npImpsCtxReleaseInternal(ctx, false);
+		npImpsCtxRelease(ctx);
 	return (ret >= 0) ? 0 : ret;
 }
 
@@ -3198,7 +3311,7 @@ static int npImpsCtlNotifyAutoSyncChanged(void)
 	if (ret >= 0)
 		ret = npImpsCtlMarkAutoSyncDirty(ctx);
 	if (ctx != NULL)
-		npImpsCtxReleaseInternal(ctx, false);
+		npImpsCtxRelease(ctx);
 	return (ret >= 0) ? 0 : ret;
 }
 
@@ -3211,9 +3324,9 @@ static int npImpsCtlTriggerSignIn(void)
 	NpImpsCtlContext *ctx = NULL;
 	int ret = npImpsCtxFindById(s_defaultCtlCtxId, &ctx, 0);
 	if (ret >= 0)
-		ret = npImpsCtlSendSimpleCmd(ctx, NP_IMPS_CTL_MSG_SIGN_IN);
+		ret = npImpsCtlSendSignInCmd(ctx);
 	if (ctx != NULL)
-		npImpsCtxReleaseInternal(ctx, false);
+		npImpsCtxRelease(ctx);
 	return (ret >= 0) ? 0 : ret;
 }
 
@@ -3226,8 +3339,8 @@ static int npImpsCtlTriggerSignOut(void)
 	NpImpsCtlContext *ctx = NULL;
 	int ret = npImpsCtxFindById(s_defaultCtlCtxId, &ctx, 0);
 	if (ret >= 0)
-		ret = npImpsCtlSendSimpleCmd(ctx, NP_IMPS_CTL_MSG_SIGN_OUT);
+		ret = npImpsCtlSendSignOutCmd(ctx);
 	if (ctx != NULL)
-		npImpsCtxReleaseInternal(ctx, false);
+		npImpsCtxRelease(ctx);
 	return (ret >= 0) ? 0 : ret;
 }

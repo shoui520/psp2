@@ -172,7 +172,9 @@ private:
 	void OnExitState(NpImpsHsmState state);
 
 	/* Leaf actions matching 0x812F7590..0x812F7BC9 */
-	void NotifyServiceState(int serviceState);
+	void NotifyServiceStateSignedOut();
+	void NotifyServiceStateSignedIn();
+	void NotifyServiceStateOnline();
 	void SetLocalServiceState(int serviceState);
 	void SetActiveProcess();
 	void EnqueueSetGameTitleJob();
@@ -227,6 +229,9 @@ public:
 	int OnProcessCreated(SceUID processId, int appId);
 	int RemoveProcess(SceUID processId);
 	int PostEvent(int eventId, SceUID processId, int errorCode);
+	int PostProcessEvent(int eventId, SceUID processId);
+	int PostProcessErrorEvent(int eventId, SceUID processId, int errorCode);
+	int PostGlobalEvent(int eventId, int errorCode);
 	int GetServiceState(SceUID processId, int *outState, SceUInt8 rawMode);
 	int LockProcess(SceUID processId);
 	int UnlockProcess(SceUID processId);
@@ -436,13 +441,13 @@ void NpImpsProcessHsm::OnEnterState(NpImpsHsmState state)
 	case NP_IMPS_HSM_SIGNED_OUT:
 	case NP_IMPS_HSM_NOT_BIG_SIGNED_OUT:
 		SetLocalServiceState(NP_IMPS_SVC_STATE_SIGNED_OUT);
-		NotifyServiceState(NP_IMPS_SVC_STATE_SIGNED_OUT);
+		NotifyServiceStateSignedOut();
 		break;
 
 	case NP_IMPS_HSM_SIGNED_IN:
 	case NP_IMPS_HSM_NOT_BIG_SIGNED_IN:
 		SetLocalServiceState(NP_IMPS_SVC_STATE_SIGNED_IN);
-		NotifyServiceState(NP_IMPS_SVC_STATE_SIGNED_IN);
+		NotifyServiceStateSignedIn();
 		RegisterSignedInListener();
 		ResetFriendPresenceToOffline();
 		break;
@@ -456,7 +461,7 @@ void NpImpsProcessHsm::OnEnterState(NpImpsHsmState state)
 
 	case NP_IMPS_HSM_ONLINE:
 		SetLocalServiceState(NP_IMPS_SVC_STATE_ONLINE);
-		NotifyServiceState(NP_IMPS_SVC_STATE_ONLINE);
+		NotifyServiceStateOnline();
 		RegisterOnlineListener();
 		FlushPendingGamePresence();
 		CompletePendingEnterOnlineResult();
@@ -464,7 +469,7 @@ void NpImpsProcessHsm::OnEnterState(NpImpsHsmState state)
 
 	case NP_IMPS_HSM_NOT_BIG_ONLINE:
 		SetLocalServiceState(NP_IMPS_SVC_STATE_ONLINE);
-		NotifyServiceState(NP_IMPS_SVC_STATE_ONLINE);
+		NotifyServiceStateOnline();
 		RegisterOnlineListener();
 		CompletePendingEnterOnlineResult();
 		break;
@@ -507,7 +512,7 @@ void NpImpsProcessHsm::OnExitState(NpImpsHsmState state)
 	case NP_IMPS_HSM_NOT_BIG_ONLINE:
 		DisconnectCoreProcess();
 		SetLocalServiceState(NP_IMPS_SVC_STATE_SIGNED_IN);
-		NotifyServiceState(NP_IMPS_SVC_STATE_SIGNED_IN);
+		NotifyServiceStateSignedIn();
 		UnregisterOnlineListener();
 		ResetFriendPresenceToOffline();
 		break;
@@ -808,12 +813,31 @@ void NpImpsProcessHsm::DispatchEvent(int eventId, int errorCode)
 	m_hsmMutex.Unlock();
 }
 
-/* 0x812F7590, 0x812F75AE, 0x812F75CC */
-void NpImpsProcessHsm::NotifyServiceState(int serviceState)
+/* 0x812F7590 */
+void NpImpsProcessHsm::NotifyServiceStateSignedOut()
 {
 	NpImpsUtilSessionHolder *gameHolder = npImpsUtilGetGameSessionHolder();
 	if (gameHolder != NULL)
-		gameHolder->SendServiceStateToProcess(m_processId, serviceState, m_lastErrorCode);
+		gameHolder->SendServiceStateToProcess(m_processId, NP_IMPS_SVC_STATE_SIGNED_OUT,
+						      m_lastErrorCode);
+}
+
+/* 0x812F75AE */
+void NpImpsProcessHsm::NotifyServiceStateSignedIn()
+{
+	NpImpsUtilSessionHolder *gameHolder = npImpsUtilGetGameSessionHolder();
+	if (gameHolder != NULL)
+		gameHolder->SendServiceStateToProcess(m_processId, NP_IMPS_SVC_STATE_SIGNED_IN,
+						      m_lastErrorCode);
+}
+
+/* 0x812F75CC */
+void NpImpsProcessHsm::NotifyServiceStateOnline()
+{
+	NpImpsUtilSessionHolder *gameHolder = npImpsUtilGetGameSessionHolder();
+	if (gameHolder != NULL)
+		gameHolder->SendServiceStateToProcess(m_processId, NP_IMPS_SVC_STATE_ONLINE,
+						      m_lastErrorCode);
 }
 
 /* 0x812F7A2E */
@@ -1222,6 +1246,39 @@ static void buildBasicPresenceDetail(NpImpsGamePresenceDetail *outDetail,
 	outDetail->gamePresence.body = snapshot->gamePresence;
 }
 
+/* 0x812F707C */
+static void sendOnlineFriendPresenceDetail(NpImpsProcessHsm *self, SceUInt32 diffMask,
+					   const NpImpsSvcPresenceSnapshot *curSnap,
+					   const SceNpId *npId)
+{
+	if ((diffMask & (NP_IMPS_DIFF_TITLE | NP_IMPS_DIFF_GAME_PRESENCE |
+			 NP_IMPS_DIFF_CONTENT_INFO)) != 0) {
+		NpImpsGamePresenceDetail detail;
+		buildBasicPresenceDetail(&detail, curSnap);
+		NpImpsUtilSessionHolder *gameHolder = npImpsUtilGetGameSessionHolder();
+		if (gameHolder != NULL)
+			gameHolder->SendFriendPresenceDetailToProcess(self->GetProcessId(), npId,
+								     &detail);
+	}
+}
+
+/* 0x812F7426 */
+static void sendOnlinePlatformFriendPresenceDetail(NpImpsProcessHsm *self, SceUInt32 diffMask,
+						   const NpImpsSvcPresenceSnapshot *curSnap,
+						   const SceNpId *npId, int platform)
+{
+	if ((diffMask & (NP_IMPS_DIFF_TITLE | NP_IMPS_DIFF_GAME_PRESENCE |
+			 NP_IMPS_DIFF_CONTENT_INFO)) != 0) {
+		NpImpsGamePresenceDetail detail;
+		buildBasicPresenceDetail(&detail, curSnap);
+		NpImpsUtilSessionHolder *gameHolder = npImpsUtilGetGameSessionHolder();
+		if (gameHolder != NULL) {
+			gameHolder->SendPlatformFriendPresenceToProcess(self->GetProcessId(), npId,
+									&detail, platform);
+		}
+	}
+}
+
 /* 0x812F7122 */
 void NpImpsProcessHsm::OnOnlineFriendPresence(int eventType, NpImpsCacheFriendPtr *handle,
 					      const SceNpId *npId,
@@ -1261,13 +1318,7 @@ void NpImpsProcessHsm::OnOnlineFriendPresence(int eventType, NpImpsCacheFriendPt
 			gameHolder->SendFriendCommIdToProcess(self->m_processId, npId,
 							      &curSnap->commId);
 
-		if ((diffMask & (NP_IMPS_DIFF_TITLE | NP_IMPS_DIFF_GAME_PRESENCE |
-				 NP_IMPS_DIFF_CONTENT_INFO)) != 0) {
-			NpImpsGamePresenceDetail detail;
-			buildBasicPresenceDetail(&detail, curSnap);
-			gameHolder->SendFriendPresenceDetailToProcess(self->m_processId, npId,
-								     &detail);
-		}
+		sendOnlineFriendPresenceDetail(self, diffMask, curSnap, npId);
 
 		if ((diffMask & (NP_IMPS_DIFF_TITLE | NP_IMPS_DIFF_COMM_ID |
 				 NP_IMPS_DIFF_GAME_PRESENCE)) != 0) {
@@ -1346,20 +1397,13 @@ void NpImpsProcessHsm::OnOnlinePlatformFriendPresence(int eventType, NpImpsCache
 	if (gameHolder == NULL)
 		return;
 
-	bool shouldSend = false;
 	if (eventType == 1) {
-		shouldSend = true;
-	} else if (eventType == 2 &&
-		   ((diffMask & (NP_IMPS_DIFF_TITLE | NP_IMPS_DIFF_GAME_PRESENCE |
-				 NP_IMPS_DIFF_CONTENT_INFO)) != 0)) {
-		shouldSend = true;
-	}
-
-	if (shouldSend) {
 		NpImpsGamePresenceDetail detail;
 		buildBasicPresenceDetail(&detail, curSnap);
 		gameHolder->SendPlatformFriendPresenceToProcess(self->m_processId, npId,
 								&detail, platform);
+	} else if (eventType == 2) {
+		sendOnlinePlatformFriendPresenceDetail(self, diffMask, curSnap, npId, platform);
 	}
 }
 
@@ -1493,6 +1537,24 @@ int NpImpsUtilMpState::PostEvent(int eventId, SceUID processId, int errorCode)
 	return 0;
 }
 
+/* 0x812F4F84 */
+int NpImpsUtilMpState::PostProcessEvent(int eventId, SceUID processId)
+{
+	return PostEvent(eventId, processId, 0);
+}
+
+/* 0x812F4FB4 */
+int NpImpsUtilMpState::PostProcessErrorEvent(int eventId, SceUID processId, int errorCode)
+{
+	return PostEvent(eventId, processId, errorCode);
+}
+
+/* 0x812F4FE2 */
+int NpImpsUtilMpState::PostGlobalEvent(int eventId, int errorCode)
+{
+	return PostEvent(eventId, 0, errorCode);
+}
+
 /* 0x812F5460 */
 bool NpImpsUtilMpState::PopEvent(EventItem *outItem, SceUInt32 *outRemaining)
 {
@@ -1600,24 +1662,36 @@ int NpImpsUtilMpState::ClearPendingGamePresence(SceUID processId)
 int NpImpsUtilMpState::SetConnectError(SceUID processId, int errorCode)
 {
 	m_mapMutex.Lock();
-	for (ConnectErrorNode *cur = m_connectErrors; cur != NULL; cur = cur->next) {
-		if (cur->processId == processId) {
-			cur->errorCode = errorCode;
-			m_mapMutex.Unlock();
-			return 0;
+	NpImpsProcessHsm *hsm = FindProcessLocked(processId);
+	if (hsm != NULL && LockProcess(processId) >= 0) {
+		int state = 0;
+		if (GetServiceState(processId, &state, 0) >= 0) {
+			if (state == NP_IMPS_SVC_STATE_ONLINE) {
+				completeEnterOnlineAsync(processId, errorCode);
+			} else {
+				bool updated = false;
+				for (ConnectErrorNode *cur = m_connectErrors; cur != NULL;
+				     cur = cur->next) {
+					if (cur->processId == processId) {
+						cur->errorCode = errorCode;
+						updated = true;
+						break;
+					}
+				}
+				if (!updated) {
+					ConnectErrorNode *node = static_cast<ConnectErrorNode *>(
+						npImpsUtilMalloc(sizeof(ConnectErrorNode)));
+					if (node != NULL) {
+						node->processId = processId;
+						node->errorCode = errorCode;
+						node->next = m_connectErrors;
+						m_connectErrors = node;
+					}
+				}
+			}
 		}
+		UnlockProcess(processId);
 	}
-
-	ConnectErrorNode *node =
-		static_cast<ConnectErrorNode *>(npImpsUtilMalloc(sizeof(ConnectErrorNode)));
-	if (node == NULL) {
-		m_mapMutex.Unlock();
-		return NP_IMPS_UTIL_ERROR_OUT_OF_MEMORY;
-	}
-	node->processId = processId;
-	node->errorCode = errorCode;
-	node->next = m_connectErrors;
-	m_connectErrors = node;
 	m_mapMutex.Unlock();
 	return 0;
 }
@@ -1754,7 +1828,21 @@ int npImpsUtilMpStatePostEvent(NpImpsUtilMpState *mpState, int eventId,
 {
 	if (mpState == NULL)
 		return NP_IMPS_UTIL_ERROR_NOT_INITIALIZED;
-	return mpState->PostEvent(eventId, processId, errorCode);
+	return mpState->PostProcessErrorEvent(eventId, processId, errorCode);
+}
+
+int npImpsUtilMpStatePostProcessEvent(NpImpsUtilMpState *mpState, int eventId, SceUID processId)
+{
+	if (mpState == NULL)
+		return NP_IMPS_UTIL_ERROR_NOT_INITIALIZED;
+	return mpState->PostProcessEvent(eventId, processId);
+}
+
+int npImpsUtilMpStatePostGlobalEvent(NpImpsUtilMpState *mpState, int eventId, int errorCode)
+{
+	if (mpState == NULL)
+		return NP_IMPS_UTIL_ERROR_NOT_INITIALIZED;
+	return mpState->PostGlobalEvent(eventId, errorCode);
 }
 
 int npImpsUtilMpStateGetServiceState(NpImpsUtilMpState *mpState, SceUID processId,
@@ -2130,6 +2218,20 @@ static void unlockSnapshotStores(IPMI::Session *session, int globalState)
 	s_mpStateThread->UnlockProcess(session->getProcessId());
 }
 
+/* 0x812F7E1C */
+static int replayInitialFriendSnapshotWrapper(IPMI::Session *session,
+					      NpImpsUtilSessionHolder *holder,
+					      SceUInt8 checkProcessState)
+{
+	return replayInitialFriendSnapshot(session, holder, checkProcessState);
+}
+
+/* 0x812F7E28 */
+static int replayInitialBlockListWrapper(IPMI::Session *session, NpImpsUtilSessionHolder *holder)
+{
+	return replayInitialBlockList(session, holder);
+}
+
 static int replayAllInitialSnapshots(IPMI::Session *session, NpImpsUtilSessionHolder *holder,
 				     SceUInt8 checkProcessState)
 {
@@ -2141,9 +2243,9 @@ static int replayAllInitialSnapshots(IPMI::Session *session, NpImpsUtilSessionHo
 	if (ret >= 0)
 		ret = replayInitialMyPartyPresence(session, holder);
 	if (ret >= 0)
-		ret = replayInitialFriendSnapshot(session, holder, checkProcessState);
+		ret = replayInitialFriendSnapshotWrapper(session, holder, checkProcessState);
 	if (ret >= 0)
-		ret = replayInitialBlockList(session, holder);
+		ret = replayInitialBlockListWrapper(session, holder);
 	return ret;
 }
 
@@ -2258,17 +2360,19 @@ int npImpsUtilHandleWaitRosterCtx(IPMI::Session *session, const SceUInt32 *ctxId
 }
 
 /* Roster async completion callbacks (0x812F5FEA..0x812F634F) */
-static void finishRosterAsyncReply(SceUInt32 replyMethodId, SceUInt32 callbackIndex,
+typedef int (*NpImpsRosterReplySender)(IPMI::Session *session, SceUInt32 requestId, int status,
+				       const SceUInt32 *contextId, const SceNpId *npId,
+				       const int *resultCode);
+
+static void finishRosterAsyncReply(NpImpsRosterReplySender replySender, SceUInt32 callbackIndex,
 				   int result, SceUInt32 contextId, const SceNpId *npId)
 {
 	SceNpId npIdCopy = *npId;
 	NpImpsUtilAsyncRelayMgr *relayMgr = NpImpsUtilAsyncRelayMgr::GetInstance();
 	NpImpsAsyncRelayRecord rec;
 	if (relayMgr->LookupContextRelay(contextId, &rec) >= 0) {
-		if (npImpsUtilSendRosterReply(rec.session, replyMethodId, rec.requestId, 0,
-					      &contextId, &npIdCopy, &result) >= 0) {
+		if (replySender(rec.session, rec.requestId, 0, &contextId, &npIdCopy, &result) >= 0)
 			npImpsUtilGetIpmiServer()->signalCallback(rec.session, callbackIndex);
-		}
 		SceShell_794BF5BE(rec.netLockToken);
 		relayMgr->UnregisterContextRelay(contextId);
 	}
@@ -2277,31 +2381,31 @@ static void finishRosterAsyncReply(SceUInt32 replyMethodId, SceUInt32 callbackIn
 /* 0x812F5FEA */
 static void onRequestFriendComplete(int result, SceUInt32 contextId, const SceNpId *npId)
 {
-	finishRosterAsyncReply(NP_IMPS_METHOD_REQUEST_FRIEND_RESULT, 0, result, contextId, npId);
+	finishRosterAsyncReply(npImpsUtilSendRequestFriendReply, 0, result, contextId, npId);
 }
 
 /* 0x812F6146 */
 static void onAcceptFriendComplete(int result, SceUInt32 contextId, const SceNpId *npId)
 {
-	finishRosterAsyncReply(NP_IMPS_METHOD_ACCEPT_FRIEND_RESULT, 1, result, contextId, npId);
+	finishRosterAsyncReply(npImpsUtilSendAcceptFriendReply, 1, result, contextId, npId);
 }
 
 /* 0x812F6098 */
 static void onDeleteFriendComplete(int result, SceUInt32 contextId, const SceNpId *npId)
 {
-	finishRosterAsyncReply(NP_IMPS_METHOD_DELETE_FRIEND_RESULT, 2, result, contextId, npId);
+	finishRosterAsyncReply(npImpsUtilSendDeleteFriendReply, 2, result, contextId, npId);
 }
 
 /* 0x812F61F4 */
 static void onAddBlockComplete(int result, SceUInt32 contextId, const SceNpId *npId)
 {
-	finishRosterAsyncReply(NP_IMPS_METHOD_ADD_BLOCK_RESULT, 3, result, contextId, npId);
+	finishRosterAsyncReply(npImpsUtilSendAddBlockReply, 3, result, contextId, npId);
 }
 
 /* 0x812F62A2 */
 static void onDeleteBlockComplete(int result, SceUInt32 contextId, const SceNpId *npId)
 {
-	finishRosterAsyncReply(NP_IMPS_METHOD_DELETE_BLOCK_RESULT, 4, result, contextId, npId);
+	finishRosterAsyncReply(npImpsUtilSendDeleteBlockReply, 4, result, contextId, npId);
 }
 
 /* 0x812F5CA2 */

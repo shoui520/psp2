@@ -88,9 +88,9 @@ static void npImpsNotifOnMessageRecv(const NpImpsSessionIdentity *session,
 		npImpsNotifDispatchMessage(session, senderNpId, msg);
 }
 
-/* 0x8131F45A / 0x8131F5AE */
-static void npImpsNotifOnSessionState(const NpImpsSessionIdentity *session, int sessionState,
-				      int errorCode)
+/* 0x8131F45A */
+static void npImpsNotifHandleSessionState(const NpImpsSessionIdentity *session, int sessionState,
+					  int errorCode)
 {
 	(void)session;
 	(void)errorCode;
@@ -123,6 +123,13 @@ static void npImpsNotifOnSessionState(const NpImpsSessionIdentity *session, int 
 	default:
 		break;
 	}
+}
+
+/* 0x8131F5AE */
+static void npImpsNotifOnSessionState(const NpImpsSessionIdentity *session, int sessionState,
+				      int errorCode)
+{
+	npImpsNotifHandleSessionState(session, sessionState, errorCode);
 }
 
 /* 0x8131F3E8 */

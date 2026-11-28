@@ -265,7 +265,7 @@ public:
 			  const SceNpCommunicationId *commId, const void *payload, SceSize payloadSize);
 
 	const SceNpId *GetSenderNpId() const { return &m_senderNpId; }
-	const SceNpCommunicationId *GetCommId() const { return &m_commId; }
+	const SceNpCommunicationId *GetCommId() const;
 	const void *GetPayload() const { return m_payload; }
 	SceSize GetPayloadSize() const { return m_payloadSize; }
 
@@ -293,7 +293,8 @@ public:
 	void SetPlatform(int platform) { m_platform = platform; }
 	void SetTitlePlatform(int platform) { m_titlePlatform = platform; }
 	int SetComment(const char *comment);
-	void SetLastOnlineTick(const paf::rtc::Tick *tick) { m_lastOnlineTick = *tick; }
+	void SetLastOnlineTick(const paf::rtc::Tick *tick);
+	void FormatLastOnlineTickForLog() const;
 	int SetTitleInfo(const SceNpCommunicationId *titleId, const char *titleIdStr,
 			 const char *titleName, SceUInt8 isSystemTitle);
 	int SetCommId(const SceNpCommunicationId *commId);
@@ -313,20 +314,20 @@ public:
 	int GetTitlePlatform() const { return m_titlePlatform; }
 	const paf::rtc::Tick *GetLastOnlineTick() const { return &m_lastOnlineTick; }
 	bool HasTitle() const { return m_hasTitle != 0; }
-	const SceNpCommunicationId *GetTitleId() const { return &m_titleId; }
+	const SceNpCommunicationId *GetTitleId() const;
 	const char *GetTitleIdStr() const { return m_titleIdStr; }
 	const char *GetTitleName() const { return m_titleName; }
-	SceUInt8 IsSystemTitle() const { return m_isSystemTitle; }
+	SceUInt8 IsSystemTitle() const;
 	const char *GetContentId() const { return m_contentId; }
-	const SceNpCommunicationId *GetJoinableCommId() const { return &m_joinableCommId; }
-	bool HasCommId() const { return m_hasCommId != 0; }
-	const SceNpCommunicationId *GetCommId() const { return &m_commId; }
+	const SceNpCommunicationId *GetJoinableCommId() const;
+	bool HasCommId() const;
+	const SceNpCommunicationId *GetCommId() const;
 	bool HasGamePresence() const { return m_hasGamePresence != 0; }
-	int GetGamePresenceType() const { return m_gamePresenceType; }
+	int GetGamePresenceType() const;
 	const char *GetGameStatus() const { return m_gameStatus; }
 	SceSize GetGameDataSize() const { return m_gameDataSize; }
 	int CopyGameData(void *dst, SceSize maxLen) const;
-	bool HasPartyPresence() const { return m_hasPartyPresence != 0; }
+	bool HasPartyPresence() const;
 	int GetPartyPresenceType() const { return m_partyPresenceType; }
 	const char *GetPartyTitle() const { return m_partyTitle; }
 	const char *GetPartyStatus() const { return m_partyStatus; }
@@ -425,8 +426,8 @@ public:
 	NpImpsSvcOnlineStatusTracker(paf::thread::RMutex *mutex) : m_mutex(mutex), m_status(1) {}
 	virtual ~NpImpsSvcOnlineStatusTracker() {}
 
-	void Lock() { m_mutex->Lock(); }
-	void Unlock() { m_mutex->Unlock(); }
+	void Lock();
+	void Unlock();
 	int GetStatus();
 	void OnImpsCoreState(int coreState, SceUInt8 *outChanged);
 

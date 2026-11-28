@@ -382,10 +382,10 @@ static int dispatchFriendVectorEvent(NpImpsCacheObserver *observer, int eventTyp
 		return 0;
 	}
 
-	NpImpsCacheFriendPtr *handles = reinterpret_cast<NpImpsCacheFriendPtr *>(
-		npImpsCacheMalloc(sizeof(NpImpsCacheFriendPtr) * count));
-	if (handles == NULL)
-		return NP_IMPS_SVC_ERROR_OUT_OF_MEMORY;
+	NpImpsCacheFriendPtr *handles = NULL;
+	int allocRet = npImpsCacheAllocFriendHandleArray(count, &handles);
+	if (allocRet < 0)
+		return allocRet;
 
 	for (SceUInt32 pos = 0; pos < count; ++pos) {
 		NpImpsCacheFriendEntryImpl *entry = entries->At(pos);
@@ -395,12 +395,7 @@ static int dispatchFriendVectorEvent(NpImpsCacheObserver *observer, int eventTyp
 	}
 
 	observer->OnFriendListEvent(eventType, count, handles);
-
-	for (SceUInt32 pos = 0; pos < count; ++pos) {
-		if (handles[pos] != NULL)
-			handles[pos]->Release();
-	}
-	npImpsCacheFree(handles);
+	npImpsCacheFreeFriendHandleArray(count, handles);
 	return 0;
 }
 
@@ -422,11 +417,20 @@ int NpImpsCacheCoreImpl::NotifyFriendListUpdated(
 	return dispatchFriendVectorEvent(m_observer, 3, entries);
 }
 
+/* 0x813006DE */
 int NpImpsCacheCoreImpl::NotifyFriendsRemoved(const NpImpsCacheNpIdSet *npIds)
 {
 	if (m_observer == NULL || npIds == NULL || npIds->Size() == 0)
 		return 0;
-	m_observer->OnFriendRemovedEvent(npIds->Size(), npIds->Data());
+	SceUInt32 count = npIds->Size();
+	SceNpId *copy = NULL;
+	int ret = npImpsCacheAllocNpIdArray(count, &copy);
+	if (ret < 0)
+		return ret;
+	for (SceUInt32 pos = 0; pos < count; ++pos)
+		copy[pos] = *npIds->At(pos);
+	m_observer->OnFriendRemovedEvent(count, copy);
+	npImpsCacheFree(copy);
 	return 0;
 }
 
@@ -549,6 +553,7 @@ void NpImpsCacheCoreImpl::ClearFriendSyncRetry()
 	m_dataMutex.Unlock();
 }
 
+/* 0x8130180E */
 bool NpImpsCacheCoreImpl::NeedsFriendSyncRetry()
 {
 	m_dataMutex.Lock();
@@ -571,6 +576,7 @@ void NpImpsCacheCoreImpl::ClearBlockSyncRetry()
 	m_dataMutex.Unlock();
 }
 
+/* 0x81301862 */
 bool NpImpsCacheCoreImpl::NeedsBlockSyncRetry()
 {
 	m_dataMutex.Lock();
@@ -579,179 +585,358 @@ bool NpImpsCacheCoreImpl::NeedsBlockSyncRetry()
 	return needed;
 }
 
-/* Shared enqueue helper */
-int NpImpsCacheCoreImpl::EnqueueEvent(NpImpsCacheEvent *event)
-{
-	if (event == NULL || m_eventQueue == NULL)
-		return NP_IMPS_SVC_ERROR_INVALID_ARGUMENT;
-
-	NpImpsCacheEvent *queued = event;
-	queued->AddRef();
-	int ret = m_eventQueue->Push(&queued);
-	queued->Release();
-
-	if (ret == NP_IMPS_CACHE_ERROR_QUEUE_FULL)
-		m_queueOverflowed = 1;
-	return ret;
-}
-
-/* 0x81300E60..0x813017B5: event enqueue wrappers */
+/* 0x81300EC8: event enqueue wrappers (0x81300D46..0x813017B5) */
 int NpImpsCacheCoreImpl::EnqueueImpsCoreState(int coreState, int errorCode)
 {
 	NpImpsCacheEvent *event = NULL;
 	int ret = npImpsCacheCreateCoreStateEvent(&event, &m_friendStore, &m_blockStore,
 						  coreState, errorCode, this);
 	if (ret >= 0) {
-		ret = EnqueueEvent(event);
-		event->Release();
+		NpImpsCacheEvent *held = event;
+		if (held != NULL)
+			held->AddRef();
+		NpImpsCacheEvent *queued = held;
+		if (queued != NULL)
+			queued->AddRef();
+		ret = m_eventQueue->Push(&queued);
+		if (queued != NULL)
+			queued->Release();
+		if (ret == NP_IMPS_CACHE_ERROR_QUEUE_FULL)
+			m_queueOverflowed = 1;
+		if (held != NULL)
+			held->Release();
 	}
+	if (event != NULL)
+		event->Release();
 	return ret;
 }
 
+/* 0x81300FEE */
 int NpImpsCacheCoreImpl::EnqueueFriendRosterAdded(const NpImpsCoreRosterBatch *batch)
 {
 	NpImpsCacheEvent *event = NULL;
 	int ret = npImpsCacheCreateFriendRosterBatchAddEvent(&event, &m_friendStore, batch);
 	if (ret >= 0) {
-		ret = EnqueueEvent(event);
-		event->Release();
+		NpImpsCacheEvent *held = event;
+		if (held != NULL)
+			held->AddRef();
+		NpImpsCacheEvent *queued = held;
+		if (queued != NULL)
+			queued->AddRef();
+		ret = m_eventQueue->Push(&queued);
+		if (queued != NULL)
+			queued->Release();
+		if (ret == NP_IMPS_CACHE_ERROR_QUEUE_FULL)
+			m_queueOverflowed = 1;
+		if (held != NULL)
+			held->Release();
 	}
+	if (event != NULL)
+		event->Release();
 	return ret;
 }
 
+/* 0x81300F66 */
 int NpImpsCacheCoreImpl::EnqueueFriendRosterRemoved(const NpImpsCoreRosterBatch *batch)
 {
 	NpImpsCacheEvent *event = NULL;
 	int ret = npImpsCacheCreateFriendRosterBatchRemoveEvent(&event, &m_friendStore, batch);
 	if (ret >= 0) {
-		ret = EnqueueEvent(event);
-		event->Release();
+		NpImpsCacheEvent *held = event;
+		if (held != NULL)
+			held->AddRef();
+		NpImpsCacheEvent *queued = held;
+		if (queued != NULL)
+			queued->AddRef();
+		ret = m_eventQueue->Push(&queued);
+		if (queued != NULL)
+			queued->Release();
+		if (ret == NP_IMPS_CACHE_ERROR_QUEUE_FULL)
+			m_queueOverflowed = 1;
+		if (held != NULL)
+			held->Release();
 	}
+	if (event != NULL)
+		event->Release();
 	return ret;
 }
 
+/* 0x8130113A */
 int NpImpsCacheCoreImpl::EnqueueBlockListRefresh()
 {
 	NpImpsCacheEvent *event = NULL;
 	int ret = npImpsCacheCreateRefreshBlockListEvent(&event, &m_blockStore);
 	if (ret >= 0) {
-		ret = EnqueueEvent(event);
-		event->Release();
+		NpImpsCacheEvent *held = event;
+		if (held != NULL)
+			held->AddRef();
+		NpImpsCacheEvent *queued = held;
+		if (queued != NULL)
+			queued->AddRef();
+		ret = m_eventQueue->Push(&queued);
+		if (queued != NULL)
+			queued->Release();
+		if (ret == NP_IMPS_CACHE_ERROR_QUEUE_FULL)
+			m_queueOverflowed = 1;
+		if (held != NULL)
+			held->Release();
 	}
+	if (event != NULL)
+		event->Release();
 	return ret;
 }
 
+/* 0x813011E8 */
 int NpImpsCacheCoreImpl::EnqueuePresenceUpdate(const SceNpId *npId,
 					       const NpImpsCorePresenceUpdate *update)
 {
 	NpImpsCacheEvent *event = NULL;
 	int ret = npImpsCacheCreatePresenceUpdateEvent(&event, &m_friendStore, npId, update);
 	if (ret >= 0) {
-		ret = EnqueueEvent(event);
-		event->Release();
+		NpImpsCacheEvent *held = event;
+		if (held != NULL)
+			held->AddRef();
+		NpImpsCacheEvent *queued = held;
+		if (queued != NULL)
+			queued->AddRef();
+		ret = m_eventQueue->Push(&queued);
+		if (queued != NULL)
+			queued->Release();
+		if (ret == NP_IMPS_CACHE_ERROR_QUEUE_FULL)
+			m_queueOverflowed = 1;
+		if (held != NULL)
+			held->Release();
 	}
+	if (event != NULL)
+		event->Release();
 	return ret;
 }
 
+/* 0x8130129E */
 int NpImpsCacheCoreImpl::EnqueueInGameDataMessage(const SceNpId *senderNpId,
 						  const NpImpsCoreMessage *msg)
 {
 	NpImpsCacheEvent *event = NULL;
 	int ret = npImpsCacheCreateInGameMessageEvent(&event, senderNpId, msg, this);
 	if (ret >= 0) {
-		ret = EnqueueEvent(event);
-		event->Release();
+		NpImpsCacheEvent *held = event;
+		if (held != NULL)
+			held->AddRef();
+		NpImpsCacheEvent *queued = held;
+		if (queued != NULL)
+			queued->AddRef();
+		ret = m_eventQueue->Push(&queued);
+		if (queued != NULL)
+			queued->Release();
+		if (ret == NP_IMPS_CACHE_ERROR_QUEUE_FULL)
+			m_queueOverflowed = 1;
+		if (held != NULL)
+			held->Release();
 	}
+	if (event != NULL)
+		event->Release();
 	return ret;
 }
 
+/* 0x8130134A */
 int NpImpsCacheCoreImpl::EnqueueNotification(int notifyCode)
 {
 	NpImpsCacheEvent *event = NULL;
 	int ret = npImpsCacheCreateNotificationEvent(&event, notifyCode, &m_friendStore,
 						     &m_blockStore, this);
 	if (ret >= 0) {
-		ret = EnqueueEvent(event);
-		event->Release();
+		NpImpsCacheEvent *held = event;
+		if (held != NULL)
+			held->AddRef();
+		NpImpsCacheEvent *queued = held;
+		if (queued != NULL)
+			queued->AddRef();
+		ret = m_eventQueue->Push(&queued);
+		if (queued != NULL)
+			queued->Release();
+		if (ret == NP_IMPS_CACHE_ERROR_QUEUE_FULL)
+			m_queueOverflowed = 1;
+		if (held != NULL)
+			held->Release();
 	}
+	if (event != NULL)
+		event->Release();
 	return ret;
 }
 
+/* 0x81301724 */
 int NpImpsCacheCoreImpl::EnqueueRetrySync()
 {
 	NpImpsCacheEvent *event = NULL;
 	int ret = npImpsCacheCreateRetrySyncEvent(&event, this, &m_friendStore,
 						  &m_blockStore, this);
 	if (ret >= 0) {
-		ret = EnqueueEvent(event);
-		event->Release();
+		NpImpsCacheEvent *held = event;
+		if (held != NULL)
+			held->AddRef();
+		NpImpsCacheEvent *queued = held;
+		if (queued != NULL)
+			queued->AddRef();
+		ret = m_eventQueue->Push(&queued);
+		if (queued != NULL)
+			queued->Release();
+		if (ret == NP_IMPS_CACHE_ERROR_QUEUE_FULL)
+			m_queueOverflowed = 1;
+		if (held != NULL)
+			held->Release();
 	}
+	if (event != NULL)
+		event->Release();
 	return ret;
 }
 
+/* 0x81300DD4 */
 int NpImpsCacheCoreImpl::EnqueueSignInSync()
 {
 	NpImpsCacheEvent *event = NULL;
 	int ret = npImpsCacheCreateSignInSyncEvent(&event, &m_friendStore, &m_blockStore, this);
 	if (ret >= 0) {
-		ret = EnqueueEvent(event);
-		event->Release();
+		NpImpsCacheEvent *held = event;
+		if (held != NULL)
+			held->AddRef();
+		NpImpsCacheEvent *queued = held;
+		if (queued != NULL)
+			queued->AddRef();
+		ret = m_eventQueue->Push(&queued);
+		if (queued != NULL)
+			queued->Release();
+		if (ret == NP_IMPS_CACHE_ERROR_QUEUE_FULL)
+			m_queueOverflowed = 1;
+		if (held != NULL)
+			held->Release();
 	}
+	if (event != NULL)
+		event->Release();
 	return ret;
 }
 
+/* 0x81300D46 */
 int NpImpsCacheCoreImpl::EnqueueSignOutClear()
 {
 	NpImpsCacheEvent *event = NULL;
 	int ret = npImpsCacheCreateSignOutClearEvent(&event, &m_friendStore, &m_blockStore, this);
 	if (ret >= 0) {
-		ret = EnqueueEvent(event);
-		event->Release();
+		NpImpsCacheEvent *held = event;
+		if (held != NULL)
+			held->AddRef();
+		NpImpsCacheEvent *queued = held;
+		if (queued != NULL)
+			queued->AddRef();
+		ret = m_eventQueue->Push(&queued);
+		if (queued != NULL)
+			queued->Release();
+		if (ret == NP_IMPS_CACHE_ERROR_QUEUE_FULL)
+			m_queueOverflowed = 1;
+		if (held != NULL)
+			held->Release();
 	}
+	if (event != NULL)
+		event->Release();
 	return ret;
 }
 
+/* 0x8130148A */
 int NpImpsCacheCoreImpl::EnqueueBlockAdd(const SceNpId *npId)
 {
 	NpImpsCacheEvent *event = NULL;
 	int ret = npImpsCacheCreateBlockAddEvent(&event, &m_friendStore, &m_blockStore, 1, npId);
 	if (ret >= 0) {
-		ret = EnqueueEvent(event);
-		event->Release();
+		NpImpsCacheEvent *held = event;
+		if (held != NULL)
+			held->AddRef();
+		NpImpsCacheEvent *queued = held;
+		if (queued != NULL)
+			queued->AddRef();
+		ret = m_eventQueue->Push(&queued);
+		if (queued != NULL)
+			queued->Release();
+		if (ret == NP_IMPS_CACHE_ERROR_QUEUE_FULL)
+			m_queueOverflowed = 1;
+		if (held != NULL)
+			held->Release();
 	}
+	if (event != NULL)
+		event->Release();
 	return ret;
 }
 
+/* 0x81301400 */
 int NpImpsCacheCoreImpl::EnqueueBlockRemove(const SceNpId *npId)
 {
 	NpImpsCacheEvent *event = NULL;
 	int ret = npImpsCacheCreateBlockRemoveEvent(&event, &m_blockStore, 1, npId);
 	if (ret >= 0) {
-		ret = EnqueueEvent(event);
-		event->Release();
+		NpImpsCacheEvent *held = event;
+		if (held != NULL)
+			held->AddRef();
+		NpImpsCacheEvent *queued = held;
+		if (queued != NULL)
+			queued->AddRef();
+		ret = m_eventQueue->Push(&queued);
+		if (queued != NULL)
+			queued->Release();
+		if (ret == NP_IMPS_CACHE_ERROR_QUEUE_FULL)
+			m_queueOverflowed = 1;
+		if (held != NULL)
+			held->Release();
 	}
+	if (event != NULL)
+		event->Release();
 	return ret;
 }
 
+/* 0x813015A0 */
 int NpImpsCacheCoreImpl::EnqueueFriendAddOrUpdate(const SceNpId *npId, int relation)
 {
 	NpImpsCacheEvent *event = NULL;
 	int ret = npImpsCacheCreateFriendAddOrUpdateEvent(&event, &m_friendStore, npId, relation);
 	if (ret >= 0) {
-		ret = EnqueueEvent(event);
-		event->Release();
+		NpImpsCacheEvent *held = event;
+		if (held != NULL)
+			held->AddRef();
+		NpImpsCacheEvent *queued = held;
+		if (queued != NULL)
+			queued->AddRef();
+		ret = m_eventQueue->Push(&queued);
+		if (queued != NULL)
+			queued->Release();
+		if (ret == NP_IMPS_CACHE_ERROR_QUEUE_FULL)
+			m_queueOverflowed = 1;
+		if (held != NULL)
+			held->Release();
 	}
+	if (event != NULL)
+		event->Release();
 	return ret;
 }
 
+/* 0x81301518 */
 int NpImpsCacheCoreImpl::EnqueueFriendRemove(const SceNpId *npId)
 {
 	NpImpsCacheEvent *event = NULL;
 	int ret = npImpsCacheCreateFriendRemoveEvent(&event, &m_friendStore, npId);
 	if (ret >= 0) {
-		ret = EnqueueEvent(event);
-		event->Release();
+		NpImpsCacheEvent *held = event;
+		if (held != NULL)
+			held->AddRef();
+		NpImpsCacheEvent *queued = held;
+		if (queued != NULL)
+			queued->AddRef();
+		ret = m_eventQueue->Push(&queued);
+		if (queued != NULL)
+			queued->Release();
+		if (ret == NP_IMPS_CACHE_ERROR_QUEUE_FULL)
+			m_queueOverflowed = 1;
+		if (held != NULL)
+			held->Release();
 	}
+	if (event != NULL)
+		event->Release();
 	return ret;
 }
 
@@ -792,11 +977,24 @@ int NpImpsCacheCoreImpl::ForceFullSync(int syncFlags)
 	int ret = npImpsCacheCreateForceSyncEvent(&event, syncFlags, &m_friendStore,
 						  &m_blockStore, this);
 	if (ret >= 0) {
-		ret = EnqueueEvent(event);
-		event->Release();
+		NpImpsCacheEvent *held = event;
+		if (held != NULL)
+			held->AddRef();
+		NpImpsCacheEvent *queued = held;
+		if (queued != NULL)
+			queued->AddRef();
+		ret = m_eventQueue->Push(&queued);
+		if (queued != NULL)
+			queued->Release();
+		if (ret == NP_IMPS_CACHE_ERROR_QUEUE_FULL)
+			m_queueOverflowed = 1;
+		if (held != NULL)
+			held->Release();
 		if (ret >= 0)
 			m_waitCond.Notify();
 	}
+	if (event != NULL)
+		event->Release();
 	return ret;
 }
 

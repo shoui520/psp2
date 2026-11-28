@@ -81,27 +81,20 @@ static int syncBlockList(NpImpsCacheBlockStoreImpl *blockStore, NpImpsCacheStore
 /* 0x8130556A: fetch and apply friend list, marking retry on failure */
 static int syncFriendList(NpImpsCacheFriendStoreImpl *friendStore, NpImpsCacheStoreSink *sink)
 {
+	NpImpsCacheNpIdSet removedAll;
 	NpImpsCacheNpIdSet removedAccepted;
-	NpImpsCacheNpIdSet removedPending;
-	NpImpsCacheNpIdSet removedRequested;
+	NpImpsCacheNpIdSet removedPendingOrReq;
 	NpImpsCacheRefVector<NpImpsCacheFriendEntryImpl> addedFriends;
 	NpImpsCacheRefVector<NpImpsCacheFriendEntryImpl> updatedFriends;
-	NpImpsCacheRefVector<NpImpsCacheRosterData> fetchedFriends;
 	bool firstLoad = false;
 
-	int ret = friendStore->FetchFromRoster(&fetchedFriends);
-	if (ret >= 0) {
-		friendStore->Lock();
-		ret = friendStore->ApplyFullList(&fetchedFriends, &removedAccepted,
-						 &removedPending, &removedRequested,
-						 &addedFriends, &updatedFriends, &firstLoad);
-		if (ret < 0)
-			friendStore->Unlock();
-	}
+	int ret = friendStore->FetchAndApply(&removedAll, &removedAccepted,
+					     &removedPendingOrReq, &addedFriends,
+					     &updatedFriends, &firstLoad);
 
 	if (ret >= 0) {
-		ret = notifyFriendSyncDiffs(sink, firstLoad, &removedAccepted, &removedPending,
-					    &removedRequested, &addedFriends, &updatedFriends);
+		ret = notifyFriendSyncDiffs(sink, firstLoad, &removedAccepted, &removedPendingOrReq,
+					    &removedPendingOrReq, &addedFriends, &updatedFriends);
 		friendStore->Unlock();
 	} else {
 		NpImpsCacheCoreImpl *core = NpImpsCacheCoreImpl::GetInstance();
@@ -116,27 +109,20 @@ static int retrySyncFriendList(NpImpsCacheFriendStoreImpl *friendStore,
 			       NpImpsCacheStoreSink *sink,
 			       NpImpsCacheCoreImpl *core)
 {
+	NpImpsCacheNpIdSet removedAll;
 	NpImpsCacheNpIdSet removedAccepted;
-	NpImpsCacheNpIdSet removedPending;
-	NpImpsCacheNpIdSet removedRequested;
+	NpImpsCacheNpIdSet removedPendingOrReq;
 	NpImpsCacheRefVector<NpImpsCacheFriendEntryImpl> addedFriends;
 	NpImpsCacheRefVector<NpImpsCacheFriendEntryImpl> updatedFriends;
-	NpImpsCacheRefVector<NpImpsCacheRosterData> fetchedFriends;
 	bool firstLoad = false;
 
-	int ret = friendStore->FetchFromRoster(&fetchedFriends);
-	if (ret >= 0) {
-		friendStore->Lock();
-		ret = friendStore->ApplyFullList(&fetchedFriends, &removedAccepted,
-						 &removedPending, &removedRequested,
-						 &addedFriends, &updatedFriends, &firstLoad);
-		if (ret < 0)
-			friendStore->Unlock();
-	}
+	int ret = friendStore->FetchAndApply(&removedAll, &removedAccepted,
+					     &removedPendingOrReq, &addedFriends,
+					     &updatedFriends, &firstLoad);
 
 	if (ret >= 0) {
-		ret = notifyFriendSyncDiffs(sink, firstLoad, &removedAccepted, &removedPending,
-					    &removedRequested, &addedFriends, &updatedFriends);
+		ret = notifyFriendSyncDiffs(sink, firstLoad, &removedAccepted, &removedPendingOrReq,
+					    &removedPendingOrReq, &addedFriends, &updatedFriends);
 		if (core != NULL)
 			core->ClearFriendSyncRetry();
 		friendStore->Unlock();
@@ -173,9 +159,9 @@ static int handleOnlineCoreState(NpImpsCacheFriendStoreImpl *friendStore,
 				 int coreState, int errorCode)
 {
 	NpImpsCacheCoreImpl *core = NpImpsCacheCoreImpl::GetInstance();
+	NpImpsCacheNpIdSet removedAll;
 	NpImpsCacheNpIdSet removedAccepted;
-	NpImpsCacheNpIdSet removedPending;
-	NpImpsCacheNpIdSet removedRequested;
+	NpImpsCacheNpIdSet removedPendingOrReq;
 	NpImpsCacheRefVector<NpImpsCacheFriendEntryImpl> addedFriends;
 	NpImpsCacheRefVector<NpImpsCacheFriendEntryImpl> updatedFriends;
 	NpImpsCacheNpIdSet addedBlocks;
@@ -206,8 +192,8 @@ static int handleOnlineCoreState(NpImpsCacheFriendStoreImpl *friendStore,
 	blockStore->Lock();
 
 	if (fetchedFriends.Size() > 0) {
-		ret = friendStore->ApplyFullList(&fetchedFriends, &removedAccepted,
-						 &removedPending, &removedRequested,
+		ret = friendStore->ApplyFullList(&fetchedFriends, &removedAll,
+						 &removedAccepted, &removedPendingOrReq,
 						 &addedFriends, &updatedFriends,
 						 &friendFirstLoad);
 		if (ret < 0 && firstError == 0)
@@ -221,8 +207,8 @@ static int handleOnlineCoreState(NpImpsCacheFriendStoreImpl *friendStore,
 			firstError = ret;
 	}
 
-	ret = notifyFriendSyncDiffs(sink, friendFirstLoad, &removedAccepted, &removedPending,
-				    &removedRequested, &addedFriends, &updatedFriends);
+	ret = notifyFriendSyncDiffs(sink, friendFirstLoad, &removedAccepted, &removedPendingOrReq,
+				    &removedPendingOrReq, &addedFriends, &updatedFriends);
 	if (ret < 0 && firstError == 0)
 		firstError = ret;
 
@@ -705,9 +691,9 @@ SignInSyncEvent::SignInSyncEvent(NpImpsCacheFriendStoreImpl *friendStore,
 int SignInSyncEvent::Execute()
 {
 	NpImpsCacheCoreImpl *core = NpImpsCacheCoreImpl::GetInstance();
+	NpImpsCacheNpIdSet removedAll;
 	NpImpsCacheNpIdSet removedAccepted;
-	NpImpsCacheNpIdSet removedPending;
-	NpImpsCacheNpIdSet removedRequested;
+	NpImpsCacheNpIdSet removedPendingOrReq;
 	NpImpsCacheRefVector<NpImpsCacheFriendEntryImpl> addedFriends;
 	NpImpsCacheRefVector<NpImpsCacheFriendEntryImpl> updatedFriends;
 	NpImpsCacheNpIdSet addedBlocks;
@@ -744,8 +730,8 @@ int SignInSyncEvent::Execute()
 	m_blockStore->Lock();
 
 	if (friendsFetched) {
-		ret = m_friendStore->ApplyFullList(&fetchedFriends, &removedAccepted,
-						   &removedPending, &removedRequested,
+		ret = m_friendStore->ApplyFullList(&fetchedFriends, &removedAll,
+						   &removedAccepted, &removedPendingOrReq,
 						   &addedFriends, &updatedFriends,
 						   &friendFirstLoad);
 		if (ret < 0) {
@@ -773,8 +759,8 @@ int SignInSyncEvent::Execute()
 			firstError = ret;
 	}
 
-	ret = notifyFriendSyncDiffs(m_sink, friendFirstLoad, &removedAccepted, &removedPending,
-				    &removedRequested, &addedFriends, &updatedFriends);
+	ret = notifyFriendSyncDiffs(m_sink, friendFirstLoad, &removedAccepted, &removedPendingOrReq,
+				    &removedPendingOrReq, &addedFriends, &updatedFriends);
 	if (ret < 0 && firstError == 0)
 		firstError = ret;
 

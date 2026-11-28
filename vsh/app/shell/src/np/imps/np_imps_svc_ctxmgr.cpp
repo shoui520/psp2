@@ -142,191 +142,253 @@ protected:
 class NpImpsSvcDeleteFriendContext : public NpImpsSvcSimpleRosterContext {
 public:
 	NpImpsSvcDeleteFriendContext(SceUInt32 contextId, const SceNpId *npId,
-				     NpImpsSvcRosterCallback callback)
-		: NpImpsSvcSimpleRosterContext(contextId, npId, callback)
-	{
-	}
-
-	/* 0x812FDF02, 0x812FDF6A */
-	virtual int Execute()
-	{
-		if (IsAborted())
-			return NP_IMPS_SVC_ERROR_ABORTED;
-
-		m_rmutex.Lock();
-		m_rosterReqId = npRosterCreateRequest();
-		m_rmutex.Unlock();
-
-		int ret = m_rosterReqId;
-		if (ret >= 0) {
-			ret = npRosterDeleteFriend(m_rosterReqId, &m_targetNpId);
-			m_rmutex.Lock();
-			int destroyRet = npRosterDestroyRequest(m_rosterReqId);
-			m_rosterReqId = -1;
-			m_rmutex.Unlock();
-			if (ret >= 0)
-				ret = destroyRet;
-		}
-		if (ret >= 0)
-			ret = npImpsTriggerRosterSync(&m_targetNpId, NP_IMPS_ROSTER_SYNC_DELETE_FRIEND);
-		return ret;
-	}
+				     NpImpsSvcRosterCallback callback);
+	int DoRosterRequest();
+	virtual int Execute();
 };
+
+/* 0x812FDE94 */
+NpImpsSvcDeleteFriendContext::NpImpsSvcDeleteFriendContext(SceUInt32 contextId,
+							   const SceNpId *npId,
+							   NpImpsSvcRosterCallback callback)
+	: NpImpsSvcSimpleRosterContext(contextId, npId, callback)
+{
+}
+
+/* 0x812FDF02 */
+int NpImpsSvcDeleteFriendContext::DoRosterRequest()
+{
+	if (IsAborted())
+		return NP_IMPS_SVC_ERROR_ABORTED;
+
+	m_rmutex.Lock();
+	m_rosterReqId = npRosterCreateRequest();
+	m_rmutex.Unlock();
+
+	int ret = m_rosterReqId;
+	if (ret >= 0) {
+		ret = npRosterDeleteFriend(m_rosterReqId, &m_targetNpId);
+		m_rmutex.Lock();
+		int destroyRet = npRosterDestroyRequest(m_rosterReqId);
+		m_rosterReqId = -1;
+		m_rmutex.Unlock();
+		if (ret >= 0)
+			ret = destroyRet;
+	}
+	return ret;
+}
+
+/* 0x812FDF6A */
+int NpImpsSvcDeleteFriendContext::Execute()
+{
+	int ret = DoRosterRequest();
+	if (ret >= 0)
+		return npImpsTriggerRosterSync(&m_targetNpId, NP_IMPS_ROSTER_SYNC_DELETE_FRIEND);
+	return ret;
+}
 
 /* Delete block context (0x812FDF84..0x812FE0AB) */
 class NpImpsSvcDeleteBlockContext : public NpImpsSvcSimpleRosterContext {
 public:
 	NpImpsSvcDeleteBlockContext(SceUInt32 contextId, const SceNpId *npId,
-				    NpImpsSvcRosterCallback callback)
-		: NpImpsSvcSimpleRosterContext(contextId, npId, callback)
-	{
-	}
-
-	/* 0x812FDFD6, 0x812FE094 */
-	virtual int Execute()
-	{
-		if (IsAborted())
-			return NP_IMPS_SVC_ERROR_ABORTED;
-
-		m_rmutex.Lock();
-		m_rosterReqId = npRosterCreateRequest();
-		m_rmutex.Unlock();
-
-		int ret = m_rosterReqId;
-		if (ret >= 0) {
-			NpRosterBlockListEntry entry;
-			sce_paf_memcpy(&entry.npId, &m_targetNpId, sizeof(SceNpId));
-			entry.action = 1;
-			ret = npRosterUpdateBlockList(m_rosterReqId, &entry, 1);
-			m_rmutex.Lock();
-			int destroyRet = npRosterDestroyRequest(m_rosterReqId);
-			m_rosterReqId = -1;
-			m_rmutex.Unlock();
-			if (ret >= 0)
-				ret = destroyRet;
-		}
-		if (ret >= 0)
-			ret = npImpsTriggerRosterSync(&m_targetNpId, NP_IMPS_ROSTER_SYNC_DELETE_BLOCK);
-		return ret;
-	}
+				    NpImpsSvcRosterCallback callback);
+	int DoRosterRequest();
+	virtual int Execute();
 };
+
+/* 0x812FDF84 */
+NpImpsSvcDeleteBlockContext::NpImpsSvcDeleteBlockContext(SceUInt32 contextId,
+							 const SceNpId *npId,
+							 NpImpsSvcRosterCallback callback)
+	: NpImpsSvcSimpleRosterContext(contextId, npId, callback)
+{
+}
+
+/* 0x812FDFD6 */
+int NpImpsSvcDeleteBlockContext::DoRosterRequest()
+{
+	if (IsAborted())
+		return NP_IMPS_SVC_ERROR_ABORTED;
+
+	m_rmutex.Lock();
+	m_rosterReqId = npRosterCreateRequest();
+	m_rmutex.Unlock();
+
+	int ret = m_rosterReqId;
+	if (ret >= 0) {
+		NpRosterBlockListEntry entry;
+		sce_paf_memcpy(&entry.npId, &m_targetNpId, sizeof(SceNpId));
+		entry.action = 1;
+		ret = npRosterUpdateBlockList(m_rosterReqId, &entry, 1);
+		m_rmutex.Lock();
+		int destroyRet = npRosterDestroyRequest(m_rosterReqId);
+		m_rosterReqId = -1;
+		m_rmutex.Unlock();
+		if (ret >= 0)
+			ret = destroyRet;
+	}
+	return ret;
+}
+
+/* 0x812FE094 */
+int NpImpsSvcDeleteBlockContext::Execute()
+{
+	int ret = DoRosterRequest();
+	if (ret >= 0)
+		return npImpsTriggerRosterSync(&m_targetNpId, NP_IMPS_ROSTER_SYNC_DELETE_BLOCK);
+	return ret;
+}
 
 /* Request friend context (2200 bytes, 0x812FFB3C..0x812FFC53) */
 class NpImpsSvcRequestFriendContext : public NpImpsSvcSimpleRosterContext {
 public:
 	NpImpsSvcRequestFriendContext(SceUInt32 contextId, const SceNpId *npId,
-				      const char *comment, NpImpsSvcRosterCallback callback)
-		: NpImpsSvcSimpleRosterContext(contextId, npId, callback)
-	{
-		sce_paf_memset(m_comment, 0, sizeof(m_comment));
-		if (comment != NULL) {
-			sce_paf_strncpy(m_comment, comment, sizeof(m_comment));
-			m_comment[sizeof(m_comment) - 1] = '\0';
-		}
-	}
-
-	/* 0x812FFBBE, 0x812FFC3C */
-	virtual int Execute()
-	{
-		if (IsAborted())
-			return NP_IMPS_SVC_ERROR_ABORTED;
-
-		m_rmutex.Lock();
-		m_rosterReqId = npRosterCreateRequest();
-		m_rmutex.Unlock();
-
-		int ret = m_rosterReqId;
-		if (ret >= 0) {
-			const char *commentArg = (sce_paf_strlen(m_comment) != 0) ? m_comment : NULL;
-			ret = npRosterRequestFriend(m_rosterReqId, &m_targetNpId, commentArg);
-			m_rmutex.Lock();
-			int destroyRet = npRosterDestroyRequest(m_rosterReqId);
-			m_rosterReqId = -1;
-			m_rmutex.Unlock();
-			if (ret >= 0)
-				ret = destroyRet;
-		}
-		if (ret >= 0)
-			ret = npImpsTriggerRosterSync(&m_targetNpId, NP_IMPS_ROSTER_SYNC_REQUEST_FRIEND);
-		return ret;
-	}
+				      const char *comment, NpImpsSvcRosterCallback callback);
+	int DoRosterRequest();
+	virtual int Execute();
 
 private:
 	char m_comment[2049];			/* +0x94 */
 };
 
+/* 0x812FFB3C */
+NpImpsSvcRequestFriendContext::NpImpsSvcRequestFriendContext(SceUInt32 contextId,
+							     const SceNpId *npId,
+							     const char *comment,
+							     NpImpsSvcRosterCallback callback)
+	: NpImpsSvcSimpleRosterContext(contextId, npId, callback)
+{
+	sce_paf_memset(m_comment, 0, sizeof(m_comment));
+	if (comment != NULL) {
+		sce_paf_strncpy(m_comment, comment, sizeof(m_comment));
+		m_comment[sizeof(m_comment) - 1] = '\0';
+	}
+}
+
+/* 0x812FFBBE */
+int NpImpsSvcRequestFriendContext::DoRosterRequest()
+{
+	if (IsAborted())
+		return NP_IMPS_SVC_ERROR_ABORTED;
+
+	m_rmutex.Lock();
+	m_rosterReqId = npRosterCreateRequest();
+	m_rmutex.Unlock();
+
+	int ret = m_rosterReqId;
+	if (ret >= 0) {
+		const char *commentArg = (sce_paf_strlen(m_comment) != 0) ? m_comment : NULL;
+		ret = npRosterRequestFriend(m_rosterReqId, &m_targetNpId, commentArg);
+		m_rmutex.Lock();
+		int destroyRet = npRosterDestroyRequest(m_rosterReqId);
+		m_rosterReqId = -1;
+		m_rmutex.Unlock();
+		if (ret >= 0)
+			ret = destroyRet;
+	}
+	return ret;
+}
+
+/* 0x812FFC3C */
+int NpImpsSvcRequestFriendContext::Execute()
+{
+	int ret = DoRosterRequest();
+	if (ret >= 0)
+		return npImpsTriggerRosterSync(&m_targetNpId, NP_IMPS_ROSTER_SYNC_REQUEST_FRIEND);
+	return ret;
+}
+
 /* Add block context (0x812FFC54..0x812FFD7F) */
 class NpImpsSvcAddBlockContext : public NpImpsSvcSimpleRosterContext {
 public:
 	NpImpsSvcAddBlockContext(SceUInt32 contextId, const SceNpId *npId,
-				 NpImpsSvcRosterCallback callback)
-		: NpImpsSvcSimpleRosterContext(contextId, npId, callback)
-	{
-	}
-
-	/* 0x812FFCA6, 0x812FFD66 */
-	virtual int Execute()
-	{
-		if (IsAborted())
-			return NP_IMPS_SVC_ERROR_ABORTED;
-
-		m_rmutex.Lock();
-		m_rosterReqId = npRosterCreateRequest();
-		m_rmutex.Unlock();
-
-		int ret = m_rosterReqId;
-		if (ret >= 0) {
-			NpRosterBlockListEntry entry;
-			sce_paf_memcpy(&entry.npId, &m_targetNpId, sizeof(SceNpId));
-			entry.action = 0;
-			ret = npRosterUpdateBlockList(m_rosterReqId, &entry, 1);
-			m_rmutex.Lock();
-			int destroyRet = npRosterDestroyRequest(m_rosterReqId);
-			m_rosterReqId = -1;
-			m_rmutex.Unlock();
-			if (ret >= 0)
-				ret = destroyRet;
-		}
-		if (ret >= 0)
-			ret = npImpsTriggerRosterSync(&m_targetNpId, NP_IMPS_ROSTER_SYNC_ADD_BLOCK);
-		return ret;
-	}
+				 NpImpsSvcRosterCallback callback);
+	int DoRosterRequest();
+	virtual int Execute();
 };
+
+/* 0x812FFC54 */
+NpImpsSvcAddBlockContext::NpImpsSvcAddBlockContext(SceUInt32 contextId, const SceNpId *npId,
+						   NpImpsSvcRosterCallback callback)
+	: NpImpsSvcSimpleRosterContext(contextId, npId, callback)
+{
+}
+
+/* 0x812FFCA6 */
+int NpImpsSvcAddBlockContext::DoRosterRequest()
+{
+	if (IsAborted())
+		return NP_IMPS_SVC_ERROR_ABORTED;
+
+	m_rmutex.Lock();
+	m_rosterReqId = npRosterCreateRequest();
+	m_rmutex.Unlock();
+
+	int ret = m_rosterReqId;
+	if (ret >= 0) {
+		NpRosterBlockListEntry entry;
+		sce_paf_memcpy(&entry.npId, &m_targetNpId, sizeof(SceNpId));
+		entry.action = 0;
+		ret = npRosterUpdateBlockList(m_rosterReqId, &entry, 1);
+		m_rmutex.Lock();
+		int destroyRet = npRosterDestroyRequest(m_rosterReqId);
+		m_rosterReqId = -1;
+		m_rmutex.Unlock();
+		if (ret >= 0)
+			ret = destroyRet;
+	}
+	return ret;
+}
+
+/* 0x812FFD66 */
+int NpImpsSvcAddBlockContext::Execute()
+{
+	int ret = DoRosterRequest();
+	if (ret >= 0)
+		return npImpsTriggerRosterSync(&m_targetNpId, NP_IMPS_ROSTER_SYNC_ADD_BLOCK);
+	return ret;
+}
 
 /* Accept friend context (0x812FFD80..0x812FFE4B) */
 class NpImpsSvcAcceptFriendContext : public NpImpsSvcSimpleRosterContext {
 public:
 	NpImpsSvcAcceptFriendContext(SceUInt32 contextId, const SceNpId *npId,
-				     NpImpsSvcRosterCallback callback)
-		: NpImpsSvcSimpleRosterContext(contextId, npId, callback)
-	{
-	}
-
-	/* 0x812FFDD4 */
-	virtual int Execute()
-	{
-		if (IsAborted())
-			return NP_IMPS_SVC_ERROR_ABORTED;
-
-		m_rmutex.Lock();
-		m_rosterReqId = npRosterCreateRequest();
-		m_rmutex.Unlock();
-
-		int ret = m_rosterReqId;
-		if (ret >= 0) {
-			ret = npRosterAcceptFriend(m_rosterReqId, &m_targetNpId);
-			m_rmutex.Lock();
-			int destroyRet = npRosterDestroyRequest(m_rosterReqId);
-			m_rosterReqId = -1;
-			m_rmutex.Unlock();
-			if (ret >= 0)
-				ret = destroyRet;
-		}
-		if (ret >= 0)
-			ret = npImpsTriggerRosterSync(&m_targetNpId, NP_IMPS_ROSTER_SYNC_ACCEPT_FRIEND);
-		return ret;
-	}
+				     NpImpsSvcRosterCallback callback);
+	virtual int Execute();
 };
+
+/* 0x812FFD80 */
+NpImpsSvcAcceptFriendContext::NpImpsSvcAcceptFriendContext(SceUInt32 contextId,
+							   const SceNpId *npId,
+							   NpImpsSvcRosterCallback callback)
+	: NpImpsSvcSimpleRosterContext(contextId, npId, callback)
+{
+}
+
+/* 0x812FFDD4 */
+int NpImpsSvcAcceptFriendContext::Execute()
+{
+	if (IsAborted())
+		return NP_IMPS_SVC_ERROR_ABORTED;
+
+	m_rmutex.Lock();
+	m_rosterReqId = npRosterCreateRequest();
+	m_rmutex.Unlock();
+
+	int ret = m_rosterReqId;
+	if (ret >= 0) {
+		ret = npRosterAcceptFriend(m_rosterReqId, &m_targetNpId);
+		m_rmutex.Lock();
+		int destroyRet = npRosterDestroyRequest(m_rosterReqId);
+		m_rosterReqId = -1;
+		m_rmutex.Unlock();
+		if (ret >= 0)
+			ret = destroyRet;
+	}
+	if (ret >= 0)
+		ret = npImpsTriggerRosterSync(&m_targetNpId, NP_IMPS_ROSTER_SYNC_ACCEPT_FRIEND);
+	return ret;
+}
 
 /* =========================================================================
  * NpImpsSvcContextFactory (0x812FDC94..0x812FDE93)

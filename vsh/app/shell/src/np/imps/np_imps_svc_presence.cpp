@@ -112,6 +112,12 @@ NpImpsSvcInGameDataMessage::~NpImpsSvcInGameDataMessage()
 	}
 }
 
+/* 0x812FE330 */
+const SceNpCommunicationId *NpImpsSvcInGameDataMessage::GetCommId() const
+{
+	return &m_commId;
+}
+
 /* 0x812FE122 */
 int NpImpsSvcInGameDataMessage::Create(NpImpsSvcInGameDataMessage **outMsg,
 				       const SceNpId *senderNpId,
@@ -283,10 +289,23 @@ void NpImpsSvcPresenceData::ClearTitleAndGamePresence()
 	ClearGamePresenceAll();
 }
 
+/* 0x812FE5FE */
+void NpImpsSvcPresenceData::FormatLastOnlineTickForLog() const
+{
+	char rfcBuf[64];
+	paf::rtc::FormatRFC3339(rfcBuf, &m_lastOnlineTick, 0);
+}
+
 /* 0x812FE634 */
 int NpImpsSvcPresenceData::SetComment(const char *comment)
 {
 	return npImpsDupCacheString(&m_comment, comment);
+}
+
+/* 0x812FE686 */
+void NpImpsSvcPresenceData::SetLastOnlineTick(const paf::rtc::Tick *tick)
+{
+	m_lastOnlineTick = *tick;
 }
 
 /* 0x812FE690 */
@@ -373,6 +392,18 @@ int NpImpsSvcPresenceData::SetContentId(const char *contentId)
 	return npImpsDupCacheString(&m_contentId, contentId);
 }
 
+/* 0x812FEA08 */
+bool NpImpsSvcPresenceData::HasCommId() const
+{
+	return m_hasCommId != 0;
+}
+
+/* 0x812FEA10 */
+bool NpImpsSvcPresenceData::HasPartyPresence() const
+{
+	return m_hasPartyPresence != 0;
+}
+
 /* 0x812FEA16 */
 int NpImpsSvcPresenceData::GetEffectiveOnlineStatus() const
 {
@@ -385,6 +416,36 @@ int NpImpsSvcPresenceData::GetEffectiveOnlineStatus() const
 	if (m_onlineStatus == 4)
 		return 2;
 	return 0;
+}
+
+/* 0x812FEA4C */
+const SceNpCommunicationId *NpImpsSvcPresenceData::GetTitleId() const
+{
+	return &m_titleId;
+}
+
+/* 0x812FEA50 */
+SceUInt8 NpImpsSvcPresenceData::IsSystemTitle() const
+{
+	return m_isSystemTitle;
+}
+
+/* 0x812FEA56 */
+const SceNpCommunicationId *NpImpsSvcPresenceData::GetJoinableCommId() const
+{
+	return &m_joinableCommId;
+}
+
+/* 0x812FEA5A */
+int NpImpsSvcPresenceData::GetGamePresenceType() const
+{
+	return m_gamePresenceType;
+}
+
+/* 0x812FEA5E */
+const SceNpCommunicationId *NpImpsSvcPresenceData::GetCommId() const
+{
+	return &m_commId;
 }
 
 /* 0x812FEA6A */
@@ -465,23 +526,53 @@ int NpImpsSvcPresenceData::Compare(const NpImpsSvcPresenceData *other,
 	return 0;
 }
 
-/* 0x812FEC6C..0x812FECF4 helpers */
+/* 0x812FEC6C */
+static void npImpsApplyCorePlatform(NpImpsSvcPresenceData **target, int rawPlatform)
+{
+	NpImpsSvcPresenceData *dst = *target;
+	switch (rawPlatform) {
+	case 0:
+		dst->SetPlatform(0);
+		break;
+	case 1:
+		dst->SetPlatform(1);
+		break;
+	case 2:
+		dst->SetPlatform(2);
+		break;
+	case 3:
+		dst->SetPlatform(3);
+		break;
+	case 4:
+		dst->SetPlatform(4);
+		break;
+	default:
+		dst->SetPlatform(-1);
+		break;
+	}
+}
+
+/* 0x812FECB0 */
+static void npImpsApplyCoreOnlineStatus(NpImpsSvcPresenceData **target, int rawStatus)
+{
+	NpImpsSvcPresenceData *dst = *target;
+	if (rawStatus == 0)
+		dst->SetOnlineStatus(2);
+	else if (rawStatus == 1)
+		dst->SetOnlineStatus(3);
+	else if (rawStatus == 2)
+		dst->SetOnlineStatus(4);
+	else if (rawStatus == 3)
+		dst->SetOnlineStatus(1);
+	else
+		dst->SetOnlineStatus(0);
+}
+
 static int npImpsMapCorePlatform(int rawPlatform)
 {
 	if (rawPlatform >= 0 && rawPlatform <= 4)
 		return rawPlatform;
 	return -1;
-}
-
-static int npImpsMapCoreOnlineStatus(int rawStatus)
-{
-	switch (rawStatus) {
-	case 0: return 2;
-	case 1: return 3;
-	case 2: return 4;
-	case 3: return 1;
-	default: return 0;
-	}
 }
 
 /* 0x812FECF4 */
@@ -566,8 +657,8 @@ int NpImpsSvcPresenceData::CreateFromCoreUpdate(NpImpsSvcPresenceData **outData,
 		return 0;
 
 	NpImpsSvcPresenceData *dst = *outData;
-	dst->SetOnlineStatus(npImpsMapCoreOnlineStatus(update->onlineStatus));
-	dst->SetPlatform(npImpsMapCorePlatform(update->platform));
+	npImpsApplyCoreOnlineStatus(outData, update->onlineStatus);
+	npImpsApplyCorePlatform(outData, update->platform);
 
 	int ret = dst->SetComment(update->comment);
 	if (ret < 0)
@@ -1244,25 +1335,42 @@ void NpImpsSvcMyPresence::SetActiveProcess(SceUID processId, int appId)
 int NpImpsSvcMyPresence::RepublishWithoutCommId()
 {
 	m_mutex.Lock();
-	SceNpCommunicationId savedCommId;
-	sce_paf_memcpy(&savedCommId, m_presence.GetCommId(), sizeof(SceNpCommunicationId));
+	SceNpCommunicationId savedCommId = *m_presence.GetCommId();
 	m_presence.ClearGamePresenceAll();
 
+	int ret = 0;
 	NpImpsCorePresenceUpdate update;
 	sce_paf_memset(&update, 0, sizeof(update));
 
-	int ret = BuildCoreUpdate(&update, 0);
-	if (ret >= 0) {
+	int buildRet = BuildCoreUpdate(&update, 0);
+	if (buildRet >= 0) {
 		int pubRet = npImpsCoreUpdatePresence(&update);
 		if (pubRet < 0)
 			ret = pubRet;
+	} else {
+		ret = buildRet;
 	}
 
 	int restoreRet = m_presence.SetCommId(&savedCommId);
 	if (restoreRet < 0 && ret == 0)
 		ret = restoreRet;
 
-	FreeCoreUpdate(&update);
+	NpImpsCoreTitleNode *titleNode = update.titleList;
+	while (titleNode != NULL) {
+		NpImpsCoreTitleNode *nextTitle = titleNode->next;
+		npImpsSvcFree(titleNode);
+		titleNode = nextTitle;
+	}
+
+	NpImpsCoreDataNode *dataNode = update.dataList;
+	while (dataNode != NULL) {
+		NpImpsCoreDataNode *nextData = dataNode->next;
+		if (dataNode->dataPtr != NULL)
+			npImpsSvcFree(dataNode->dataPtr);
+		npImpsSvcFree(dataNode);
+		dataNode = nextData;
+	}
+
 	m_mutex.Unlock();
 	return ret;
 }

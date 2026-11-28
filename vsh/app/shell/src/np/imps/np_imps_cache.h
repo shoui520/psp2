@@ -136,7 +136,7 @@ private:
 class NpImpsCacheRosterData : public paf::common::RefObj {
 public:
 	NpImpsCacheRosterData();
-	virtual ~NpImpsCacheRosterData() {}
+	virtual ~NpImpsCacheRosterData();
 
 	static int CreateFromRosterEntry(NpImpsCacheRosterData **outData,
 					 const NpRosterFriendEntry *entry);
@@ -146,11 +146,7 @@ public:
 	static int CreateWithRelation(NpImpsCacheRosterData **outData,
 				      const SceNpId *npId, int relation);
 
-	void SetRelationAndDate(int relation, const paf::rtc::Tick *date)
-	{
-		m_relation = relation;
-		m_updateDate = *date;
-	}
+	void SetRelationAndDate(int relation, const paf::rtc::Tick *date);
 	void SetRequestDirection(int direction) { m_requestDirection = direction; }
 
 	const SceNpId *GetNpId() const { return &m_npId; }
@@ -236,7 +232,7 @@ private:
 /* Base class for queued cache worker events (0x81308394) */
 class NpImpsCacheEvent : public paf::common::RefObj {
 public:
-	NpImpsCacheEvent() {}
+	NpImpsCacheEvent();
 	virtual ~NpImpsCacheEvent() {}
 	virtual int Execute() = 0;
 };
@@ -359,9 +355,15 @@ public:
 
 	/* Mutators invoked from cache worker events */
 	int ApplyFullList(const NpImpsCacheRefVector<NpImpsCacheRosterData> *fetched,
+			  NpImpsCacheNpIdSet *outRemovedAll,
 			  NpImpsCacheNpIdSet *outRemovedAccepted,
-			  NpImpsCacheNpIdSet *outRemovedPending,
-			  NpImpsCacheNpIdSet *outRemovedRequested,
+			  NpImpsCacheNpIdSet *outRemovedPendingOrReq,
+			  NpImpsCacheRefVector<NpImpsCacheFriendEntryImpl> *outAdded,
+			  NpImpsCacheRefVector<NpImpsCacheFriendEntryImpl> *outUpdated,
+			  bool *outFirstLoad);
+	int FetchAndApply(NpImpsCacheNpIdSet *outRemovedAll,
+			  NpImpsCacheNpIdSet *outRemovedAccepted,
+			  NpImpsCacheNpIdSet *outRemovedPendingOrReq,
 			  NpImpsCacheRefVector<NpImpsCacheFriendEntryImpl> *outAdded,
 			  NpImpsCacheRefVector<NpImpsCacheFriendEntryImpl> *outUpdated,
 			  bool *outFirstLoad);
@@ -383,6 +385,21 @@ private:
 	NpImpsCacheFriendEntryImpl *FindLocked(const SceNpId *npId) const;
 	int InsertLocked(const SceNpId *npId, NpImpsCacheFriendEntryImpl *entry);
 	bool EraseLocked(const SceNpId *npId);
+	int AddEntryLocked(NpImpsCacheRosterData **rosterData,
+			   NpImpsCacheRefVector<NpImpsCacheFriendEntryImpl> *outAdded);
+	int UpdateEntryLocked(SceUInt32 slotIndex, NpImpsCacheRosterData **rosterData,
+			      NpImpsCacheRefVector<NpImpsCacheFriendEntryImpl> *outUpdated);
+	int ApplyAddedAndUpdated(const NpImpsCacheRefVector<NpImpsCacheRosterData> *fetched,
+				 NpImpsCacheRefVector<NpImpsCacheFriendEntryImpl> *outAdded,
+				 NpImpsCacheRefVector<NpImpsCacheFriendEntryImpl> *outUpdated);
+	int CollectAndRemoveMissing(const NpImpsCacheRefVector<NpImpsCacheRosterData> *fetched,
+				    NpImpsCacheNpIdSet *outRemovedAll,
+				    NpImpsCacheNpIdSet *outRemovedAccepted,
+				    NpImpsCacheNpIdSet *outRemovedPendingOrReq);
+	void CollectPendingAndRequested(const NpImpsCacheNpIdSet *npIds,
+					NpImpsCacheNpIdSet *outSet);
+	void CollectAccepted(const NpImpsCacheNpIdSet *npIds, NpImpsCacheNpIdSet *outSet);
+	SceUInt32 CountByRelation(SceUInt8 *outLoaded, int relation);
 	SceUInt32 CountByRelationLocked(int relation) const;
 	void CopyByRelationLocked(SceUInt32 startIndex, SceNpId *outEntries,
 				  SceUInt32 maxCount, SceUInt32 *outCount,
@@ -517,7 +534,6 @@ public:
 	void SignalWorker() { m_waitCond.Notify(); }
 
 private:
-	int EnqueueEvent(NpImpsCacheEvent *event);
 	int EnqueueBlockAdd(const SceNpId *npId);
 	int EnqueueBlockRemove(const SceNpId *npId);
 	int EnqueueFriendAddOrUpdate(const SceNpId *npId, int relation);
@@ -613,12 +629,15 @@ extern int npImpsCacheCreateSignOutClearEvent(NpImpsCacheEvent **outEvent,
 					      NpImpsCacheBlockStoreImpl *blockStore,
 					      NpImpsCacheStoreSink *sink);
 
-/* Roster fetch helpers (0x81304250, 0x81304324, 0x81308280, 0x813082C4) */
+/* Roster fetch & buffer allocation helpers (0x81304250, 0x81304324, 0x81308280..0x81308393) */
 extern int npImpsCacheFetchFriendListFromRoster(NpImpsCacheRefVector<NpImpsCacheRosterData> *outList);
 extern int npImpsCacheFetchBlockListFromRoster(NpImpsCacheNpIdSet *outSet);
 extern bool npImpsCacheRosterListContains(const SceNpId *npId,
 					  const NpImpsCacheRefVector<NpImpsCacheRosterData> *list);
 extern bool npImpsCacheArrayContains(const SceNpId *npId, const SceNpId *array, SceUInt32 count);
+extern int npImpsCacheAllocFriendHandleArray(SceUInt32 count, NpImpsCacheFriendPtr **outArray);
+extern void npImpsCacheFreeFriendHandleArray(SceUInt32 count, NpImpsCacheFriendPtr *array);
+extern int npImpsCacheAllocNpIdArray(SceUInt32 count, SceNpId **outArray);
 
 /* External bridge to Shell account event service */
 typedef void (*ShellAccountEventCallback)(int eventId, int stateGroup, int stateCode,

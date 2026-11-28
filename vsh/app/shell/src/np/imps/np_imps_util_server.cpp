@@ -34,22 +34,34 @@ static NpImpsSvcAsyncInterface *s_svcAsyncInterface = NULL;
  * Heap helpers (0x812F4BF4..0x812F4C43)
  * ============================================================================ */
 
-void npImpsUtilHeapInit(void)
+static paf::memory::HeapAllocator *s_utilHeap = NULL;		/* 0x815C3844 */
+
+/* 0x812F4BF4 */
+void npImpsUtilHeapInit(paf::memory::HeapAllocator *heap)
 {
+	s_utilHeap = heap;
 }
 
+/* 0x812F4C00 */
 void npImpsUtilHeapTerm(void)
 {
+	s_utilHeap = NULL;
 }
 
 void *npImpsUtilMalloc(SceSize size)
 {
+	if (s_utilHeap != NULL)
+		return s_utilHeap->sce_paf_malloc(size);
 	return sce_paf_malloc(size);
 }
 
 void npImpsUtilFree(void *ptr)
 {
-	if (ptr != NULL)
+	if (ptr == NULL)
+		return;
+	if (s_utilHeap != NULL)
+		s_utilHeap->sce_paf_free(ptr);
+	else
 		sce_paf_free(ptr);
 }
 
@@ -85,17 +97,21 @@ NpImpsUtilMpState *npImpsUtilGetMpState(void)
 class NpImpsSystemQueueOverflowStrategy : public NpImpsQueueOverflowStrategy {
 public:
 	virtual int HandleOverflow(IPMI::Session *session, SceUInt32 queueIndex,
-				   const void *msgBuf, SceSize msgSize)
-	{
-		(void)msgBuf;
-		(void)msgSize;
-		if (queueIndex == 0) {
-			session->emptyMsgQueue(0);
-			return npImpsUtilHandleResyncSystemEvents(session);
-		}
-		return 0;
-	}
+				   const void *msgBuf, SceSize msgSize);
 };
+
+/* 0x812F3738 */
+int NpImpsSystemQueueOverflowStrategy::HandleOverflow(IPMI::Session *session, SceUInt32 queueIndex,
+						      const void *msgBuf, SceSize msgSize)
+{
+	(void)msgBuf;
+	(void)msgSize;
+	if (queueIndex == 0) {
+		session->emptyMsgQueue(0);
+		return npImpsUtilHandleResyncSystemEvents(session);
+	}
+	return 0;
+}
 
 class NpImpsGameQueueOverflowStrategy : public NpImpsQueueOverflowStrategy {
 public:
@@ -175,145 +191,16 @@ void npImpsUtilFillPartyPresence(NpImpsPartyPresence *outParty,
 
 class NpImpsUtilRawMsgMgr {
 public:
-	NpImpsUtilRawMsgMgr()
-		: m_mutex("SceNpImpsUtilRawMsgCbMgr", 0),
-		  m_channels(NULL),
-		  m_sessionChannels(NULL)
-	{
-	}
+	NpImpsUtilRawMsgMgr();
+	~NpImpsUtilRawMsgMgr();
 
-	~NpImpsUtilRawMsgMgr()
-	{
-		m_mutex.Lock();
-		while (m_channels != NULL) {
-			ChannelNode *next = m_channels->next;
-			npImpsUtilFree(m_channels);
-			m_channels = next;
-		}
-		while (m_sessionChannels != NULL) {
-			SessionChannelNode *next = m_sessionChannels->next;
-			npImpsUtilFree(m_sessionChannels);
-			m_sessionChannels = next;
-		}
-		m_mutex.Unlock();
-	}
-
-	int RegisterChannel(int channelId, const NpImpsRawMsgServerCallbacks *callbacks)
-	{
-		m_mutex.Lock();
-		for (ChannelNode *cur = m_channels; cur != NULL; cur = cur->next) {
-			if (cur->channelId == channelId) {
-				m_mutex.Unlock();
-				return NP_IMPS_UTIL_ERROR_CHANNEL_REGISTERED;
-			}
-		}
-
-		ChannelNode *node = static_cast<ChannelNode *>(npImpsUtilMalloc(sizeof(ChannelNode)));
-		if (node == NULL) {
-			m_mutex.Unlock();
-			return NP_IMPS_UTIL_ERROR_INTERNAL;
-		}
-		node->channelId = channelId;
-		node->callbacks = *callbacks;
-		node->next = m_channels;
-		m_channels = node;
-		m_mutex.Unlock();
-		return 0;
-	}
-
-	int UnregisterChannel(int channelId)
-	{
-		m_mutex.Lock();
-		ChannelNode **link = &m_channels;
-		while (*link != NULL) {
-			if ((*link)->channelId == channelId) {
-				ChannelNode *victim = *link;
-				*link = victim->next;
-				npImpsUtilFree(victim);
-				m_mutex.Unlock();
-				return 0;
-			}
-			link = &(*link)->next;
-		}
-		m_mutex.Unlock();
-		return NP_IMPS_UTIL_ERROR_CHANNEL_NOT_FOUND;
-	}
-
-	const NpImpsRawMsgServerCallbacks *FindChannel(int channelId)
-	{
-		m_mutex.Lock();
-		for (ChannelNode *cur = m_channels; cur != NULL; cur = cur->next) {
-			if (cur->channelId == channelId) {
-				const NpImpsRawMsgServerCallbacks *cb = &cur->callbacks;
-				m_mutex.Unlock();
-				return cb;
-			}
-		}
-		m_mutex.Unlock();
-		return NULL;
-	}
-
-	int BindSession(IPMI::Session *session, int channelId)
-	{
-		m_mutex.Lock();
-		for (SessionChannelNode *cur = m_sessionChannels; cur != NULL; cur = cur->next) {
-			if (cur->session == session) {
-				m_mutex.Unlock();
-				return NP_IMPS_UTIL_ERROR_INTERNAL;
-			}
-		}
-
-		SessionChannelNode *node =
-			static_cast<SessionChannelNode *>(npImpsUtilMalloc(sizeof(SessionChannelNode)));
-		if (node == NULL) {
-			m_mutex.Unlock();
-			return NP_IMPS_UTIL_ERROR_OUT_OF_MEMORY;
-		}
-		node->session = session;
-		node->channelId = channelId;
-		node->next = m_sessionChannels;
-		m_sessionChannels = node;
-		m_mutex.Unlock();
-		return 0;
-	}
-
-	int UnbindSession(IPMI::Session *session)
-	{
-		m_mutex.Lock();
-		SessionChannelNode **link = &m_sessionChannels;
-		while (*link != NULL) {
-			if ((*link)->session == session) {
-				SessionChannelNode *victim = *link;
-				*link = victim->next;
-				npImpsUtilFree(victim);
-				m_mutex.Unlock();
-				return 0;
-			}
-			link = &(*link)->next;
-		}
-		m_mutex.Unlock();
-		return NP_IMPS_UTIL_ERROR_INTERNAL;
-	}
-
-	int GetSessionChannel(IPMI::Session *session, int *outChannelId)
-	{
-		m_mutex.Lock();
-		for (SessionChannelNode *cur = m_sessionChannels; cur != NULL; cur = cur->next) {
-			if (cur->session == session) {
-				*outChannelId = cur->channelId;
-				m_mutex.Unlock();
-				return 0;
-			}
-		}
-		m_mutex.Unlock();
-		return NP_IMPS_UTIL_ERROR_INTERNAL;
-	}
-
-	bool HasSession(IPMI::Session *session)
-	{
-		int channelId = 0;
-		return GetSessionChannel(session, &channelId) >= 0;
-	}
+	int RegisterChannel(int channelId, const NpImpsRawMsgServerCallbacks *callbacks);
+	int UnregisterChannel(int channelId);
+	const NpImpsRawMsgServerCallbacks *FindChannel(int channelId);
+	int BindSession(IPMI::Session *session, int channelId);
+	int UnbindSession(IPMI::Session *session);
+	int GetSessionChannel(IPMI::Session *session, int *outChannelId);
+	bool HasSession(IPMI::Session *session);
 
 private:
 	struct ChannelNode {
@@ -333,8 +220,165 @@ private:
 	SessionChannelNode *m_sessionChannels;
 };
 
+NpImpsUtilRawMsgMgr::NpImpsUtilRawMsgMgr()
+	: m_mutex("SceNpImpsUtilRawMsgCbMgr", 0),
+	  m_channels(NULL),
+	  m_sessionChannels(NULL)
+{
+}
+
+NpImpsUtilRawMsgMgr::~NpImpsUtilRawMsgMgr()
+{
+	m_mutex.Lock();
+	while (m_channels != NULL) {
+		ChannelNode *next = m_channels->next;
+		npImpsUtilFree(m_channels);
+		m_channels = next;
+	}
+	while (m_sessionChannels != NULL) {
+		SessionChannelNode *next = m_sessionChannels->next;
+		npImpsUtilFree(m_sessionChannels);
+		m_sessionChannels = next;
+	}
+	m_mutex.Unlock();
+}
+
+/* 0x812F14A8 */
+int NpImpsUtilRawMsgMgr::RegisterChannel(int channelId,
+					 const NpImpsRawMsgServerCallbacks *callbacks)
+{
+	m_mutex.Lock();
+	for (ChannelNode *cur = m_channels; cur != NULL; cur = cur->next) {
+		if (cur->channelId == channelId) {
+			m_mutex.Unlock();
+			return NP_IMPS_UTIL_ERROR_CHANNEL_REGISTERED;
+		}
+	}
+
+	ChannelNode *node = static_cast<ChannelNode *>(npImpsUtilMalloc(sizeof(ChannelNode)));
+	if (node == NULL) {
+		m_mutex.Unlock();
+		return NP_IMPS_UTIL_ERROR_INTERNAL;
+	}
+	node->channelId = channelId;
+	node->callbacks = *callbacks;
+	node->next = m_channels;
+	m_channels = node;
+	m_mutex.Unlock();
+	return 0;
+}
+
+/* 0x812F1552 */
+int NpImpsUtilRawMsgMgr::UnregisterChannel(int channelId)
+{
+	m_mutex.Lock();
+	ChannelNode **link = &m_channels;
+	while (*link != NULL) {
+		if ((*link)->channelId == channelId) {
+			ChannelNode *victim = *link;
+			*link = victim->next;
+			npImpsUtilFree(victim);
+			m_mutex.Unlock();
+			return 0;
+		}
+		link = &(*link)->next;
+	}
+	m_mutex.Unlock();
+	return NP_IMPS_UTIL_ERROR_CHANNEL_NOT_FOUND;
+}
+
+/* 0x812F15C2 */
+const NpImpsRawMsgServerCallbacks *NpImpsUtilRawMsgMgr::FindChannel(int channelId)
+{
+	m_mutex.Lock();
+	for (ChannelNode *cur = m_channels; cur != NULL; cur = cur->next) {
+		if (cur->channelId == channelId) {
+			const NpImpsRawMsgServerCallbacks *cb = &cur->callbacks;
+			m_mutex.Unlock();
+			return cb;
+		}
+	}
+	m_mutex.Unlock();
+	return NULL;
+}
+
+/* 0x812F1600 */
+int NpImpsUtilRawMsgMgr::BindSession(IPMI::Session *session, int channelId)
+{
+	m_mutex.Lock();
+	for (SessionChannelNode *cur = m_sessionChannels; cur != NULL; cur = cur->next) {
+		if (cur->session == session) {
+			m_mutex.Unlock();
+			return NP_IMPS_UTIL_ERROR_INTERNAL;
+		}
+	}
+
+	SessionChannelNode *node =
+		static_cast<SessionChannelNode *>(npImpsUtilMalloc(sizeof(SessionChannelNode)));
+	if (node == NULL) {
+		m_mutex.Unlock();
+		return NP_IMPS_UTIL_ERROR_OUT_OF_MEMORY;
+	}
+	node->session = session;
+	node->channelId = channelId;
+	node->next = m_sessionChannels;
+	m_sessionChannels = node;
+	m_mutex.Unlock();
+	return 0;
+}
+
+/* 0x812F16AE */
+int NpImpsUtilRawMsgMgr::UnbindSession(IPMI::Session *session)
+{
+	m_mutex.Lock();
+	SessionChannelNode **link = &m_sessionChannels;
+	while (*link != NULL) {
+		if ((*link)->session == session) {
+			SessionChannelNode *victim = *link;
+			*link = victim->next;
+			npImpsUtilFree(victim);
+			m_mutex.Unlock();
+			return 0;
+		}
+		link = &(*link)->next;
+	}
+	m_mutex.Unlock();
+	return NP_IMPS_UTIL_ERROR_INTERNAL;
+}
+
+/* 0x812F173E */
+int NpImpsUtilRawMsgMgr::GetSessionChannel(IPMI::Session *session, int *outChannelId)
+{
+	m_mutex.Lock();
+	for (SessionChannelNode *cur = m_sessionChannels; cur != NULL; cur = cur->next) {
+		if (cur->session == session) {
+			*outChannelId = cur->channelId;
+			m_mutex.Unlock();
+			return 0;
+		}
+	}
+	m_mutex.Unlock();
+	return NP_IMPS_UTIL_ERROR_INTERNAL;
+}
+
+/* 0x812F17B0 */
+bool NpImpsUtilRawMsgMgr::HasSession(IPMI::Session *session)
+{
+	m_mutex.Lock();
+	bool found = false;
+	for (SessionChannelNode *cur = m_sessionChannels; cur != NULL; cur = cur->next) {
+		if (cur->session == session) {
+			found = true;
+			break;
+		}
+	}
+	m_mutex.Unlock();
+	return found;
+}
+
 static NpImpsUtilRawMsgMgr *s_rawMsgMgr = NULL;		/* 0x815460F0 */
 
+/* 0x812F13FA */
 static int rawMsgMgrInit(void)
 {
 	if (s_rawMsgMgr != NULL)
@@ -625,6 +669,7 @@ void NpImpsUtilSessionHolder::TrySendToSessionLocked(IPMI::Session *session, Sce
 	}
 }
 
+/* 0x812F1B7C */
 void NpImpsUtilSessionHolder::BroadcastLocked(SceUInt32 queueIndex, SceUInt32 eventKind,
 					      const void *msgBuf, SceSize msgSize)
 {
@@ -910,6 +955,20 @@ void NpImpsUtilSessionHolder::SendFriendPartyPresenceToSession(IPMI::Session *se
 	m_mutex.Unlock();
 }
 
+/* 0x812F2CEC */
+void NpImpsUtilSessionHolder::BroadcastFriendPartyPresence(const SceNpId *npId,
+							   const NpImpsPartyPresence *presence)
+{
+	NpImpsWireFriendPartyPresence msg;
+	msg.kind = NP_IMPS_EVT_FRIEND_PARTY_PRESENCE;
+	msg.npId = *npId;
+	msg.presence = *presence;
+
+	m_mutex.Lock();
+	BroadcastLocked(0, NP_IMPS_EVT_FRIEND_PARTY_PRESENCE, &msg, sizeof(msg));
+	m_mutex.Unlock();
+}
+
 /* 0x812F2DAA */
 void NpImpsUtilSessionHolder::SendFriendPartyPresenceToProcess(SceUID processId,
 							       const SceNpId *npId,
@@ -1120,9 +1179,10 @@ int npImpsUtilSendEnterOnlineReply(IPMI::Session *session, SceUInt32 requestId,
 						    status, &outInfo, 1);
 }
 
-int npImpsUtilSendRosterReply(IPMI::Session *session, SceUInt32 methodId,
-			      SceUInt32 requestId, int status, const SceUInt32 *contextId,
-			      const SceNpId *npId, const int *resultCode)
+/* 0x812F37F4 */
+int npImpsUtilSendRequestFriendReply(IPMI::Session *session, SceUInt32 requestId, int status,
+				     const SceUInt32 *contextId, const SceNpId *npId,
+				     const int *resultCode)
 {
 	IPMI::DataInfo outInfos[3];
 	outInfos[0].pData = contextId;
@@ -1131,7 +1191,72 @@ int npImpsUtilSendRosterReply(IPMI::Session *session, SceUInt32 methodId,
 	outInfos[1].dataSize = sizeof(*npId);
 	outInfos[2].pData = resultCode;
 	outInfos[2].dataSize = sizeof(*resultCode);
-	return session->respondToAsyncMethodRequest(methodId, requestId, status, outInfos, 3);
+	return session->respondToAsyncMethodRequest(NP_IMPS_METHOD_REQUEST_FRIEND_RESULT,
+						    requestId, status, outInfos, 3);
+}
+
+/* 0x812F3844 */
+int npImpsUtilSendAcceptFriendReply(IPMI::Session *session, SceUInt32 requestId, int status,
+				    const SceUInt32 *contextId, const SceNpId *npId,
+				    const int *resultCode)
+{
+	IPMI::DataInfo outInfos[3];
+	outInfos[0].pData = contextId;
+	outInfos[0].dataSize = sizeof(*contextId);
+	outInfos[1].pData = npId;
+	outInfos[1].dataSize = sizeof(*npId);
+	outInfos[2].pData = resultCode;
+	outInfos[2].dataSize = sizeof(*resultCode);
+	return session->respondToAsyncMethodRequest(NP_IMPS_METHOD_ACCEPT_FRIEND_RESULT,
+						    requestId, status, outInfos, 3);
+}
+
+/* 0x812F3894 */
+int npImpsUtilSendDeleteFriendReply(IPMI::Session *session, SceUInt32 requestId, int status,
+				    const SceUInt32 *contextId, const SceNpId *npId,
+				    const int *resultCode)
+{
+	IPMI::DataInfo outInfos[3];
+	outInfos[0].pData = contextId;
+	outInfos[0].dataSize = sizeof(*contextId);
+	outInfos[1].pData = npId;
+	outInfos[1].dataSize = sizeof(*npId);
+	outInfos[2].pData = resultCode;
+	outInfos[2].dataSize = sizeof(*resultCode);
+	return session->respondToAsyncMethodRequest(NP_IMPS_METHOD_DELETE_FRIEND_RESULT,
+						    requestId, status, outInfos, 3);
+}
+
+/* 0x812F38E4 */
+int npImpsUtilSendAddBlockReply(IPMI::Session *session, SceUInt32 requestId, int status,
+				const SceUInt32 *contextId, const SceNpId *npId,
+				const int *resultCode)
+{
+	IPMI::DataInfo outInfos[3];
+	outInfos[0].pData = contextId;
+	outInfos[0].dataSize = sizeof(*contextId);
+	outInfos[1].pData = npId;
+	outInfos[1].dataSize = sizeof(*npId);
+	outInfos[2].pData = resultCode;
+	outInfos[2].dataSize = sizeof(*resultCode);
+	return session->respondToAsyncMethodRequest(NP_IMPS_METHOD_ADD_BLOCK_RESULT,
+						    requestId, status, outInfos, 3);
+}
+
+/* 0x812F3934 */
+int npImpsUtilSendDeleteBlockReply(IPMI::Session *session, SceUInt32 requestId, int status,
+				   const SceUInt32 *contextId, const SceNpId *npId,
+				   const int *resultCode)
+{
+	IPMI::DataInfo outInfos[3];
+	outInfos[0].pData = contextId;
+	outInfos[0].dataSize = sizeof(*contextId);
+	outInfos[1].pData = npId;
+	outInfos[1].dataSize = sizeof(*npId);
+	outInfos[2].pData = resultCode;
+	outInfos[2].dataSize = sizeof(*resultCode);
+	return session->respondToAsyncMethodRequest(NP_IMPS_METHOD_DELETE_BLOCK_RESULT,
+						    requestId, status, outInfos, 3);
 }
 
 /* ============================================================================
@@ -1196,6 +1321,18 @@ int NpImpsUtilAsyncRelayMgr::Destroy()
 NpImpsUtilAsyncRelayMgr *NpImpsUtilAsyncRelayMgr::GetInstance()
 {
 	return s_asyncRelayMgr;
+}
+
+/* 0x812F4BE0 */
+void NpImpsUtilAsyncRelayMgr::Lock()
+{
+	m_mutex.Lock();
+}
+
+/* 0x812F4BEA */
+void NpImpsUtilAsyncRelayMgr::Unlock()
+{
+	m_mutex.Unlock();
 }
 
 /* 0x812F42A4 */
@@ -1472,13 +1609,13 @@ static void onGlobalFriendPresence(int eventType, NpImpsCacheFriendPtr *handle, 
 				   const NpImpsSvcPresenceSnapshot *prevSnap,
 				   SceUInt32 diffMask, void *userArg)
 {
-	(void)eventType;
 	(void)handle;
-	(void)npId;
-	(void)curSnap;
 	(void)prevSnap;
-	(void)diffMask;
-	(void)userArg;
+	NpImpsUtilServerContext *ctx = static_cast<NpImpsUtilServerContext *>(userArg);
+	if (ctx == NULL || ctx->systemSessions == NULL)
+		return;
+	if (eventType == 1 || (eventType == 2 && (diffMask & NP_IMPS_DIFF_PARTY_PRESENCE) != 0))
+		ctx->systemSessions->BroadcastFriendPartyPresence(npId, &curSnap->partyPresence);
 }
 
 /* 0x812F1010 */
@@ -1510,16 +1647,16 @@ static void onGlobalPlatformFriendPresence(int eventType, NpImpsCacheFriendPtr *
 	}
 }
 
-/* 0x812F10D0 */
+/* 0x812F0FE0 */
 static void onGlobalFriendContext(int eventType, NpImpsCacheFriendPtr *handle, const SceNpId *npId,
 				  int contextState, void *extra, void *userArg)
 {
 	(void)eventType;
 	(void)handle;
 	(void)extra;
-	(void)userArg;
-	if (s_systemSessionHolder != NULL)
-		s_systemSessionHolder->BroadcastFriendContext(contextState, npId);
+	NpImpsUtilServerContext *ctx = static_cast<NpImpsUtilServerContext *>(userArg);
+	if (ctx != NULL && ctx->systemSessions != NULL)
+		ctx->systemSessions->BroadcastFriendContext(contextState, npId);
 }
 
 /* ============================================================================
@@ -2196,6 +2333,12 @@ int npImpsUtilGetProcessServiceState(NpImpsUtilServerContext *ctx, SceUID proces
 	int state = 0;
 	npImpsUtilMpStateGetServiceState(ctx->mpState, processId, &state, 0);
 	return state;
+}
+
+/* 0x812F10D8 */
+int npImpsUtilShutdown(void)
+{
+	return npImpsUtilTerm();
 }
 
 /* 0x812F10E0 */

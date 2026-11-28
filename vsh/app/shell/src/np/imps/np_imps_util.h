@@ -168,7 +168,7 @@ struct NpImpsAsyncRelayRecord {
 };
 
 /* Heap helpers for SceNpImpsUtil (0x812F4BF4..0x812F4C43) */
-extern void npImpsUtilHeapInit(void);
+extern void npImpsUtilHeapInit(paf::memory::HeapAllocator *heap = NULL);
 extern void npImpsUtilHeapTerm(void);
 extern void *npImpsUtilMalloc(SceSize size);
 extern void npImpsUtilFree(void *ptr);
@@ -231,6 +231,8 @@ public:
 
 	void SendFriendPartyPresenceToSession(IPMI::Session *session, const SceNpId *npId,
 					      const NpImpsPartyPresence *presence);
+	void BroadcastFriendPartyPresence(const SceNpId *npId,
+					  const NpImpsPartyPresence *presence);
 	void SendFriendPartyPresenceToProcess(SceUID processId, const SceNpId *npId,
 					      const NpImpsPartyPresence *presence);
 
@@ -291,8 +293,8 @@ public:
 	static int Destroy();
 	static NpImpsUtilAsyncRelayMgr *GetInstance();
 
-	void Lock() { m_mutex.Lock(); }
-	void Unlock() { m_mutex.Unlock(); }
+	void Lock();
+	void Unlock();
 
 	void CleanupProcessContexts(SceUID processId);
 	int AddProcessContext(SceUID processId, SceUInt32 contextId);
@@ -365,13 +367,26 @@ extern void npImpsUtilFillPartyPresence(NpImpsPartyPresence *outParty,
 /* Async reply writers (0x812F37B2..0x812F3983) */
 extern int npImpsUtilSendEnterOnlineReply(IPMI::Session *session, SceUInt32 requestId,
 					  int status, const int *resultCode);
-extern int npImpsUtilSendRosterReply(IPMI::Session *session, SceUInt32 methodId,
-				     SceUInt32 requestId, int status, const SceUInt32 *contextId,
-				     const SceNpId *npId, const int *resultCode);
+extern int npImpsUtilSendRequestFriendReply(IPMI::Session *session, SceUInt32 requestId,
+					    int status, const SceUInt32 *contextId,
+					    const SceNpId *npId, const int *resultCode);
+extern int npImpsUtilSendAcceptFriendReply(IPMI::Session *session, SceUInt32 requestId,
+					   int status, const SceUInt32 *contextId,
+					   const SceNpId *npId, const int *resultCode);
+extern int npImpsUtilSendDeleteFriendReply(IPMI::Session *session, SceUInt32 requestId,
+					   int status, const SceUInt32 *contextId,
+					   const SceNpId *npId, const int *resultCode);
+extern int npImpsUtilSendAddBlockReply(IPMI::Session *session, SceUInt32 requestId,
+				       int status, const SceUInt32 *contextId,
+				       const SceNpId *npId, const int *resultCode);
+extern int npImpsUtilSendDeleteBlockReply(IPMI::Session *session, SceUInt32 requestId,
+					  int status, const SceUInt32 *contextId,
+					  const SceNpId *npId, const int *resultCode);
 
 /* Server lifecycle and process event hooks (0x812F0794..0x812F1121) */
 extern int npImpsUtilInit(void);
 extern int npImpsUtilTerm(void);
+extern int npImpsUtilShutdown(void);
 extern int npImpsUtilOnProcessEvent(NpImpsUtilServerContext *ctx, int eventType,
 				    SceUID processId, int appId, int eventAttr);
 extern int npImpsUtilGetProcessServiceState(NpImpsUtilServerContext *ctx, SceUID processId);
@@ -383,6 +398,10 @@ extern int npImpsUtilMpStateStop(void);
 extern int npImpsUtilMpStateOnProcessCreated(NpImpsUtilMpState *mpState, SceUID processId, int appId);
 extern int npImpsUtilMpStatePostEvent(NpImpsUtilMpState *mpState, int eventId,
 				      SceUID processId, int errorCode);
+extern int npImpsUtilMpStatePostProcessEvent(NpImpsUtilMpState *mpState, int eventId,
+					     SceUID processId);
+extern int npImpsUtilMpStatePostGlobalEvent(NpImpsUtilMpState *mpState, int eventId,
+					    int errorCode);
 extern int npImpsUtilMpStateGetServiceState(NpImpsUtilMpState *mpState, SceUID processId,
 					    int *outState, SceUInt8 rawMode);
 

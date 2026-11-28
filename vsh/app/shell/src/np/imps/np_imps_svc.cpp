@@ -13,6 +13,18 @@
 static paf::memory::HeapAllocator *s_svcHeap = NULL;		/* 0x81546104 */
 static NpImpsSvc *s_svcInstance = NULL;				/* 0x81546108 */
 
+/* 0x812FDBA0 */
+void NpImpsSvcOnlineStatusTracker::Lock()
+{
+	m_mutex->Lock();
+}
+
+/* 0x812FDBAA */
+void NpImpsSvcOnlineStatusTracker::Unlock()
+{
+	m_mutex->Unlock();
+}
+
 /* 0x812FDB20 */
 int NpImpsSvcOnlineStatusTracker::GetStatus()
 {

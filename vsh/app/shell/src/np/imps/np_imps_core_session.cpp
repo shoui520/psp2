@@ -643,13 +643,19 @@ static int npImpsSessionPipeRecv(SceUID *pipeId, NpImpsSessionMsg *msg, SceUInt3
 	return ret;
 }
 
+/* 0x81317FAA */
 static int npImpsSessionSendWakeup(SceUID *pipeId)
 {
 	NpImpsSessionMsg msg;
-	sceClibMemset(&msg, 0, sizeof(msg));
 	msg.kind = NP_IMPS_MSG_WAKEUP;
 	SceUInt32 timeout = NP_IMPS_PIPE_SEND_TIMEOUT_USEC;
-	return npImpsSessionPipeSend(pipeId, &msg, &timeout);
+	SceSize sent = 0;
+	int ret = sceKernelSendMsgPipe(*pipeId, &msg, sizeof(msg), 1, &sent, &timeout);
+	if (ret == -2147319803)
+		return NP_IMPS_CORE_ERR_PIPE_TIMEOUT;
+	if (ret >= 0)
+		return (sent == sizeof(msg)) ? 0 : NP_IMPS_CORE_ERR_INTERNAL;
+	return ret;
 }
 
 /* 0x8131B2EC */
@@ -692,8 +698,8 @@ static void npImpsRtEventCleanup(NpImpsRtEventPayload *ev)
 	ev->eventKind = -1;
 }
 
-/* 0x81319818 / 0x8131987A */
-static void npImpsSessionMsgCleanup(NpImpsSessionMsg *msg)
+/* 0x81319818 */
+static void npImpsSessionMsgCleanupCore(NpImpsSessionMsg *msg)
 {
 	switch (msg->kind) {
 	case NP_IMPS_MSG_START:
@@ -720,6 +726,12 @@ static void npImpsSessionMsgCleanup(NpImpsSessionMsg *msg)
 		break;
 	}
 	msg->kind = NP_IMPS_MSG_INVALID;
+}
+
+/* 0x8131987A */
+static void npImpsSessionMsgCleanup(NpImpsSessionMsg *msg)
+{
+	npImpsSessionMsgCleanupCore(msg);
 }
 
 /* 0x8131801C */
@@ -1507,6 +1519,7 @@ static int npImpsSessionGetAutoIntervalSec(const NpImpsSession *session)
 	return cfg->autoIntervalPolicy / 1000;
 }
 
+/* 0x81318458 */
 static void npImpsSessionAbort(NpImpsSession *session)
 {
 	int lockState = npRtLockLwMutex(&session->mutex);
@@ -1782,6 +1795,7 @@ static int npImpsSessionStartWorker(NpImpsSession *session)
  * SceNpImpsCoreMain worker thread & callbacks (0x8131848C..0x813186C3)
  * ============================================================================ */
 
+/* 0x813184FA */
 static int npImpsCoreMainThreadEntry(SceSize args, void *argp)
 {
 	(void)args;
@@ -1793,6 +1807,22 @@ static int npImpsCoreMainThreadEntry(SceSize args, void *argp)
 	return 0;
 }
 
+/* 0x8131848C */
+static int npImpsCoreCreateMainThread(SceUID *outThreadId, const NpPollingThreadParam *threadParam)
+{
+	SceUID tid = sceKernelCreateThread("SceNpImpsCoreMain", npImpsCoreMainThreadEntry,
+					   threadParam->priority, threadParam->stackSize,
+					   0, threadParam->cpuAffinityMask, NULL);
+	if (tid >= 0) {
+		*outThreadId = tid;
+		return 0;
+	}
+	if (tid != -1)
+		sceKernelDeleteThread(tid);
+	return tid;
+}
+
+/* 0x81317D7A */
 static int npImpsSessionMgrInit(const NpPollingThreadParam *threadParam)
 {
 	if (s_sessionMgrInit != 0)
@@ -1804,16 +1834,8 @@ static int npImpsSessionMgrInit(const NpPollingThreadParam *threadParam)
 	s_sessionCount = 0;
 	s_nextSessionId = 0;
 
-	SceUID tid = sceKernelCreateThread("SceNpImpsCoreMain", npImpsCoreMainThreadEntry,
-					   threadParam->priority, threadParam->stackSize,
-					   0, threadParam->cpuAffinityMask, NULL);
-	if (tid < 0) {
-		if (tid != -1)
-			sceKernelDeleteThread(tid);
-		return tid;
-	}
-	s_coreMainThreadId = tid;
-	return 0;
+	int ret = npImpsCoreCreateMainThread(&s_coreMainThreadId, threadParam);
+	return (ret >= 0) ? 0 : ret;
 }
 
 static int npImpsSessionMgrTerm(void)
@@ -1831,8 +1853,9 @@ static int npImpsSessionMgrTerm(void)
 }
 
 /* Polling callbacks -> post NP_IMPS_MSG_POLL_EVENT (0x81319884, 0x81319908) */
-static void npImpsOnPollingState(const NpPollingSessionIdentity *identity, int eventState,
-				 int resultCode)
+/* 0x81319884 */
+static void npImpsPostPollingState(const NpPollingSessionIdentity *identity, int eventState,
+				   int resultCode)
 {
 	NpImpsSession *session = NULL;
 	if (npImpsSessionAcquireByPollId(identity->sessionId, &session, 1) >= 0) {
@@ -1849,8 +1872,16 @@ static void npImpsOnPollingState(const NpPollingSessionIdentity *identity, int e
 		npImpsSessionRelease(session);
 }
 
-static void npImpsOnPollingUpdate(const NpPollingSessionIdentity *identity, int updateKind,
-				  const NpPollingTimestampSet *timestamps)
+/* 0x813185BE */
+static void npImpsOnPollingState(const NpPollingSessionIdentity *identity, int eventState,
+				 int resultCode)
+{
+	npImpsPostPollingState(identity, eventState, resultCode);
+}
+
+/* 0x81319908 */
+static void npImpsPostPollingUpdate(const NpPollingSessionIdentity *identity, int updateKind,
+				    const NpPollingTimestampSet *timestamps)
 {
 	NpImpsSession *session = NULL;
 	if (npImpsSessionAcquireByPollId(identity->sessionId, &session, 0) >= 0) {
@@ -1868,6 +1899,13 @@ static void npImpsOnPollingUpdate(const NpPollingSessionIdentity *identity, int 
 		npImpsSessionRelease(session);
 }
 
+/* 0x813185C6 */
+static void npImpsOnPollingUpdate(const NpPollingSessionIdentity *identity, int updateKind,
+				  const NpPollingTimestampSet *timestamps)
+{
+	npImpsPostPollingUpdate(identity, updateKind, timestamps);
+}
+
 /* RT / Basic callbacks -> post NP_IMPS_MSG_RT_EVENT (0x8131AA80..0x8131B00F) */
 static void npImpsCopyRtHeader(NpImpsRtEventPayload *dst, const NpRtSessionIdentity *rtSession)
 {
@@ -1876,8 +1914,9 @@ static void npImpsCopyRtHeader(NpImpsRtEventPayload *dst, const NpRtSessionIdent
 	sceClibMemcpy_safe(dst->sessionSid, rtSession->sessionSid, sizeof(dst->sessionSid));
 }
 
-static void npImpsPostRtStatusEvent(const NpRtSessionIdentity *rtSession, int eventKind,
-				    int stateOrTxId, int errorOrResult)
+/* 0x8131AA80 */
+static void npImpsPostRtStateEvent(const NpRtSessionIdentity *rtSession, int eventState,
+				   int resultCode)
 {
 	NpImpsSession *session = NULL;
 	if (npImpsSessionAcquireByRtHandle(rtSession->sessionId, &session, 1) >= 0) {
@@ -1885,50 +1924,128 @@ static void npImpsPostRtStatusEvent(const NpRtSessionIdentity *rtSession, int ev
 		sceClibMemset(&msg, 0, sizeof(msg));
 		msg.kind = NP_IMPS_MSG_RT_EVENT;
 		npImpsCopyRtHeader(&msg.body.rtEvent, rtSession);
-		msg.body.rtEvent.eventKind = eventKind;
-		msg.body.rtEvent.detail.status.stateOrTxId = stateOrTxId;
-		msg.body.rtEvent.detail.status.errorOrResult = errorOrResult;
+		msg.body.rtEvent.eventKind = NP_IMPS_RT_EVT_STATE;
+		msg.body.rtEvent.detail.status.stateOrTxId = eventState;
+		msg.body.rtEvent.detail.status.errorOrResult = resultCode;
 		npImpsSessionPipeSend(&session->msgPipeId, &msg, NULL);
 	}
 	if (session != NULL)
 		npImpsSessionRelease(session);
 }
 
+/* 0x8131869C */
 static void npImpsOnRtState(const NpRtSessionIdentity *rtSession, int eventState, int resultCode)
 {
-	npImpsPostRtStatusEvent(rtSession, NP_IMPS_RT_EVT_STATE, eventState, resultCode);
+	npImpsPostRtStateEvent(rtSession, eventState, resultCode);
 }
 
+/* 0x8131AD56 */
+static void npImpsPostRtStandbyDone(const NpRtSessionIdentity *rtSession, int txId, int result)
+{
+	NpImpsSession *session = NULL;
+	if (npImpsSessionAcquireByRtHandle(rtSession->sessionId, &session, 1) >= 0) {
+		NpImpsSessionMsg msg;
+		sceClibMemset(&msg, 0, sizeof(msg));
+		msg.kind = NP_IMPS_MSG_RT_EVENT;
+		npImpsCopyRtHeader(&msg.body.rtEvent, rtSession);
+		msg.body.rtEvent.eventKind = NP_IMPS_RT_EVT_STANDBY_DONE;
+		msg.body.rtEvent.detail.status.stateOrTxId = txId;
+		msg.body.rtEvent.detail.status.errorOrResult = result;
+		npImpsSessionPipeSend(&session->msgPipeId, &msg, NULL);
+	}
+	if (session != NULL)
+		npImpsSessionRelease(session);
+}
+
+/* 0x81319B6A */
 static void npImpsOnRtStandbyDone(const NpRtSessionIdentity *rtSession, int txId, int result,
 				  void *userArg)
 {
 	(void)userArg;
-	npImpsPostRtStatusEvent(rtSession, NP_IMPS_RT_EVT_STANDBY_DONE, txId, result);
+	npImpsPostRtStandbyDone(rtSession, txId, result);
 }
 
+/* 0x8131AE82 */
+static void npImpsPostRtPresenceSent(const NpRtSessionIdentity *rtSession, int txId, int result)
+{
+	NpImpsSession *session = NULL;
+	if (npImpsSessionAcquireByRtHandle(rtSession->sessionId, &session, 1) >= 0) {
+		NpImpsSessionMsg msg;
+		sceClibMemset(&msg, 0, sizeof(msg));
+		msg.kind = NP_IMPS_MSG_RT_EVENT;
+		npImpsCopyRtHeader(&msg.body.rtEvent, rtSession);
+		msg.body.rtEvent.eventKind = NP_IMPS_RT_EVT_PRESENCE_SENT;
+		msg.body.rtEvent.detail.status.stateOrTxId = txId;
+		msg.body.rtEvent.detail.status.errorOrResult = result;
+		npImpsSessionPipeSend(&session->msgPipeId, &msg, NULL);
+	}
+	if (session != NULL)
+		npImpsSessionRelease(session);
+}
+
+/* 0x81319B7A */
 static void npImpsOnRtPresenceSent(const NpRtSessionIdentity *rtSession, int txId, int result,
 				   void *userArg)
 {
 	(void)userArg;
-	npImpsPostRtStatusEvent(rtSession, NP_IMPS_RT_EVT_PRESENCE_SENT, txId, result);
+	npImpsPostRtPresenceSent(rtSession, txId, result);
 }
 
+/* 0x8131AF06 */
+static void npImpsPostRtMessageSent(const NpRtSessionIdentity *rtSession, int txId, int result)
+{
+	NpImpsSession *session = NULL;
+	if (npImpsSessionAcquireByRtHandle(rtSession->sessionId, &session, 1) >= 0) {
+		NpImpsSessionMsg msg;
+		sceClibMemset(&msg, 0, sizeof(msg));
+		msg.kind = NP_IMPS_MSG_RT_EVENT;
+		npImpsCopyRtHeader(&msg.body.rtEvent, rtSession);
+		msg.body.rtEvent.eventKind = NP_IMPS_RT_EVT_MESSAGE_SENT;
+		msg.body.rtEvent.detail.status.stateOrTxId = txId;
+		msg.body.rtEvent.detail.status.errorOrResult = result;
+		npImpsSessionPipeSend(&session->msgPipeId, &msg, NULL);
+	}
+	if (session != NULL)
+		npImpsSessionRelease(session);
+}
+
+/* 0x81319B82 */
 static void npImpsOnRtMessageSent(const NpRtSessionIdentity *rtSession, int txId, int result,
 				  void *userArg)
 {
 	(void)userArg;
-	npImpsPostRtStatusEvent(rtSession, NP_IMPS_RT_EVT_MESSAGE_SENT, txId, result);
+	npImpsPostRtMessageSent(rtSession, txId, result);
 }
 
+/* 0x8131AF8A */
+static void npImpsPostRtStoredDeleted(const NpRtSessionIdentity *rtSession, int txId, int result)
+{
+	NpImpsSession *session = NULL;
+	if (npImpsSessionAcquireByRtHandle(rtSession->sessionId, &session, 1) >= 0) {
+		NpImpsSessionMsg msg;
+		sceClibMemset(&msg, 0, sizeof(msg));
+		msg.kind = NP_IMPS_MSG_RT_EVENT;
+		npImpsCopyRtHeader(&msg.body.rtEvent, rtSession);
+		msg.body.rtEvent.eventKind = NP_IMPS_RT_EVT_STORED_DELETED;
+		msg.body.rtEvent.detail.status.stateOrTxId = txId;
+		msg.body.rtEvent.detail.status.errorOrResult = result;
+		npImpsSessionPipeSend(&session->msgPipeId, &msg, NULL);
+	}
+	if (session != NULL)
+		npImpsSessionRelease(session);
+}
+
+/* 0x81319B8A */
 static void npImpsOnRtStoredDeleted(const NpRtSessionIdentity *rtSession, int txId, int result,
 				    void *userArg)
 {
 	(void)userArg;
-	npImpsPostRtStatusEvent(rtSession, NP_IMPS_RT_EVT_STORED_DELETED, txId, result);
+	npImpsPostRtStoredDeleted(rtSession, txId, result);
 }
 
-static void npImpsOnRtRosterGetDone(const NpRtSessionIdentity *rtSession, int txId, int result,
-				    NpBasicRosterList *rosterList)
+/* 0x8131ADDA */
+static void npImpsPostRtRosterGetDone(const NpRtSessionIdentity *rtSession, int txId, int result,
+				      NpBasicRosterList *rosterList)
 {
 	NpImpsSession *session = NULL;
 	if (npImpsSessionAcquireByRtHandle(rtSession->sessionId, &session, 1) >= 0) {
@@ -1950,8 +2067,16 @@ static void npImpsOnRtRosterGetDone(const NpRtSessionIdentity *rtSession, int tx
 		npImpsSessionRelease(session);
 }
 
-static void npImpsOnBasicRosterPush(const NpRtSessionIdentity *rtSession,
+/* 0x81319B72 */
+static void npImpsOnRtRosterGetDone(const NpRtSessionIdentity *rtSession, int txId, int result,
 				    NpBasicRosterList *rosterList)
+{
+	npImpsPostRtRosterGetDone(rtSession, txId, result, rosterList);
+}
+
+/* 0x8131AB04 */
+static void npImpsPostBasicRosterPush(const NpRtSessionIdentity *rtSession,
+				      NpBasicRosterList *rosterList)
 {
 	NpImpsSession *session = NULL;
 	if (npImpsSessionAcquireByRtHandle(rtSession->sessionId, &session, 1) >= 0) {
@@ -1970,8 +2095,16 @@ static void npImpsOnBasicRosterPush(const NpRtSessionIdentity *rtSession,
 		npImpsSessionRelease(session);
 }
 
-static void npImpsOnBasicPrivacyPush(const NpRtSessionIdentity *rtSession,
-				     NpBasicPrivacyList *privacyList)
+/* 0x813186A4 */
+static void npImpsOnBasicRosterPush(const NpRtSessionIdentity *rtSession,
+				    NpBasicRosterList *rosterList)
+{
+	npImpsPostBasicRosterPush(rtSession, rosterList);
+}
+
+/* 0x8131AB98 */
+static void npImpsPostBasicPrivacyPush(const NpRtSessionIdentity *rtSession,
+				       NpBasicPrivacyList *privacyList)
 {
 	NpImpsSession *session = NULL;
 	if (npImpsSessionAcquireByRtHandle(rtSession->sessionId, &session, 1) >= 0) {
@@ -1990,8 +2123,16 @@ static void npImpsOnBasicPrivacyPush(const NpRtSessionIdentity *rtSession,
 		npImpsSessionRelease(session);
 }
 
-static void npImpsOnBasicMessageRecv(const NpRtSessionIdentity *rtSession,
-				     NpRtMessageStanza *stanza)
+/* 0x813186AC */
+static void npImpsOnBasicPrivacyPush(const NpRtSessionIdentity *rtSession,
+				     NpBasicPrivacyList *privacyList)
+{
+	npImpsPostBasicPrivacyPush(rtSession, privacyList);
+}
+
+/* 0x8131AC2C */
+static void npImpsPostBasicMessageRecv(const NpRtSessionIdentity *rtSession,
+				       NpRtMessageStanza *stanza)
 {
 	NpImpsSession *session = NULL;
 	if (npImpsSessionAcquireByRtHandle(rtSession->sessionId, &session, 1) >= 0) {
@@ -2010,8 +2151,16 @@ static void npImpsOnBasicMessageRecv(const NpRtSessionIdentity *rtSession,
 		npImpsSessionRelease(session);
 }
 
-static void npImpsOnBasicPresenceRecv(const NpRtSessionIdentity *rtSession,
-				      NpRtPresenceStanza *stanza)
+/* 0x813186B4 */
+static void npImpsOnBasicMessageRecv(const NpRtSessionIdentity *rtSession,
+				     NpRtMessageStanza *stanza)
+{
+	npImpsPostBasicMessageRecv(rtSession, stanza);
+}
+
+/* 0x8131ACC2 */
+static void npImpsPostBasicPresenceRecv(const NpRtSessionIdentity *rtSession,
+					NpRtPresenceStanza *stanza)
 {
 	NpImpsSession *session = NULL;
 	if (npImpsSessionAcquireByRtHandle(rtSession->sessionId, &session, 1) >= 0) {
@@ -2028,6 +2177,13 @@ static void npImpsOnBasicPresenceRecv(const NpRtSessionIdentity *rtSession,
 	}
 	if (session != NULL)
 		npImpsSessionRelease(session);
+}
+
+/* 0x813186BC */
+static void npImpsOnBasicPresenceRecv(const NpRtSessionIdentity *rtSession,
+				      NpRtPresenceStanza *stanza)
+{
+	npImpsPostBasicPresenceRecv(rtSession, stanza);
 }
 
 /* ============================================================================
@@ -2278,6 +2434,13 @@ static int npImpsStateRtConnected(NpImpsSession *session, int *nextState)
 	}
 }
 
+/* 0x8131A034: state 6 (RT_CONNECTED_SAME_SID) */
+static int npImpsStateRtConnectedSameSid(NpImpsSession *session, int *nextState)
+{
+	int ret = npImpsStateRtConnected(session, nextState);
+	return (ret >= 0) ? 0 : ret;
+}
+
 /* 0x8131A044: state 7 (ENTERING_ONLINE) */
 static int npImpsStateEnteringOnline(NpImpsSession *session, int *nextState)
 {
@@ -2395,6 +2558,13 @@ static int npImpsStateEnteringPoll(NpImpsSession *session, int *nextState)
 
 	npImpsSessionMsgCleanup(&msg);
 	return ret;
+}
+
+/* 0x8131A326: state 9 (ENTERING_CRON_POLL) */
+static int npImpsStateEnteringCronPoll(NpImpsSession *session, int *nextState)
+{
+	int ret = npImpsStateEnteringPoll(session, nextState);
+	return (ret >= 0) ? 0 : ret;
 }
 
 /* 0x8131A336: state 10 (DISCONNECTING) */
@@ -2517,8 +2687,8 @@ static int npImpsStateOnline(NpImpsSession *session, int *nextState)
 	return ret;
 }
 
-/* 0x8131A672 & 0x8131A808: states 12 (POLL_INTERVAL) and 13 (POLL_CRON) */
-static int npImpsStatePollingCommon(NpImpsSession *session, int *nextState, bool isCronState)
+/* 0x8131A672: state 12 (POLL_INTERVAL) */
+static int npImpsStatePollInterval(NpImpsSession *session, int *nextState)
 {
 	NpImpsSessionMsg msg;
 	sceClibMemset(&msg, 0, sizeof(msg));
@@ -2540,15 +2710,8 @@ static int npImpsStatePollingCommon(NpImpsSession *session, int *nextState, bool
 			ret = npImpsRtReconnect(&session->rt);
 		if (ret >= 0)
 			*nextState = NP_IMPS_SESS_ENTERING_ONLINE;
-	} else if (!isCronState && session->desiredMode == NP_IMPS_MODE_CRON_POLL) {
+	} else if (session->desiredMode == NP_IMPS_MODE_CRON_POLL) {
 		ret = npImpsPollUpdateMode(&session->poll, NP_POLLING_MODE_CRON,
-					   session->rt.sessionSid);
-		if (ret >= 0) {
-			*nextState = NP_IMPS_SESS_POLL_INTERVAL;
-			waitEvent = true;
-		}
-	} else if (isCronState && session->desiredMode == NP_IMPS_MODE_INTERVAL_POLL) {
-		ret = npImpsPollUpdateMode(&session->poll, NP_POLLING_MODE_INTERVAL,
 					   session->rt.sessionSid);
 		if (ret >= 0) {
 			*nextState = NP_IMPS_SESS_POLL_INTERVAL;
@@ -2588,14 +2751,68 @@ static int npImpsStatePollingCommon(NpImpsSession *session, int *nextState, bool
 	return ret;
 }
 
-static int npImpsStatePollInterval(NpImpsSession *session, int *nextState)
-{
-	return npImpsStatePollingCommon(session, nextState, false);
-}
-
+/* 0x8131A808: state 13 (POLL_CRON) */
 static int npImpsStatePollCron(NpImpsSession *session, int *nextState)
 {
-	return npImpsStatePollingCommon(session, nextState, true);
+	NpImpsSessionMsg msg;
+	sceClibMemset(&msg, 0, sizeof(msg));
+	msg.kind = NP_IMPS_MSG_INVALID;
+
+	int ret = 0;
+	bool waitEvent = false;
+
+	if (session->desiredMode == NP_IMPS_MODE_DISCONNECT) {
+		ret = npImpsPollDisconnect(&session->poll);
+		if (ret >= 0)
+			ret = npImpsRtReconnect(&session->rt);
+		if (ret >= 0)
+			*nextState = NP_IMPS_SESS_DISCONNECTING;
+	} else if (session->desiredMode == NP_IMPS_MODE_ONLINE) {
+		npImpsSessionLatchPendingPresence(session);
+		ret = npImpsPollDisconnect(&session->poll);
+		if (ret >= 0)
+			ret = npImpsRtReconnect(&session->rt);
+		if (ret >= 0)
+			*nextState = NP_IMPS_SESS_ENTERING_ONLINE;
+	} else if (session->desiredMode == NP_IMPS_MODE_INTERVAL_POLL) {
+		ret = npImpsPollUpdateMode(&session->poll, NP_POLLING_MODE_INTERVAL,
+					   session->rt.sessionSid);
+		if (ret >= 0) {
+			*nextState = NP_IMPS_SESS_POLL_INTERVAL;
+			waitEvent = true;
+		}
+	} else {
+		waitEvent = true;
+	}
+
+	if (waitEvent) {
+		ret = npImpsSessionRecvFilteredMsg(session, &msg, NULL);
+		if (ret >= 0) {
+			if (msg.kind == NP_IMPS_MSG_SET_MODE) {
+				npImpsSessionUpdateDesiredMode(session, msg.body.modeReq.mode,
+							       msg.body.modeReq.presence);
+				ret = 0;
+			} else if (msg.kind == NP_IMPS_MSG_POLL_EVENT) {
+				int diffBits = 0;
+				int pollRet = npImpsPollHandleActiveEvent(
+					&session->poll, &msg.body.pollEvent, &diffBits);
+				if (pollRet < 0) {
+					npImpsSessionEnterSuspended(session, pollRet, nextState);
+				} else if (diffBits != 0) {
+					npImpsSessionNotifyPolling(&session->identity,
+								   &session->poll.timestamps,
+								   diffBits);
+				}
+				ret = 0;
+			} else {
+				ret = npImpsSessionRejectUnexpectedMsg(session, &msg,
+								       NP_IMPS_CORE_ERR_BAD_STATE);
+			}
+		}
+	}
+
+	npImpsSessionMsgCleanup(&msg);
+	return ret;
 }
 
 /* 0x8131A99C: state 14 (SUSPENDED) */
@@ -2663,10 +2880,10 @@ static const NpImpsSessionStateFn s_sessionStateTable[17] = {
 	npImpsStateWaitPollConnect,	/* 3: WAIT_POLL_CONNECT */
 	npImpsStateWaitRtConnect,	/* 4: WAIT_RT_CONNECT */
 	npImpsStateRtConnected,		/* 5: RT_CONNECTED_NEW_SID */
-	npImpsStateRtConnected,		/* 6: RT_CONNECTED_SAME_SID */
+	npImpsStateRtConnectedSameSid,	/* 6: RT_CONNECTED_SAME_SID */
 	npImpsStateEnteringOnline,	/* 7: ENTERING_ONLINE */
 	npImpsStateEnteringPoll,	/* 8: ENTERING_INTERVAL_POLL */
-	npImpsStateEnteringPoll,	/* 9: ENTERING_CRON_POLL */
+	npImpsStateEnteringCronPoll,	/* 9: ENTERING_CRON_POLL */
 	npImpsStateDisconnecting,	/* 10: DISCONNECTING */
 	npImpsStateOnline,		/* 11: ONLINE */
 	npImpsStatePollInterval,	/* 12: POLL_INTERVAL */
@@ -2873,9 +3090,9 @@ static void npImpsSessionNotifyPolling(const NpImpsSessionIdentity *identity,
 	}
 }
 
-/* 0x8131B246 */
-int npImpsCoreRegisterSessionCallbacks(const NpImpsCoreSessionCallbacks *callbacks,
-				       int *outCallbackId)
+/* 0x8131B010 */
+static int npImpsSessionListenerAlloc(const NpImpsCoreSessionCallbacks *callbacks,
+				      NpImpsSessionListenerNode **outNode)
 {
 	if (s_listenerCount >= NP_IMPS_MAX_LISTENERS)
 		return NP_IMPS_CORE_ERR_CB_FULL;
@@ -2902,8 +3119,21 @@ int npImpsCoreRegisterSessionCallbacks(const NpImpsCoreSessionCallbacks *callbac
 		s_listenerHead = node;
 	s_listenerTail = node;
 
-	*outCallbackId = node->listenerId;
+	*outNode = node;
 	return 0;
+}
+
+/* 0x8131B246 */
+int npImpsCoreRegisterSessionCallbacks(const NpImpsCoreSessionCallbacks *callbacks,
+				       int *outCallbackId)
+{
+	NpImpsSessionListenerNode *node = NULL;
+	int ret = npImpsSessionListenerAlloc(callbacks, &node);
+	if (ret >= 0) {
+		*outCallbackId = node->listenerId;
+		return 0;
+	}
+	return ret;
 }
 
 /* 0x8131B27C */
