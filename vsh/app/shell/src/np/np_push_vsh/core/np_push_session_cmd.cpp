@@ -10,6 +10,23 @@ namespace Np {
 namespace Push {
 
 /* 0x813B17F4 */
+SessionCmd::SessionCmd()
+	: type(SESSION_CMD_INVALID), errorCode(0), payload(NULL)
+{
+}
+
+/* 0x813B1808 */
+SessionCmd::SessionCmd(SessionCmdType cmdType)
+	: type(cmdType), errorCode(0), payload(NULL)
+{
+}
+
+/* 0x813B181C / 0x813B182A */
+SessionCmd::~SessionCmd()
+{
+}
+
+/* 0x813B1840 */
 SessionCmdQueue::SessionCmdQueue() : m_initialized(false)
 {
 	SceNpCommonPs4_7E37A6BF(&m_queue, GetAllocator());
@@ -97,6 +114,37 @@ void SessionCmdQueue::Abort(void)
 		return;
 
 	SceNpCommonPs4_3A4163FD(&m_queue, 3);
+}
+
+/* 0x813B197C */
+SessionThread::SessionThread(Session *owner)
+	: m_owner(owner)
+{
+	SceNpCommonPs4_04CBEB81(AsThreadBase());
+}
+
+/* 0x813B1998 / 0x813B19B4 */
+SessionThread::~SessionThread()
+{
+	SceNpCommonPs4_502309F4(AsThreadBase());
+}
+
+int SessionThread::Run(void)
+{
+	if (m_owner != NULL)
+		m_owner->ThreadMain();
+	return 0;
+}
+
+/* 0x813B19D4 */
+int SessionThread::Start(void)
+{
+	NpPushThreadParam threadParam;
+	threadParam.name = "SceNpPushSession";
+	threadParam.stackSize = 0x4000;
+	threadParam.priority = 0x10000100;
+	threadParam.cpuAffinity = 0;
+	return SceNpCommonPs4_C8F1844F(AsThreadBase(), &threadParam);
 }
 
 } /* namespace Push */

@@ -47,9 +47,11 @@ UserRequest::UserRequest(UserRequestType requestType, const NpPushOnlineId *onli
 			 UserRequestCallback callback, void *userContext)
 	: m_type(requestType),
 	  m_state(USER_REQUEST_STATE_IDLE),
+	  m_requestId(0),
 	  m_result(0),
 	  m_callback(callback),
-	  m_userContext(userContext)
+	  m_userContext(userContext),
+	  m_attachedUser(NULL)
 {
 	SceNpCommonPs4_108738F2(this);
 	vtable = &kUserRequestVtable[2];
@@ -64,6 +66,20 @@ UserRequest::~UserRequest()
 {
 	SceNpCommonPs4_1543D7EE(&m_onlineId);
 	SceNpCommonPs4_BA23AD76(this);
+}
+
+/* 0x813AEBAA */
+int UserRequest::AttachToUserContext(UserContext *userCtx, bool *outAttached)
+{
+	if (userCtx != NULL && m_state == USER_REQUEST_STATE_IDLE) {
+		m_state = USER_REQUEST_STATE_RUNNING;
+		m_attachedUser = userCtx;
+		if (outAttached != NULL)
+			*outAttached = true;
+	} else if (outAttached != NULL) {
+		*outAttached = false;
+	}
+	return 0;
 }
 
 /* 0x813AEBC4 */
@@ -241,9 +257,72 @@ bool UserRequestList::PopFinished(RefPtr<UserRequest> *outRequest)
 	return true;
 }
 
+/* 0x813AEE78 */
+void UserRequestList::FindByRequestId(int requestId, RefPtr<UserRequest> *outRequest)
+{
+	if (outRequest == NULL)
+		return;
+	outRequest->Reset();
+	if (!m_initialized)
+		return;
+
+	ScopedLock lock(&m_mutex);
+	for (ListNode<RefPtr<UserRequest> > *iter = m_registered.Begin();
+	     iter != m_registered.End(); iter = iter->next) {
+		if (!iter->value.IsNull() && iter->value->GetRequestId() == requestId) {
+			*outRequest = iter->value;
+			return;
+		}
+	}
+	for (ListNode<RefPtr<UserRequest> > *iter = m_running.Begin();
+	     iter != m_running.End(); iter = iter->next) {
+		if (!iter->value.IsNull() && iter->value->GetRequestId() == requestId) {
+			*outRequest = iter->value;
+			return;
+		}
+	}
+}
+
+/* 0x813AEF56 */
+int UserRequestList::FinishAllPending(int result)
+{
+	if (!m_initialized)
+		return SCE_NP_PUSH_ERROR_NOT_INITIALIZED;
+
+	ScopedLock lock(&m_mutex);
+	while (!m_registered.Empty()) {
+		RefPtr<UserRequest> req = m_registered.Begin()->value;
+		SetFinishedImpl(req, result);
+	}
+	return 0;
+}
+
 bool UserRequestList::HasPending(void) const
 {
 	return !m_registered.Empty() || !m_running.Empty();
+}
+
+/* 0x813AEF90 */
+ProtocolVersion::ProtocolVersion()
+	: majorVersion(0), minorVersion(0), useTitleToken(0)
+{
+	sceClibMemset(versionText, 0, sizeof(versionText));
+}
+
+/* 0x813AEFB8 */
+ProtocolVersion::ProtocolVersion(SceUInt32 packedVersion, SceUInt8 titleTokenFlag)
+	: majorVersion(static_cast<SceUInt16>((packedVersion >> 16) & 0xFFFFU)),
+	  minorVersion(static_cast<SceUInt16>(packedVersion & 0xFFFFU)),
+	  useTitleToken(titleTokenFlag)
+{
+	sceClibSnprintf(versionText, sizeof(versionText), "%d.%d",
+			static_cast<int>(majorVersion), static_cast<int>(minorVersion));
+}
+
+/* 0x813AEFEC */
+bool ProtocolVersion::Equals(const ProtocolVersion &other) const
+{
+	return ToPacked() == other.ToPacked();
 }
 
 } /* namespace Push */

@@ -77,6 +77,8 @@ Request::Request(RequestType requestType, const NpPushOnlineId *onlineId,
 		 const RefPtr<Packet> &sendPacket, Handler *handler, void *userContext)
 	: m_type(requestType),
 	  m_state(REQUEST_STATE_IDLE),
+	  m_requestId(0),
+	  m_needsAuthToken(true),
 	  m_sendPacket(sendPacket),
 	  m_result(0),
 	  m_retryIntervalSec(0),
@@ -170,6 +172,55 @@ int Request::Start(Session *session, NpPushHandle *cancelHandle)
 void Request::Cancel(void)
 {
 	SetResultError(SCE_NP_PUSH_ERROR_ABORTED, 0);
+}
+
+/* 0x813B5B32 */
+void Request::AbortAndUnlink(void)
+{
+	ScopedLock lock(&m_mutex);
+	SceNpCommonPs4_7A30E24E(&m_timeoutJob);
+	m_handler = NULL;
+	m_sendPacket.Reset();
+	m_state = REQUEST_STATE_FINISHED;
+}
+
+/* 0x813B5FE2 */
+void Request::UnlinkIfFinished(RefPtr<Request> *outSelf)
+{
+	if (outSelf == NULL)
+		return;
+	ScopedLock lock(&m_mutex);
+	if (m_state == REQUEST_STATE_FINISHED)
+		*outSelf = RefPtr<Request>(this);
+	else
+		outSelf->Reset();
+}
+
+/* 0x813B6032 */
+void Request::InvokeHandler(void)
+{
+	if (m_handler != NULL)
+		m_handler->OnRequestFinished(this);
+}
+
+/* 0x813B60A4 */
+int Request::PrepareSendPacket(NpPushHandle *cancelHandle, RefPtr<Packet> *outPacket)
+{
+	RefPtr<Packet> packet = m_sendPacket;
+	if (m_needsAuthToken && !packet.IsNull()) {
+		NpPushUserToken userToken;
+		SceNpCommonPs4_988DFD87(&userToken);
+		int ret = SceNpCommonPs4_191AEA9E(cancelHandle, &m_onlineId, &userToken);
+		if (ret >= 0)
+			ret = packet->SetAuthAccessToken(userToken.accessToken);
+		SceNpCommonPs4_78CC9FCD(&userToken);
+		if (ret < 0)
+			return ret;
+	}
+
+	*outPacket = packet;
+	m_sendPacket.Reset();
+	return 0;
 }
 
 /* 0x813B5CA8: OnTimeout */

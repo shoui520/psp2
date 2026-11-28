@@ -691,6 +691,342 @@ int Dispatcher::ReceiveServiceQueryRequestPacket(const RefPtr<Packet> &packet)
 	return 0;
 }
 
+/* 0x813B3378 */
+void Dispatcher::DispatchCommCallbacks(const void *toOnlineId, const void *fromOnlineId,
+				       const void *commId, const char *dataType,
+				       const void *bodyPtr, SceSize bodySize)
+{
+	(void)commId;
+	ScopedLock lock(&m_mutex);
+	SceSize effectiveLen = (bodySize != 0) ? (bodySize - 1) : 0;
+	const char *effectiveBody = (bodySize != 0) ? static_cast<const char *>(bodyPtr) : NULL;
+	const char *toStr = static_cast<const char *>(toOnlineId);
+	const char *fromStr = static_cast<const char *>(fromOnlineId);
+
+	for (ListNode<InternalCallbackEntry> *iter = m_callbacks.Begin();
+	     iter != m_callbacks.End(); iter = iter->next) {
+		const InternalCallbackEntry &cb = iter->value;
+		SceSize patLen = sceClibStrnlen(cb.dataType, 0xFFFFFFFFU);
+		bool matched = ((cb.matchType & 1) != 0 &&
+				sceClibStrncmp(cb.dataType, dataType, patLen) == 0) ||
+			       ((cb.matchType & 2) != 0 &&
+				sceClibStrncmp(cb.dataType, dataType, patLen + 1) == 0);
+		if (matched && cb.isCommCallback && cb.commCb != NULL) {
+			cb.commCb(dataType, NULL, fromStr, toStr, effectiveBody, effectiveLen,
+				  NULL, 0, cb.userContext);
+		}
+	}
+}
+
+/* 0x813B3448 */
+void Dispatcher::DispatchNotificationCallbacks(const void *toOnlineId, const void *fromOnlineId,
+					       const char *dataType, const void *bodyPtr,
+					       SceSize bodySize)
+{
+	ScopedLock lock(&m_mutex);
+	SceSize effectiveLen = (bodySize != 0) ? (bodySize - 1) : 0;
+	const char *effectiveBody = (bodySize != 0) ? static_cast<const char *>(bodyPtr) : NULL;
+	const char *toStr = static_cast<const char *>(toOnlineId);
+	const char *fromStr = static_cast<const char *>(fromOnlineId);
+
+	for (ListNode<InternalCallbackEntry> *iter = m_callbacks.Begin();
+	     iter != m_callbacks.End(); iter = iter->next) {
+		const InternalCallbackEntry &cb = iter->value;
+		SceSize patLen = sceClibStrnlen(cb.dataType, 0xFFFFFFFFU);
+		bool matched = ((cb.matchType & 1) != 0 &&
+				sceClibStrncmp(cb.dataType, dataType, patLen) == 0) ||
+			       ((cb.matchType & 2) != 0 &&
+				sceClibStrncmp(cb.dataType, dataType, patLen + 1) == 0);
+		if (matched && !cb.isCommCallback && cb.notificationCb != NULL) {
+			cb.notificationCb(dataType, fromStr, toStr, effectiveBody, effectiveLen,
+					  cb.userContext);
+		}
+	}
+}
+
+/* 0x813B3706 */
+void Dispatcher::DispatchToIpcProcesses(int sessionId, const RefPtr<Packet> &packet)
+{
+	(void)sessionId;
+	ScopedLock lock(&m_mutex);
+	for (ListNode<IpcProcessContext *> *iter = m_ipcProcesses.Begin();
+	     iter != m_ipcProcesses.End(); iter = iter->next) {
+		iter->value->ReceivePacket(packet);
+	}
+}
+
+/* 0x813B37DC */
+void Dispatcher::DispatchServiceCommCallbacks(int sessionId, const void *toOnlineId,
+					      const void *fromOnlineId, const void *commId,
+					      const char *dataType, const void *bodyPtr,
+					      SceSize bodySize)
+{
+	(void)sessionId;
+	DispatchCommCallbacks(toOnlineId, fromOnlineId, commId, dataType, bodyPtr, bodySize);
+}
+
+/* 0x813B3852 */
+int Dispatcher::ExtractNotificationPacket(const RefPtr<Packet> &packet,
+					  NpPushOnlineIdData *outToOnlineId,
+					  NpPushOnlineIdData *outFromOnlineId,
+					  NpPushCommunicationIdData *outCommId,
+					  char *outDataType, IpcJsonEntry *outBody)
+{
+	int ret = packet->GetToOnlineId(outToOnlineId);
+	if (ret < 0)
+		return ret;
+
+	if (packet->HasFrom()) {
+		ret = packet->GetFromOnlineId(outFromOnlineId);
+		if (ret < 0)
+			return ret;
+	} else {
+		sceClibMemset(outFromOnlineId, 0, sizeof(*outFromOnlineId));
+	}
+
+	if (packet->HasToCommId()) {
+		ret = packet->GetToCommId(outCommId);
+		if (ret < 0)
+			return ret;
+	} else {
+		sceClibMemset(outCommId, 0, sizeof(*outCommId));
+	}
+
+	ret = packet->GetDataType(outDataType, NP_PUSH_IPC_DATA_TYPE_WIRE_SIZE);
+	if (ret < 0)
+		return ret;
+
+	NpPushJsonValue *bodyVal = packet->GetBodyData();
+	if (bodyVal != NULL) {
+		outBody->ownerPacket = packet;
+		outBody->keyName = NULL;
+		outBody->jsonValue = bodyVal;
+	} else {
+		outBody->Reset();
+	}
+	return 0;
+}
+
+/* 0x813B3A02 */
+void Dispatcher::OnCtlServiceCommPacket(int sessionId, const RefPtr<Packet> &packet)
+{
+	(void)sessionId;
+	ReceiveServiceCommunicationPacket(packet);
+}
+
+/* 0x813B3A44 */
+void Dispatcher::DispatchServiceQueryCallbacks(int sessionId, const void *toOnlineId,
+					       const void *fromOnlineId,
+					       const FromAccountInfo *fromAccount,
+					       const void *commId, int queryType,
+					       const char *tranId, const char *dataType,
+					       const void *bodyPtr, SceSize bodySize)
+{
+	(void)sessionId;
+	(void)fromAccount;
+	(void)commId;
+	(void)queryType;
+	(void)tranId;
+	DispatchCommCallbacks(toOnlineId, fromOnlineId, NULL, dataType, bodyPtr, bodySize);
+}
+
+/* 0x813B3AD4 */
+int Dispatcher::ExtractServiceQueryRequest(const RefPtr<Packet> &packet,
+					   NpPushOnlineIdData *outToOnlineId,
+					   NpPushOnlineIdData *outFromOnlineId,
+					   FromAccountInfo *outFromAccount,
+					   bool *outHasCommId,
+					   NpPushCommunicationIdData *outCommId,
+					   char *outTranId, int *outQueryType,
+					   char *outDataType, IpcJsonEntry *outBody)
+{
+	int ret = packet->GetToOnlineId(outToOnlineId);
+	if (ret < 0)
+		return ret;
+	ret = packet->GetFromOnlineId(outFromOnlineId);
+	if (ret < 0)
+		return ret;
+	ret = packet->GetFromAccountInfo(outFromAccount);
+	if (ret < 0)
+		return ret;
+
+	if (!packet->HasToCommId()) {
+		*outHasCommId = false;
+	} else {
+		ret = packet->GetToCommId(outCommId);
+		if (ret < 0)
+			return ret;
+		*outHasCommId = true;
+	}
+
+	char queryStr[32];
+	ret = packet->GetQueryType(queryStr, sizeof(queryStr));
+	if (ret < 0)
+		return ret;
+	*outQueryType = (sceClibStrncmp(queryStr, "request", 8) == 0) ? 1 : 2;
+
+	ret = packet->GetTranIdFixed(outTranId);
+	if (ret < 0)
+		return ret;
+	ret = packet->GetDataType(outDataType, NP_PUSH_IPC_DATA_TYPE_WIRE_SIZE);
+	if (ret < 0)
+		return ret;
+
+	NpPushJsonValue *bodyVal = packet->GetBodyData();
+	if (bodyVal != NULL) {
+		outBody->ownerPacket = packet;
+		outBody->keyName = NULL;
+		outBody->jsonValue = bodyVal;
+	} else {
+		outBody->Reset();
+	}
+	return 0;
+}
+
+/* 0x813B3CC4 */
+void Dispatcher::OnCtlServiceQueryRequest(int sessionId, const RefPtr<Packet> &packet)
+{
+	(void)sessionId;
+	ReceiveServiceQueryRequestPacket(packet);
+}
+
+/* 0x813B3D08 */
+int Dispatcher::ExtractServiceQueryResponse(const RefPtr<Packet> &packet,
+					    NpPushOnlineIdData *outToOnlineId,
+					    NpPushOnlineIdData *outFromOnlineId,
+					    FromAccountInfo *outFromAccount,
+					    bool *outHasCommId,
+					    NpPushCommunicationIdData *outCommId,
+					    int *outQueryType, int *outErrorSource,
+					    int *outReturnCode, char *outDataType,
+					    IpcJsonEntry *outBody)
+{
+	int ret = packet->GetToOnlineId(outToOnlineId);
+	if (ret < 0)
+		return ret;
+	ret = packet->GetFromOnlineId(outFromOnlineId);
+	if (ret < 0)
+		return ret;
+	ret = packet->GetFromAccountInfo(outFromAccount);
+	if (ret < 0)
+		return ret;
+
+	if (!packet->HasToCommId()) {
+		*outHasCommId = false;
+	} else {
+		ret = packet->GetToCommId(outCommId);
+		if (ret < 0)
+			return ret;
+		*outHasCommId = true;
+	}
+
+	char queryStr[32];
+	ret = packet->GetQueryType(queryStr, sizeof(queryStr));
+	if (ret < 0)
+		return ret;
+	*outQueryType = (sceClibStrncmp(queryStr, "response", 9) == 0) ? 3 : 4;
+
+	if (packet->HasErrorSource()) {
+		char errSrcBuf[32];
+		ret = packet->GetErrorSource(errSrcBuf, sizeof(errSrcBuf));
+		if (ret < 0)
+			return ret;
+		*outErrorSource = (sceClibStrncmp(errSrcBuf, "server", 7) == 0) ? 1 : 2;
+	} else {
+		*outErrorSource = 0;
+	}
+
+	if (packet->HasReturnCode()) {
+		SceInt32 rc = -1;
+		ret = packet->GetReturnCode(&rc);
+		if (ret < 0)
+			return ret;
+		*outReturnCode = rc;
+	} else {
+		*outReturnCode = -1;
+	}
+
+	ret = packet->GetDataType(outDataType, NP_PUSH_IPC_DATA_TYPE_WIRE_SIZE);
+	if (ret < 0)
+		return ret;
+
+	NpPushJsonValue *bodyVal = packet->GetBodyData();
+	if (bodyVal != NULL) {
+		outBody->ownerPacket = packet;
+		outBody->keyName = NULL;
+		outBody->jsonValue = bodyVal;
+	} else {
+		outBody->Reset();
+	}
+	return 0;
+}
+
+/* 0x813B3E32 */
+void Dispatcher::DispatchServiceQueryResponse(int sessionId, void *callback, void *userArg,
+					      int errorCode, const RefPtr<Packet> &packet)
+{
+	typedef void (*QueryRespCallback)(int, const void *, const void *, const void *,
+					  const void *, int, int, int, int, const char *,
+					  const void *, SceSize, void *);
+	QueryRespCallback cb = reinterpret_cast<QueryRespCallback>(callback);
+
+	if (packet.IsNull()) {
+		int err = (errorCode < 0) ? errorCode : SCE_NP_PUSH_ERROR_INTERNAL;
+		ScopedLock lock(&m_mutex);
+		if (cb != NULL)
+			cb(sessionId, NULL, NULL, NULL, NULL, 0, err, 0, -1, NULL, NULL, 0, userArg);
+		return;
+	}
+
+	NpPushOnlineIdData toOnlineId;
+	NpPushOnlineIdData fromOnlineId;
+	FromAccountInfo fromAccount;
+	NpPushCommunicationIdData commId;
+	char dataType[NP_PUSH_IPC_DATA_TYPE_WIRE_SIZE];
+	bool hasCommId = false;
+	int queryType = 0;
+	int errorSource = 0;
+	int returnCode = -1;
+	IpcJsonEntry bodyEntry;
+
+	int ret = ExtractServiceQueryResponse(packet, &toOnlineId, &fromOnlineId, &fromAccount,
+					      &hasCommId, &commId, &queryType, &errorSource,
+					      &returnCode, dataType, &bodyEntry);
+	if (ret < 0) {
+		ScopedLock lock(&m_mutex);
+		if (cb != NULL)
+			cb(sessionId, NULL, NULL, NULL, NULL, 0, ret, 0, -1, NULL, NULL, 0, userArg);
+		return;
+	}
+
+	char *bodyJson = NULL;
+	SceSize bodySize = 0;
+	ret = SerializeJsonValue(bodyEntry.jsonValue, &bodyJson, &bodySize);
+	if (ret < 0) {
+		ScopedLock lock(&m_mutex);
+		if (cb != NULL)
+			cb(sessionId, NULL, NULL, NULL, NULL, 0, ret, 0, -1, NULL, NULL, 0, userArg);
+		return;
+	}
+
+	ScopedLock lock(&m_mutex);
+	if (cb != NULL) {
+		cb(sessionId, &toOnlineId, &fromOnlineId, &fromAccount,
+		   hasCommId ? &commId : NULL, queryType, errorCode, errorSource, returnCode,
+		   dataType, (bodySize != 0) ? bodyJson : NULL,
+		   (bodySize != 0) ? (bodySize - 1) : 0, userArg);
+	}
+	if (bodyJson != NULL)
+		SceNpCommonPs4_6B428829(GetAllocator(), bodyJson);
+}
+
+/* 0x813B408E */
+void Dispatcher::OnCtlServiceQueryResponse(int sessionId, void *callback, void *userArg,
+					   int errorCode, const RefPtr<Packet> &packet)
+{
+	DispatchServiceQueryResponse(sessionId, callback, userArg, errorCode, packet);
+}
+
 } /* namespace Push */
 } /* namespace Np */
 } /* namespace sce */

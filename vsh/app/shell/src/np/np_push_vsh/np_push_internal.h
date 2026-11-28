@@ -626,6 +626,14 @@ extern int npWebSocketSendText(void *wsHandle, const char *text, SceSize length)
 extern int npWebSocketSendClose(void *wsHandle);
 extern int npWebSocketReceive(void *wsHandle, int *outOpcode, void *buffer,
 			      SceSize bufferSize, SceSize *outReceived);
+extern int npWebSocketGetResponseHeader(void *wsHandle, const char *headerName,
+					const char **outValue, SceSize *outValueLen);
+
+/* SceNpManager / Account Internal Bridges */
+extern int npAccountIsSignedIn(void);
+extern int npAccountGetCachedNpId(SceNpId *outNpId);
+extern int npManagerGetCachedCredentials(void *outLoginId, void *outPassword,
+					 SceUInt64 *outAccountId);
 
 /* ============================================================================
  * sce::Np::Push Namespace Forward Declarations & Core Types
@@ -821,19 +829,42 @@ struct ProtocolVersion {
 	SceUInt16 majorVersion;
 	SceUInt16 minorVersion;
 	SceUInt8 useTitleToken;
+	char versionText[8];
 
-	ProtocolVersion() : majorVersion(0), minorVersion(0), useTitleToken(0) {}
-	ProtocolVersion(SceUInt32 packedVersion, SceUInt8 titleTokenFlag)
-		: majorVersion(static_cast<SceUInt16>((packedVersion >> 16) & 0xFFFFU)),
-		  minorVersion(static_cast<SceUInt16>(packedVersion & 0xFFFFU)),
-		  useTitleToken(titleTokenFlag)
-	{
-	}
+	ProtocolVersion();
+	ProtocolVersion(SceUInt32 packedVersion, SceUInt8 titleTokenFlag = 0);
+	bool Equals(const ProtocolVersion &other) const;
 	SceUInt32 ToPacked() const
 	{
 		return (static_cast<SceUInt32>(majorVersion) << 16) | minorVersion;
 	}
 };
+
+struct FromAccountInfo {
+	SceUInt64 accountId;
+	char onlineId[20];
+	char opt[4];
+	char platform[4];
+	SceUInt8 valid;
+};
+
+struct PushAccountSnapshot {
+	SceNpId npId;
+	SceUInt64 accountId;
+	SceUInt32 signedIn;
+	SceUInt32 reserved;
+};
+
+struct PushRequestCompletion {
+	int requestId;
+	int errorCode;
+	SceUInt32 retryIntervalSec;
+	int serverStatus;
+};
+
+/* TranId helpers (core/np_push_packet.cpp) */
+bool TranIdEquals(const char *left, const char *right);
+int TranIdCopy(char *dst, const char *src);
 
 struct ProtocolConfigEntry {
 	const char *envName;
@@ -931,6 +962,7 @@ public:
 	int GetMethod(int *outMethod) const;
 	bool HasTranId(void) const;
 	int GetTranId(char *outBuf, SceSize bufSize) const;
+	int GetTranIdFixed(char *outTranId) const;
 	bool HasReturnCode(void) const;
 	int GetReturnCode(SceInt32 *outCode) const;
 	bool HasRetryInterval(void) const;
@@ -943,15 +975,26 @@ public:
 	int GetDataType(char *outBuf, SceSize bufSize) const;
 	bool MatchDataTypeExact(const char *pattern) const;
 	bool MatchDataTypePrefix(const char *prefix) const;
+	bool HasFrom(void) const;
 	int GetFromOnlineId(NpPushOnlineIdData *outOnlineId) const;
+	int GetFromAccountInfo(FromAccountInfo *outInfo) const;
 	int GetToOnlineId(NpPushOnlineIdData *outOnlineId) const;
+	bool HasToCommId(void) const;
 	int GetToCommId(NpPushCommunicationIdData *outCommId) const;
+	bool HasStatus(void) const;
 	int GetStatus(int *outStatus) const;
 	NpPushJsonValue *GetBodyData(void) const;
 	NpPushJsonValue *GetExtendedData(void) const;
+	NpPushJsonValue *GetExtendedDataEntry(int index, char **outKeyName) const;
+	bool IsReqTransResponse(void) const;
+	bool IsLoginMethod(void) const;
+	bool IsNotificationMethod(void) const;
+	bool IsServiceQueryRequest(void) const;
+	bool IsServiceQueryResponse(void) const;
 
 private:
 	NpPushJsonValue *m_root;
+	int m_method;
 };
 
 /* ============================================================================
@@ -986,21 +1029,62 @@ struct ConnectionResponseInfo {
 class Connection {
 public:
 	Connection();
-	~Connection();
+	virtual ~Connection();
 
 	int Connect(NpPushHandle *cancelHandle, const char *fqdn,
 		    const NpPushOnlineId *onlineId, bool isReconnect,
 		    ConnectionResponseInfo *outRespInfo);
 	int Disconnect(void);
+	int DisconnectWithCancelScope(NpPushHandle *cancelHandle);
 	int SendClose(void);
 	int SendPacket(const Packet *packet);
 	int ReceivePacket(RefPtr<Packet> *outPacket);
+	int ParseOnlineIdHeader(const char *headerName, NpPushOnlineIdData *outList,
+				int maxCount, int *outCount);
+	int ParseRetryIntervalHeader(SceUInt32 *outIntervalSec);
 	bool IsConnected(void) const { return m_wsHandle != NULL; }
 
 private:
 	void *m_wsHandle;
 	char *m_recvBuffer;
 	SceSize m_recvBufferSize;
+};
+
+class RecvPacketQueue {
+public:
+	explicit RecvPacketQueue(NpPushMutex *mutex);
+	virtual ~RecvPacketQueue();
+
+	int Push(const RefPtr<Packet> &packet);
+	void Pop(RefPtr<Packet> *outPacket);
+	void Clear(void);
+
+private:
+	NpPushMutex *m_mutex;
+	AllocList<RefPtr<Packet> > m_list;
+};
+
+class ReceiveThread {
+public:
+	explicit ReceiveThread(Session *owner);
+	virtual ~ReceiveThread();
+	virtual int Run(void);
+
+	int Start(void);
+	NpPushThreadBase *AsThreadBase(void)
+	{
+		return reinterpret_cast<NpPushThreadBase *>(this);
+	}
+
+private:
+	SceUID m_threadId;
+	int m_priority;
+	SceSize m_stackSize;
+	char m_name[32];
+	int m_cpuAffinity;
+	int m_state;
+	int m_exitStatus;
+	Session *m_owner;
 };
 
 /* ============================================================================
@@ -1010,7 +1094,7 @@ private:
 class ServerAddr {
 public:
 	ServerAddr();
-	~ServerAddr();
+	virtual ~ServerAddr();
 
 	int SetFqdn(const char *fqdn);
 	const char *GetFqdn(void) const { return m_fqdn; }
@@ -1023,11 +1107,17 @@ private:
 class GetServerAddrTrans {
 public:
 	GetServerAddrTrans(NpPushAllocator *allocator, const NpPushOnlineId *onlineId);
-	~GetServerAddrTrans();
+	virtual ~GetServerAddrTrans();
+
+	static int FetchServerAddr(NpPushHandle *cancelHandle, const char *baseUrl,
+				   const NpPushOnlineId *onlineId, ServerAddr *outServerAddr,
+				   SceUInt32 *outRetryIntervalSec);
 
 	int Execute(NpPushHandle *cancelHandle, NpPushHttpContext *httpContext,
 		    const char *baseUrl, ServerAddr *outServerAddr,
 		    SceUInt32 *outRetryIntervalSec);
+	int ReceiveAndParseResponse(NpPushHandle *cancelHandle, ServerAddr *outServerAddr,
+				    SceUInt32 *outRetryIntervalSec);
 
 private:
 	NpPushNpTrans m_npTrans;
@@ -1068,6 +1158,10 @@ public:
 
 	int Start(Session *session, NpPushHandle *cancelHandle);
 	void Cancel(void);
+	void AbortAndUnlink(void);
+	void UnlinkIfFinished(RefPtr<Request> *outSelf);
+	void InvokeHandler(void);
+	int PrepareSendPacket(NpPushHandle *cancelHandle, RefPtr<Packet> *outPacket);
 	void OnTimeout(void);
 	int SetResultReceivedReqTransResponse(const RefPtr<Packet> &respPacket);
 	int SetResultReceivedQueryResponse(const RefPtr<Packet> &respPacket);
@@ -1075,6 +1169,7 @@ public:
 
 	RequestType GetType(void) const { return m_type; }
 	RequestState GetState(void) const { return m_state; }
+	int GetRequestId(void) const { return m_requestId; }
 	int GetResult(void) const { return m_result; }
 	SceUInt32 GetRetryInterval(void) const { return m_retryIntervalSec; }
 	const char *GetTranId(void) const { return m_tranId; }
@@ -1090,6 +1185,8 @@ private:
 	NpPushCalloutJob m_timeoutJob;
 	RequestType m_type;
 	RequestState m_state;
+	int m_requestId;
+	bool m_needsAuthToken;
 	NpPushOnlineId m_onlineId;
 	char m_tranId[32];
 	RefPtr<Packet> m_sendPacket;
@@ -1129,19 +1226,23 @@ public:
 
 	UserRequestType GetType(void) const { return m_type; }
 	UserRequestState GetState(void) const { return m_state; }
+	int GetRequestId(void) const { return m_requestId; }
 	void SetState(UserRequestState state) { m_state = state; }
 	const NpPushOnlineId &GetOnlineId(void) const { return m_onlineId; }
 	int GetResult(void) const { return m_result; }
 	void SetResult(int result) { m_result = result; }
+	int AttachToUserContext(UserContext *userCtx, bool *outAttached);
 	void InvokeCallback(void);
 
 private:
 	UserRequestType m_type;
 	UserRequestState m_state;
+	int m_requestId;
 	NpPushOnlineId m_onlineId;
 	int m_result;
 	UserRequestCallback m_callback;
 	void *m_userContext;
+	UserContext *m_attachedUser;
 };
 
 class UserRequestList {
@@ -1155,6 +1256,8 @@ public:
 	int SetRunning(const RefPtr<UserRequest> &request);
 	int SetFinished(const RefPtr<UserRequest> &request, int result);
 	int SetFinishedAll(int result);
+	void FindByRequestId(int requestId, RefPtr<UserRequest> *outRequest);
+	int FinishAllPending(int result);
 	bool PopRegistered(RefPtr<UserRequest> *outRequest);
 	bool PopFinished(RefPtr<UserRequest> *outRequest);
 	bool HasPending(void) const;
@@ -1170,10 +1273,11 @@ private:
 };
 
 /* ============================================================================
- * SessionCmd & SessionCmdQueue (core/np_push_session_cmd.cpp)
+ * SessionCmd, SessionCmdQueue & SessionThread (core/np_push_session_cmd.cpp)
  * ============================================================================ */
 
 enum SessionCmdType {
+	SESSION_CMD_INVALID		= -1,
 	SESSION_CMD_CONNECT		= 1,
 	SESSION_CMD_DISCONNECT		= 2,
 	SESSION_CMD_SEND_REQUEST	= 3,
@@ -1182,7 +1286,12 @@ enum SessionCmdType {
 	SESSION_CMD_STOP		= 6
 };
 
-struct SessionCmd {
+class SessionCmd {
+public:
+	SessionCmd();
+	explicit SessionCmd(SessionCmdType cmdType);
+	virtual ~SessionCmd();
+
 	SessionCmdType type;
 	int errorCode;
 	void *payload;
@@ -1191,7 +1300,7 @@ struct SessionCmd {
 class SessionCmdQueue {
 public:
 	SessionCmdQueue();
-	~SessionCmdQueue();
+	virtual ~SessionCmdQueue();
 
 	int Init(void);
 	void Finalize(void);
@@ -1203,6 +1312,29 @@ public:
 private:
 	NpPushEventQueue m_queue;
 	bool m_initialized;
+};
+
+class SessionThread {
+public:
+	explicit SessionThread(Session *owner);
+	virtual ~SessionThread();
+	virtual int Run(void);
+
+	int Start(void);
+	NpPushThreadBase *AsThreadBase(void)
+	{
+		return reinterpret_cast<NpPushThreadBase *>(this);
+	}
+
+private:
+	SceUID m_threadId;
+	int m_priority;
+	SceSize m_stackSize;
+	char m_name[32];
+	int m_cpuAffinity;
+	int m_state;
+	int m_exitStatus;
+	Session *m_owner;
 };
 
 /* ============================================================================
@@ -1245,7 +1377,22 @@ public:
 	int Connect(const NpPushOnlineId *onlineId, bool isReconnect);
 	int Disconnect(void);
 	int SendRequest(const RefPtr<Request> &request);
+	int PostCommandChecked(const SessionCmd *cmd, const SceUInt32 *allowedStateMask);
+	int PostConnectCommand(void);
+	int PostDisconnectCommand(void);
+	int SendLoginRequest(const NpPushOnlineId *onlineId, bool activeStatus,
+			     bool includePresence, Request::Handler *handler, int *outRequestId);
+	int SendLogoutRequest(const NpPushOnlineId *onlineId, Request::Handler *handler,
+			      int *outRequestId);
+	int SendChangeStatusRequest(const NpPushOnlineId *onlineId, int newStatus,
+				    const SceUInt64 *timestamp, Request::Handler *handler,
+				    int *outRequestId);
+	int StopReceiveThreadAndConnection(void);
+	int StopSessionThread(void);
+	void OnConnectTimeout(void);
 	SessionState GetState(void) const { return m_state; }
+	int GetSessionId(void) const { return m_sessionId; }
+	SceUInt32 GetRetryIntervalSec(void) const { return m_retryIntervalSec; }
 
 	void ThreadMain(void);
 	void ReceiveMain(void);
@@ -1264,19 +1411,37 @@ private:
 	void ErrorRequestAll(int errorCode);
 	int StartReceiveThread(void);
 	void StopReceiveThread(void);
+	void PopCompletedRequest(RefPtr<Request> *outRequest);
+	void NotifyCompletedRequests(void);
+	void PeekActiveRequest(RefPtr<Request> *outRequest);
+	void FindRequestById(int requestId, RefPtr<Request> *outRequest);
+	void FindRequestByTranId(const char *tranId, RefPtr<Request> *outRequest);
+	void CancelCommandRequest(const SessionCmd *cmd);
+	void ChangeState(SessionState nextState, int errorCode);
+	void InspectResponseErrorSource(const RefPtr<Packet> &packet);
+	void HandleReqTransResponse(const RefPtr<Packet> &packet);
+	void HandleQueryResponse(const RefPtr<Packet> &packet);
+	void NotifyNotificationPacket(const RefPtr<Packet> &packet);
+	void NotifyServiceCommPacket(const RefPtr<Packet> &packet);
+	void NotifyServiceQueryPacket(const RefPtr<Packet> &packet);
+	int ProcessRequestCommand(int requestId);
 
 	NpPushMutex m_mutex;
+	int m_sessionId;
 	SessionState m_state;
 	Handler *m_handler;
+	AllocList<Handler *> m_handlers;
 	SessionCmdQueue m_cmdQueue;
-	NpPushThreadBase m_sessionThread;
-	NpPushThreadBase m_receiveThread;
+	SessionThread *m_sessionThread;
+	ReceiveThread *m_receiveThread;
 	bool m_sessionThreadRunning;
 	bool m_receiveThreadRunning;
 	NpPushHandle m_cancelHandle;
 	Connection m_connection;
+	RecvPacketQueue m_recvQueue;
 	NpPushOnlineId m_connectOnlineId;
 	bool m_isReconnect;
+	SceUInt32 m_retryIntervalSec;
 	AllocList<RefPtr<Request> > m_activeRequests;
 	bool m_initialized;
 };
@@ -1315,6 +1480,16 @@ public:
 	void ScheduleRetry(SceUInt32 delaySec);
 	void CancelRetry(void);
 	void OnRetryTimeout(void);
+	int UpdateAccountStatus(const PushAccountSnapshot *snapshot);
+	int MarkSignedOut(void);
+	void SetServerPresenceState(int nextState);
+	void SetInitialServerPresenceState(int nextState);
+	SceUInt32 GetNextTimerDelayUsec(const SceInt64 *nowTick) const;
+	void ExpireGracePeriod(const SceInt64 *nowTick, bool *outRemovable);
+	int SyncStateWithSession(Session *session, const SceInt64 *nowTick,
+				 int activeIntervalSec, bool *outRemovable);
+	int HandleRequestResult(const PushRequestCompletion *completion);
+	void ResetWithError(int errorCode);
 
 	virtual void OnRequestFinished(Request *request);
 
@@ -1322,7 +1497,12 @@ private:
 	NpPushOnlineId m_onlineId;
 	int m_desiredStatus;
 	int m_serverStatus;
+	int m_pendingTargetStatus;
+	int m_activeRequestId;
 	SceInt64 m_lastSyncTick;
+	SceInt64 m_graceStartTick;
+	SceInt64 m_retryStartTick;
+	int m_retryCount;
 	SceUInt32 m_retryIntervalSec;
 	RefPtr<Request> m_activeRequest;
 	RefPtr<UserRequest> m_pendingUserRequest;
@@ -1337,25 +1517,39 @@ private:
 class Context {
 public:
 	Context();
-	~Context();
+	virtual ~Context();
 
 	int Init(Session::Handler *sessionHandler, UserContext::Handler *userHandler);
+	int InitMutex(void);
 	void Finalize(void);
 
 	Session *GetSession(void) const { return m_session; }
+	int GetSessionId(void);
+	SceUInt32 GetSessionRetryInterval(void);
+	void TeardownSession(SceUInt32 *outRetryIntervalSec);
+	void ResetAllUsersWithError(int errorCode);
+	int AllocateUserContext(const NpPushOnlineId *onlineId, UserContext::Handler *userHandler);
 	UserContext *FindUserContext(const NpPushOnlineId *onlineId) const;
+	UserContext *FindUserContextWithIndex(const NpPushOnlineId *onlineId,
+					      SceUInt32 *outIndex);
 	UserContext *GetOrCreateUserContext(const NpPushOnlineId *onlineId,
 					    UserContext::Handler *userHandler);
+	void DestroyUserContextAt(int index);
 	void RemoveUserContext(const NpPushOnlineId *onlineId);
 	void ClearAllUserContexts(void);
 
+	int SyncSignedInUsers(UserContext::Handler *userHandler);
 	int ConnectSession(bool isReconnect);
 	int UpdateInitialSessionStatus(void);
 	int UpdateUserContexts(void);
+	int UpdateAllUserContexts(int activeIntervalSec, UserContext::Handler *userHandler);
 	int HandleRequestResult(UserContext *userContext, Request *request);
+	int HandleRequestResultById(const PushRequestCompletion *completion);
+	int DispatchUserRequest(const RefPtr<UserRequest> &userRequest, bool *outQueued);
 	int StartPresenceOnlineRequest(const RefPtr<UserRequest> &userRequest);
 	void ResetUsersOnDisconnect(void);
 	bool HasAnyActiveUsers(void) const;
+	void OnCalloutTimer(void);
 
 	const NpPushOnlineId &GetSessionOnlineId(void) const { return m_sessionOnlineId; }
 	void SetSessionOnlineId(const NpPushOnlineId *onlineId);
@@ -1364,7 +1558,11 @@ public:
 	void UpdateIntervals(const ConnectionResponseInfo *respInfo);
 
 private:
+	NpPushMutex m_mutex;
+	Ctl *m_ownerCtl;
 	Session *m_session;
+	bool m_initialStatusUpdated;
+	NpPushCalloutJob m_updateTimerJob;
 	UserContext *m_users[NP_PUSH_MAX_USERS];
 	NpPushOnlineId m_sessionOnlineId;
 	bool m_hasSessionOnlineId;
@@ -1375,7 +1573,7 @@ private:
 };
 
 /* ============================================================================
- * CtlCmd & CtlCmdQueue (core/np_push_ctl_cmd.cpp)
+ * CtlCmd, CtlCmdQueue & CtlThread (core/np_push_ctl_cmd.cpp)
  * ============================================================================ */
 
 enum CtlCmdType {
@@ -1394,7 +1592,12 @@ enum CtlCmdType {
 	CTL_CMD_SET_PRESENCE_STATUS		= 13
 };
 
-struct CtlCmd {
+class CtlCmd {
+public:
+	CtlCmd();
+	explicit CtlCmd(CtlCmdType cmdType);
+	virtual ~CtlCmd();
+
 	CtlCmdType type;
 	int statusCode;
 	SceUInt32 retryIntervalSec;
@@ -1406,17 +1609,41 @@ struct CtlCmd {
 class CtlCmdQueue {
 public:
 	CtlCmdQueue();
-	~CtlCmdQueue();
+	virtual ~CtlCmdQueue();
 
 	int Init(void);
 	void Finalize(void);
 	int Push(const CtlCmd *cmd);
 	int Pop(CtlCmd *outCmd, SceUInt32 timeoutUsec);
+	int TryPop(CtlCmd *outCmd);
 	void Abort(void);
 
 private:
 	NpPushEventQueue m_queue;
 	bool m_initialized;
+};
+
+class CtlThread {
+public:
+	explicit CtlThread(Ctl *owner);
+	virtual ~CtlThread();
+	virtual int Run(void);
+
+	int Start(void);
+	NpPushThreadBase *AsThreadBase(void)
+	{
+		return reinterpret_cast<NpPushThreadBase *>(this);
+	}
+
+private:
+	SceUID m_threadId;
+	int m_priority;
+	SceSize m_stackSize;
+	char m_name[32];
+	int m_cpuAffinity;
+	int m_state;
+	int m_exitStatus;
+	Ctl *m_owner;
 };
 
 /* ============================================================================
@@ -1441,6 +1668,10 @@ public:
 		virtual ~Handler() {}
 		virtual void OnCtlReceivedPacket(const RefPtr<Packet> &packet) = 0;
 		virtual void OnCtlDisconnected(int reason) = 0;
+		virtual void OnCtlServiceCommPacket(int sessionId, const RefPtr<Packet> &packet) {}
+		virtual void OnCtlServiceQueryRequest(int sessionId, const RefPtr<Packet> &packet) {}
+		virtual void OnCtlServiceQueryResponse(int sessionId, void *callback, void *userArg,
+						       int errorCode, const RefPtr<Packet> &packet) {}
 	};
 
 	static int InitInstance(void);
@@ -1461,6 +1692,17 @@ public:
 	int PostSetPresenceOnline(const NpPushOnlineId *onlineId,
 				  UserRequestCallback callback, void *userContext);
 	int PostSetPresenceStatus(const NpPushOnlineId *onlineId, int status);
+	int PostCommandChecked(const CtlCmd *cmd, const SceUInt32 *allowedStateMask);
+	int PostWakeupCommand(void);
+	bool IsImpsOnline(void);
+	int EnsureContextInitialized(void);
+	void FailCommandUserRequest(const CtlCmd *cmd, int errorCode);
+	void NotifyHandlersNotification(int sessionId, const RefPtr<Packet> &packet);
+	void NotifyHandlersServiceComm(int sessionId, const RefPtr<Packet> &packet);
+	void NotifyHandlersServiceQueryRequest(int sessionId, const RefPtr<Packet> &packet);
+	void NotifyHandlersServiceQueryResponse(int sessionId, void *callback, void *userArg,
+						int errorCode, const RefPtr<Packet> &packet);
+	static void OnImpsStateChanged(int impsContext, int impsState);
 
 	void ThreadMain(void);
 	void OnReconnectTimeout(void);
@@ -1504,10 +1746,11 @@ private:
 	NpPushMutex m_mutex;
 	CtlState m_state;
 	Handler *m_handler;
+	AllocList<Handler *> m_handlers;
 	Context *m_context;
 	CtlCmdQueue m_cmdQueue;
 	UserRequestList m_userRequestList;
-	NpPushThreadBase m_ctlThread;
+	CtlThread *m_ctlThread;
 	bool m_ctlThreadRunning;
 	NpPushCalloutJob m_reconnectJob;
 	int m_impsCallbackId;
@@ -1543,13 +1786,14 @@ struct DataTypeFilterEntry {
 class IpcUserContext {
 public:
 	IpcUserContext(SceUInt32 userContextId, const NpPushOnlineId *onlineId);
-	~IpcUserContext();
+	virtual ~IpcUserContext();
 
 	SceUInt32 GetId(void) const { return m_userContextId; }
 	const NpPushOnlineId &GetOnlineId(void) const { return m_onlineId; }
 	int EnqueuePacket(const RefPtr<Packet> &packet);
 	int DequeuePacket(RefPtr<Packet> *outPacket);
 	int PeekPacket(RefPtr<Packet> *outPacket) const;
+	void PeekPacketRef(RefPtr<Packet> *outPacket) const;
 	SceSize GetQueuedCount(void) const { return m_packetQueue.Size(); }
 
 private:
@@ -1561,7 +1805,7 @@ private:
 class IpcProcessContext {
 public:
 	explicit IpcProcessContext(IPMI::Session *session);
-	~IpcProcessContext();
+	virtual ~IpcProcessContext();
 
 	IPMI::Session *GetSession(void) const { return m_session; }
 	int CreateIpcUserContext(const NpPushOnlineId *onlineId, SceUInt32 *outUserContextId);
@@ -1571,11 +1815,13 @@ public:
 	int RemoveDataTypeFilter(FilterMatchType matchType, const char *dataType);
 	int RemoveDataTypeFilterByName(const char *dataType);
 
+	int ReceivePacket(const RefPtr<Packet> &packet);
 	int ReceiveNotificationDataTypePacket(const RefPtr<Packet> &packet);
 	int ReceiveUserNotificationPacket(const RefPtr<Packet> &packet);
 
 	int DequeueDataTypePacket(RefPtr<Packet> *outPacket);
 	int PeekDataTypePacket(RefPtr<Packet> *outPacket);
+	void PeekDataTypePacketRef(RefPtr<Packet> *outPacket);
 	int DequeueUserPacket(RefPtr<Packet> *outPacket);
 	int PeekUserPacket(RefPtr<Packet> *outPacket);
 
@@ -1733,11 +1979,56 @@ public:
 	/* Ctl::Handler */
 	virtual void OnCtlReceivedPacket(const RefPtr<Packet> &packet);
 	virtual void OnCtlDisconnected(int reason);
+	virtual void OnCtlServiceCommPacket(int sessionId, const RefPtr<Packet> &packet);
+	virtual void OnCtlServiceQueryRequest(int sessionId, const RefPtr<Packet> &packet);
+	virtual void OnCtlServiceQueryResponse(int sessionId, void *callback, void *userArg,
+					       int errorCode, const RefPtr<Packet> &packet);
 
 private:
 	int ReceiveNotificationPacket(const RefPtr<Packet> &packet);
 	int ReceiveServiceCommunicationPacket(const RefPtr<Packet> &packet);
 	int ReceiveServiceQueryRequestPacket(const RefPtr<Packet> &packet);
+	void DispatchCommCallbacks(const void *toOnlineId, const void *fromOnlineId,
+				   const void *commId, const char *dataType,
+				   const void *bodyPtr, SceSize bodySize);
+	void DispatchNotificationCallbacks(const void *toOnlineId, const void *fromOnlineId,
+					   const char *dataType, const void *bodyPtr,
+					   SceSize bodySize);
+	void DispatchToIpcProcesses(int sessionId, const RefPtr<Packet> &packet);
+	void DispatchServiceCommCallbacks(int sessionId, const void *toOnlineId,
+					  const void *fromOnlineId, const void *commId,
+					  const char *dataType, const void *bodyPtr,
+					  SceSize bodySize);
+	int ExtractNotificationPacket(const RefPtr<Packet> &packet,
+				      NpPushOnlineIdData *outToOnlineId,
+				      NpPushOnlineIdData *outFromOnlineId,
+				      NpPushCommunicationIdData *outCommId,
+				      char *outDataType, IpcJsonEntry *outBody);
+	void DispatchServiceQueryCallbacks(int sessionId, const void *toOnlineId,
+					   const void *fromOnlineId,
+					   const FromAccountInfo *fromAccount,
+					   const void *commId, int queryType,
+					   const char *tranId, const char *dataType,
+					   const void *bodyPtr, SceSize bodySize);
+	int ExtractServiceQueryRequest(const RefPtr<Packet> &packet,
+				       NpPushOnlineIdData *outToOnlineId,
+				       NpPushOnlineIdData *outFromOnlineId,
+				       FromAccountInfo *outFromAccount,
+				       bool *outHasCommId,
+				       NpPushCommunicationIdData *outCommId,
+				       char *outTranId, int *outQueryType,
+				       char *outDataType, IpcJsonEntry *outBody);
+	int ExtractServiceQueryResponse(const RefPtr<Packet> &packet,
+					NpPushOnlineIdData *outToOnlineId,
+					NpPushOnlineIdData *outFromOnlineId,
+					FromAccountInfo *outFromAccount,
+					bool *outHasCommId,
+					NpPushCommunicationIdData *outCommId,
+					int *outQueryType, int *outErrorSource,
+					int *outReturnCode, char *outDataType,
+					IpcJsonEntry *outBody);
+	void DispatchServiceQueryResponse(int sessionId, void *callback, void *userArg,
+					  int errorCode, const RefPtr<Packet> &packet);
 	static int SerializeJsonValue(NpPushJsonValue *value, char **outBuffer, SceSize *outSize);
 
 	NpPushMutex m_mutex;

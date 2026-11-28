@@ -9,6 +9,33 @@ namespace sce {
 namespace Np {
 namespace Push {
 
+/* 0x813ACEF8 */
+CtlCmd::CtlCmd()
+	: type(CTL_CMD_START),
+	  statusCode(0),
+	  retryIntervalSec(0),
+	  target(NULL),
+	  payload(NULL),
+	  extraStatus(0)
+{
+}
+
+/* 0x813ACEF8 */
+CtlCmd::CtlCmd(CtlCmdType cmdType)
+	: type(cmdType),
+	  statusCode(0),
+	  retryIntervalSec(0),
+	  target(NULL),
+	  payload(NULL),
+	  extraStatus(0)
+{
+}
+
+/* 0x813ACF0C / 0x813ACF1A */
+CtlCmd::~CtlCmd()
+{
+}
+
 /* 0x813ACEE4 */
 CtlCmdQueue::CtlCmdQueue() : m_initialized(false)
 {
@@ -76,6 +103,20 @@ int CtlCmdQueue::Pop(CtlCmd *outCmd, SceUInt32 timeoutUsec)
 	return 0;
 }
 
+/* 0x813AD06A */
+int CtlCmdQueue::TryPop(CtlCmd *outCmd)
+{
+	if (!m_initialized)
+		return SCE_NP_PUSH_ERROR_NOT_INITIALIZED;
+	if (outCmd == NULL)
+		return SCE_NP_PUSH_ERROR_INVALID_ARGUMENT;
+
+	int ret = SceNpCommonPs4_6C3B5D0F(&m_queue, outCmd, sizeof(CtlCmd));
+	if (ret < 0)
+		return ret;
+	return 0;
+}
+
 /* 0x813AD080 */
 void CtlCmdQueue::Abort(void)
 {
@@ -83,6 +124,37 @@ void CtlCmdQueue::Abort(void)
 		return;
 
 	SceNpCommonPs4_3A4163FD(&m_queue, 3);
+}
+
+/* 0x813AD0A0 */
+CtlThread::CtlThread(Ctl *owner)
+	: m_owner(owner)
+{
+	SceNpCommonPs4_04CBEB81(AsThreadBase());
+}
+
+/* 0x813AD0BC / 0x813AD0D8 */
+CtlThread::~CtlThread()
+{
+	SceNpCommonPs4_502309F4(AsThreadBase());
+}
+
+int CtlThread::Run(void)
+{
+	if (m_owner != NULL)
+		m_owner->ThreadMain();
+	return 0;
+}
+
+/* 0x813AD0F8 */
+int CtlThread::Start(void)
+{
+	NpPushThreadParam threadParam;
+	threadParam.name = "SceNpPushCtl";
+	threadParam.stackSize = 0x2000;
+	threadParam.priority = 0x10000100;
+	threadParam.cpuAffinity = 0;
+	return SceNpCommonPs4_C8F1844F(AsThreadBase(), &threadParam);
 }
 
 } /* namespace Push */

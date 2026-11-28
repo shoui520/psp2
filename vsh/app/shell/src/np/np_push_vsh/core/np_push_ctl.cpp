@@ -29,23 +29,6 @@ static const void *const kCtlReconnectTargetVtable[] = {
 	reinterpret_cast<const void *>(CtlReconnectTargetInvoke)
 };
 
-static int CtlThreadThunk(NpPushThreadBase *threadBase)
-{
-	(void)threadBase;
-	Ctl *ctl = Ctl::GetInstance();
-	if (ctl != NULL)
-		ctl->ThreadMain();
-	return 0;
-}
-
-static const void *const kCtlThreadVtable[] = {
-	NULL,
-	NULL,
-	reinterpret_cast<const void *>(SceNpCommonPs4_502309F4),
-	reinterpret_cast<const void *>(SceNpCommonPs4_502309F4),
-	reinterpret_cast<const void *>(CtlThreadThunk)
-};
-
 static void OnImpsSessionStateCallback(const NpImpsSessionIdentity *session,
 				       int sessionState, int errorCode)
 {
@@ -112,13 +95,13 @@ Ctl::Ctl()
 	: m_state(CTL_STATE_INIT),
 	  m_handler(NULL),
 	  m_context(NULL),
+	  m_ctlThread(NULL),
 	  m_ctlThreadRunning(false),
 	  m_impsCallbackId(0),
 	  m_isSignedIn(false),
 	  m_initialized(false)
 {
 	SceNpCommonPs4_4266D870(&m_mutex);
-	SceNpCommonPs4_04CBEB81(&m_ctlThread);
 	SceNpCommonPs4_1CC3A645(&m_reconnectJob, GetCalloutContext());
 	SceNpCommonPs4_B0BAB9BE(&m_signedInOnlineId);
 }
@@ -128,7 +111,6 @@ Ctl::~Ctl()
 {
 	SceNpCommonPs4_1543D7EE(&m_signedInOnlineId);
 	SceNpCommonPs4_941B0290(&m_reconnectJob);
-	SceNpCommonPs4_502309F4(&m_ctlThread);
 	SceNpCommonPs4_294F0B1A(&m_mutex);
 }
 
@@ -154,6 +136,7 @@ int Ctl::Init(void)
 		return ret;
 	}
 
+	m_handlers.SetAllocator(GetAllocator());
 	m_state = CTL_STATE_IDLE;
 	m_initialized = true;
 	return 0;
@@ -190,6 +173,8 @@ int Ctl::RegisterHandler(Handler *handler)
 
 	ScopedLock lock(&m_mutex);
 	m_handler = handler;
+	if (handler != NULL)
+		m_handlers.PushBack(handler);
 	return 0;
 }
 
@@ -208,26 +193,24 @@ int Ctl::Start(void)
 	if (npImpsCoreRegisterCallbacks(&impsCallbacks, &cbId) >= 0)
 		m_impsCallbackId = cbId;
 
-	m_ctlThread.vtable = &kCtlThreadVtable[2];
-	NpPushThreadParam threadParam;
-	threadParam.name = "SceNpPushCtl";
-	threadParam.stackSize = 16 * 1024;
-	threadParam.priority = 160;
-	threadParam.cpuAffinity = 0;
+	void *rawThread = SceNpCommonPs4_0C922423(sizeof(CtlThread), GetAllocator());
+	if (rawThread == NULL)
+		return SCE_NP_PUSH_ERROR_OUT_OF_MEMORY;
 
-	int ret = SceNpCommonPs4_C8F1844F(&m_ctlThread, &threadParam);
-	if (ret < 0)
+	m_ctlThread = new (rawThread) CtlThread(this);
+	int ret = m_ctlThread->Start();
+	if (ret >= 0)
+		ret = SceNpCommonPs4_8CBDFDB7(m_ctlThread->AsThreadBase());
+	if (ret < 0) {
+		m_ctlThread->~CtlThread();
+		SceNpCommonPs4_6B428829(GetAllocator(), m_ctlThread);
+		m_ctlThread = NULL;
 		return ret;
-
-	ret = SceNpCommonPs4_8CBDFDB7(&m_ctlThread);
-	if (ret < 0)
-		return ret;
+	}
 
 	m_ctlThreadRunning = true;
 
-	CtlCmd startCmd;
-	sceClibMemset(&startCmd, 0, sizeof(startCmd));
-	startCmd.type = CTL_CMD_START;
+	CtlCmd startCmd(CTL_CMD_START);
 	return m_cmdQueue.Push(&startCmd);
 }
 
@@ -237,14 +220,17 @@ int Ctl::Stop(void)
 	if (!m_ctlThreadRunning)
 		return 0;
 
-	CtlCmd stopCmd;
-	sceClibMemset(&stopCmd, 0, sizeof(stopCmd));
-	stopCmd.type = CTL_CMD_STOP;
+	CtlCmd stopCmd(CTL_CMD_STOP);
 	m_cmdQueue.Push(&stopCmd);
 	m_cmdQueue.Abort();
 
-	int exitStatus = 0;
-	SceNpCommonPs4_2C0585AD(&m_ctlThread, &exitStatus);
+	if (m_ctlThread != NULL) {
+		int exitStatus = 0;
+		SceNpCommonPs4_2C0585AD(m_ctlThread->AsThreadBase(), &exitStatus);
+		m_ctlThread->~CtlThread();
+		SceNpCommonPs4_6B428829(GetAllocator(), m_ctlThread);
+		m_ctlThread = NULL;
+	}
 	m_ctlThreadRunning = false;
 	return 0;
 }
@@ -261,9 +247,7 @@ int Ctl::PostSignedIn(const NpPushOnlineId *onlineId)
 		m_isSignedIn = true;
 	}
 
-	CtlCmd cmd;
-	sceClibMemset(&cmd, 0, sizeof(cmd));
-	cmd.type = CTL_CMD_SIGNED_IN;
+	CtlCmd cmd(CTL_CMD_SIGNED_IN);
 	return m_cmdQueue.Push(&cmd);
 }
 
@@ -278,9 +262,7 @@ int Ctl::PostSignedOut(void)
 		m_isSignedIn = false;
 	}
 
-	CtlCmd cmd;
-	sceClibMemset(&cmd, 0, sizeof(cmd));
-	cmd.type = CTL_CMD_SIGNED_OUT;
+	CtlCmd cmd(CTL_CMD_SIGNED_OUT);
 	return m_cmdQueue.Push(&cmd);
 }
 
@@ -302,9 +284,7 @@ int Ctl::PostSetPresenceOnline(const NpPushOnlineId *onlineId,
 		return ret;
 
 	SceNpCommonPs4_64BAC888(req);
-	CtlCmd cmd;
-	sceClibMemset(&cmd, 0, sizeof(cmd));
-	cmd.type = CTL_CMD_USER_REQUEST;
+	CtlCmd cmd(CTL_CMD_USER_REQUEST);
 	cmd.payload = req;
 	ret = m_cmdQueue.Push(&cmd);
 	if (ret < 0)
@@ -324,9 +304,7 @@ int Ctl::PostSetPresenceStatus(const NpPushOnlineId *onlineId, int status)
 		return SCE_NP_PUSH_ERROR_OUT_OF_MEMORY;
 	SceNpCommonPs4_AEC0DAC5(copyId, onlineId);
 
-	CtlCmd cmd;
-	sceClibMemset(&cmd, 0, sizeof(cmd));
-	cmd.type = CTL_CMD_SET_PRESENCE_STATUS;
+	CtlCmd cmd(CTL_CMD_SET_PRESENCE_STATUS);
 	cmd.statusCode = status;
 	cmd.payload = copyId;
 	int ret = m_cmdQueue.Push(&cmd);
@@ -349,9 +327,7 @@ void Ctl::OnSessionConnected(Session *session, const ConnectionResponseInfo *res
 			*respCopy = *respInfo;
 	}
 
-	CtlCmd cmd;
-	sceClibMemset(&cmd, 0, sizeof(cmd));
-	cmd.type = CTL_CMD_SESSION_CONNECTED;
+	CtlCmd cmd(CTL_CMD_SESSION_CONNECTED);
 	cmd.payload = respCopy;
 	if (m_cmdQueue.Push(&cmd) < 0 && respCopy != NULL)
 		SceNpCommonPs4_6B428829(GetAllocator(), respCopy);
@@ -360,9 +336,7 @@ void Ctl::OnSessionConnected(Session *session, const ConnectionResponseInfo *res
 void Ctl::OnSessionConnectFailed(Session *session, int errorCode, SceUInt32 retryIntervalSec)
 {
 	(void)session;
-	CtlCmd cmd;
-	sceClibMemset(&cmd, 0, sizeof(cmd));
-	cmd.type = CTL_CMD_SESSION_CONNECT_FAILED;
+	CtlCmd cmd(CTL_CMD_SESSION_CONNECT_FAILED);
 	cmd.statusCode = errorCode;
 	cmd.retryIntervalSec = retryIntervalSec;
 	m_cmdQueue.Push(&cmd);
@@ -371,9 +345,7 @@ void Ctl::OnSessionConnectFailed(Session *session, int errorCode, SceUInt32 retr
 void Ctl::OnSessionDisconnected(Session *session, int errorCode)
 {
 	(void)session;
-	CtlCmd cmd;
-	sceClibMemset(&cmd, 0, sizeof(cmd));
-	cmd.type = CTL_CMD_SESSION_DISCONNECTED;
+	CtlCmd cmd(CTL_CMD_SESSION_DISCONNECTED);
 	cmd.statusCode = errorCode;
 	m_cmdQueue.Push(&cmd);
 }
@@ -386,9 +358,7 @@ void Ctl::OnSessionReceivedPacket(Session *session, const RefPtr<Packet> &packet
 	Packet *rawPacket = packet.Get();
 	SceNpCommonPs4_64BAC888(rawPacket);
 
-	CtlCmd cmd;
-	sceClibMemset(&cmd, 0, sizeof(cmd));
-	cmd.type = CTL_CMD_SESSION_RECV_PACKET;
+	CtlCmd cmd(CTL_CMD_SESSION_RECV_PACKET);
 	cmd.payload = rawPacket;
 	if (m_cmdQueue.Push(&cmd) < 0)
 		SceNpCommonPs4_93C97239(rawPacket);
@@ -400,9 +370,7 @@ void Ctl::OnUserContextRequestFinished(UserContext *userContext, Request *reques
 	if (request != NULL)
 		SceNpCommonPs4_64BAC888(request);
 
-	CtlCmd cmd;
-	sceClibMemset(&cmd, 0, sizeof(cmd));
-	cmd.type = CTL_CMD_REQUEST_FINISHED;
+	CtlCmd cmd(CTL_CMD_REQUEST_FINISHED);
 	cmd.target = userContext;
 	cmd.payload = request;
 	if (m_cmdQueue.Push(&cmd) < 0 && request != NULL)
@@ -411,18 +379,14 @@ void Ctl::OnUserContextRequestFinished(UserContext *userContext, Request *reques
 
 void Ctl::OnUserContextRetryTimer(UserContext *userContext)
 {
-	CtlCmd cmd;
-	sceClibMemset(&cmd, 0, sizeof(cmd));
-	cmd.type = CTL_CMD_USER_RETRY_TIMER;
+	CtlCmd cmd(CTL_CMD_USER_RETRY_TIMER);
 	cmd.target = userContext;
 	m_cmdQueue.Push(&cmd);
 }
 
 void Ctl::OnReconnectTimeout(void)
 {
-	CtlCmd cmd;
-	sceClibMemset(&cmd, 0, sizeof(cmd));
-	cmd.type = CTL_CMD_RECONNECT_TIMER;
+	CtlCmd cmd(CTL_CMD_RECONNECT_TIMER);
 	m_cmdQueue.Push(&cmd);
 }
 
@@ -843,7 +807,6 @@ void Ctl::ThreadMain(void)
 
 	while (m_state != CTL_STATE_STOPPING) {
 		CtlCmd cmd;
-		sceClibMemset(&cmd, 0, sizeof(cmd));
 		int ret = m_cmdQueue.Pop(&cmd, 0);
 		if (ret < 0)
 			break;
@@ -861,6 +824,128 @@ void Ctl::ThreadMain(void)
 		else
 			(this->*kCtlStateTable[stateIndex])(&cmd);
 	}
+}
+
+/* 0x813AB3C6 */
+void Ctl::FailCommandUserRequest(const CtlCmd *cmd, int errorCode)
+{
+	if (cmd->type != CTL_CMD_USER_REQUEST)
+		return;
+
+	RefPtr<UserRequest> req;
+	m_userRequestList.FindByRequestId(cmd->statusCode, &req);
+	if (!req.IsNull())
+		m_userRequestList.SetFinished(req, errorCode);
+}
+
+/* 0x813AB8EC */
+int Ctl::PostCommandChecked(const CtlCmd *cmd, const SceUInt32 *allowedStateMask)
+{
+	{
+		ScopedLock lock(&m_mutex);
+		if (m_state == CTL_STATE_STOPPING)
+			return SCE_NP_PUSH_ERROR_INVALID_STATE;
+		if (allowedStateMask != NULL &&
+		    ((1U << static_cast<SceUInt32>(m_state)) & *allowedStateMask) == 0) {
+			return SCE_NP_PUSH_ERROR_INVALID_STATE;
+		}
+	}
+	int ret = m_cmdQueue.Push(cmd);
+	return (ret >= 0) ? 0 : ret;
+}
+
+/* 0x813AB95A */
+int Ctl::PostWakeupCommand(void)
+{
+	CtlCmd cmd(CTL_CMD_SIGNED_IN);
+	SceUInt32 mask = 0x7FU;
+	PostCommandChecked(&cmd, &mask);
+	return 0;
+}
+
+/* 0x813ABC1E */
+void Ctl::NotifyHandlersNotification(int sessionId, const RefPtr<Packet> &packet)
+{
+	(void)sessionId;
+	for (ListNode<Handler *> *iter = m_handlers.Begin();
+	     iter != m_handlers.End(); iter = iter->next) {
+		iter->value->OnCtlReceivedPacket(packet);
+	}
+}
+
+/* 0x813ABCCC */
+void Ctl::NotifyHandlersServiceComm(int sessionId, const RefPtr<Packet> &packet)
+{
+	for (ListNode<Handler *> *iter = m_handlers.Begin();
+	     iter != m_handlers.End(); iter = iter->next) {
+		iter->value->OnCtlServiceCommPacket(sessionId, packet);
+	}
+}
+
+/* 0x813ABD7A */
+void Ctl::NotifyHandlersServiceQueryRequest(int sessionId, const RefPtr<Packet> &packet)
+{
+	for (ListNode<Handler *> *iter = m_handlers.Begin();
+	     iter != m_handlers.End(); iter = iter->next) {
+		iter->value->OnCtlServiceQueryRequest(sessionId, packet);
+	}
+}
+
+/* 0x813ABE28 */
+void Ctl::NotifyHandlersServiceQueryResponse(int sessionId, void *callback, void *userArg,
+					     int errorCode, const RefPtr<Packet> &packet)
+{
+	for (ListNode<Handler *> *iter = m_handlers.Begin();
+	     iter != m_handlers.End(); iter = iter->next) {
+		iter->value->OnCtlServiceQueryResponse(sessionId, callback, userArg,
+						       errorCode, packet);
+	}
+}
+
+/* 0x813ABFC8 */
+void Ctl::OnImpsStateChanged(int impsContext, int impsState)
+{
+	(void)impsContext;
+	Ctl *ctl = s_ctlInstance;
+	if (ctl == NULL)
+		return;
+
+	{
+		ScopedLock lock(&ctl->m_mutex);
+		ctl->m_isSignedIn = (impsState == 6);
+	}
+	CtlCmd cmd(CTL_CMD_SIGNED_IN);
+	SceUInt32 mask = 0x7FU;
+	ctl->PostCommandChecked(&cmd, &mask);
+}
+
+/* 0x813AC0D0 */
+int Ctl::EnsureContextInitialized(void)
+{
+	ScopedLock lock(&m_mutex);
+	if (m_context != NULL)
+		return 0;
+
+	void *rawCtx = SceNpCommonPs4_0C922423(sizeof(Context), GetAllocator());
+	if (rawCtx == NULL)
+		return SCE_NP_PUSH_ERROR_OUT_OF_MEMORY;
+
+	m_context = new (rawCtx) Context();
+	int ret = m_context->InitMutex();
+	if (ret < 0) {
+		m_context->~Context();
+		SceNpCommonPs4_6B428829(GetAllocator(), m_context);
+		m_context = NULL;
+		return ret;
+	}
+	return 0;
+}
+
+/* 0x813AC14C */
+bool Ctl::IsImpsOnline(void)
+{
+	ScopedLock lock(&m_mutex);
+	return m_isSignedIn;
 }
 
 } /* namespace Push */

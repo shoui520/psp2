@@ -14,87 +14,21 @@ static const char kPushAsmServiceName[] = "pushNotification";
 static const char kKickoutDataType[] = "np:service:pushnotification:kickout";
 static const char kSignoutDataType[] = "np:service:pushnotification:signout";
 
-struct SessionThreadAdapter {
-	NpPushThreadBase base;
-	Session *owner;
-};
-
-static int SessionThreadEntry(SessionThreadAdapter *adapter)
-{
-	if (adapter != NULL && adapter->owner != NULL)
-		adapter->owner->ThreadMain();
-	return 0;
-}
-
-static int ReceiveThreadEntry(SessionThreadAdapter *adapter)
-{
-	if (adapter != NULL && adapter->owner != NULL)
-		adapter->owner->ReceiveMain();
-	return 0;
-}
-
-static const void *const kSessionThreadVtable[] = {
-	NULL,
-	NULL,
-	reinterpret_cast<const void *>(SceNpCommonPs4_502309F4),
-	reinterpret_cast<const void *>(SceNpCommonPs4_502309F4),
-	reinterpret_cast<const void *>(SessionThreadEntry)
-};
-
-static const void *const kReceiveThreadVtable[] = {
-	NULL,
-	NULL,
-	reinterpret_cast<const void *>(SceNpCommonPs4_502309F4),
-	reinterpret_cast<const void *>(SceNpCommonPs4_502309F4),
-	reinterpret_cast<const void *>(ReceiveThreadEntry)
-};
-
-static Session *s_activeSessionForThreads = NULL;
-
-static int SessionThreadThunk(NpPushThreadBase *threadBase)
-{
-	(void)threadBase;
-	if (s_activeSessionForThreads != NULL)
-		s_activeSessionForThreads->ThreadMain();
-	return 0;
-}
-
-static int ReceiveThreadThunk(NpPushThreadBase *threadBase)
-{
-	(void)threadBase;
-	if (s_activeSessionForThreads != NULL)
-		s_activeSessionForThreads->ReceiveMain();
-	return 0;
-}
-
-static const void *const kSessionThreadDirectVtable[] = {
-	NULL,
-	NULL,
-	reinterpret_cast<const void *>(SceNpCommonPs4_502309F4),
-	reinterpret_cast<const void *>(SceNpCommonPs4_502309F4),
-	reinterpret_cast<const void *>(SessionThreadThunk)
-};
-
-static const void *const kReceiveThreadDirectVtable[] = {
-	NULL,
-	NULL,
-	reinterpret_cast<const void *>(SceNpCommonPs4_502309F4),
-	reinterpret_cast<const void *>(SceNpCommonPs4_502309F4),
-	reinterpret_cast<const void *>(ReceiveThreadThunk)
-};
-
 /* 0x813AFDC2 */
 Session::Session()
-	: m_state(SESSION_STATE_INIT),
+	: m_sessionId(0),
+	  m_state(SESSION_STATE_INIT),
 	  m_handler(NULL),
+	  m_sessionThread(NULL),
+	  m_receiveThread(NULL),
 	  m_sessionThreadRunning(false),
 	  m_receiveThreadRunning(false),
+	  m_recvQueue(&m_mutex),
 	  m_isReconnect(false),
+	  m_retryIntervalSec(NP_PUSH_DEFAULT_RETRY_INTERVAL_SEC),
 	  m_initialized(false)
 {
 	SceNpCommonPs4_4266D870(&m_mutex);
-	SceNpCommonPs4_04CBEB81(&m_sessionThread);
-	SceNpCommonPs4_04CBEB81(&m_receiveThread);
 	SceNpCommonPs4_2E2B2655(&m_cancelHandle);
 	SceNpCommonPs4_B0BAB9BE(&m_connectOnlineId);
 }
@@ -107,8 +41,6 @@ Session::~Session()
 
 	SceNpCommonPs4_1543D7EE(&m_connectOnlineId);
 	SceNpCommonPs4_62214062(&m_cancelHandle);
-	SceNpCommonPs4_502309F4(&m_receiveThread);
-	SceNpCommonPs4_502309F4(&m_sessionThread);
 	SceNpCommonPs4_294F0B1A(&m_mutex);
 }
 
@@ -135,6 +67,7 @@ int Session::Init(void)
 		return ret;
 	}
 
+	m_handlers.SetAllocator(GetAllocator());
 	m_activeRequests.SetAllocator(GetAllocator());
 	m_state = SESSION_STATE_IDLE;
 	m_initialized = true;
@@ -164,6 +97,8 @@ int Session::RegisterHandler(Handler *handler)
 
 	ScopedLock lock(&m_mutex);
 	m_handler = handler;
+	if (handler != NULL)
+		m_handlers.PushBack(handler);
 	return 0;
 }
 
@@ -176,22 +111,20 @@ int Session::Start(void)
 	if (m_sessionThreadRunning)
 		return SCE_NP_PUSH_ERROR_INVALID_STATE;
 
-	s_activeSessionForThreads = this;
-	m_sessionThread.vtable = &kSessionThreadDirectVtable[2];
+	void *rawThread = SceNpCommonPs4_0C922423(sizeof(SessionThread), GetAllocator());
+	if (rawThread == NULL)
+		return SCE_NP_PUSH_ERROR_OUT_OF_MEMORY;
 
-	NpPushThreadParam threadParam;
-	threadParam.name = "SceNpPushSession";
-	threadParam.stackSize = 16 * 1024;
-	threadParam.priority = 160;
-	threadParam.cpuAffinity = 0;
-
-	int ret = SceNpCommonPs4_C8F1844F(&m_sessionThread, &threadParam);
-	if (ret < 0)
+	m_sessionThread = new (rawThread) SessionThread(this);
+	int ret = m_sessionThread->Start();
+	if (ret >= 0)
+		ret = SceNpCommonPs4_8CBDFDB7(m_sessionThread->AsThreadBase());
+	if (ret < 0) {
+		m_sessionThread->~SessionThread();
+		SceNpCommonPs4_6B428829(GetAllocator(), m_sessionThread);
+		m_sessionThread = NULL;
 		return ret;
-
-	ret = SceNpCommonPs4_8CBDFDB7(&m_sessionThread);
-	if (ret < 0)
-		return ret;
+	}
 
 	m_sessionThreadRunning = true;
 	return 0;
@@ -205,15 +138,11 @@ int Session::Stop(void)
 
 	SceNpCommonPs4_6B8D9291(&m_cancelHandle);
 
-	SessionCmd stopCmd;
-	stopCmd.type = SESSION_CMD_STOP;
-	stopCmd.errorCode = 0;
-	stopCmd.payload = NULL;
+	SessionCmd stopCmd(SESSION_CMD_STOP);
 	m_cmdQueue.Push(&stopCmd);
 	m_cmdQueue.Abort();
 
-	int exitStatus = 0;
-	SceNpCommonPs4_2C0585AD(&m_sessionThread, &exitStatus);
+	StopSessionThread();
 	m_sessionThreadRunning = false;
 	return 0;
 }
@@ -230,10 +159,7 @@ int Session::Connect(const NpPushOnlineId *onlineId, bool isReconnect)
 		m_isReconnect = isReconnect;
 	}
 
-	SessionCmd cmd;
-	cmd.type = SESSION_CMD_CONNECT;
-	cmd.errorCode = 0;
-	cmd.payload = NULL;
+	SessionCmd cmd(SESSION_CMD_CONNECT);
 	return m_cmdQueue.Push(&cmd);
 }
 
@@ -245,10 +171,7 @@ int Session::Disconnect(void)
 
 	SceNpCommonPs4_6B8D9291(&m_cancelHandle);
 
-	SessionCmd cmd;
-	cmd.type = SESSION_CMD_DISCONNECT;
-	cmd.errorCode = 0;
-	cmd.payload = NULL;
+	SessionCmd cmd(SESSION_CMD_DISCONNECT);
 	return m_cmdQueue.Push(&cmd);
 }
 
@@ -261,9 +184,7 @@ int Session::SendRequest(const RefPtr<Request> &request)
 	Request *rawReq = request.Get();
 	SceNpCommonPs4_64BAC888(rawReq);
 
-	SessionCmd cmd;
-	cmd.type = SESSION_CMD_SEND_REQUEST;
-	cmd.errorCode = 0;
+	SessionCmd cmd(SESSION_CMD_SEND_REQUEST);
 	cmd.payload = rawReq;
 	int ret = m_cmdQueue.Push(&cmd);
 	if (ret < 0)
@@ -325,22 +246,20 @@ int Session::StartReceiveThread(void)
 	if (m_receiveThreadRunning)
 		return 0;
 
-	s_activeSessionForThreads = this;
-	m_receiveThread.vtable = &kReceiveThreadDirectVtable[2];
+	void *rawThread = SceNpCommonPs4_0C922423(sizeof(ReceiveThread), GetAllocator());
+	if (rawThread == NULL)
+		return SCE_NP_PUSH_ERROR_OUT_OF_MEMORY;
 
-	NpPushThreadParam threadParam;
-	threadParam.name = "SceNpPushReceive";
-	threadParam.stackSize = 16 * 1024;
-	threadParam.priority = 160;
-	threadParam.cpuAffinity = 0;
-
-	int ret = SceNpCommonPs4_C8F1844F(&m_receiveThread, &threadParam);
-	if (ret < 0)
+	m_receiveThread = new (rawThread) ReceiveThread(this);
+	int ret = m_receiveThread->Start();
+	if (ret >= 0)
+		ret = SceNpCommonPs4_8CBDFDB7(m_receiveThread->AsThreadBase());
+	if (ret < 0) {
+		m_receiveThread->~ReceiveThread();
+		SceNpCommonPs4_6B428829(GetAllocator(), m_receiveThread);
+		m_receiveThread = NULL;
 		return ret;
-
-	ret = SceNpCommonPs4_8CBDFDB7(&m_receiveThread);
-	if (ret < 0)
-		return ret;
+	}
 
 	m_receiveThreadRunning = true;
 	return 0;
@@ -352,8 +271,7 @@ void Session::StopReceiveThread(void)
 	if (!m_receiveThreadRunning)
 		return;
 
-	int exitStatus = 0;
-	SceNpCommonPs4_2C0585AD(&m_receiveThread, &exitStatus);
+	StopReceiveThreadAndConnection();
 	m_receiveThreadRunning = false;
 }
 
@@ -367,10 +285,8 @@ void Session::ReceiveMain(void)
 		RefPtr<Packet> packet;
 		int ret = m_connection.ReceivePacket(&packet);
 		if (ret < 0) {
-			SessionCmd errCmd;
-			errCmd.type = SESSION_CMD_RECV_ERROR;
+			SessionCmd errCmd(SESSION_CMD_RECV_ERROR);
 			errCmd.errorCode = ret;
-			errCmd.payload = NULL;
 			m_cmdQueue.Push(&errCmd);
 			break;
 		}
@@ -378,9 +294,7 @@ void Session::ReceiveMain(void)
 		if (!packet.IsNull()) {
 			Packet *rawPacket = packet.Get();
 			SceNpCommonPs4_64BAC888(rawPacket);
-			SessionCmd pktCmd;
-			pktCmd.type = SESSION_CMD_RECV_PACKET;
-			pktCmd.errorCode = 0;
+			SessionCmd pktCmd(SESSION_CMD_RECV_PACKET);
 			pktCmd.payload = rawPacket;
 			if (m_cmdQueue.Push(&pktCmd) < 0)
 				SceNpCommonPs4_93C97239(rawPacket);
@@ -467,7 +381,6 @@ void Session::ThreadMain(void)
 
 	while (m_state != SESSION_STATE_STOPPING) {
 		SessionCmd cmd;
-		sceClibMemset(&cmd, 0, sizeof(cmd));
 		int ret = m_cmdQueue.Pop(&cmd, 0);
 		if (ret < 0)
 			break;
@@ -622,6 +535,377 @@ int Session::StateInvalid(const SessionCmd *cmd)
 {
 	(void)cmd;
 	return SCE_NP_PUSH_ERROR_INVALID_STATE;
+}
+
+/* 0x813AFE7A */
+int Session::StopReceiveThreadAndConnection(void)
+{
+	if (m_receiveThread == NULL)
+		return 0;
+
+	SceNpCommonPs4_A6C7D48D(&m_cancelHandle.cancelable, SCE_NP_PUSH_ERROR_SERVER_RESPONSE, 0);
+	SceNpCommonPs4_2C0585AD(m_receiveThread->AsThreadBase(), NULL);
+	m_receiveThread->~ReceiveThread();
+	SceNpCommonPs4_6B428829(GetAllocator(), m_receiveThread);
+	m_receiveThread = NULL;
+	m_recvQueue.Clear();
+	return 0;
+}
+
+/* 0x813AFEDE */
+int Session::StopSessionThread(void)
+{
+	if (m_sessionThread == NULL)
+		return 0;
+
+	SceNpCommonPs4_A6C7D48D(&m_cancelHandle.cancelable, SCE_NP_PUSH_ERROR_SERVER_RESPONSE, 0);
+	m_cmdQueue.Abort();
+	SceNpCommonPs4_2C0585AD(m_sessionThread->AsThreadBase(), NULL);
+	m_sessionThread->~SessionThread();
+	SceNpCommonPs4_6B428829(GetAllocator(), m_sessionThread);
+	m_sessionThread = NULL;
+	return 0;
+}
+
+/* 0x813B01C0 */
+void Session::PopCompletedRequest(RefPtr<Request> *outRequest)
+{
+	ScopedLock lock(&m_mutex);
+	outRequest->Reset();
+	for (ListNode<RefPtr<Request> > *iter = m_activeRequests.Begin();
+	     iter != m_activeRequests.End(); iter = iter->next) {
+		RefPtr<Request> finished;
+		iter->value->UnlinkIfFinished(&finished);
+		if (!finished.IsNull()) {
+			*outRequest = finished;
+			m_activeRequests.Erase(iter);
+			return;
+		}
+	}
+}
+
+/* 0x813B01EE */
+void Session::NotifyCompletedRequests(void)
+{
+	while (true) {
+		RefPtr<Request> completed;
+		PopCompletedRequest(&completed);
+		if (completed.IsNull())
+			break;
+		completed->InvokeHandler();
+	}
+}
+
+/* 0x813B0252 */
+void Session::PeekActiveRequest(RefPtr<Request> *outRequest)
+{
+	ScopedLock lock(&m_mutex);
+	if (!m_activeRequests.Empty())
+		*outRequest = m_activeRequests.Begin()->value;
+	else
+		outRequest->Reset();
+}
+
+/* 0x813B0372 */
+void Session::FindRequestById(int requestId, RefPtr<Request> *outRequest)
+{
+	ScopedLock lock(&m_mutex);
+	outRequest->Reset();
+	for (ListNode<RefPtr<Request> > *iter = m_activeRequests.Begin();
+	     iter != m_activeRequests.End(); iter = iter->next) {
+		if (iter->value->GetRequestId() == requestId) {
+			*outRequest = iter->value;
+			return;
+		}
+	}
+}
+
+/* 0x813B03C8 */
+void Session::CancelCommandRequest(const SessionCmd *cmd)
+{
+	if (cmd->type != SESSION_CMD_SEND_REQUEST)
+		return;
+
+	RefPtr<Request> req;
+	FindRequestById(cmd->errorCode, &req);
+	if (!req.IsNull())
+		req->SetResultError(SCE_NP_PUSH_ERROR_NOT_FOUND, 0);
+}
+
+/* 0x813B0530 */
+void Session::ChangeState(SessionState nextState, int errorCode)
+{
+	SessionState prevState;
+	{
+		ScopedLock lock(&m_mutex);
+		prevState = m_state;
+		m_state = nextState;
+	}
+
+	if (nextState == SESSION_STATE_STOPPING || nextState == SESSION_STATE_ERROR) {
+		int err = errorCode;
+		if (err == 0) {
+			err = (m_state == SESSION_STATE_STOPPING)
+				      ? SCE_NP_PUSH_ERROR_NOT_CONNECTED
+				      : SCE_NP_PUSH_ERROR_INTERNAL;
+		}
+		ErrorRequestAll(err);
+	}
+
+	if (nextState == SESSION_STATE_STOPPING || nextState == SESSION_STATE_ERROR) {
+		if (prevState != SESSION_STATE_CONNECTING &&
+		    prevState != SESSION_STATE_ESTABLISHED &&
+		    prevState != SESSION_STATE_DISCONNECTING) {
+			return;
+		}
+		for (ListNode<Handler *> *iter = m_handlers.Begin();
+		     iter != m_handlers.End(); iter = iter->next) {
+			iter->value->OnSessionDisconnected(this, errorCode);
+		}
+	}
+}
+
+/* 0x813B0684 */
+int Session::PostCommandChecked(const SessionCmd *cmd, const SceUInt32 *allowedStateMask)
+{
+	{
+		ScopedLock lock(&m_mutex);
+		if (m_state == SESSION_STATE_STOPPING || m_state == SESSION_STATE_ERROR)
+			return SCE_NP_PUSH_ERROR_NOT_FOUND;
+		if (allowedStateMask != NULL &&
+		    ((1U << static_cast<SceUInt32>(m_state)) & *allowedStateMask) == 0) {
+			return SCE_NP_PUSH_ERROR_NOT_FOUND;
+		}
+	}
+	int ret = m_cmdQueue.Push(cmd);
+	return (ret >= 0) ? 0 : ret;
+}
+
+/* 0x813B06FE */
+int Session::PostConnectCommand(void)
+{
+	SessionCmd cmd(SESSION_CMD_CONNECT);
+	SceUInt32 mask = (1U << SESSION_STATE_IDLE);
+	int ret = PostCommandChecked(&cmd, &mask);
+	return (ret >= 0) ? 0 : ret;
+}
+
+/* 0x813B0752 */
+int Session::PostDisconnectCommand(void)
+{
+	SessionCmd cmd(SESSION_CMD_DISCONNECT);
+	SceUInt32 mask = (1U << SESSION_STATE_IDLE) | (1U << SESSION_STATE_CONNECTING) |
+			 (1U << SESSION_STATE_ESTABLISHED);
+	int ret = PostCommandChecked(&cmd, &mask);
+	return (ret >= 0) ? 0 : ret;
+}
+
+/* 0x813B07A6 */
+int Session::SendLoginRequest(const NpPushOnlineId *onlineId, bool activeStatus,
+			      bool includePresence, Request::Handler *handler, int *outRequestId)
+{
+	(void)includePresence;
+	RefPtr<Packet> packet;
+	int status = activeStatus ? PRESENCE_STATUS_ACTIVE : PRESENCE_STATUS_SLEEP;
+	int ret = Packet::CreateLoginRequest(onlineId, status, &packet);
+	if (ret < 0)
+		return ret;
+
+	Request *req = Request::Create(REQUEST_TYPE_TRANSACTION, onlineId, packet, handler, NULL);
+	if (req == NULL)
+		return SCE_NP_PUSH_ERROR_OUT_OF_MEMORY;
+
+	RefPtr<Request> reqRef;
+	reqRef.Adopt(req);
+	ret = reqRef->Start(this, &m_cancelHandle);
+	if (ret < 0)
+		return ret;
+
+	SessionCmd cmd(SESSION_CMD_SEND_REQUEST);
+	cmd.errorCode = reqRef->GetRequestId();
+	SceUInt32 mask = (1U << SESSION_STATE_ESTABLISHED);
+	ret = PostCommandChecked(&cmd, &mask);
+	if (ret < 0) {
+		reqRef->AbortAndUnlink();
+		return ret;
+	}
+	if (outRequestId != NULL)
+		*outRequestId = reqRef->GetRequestId();
+	return 0;
+}
+
+/* 0x813B0906 */
+int Session::SendLogoutRequest(const NpPushOnlineId *onlineId, Request::Handler *handler,
+			       int *outRequestId)
+{
+	RefPtr<Packet> packet;
+	int ret = Packet::CreateLogoutRequest(onlineId, &packet);
+	if (ret < 0)
+		return ret;
+
+	Request *req = Request::Create(REQUEST_TYPE_TRANSACTION, onlineId, packet, handler, NULL);
+	if (req == NULL)
+		return SCE_NP_PUSH_ERROR_OUT_OF_MEMORY;
+
+	RefPtr<Request> reqRef;
+	reqRef.Adopt(req);
+	ret = reqRef->Start(this, &m_cancelHandle);
+	if (ret < 0)
+		return ret;
+
+	SessionCmd cmd(SESSION_CMD_SEND_REQUEST);
+	cmd.errorCode = reqRef->GetRequestId();
+	SceUInt32 mask = (1U << SESSION_STATE_ESTABLISHED);
+	ret = PostCommandChecked(&cmd, &mask);
+	if (ret < 0) {
+		reqRef->AbortAndUnlink();
+		return ret;
+	}
+	if (outRequestId != NULL)
+		*outRequestId = reqRef->GetRequestId();
+	return 0;
+}
+
+/* 0x813B0A44 */
+int Session::SendChangeStatusRequest(const NpPushOnlineId *onlineId, int newStatus,
+				     const SceUInt64 *timestamp, Request::Handler *handler,
+				     int *outRequestId)
+{
+	(void)timestamp;
+	RefPtr<Packet> packet;
+	int ret = Packet::CreateChangeStatusRequest(onlineId, newStatus, &packet);
+	if (ret < 0)
+		return ret;
+
+	Request *req = Request::Create(REQUEST_TYPE_TRANSACTION, onlineId, packet, handler, NULL);
+	if (req == NULL)
+		return SCE_NP_PUSH_ERROR_OUT_OF_MEMORY;
+
+	RefPtr<Request> reqRef;
+	reqRef.Adopt(req);
+	ret = reqRef->Start(this, &m_cancelHandle);
+	if (ret < 0)
+		return ret;
+
+	SessionCmd cmd(SESSION_CMD_SEND_REQUEST);
+	cmd.errorCode = reqRef->GetRequestId();
+	SceUInt32 mask = (1U << SESSION_STATE_ESTABLISHED);
+	ret = PostCommandChecked(&cmd, &mask);
+	if (ret < 0) {
+		reqRef->AbortAndUnlink();
+		return ret;
+	}
+	if (outRequestId != NULL)
+		*outRequestId = reqRef->GetRequestId();
+	return 0;
+}
+
+/* 0x813B0D40 */
+void Session::OnConnectTimeout(void)
+{
+	ScopedLock lock(&m_mutex);
+	if (m_state == SESSION_STATE_CONNECTING)
+		SceNpCommonPs4_A6C7D48D(&m_cancelHandle.cancelable, SCE_NP_PUSH_ERROR_UNSUPPORTED, 0);
+}
+
+/* 0x813B0D6E */
+void Session::FindRequestByTranId(const char *tranId, RefPtr<Request> *outRequest)
+{
+	ScopedLock lock(&m_mutex);
+	outRequest->Reset();
+	for (ListNode<RefPtr<Request> > *iter = m_activeRequests.Begin();
+	     iter != m_activeRequests.End(); iter = iter->next) {
+		if (TranIdEquals(iter->value->GetTranId(), tranId)) {
+			*outRequest = iter->value;
+			return;
+		}
+	}
+}
+
+/* 0x813B0DCC */
+void Session::InspectResponseErrorSource(const RefPtr<Packet> &packet)
+{
+	SceInt32 returnCode = -1;
+	char errSrcBuf[32];
+	if (packet->HasErrorSource() &&
+	    packet->GetErrorSource(errSrcBuf, sizeof(errSrcBuf)) == 0 &&
+	    sceClibStrncmp(errSrcBuf, "client", 7) == 0) {
+		packet->GetReturnCode(&returnCode);
+	}
+}
+
+/* 0x813B0E1E */
+void Session::HandleReqTransResponse(const RefPtr<Packet> &packet)
+{
+	char tranId[32];
+	sceClibMemset(tranId, 0, sizeof(tranId));
+	if (packet->GetTranIdFixed(tranId) >= 0) {
+		RefPtr<Request> req;
+		FindRequestByTranId(tranId, &req);
+		if (!req.IsNull() && req->GetType() == REQUEST_TYPE_TRANSACTION)
+			req->SetResultReceivedReqTransResponse(packet);
+		InspectResponseErrorSource(packet);
+	}
+}
+
+/* 0x813B0EBA */
+void Session::HandleQueryResponse(const RefPtr<Packet> &packet)
+{
+	char tranId[32];
+	sceClibMemset(tranId, 0, sizeof(tranId));
+	if (packet->GetTranIdFixed(tranId) >= 0) {
+		RefPtr<Request> req;
+		FindRequestByTranId(tranId, &req);
+		if (!req.IsNull() && req->GetType() == REQUEST_TYPE_QUERY)
+			req->SetResultReceivedQueryResponse(packet);
+	}
+}
+
+/* 0x813B11B0 */
+void Session::NotifyNotificationPacket(const RefPtr<Packet> &packet)
+{
+	for (ListNode<Handler *> *iter = m_handlers.Begin();
+	     iter != m_handlers.End(); iter = iter->next) {
+		iter->value->OnSessionReceivedPacket(this, packet);
+	}
+}
+
+/* 0x813B1220 */
+void Session::NotifyServiceCommPacket(const RefPtr<Packet> &packet)
+{
+	for (ListNode<Handler *> *iter = m_handlers.Begin();
+	     iter != m_handlers.End(); iter = iter->next) {
+		iter->value->OnSessionReceivedPacket(this, packet);
+	}
+}
+
+/* 0x813B1290 */
+void Session::NotifyServiceQueryPacket(const RefPtr<Packet> &packet)
+{
+	for (ListNode<Handler *> *iter = m_handlers.Begin();
+	     iter != m_handlers.End(); iter = iter->next) {
+		iter->value->OnSessionReceivedPacket(this, packet);
+	}
+}
+
+/* 0x813B1300 */
+int Session::ProcessRequestCommand(int requestId)
+{
+	RefPtr<Request> req;
+	FindRequestById(requestId, &req);
+	if (req.IsNull())
+		return 0;
+
+	RefPtr<Packet> sendPacket;
+	int ret = req->PrepareSendPacket(&m_cancelHandle, &sendPacket);
+	if (ret >= 0)
+		ret = m_connection.SendPacket(sendPacket.Get());
+
+	if (ret < 0) {
+		req->SetResultError(ret, 0);
+		return ret;
+	}
+	return 0;
 }
 
 } /* namespace Push */

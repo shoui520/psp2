@@ -31,7 +31,12 @@ static const void *const kUserRetryTargetVtable[] = {
 UserContext::UserContext(const NpPushOnlineId *onlineId, Handler *handler)
 	: m_desiredStatus(PRESENCE_STATUS_OFFLINE),
 	  m_serverStatus(PRESENCE_STATUS_OFFLINE),
+	  m_pendingTargetStatus(PRESENCE_STATUS_OFFLINE),
+	  m_activeRequestId(0),
 	  m_lastSyncTick(0),
+	  m_graceStartTick(0),
+	  m_retryStartTick(0),
+	  m_retryCount(0),
 	  m_retryIntervalSec(NP_PUSH_DEFAULT_RETRY_INTERVAL_SEC),
 	  m_handler(handler)
 {
@@ -221,6 +226,191 @@ void UserContext::OnRequestFinished(Request *request)
 
 	if (m_handler != NULL)
 		m_handler->OnUserContextRequestFinished(this, request);
+}
+
+/* 0x813B1BF2 */
+int UserContext::UpdateAccountStatus(const PushAccountSnapshot *snapshot)
+{
+	if (snapshot->signedIn == 0) {
+		if (m_desiredStatus != 4) {
+			if (m_desiredStatus == 2)
+				m_lastSyncTick = 0;
+			if (!m_pendingUserRequest.IsNull())
+				SetUserRequestResult(SCE_NP_PUSH_ERROR_SEND_FAILED);
+			m_desiredStatus = 4;
+		}
+		return 0;
+	}
+
+	if (m_desiredStatus == 2)
+		return 0;
+
+	SceRtcTick monoTick;
+	SceRtcTick utcTick;
+	sceClibMemset(&monoTick, 0, sizeof(monoTick));
+	sceClibMemset(&utcTick, 0, sizeof(utcTick));
+	int ret = SceNpCommonPs4_5B904477(&monoTick);
+	if (ret < 0)
+		return ret;
+	ret = SceNpCommonPs4_477BD360(&utcTick);
+	if (ret < 0)
+		return ret;
+
+	m_lastSyncTick = static_cast<SceInt64>(monoTick.tick);
+	m_desiredStatus = 2;
+	return 0;
+}
+
+/* 0x813B1C82 */
+int UserContext::MarkSignedOut(void)
+{
+	if (m_desiredStatus != 4) {
+		if (m_desiredStatus == 2)
+			m_lastSyncTick = 0;
+		if (!m_pendingUserRequest.IsNull())
+			SetUserRequestResult(SCE_NP_PUSH_ERROR_SEND_FAILED);
+		m_desiredStatus = 4;
+	}
+	return 0;
+}
+
+/* 0x813B1CAE */
+void UserContext::SetServerPresenceState(int nextState)
+{
+	if (m_serverStatus == nextState)
+		return;
+
+	int targetState = nextState;
+	if (nextState == 2) {
+		if (!m_pendingUserRequest.IsNull())
+			SetUserRequestResult(0);
+	} else if (m_serverStatus == 2 && nextState == 0) {
+		targetState = 1;
+		SceRtcTick nowTick;
+		sceClibMemset(&nowTick, 0, sizeof(nowTick));
+		SceNpCommonPs4_5B904477(&nowTick);
+		m_graceStartTick = static_cast<SceInt64>(nowTick.tick);
+	}
+	m_serverStatus = targetState;
+}
+
+/* 0x813B1D0C */
+void UserContext::SetInitialServerPresenceState(int nextState)
+{
+	SetServerPresenceState(nextState);
+}
+
+/* 0x813B1D16 */
+SceUInt32 UserContext::GetNextTimerDelayUsec(const SceInt64 *nowTick) const
+{
+	SceUInt32 retryDelay = 0xFFFFFFFFU;
+	if (m_retryStartTick != 0) {
+		SceUInt64 limitUsec = (m_retryIntervalSec != 0)
+					      ? (static_cast<SceUInt64>(m_retryIntervalSec) * 1000000ULL)
+					      : 60000000ULL;
+		SceUInt64 remaining = 0;
+		if (SceNpCommonPs4_7DABC125(nowTick, &m_retryStartTick, limitUsec, &remaining) == 0)
+			retryDelay = static_cast<SceUInt32>(remaining);
+	}
+
+	SceUInt32 graceDelay = 0xFFFFFFFFU;
+	if (m_serverStatus == 1) {
+		SceUInt64 remaining = 0;
+		if (SceNpCommonPs4_7DABC125(nowTick, &m_graceStartTick, 120000000ULL, &remaining) == 0)
+			graceDelay = static_cast<SceUInt32>(remaining);
+	}
+
+	return (retryDelay < graceDelay) ? retryDelay : graceDelay;
+}
+
+/* 0x813B2244 */
+void UserContext::ExpireGracePeriod(const SceInt64 *nowTick, bool *outRemovable)
+{
+	if (outRemovable != NULL)
+		*outRemovable = false;
+
+	SceUInt64 remaining = 0;
+	if (m_serverStatus == 1 &&
+	    SceNpCommonPs4_7DABC125(nowTick, &m_graceStartTick, 120000000ULL, &remaining) == 0) {
+		return;
+	}
+
+	if (m_serverStatus == 1)
+		SetServerPresenceState(0);
+
+	if (outRemovable != NULL && (m_serverStatus == 0 || m_serverStatus == 4) &&
+	    (m_desiredStatus == 0 || m_desiredStatus == 4)) {
+		*outRemovable = true;
+	}
+}
+
+/* 0x813B22B8 */
+int UserContext::SyncStateWithSession(Session *session, const SceInt64 *nowTick,
+				      int activeIntervalSec, bool *outRemovable)
+{
+	(void)activeIntervalSec;
+	*outRemovable = false;
+	if (m_activeRequestId != 0)
+		return 0;
+
+	ExpireGracePeriod(nowTick, NULL);
+	if ((m_serverStatus == 0 || m_serverStatus == 4) &&
+	    (m_desiredStatus == 0 || m_desiredStatus == 4)) {
+		*outRemovable = true;
+		return 0;
+	}
+
+	return RequestStart(session, NULL);
+}
+
+/* 0x813B2352 */
+int UserContext::HandleRequestResult(const PushRequestCompletion *completion)
+{
+	if (m_activeRequestId == 0 || m_activeRequestId != completion->requestId)
+		return 0;
+
+	if (completion->errorCode != 0) {
+		m_activeRequestId = 0;
+		m_pendingTargetStatus = 0;
+		m_retryCount++;
+		m_retryIntervalSec = completion->retryIntervalSec;
+		if (!m_pendingUserRequest.IsNull())
+			SetUserRequestResult(completion->errorCode);
+		return 0;
+	}
+
+	int resolvedStatus = m_pendingTargetStatus;
+	if (m_pendingTargetStatus == 5) {
+		if (completion->serverStatus == 1)
+			resolvedStatus = 2;
+		else if (completion->serverStatus == 0 || completion->serverStatus == 2)
+			resolvedStatus = 3;
+		else
+			return SCE_NP_PUSH_ERROR_SERVER_SHUTDOWN;
+	}
+
+	m_pendingTargetStatus = 0;
+	m_activeRequestId = 0;
+	m_retryCount = 0;
+	m_retryIntervalSec = 0;
+	m_retryStartTick = 0;
+	SetServerPresenceState(resolvedStatus);
+	return 0;
+}
+
+/* 0x813B23D4 */
+void UserContext::ResetWithError(int errorCode)
+{
+	if (m_activeRequestId != 0) {
+		m_pendingTargetStatus = 0;
+		m_activeRequestId = 0;
+		m_retryCount = 0;
+		m_retryIntervalSec = 0;
+		m_retryStartTick = 0;
+	}
+	SetServerPresenceState(0);
+	if (!m_pendingUserRequest.IsNull())
+		SetUserRequestResult(errorCode);
 }
 
 } /* namespace Push */

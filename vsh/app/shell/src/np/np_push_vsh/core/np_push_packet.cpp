@@ -91,7 +91,7 @@ void Packet::Destroy(Packet *packet)
 }
 
 /* 0x813AD338 */
-Packet::Packet() : m_root(NULL)
+Packet::Packet() : m_root(NULL), m_method(PACKET_METHOD_NONE)
 {
 	SceNpCommonPs4_108738F2(this);
 	vtable = &kPacketVtable[2];
@@ -156,6 +156,9 @@ int Packet::Parse(const char *jsonText, SceSize length, RefPtr<Packet> *outPacke
 	}
 
 	packet->m_root = root;
+	SceInt32 parsedMethod = PACKET_METHOD_NONE;
+	if (SceNpCommonPs4_066F0583(root, "method", &parsedMethod) >= 0)
+		packet->m_method = parsedMethod;
 	outPacket->Adopt(packet);
 	return 0;
 }
@@ -228,6 +231,7 @@ int Packet::InitRequest(int methodCode)
 	}
 
 	m_root = root;
+	m_method = methodCode;
 	return 0;
 }
 
@@ -641,6 +645,202 @@ NpPushJsonValue *Packet::GetExtendedData(void) const
 	if (m_root == NULL)
 		return NULL;
 	return SceNpCommonPs4_42CAF6ED(m_root, "extendedData");
+}
+
+/* 0x813ADB3E */
+int Packet::GetTranIdFixed(char *outTranId) const
+{
+	NP_PUSH_ASSERT(m_root != NULL, "GetTranId", "core\\np_push_packet.cpp", 398,
+		       "m_obj != 0");
+
+	NpPushJsonValue *val = SceNpCommonPs4_E8740CE6(m_root, "tranId");
+	if (val == NULL)
+		return SCE_NP_PUSH_ERROR_TIMEOUT;
+
+	const char *text = SceNpCommonPs4_ED539A9D(val);
+	int ret = TranIdCopy(outTranId, text);
+	return (ret >= 0) ? 0 : ret;
+}
+
+/* 0x813AE0E6 */
+bool Packet::HasFrom(void) const
+{
+	return SceNpCommonPs4_C4525618(m_root, "from") != NULL;
+}
+
+/* 0x813AE1F4 */
+int Packet::GetFromAccountInfo(FromAccountInfo *outInfo) const
+{
+	NpPushJsonValue *fromObj = SceNpCommonPs4_C4525618(m_root, "from");
+	if (fromObj == NULL)
+		return SCE_NP_PUSH_ERROR_MAX;
+
+	int ret = SceNpCommonPs4_63174832(fromObj, "accountId", &outInfo->accountId);
+	if (ret < 0)
+		return ret;
+
+	sceClibMemset(outInfo->onlineId, 0, sizeof(outInfo->onlineId) + sizeof(outInfo->opt) +
+		      sizeof(outInfo->platform) + sizeof(outInfo->valid));
+
+	NpPushJsonValue *onlineIdVal = SceNpCommonPs4_E8740CE6(fromObj, "onlineId");
+	if (onlineIdVal == NULL)
+		return SCE_NP_PUSH_ERROR_MAX;
+	const char *onlineIdStr = SceNpCommonPs4_ED539A9D(onlineIdVal);
+	sceClibStrncpy(outInfo->onlineId, onlineIdStr, 16);
+
+	NpPushJsonValue *optVal = SceNpCommonPs4_E8740CE6(fromObj, "opt");
+	if (optVal == NULL)
+		return SCE_NP_PUSH_ERROR_MAX;
+	const char *optStr = SceNpCommonPs4_ED539A9D(optVal);
+	if (sceClibStrnlen(optStr, 0xFFFFFFFFU) != 4)
+		return SCE_NP_PUSH_ERROR_MAX;
+	sceClibMemcpy_safe(outInfo->opt, optStr, 4);
+
+	NpPushJsonValue *platformVal = SceNpCommonPs4_E8740CE6(fromObj, "platform");
+	if (platformVal == NULL)
+		return SCE_NP_PUSH_ERROR_MAX;
+	const char *platformStr = SceNpCommonPs4_ED539A9D(platformVal);
+
+	int platformCode = 0;
+	if (sceClibStrncmp(platformStr, "ORBIS", 6) == 0 ||
+	    sceClibStrncmp(platformStr, "PS4", 4) == 0) {
+		platformCode = 3;
+	} else if (sceClibStrncmp(platformStr, "PS3", 4) == 0) {
+		platformCode = 1;
+	} else if (sceClibStrncmp(platformStr, "PSVITA", 7) == 0) {
+		platformCode = 2;
+	}
+
+	if (platformCode == 2) {
+		outInfo->platform[0] = 'p';
+		outInfo->platform[1] = 's';
+		outInfo->platform[2] = 'p';
+		outInfo->platform[3] = '2';
+	} else if (platformCode == 3) {
+		outInfo->platform[0] = 'p';
+		outInfo->platform[1] = 's';
+		outInfo->platform[2] = '4';
+		outInfo->platform[3] = '\0';
+	} else if (platformCode == 1) {
+		outInfo->platform[0] = 'p';
+		outInfo->platform[1] = 's';
+		outInfo->platform[2] = '3';
+		outInfo->platform[3] = '\0';
+	}
+
+	outInfo->valid = 1;
+	return 0;
+}
+
+/* 0x813AE484 */
+bool Packet::HasToCommId(void) const
+{
+	NpPushJsonValue *toObj = SceNpCommonPs4_C4525618(m_root, "to");
+	return toObj != NULL && SceNpCommonPs4_E8740CE6(toObj, "npComId") != NULL;
+}
+
+/* 0x813AE5AC */
+bool Packet::HasStatus(void) const
+{
+	return m_method == PACKET_METHOD_LOGIN &&
+	       SceNpCommonPs4_E8740CE6(m_root, "status") != NULL;
+}
+
+/* 0x813AE6F0 */
+NpPushJsonValue *Packet::GetExtendedDataEntry(int index, char **outKeyName) const
+{
+	NpPushJsonValue *bodyObj = SceNpCommonPs4_C4525618(m_root, "body");
+	if (bodyObj == NULL)
+		return NULL;
+	NpPushJsonValue *extObj = SceNpCommonPs4_C4525618(bodyObj, "extendedData");
+	if (extObj == NULL)
+		return NULL;
+
+	int count = SceNpCommonPs4_9C3F1645(extObj);
+	if (count <= 0)
+		return NULL;
+	for (int checkIdx = 0; checkIdx < count; ++checkIdx) {
+		char *probeKey = NULL;
+		if (SceNpCommonPs4_24D09586(extObj, checkIdx, &probeKey) == NULL)
+			return NULL;
+	}
+	if (index >= count)
+		return NULL;
+
+	NpPushJsonValue *entryObj = SceNpCommonPs4_24D09586(extObj, index, outKeyName);
+	if (entryObj == NULL)
+		return NULL;
+	return SceNpCommonPs4_C4525618(entryObj, "value");
+}
+
+/* 0x813AE7D0 */
+bool Packet::IsReqTransResponse(void) const
+{
+	if (m_method < 1000 || m_method >= 2000)
+		return false;
+	NP_PUSH_ASSERT(m_root != NULL, "HasReturnCode", "core\\np_push_packet.cpp", 489,
+		       "m_obj != 0");
+	return SceNpCommonPs4_42CAF6ED(m_root, "returnCode") != NULL;
+}
+
+/* 0x813AE83C */
+bool Packet::IsLoginMethod(void) const
+{
+	return m_method == PACKET_METHOD_LOGIN;
+}
+
+/* 0x813AE84C */
+bool Packet::IsNotificationMethod(void) const
+{
+	return m_method == PACKET_METHOD_NOTIFICATION;
+}
+
+/* 0x813AE914 */
+bool Packet::IsServiceQueryRequest(void) const
+{
+	if (m_method != PACKET_METHOD_SERVICE_COMM)
+		return false;
+	NP_PUSH_ASSERT(m_root != NULL, "HasQuery", "core\\np_push_packet.cpp", 578,
+		       "m_obj != 0");
+	if (SceNpCommonPs4_E8740CE6(m_root, "query") == NULL)
+		return false;
+	char queryBuf[32];
+	if (GetQueryType(queryBuf, sizeof(queryBuf)) != 0)
+		return false;
+	return sceClibStrncmp(queryBuf, "request", 8) == 0 ||
+	       sceClibStrncmp(queryBuf, "notify", 7) == 0;
+}
+
+/* 0x813AE9AC */
+bool Packet::IsServiceQueryResponse(void) const
+{
+	if (m_method != PACKET_METHOD_SERVICE_COMM)
+		return false;
+	NP_PUSH_ASSERT(m_root != NULL, "HasQuery", "core\\np_push_packet.cpp", 578,
+		       "m_obj != 0");
+	if (SceNpCommonPs4_E8740CE6(m_root, "query") == NULL)
+		return false;
+	char queryBuf[32];
+	if (GetQueryType(queryBuf, sizeof(queryBuf)) != 0)
+		return false;
+	return sceClibStrncmp(queryBuf, "response", 9) == 0 ||
+	       sceClibStrncmp(queryBuf, "error", 6) == 0;
+}
+
+/* 0x813AEA44 */
+bool TranIdEquals(const char *left, const char *right)
+{
+	return sceClibStrncmp(left, right, 32) == 0;
+}
+
+/* 0x813AEA9E */
+int TranIdCopy(char *dst, const char *src)
+{
+	if (sceClibStrnlen(src, 0xFFFFFFFFU) >= 32)
+		return SCE_NP_PUSH_ERROR_BUFFER_TOO_SMALL;
+	sceClibStrncpy(dst, src, 32);
+	dst[31] = '\0';
+	return 0;
 }
 
 } /* namespace Push */

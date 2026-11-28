@@ -17,6 +17,7 @@ static const SceSize kRespHeaderBufSize = 4096;
  * DataType (0x813B54F8..0x813B555B)
  * ============================================================================ */
 
+/* 0x813B54F8 */
 DataType::DataType() : m_text(NULL) {}
 
 DataType::DataType(const DataType &other) : m_text(NULL)
@@ -46,6 +47,7 @@ DataType &DataType::operator=(const DataType &other)
 	return *this;
 }
 
+/* 0x813B5518 */
 int DataType::Set(const char *text)
 {
 	if (m_text != NULL) {
@@ -61,6 +63,7 @@ int DataType::Set(const char *text)
 	return 0;
 }
 
+/* 0x813B5544 */
 bool DataType::Equals(const char *other) const
 {
 	if (m_text == NULL || other == NULL)
@@ -309,6 +312,152 @@ int Connection::ReceivePacket(RefPtr<Packet> *outPacket)
 
 	m_recvBuffer[receivedSize] = '\0';
 	return Packet::Parse(m_recvBuffer, receivedSize, outPacket);
+}
+
+/* 0x813B4CF0 */
+int Connection::ParseOnlineIdHeader(const char *headerName, NpPushOnlineIdData *outList,
+				    int maxCount, int *outCount)
+{
+	sceClibMemset(outList, 0, sizeof(NpPushOnlineIdData) * static_cast<SceSize>(maxCount));
+	const char *valueStr = NULL;
+	SceSize valueLen = 0;
+	int ret = npWebSocketGetResponseHeader(m_wsHandle, headerName, &valueStr, &valueLen);
+	if (ret < 0) {
+		*outCount = 0;
+		return 0;
+	}
+
+	const char *cursor = valueStr;
+	const char *end = valueStr + valueLen;
+	int parsedCount = 0;
+	while (cursor < end) {
+		while (cursor < end && *cursor == ' ')
+			++cursor;
+		const char *tokenStart = cursor;
+		while (cursor < end && *cursor != ',')
+			++cursor;
+		SceSize tokenLen = static_cast<SceSize>(cursor - tokenStart);
+		if (tokenLen > 0 && parsedCount < maxCount && tokenLen <= 16) {
+			sceClibStrncpy(outList[parsedCount].text, tokenStart, tokenLen);
+			++parsedCount;
+		}
+		if (cursor < end && *cursor == ',')
+			++cursor;
+	}
+
+	*outCount = parsedCount;
+	return 0;
+}
+
+/* 0x813B4DB0 */
+int Connection::ParseRetryIntervalHeader(SceUInt32 *outIntervalSec)
+{
+	const char *valueStr = NULL;
+	SceSize valueLen = 0;
+	int ret = npWebSocketGetResponseHeader(m_wsHandle, "X-NP-RETRY-INTERVAL",
+					       &valueStr, &valueLen);
+	if (ret == SCE_HTTP_ERROR_PARSE_HTTP_NOT_FOUND) {
+		*outIntervalSec = NP_PUSH_DEFAULT_RETRY_INTERVAL_SEC;
+		return 0;
+	}
+	if (ret < 0)
+		return ret;
+
+	SceInt32 parsed = NP_PUSH_DEFAULT_RETRY_INTERVAL_SEC;
+	if (SceNpCommonPs4_3AE5ABF3(valueStr, &parsed, 10, NULL) < 0 || parsed < 0)
+		*outIntervalSec = NP_PUSH_DEFAULT_RETRY_INTERVAL_SEC;
+	else
+		*outIntervalSec = static_cast<SceUInt32>(parsed);
+	return 0;
+}
+
+/* 0x813B51C6 */
+int Connection::DisconnectWithCancelScope(NpPushHandle *cancelHandle)
+{
+	NpPushScope cancelScope;
+	SceNpCommonPs4_5BBB1ABA(&cancelScope);
+	int ret = SceNpCommonPs4_DDFD56E9(&cancelScope, cancelHandle, 0, 0, 0);
+	if (ret >= 0) {
+		int closeRet = npWebSocketSendClose(m_wsHandle);
+		ret = SceNpCommonPs4_3D0FA7C9(&cancelScope, closeRet, 0, 0, 0);
+	}
+	SceNpCommonPs4_101259AD(&cancelScope);
+	return (ret >= 0) ? 0 : ret;
+}
+
+/* ============================================================================
+ * RecvPacketQueue (0x813B555C..0x813B56E0) & ReceiveThread (0x813B56FC..0x813B57A9)
+ * ============================================================================ */
+
+/* 0x813B555C */
+RecvPacketQueue::RecvPacketQueue(NpPushMutex *mutex)
+	: m_mutex(mutex), m_list(GetAllocator())
+{
+}
+
+/* 0x813B5580 / 0x813B55E4 */
+RecvPacketQueue::~RecvPacketQueue()
+{
+	m_list.Clear();
+}
+
+/* 0x813B55F4 */
+int RecvPacketQueue::Push(const RefPtr<Packet> &packet)
+{
+	ScopedLock lock(m_mutex);
+	if (!m_list.PushBack(packet))
+		return SCE_NP_PUSH_ERROR_OUT_OF_MEMORY;
+	return 0;
+}
+
+/* 0x813B564C */
+void RecvPacketQueue::Pop(RefPtr<Packet> *outPacket)
+{
+	ScopedLock lock(m_mutex);
+	if (m_list.Empty()) {
+		outPacket->Reset();
+		return;
+	}
+	*outPacket = m_list.Begin()->value;
+	m_list.Erase(m_list.Begin());
+}
+
+/* 0x813B56E0 */
+void RecvPacketQueue::Clear(void)
+{
+	ScopedLock lock(m_mutex);
+	m_list.Clear();
+}
+
+/* 0x813B56FC */
+ReceiveThread::ReceiveThread(Session *owner)
+	: m_owner(owner)
+{
+	SceNpCommonPs4_04CBEB81(AsThreadBase());
+}
+
+/* 0x813B5718 / 0x813B5734 */
+ReceiveThread::~ReceiveThread()
+{
+	SceNpCommonPs4_502309F4(AsThreadBase());
+}
+
+int ReceiveThread::Run(void)
+{
+	if (m_owner != NULL)
+		m_owner->ReceiveMain();
+	return 0;
+}
+
+/* 0x813B5754 */
+int ReceiveThread::Start(void)
+{
+	NpPushThreadParam threadParam;
+	threadParam.name = "SceNpPushReceive";
+	threadParam.stackSize = 0x2000;
+	threadParam.priority = 0x10000100;
+	threadParam.cpuAffinity = 0;
+	return SceNpCommonPs4_C8F1844F(AsThreadBase(), &threadParam);
 }
 
 } /* namespace Push */

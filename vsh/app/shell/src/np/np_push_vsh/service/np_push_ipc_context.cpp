@@ -63,6 +63,17 @@ int IpcUserContext::PeekPacket(RefPtr<Packet> *outPacket) const
 	return 0;
 }
 
+/* 0x813B42BC */
+void IpcUserContext::PeekPacketRef(RefPtr<Packet> *outPacket) const
+{
+	if (outPacket == NULL)
+		return;
+	if (!m_packetQueue.Empty())
+		*outPacket = m_packetQueue.Begin()->value;
+	else
+		outPacket->Reset();
+}
+
 /* ============================================================================
  * IpcProcessContext (0x813B43AA..0x813B4C73)
  * ============================================================================ */
@@ -211,6 +222,20 @@ int IpcProcessContext::RemoveDataTypeFilterByName(const char *dataType)
 	return SCE_NP_PUSH_ERROR_NOT_FOUND;
 }
 
+/* 0x813B469E */
+int IpcProcessContext::ReceivePacket(const RefPtr<Packet> &packet)
+{
+	if (packet.IsNull() || !packet->HasDataType())
+		return 0;
+
+	int ret = ReceiveUserNotificationPacket(packet);
+	if (ret < 0)
+		return ret;
+
+	ret = ReceiveNotificationDataTypePacket(packet);
+	return (ret < 0) ? ret : 0;
+}
+
 /* 0x813B44EC: ReceiveNotificationDataTypePacket */
 int IpcProcessContext::ReceiveNotificationDataTypePacket(const RefPtr<Packet> &packet)
 {
@@ -304,6 +329,18 @@ int IpcProcessContext::DequeueUserPacket(RefPtr<Packet> *outPacket)
 		}
 	}
 	return SCE_NP_PUSH_ERROR_NO_DATA;
+}
+
+/* 0x813B4BB2 */
+void IpcProcessContext::PeekDataTypePacketRef(RefPtr<Packet> *outPacket)
+{
+	if (outPacket == NULL)
+		return;
+	outPacket->Reset();
+	if (!m_dataTypeQueue.Empty()) {
+		*outPacket = m_dataTypeQueue.Begin()->value;
+		NotifyDataTypeEvent();
+	}
 }
 
 /* 0x813B4B70: PeekDataTypePacket */

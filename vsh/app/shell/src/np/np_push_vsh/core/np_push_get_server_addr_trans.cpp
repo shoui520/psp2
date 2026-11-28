@@ -46,8 +46,10 @@ static const NpPushJsonLexerConfig kServerAddrParseConfig = {
  * ServerAddr (0x813B6204..0x813B62FF)
  * ============================================================================ */
 
+/* 0x813B6204 */
 ServerAddr::ServerAddr() : m_fqdn(NULL) {}
 
+/* 0x813B6218 / 0x813B623E */
 ServerAddr::~ServerAddr()
 {
 	Clear();
@@ -160,6 +162,7 @@ static const void *const kServerAddrObserverVtable[] = {
  * GetServerAddrTrans (0x813B6310..0x813B6927)
  * ============================================================================ */
 
+/* 0x813B62F0 */
 GetServerAddrTrans::GetServerAddrTrans(NpPushAllocator *allocator,
 				       const NpPushOnlineId *onlineId)
 	: m_allocator(allocator)
@@ -167,9 +170,98 @@ GetServerAddrTrans::GetServerAddrTrans(NpPushAllocator *allocator,
 	SceNpCommonPs4_3FC6688C(&m_npTrans, allocator, onlineId);
 }
 
+/* 0x813B6310 / 0x813B6332 */
 GetServerAddrTrans::~GetServerAddrTrans()
 {
 	SceNpCommonPs4_47D94EF0(&m_npTrans);
+}
+
+/* 0x813B626A */
+int GetServerAddrTrans::FetchServerAddr(NpPushHandle *cancelHandle, const char *baseUrl,
+					const NpPushOnlineId *onlineId,
+					ServerAddr *outServerAddr,
+					SceUInt32 *outRetryIntervalSec)
+{
+	GetServerAddrTrans trans(GetAllocator(), onlineId);
+	int ret = trans.Execute(cancelHandle, GetNpHttpClient(), baseUrl,
+				outServerAddr, outRetryIntervalSec);
+	return (ret >= 0) ? 0 : ret;
+}
+
+/* 0x813B64A8 */
+int GetServerAddrTrans::ReceiveAndParseResponse(NpPushHandle *cancelHandle,
+						ServerAddr *outServerAddr,
+						SceUInt32 *outRetryIntervalSec)
+{
+	char *chunkBuf = static_cast<char *>(SceNpCommonPs4_AA980113(m_allocator, 1024));
+	if (chunkBuf == NULL) {
+		if (outRetryIntervalSec != NULL)
+			*outRetryIntervalSec = NP_PUSH_DEFAULT_RETRY_INTERVAL_SEC;
+		return SCE_NP_PUSH_ERROR_OUT_OF_MEMORY;
+	}
+
+	SceInt32 statusCode = 0;
+	int ret = SceNpCommonPs4_6B6E813E(&m_npTrans.httpTrans, cancelHandle, &statusCode);
+	if (ret < 0) {
+		if (outRetryIntervalSec != NULL)
+			*outRetryIntervalSec = NP_PUSH_DEFAULT_RETRY_INTERVAL_SEC;
+		SceNpCommonPs4_6B428829(m_allocator, chunkBuf);
+		return ret;
+	}
+
+	ServerAddrResponseParser *respParser = static_cast<ServerAddrResponseParser *>(
+		SceNpCommonPs4_0C922423(sizeof(ServerAddrResponseParser), m_allocator));
+	if (respParser == NULL) {
+		if (outRetryIntervalSec != NULL)
+			*outRetryIntervalSec = NP_PUSH_DEFAULT_RETRY_INTERVAL_SEC;
+		SceNpCommonPs4_6B428829(m_allocator, chunkBuf);
+		return SCE_NP_PUSH_ERROR_OUT_OF_MEMORY;
+	}
+
+	sceClibMemset(respParser, 0, sizeof(*respParser));
+	SceNpCommonPs4_4F720AFD(&respParser->parser, m_allocator);
+	respParser->observerVtable = kServerAddrObserverVtable;
+	respParser->outServerAddr = outServerAddr;
+
+	ret = SceNpCommonPs4_89322005(&respParser->parser,
+				      const_cast<NpPushJsonLexerConfig *>(&kServerAddrParseConfig),
+				      &respParser->observerVtable);
+
+	while (ret >= 0) {
+		SceSize received = 0;
+		ret = SceNpCommonPs4_C80B0275(&m_npTrans.httpTrans, cancelHandle,
+					      chunkBuf, 1024, &received);
+		if (ret < 0)
+			break;
+		ret = SceNpCommonPs4_FE98E2A7(&respParser->parser, chunkBuf,
+					      static_cast<int>(received));
+		if (ret < 0)
+			break;
+		if (received == 0) {
+			if (statusCode == 200) {
+				ret = respParser->hasFqdn ? 0 : SCE_NP_PUSH_ERROR_ABORTED;
+			} else {
+				if (respParser->hasRetryInterval && outRetryIntervalSec != NULL)
+					*outRetryIntervalSec = respParser->retryIntervalSec;
+				else if (outRetryIntervalSec != NULL)
+					*outRetryIntervalSec = NP_PUSH_DEFAULT_RETRY_INTERVAL_SEC;
+				if (respParser->hasErrorCode) {
+					SceNpCommonPs4_6DA866D5(0, respParser->serverErrorCode);
+					ret = SCE_NP_PUSH_ERROR_SERVER_RESPONSE;
+				} else if (statusCode == 503) {
+					ret = SCE_NP_PUSH_ERROR_SERVICE_UNAVAILABLE;
+				} else {
+					ret = SCE_NP_PUSH_ERROR_SERVER_RESPONSE;
+				}
+			}
+			break;
+		}
+	}
+
+	SceNpCommonPs4_0A3AA2EF(&respParser->parser);
+	SceNpCommonPs4_6B428829(m_allocator, respParser);
+	SceNpCommonPs4_6B428829(m_allocator, chunkBuf);
+	return ret;
 }
 
 int GetServerAddrTrans::Execute(NpPushHandle *cancelHandle, NpPushHttpContext *httpContext,
