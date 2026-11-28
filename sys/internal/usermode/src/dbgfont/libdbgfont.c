@@ -21,11 +21,11 @@ typedef struct SceDbgFont {
 	SceUChar8 pad[3];
 } SceDbgFont;
 
-static SceInt32 s_dbgfont_size = DBGFONT_GLYPH_SIZE_DEFAULT;
+static SceInt32 s_dbgfont_size;
 static SceDbgFont s_dbgfont_buf[SCE_DBGFONT_FONTCOUNT_MAX];
 static SceUInt32 s_dbgfont_cnt;
 static SceUInt32 s_dbgfont_initialized;
-static SceUID s_dbgfont_mutex_id = -1;
+static SceUID s_dbgfont_mutex_id;
 
 SceInt32 sceDbgFontInit(const SceDbgFontConfig *config)
 {

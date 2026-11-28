@@ -179,7 +179,7 @@ namespace common {
 
 inline void EncodedString::Construct(const char *src, int encoding)
 {
-	ScePafMisc_86181366(this, src, encoding);
+	ScePafMisc_C11CB5E4(this, src, encoding);
 }
 
 inline const wchar_t *EncodedString::GetWideString()
@@ -189,7 +189,7 @@ inline const wchar_t *EncodedString::GetWideString()
 
 inline void EncodedString::Destroy()
 {
-	ScePafMisc_B45A7521(this);
+	ScePafMisc_AF142E26(this);
 }
 
 }

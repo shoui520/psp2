@@ -180,6 +180,9 @@ int PageBase::Inactivate()
 	return 0;
 }
 
+#ifdef PAF_BUILD_2014
+__attribute__((noinline))
+#endif
 ui::Scene *PageBase::GetRoot()
 {
 	if (m_plugin != NULL)

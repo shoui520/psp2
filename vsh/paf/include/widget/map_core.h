@@ -536,6 +536,7 @@ public:
 
 	MapLocationClient *m_client;
 	MapView *m_map_view;
+	uint8_t padding[8];
 	MapGeoCoord m_last_coord;
 	MapGeoCoord m_target_coord;
 	uint32_t m_flags;

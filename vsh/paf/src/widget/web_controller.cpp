@@ -227,12 +227,18 @@ void WebController::OnResume()
 {
 }
 
-void WebController::OnOtherControllerWakeup()
+int32_t WebController::OnSelectPopupClosed(int32_t selected_index)
 {
+	(void)selected_index;
+	return 0;
 }
 
-void WebController::OnSuspend()
+int32_t WebController::OnFileChooserResult(const common::String &path,
+					   const common::String &mime)
 {
+	(void)path;
+	(void)mime;
+	return 0;
 }
 
 math::v4 WebController::GetViewportSize()

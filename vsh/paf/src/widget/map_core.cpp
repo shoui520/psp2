@@ -959,11 +959,11 @@ MapJsRequest::MapJsRequest()
 MapJsRequest::~MapJsRequest()
 {
 	if (m_from_address != NULL)
-		sce_paf_free(m_from_address);
+		delete[] m_from_address;
 	if (m_to_address != NULL)
-		sce_paf_free(m_to_address);
+		delete[] m_to_address;
 	if (m_language != NULL)
-		sce_paf_free(m_language);
+		delete[] m_language;
 	m_from_address = NULL;
 	m_to_address = NULL;
 }
@@ -1494,7 +1494,7 @@ int32_t MapJsBridge::ExecuteRequest(MapJsRequest *request, int32_t serializer_ki
 	int32_t ret = m_map_core->ExecuteJavaScriptUrl(script);
 
 	if (script != NULL)
-		sce_paf_free(script);
+		delete[] script;
 	return ret;
 }
 
@@ -1540,7 +1540,7 @@ int32_t MapJsResultParser::Clear()
 		m_raw_message = NULL;
 	}
 	if (m_token_buf != NULL) {
-		sce_paf_free(m_token_buf);
+		delete[] m_token_buf;
 		m_token_buf = NULL;
 	}
 	return 0;
@@ -1579,7 +1579,7 @@ int32_t MapJsResultParser::ParseField(int32_t field_index)
 	m_string_kind = 0;
 
 	if (m_token_buf != NULL) {
-		sce_paf_free(m_token_buf);
+		delete[] m_token_buf;
 		m_token_buf = NULL;
 	}
 	m_token_len = 0;
@@ -1597,7 +1597,7 @@ int32_t MapJsResultParser::ParseField(int32_t field_index)
 
 	while (true) {
 		if (current_index == field_index && delim_pos > start) {
-			m_token_buf = static_cast<char *>(sce_paf_malloc(1024));
+			m_token_buf = new char[1024];
 			if (m_token_buf != NULL)
 				break;
 		}
@@ -1618,7 +1618,7 @@ int32_t MapJsResultParser::ParseField(int32_t field_index)
 bool MapCountryLookup::IsRegionFlagged(const char *country_code) const
 {
 	for (uint32_t idx = 0; idx < 240; ++idx) {
-		if (sce_paf_strncmp(s_country_table[idx].m_code, country_code, 2) == 0)
+		if (sce_paf_strncasecmp(s_country_table[idx].m_code, country_code, 2) == 0)
 			return s_country_table[idx].m_region_flag != 0;
 	}
 	return false;
@@ -1698,11 +1698,11 @@ MapMarker::~MapMarker()
 {
 	m_draggable = false;
 	if (m_title != NULL)
-		sce_paf_free(m_title);
+		delete[] m_title;
 	m_has_popup = false;
 	m_has_image = false;
 	if (m_popup_text != NULL)
-		sce_paf_free(m_popup_text);
+		delete[] m_popup_text;
 	m_title = NULL;
 	m_popup_text = NULL;
 }

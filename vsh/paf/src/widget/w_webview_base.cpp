@@ -368,7 +368,7 @@ void WebViewBase::OnNavigationWarningResult(int32_t result)
 void WebViewBase::OnConfirmPluginResult(int32_t result)
 {
 	if (m_browser_component != NULL)
-		m_browser_component->ReplyPluginAction(result != 0, m_dialog_request);
+		m_browser_component->ReplyLoadError(result != 0, m_dialog_request);
 	m_dialog_request = NULL;
 }
 

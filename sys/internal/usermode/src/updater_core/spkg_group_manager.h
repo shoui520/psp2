@@ -164,11 +164,7 @@ private:
 	SceUpdaterProgress m_lastProgress;
 	SceKernelSysClock m_inspectStartTime;
 	SceKernelSysClock m_updateStartTime;
-#ifdef UPDATER_CORE_2014
-	SceUInt8 m_reserved[120];
-#else
 	SceUInt8 m_reserved[132];
-#endif
 	int m_hasDiffGroup;
 };
 

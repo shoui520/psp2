@@ -166,11 +166,12 @@ SceInt32 UpdateCuiView::DrawProgressScreen()
 	}
 
 	char headerText[16] = "System Update\n";
-	char confText[20] = "SCE CONFIDENTIAL\n";
-	char copyText[52] = "Copyright(C) 2013 Sony Computer Entertainment Inc.\n";
-
 	sceDbgFontPrint(30, 30, CUI_COLOR_WHITE, reinterpret_cast<const SceChar8 *>(headerText));
+
+	char confText[20] = "SCE CONFIDENTIAL\n";
 	sceDbgFontPrint(30, 235, CUI_COLOR_WHITE, reinterpret_cast<const SceChar8 *>(confText));
+
+	char copyText[52] = "Copyright(C) 2013 Sony Computer Entertainment Inc.\n";
 	sceDbgFontPrint(30, 250, CUI_COLOR_WHITE, reinterpret_cast<const SceChar8 *>(copyText));
 	sceDbgFontPrint(90, 85, CUI_COLOR_NORMAL,
 			reinterpret_cast<const SceChar8 *>(s_statusMessage));
@@ -251,11 +252,12 @@ SceInt32 UpdateCuiView::DrawErrorScreen()
 	ClearFrameBuffer(s_frameBufBase[s_frameBufToggle++ & 1]);
 
 	char headerText[16] = "System Update\n";
-	char confText[20] = "SCE CONFIDENTIAL\n";
-	char copyText[52] = "Copyright(C) 2012 Sony Computer Entertainment Inc.\n";
-
 	sceDbgFontPrint(30, 30, CUI_COLOR_WHITE, reinterpret_cast<const SceChar8 *>(headerText));
+
+	char confText[20] = "SCE CONFIDENTIAL\n";
 	sceDbgFontPrint(30, 235, CUI_COLOR_WHITE, reinterpret_cast<const SceChar8 *>(confText));
+
+	char copyText[52] = "Copyright(C) 2012 Sony Computer Entertainment Inc.\n";
 	sceDbgFontPrint(30, 250, CUI_COLOR_WHITE, reinterpret_cast<const SceChar8 *>(copyText));
 
 	if (s_blinkOff) {

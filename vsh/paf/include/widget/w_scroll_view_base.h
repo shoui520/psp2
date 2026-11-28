@@ -469,8 +469,10 @@ public:
 	ScrollViewBase *GetParentView();
 	/* where the touch it tracks is on its plane (ScePafWidget A1ED1315; name ours) */
 	math::v2 GetTrackPos();
+#ifndef PAF_BUILD_2014
 	/* the scroll range updated where its world rotation changed (name ours) */
 	void UpdateWorldRot();
+#endif
 	/* the focus kept within the view's limits, at the center along the axes that fit where
 	   center_fit is set (ScePafWidget 1EB87BE1; name ours) */
 	ScrollViewFocusLimit LimitFocus(const math::v2 &focus, bool center_fit);

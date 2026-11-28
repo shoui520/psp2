@@ -471,7 +471,7 @@ public:
 
 template<class _Elem, class _Traits, class _Ax>
 #ifdef PAF_BUILD_2014
-inline
+inline __attribute__((always_inline))
 #endif
 basic_string<_Elem, _Traits, _Ax> &
 basic_string<_Elem, _Traits, _Ax>::assign(const _Elem *src, size_type len)
@@ -509,7 +509,7 @@ basic_string<_Elem, _Traits, _Ax>::assign(const _Elem *src, size_type len)
 
 template<class _Elem, class _Traits, class _Ax>
 #ifdef PAF_BUILD_2014
-inline
+inline __attribute__((always_inline))
 #endif
 basic_string<_Elem, _Traits, _Ax> &
 basic_string<_Elem, _Traits, _Ax>::assign(const _Myt &src)

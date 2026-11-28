@@ -101,6 +101,7 @@ public:
 	MapCore *m_map_core;
 	bool m_initial_render_done;
 	uint32_t m_touch_user_data;
+	uint8_t tail_padding[8];
 };
 
 }

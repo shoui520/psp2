@@ -289,7 +289,7 @@ int PupController::clearCache(void)
 int PupController::InitializeCache(void)
 {
 	return sceKernelCreateLwMutex(&s_cacheMutex, "SceUpdaterCore PupController",
-				      SCE_KERNEL_LW_MUTEX_ATTR_RECURSIVE, 0, NULL);
+				      SCE_KERNEL_LW_MUTEX_ATTR_TH_PRIO, 0, NULL);
 }
 
 int PupController::FinalizeCache(void)

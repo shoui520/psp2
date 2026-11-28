@@ -207,6 +207,9 @@ public:
 	virtual int32_t Wakeup();
 	virtual void OnResume();
 	virtual int32_t Sleep(bool notify_error);
+	virtual int32_t OnSelectPopupClosed(int32_t selected_index);
+	virtual int32_t OnFileChooserResult(const common::String &path,
+					    const common::String &mime);
 	virtual math::v4 GetViewportSize();
 	virtual void SetMaxSurfaceSize(math::v2 size);
 	virtual int32_t OnBrowserComponentCreated(WbcBrowserComponent *component);
@@ -219,12 +222,9 @@ public:
 	virtual void OnBadCertificateResult(int32_t result, int32_t show_detail);
 	virtual void OnBasicAuthResult(int32_t result);
 
-	/* WebViewBase IME / popup / file-chooser callbacks. */
+	/* WebViewBase IME callbacks. */
 	virtual int32_t GetImeTypeAndEnterLabel(int32_t *out_input_type);
 	virtual int32_t OnMultiLineImeCommit(const common::String &text);
-	virtual int32_t OnSelectPopupClosed(int32_t selected_index);
-	virtual int32_t OnFileChooserResult(const common::String &path,
-					    const common::String &mime);
 
 	/* WebCorePageClient & WebCoreDocumentHost overrides. */
 	virtual void OnStartLoad();

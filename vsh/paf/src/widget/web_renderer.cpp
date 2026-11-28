@@ -344,8 +344,8 @@ int32_t WebRenderer::HandleMouseEvent(int32_t event_type, int32_t pos_x, int32_t
 
 	if (m_view != NULL) {
 		Vector3 doc_pos = m_widget_to_doc * Vector3((float)pos_x, (float)pos_y, 1.0f);
-		int32_t doc_x = (int32_t)sce_paf_roundf(doc_pos.getX());
-		int32_t doc_y = (int32_t)sce_paf_roundf(doc_pos.getY());
+		int32_t doc_x = (int32_t)sce_paf_ceilf(doc_pos.getX());
+		int32_t doc_y = (int32_t)sce_paf_ceilf(doc_pos.getY());
 
 		ret = m_view->HandleMouseEvent(event_type, doc_x, doc_y,
 					       button, click_count, modifiers, extra);

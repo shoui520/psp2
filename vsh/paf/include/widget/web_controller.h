@@ -427,8 +427,9 @@ public:
 	virtual int32_t OnBrowserComponentCreated(WbcBrowserComponent *component);
 	virtual int32_t Sleep(bool notify_error);
 	virtual void OnResume();
-	virtual void OnOtherControllerWakeup();
-	virtual void OnSuspend();
+	virtual int32_t OnSelectPopupClosed(int32_t selected_index);
+	virtual int32_t OnFileChooserResult(const common::String &path,
+					    const common::String &mime);
 	virtual math::v4 GetViewportSize();
 	virtual void SetMaxSurfaceSize(math::v2 size);
 	virtual int32_t GetImeTypeAndEnterLabel(int32_t *out_input_type);

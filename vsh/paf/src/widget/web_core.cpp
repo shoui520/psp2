@@ -64,7 +64,7 @@ void WebCore::NotifyControllerWakeup(WebController *sender)
 {
 	for (size_t i = 0; i < m_controllers.size(); i++) {
 		if (m_controllers[i] != sender)
-			m_controllers[i]->OnOtherControllerWakeup();
+			m_controllers[i]->OnResume();
 	}
 }
 

@@ -2372,6 +2372,7 @@ void TouchScrollSupplier::UpdateTouch(ScrollViewBase *view)
 	}
 }
 
+#ifndef PAF_BUILD_2014
 void ScrollViewBase::UpdateWorldRot()
 {
 	if (m_hold_count <= 0 && !(m_world_rot == m_world_rot_pre)) {
@@ -2379,6 +2380,7 @@ void ScrollViewBase::UpdateWorldRot()
 		UpdateScrollRange();
 	}
 }
+#endif
 
 ScrollViewFocusLimit ScrollViewBase::LimitFocus(const math::v2 &focus, bool center_fit)
 {
@@ -2568,7 +2570,14 @@ void ScrollViewBase::UpdatePost()
 		m_debug->Update();
 	if (!m_ime_padding)
 		m_ime_height = 0.0f;
+#ifdef PAF_BUILD_2014
+	if (!(m_world_rot == m_world_rot_pre)) {
+		m_world_rot_pre = m_world_rot;
+		UpdateScrollRange();
+	}
+#else
 	UpdateWorldRot();
+#endif
 	if (m_track_port != -1 || m_rear_touches != 0)
 		s_touch_scroll_supplier.UpdateTouch(this);
 	if (m_over_scroll != NULL)
