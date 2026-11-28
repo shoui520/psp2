@@ -9,6 +9,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "musiccore_sync.h"
+
 namespace sce {
 namespace MusicCore {
 
@@ -17,31 +19,6 @@ extern void *getWorkerThreadPool();
 extern int workerThreadPoolStart(void *pool, int slotType, void *entryFn,
                                  size_t argSize, void *argData, int *outWorkerId);
 extern void workerThreadPoolJoin(void *pool, int workerId);
-
-/* Synchronization wrappers implemented in musiccore_sync_cache_io.cpp */
-struct SyncMutexStorage {
-    void *vtablePtr;
-    SceUID mutexId;
-};
-
-struct SyncCondStorage {
-    void *vtablePtr;
-    SceUID eventFlagId;
-};
-
-extern void syncMutexInit(SyncMutexStorage *mutex, const char *name);
-extern void syncMutexDestroy(SyncMutexStorage *mutex);
-extern int syncMutexIsValid(const SyncMutexStorage *mutex);
-extern int syncMutexLock(SyncMutexStorage *mutex);
-extern int syncMutexUnlock(SyncMutexStorage *mutex);
-
-extern void syncCondInit(SyncCondStorage *cond, const char *name);
-extern void syncCondDestroy(SyncCondStorage *cond);
-extern int syncCondWait(SyncCondStorage *cond, SyncMutexStorage *mutex,
-                        uint32_t waitBits, uint32_t *outBits);
-extern int syncCondSignal(SyncCondStorage *cond, uint32_t signalBits);
-extern void workerThreadJoinRaw(int threadId);
-extern void workerThreadExitSelf();
 
 /* Pipeline stage completion masks (0x81545000, 0x81545002, 0x81545004) */
 static uint16_t g_runningStageMask = 0x0110u;
@@ -320,8 +297,8 @@ private:
     PipelineEventCallback *m_callback;        /* +28 */
     int m_state;                              /* +32 */
     int m_workerThreadId;                     /* +36 */
-    SyncMutexStorage m_mutex;                 /* +40 */
-    SyncCondStorage m_cond;                   /* +48 */
+    SyncMutex m_mutex;                        /* +40 */
+    SyncCond m_cond;                          /* +48 */
     uint16_t m_stageFlags;                    /* +56 */
     uint16_t m_padStageFlags;                 /* +58 */
     int m_pendingCommand;                     /* +60 */
@@ -352,7 +329,7 @@ int DecoderPipeline::workerThreadEntry(SceSize argSize, void *argData)
         return -1;
     }
     (*selfPtr)->runEventLoop();
-    workerThreadExitSelf();
+    exitWorkerThread();
     return 1;
 }
 
@@ -367,6 +344,8 @@ DecoderPipeline::DecoderPipeline(ParserFilter *parser, BufRefPipe *pipe,
     , m_callback(NULL)
     , m_state(STAGE_STATE_IDLE)
     , m_workerThreadId(-1)
+    , m_mutex("SceShellMusicCoreDecoderMgr")
+    , m_cond("SceShellMusicCoreDecoderMgr")
     , m_stageFlags(0)
     , m_padStageFlags(0)
     , m_pendingCommand(PIPELINE_CMD_NONE)
@@ -384,9 +363,6 @@ DecoderPipeline::DecoderPipeline(ParserFilter *parser, BufRefPipe *pipe,
     , m_threadArg(NULL)
     , m_usesThreadPool(1)
 {
-    syncMutexInit(&m_mutex, "SceShellMusicCoreDecoderMgr");
-    syncCondInit(&m_cond, "SceShellMusicCoreDecoderMgr");
-
     m_eventQueue.entries = m_eventStorage;
     m_eventQueue.capacity = 16;
     m_eventQueue.headIndex = -1;
@@ -423,26 +399,23 @@ DecoderPipeline::DecoderPipeline(ParserFilter *parser, BufRefPipe *pipe,
 /* 0x811F6272 / 0x811F62FA */
 DecoderPipeline::~DecoderPipeline()
 {
-    syncMutexLock(&m_mutex);
+    m_mutex.lock();
     m_state = -1;
     m_pendingCommand = PIPELINE_CMD_SHUTDOWN;
-    syncCondSignal(&m_cond, 0xFFFFFFFFu);
-    syncMutexUnlock(&m_mutex);
+    m_cond.signal(0xFFFFFFFFu);
+    m_mutex.unlock();
 
     if (m_usesThreadPool == 1u) {
         void *pool = getWorkerThreadPool();
         workerThreadPoolJoin(pool, m_workerThreadId);
     } else {
-        workerThreadJoinRaw(m_workerThreadId);
+        joinWorkerThread(m_workerThreadId);
     }
 
     if (m_threadArg != NULL) {
         delete m_threadArg;
         m_threadArg = NULL;
     }
-
-    syncCondDestroy(&m_cond);
-    syncMutexDestroy(&m_mutex);
 }
 
 /* 0x811F630A */
@@ -451,10 +424,10 @@ bool DecoderPipeline::isReady() const
     if (m_workerThreadId < 0) {
         return false;
     }
-    if (syncMutexIsValid(&m_mutex) == 0) {
+    if (!m_mutex.isValid()) {
         return false;
     }
-    return syncMutexIsValid((const SyncMutexStorage *)&m_cond) != 0;
+    return m_cond.isValid();
 }
 
 void DecoderPipeline::stopAllStages()
@@ -613,7 +586,7 @@ void DecoderPipeline::handleCommandInIdle(int command)
 
         if ((g_startedStageMask & startedBits) != 0u) {
             if ((g_startedStageMask & startedBits) != g_startedStageMask) {
-                syncMutexLock(&m_mutex);
+                m_mutex.lock();
                 uint16_t failedStage = 3u;
                 int failedErr = audioErr;
                 if (parserErr != 0) {
@@ -624,7 +597,7 @@ void DecoderPipeline::handleCommandInIdle(int command)
                     failedErr = decoderErr;
                 }
                 m_eventQueue.push(PIPELINE_EVT_ERROR, failedErr, failedStage, m_stageFlags);
-                syncMutexUnlock(&m_mutex);
+                m_mutex.unlock();
             }
             m_state = STAGE_STATE_STARTING;
         } else {
@@ -773,7 +746,7 @@ void DecoderPipeline::handleEventInSpeedChange(uint32_t eventCode, int statusCod
 
             if ((g_startedStageMask & startedBits) != 0u) {
                 if ((g_startedStageMask & startedBits) != g_startedStageMask) {
-                    syncMutexLock(&m_mutex);
+                    m_mutex.lock();
                     uint16_t failedStage = 1u;
                     int failedErr = audioErr;
                     if (parserErr != 0) {
@@ -784,7 +757,7 @@ void DecoderPipeline::handleEventInSpeedChange(uint32_t eventCode, int statusCod
                         failedErr = decoderErr;
                     }
                     m_eventQueue.push(PIPELINE_EVT_ERROR, failedErr, failedStage, m_stageFlags);
-                    syncMutexUnlock(&m_mutex);
+                    m_mutex.unlock();
                 }
                 m_state = STAGE_STATE_SPEED_STARTING;
             } else {
@@ -969,13 +942,13 @@ void DecoderPipeline::rejectCommand(int command)
 /* 0x811F6E4C */
 void DecoderPipeline::runEventLoop()
 {
-    syncMutexLock(&m_mutex);
+    m_mutex.lock();
 
     while (m_pendingCommand != PIPELINE_CMD_SHUTDOWN) {
         PipelineEventEntry evt;
         if (m_eventQueue.pop(&evt) == 0) {
             int curState = m_state;
-            syncMutexUnlock(&m_mutex);
+            m_mutex.unlock();
 
             if (curState == STAGE_STATE_ERR_FROM_SPEED
                 || curState == STAGE_STATE_ERR_FROM_STOPPING
@@ -995,14 +968,14 @@ void DecoderPipeline::runEventLoop()
                 handleEventInSpeedChange(evt.eventCode, evt.statusCode, evt.sourceStage);
             }
 
-            syncMutexLock(&m_mutex);
+            m_mutex.lock();
         } else if (m_pendingCommand == PIPELINE_CMD_NONE) {
-            syncCondWait(&m_cond, &m_mutex, 3u, NULL);
+            m_cond.wait(&m_mutex, 3u, NULL);
         } else {
             int command = m_pendingCommand;
             int curState = m_state;
             m_pendingCommand = PIPELINE_CMD_NONE;
-            syncMutexUnlock(&m_mutex);
+            m_mutex.unlock();
 
             if (curState == STAGE_STATE_IDLE) {
                 handleCommandInIdle(command);
@@ -1014,11 +987,11 @@ void DecoderPipeline::runEventLoop()
                 rejectCommand(command);
             }
 
-            syncMutexLock(&m_mutex);
+            m_mutex.lock();
         }
     }
 
-    syncMutexUnlock(&m_mutex);
+    m_mutex.unlock();
 }
 
 /* 0x811F7164 */
@@ -1028,24 +1001,24 @@ int DecoderPipeline::requestStart(void *mediaItem, int startMs, int endMs, int p
         return PIPELINE_ERR_BAD_PARAM;
     }
 
-    syncMutexLock(&m_mutex);
+    m_mutex.lock();
     m_startMediaItem = mediaItem;
     m_startPositionMs = startMs;
     m_endPositionMs = endMs;
     m_startPlaySpeed = playSpeed;
     m_pendingCommand = PIPELINE_CMD_START;
-    syncCondSignal(&m_cond, 1u);
-    syncMutexUnlock(&m_mutex);
+    m_cond.signal(1u);
+    m_mutex.unlock();
     return 0;
 }
 
 /* 0x811F71C6 */
 int DecoderPipeline::requestStop()
 {
-    syncMutexLock(&m_mutex);
+    m_mutex.lock();
     m_pendingCommand = PIPELINE_CMD_STOP;
-    syncCondSignal(&m_cond, 1u);
-    syncMutexUnlock(&m_mutex);
+    m_cond.signal(1u);
+    m_mutex.unlock();
     return 0;
 }
 
@@ -1056,11 +1029,11 @@ int DecoderPipeline::requestSetSpeed(int playSpeed)
         return PIPELINE_ERR_BAD_PARAM;
     }
 
-    syncMutexLock(&m_mutex);
+    m_mutex.lock();
     m_pendingSpeed = playSpeed;
     m_pendingCommand = PIPELINE_CMD_SET_SPEED;
-    syncCondSignal(&m_cond, 1u);
-    syncMutexUnlock(&m_mutex);
+    m_cond.signal(1u);
+    m_mutex.unlock();
     return 0;
 }
 
@@ -1071,21 +1044,21 @@ int DecoderPipeline::requestQueryMetadata(void *metaOut)
         return PIPELINE_ERR_BAD_PARAM;
     }
 
-    syncMutexLock(&m_mutex);
+    m_mutex.lock();
     m_pendingMetaOut = metaOut;
     m_pendingCommand = PIPELINE_CMD_QUERY_META;
-    syncCondSignal(&m_cond, 1u);
-    syncMutexUnlock(&m_mutex);
+    m_cond.signal(1u);
+    m_mutex.unlock();
     return 0;
 }
 
 /* 0x811F7268 */
 int DecoderPipeline::requestGetPosition()
 {
-    syncMutexLock(&m_mutex);
+    m_mutex.lock();
     m_pendingCommand = PIPELINE_CMD_GET_POSITION;
-    syncCondSignal(&m_cond, 1u);
-    syncMutexUnlock(&m_mutex);
+    m_cond.signal(1u);
+    m_mutex.unlock();
     return 0;
 }
 
@@ -1100,7 +1073,7 @@ void DecoderPipeline::onFilterEvent(int eventKind, void *sourceFilter, int statu
     void *decoderCtrl = (m_decoder != NULL) ? (void *)m_decoder->asActiveControl() : NULL;
     void *audioCtrl = (void *)m_audioControl;
 
-    syncMutexLock(&m_mutex);
+    m_mutex.lock();
     uint16_t sourceStage = 0;
     bool signalCond = false;
 
@@ -1189,9 +1162,9 @@ void DecoderPipeline::onFilterEvent(int eventKind, void *sourceFilter, int statu
     }
 
     if (signalCond) {
-        syncCondSignal(&m_cond, 2u);
+        m_cond.signal(2u);
     }
-    syncMutexUnlock(&m_mutex);
+    m_mutex.unlock();
 }
 
 /* 0x811F7594 (+ thunk at 0x811F75F6) */

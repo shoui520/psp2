@@ -36,14 +36,6 @@ static const int TAG_STATE_UNKNOWN = 255;
 extern uint8_t *allocUint8Array(size_t count);
 extern uint32_t *allocUint32ArrayCount(size_t count);
 
-static uint32_t swapBigEndian32(uint32_t value)
-{
-    return ((value & 0x000000FFu) << 24)
-         | ((value & 0x0000FF00u) << 8)
-         | ((value & 0x00FF0000u) >> 8)
-         | ((value & 0xFF000000u) >> 24);
-}
-
 /* ===== MediaInfoBase (0x811FDB5C - 0x811FDBBF) ===== */
 
 /* 0x811FDB5C */
@@ -119,15 +111,6 @@ static const char ID3V2_MAGIC[3] = { 'I', 'D', '3' };
 static const char EA3_MAGIC[3] = { 'e', 'a', '3' };
 static const char ID3V2_FOOTER_MAGIC[3] = { '3', 'D', 'I' };
 
-static uint32_t decodeSynchsafeSize(const uint8_t *headerBytes)
-{
-    uint32_t total = 0;
-    for (uint8_t idx = 0; idx < 4u; ++idx) {
-        total = (total << 7) | (headerBytes[6u + idx] & makeBitMask(7u));
-    }
-    return total;
-}
-
 /* 0x811FE0F8 */
 Id3v2Header::Id3v2Header()
     : m_isValid(0)
@@ -138,7 +121,11 @@ Id3v2Header::Id3v2Header()
 /* 0x811FE018 */
 uint32_t Id3v2Header::getTagBodySize() const
 {
-    return decodeSynchsafeSize(m_rawHeader);
+    uint32_t total = 0;
+    for (uint8_t idx = 0; idx < 4u; ++idx) {
+        total = (total << 7) | (m_rawHeader[6u + idx] & makeBitMask(7u));
+    }
+    return total;
 }
 
 /* 0x811FE042 */
@@ -151,7 +138,11 @@ bool Id3v2Header::isHeaderValid(const uint8_t *bytes)
         && sce_paf_memcmp(bytes, EA3_MAGIC, 3u) != 0) {
         return false;
     }
-    return decodeSynchsafeSize(bytes) != 0u;
+    uint32_t total = 0;
+    for (uint8_t idx = 0; idx < 4u; ++idx) {
+        total = (total << 7) | (bytes[6u + idx] & makeBitMask(7u));
+    }
+    return total != 0u;
 }
 
 /* 0x811FE0AA */
@@ -160,7 +151,11 @@ bool Id3v2Header::isFooterValid(const uint8_t *bytes)
     if (sce_paf_memcmp(bytes, ID3V2_FOOTER_MAGIC, 3u) != 0) {
         return false;
     }
-    return decodeSynchsafeSize(bytes) != 0u;
+    uint32_t total = 0;
+    for (uint8_t idx = 0; idx < 4u; ++idx) {
+        total = (total << 7) | (bytes[6u + idx] & makeBitMask(7u));
+    }
+    return total != 0u;
 }
 
 /* 0x811FE0FE */
@@ -1140,9 +1135,7 @@ int Mp3XingSeeker::seekToMs(uint32_t targetMs, int fileLimit, int *outOffset,
         return 0;
     }
 
-    uint32_t rawFrames = 0;
-    sce_paf_memcpy(&rawFrames, xingHdr->rawBytes + 8, 4u);
-    uint32_t totalFrames = swapBigEndian32(rawFrames);
+    uint32_t totalFrames = readBigEndian32(xingHdr->rawBytes + 8);
 
     const MpegFrameHeader *firstHdr = m_firstFinder->getFirstHeader();
     uint32_t samplesPerFrame = (uint32_t)getMpegLayer3SamplesPerFrame(firstHdr->rawBits);
@@ -1166,9 +1159,7 @@ int Mp3XingSeeker::seekToMs(uint32_t targetMs, int fileLimit, int *outOffset,
         interpOffset = remainderMs * (delta / (totalDurationMs / 100.0f));
     }
 
-    uint32_t rawBytes = 0;
-    sce_paf_memcpy(&rawBytes, xingHdr->rawBytes + 12, 4u);
-    int totalBytes = (int)swapBigEndian32(rawBytes);
+    int totalBytes = (int)readBigEndian32(xingHdr->rawBytes + 12);
     if (totalBytes < 0) {
         *outErr = totalBytes;
         return 0;

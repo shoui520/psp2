@@ -30,6 +30,7 @@
 #include <std/string.h>
 #include "shell.h"
 #include "plugins.h"
+#include "src/netctl/netctl_internal.h"
 
 using namespace paf;
 
@@ -437,30 +438,30 @@ static const ShellNetCtlHostFuncs s_netCtlHostFuncs = {
 };
 
 static const NetCtlHandlers s_netCtlHandlers = {
-	shellNetCtlInetGetInfo,
-	shellNetCtlInetGetState,
-	shellNetCtlHandle_E8E8DF18,
-	shellNetCtlHandle_CDEBA500,
-	shellNetCtlAdhocGetState,
-	shellNetCtlHandle_0CC36330,
-	shellNetCtlAdhocGetInAddr,
-	shellNetCtlGetNatInfo,
-	shellNetCtlHandle_F30365D6,
-	shellNetCtlHandle_6A56FC3A,
-	shellNetCtlHandle_47980B9B,
-	shellNetCtlHandle_92EB6B1A,
-	shellNetCtlHandle_A840C74C,
-	shellNetCtlHandle_1A254169,
-	shellNetCtlHandle_27932A1B,
-	shellNetCtlHandle_484EE0B2,
-	shellNetCtlHandle_A59146E1,
-	shellNetCtlHandle_147B054C,
-	shellNetCtlHandle_C15740E9,
-	shellNetCtlHandle_CCF30B92,
-	shellNetCtlGetIfStat,
-	shellNetCtlGetIfStat,
-	shellNetCtlHandle_777FE4C2,
-	shellNetCtlHandle_8B2FEFAA,
+	SceShell_7AD86CE1,
+	netCtlApiInetGetState,
+	SceShell_77642C92,
+	netCtlApiAdhocGetInfo,
+	netCtlApiAdhocGetState,
+	SceShell_5DC4A753,
+	netCtlApiAdhocGetInAddr,
+	netCtlApiGetNatInfo,
+	reinterpret_cast<int (*)(void *)>(netCtlApiGetNatDetailInfo),
+	reinterpret_cast<int (*)(const char **, SceUInt32, void *)>(SceShell_449348B6),
+	netCtlApiGetScanResultCount,
+	reinterpret_cast<int (*)(int, void *)>(netCtlApiGetScanResultByIndex),
+	reinterpret_cast<int (*)(void *, int)>(SceShell_0025417F),
+	reinterpret_cast<int (*)(void *, void *, int, int *)>(SceShell_EC75C2F3),
+	reinterpret_cast<int (*)(void *, int, int *)>(SceShell_05D6FCB0),
+	reinterpret_cast<int (*)(void *, int)>(SceShell_3059EEBC),
+	reinterpret_cast<int (*)(void *, void *, int, int *)>(SceShell_3E737FBE),
+	SceShell_36788D70,
+	SceShell_8858B876,
+	SceShell_29A14252,
+	netCtlApiGetIfStat,
+	netCtlApiGetIfStat,
+	netCtlApiLinkProcess,
+	netCtlApiUnlinkProcess,
 };
 
 static void shellNetOnAppEvent(int code, const void *data, SceSize size, void *arg);

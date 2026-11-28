@@ -7,42 +7,14 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "musiccore_sync.h"
+
 static const int MUSICCORE_ERR_FAILED = -1879113726; /* 0x8FFF0002 */
 static const int MUSICCORE_ERR_NO_MEMORY = -1879113724; /* 0x8FFF0004 */
 static const int MUSICCORE_ERR_INVALID_ARG = -1879113723; /* 0x8FFF0005 */
 
 namespace sce {
 namespace MusicCore {
-
-struct PoolSlotHeader {
-    unsigned char reserved[5];
-    unsigned char active;
-    unsigned char pad[6];
-    void *object;
-};
-
-class FixedPool {
-public:
-    FixedPool(unsigned int elemSize, unsigned int count, unsigned int totalBytes,
-              unsigned int headerSize);
-    virtual ~FixedPool();
-
-    static unsigned int calcBodySize(unsigned int elemSize, unsigned int count);
-    static unsigned int calcTotalSize(unsigned int elemSize, unsigned int count);
-
-    PoolSlotHeader *getSlotHeader(unsigned char index);
-    unsigned int getSlotSize() const;
-    void *allocSlot();
-    void freeSlot(void *slot);
-    void *getSlotObject(unsigned int index);
-    void setSlotActive(void *slot, unsigned char active);
-    int isSlotActive(void *slot);
-
-public:
-    void *m_poolMem;
-    unsigned int m_count;
-    unsigned int m_elemSize;
-};
 
 class BaseObject {
 public:
@@ -79,7 +51,7 @@ static unsigned int calcPlayerElemSize(char playerKind, int capacity)
     return 0;
 }
 
-class PlayerPool : public FixedPool {
+class PlayerPool : public CacheBufferPool {
 public:
     static unsigned int calcSize(char playerKind, unsigned char count, int capacity);
 
@@ -100,12 +72,12 @@ unsigned int PlayerPool::calcSize(char playerKind, unsigned char count, int capa
     unsigned int elemSize = 0;
     if (playerKind >= 0 && playerKind <= 2)
         elemSize = alignUp8(calcPlayerElemSize(playerKind, capacity));
-    return FixedPool::calcBodySize(elemSize, count);
+    return CacheBufferPool::calcBlocksTotalSize(elemSize, count);
 }
 
 PlayerPool::PlayerPool(void *factory, char playerKind, unsigned char count, int capacity,
                        unsigned int totalBytes, unsigned int headerSize)
-    : FixedPool(calcPlayerElemSize(playerKind, capacity), count, totalBytes, headerSize),
+    : CacheBufferPool(calcPlayerElemSize(playerKind, capacity), count, totalBytes, headerSize),
       m_playerKind(playerKind),
       m_playerCount(count),
       m_capacity(capacity)
@@ -118,17 +90,17 @@ PlayerPool::PlayerPool(void *factory, char playerKind, unsigned char count, int 
         return;
 
     unsigned int rawElemSize = calcPlayerElemSize(m_playerKind, m_capacity);
-    if (FixedPool::calcBodySize(rawElemSize, m_playerCount) + 24 > totalBytes)
+    if (CacheBufferPool::calcBlocksTotalSize(rawElemSize, m_playerCount) + 24 > totalBytes)
         return;
 
-    for (unsigned int i = 0; i < m_count; ++i) {
-        void *slot = allocSlot();
+    for (unsigned int i = 0; i < m_blockCount; ++i) {
+        void *slot = acquireBuffer();
         if (slot == NULL)
             continue;
 
         int err = 0;
         BaseObject *obj = NULL;
-        unsigned int slotSize = getSlotSize();
+        unsigned int slotSize = getBlockPayloadSize();
 
         if (m_playerKind == 0) {
             obj = constructMusicPlayer(slot, factory, m_capacity, &err, slotSize, 472);
@@ -143,19 +115,19 @@ PlayerPool::PlayerPool(void *factory, char playerKind, unsigned char count, int 
         if (err != 0) {
             if (obj != NULL)
                 obj->~BaseObject();
-            freeSlot(slot);
+            releaseBuffer(slot);
         } else if (obj == NULL) {
-            freeSlot(slot);
+            releaseBuffer(slot);
         } else {
-            setSlotActive(slot, 1);
+            setBufferPinned(slot, 1);
         }
     }
 }
 
 PlayerPool::~PlayerPool()
 {
-    for (unsigned int i = 0; i < m_count; ++i) {
-        BaseObject *obj = (BaseObject *)getSlotObject(i);
+    for (unsigned int i = 0; i < m_blockCount; ++i) {
+        BaseObject *obj = (BaseObject *)getPayloadAt(i);
         if (obj != NULL)
             obj->~BaseObject();
     }
@@ -163,9 +135,9 @@ PlayerPool::~PlayerPool()
 
 void *PlayerPool::getPlayer(unsigned char index)
 {
-    PoolSlotHeader *hdr = getSlotHeader(index);
-    if (hdr != NULL && hdr->active == 1)
-        return hdr->object;
+    BufferBlock *hdr = getBlockAt(index);
+    if (hdr != NULL && hdr->m_pinned == 1)
+        return hdr->m_payloadPtr;
     return NULL;
 }
 
@@ -185,21 +157,21 @@ public:
     int getPlayerPool(char playerKind, PlayerPool **outPool);
 
 private:
-    FixedPool *m_controllerPool;
+    CacheBufferPool *m_controllerPool;
     PlayerPool *m_playlistPool;
     PlayerPool *m_musicPool;
     PlayerPool *m_streamPool;
-    FixedPool *m_workBufPool;
+    CacheBufferPool *m_workBufPool;
 };
 
 unsigned int ObjFactory::calcPayloadSize(int numMusic, int numPlaylist, int numStream)
 {
-    unsigned int ctrlPoolSz = FixedPool::calcTotalSize(calcControllerSize(), 1);
+    unsigned int ctrlPoolSz = CacheBufferPool::calcPoolTotalSize(calcControllerSize(), 1);
     unsigned int musicSz = PlayerPool::calcSize(0, (unsigned char)numMusic, 1);
     unsigned int playlistSz = PlayerPool::calcSize(1, (unsigned char)numPlaylist, 10000);
     unsigned int streamSz = PlayerPool::calcSize(2, (unsigned char)numStream, 1);
     unsigned int workBufCount = (unsigned int)(2 * (numMusic + numPlaylist + numStream) + 6);
-    unsigned int workBufSz = FixedPool::calcTotalSize(4224, workBufCount);
+    unsigned int workBufSz = CacheBufferPool::calcPoolTotalSize(4224, workBufCount);
     return ctrlPoolSz + musicSz + playlistSz + streamSz + workBufSz + 72;
 }
 
@@ -226,11 +198,11 @@ ObjFactory::ObjFactory(int numMusic, int numPlaylist, int numStream,
     char *cursor = (char *)this + offset;
 
     unsigned int ctrlElemSz = calcControllerSize();
-    unsigned int ctrlPoolSz = FixedPool::calcTotalSize(ctrlElemSz, 1);
+    unsigned int ctrlPoolSz = CacheBufferPool::calcPoolTotalSize(ctrlElemSz, 1);
     if (offset + ctrlPoolSz > totalBytes)
         return;
     if (cursor != NULL)
-        m_controllerPool = new (cursor) FixedPool(ctrlElemSz, 1, ctrlPoolSz, 16);
+        m_controllerPool = new (cursor) CacheBufferPool(ctrlElemSz, 1, ctrlPoolSz, 16);
     cursor += ctrlPoolSz;
     offset += ctrlPoolSz;
 
@@ -259,17 +231,17 @@ ObjFactory::ObjFactory(int numMusic, int numPlaylist, int numStream,
     offset += streamSz;
 
     unsigned int workBufCount = (unsigned int)(2 * (numMusic + numPlaylist + numStream) + 6);
-    unsigned int workBufSz = FixedPool::calcTotalSize(4224, workBufCount);
+    unsigned int workBufSz = CacheBufferPool::calcPoolTotalSize(4224, workBufCount);
     if (offset + workBufSz > totalBytes)
         return;
     if (cursor != NULL)
-        m_workBufPool = new (cursor) FixedPool(4224, workBufCount, workBufSz, 16);
+        m_workBufPool = new (cursor) CacheBufferPool(4224, workBufCount, workBufSz, 16);
 }
 
 ObjFactory::~ObjFactory()
 {
     if (m_workBufPool != NULL) {
-        m_workBufPool->~FixedPool();
+        m_workBufPool->~CacheBufferPool();
         m_workBufPool = NULL;
     }
     if (m_musicPool != NULL) {
@@ -285,7 +257,7 @@ ObjFactory::~ObjFactory()
         m_streamPool = NULL;
     }
     if (m_controllerPool != NULL) {
-        m_controllerPool->~FixedPool();
+        m_controllerPool->~CacheBufferPool();
         m_controllerPool = NULL;
     }
 }
@@ -297,18 +269,18 @@ int ObjFactory::createController(void **outCtrl)
         return MUSICCORE_ERR_NO_MEMORY;
 
     int err = 0;
-    void *slot = m_controllerPool->allocSlot();
+    void *slot = m_controllerPool->acquireBuffer();
     if (slot == NULL)
         return MUSICCORE_ERR_NO_MEMORY;
 
-    unsigned int slotSize = m_controllerPool->getSlotSize();
+    unsigned int slotSize = m_controllerPool->getBlockPayloadSize();
     BaseObject *ctrl = constructController(slot, this, &err, slotSize);
     *outCtrl = ctrl;
     if (ctrl == NULL) {
         err = MUSICCORE_ERR_FAILED;
-        m_controllerPool->freeSlot(slot);
+        m_controllerPool->releaseBuffer(slot);
     } else {
-        m_controllerPool->setSlotActive(slot, 1);
+        m_controllerPool->setBufferPinned(slot, 1);
     }
     return err;
 }
@@ -320,11 +292,11 @@ int ObjFactory::destroyController(BaseObject *ctrl)
     if (m_controllerPool == NULL)
         return MUSICCORE_ERR_FAILED;
 
-    if (m_controllerPool->isSlotActive(ctrl) == 1) {
+    if (m_controllerPool->isBufferPinned(ctrl) == 1) {
         ctrl->~BaseObject();
-        m_controllerPool->setSlotActive(ctrl, 0);
+        m_controllerPool->setBufferPinned(ctrl, 0);
     }
-    m_controllerPool->freeSlot(ctrl);
+    m_controllerPool->releaseBuffer(ctrl);
     return 0;
 }
 
@@ -334,18 +306,18 @@ int ObjFactory::createWorkBuf(void **outBuf)
     if (m_workBufPool == NULL)
         return MUSICCORE_ERR_NO_MEMORY;
 
-    void *slot = m_workBufPool->allocSlot();
+    void *slot = m_workBufPool->acquireBuffer();
     if (slot == NULL)
         return MUSICCORE_ERR_NO_MEMORY;
 
-    unsigned int slotSize = m_workBufPool->getSlotSize();
+    unsigned int slotSize = m_workBufPool->getBlockPayloadSize();
     BaseObject *buf = constructWorkBuffer(slot, 4192, slotSize);
     *outBuf = buf;
     if (buf == NULL) {
-        m_workBufPool->freeSlot(slot);
+        m_workBufPool->releaseBuffer(slot);
         return MUSICCORE_ERR_FAILED;
     }
-    m_workBufPool->setSlotActive(slot, 1);
+    m_workBufPool->setBufferPinned(slot, 1);
     return 0;
 }
 
@@ -364,11 +336,11 @@ int ObjFactory::destroyWorkBuf(BaseObject *buf)
     if (m_workBufPool == NULL)
         return MUSICCORE_ERR_FAILED;
 
-    if (m_workBufPool->isSlotActive(buf) == 1) {
+    if (m_workBufPool->isBufferPinned(buf) == 1) {
         buf->~BaseObject();
-        m_workBufPool->setSlotActive(buf, 0);
+        m_workBufPool->setBufferPinned(buf, 0);
     }
-    m_workBufPool->freeSlot(buf);
+    m_workBufPool->releaseBuffer(buf);
     return 0;
 }
 

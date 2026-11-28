@@ -124,6 +124,12 @@ static int consoleInfoSenderStart(int mode)
 	return 1;
 }
 
+extern "C" {
+int SceShell_77642C92(int *outRawState);
+int SceShell_7AD86CE1(int code, SceNetCtlInfo *info);
+int SceShell_2E0B6FA6(void (*callback)(int, int, int, int, int, void *), void *arg, int *outId);
+}
+
 static void consoleInfoSenderOnNetEvent(int code, int event, int state);
 static int consoleInfoSenderOnMtp(void);
 
@@ -140,13 +146,13 @@ int consoleInfoSenderInit(void)
 	option.stackSize = CONSOLE_INFO_SENDER_STACK;
 	s_queue = new job::JobQueue("SceConsoleInfoSendJobQueue", &option);
 
-	shellNetCtlHandle_E8E8DF18(&state);
+	SceShell_77642C92(&state);
 	if (state == CONSOLE_INFO_SENDER_CONNECTED &&
-	    shellNetCtlInetGetInfo(SCE_NET_CTL_INFO_DEVICE, &info) == 0 &&
+	    SceShell_7AD86CE1(SCE_NET_CTL_INFO_DEVICE, &info) == 0 &&
 	    info.device <= SCE_NET_CTL_DEVICE_WIRED)
 		consoleInfoSenderStart(CONSOLE_INFO_SENDER_NETWORK);
 
-	int ret = shellNetCtlInetRegisterCallback(consoleInfoSenderOnNetEvent, NULL, &id);
+	int ret = SceShell_2E0B6FA6(reinterpret_cast<void (*)(int, int, int, int, int, void *)>(consoleInfoSenderOnNetEvent), NULL, &id);
 
 	if (ret == 0)
 		return shellMtpServerSetConsoleInfoCallback(consoleInfoSenderOnMtp, 0);
@@ -161,7 +167,7 @@ static void consoleInfoSenderOnNetEvent(int code, int event, int state)
 
 	if (event != CONSOLE_INFO_SENDER_EVENT ||
 	    (state != CONSOLE_INFO_SENDER_EVENT_IP && code != CONSOLE_INFO_SENDER_EVENT_UP) ||
-	    shellNetCtlInetGetInfo(SCE_NET_CTL_INFO_DEVICE, &info) < 0)
+	    SceShell_7AD86CE1(SCE_NET_CTL_INFO_DEVICE, &info) < 0)
 		return;
 
 	int kind = 0;

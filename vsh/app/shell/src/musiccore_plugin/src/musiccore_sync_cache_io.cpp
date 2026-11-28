@@ -7,6 +7,7 @@
 
 #include "musiccore_cache_io_engine.h"
 #include "musiccore_local_cache_io.h"
+#include "musiccore_sync.h"
 #include <kernel.h>
 #include <std/new>
 #include <stddef.h>
@@ -59,19 +60,6 @@ static void noopCacheNotify()
 
 /* ===== SyncMutex (0x811F3AB8 - 0x811F3BA3) ===== */
 
-class SyncMutex {
-public:
-    explicit SyncMutex(const char *name);
-    virtual ~SyncMutex();
-
-    bool isValid() const;
-    int lock();
-    int unlock();
-
-private:
-    SceUID m_semaId;
-};
-
 /* 0x811F3AB8 */
 SyncMutex::SyncMutex(const char *name)
     : m_semaId(-1)
@@ -122,18 +110,6 @@ int SyncMutex::unlock()
 }
 
 /* ===== SyncCond (0x811F360C - 0x811F3743) ===== */
-
-class SyncCond {
-public:
-    explicit SyncCond(const char *name);
-    virtual ~SyncCond();
-
-    int wait(SyncMutex *mutex, unsigned int waitBits, SceUInt *timeout);
-    int signal(unsigned int signalBits);
-
-private:
-    SceUID m_eventFlagId;
-};
 
 /* 0x811F360C */
 SyncCond::SyncCond(const char *name)
@@ -186,19 +162,6 @@ int SyncCond::signal(unsigned int signalBits)
 
 /* ===== BufferBlock & BufferPool (0x811F3744 - 0x811F3AB7) ===== */
 
-class BufferBlock {
-public:
-    BufferBlock(uint32_t payloadSize, uint32_t totalBytes, uint32_t headerSize);
-    virtual ~BufferBlock();
-    virtual uint32_t getStride() const;
-
-    uint8_t m_inUse;
-    uint8_t m_pinned;
-    uint16_t m_padFlags;
-    uint32_t m_payloadSize;
-    void *m_payloadPtr;
-};
-
 /* 0x811F3744 */
 BufferBlock::BufferBlock(uint32_t payloadSize, uint32_t totalBytes, uint32_t headerSize)
     : m_inUse(0)
@@ -228,28 +191,6 @@ uint32_t BufferBlock::getStride() const
 {
     return ((m_payloadSize - 1u) & 0xFFFFFFF8u) + 24u;
 }
-
-class CacheBufferPool {
-public:
-    static uint32_t calcBlocksTotalSize(uint32_t payloadSize, uint32_t blockCount);
-    static uint32_t calcPoolTotalSize(uint32_t payloadSize, uint32_t blockCount);
-
-    CacheBufferPool(uint32_t payloadSize, uint32_t blockCount, uint32_t arenaSize, uint32_t headerSize);
-    virtual ~CacheBufferPool();
-
-    BufferBlock *getBlockAt(uint32_t index);
-    uint32_t getBlockPayloadSize() const;
-    void *acquireBuffer();
-    void releaseBuffer(void *payloadPtr);
-    void *getPayloadAt(uint32_t index);
-    void setBufferPinned(void *payloadPtr, uint8_t pinned);
-    uint8_t isBufferPinned(void *payloadPtr) const;
-
-private:
-    BufferBlock *m_firstBlock;
-    uint32_t m_blockCount;
-    uint32_t m_blockStride;
-};
 
 /* 0x811F391A */
 uint32_t CacheBufferPool::calcBlocksTotalSize(uint32_t payloadSize, uint32_t blockCount)
@@ -1155,96 +1096,6 @@ int workerThreadDelete(SceUID threadId)
     return deleteWorkerThread(threadId);
 }
 
-/* FixedPool alias delegating to CacheBufferPool (used by musiccore_factory.cpp) */
-struct PoolSlotHeader {
-    unsigned char reserved[5];
-    unsigned char active;
-    unsigned char pad[6];
-    void *object;
-};
-
-class FixedPool {
-public:
-    FixedPool(unsigned int elemSize, unsigned int count, unsigned int totalBytes,
-              unsigned int headerSize);
-    virtual ~FixedPool();
-
-    static unsigned int calcBodySize(unsigned int elemSize, unsigned int count);
-    static unsigned int calcTotalSize(unsigned int elemSize, unsigned int count);
-
-    PoolSlotHeader *getSlotHeader(unsigned char index);
-    unsigned int getSlotSize() const;
-    void *allocSlot();
-    void freeSlot(void *slot);
-    void *getSlotObject(unsigned int index);
-    void setSlotActive(void *slot, unsigned char active);
-    int isSlotActive(void *slot);
-
-public:
-    void *m_poolMem;
-    unsigned int m_count;
-    unsigned int m_elemSize;
-};
-
-FixedPool::FixedPool(unsigned int elemSize, unsigned int count, unsigned int totalBytes,
-                     unsigned int headerSize)
-    : m_poolMem(NULL), m_count(count), m_elemSize(elemSize)
-{
-    new (reinterpret_cast<CacheBufferPool *>(this))
-        CacheBufferPool(elemSize, count, totalBytes, headerSize);
-}
-
-FixedPool::~FixedPool()
-{
-    reinterpret_cast<CacheBufferPool *>(this)->~CacheBufferPool();
-}
-
-unsigned int FixedPool::calcBodySize(unsigned int elemSize, unsigned int count)
-{
-    return CacheBufferPool::calcBlocksTotalSize(elemSize, count);
-}
-
-unsigned int FixedPool::calcTotalSize(unsigned int elemSize, unsigned int count)
-{
-    return CacheBufferPool::calcPoolTotalSize(elemSize, count);
-}
-
-PoolSlotHeader *FixedPool::getSlotHeader(unsigned char index)
-{
-    return reinterpret_cast<PoolSlotHeader *>(
-        reinterpret_cast<CacheBufferPool *>(this)->getBlockAt(index));
-}
-
-unsigned int FixedPool::getSlotSize() const
-{
-    return reinterpret_cast<const CacheBufferPool *>(this)->getBlockPayloadSize();
-}
-
-void *FixedPool::allocSlot()
-{
-    return reinterpret_cast<CacheBufferPool *>(this)->acquireBuffer();
-}
-
-void FixedPool::freeSlot(void *slot)
-{
-    reinterpret_cast<CacheBufferPool *>(this)->releaseBuffer(slot);
-}
-
-void *FixedPool::getSlotObject(unsigned int index)
-{
-    return reinterpret_cast<CacheBufferPool *>(this)->getPayloadAt(index);
-}
-
-void FixedPool::setSlotActive(void *slot, unsigned char active)
-{
-    reinterpret_cast<CacheBufferPool *>(this)->setBufferPinned(slot, active);
-}
-
-int FixedPool::isSlotActive(void *slot)
-{
-    return reinterpret_cast<CacheBufferPool *>(this)->isBufferPinned(slot);
-}
-
 int isWorkerThreadValid(SceUID threadId)
 {
     return isValidWorkerThreadId(threadId) ? 1 : 0;
@@ -1259,75 +1110,6 @@ int workerThreadCreate(const char *name, SceUID *outThid, SceKernelThreadEntry e
 int workerThreadWaitEnd(SceUID thid)
 {
     return joinWorkerThread(thid);
-}
-
-void workerThreadExitSelf()
-{
-    exitWorkerThread();
-}
-
-int workerThreadJoinRaw(SceUID thid)
-{
-    return joinWorkerThread(thid);
-}
-
-struct SyncMutexStorage {
-    void *vtable;
-    SceUID semaId;
-};
-
-struct SyncCondStorage {
-    void *vtable;
-    SceUID evfId;
-};
-
-void syncMutexInit(SyncMutexStorage *mtx, const char *name)
-{
-    new (reinterpret_cast<SyncMutex *>(mtx)) SyncMutex(name);
-}
-
-void syncMutexDestroy(SyncMutexStorage *mtx)
-{
-    if (mtx != NULL)
-        reinterpret_cast<SyncMutex *>(mtx)->~SyncMutex();
-}
-
-int syncMutexIsValid(const SyncMutexStorage *mtx)
-{
-    return (mtx != NULL && reinterpret_cast<const SyncMutex *>(mtx)->isValid()) ? 1 : 0;
-}
-
-int syncMutexLock(SyncMutexStorage *mtx)
-{
-    return (mtx != NULL) ? reinterpret_cast<SyncMutex *>(mtx)->lock() : MC_ERR_INTERNAL;
-}
-
-int syncMutexUnlock(SyncMutexStorage *mtx)
-{
-    return (mtx != NULL) ? reinterpret_cast<SyncMutex *>(mtx)->unlock() : MC_ERR_INTERNAL;
-}
-
-void syncCondInit(SyncCondStorage *cond, const char *name)
-{
-    new (reinterpret_cast<SyncCond *>(cond)) SyncCond(name);
-}
-
-void syncCondDestroy(SyncCondStorage *cond)
-{
-    if (cond != NULL)
-        reinterpret_cast<SyncCond *>(cond)->~SyncCond();
-}
-
-int syncCondWait(SyncCondStorage *cond, SyncMutexStorage *mtx, unsigned int mask, unsigned int *timeout)
-{
-    return (cond != NULL)
-        ? reinterpret_cast<SyncCond *>(cond)->wait(reinterpret_cast<SyncMutex *>(mtx), mask, timeout)
-        : MC_ERR_INTERNAL;
-}
-
-int syncCondSignal(SyncCondStorage *cond, unsigned int mask)
-{
-    return (cond != NULL) ? reinterpret_cast<SyncCond *>(cond)->signal(mask) : MC_ERR_INTERNAL;
 }
 
 struct StreamIoInterface;

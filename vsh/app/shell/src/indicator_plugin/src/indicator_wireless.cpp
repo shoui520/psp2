@@ -253,6 +253,11 @@ void IndicatorWireless::OnStatus(IndicatorStatus status)
 					   new ui::EventCBListener(indicatorWirelessOnPoll, this));
 }
 
+extern "C" {
+int SceShell_5DC4A753(int *outRawState);
+int SceShell_7AD86CE1(int code, SceNetCtlInfo *info);
+}
+
 /*
  * The Wi-Fi polled: its signal level, connecting, or the wired connection handed on as a
  * network event, through the telephony listener's queue (0x8116294E).
@@ -262,7 +267,7 @@ static void indicatorWirelessOnPoll(SceInt32 type, ui::Handler *self, ui::Event 
 	int level = INDICATOR_WIFI_NONE;
 	int state = 0;
 
-	if (shellNetCtlHandle_0CC36330(&state) != 0)
+	if (SceShell_5DC4A753(&state) != 0)
 		return;
 	if (state != SCE_NET_CTL_STATE_DISCONNECTED) {
 		level = INDICATOR_WIFI_CONNECTING;
@@ -273,7 +278,7 @@ static void indicatorWirelessOnPoll(SceInt32 type, ui::Handler *self, ui::Event 
 
 	SceNetCtlInfo info;
 
-	if (shellNetCtlInetGetInfo(SCE_NET_CTL_INFO_DEVICE, &info) != 0) {
+	if (SceShell_7AD86CE1(SCE_NET_CTL_INFO_DEVICE, &info) != 0) {
 		indicatorTelGeneralNetworkTypeCB(0, 0, &level, 0);
 		return;
 	}
@@ -288,7 +293,7 @@ static void indicatorWirelessOnPoll(SceInt32 type, ui::Handler *self, ui::Event 
 		return;
 	}
 	s_wifiLevelKnown = true;
-	if (shellNetCtlInetGetInfo(SCE_NET_CTL_INFO_RSSI_PERCENTAGE, &info) != 0) {
+	if (SceShell_7AD86CE1(SCE_NET_CTL_INFO_RSSI_PERCENTAGE, &info) != 0) {
 		indicatorTelGeneralNetworkTypeCB(0, 0, &level, 0);
 		return;
 	}

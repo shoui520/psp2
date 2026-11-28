@@ -1240,13 +1240,15 @@ static int consoleInfoCiGetCecStandby(ConsoleInfoCiIntField *field, int *value)
 	return 0;
 }
 
+extern "C" int SceShell_7AD86CE1(int code, SceNetCtlInfo *info);
+
 /* (0x810EA3A8) the network device a wireless one */
 static int consoleInfoCiGetWireless(ConsoleInfoCiIntField *field, int *value)
 {
 	SceNetCtlInfo info;
 
 	*value = 0;
-	if (shellNetCtlInetGetInfo(SCE_NET_CTL_INFO_DEVICE, &info) >= 0 &&
+	if (SceShell_7AD86CE1(SCE_NET_CTL_INFO_DEVICE, &info) >= 0 &&
 	    info.device == SCE_NET_CTL_DEVICE_WIRELESS)
 		*value = 1;
 	return 0;
@@ -1844,11 +1846,13 @@ static int consoleInfoCiGetFileInt64(ConsoleInfoCiInt64Field *field, SceInt64 *v
 static SceNetCtlIfStat s_phoneIfStat;
 static int s_phoneIfStatResult = SCE_ERROR_ERRNO_EINVAL;
 
+extern "C" int netCtlApiGetIfStat(int device, SceNetCtlIfStat *outStat);
+
 /* (0x810EA66A) the phone network's statistics read: the seconds it was up */
 static int consoleInfoCiGetPhoneTime(ConsoleInfoCiInt64Field *field, SceInt64 *value)
 {
 	s_phoneIfStat.size = sizeof(s_phoneIfStat);
-	s_phoneIfStatResult = shellNetGetIfStat(SCE_NET_CTL_DEVICE_PHONE, &s_phoneIfStat);
+	s_phoneIfStatResult = netCtlApiGetIfStat(SCE_NET_CTL_DEVICE_PHONE, &s_phoneIfStat);
 	*value = s_phoneIfStat.totalSec;
 	return s_phoneIfStatResult;
 }
