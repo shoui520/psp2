@@ -83,8 +83,9 @@ extern int sceNpWebApiDeleteRequest(SceInt64 requestId);
 extern int sceNpWebApiAbortRequest(SceInt64 requestId);
 }
 
+#include "../../../../../np_friend_importer_internal.h"
+
 extern int shellNpGetWebApiLibCtx(int *outLibCtx);				/* 0x81003D20 */
-extern paf::job::JobQueue *shellGetNpBackgroundJobQueue(void);			/* 0x813C5BE0 */
 extern int shellNpPushRegisterService(const char *servicePrefix, int matchMode,
 				      void *callback, void *userContext, int *outHandle);					/* 0x813AF03A */
 
@@ -1521,7 +1522,7 @@ int npPartyVshOnAppLeftParty(const SceNpPartyRoomLeftReason *reason, SceUInt8 ap
 		return ret;
 
 	if (appStopped != 0 && s_partyVshCtx.room.memberNum != 0) {
-		paf::job::JobQueue *bgQueue = shellGetNpBackgroundJobQueue();
+		paf::job::JobQueue *bgQueue = NpFriendImporter::GetJobQueue();
 		int webApiLibCtx = 0;
 		if (bgQueue != NULL && shellNpGetWebApiLibCtx(&webApiLibCtx) >= 0) {
 			PartyLeaveSessionJob *leaveJob = new PartyLeaveSessionJob(

@@ -1519,9 +1519,3 @@ void shellNotifyProfileSaved(void)
 	if (NpFriendImporter::GetInstance(&importer) >= 0 && importer != NULL)
 		importer->EnqueueUpdateSelfProfile();
 }
-
-/* 0x813C5BE0 */
-paf::job::JobQueue *shellGetNpBackgroundJobQueue(void)
-{
-	return NpFriendImporter::GetJobQueue();
-}

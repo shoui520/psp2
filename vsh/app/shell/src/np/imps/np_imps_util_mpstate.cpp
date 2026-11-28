@@ -13,6 +13,7 @@
 #include <job/job.h>
 #include "np_imps_util.h"
 #include "np_imps_core.h"
+#include "../../../np_friend_importer_internal.h"
 
 /* External shell / NP / AppMgr bridges */
 extern "C" {
@@ -26,7 +27,6 @@ extern int SceNpManager_9554802B(const char *tag, const char *detail, const char
 
 /* SceNpManager / SceNpCommonPs4 / Shell job-queue bridges */
 extern int npAccountIsSignedIn(void);							/* 0x81326D30 */
-extern paf::job::JobQueue *shellGetNpBackgroundJobQueue(void);				/* 0x813C5BE0 */
 extern int npPushNotifyAppOnline(int appId);						/* 0x813B9D0C */
 extern void npPushNotifyAppExit(void);							/* 0x813B9D1A */
 extern int npPushNotifySignedOut(void);							/* 0x813B9D22 */
@@ -879,7 +879,7 @@ void NpImpsProcessHsm::EnqueueSetGameTitleJob()
 
 	NpImpsUtilSetGameTitleJob *job = new (mem) NpImpsUtilSetGameTitleJob(m_appId);
 	paf::common::SharedPtr<paf::job::JobItem> jobPtr(job);
-	paf::job::JobQueue *queue = shellGetNpBackgroundJobQueue();
+	paf::job::JobQueue *queue = NpFriendImporter::GetJobQueue();
 	if (queue != NULL)
 		queue->Enqueue(jobPtr);
 }

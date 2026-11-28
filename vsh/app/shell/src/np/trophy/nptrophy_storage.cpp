@@ -10,6 +10,7 @@
 #include <scetypes.h>
 #include <bXCe/bxce_internal.h>
 #include "nptrophy_storage.h"
+#include "nptrophy_net.h"
 
 namespace {
 
@@ -456,17 +457,15 @@ int TrophySignedSfmParser::ParseSignedStream(TrophyHandle *handle,
 				ret = NP_TROPHY_ERR_OUT_OF_MEMORY;
 			} else {
 				*m_signatureCopy = sig;
-				m_verifier = npTrophyCreateSfmVerifier();
+				m_verifier = new TrophySfmSignatureVerifier();
 				if (m_verifier == NULL)
 					ret = NP_TROPHY_ERR_OUT_OF_MEMORY;
 				else
-					ret = npTrophySfmVerifierInit(m_verifier, m_signatureCopy);
+					ret = m_verifier->Init(m_signatureCopy);
 			}
 		}
 		if (ret >= 0) {
-			TrophyHashSink *hashSink =
-				(m_verifier != NULL) ? npTrophySfmVerifierAsHashSink(m_verifier)
-						     : NULL;
+			TrophyHashSink *hashSink = m_verifier;
 			ret = ParseStream(handle, stripper, hashSink);
 			if (ret >= 0) {
 				bool sigRequired = true;
@@ -475,8 +474,7 @@ int TrophySignedSfmParser::ParseSignedStream(TrophyHandle *handle,
 					if (m_verifier == NULL)
 						ret = NP_TROPHY_ERR_SIG_VERIFY_FAILED;
 					else
-						ret = npTrophySfmVerifierVerify(m_verifier,
-										m_signatureCopy);
+						ret = m_verifier->Verify(m_signatureCopy);
 				}
 			}
 		}
@@ -542,13 +540,13 @@ int TrophySignedSfmStream::TakeConfHandle(const TrophyCommId *expectedCommId, in
 		return ret;
 	}
 
-	TrophyConfHandle *confHandle = npTrophyCreateConfHandle();
+	TrophyConfHandle *confHandle = new TrophyConfHandle();
 	if (confHandle == NULL) {
 		if (confData != NULL)
 			delete confData;
 		return NP_TROPHY_ERR_OUT_OF_MEMORY;
 	}
-	npTrophyConfHandleAssign(confHandle, &confData, headerSize, lang);
+	confHandle->Assign(&confData, headerSize, lang);
 	*outHandle = confHandle;
 	return 0;
 }
@@ -597,13 +595,13 @@ int TrophySignedSfmReader::TakeConfHandle(const TrophyCommId *expectedCommId, in
 		return ret;
 	}
 
-	TrophyConfHandle *confHandle = npTrophyCreateConfHandle();
+	TrophyConfHandle *confHandle = new TrophyConfHandle();
 	if (confHandle == NULL) {
 		if (confData != NULL)
 			delete confData;
 		return NP_TROPHY_ERR_OUT_OF_MEMORY;
 	}
-	npTrophyConfHandleAssign(confHandle, &confData, headerSize, lang);
+	confHandle->Assign(&confData, headerSize, lang);
 	*outHandle = confHandle;
 	return 0;
 }
@@ -744,8 +742,8 @@ int npTrophyExtractTitleTextInfo(TrophyHandle *handle, TrophyFileBase *file,
 		char description[1024];
 	};
 
-	const TrophyConfData *conf = npTrophyConfHandleGetData(confHandle);
-	SceSize headerOffset = npTrophyConfHandleGetHeaderSize(confHandle);
+	const TrophyConfData *conf = confHandle->GetConfData();
+	SceSize headerOffset = confHandle->GetStrippedHeaderSize();
 	GameDetailsLayout *out = static_cast<GameDetailsLayout *>(outTitleDetails);
 
 	uint32_t numGroups = 0;
@@ -791,8 +789,8 @@ int npTrophyExtractGroupTextInfo(TrophyHandle *handle, TrophyFileBase *file,
 		char description[1024];
 	};
 
-	const TrophyConfData *conf = npTrophyConfHandleGetData(confHandle);
-	SceSize headerOffset = npTrophyConfHandleGetHeaderSize(confHandle);
+	const TrophyConfData *conf = confHandle->GetConfData();
+	SceSize headerOffset = confHandle->GetStrippedHeaderSize();
 	if (!conf->SupportsGroups())
 		return NP_TROPHY_ERR_GROUP_UNSUPPORTED;
 
@@ -849,8 +847,8 @@ int npTrophyExtractTrophyTextInfo(TrophyHandle *handle, TrophyFileBase *file,
 		char description[1024];
 	};
 
-	const TrophyConfData *conf = npTrophyConfHandleGetData(confHandle);
-	SceSize headerOffset = npTrophyConfHandleGetHeaderSize(confHandle);
+	const TrophyConfData *conf = confHandle->GetConfData();
+	SceSize headerOffset = confHandle->GetStrippedHeaderSize();
 	TrophyConfEntry *entry = NULL;
 	int ret = conf->GetTrophy((uint32_t)trophyId, &entry);
 	if (ret < 0)
@@ -1100,7 +1098,7 @@ int TrophyConfStorage::InstallFromSource(TrophyHandle *handle, TrophyConfSource 
 		    defaultConf->GetConfVersion() != TROPHY_FORMAT_VERSION_V1_1) {
 			ret = NP_TROPHY_ERR_UNSUPPORTED_VERSION;
 		} else if (outLocalizedConf != NULL && localizedConf != NULL) {
-			const TrophyConfData *locData = npTrophyConfHandleGetData(localizedConf);
+			const TrophyConfData *locData = localizedConf->GetConfData();
 			if ((locData->GetPlatformMask() & TROPHY_PLATFORM_PSP2) == 0 ||
 			    locData->GetConfVersion() != TROPHY_FORMAT_VERSION_V1_1) {
 				ret = NP_TROPHY_ERR_UNSUPPORTED_VERSION;
@@ -1966,7 +1964,7 @@ int TrophyUserStorage::ApplySyncSession(TrophyHandle *handle, const TrophyDualTi
 		return 0;
 	}
 
-	TrophySyncTitleResultBase *result = npTrophySyncSessionFindResult(syncSession, m_commId);
+	TrophySyncTitleResultBase *result = syncSession->FindResult(m_commId);
 	if (result == NULL) {
 		if (!m_transFile.IsOpen())
 			return 0;
@@ -2475,7 +2473,7 @@ int TrophyUserStorage::PrepareUploadSyncSession(TrophyHandle *handle,
 						TrophySyncSessionBase *syncSession)
 {
 	TrophySyncTitleRequestBase *req = NULL;
-	int ret = npTrophySyncSessionInitTitle(syncSession, m_commId, 128, &req);
+	int ret = static_cast<TrophyNetSyncBatch *>(syncSession)->AddTitle(m_commId, 128, &req);
 	if (ret < 0)
 		return ret;
 	return m_transFile.PopulateUploadBatch(handle, req);
@@ -3377,10 +3375,12 @@ int TrophyTitleStorage::PublishUnlockedToSns(TrophyHandle *handle,
 			ret = npTrophyGetSystemLanguage(&sysLang);
 		char iconUrl[516];
 		if (ret >= 0) {
-			ret = npTrophyNetFetchIconUrl(handle,
-						      npTrophyUserSessionGetNetClient(m_session),
-						      &m_commId, sysLang, iconUrl,
-						      sizeof(iconUrl));
+			TrophyNetClient *netClient = npTrophyUserSessionGetNetClient(m_session);
+			TrophyNetIconStream iconStream;
+			ret = iconStream.OpenTitleIcon(handle, netClient->GetHttpTemplate(), NULL,
+						       &m_commId, sysLang, 0, true, iconUrl);
+			if (ret >= 0)
+				iconStream.Close();
 		}
 
 		if (ret >= 0) {
@@ -3442,7 +3442,7 @@ int TrophyTitleStorage::BuildInitialSyncSession(TrophyHandle *handle,
 	int online = SceNpManager_A775A452();
 	if (online <= 0)
 		return online < 0 ? online : 0;
-	if (!npTrophyNetIsSyncAvailable())
+	if (!npTrophyNetIsOnline())
 		return 0;
 
 	char env[20];
@@ -3450,24 +3450,21 @@ int TrophyTitleStorage::BuildInitialSyncSession(TrophyHandle *handle,
 	if (ret < 0 || !npTrophyIsValidNpEnvironment(env))
 		return ret < 0 ? ret : 0;
 
-	TrophySyncSessionBase *session = npTrophyCreateSyncSession();
+	TrophyNetSyncBatch *session = new TrophyNetSyncBatch();
 	if (session == NULL)
 		return NP_TROPHY_ERR_OUT_OF_MEMORY;
 
-	uint32_t timeouts[3] = { 30000000u, 30000000u, 30000000u };
-	ret = npTrophySyncSessionSetTimeouts(session, timeouts);
-	if (ret >= 0) {
-		SceNpId npId;
-		sceClibMemset(&npId, 0, sizeof(npId));
-		TrophySyncTitleRequestBase *req = NULL;
-		ret = npTrophySyncSessionInitTitle(session, &m_commId, 0, &req);
-		if (ret >= 0)
-			ret = TrophyTicketClient::FetchNpId(handle, &npId);
-		if (ret >= 0)
-			ret = npTrophyNetExecuteSyncBatch(
-				session, handle, npTrophyUserSessionGetNetClient(m_session),
-				&npId);
-	}
+	TrophyHttpTimeouts httpTimeouts = { 30000000u, 30000000u, 30000000u };
+	session->SetTimeouts(&httpTimeouts);
+	SceNpId npId;
+	sceClibMemset(&npId, 0, sizeof(npId));
+	TrophySyncTitleRequestBase *req = NULL;
+	ret = session->AddTitle(&m_commId, 0, &req);
+	if (ret >= 0)
+		ret = TrophyTicketClient::FetchNpId(handle, &npId);
+	if (ret >= 0)
+		ret = session->ExecuteWithFilter(handle, npTrophyUserSessionGetNetClient(m_session),
+						 &npId);
 	if (ret < 0) {
 		delete session;
 		return ret;
@@ -3486,19 +3483,19 @@ int TrophyTitleStorage::BuildDownloadSyncSession(TrophyHandle *handle,
 	if (ret < 0 || !npTrophyIsValidNpEnvironment(env))
 		return ret < 0 ? ret : 0;
 
-	TrophySyncSessionBase *session = npTrophyCreateSyncSession();
+	TrophyNetSyncBatch *session = new TrophyNetSyncBatch();
 	if (session == NULL)
 		return NP_TROPHY_ERR_OUT_OF_MEMORY;
 
 	SceNpId npId;
 	sceClibMemset(&npId, 0, sizeof(npId));
 	TrophySyncTitleRequestBase *req = NULL;
-	ret = npTrophySyncSessionInitTitle(session, &m_commId, 0, &req);
+	ret = session->AddTitle(&m_commId, 0, &req);
 	if (ret >= 0)
 		ret = TrophyTicketClient::FetchNpId(handle, &npId);
 	if (ret >= 0)
-		ret = npTrophyNetExecuteSyncBatch(
-			session, handle, npTrophyUserSessionGetNetClient(m_session), &npId);
+		ret = session->ExecuteWithFilter(handle, npTrophyUserSessionGetNetClient(m_session),
+						 &npId);
 	if (ret < 0) {
 		delete session;
 		return ret;
@@ -3518,7 +3515,7 @@ int TrophyTitleStorage::BuildPeriodicSyncSession(TrophyHandle *handle, const Tro
 	int online = SceNpManager_A775A452();
 	if (online <= 0)
 		return online < 0 ? online : 0;
-	if (!npTrophyNetIsSyncAvailable())
+	if (!npTrophyNetIsOnline())
 		return 0;
 
 	char env[20];
@@ -3526,10 +3523,10 @@ int TrophyTitleStorage::BuildPeriodicSyncSession(TrophyHandle *handle, const Tro
 	if (ret < 0 || !npTrophyIsValidNpEnvironment(env))
 		return ret < 0 ? ret : 0;
 
-	uint32_t timeouts[3] = { 30000000u, 30000000u, 30000000u };
+	TrophyHttpTimeouts httpTimeouts = { 30000000u, 30000000u, 30000000u };
 	uint64_t intervalSec = 0;
-	ret = npTrophyNetGetSyncInterval(npTrophyUserSessionGetNetClient(m_session), handle,
-					 &intervalSec, timeouts);
+	ret = npTrophyUserSessionGetNetClient(m_session)->GetSyncInterval(
+		handle, &intervalSec, &httpTimeouts);
 	if (ret < 0)
 		return ret;
 
@@ -3546,7 +3543,7 @@ int TrophyTitleStorage::BuildPeriodicSyncSession(TrophyHandle *handle, const Tro
 	if (!shouldSync)
 		return 0;
 
-	TrophySyncSessionBase *session = npTrophyCreateSyncSession();
+	TrophyNetSyncBatch *session = new TrophyNetSyncBatch();
 	if (session == NULL)
 		return NP_TROPHY_ERR_OUT_OF_MEMORY;
 
@@ -3556,8 +3553,8 @@ int TrophyTitleStorage::BuildPeriodicSyncSession(TrophyHandle *handle, const Tro
 	if (ret >= 0)
 		ret = TrophyTicketClient::FetchNpId(handle, &npId);
 	if (ret >= 0)
-		ret = npTrophyNetExecuteSyncBatch(
-			session, handle, npTrophyUserSessionGetNetClient(m_session), &npId);
+		ret = session->ExecuteWithFilter(handle, npTrophyUserSessionGetNetClient(m_session),
+						 &npId);
 	if (ret < 0) {
 		delete session;
 		return ret;
@@ -3576,7 +3573,7 @@ int TrophyTitleStorage::BuildUploadSyncSession(TrophyHandle *handle,
 	if (ret < 0 || !npTrophyIsValidNpEnvironment(env))
 		return ret < 0 ? ret : 0;
 
-	TrophySyncSessionBase *session = npTrophyCreateSyncSession();
+	TrophyNetSyncBatch *session = new TrophyNetSyncBatch();
 	if (session == NULL)
 		return NP_TROPHY_ERR_OUT_OF_MEMORY;
 
@@ -3586,8 +3583,8 @@ int TrophyTitleStorage::BuildUploadSyncSession(TrophyHandle *handle,
 	if (ret >= 0)
 		ret = TrophyTicketClient::FetchNpId(handle, &npId);
 	if (ret >= 0)
-		ret = npTrophyNetExecuteSyncBatch(
-			session, handle, npTrophyUserSessionGetNetClient(m_session), &npId);
+		ret = session->ExecuteWithFilter(handle, npTrophyUserSessionGetNetClient(m_session),
+						 &npId);
 	if (ret < 0) {
 		delete session;
 		return ret;

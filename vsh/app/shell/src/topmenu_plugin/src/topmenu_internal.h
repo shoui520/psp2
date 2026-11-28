@@ -1135,11 +1135,6 @@ bool bgdlResolvePspInstallTitleId(const LsdbAppInfoPtr *appInfo, paf::string *ou
 int topmenuStartAppInfoSearch(paf::common::SharedPtr<paf::job::JobItem> *outJob,
 			      const char *titleId, const char *altTitleIds,
 			      SceInt32 launchMode);				/* 0x81286D74 */
-const char *topmenuAppProcessGetTitleId(const TopmenuAppProcess *proc);		/* 0x81287190 */
-bool topmenuAppProcessIsRunning(const TopmenuAppProcess *proc);			/* 0x8128720C */
-void topmenuAppProcessOnEnterViewport(TopmenuAppProcess *proc);			/* 0x812872DC */
-void topmenuAppProcessOnLeaveViewport(TopmenuAppProcess *proc);			/* 0x812872E4 */
-void topmenuAppProcessCancel(TopmenuAppProcess *proc);				/* 0x812874F2 */
 int topmenuStartAppCheckJob(paf::common::SharedPtr<paf::job::JobItem> *outJob,
 			    TopmenuAppProcess *proc);				/* 0x812888A2 */
 void topmenuCloseDialogAndDeleteTab(SceInt32 dialogId, SceInt32 unusedFlag, SceInt32 pageKey); /* 0x81289B0A */

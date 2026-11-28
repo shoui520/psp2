@@ -2076,7 +2076,7 @@ void topmenuSwitchToProcess(TopWindow *window, TopmenuAppProcess *proc, bool che
 	bool detachedSystemApp = false;
 	if (window->m_foregroundApp != NULL) {
 		if (window->m_foregroundApp->m_tabAppData != NULL) {
-			if (topmenuAppProcessIsRunning(window->m_foregroundApp)) {
+			if (window->m_foregroundApp->IsProcessRunning()) {
 				window->m_foregroundApp->SendProcessCommand(2);
 			} else if (window->m_shellViewMode != 1) {
 				if (window->m_foregroundApp->m_wantActive) {
@@ -3358,7 +3358,7 @@ static void activateSystemAppProcess(TopWindow *window, TopmenuAppProcess *sysPr
 {
 	window->m_closingApp = sysProc;
 	window->m_closingAppPending = true;
-	topmenuAppProcessCancel(sysProc);
+	sysProc->StartAppCheck(NULL);
 
 	window->m_appCloseSnapshot.clear();
 	SceInt32 captureAppId = -5;
@@ -4154,7 +4154,7 @@ static TopTab *findRunningTabByAppId(TopWindow *window, SceInt32 appId)
 	     it != window->m_tabs.end(); ++it) {
 		TopTab *tab = reinterpret_cast<TopTab *>(*it);
 		if (tab->m_appData != NULL &&
-		    topmenuAppProcessIsRunning(&tab->m_appData->m_process)) {
+		    tab->m_appData->m_process.IsProcessRunning()) {
 			SceInt32 runningId = tab->m_appData->m_process.m_appId;
 			if (runningId == appId)
 				return tab;
@@ -4706,7 +4706,7 @@ static void leaveEditMode(TopWindow *window)
 void topmenuOnTabDestroyed(TopWindow *window, TopTab *tab)
 {
 	(void)window;
-	if (tab->m_appData != NULL && topmenuAppProcessIsRunning(&tab->m_appData->m_process))
+	if (tab->m_appData != NULL && tab->m_appData->m_process.IsProcessRunning())
 		tab->m_appData->m_process.SendProcessCommand(5);
 }
 
@@ -4971,7 +4971,7 @@ TopmenuAppProcess *topmenuFindProcessByAppId(TopWindow *window, SceInt32 pid)
 	     it != window->m_tabs.end(); ++it) {
 		TopTab *tab = reinterpret_cast<TopTab *>(*it);
 		if (tab->m_appData != NULL &&
-		    topmenuAppProcessIsRunning(&tab->m_appData->m_process) &&
+		    tab->m_appData->m_process.IsProcessRunning() &&
 		    topmenuProcessGetPid(&tab->m_appData->m_process) == pid) {
 			return &tab->m_appData->m_process;
 		}
@@ -4989,7 +4989,7 @@ TopmenuAppProcess *topmenuFindProcessByRunningAppId(TopWindow *window, SceInt32 
 	     it != window->m_tabs.end(); ++it) {
 		TopTab *tab = reinterpret_cast<TopTab *>(*it);
 		if (tab->m_appData != NULL &&
-		    topmenuAppProcessIsRunning(&tab->m_appData->m_process) &&
+		    tab->m_appData->m_process.IsProcessRunning() &&
 		    tab->m_appData->m_process.m_appId == appId) {
 			return &tab->m_appData->m_process;
 		}
@@ -6109,11 +6109,11 @@ static void clearBgPartnerLiveAreaOnExit(TopWindow *window, SceInt32 exitedAppId
 	     it != window->m_tabs.end(); ++it) {
 		TopTab *tab = reinterpret_cast<TopTab *>(*it);
 		if (tab->m_appData == NULL ||
-		    topmenuAppProcessIsRunning(&tab->m_appData->m_process)) {
+		    tab->m_appData->m_process.IsProcessRunning()) {
 			continue;
 		}
 
-		const char *bgTitleId = topmenuAppProcessGetTitleId(&tab->m_appData->m_process);
+		const char *bgTitleId = tab->m_appData->m_process.GetBgTitleId();
 		if (bgTitleId == NULL)
 			continue;
 
@@ -7299,7 +7299,7 @@ static int ifBeginAppInstallLock(const char *titleId)
 	g_topWindow->m_closingAllTabs = true;
 	TopTab *tab = topmenuFindTabByTitleId(g_topWindow, titleId);
 	if (tab != NULL && tab->m_appData != NULL &&
-	    topmenuAppProcessIsRunning(&tab->m_appData->m_process)) {
+	    tab->m_appData->m_process.IsProcessRunning()) {
 		tab->m_appData->m_process.SendProcessCommand(5);
 	}
 

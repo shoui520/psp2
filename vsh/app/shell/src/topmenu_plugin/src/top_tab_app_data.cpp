@@ -266,7 +266,7 @@ void TopTabScreenCopy::CaptureAndPublish()
 	int captureFlags = -5;
 	if (SceLsdb_849E8DC6(&m_owner->m_process.m_appInfo) == 0) {
 		captureFlags = -2;
-		if (topmenuAppProcessIsRunning(&m_owner->m_process) &&
+		if (m_owner->m_process.IsProcessRunning() &&
 		    m_owner->m_process.m_hasAppId) {
 			captureFlags = m_owner->m_process.m_appId;
 		}
@@ -501,7 +501,7 @@ void TopTabAppData::Update()
 {
 	bool isCurrentAndRunning =
 		(g_topWindow->m_currentTab == m_ownerTab) &&
-		topmenuAppProcessIsRunning(&m_process) &&
+		m_process.IsProcessRunning() &&
 		(m_process.m_appId != -1);
 
 	if (m_captureCountdown > 0 && isCurrentAndRunning) {
@@ -534,7 +534,7 @@ void TopTabAppData::Update()
 
 	if (sceKernelCheckDipsw(185) != 0 &&
 	    m_process.m_bootTimeStartUs != 0 &&
-	    topmenuAppProcessIsRunning(&m_process) &&
+	    m_process.IsProcessRunning() &&
 	    m_process.m_appId != -1) {
 		SceUID pid = topmenuProcessGetPid(&m_process);
 		if (sceSharedFbGetRenderingInfo(pid) == 0) {
@@ -745,13 +745,13 @@ void TopTabAppData::RefreshLiveAreaInfo()
 /* 0x81297B58 */
 void TopTabAppData::OnEnterViewport()
 {
-	topmenuAppProcessOnEnterViewport(&m_process);
+	m_process.OnEnterViewport();
 }
 
 /* 0x81297B62 */
 void TopTabAppData::OnLeaveViewport()
 {
-	topmenuAppProcessOnLeaveViewport(&m_process);
+	m_process.OnLeaveViewport();
 }
 
 /* 0x81297B6C */
@@ -1005,7 +1005,7 @@ void TopTabAppData::SetupContent()
 /* 0x8129864E */
 void TopTabAppData::RequestCancelLaunch()
 {
-	topmenuAppProcessCancel(&m_process);
+	m_process.StartAppCheck(NULL);
 }
 
 #if !defined(FW_TYPE_CEX)

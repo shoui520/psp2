@@ -753,11 +753,6 @@ static int ifaceLockIfWakeApp(const char *titleId)
 	return 1;
 }
 
-static int ifaceIsWakeApp(const char *titleId)
-{
-	return PowerManage::IsWakeAppName(titleId);
-}
-
 static bool ifaceIsSuspended(void)
 {
 	return g_powerManage->m_isSuspended;
@@ -900,7 +895,7 @@ PowerManage::PowerManage(paf::Plugin *plugin)
 	s_powerManageInterface.getPage = ifaceGetPage;
 	s_powerManageInterface.setDolceLockEnabled = ifaceSetDolceLockEnabled;
 	s_powerManageInterface.lockIfWakeApp = ifaceLockIfWakeApp;
-	s_powerManageInterface.isWakeApp = ifaceIsWakeApp;
+	s_powerManageInterface.isWakeApp = PowerManage::IsWakeAppName;
 	s_powerManageInterface.isSuspended = ifaceIsSuspended;
 	s_powerManageInterface.getAuthInterface = ifaceGetAuthInterface;
 

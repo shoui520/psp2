@@ -99,13 +99,13 @@ extern int SceNpManager_29C9B8A5(int reqHandle, int flags);
 }
 
 static paf::wstring sysupchkDefaultGetVersionString(void);
-static int sysupchkDefaultCheckVersion(SceUInt32 requiredVersion, int *outNeedsUpdate);
+int shellSystemVersionCheck(SceUInt32 requiredVersion, int *outNeedsUpdate);
 static int sysupchkDefaultCheckLocalPup(SceUInt32 requiredVersion);
 
 /* 0x8154753C: default shell interface for version/PUP queries */
 ShellSysupchkInterface shellSysupchkDefaultInterface = {
 	sysupchkDefaultGetVersionString,
-	sysupchkDefaultCheckVersion,
+	shellSystemVersionCheck,
 	sysupchkDefaultCheckLocalPup,
 };
 
@@ -757,7 +757,7 @@ static void sysupchkOnPluginDestroy(paf::Plugin *plugin)
 }
 
 /* 0x81363DA0 */
-static int sysupchkDefaultCheckVersion(SceUInt32 requiredVersion, int *outNeedsUpdate)
+int shellSystemVersionCheck(SceUInt32 requiredVersion, int *outNeedsUpdate)
 {
 	if (outNeedsUpdate != NULL) {
 		int updateFlag = 0;
@@ -765,11 +765,6 @@ static int sysupchkDefaultCheckVersion(SceUInt32 requiredVersion, int *outNeedsU
 			*outNeedsUpdate = (updateFlag != 0) ? 1 : 0;
 	}
 	return 0;
-}
-
-int shellSystemVersionCheck(SceUInt32 requiredVersion, int *outNeedsUpdate)
-{
-	return sysupchkDefaultCheckVersion(requiredVersion, outNeedsUpdate);
 }
 
 /* 0x81363DF2 */

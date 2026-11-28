@@ -267,8 +267,6 @@ public:
 	void OnDialogCancel(void);
 	void OnDialogConfirm(void);
 	void OnDialogEvent(SceInt32 eventCode);
-	void OnExecuteFinished(SceInt32 result);
-	void OnLoadInfoFinished(SceInt32 result);
 	void OnSearchTargetFinished(SceInt32 result);
 
 	static void StaticDialogCallback(SceInt32 eventCode, void *userData);

@@ -117,7 +117,7 @@ bool TopTab::CanClose() const
 			return false;
 	}
 
-	const char *titleId = topmenuAppProcessGetTitleId(&m_appData->m_process);
+	const char *titleId = m_appData->m_process.GetBgTitleId();
 	return titleId == NULL || !topmenuHasRunningAppWithTitleId(g_topWindow, titleId);
 }
 

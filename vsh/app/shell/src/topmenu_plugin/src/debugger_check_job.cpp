@@ -705,32 +705,6 @@ void TopmenuAppProcess::OnAppCheckSucceeded(const LsdbAppInfoPtr &appInfo)
 		topmenuNotifyLaunchSeqReady(m_tabAppData->m_ownerTab->m_pageKey);
 }
 
-/* C-linkage wrappers declared in topmenu_internal.h for Batch 2 callers */
-const char *topmenuAppProcessGetTitleId(const TopmenuAppProcess *proc)
-{
-	return proc->GetBgTitleId();
-}
-
-bool topmenuAppProcessIsRunning(const TopmenuAppProcess *proc)
-{
-	return proc->IsProcessRunning();
-}
-
-void topmenuAppProcessOnEnterViewport(TopmenuAppProcess *proc)
-{
-	proc->OnEnterViewport();
-}
-
-void topmenuAppProcessOnLeaveViewport(TopmenuAppProcess *proc)
-{
-	proc->OnLeaveViewport();
-}
-
-void topmenuAppProcessCancel(TopmenuAppProcess *proc)
-{
-	proc->StartAppCheck(NULL);
-}
-
 #if !defined(FW_TYPE_CEX)
 /* (0x8127ABD2, TOOL) */
 void TopmenuAppProcess::SetTitleId(const char *titleId)

@@ -67,9 +67,10 @@ extern int sceNpWebApiGetErrorCode(int httpStatusCode, const void *body, SceSize
 extern int sceNpWebApiDeleteRequest(SceInt64 requestId);
 }
 
+#include "../../../np_friend_importer_internal.h"
+
 extern int ipmiAsyncNotSupported(void);
 extern int shellNpGetWebApiLibCtx(int *outLibCtx);
-extern paf::job::JobQueue *shellGetNpBackgroundJobQueue(void);
 extern int npImpsSvcGetAppTitleInfo(SceUID processId, NpImpsAppTitleInfo *outInfo);
 extern int npImpsSvcSetGameTitle(int appId);
 extern int npImpsSvcClearGameTitle(void);
@@ -407,7 +408,7 @@ static int EnqueueGamePresenceTask(GamePresenceTask *task)
 
 	NpGamePresenceJobItem *jobItem = new (rawJob) NpGamePresenceJobItem(task);
 	paf::common::SharedPtr<paf::job::JobItem> jobPtr(jobItem);
-	paf::job::JobQueue *queue = shellGetNpBackgroundJobQueue();
+	paf::job::JobQueue *queue = NpFriendImporter::GetJobQueue();
 	return queue->Enqueue(jobPtr);
 }
 

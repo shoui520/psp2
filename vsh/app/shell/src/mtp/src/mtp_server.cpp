@@ -913,7 +913,7 @@ int MtpServer::onNewClient(IPMI::Server *server, const IPMI::Session::Config *co
 }
 
 /* 0x812B8076 */
-void MtpServer::destroySession(IPMI::Session *session)
+void MtpServer::onSessionClosedByClient(IPMI::Session *session)
 {
 	SceLibMtp_BB32CD0A();
 	if (session->getServer() == m_cancelServer || m_sessionMgr.clear(session) >= 0) {
@@ -925,14 +925,16 @@ void MtpServer::destroySession(IPMI::Session *session)
 	}
 }
 
-void MtpServer::onSessionClosedByClient(IPMI::Session *session)
-{
-	destroySession(session);
-}
-
 void MtpServer::onSessionKilled(IPMI::Session *session)
 {
-	destroySession(session);
+	SceLibMtp_BB32CD0A();
+	if (session->getServer() == m_cancelServer || m_sessionMgr.clear(session) >= 0) {
+		int ret = session->destroy();
+		if (ret != 0)
+			sceClibPrintf("[MTP %s] Error %s(%u): Destroy session failed: 0x%x\n",
+				      "SERVER", "destroySession", 796, ret);
+		sce_paf_free(session);
+	}
 }
 
 /* 0x812B80DE */

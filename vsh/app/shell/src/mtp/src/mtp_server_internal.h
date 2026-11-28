@@ -592,7 +592,6 @@ private:
 			     void **outWorkBuf, SceSize *outWorkBufSize,
 			     SceUID *outThreadId, SceKernelThreadEntry threadEntry);
 	int finalizeServer();
-	void destroySession(IPMI::Session *session);
 
 	static int serverThreadEntry(SceSize args, void *argp);
 	static int serverCancelThreadEntry(SceSize args, void *argp);

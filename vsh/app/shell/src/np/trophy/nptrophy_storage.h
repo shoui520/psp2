@@ -1263,49 +1263,6 @@ int vshRtcGetCurrentSecureTick(SceRtcTick *tick);
 int SceNpManager_A775A452(void);
 }
 
-/* Batch 3 network/sync/signature bridge helpers */
-TrophySfmSignatureVerifier *npTrophyCreateSfmVerifier();
-int npTrophySfmVerifierInit(TrophySfmSignatureVerifier *verifier, const TrophySfmSignature *sig);
-int npTrophySfmVerifierVerify(TrophySfmSignatureVerifier *verifier,
-			      const TrophySfmSignature *sig);
-TrophyHashSink *npTrophySfmVerifierAsHashSink(TrophySfmSignatureVerifier *verifier);
-
-TrophyConfHandle *npTrophyCreateConfHandle();
-int npTrophyConfHandleAssign(TrophyConfHandle *handle, TrophyConfData **ioConfData,
-			     SceSize strippedHeaderSize, int lang);
-const TrophyConfData *npTrophyConfHandleGetData(const TrophyConfHandle *handle);
-SceSize npTrophyConfHandleGetHeaderSize(const TrophyConfHandle *handle);
-
-bool npTrophyNetIsSyncAvailable();
-int npTrophyNetFetchIconUrl(TrophyHandle *handle, TrophyNetClient *netClient,
-			    const TrophyCommId *commId, int lang, char *outUrlBuf,
-			    SceSize outUrlSize);
-int npTrophyNetGetSyncInterval(TrophyNetClient *netClient, TrophyHandle *handle,
-			       uint64_t *outIntervalSec, const uint32_t *timeouts);
-int npTrophyNetExecuteSyncBatch(TrophySyncSessionBase *syncSession, TrophyHandle *handle,
-				TrophyNetClient *netClient, const SceNpId *npId);
-
-int npTrophySyncSessionInitTitle(TrophySyncSessionBase *session, const TrophyCommId *commId,
-				 uint32_t maxTransEntries,
-				 TrophySyncTitleRequestBase **outRequest);
-int npTrophySyncSessionSetTimeouts(TrophySyncSessionBase *session, const uint32_t *timeouts);
-TrophySyncSessionBase *npTrophyCreateSyncSession();
-TrophySyncTitleResultBase *npTrophySyncSessionFindResult(TrophySyncSessionBase *session,
-							 const TrophyCommId *commId);
-void npTrophySyncRequestReset(TrophySyncTitleRequestBase *req);
-int npTrophySyncRequestSetServerTag(TrophySyncTitleRequestBase *req, const void *tagBuf);
-int npTrophySyncRequestAddRegister(TrophySyncTitleRequestBase *req,
-				   const TrophyTransRegisterEntry *entry);
-int npTrophySyncRequestAddUnlock(TrophySyncTitleRequestBase *req,
-				 const TrophyTransUnlockEntry *entry);
-int npTrophySyncResultGetTransCount(const TrophySyncTitleResultBase *result);
-int npTrophySyncResultGetTransStatus(const TrophySyncTitleResultBase *result, uint32_t index,
-				     TrophyTransBatchEntry *outEntry, bool *outAccepted);
-int npTrophySyncResultGetTrophyState(const TrophySyncTitleResultBase *result, int trophyId,
-				     uint64_t *outServerTick, int *outUnlocked);
-int npTrophySyncResultGetServerTimestamp(const TrophySyncTitleResultBase *result,
-					 uint64_t *outTimestamp);
-
 /* Batch 4 service / arbiter / context bridge helpers */
 bool npTrophyServiceIsSyncInGameDisabled();
 int npTrophyUserSessionEnsureReady(TrophyUserSession *session, TrophyHandle *handle, int mode);

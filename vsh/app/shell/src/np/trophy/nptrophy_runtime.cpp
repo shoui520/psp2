@@ -31,28 +31,10 @@ int g_npTrophyDebugMode = 0;
 static int s_mspaceRefCount = 0;
 static TrophyMspace s_trophyMspace;
 
-static void *trophyHeapAllocCallback(SceSize size, void *userCtx)
-{
-	(void)userCtx;
-	return npTrophyHeapAlloc(size);
-}
-
-static void *trophyHeapReallocCallback(void *ptr, SceSize size, void *userCtx)
-{
-	(void)userCtx;
-	return npTrophyHeapRealloc(ptr, size);
-}
-
-static void trophyHeapFreeCallback(void *ptr, void *userCtx)
-{
-	(void)userCtx;
-	npTrophyHeapFree(ptr);
-}
-
 static TrophyHeapAllocator s_trophyHeapAllocator = {
-	trophyHeapAllocCallback,
-	trophyHeapReallocCallback,
-	trophyHeapFreeCallback,
+	(void *(*)(SceSize, void *))npTrophyHeapAlloc,
+	(void *(*)(void *, SceSize, void *))npTrophyHeapRealloc,
+	(void (*)(void *, void *))npTrophyHeapFree,
 	NULL
 };
 

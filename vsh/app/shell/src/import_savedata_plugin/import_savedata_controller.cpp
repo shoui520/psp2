@@ -440,45 +440,37 @@ void ImportSaveDataController::StaticDialogCallback(SceInt32 eventCode, void *us
 }
 
 /* 0x813962CA */
-void ImportSaveDataController::OnExecuteFinished(SceInt32 result)
-{
-	if (result == 0) {
-		FinishAndNotify();
-	} else if (result == IMPORT_SAVEDATA_ERR_NO_MEDIA) {
-		TransitionState(IMPORT_SAVEDATA_STATE_CARD_REMOVED);
-	} else {
-		m_state = IMPORT_SAVEDATA_STATE_ERROR;
-		m_dialog->ShowErrorDialog(result);
-	}
-}
-
 void ImportSaveDataController::StaticExecuteCallback(SceInt32 result, void *userData)
 {
 	ImportSaveDataController *self = static_cast<ImportSaveDataController *>(userData);
-	if (self != NULL)
-		self->OnExecuteFinished(result);
-}
-
-/* 0x81396320 */
-void ImportSaveDataController::OnLoadInfoFinished(SceInt32 result)
-{
-	if (result == IMPORT_SAVEDATA_KERNEL_ENOENT) {
-		TransitionState(IMPORT_SAVEDATA_STATE_INFO_NOT_FOUND);
-	} else if (result != 0) {
-		m_state = IMPORT_SAVEDATA_STATE_ERROR;
-		m_dialog->ShowErrorDialog(result);
+	if (self == NULL)
+		return;
+	if (result == 0) {
+		self->FinishAndNotify();
+	} else if (result == IMPORT_SAVEDATA_ERR_NO_MEDIA) {
+		self->TransitionState(IMPORT_SAVEDATA_STATE_CARD_REMOVED);
 	} else {
-		paf::string infoText = m_loadInfoJob->GetInfoText();
-		m_dialog->SetInfoText(infoText);
-		TransitionState(IMPORT_SAVEDATA_STATE_INTRO);
+		self->m_state = IMPORT_SAVEDATA_STATE_ERROR;
+		self->m_dialog->ShowErrorDialog(result);
 	}
 }
 
+/* 0x81396320 */
 void ImportSaveDataController::StaticLoadInfoCallback(SceInt32 result, void *userData)
 {
 	ImportSaveDataController *self = static_cast<ImportSaveDataController *>(userData);
-	if (self != NULL)
-		self->OnLoadInfoFinished(result);
+	if (self == NULL)
+		return;
+	if (result == IMPORT_SAVEDATA_KERNEL_ENOENT) {
+		self->TransitionState(IMPORT_SAVEDATA_STATE_INFO_NOT_FOUND);
+	} else if (result != 0) {
+		self->m_state = IMPORT_SAVEDATA_STATE_ERROR;
+		self->m_dialog->ShowErrorDialog(result);
+	} else {
+		paf::string infoText = self->m_loadInfoJob->GetInfoText();
+		self->m_dialog->SetInfoText(infoText);
+		self->TransitionState(IMPORT_SAVEDATA_STATE_INTRO);
+	}
 }
 
 /* 0x813963B8 */

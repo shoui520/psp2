@@ -1288,7 +1288,7 @@ int TrophySyncController::CheckNetSync(TrophyHandle *handle, uint64_t options, i
 	if (ret < 0)
 		return ret;
 
-	if (!npTrophyNetIsSyncAvailable())
+	if (!npTrophyNetIsOnline())
 		return 0;
 
 	TrophyUserIndexStorage *indexStorage = m_session->GetIndexStorage();
@@ -1575,7 +1575,7 @@ int TrophySyncController::SyncTitles(TrophyHandle *handle, uint64_t options)
 	if (m_session == NULL)
 		return NP_TROPHY_ERR_INVALID_ARGUMENT;
 
-	if (!npTrophyNetIsSyncAvailable())
+	if (!npTrophyNetIsOnline())
 		return NP_TROPHY_ERR_GENERIC;
 
 	if ((options & 1ULL) != 0)

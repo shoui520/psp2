@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <scetypes.h>
 #include "nptrophy_storage.h"
+#include "nptrophy_net.h"
 
 extern "C" {
 extern uint32_t sceNetHtonl(uint32_t host32);
@@ -1880,13 +1881,14 @@ int TrophyTransDataFile::RemoveUnlockByTrophyId(TrophyHandle *handle, int trophy
 int TrophyTransDataFile::PopulateUploadBatch(TrophyHandle *handle,
 					     TrophySyncTitleRequestBase *outReq)
 {
-	npTrophySyncRequestReset(outReq);
+	TrophySyncTitleRequest *req = static_cast<TrophySyncTitleRequest *>(outReq);
+	req->Reset();
 	uint32_t fields[4];
 	int ret = ReadHeaderCounts(handle, fields);
 	if (ret < 0)
 		return ret;
 	if (fields[1] - fields[2] == fields[3]) {
-		npTrophySyncRequestReset(outReq);
+		req->Reset();
 		return 0;
 	}
 
@@ -1894,17 +1896,17 @@ int TrophyTransDataFile::PopulateUploadBatch(TrophyHandle *handle,
 	uint8_t tagBuf[160];
 	ret = GetServerTag(handle, &hasTag, tagBuf);
 	if (ret < 0) {
-		npTrophySyncRequestReset(outReq);
+		req->Reset();
 		return ret;
 	}
 	if (!hasTag) {
-		npTrophySyncRequestReset(outReq);
+		req->Reset();
 		return 0;
 	}
 
-	ret = npTrophySyncRequestSetServerTag(outReq, tagBuf);
+	ret = req->SetCommSign(tagBuf);
 	if (ret < 0) {
-		npTrophySyncRequestReset(outReq);
+		req->Reset();
 		return ret;
 	}
 
@@ -1912,7 +1914,7 @@ int TrophyTransDataFile::PopulateUploadBatch(TrophyHandle *handle,
 		TrophyTransSlotHeader hdr;
 		ret = ReadSlotHeader(handle, slot, &hdr);
 		if (ret < 0) {
-			npTrophySyncRequestReset(outReq);
+			req->Reset();
 			return ret;
 		}
 		if (hdr.synced != 0 || hdr.deferred != 0)
@@ -1922,16 +1924,16 @@ int TrophyTransDataFile::PopulateUploadBatch(TrophyHandle *handle,
 			TrophyTransRegisterEntry regEntry;
 			regEntry.Init();
 			ret = ReadRegisterEntry(handle, slot, &regEntry);
-			if (ret < 0 || (ret = npTrophySyncRequestAddRegister(outReq, &regEntry)) < 0) {
-				npTrophySyncRequestReset(outReq);
+			if (ret < 0 || (ret = req->AddRegisterTrans(&regEntry)) < 0) {
+				req->Reset();
 				return ret;
 			}
 		} else if (hdr.transType == 2) {
 			TrophyTransUnlockEntry unlockEntry;
 			unlockEntry.Init();
 			ret = ReadUnlockEntry(handle, slot, &unlockEntry);
-			if (ret < 0 || (ret = npTrophySyncRequestAddUnlock(outReq, &unlockEntry)) < 0) {
-				npTrophySyncRequestReset(outReq);
+			if (ret < 0 || (ret = req->AddUnlockTrans(&unlockEntry)) < 0) {
+				req->Reset();
 				return ret;
 			}
 		}
@@ -1978,7 +1980,8 @@ int TrophyTransDataFile::ApplySyncResults(TrophyHandle *handle,
 					  NpTrophyFlagArray *outSyncedTrophies)
 {
 	sceClibMemset(outSyncedTrophies, 0, sizeof(*outSyncedTrophies));
-	int totalCount = npTrophySyncResultGetTransCount(result);
+	const TrophySyncTitleResult *syncResult = static_cast<const TrophySyncTitleResult *>(result);
+	int totalCount = static_cast<int>(syncResult->GetPairedTransCount());
 
 	uint32_t fields[4];
 	int ret = ReadHeaderCounts(handle, fields);
@@ -1988,7 +1991,7 @@ int TrophyTransDataFile::ApplySyncResults(TrophyHandle *handle,
 	for (int i = 0; i < totalCount; ++i) {
 		TrophyTransBatchEntry entry;
 		bool accepted = false;
-		ret = npTrophySyncResultGetTransStatus(result, (uint32_t)i, &entry, &accepted);
+		ret = syncResult->GetPairedTransStatus((uint32_t)i, &entry, &accepted);
 		if (ret < 0)
 			return ret;
 		bool marked = false;
@@ -3527,8 +3530,7 @@ int TrophyTitleDataFile::MergeSyncResult(TrophyHandle *handle, TrophyAccountCach
 
 		uint64_t serverTick = 0;
 		int serverUnlocked = 0;
-		ret = npTrophySyncResultGetTrophyState(syncResult, id, &serverTick,
-						       &serverUnlocked);
+		ret = syncResult->FindTrophyUnlock(id, &serverTick, &serverUnlocked);
 		if (ret < 0)
 			return ret;
 		if (serverUnlocked == 0)
@@ -3575,9 +3577,7 @@ int TrophyTitleDataFile::MergeSyncResult(TrophyHandle *handle, TrophyAccountCach
 	}
 
 	uint64_t serverTimestamp = 0;
-	ret = npTrophySyncResultGetServerTimestamp(syncResult, &serverTimestamp);
-	if (ret < 0)
-		return ret;
+	syncResult->GetLastUpdated(&serverTimestamp);
 
 	cache.lastSyncedTick = *syncTicks;
 	cache.serverTimestamp = serverTimestamp;
