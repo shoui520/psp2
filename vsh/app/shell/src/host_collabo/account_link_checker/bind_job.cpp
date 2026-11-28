@@ -179,17 +179,7 @@ static void copyRemoteAccountFromXml(RemoteNpAccountSummary *summary,
 
 class Mtpr3AccountSaxHandler : public bXCe::Sax::DocumentHandler {
 public:
-	/* 0x813C0C0C */
-	Mtpr3AccountSaxHandler(Mtpr3HostAccountXmlInfo *target, bool *foundUser, bool *foundOnline)
-	{
-		s_saxTargetAccount = target;
-		s_saxFoundUserName = foundUser;
-		*foundUser = false;
-		*foundOnline = false;
-		s_saxFoundOnlineUser = foundOnline;
-		s_saxPathBuffer[0] = '\0';
-	}
-
+	Mtpr3AccountSaxHandler(Mtpr3HostAccountXmlInfo *target, bool *foundUser, bool *foundOnline);
 	virtual ~Mtpr3AccountSaxHandler() {}
 
 	/* 0x813C094C */
@@ -272,6 +262,18 @@ public:
 	}
 };
 
+/* 0x813C0C0C */
+Mtpr3AccountSaxHandler::Mtpr3AccountSaxHandler(Mtpr3HostAccountXmlInfo *target,
+					       bool *foundUser, bool *foundOnline)
+{
+	s_saxTargetAccount = target;
+	s_saxFoundUserName = foundUser;
+	*foundUser = false;
+	*foundOnline = false;
+	s_saxFoundOnlineUser = foundOnline;
+	s_saxPathBuffer[0] = '\0';
+}
+
 struct Mtpr3AccountSaxParser {
 	bXCe::Sax::Parser *parser;
 	Mtpr3AccountSaxHandler *handler;
@@ -279,39 +281,8 @@ struct Mtpr3AccountSaxParser {
 	bool foundOnlineUser;
 	Mtpr3HostAccountXmlInfo *target;
 
-	/* 0x813C054E */
 	Mtpr3AccountSaxParser(bool skipWhitespace, bool resolveEntity,
-			      Mtpr3HostAccountXmlInfo *outAccount, int *outError)
-		: parser(NULL),
-		  handler(NULL),
-		  foundUserName(false),
-		  foundOnlineUser(false),
-		  target(outAccount)
-	{
-		if (outAccount == NULL || outError == NULL) {
-			for (;;)
-				;
-		}
-
-		int err;
-		parser = new bXCe::Sax::Parser();
-		if (parser != NULL) {
-			err = parser->initialize(NULL);
-			if (err == 0) {
-				parser->setResolveEntity(resolveEntity);
-				parser->setSkipIgnorableWhiteSpace(skipWhitespace);
-				handler = new Mtpr3AccountSaxHandler(target, &foundUserName,
-								     &foundOnlineUser);
-				if (handler != NULL)
-					parser->setDocumentHandler(handler);
-				else
-					err = MTPR3_ERROR_NO_MEMORY;
-			}
-		} else {
-			err = MTPR3_ERROR_NO_MEMORY;
-		}
-		*outError = err;
-	}
+			      Mtpr3HostAccountXmlInfo *outAccount, int *outError);
 
 	~Mtpr3AccountSaxParser()
 	{
@@ -326,6 +297,40 @@ struct Mtpr3AccountSaxParser {
 		}
 	}
 };
+
+/* 0x813C054E */
+Mtpr3AccountSaxParser::Mtpr3AccountSaxParser(bool skipWhitespace, bool resolveEntity,
+					     Mtpr3HostAccountXmlInfo *outAccount, int *outError)
+	: parser(NULL),
+	  handler(NULL),
+	  foundUserName(false),
+	  foundOnlineUser(false),
+	  target(outAccount)
+{
+	if (outAccount == NULL || outError == NULL) {
+		for (;;)
+			;
+	}
+
+	int err;
+	parser = new bXCe::Sax::Parser();
+	if (parser != NULL) {
+		err = parser->initialize(NULL);
+		if (err == 0) {
+			parser->setResolveEntity(resolveEntity);
+			parser->setSkipIgnorableWhiteSpace(skipWhitespace);
+			handler = new Mtpr3AccountSaxHandler(target, &foundUserName,
+							     &foundOnlineUser);
+			if (handler != NULL)
+				parser->setDocumentHandler(handler);
+			else
+				err = MTPR3_ERROR_NO_MEMORY;
+		}
+	} else {
+		err = MTPR3_ERROR_NO_MEMORY;
+	}
+	*outError = err;
+}
 
 /* 0x813C034C */
 static int mtpr3GetConnectionInfo(int *outConnected)
@@ -583,143 +588,12 @@ static int mtpr3SetAccountId(const SceUInt8 accountIdBytes[8])
 
 class ConnectJob : public paf::job::JobItem {
 public:
-	/* 0x813BFD40 */
-	ConnectJob(AccountLinkFinishedCallback callback, void *userData)
-		: paf::job::JobItem("ConnectJob", NULL),
-		  m_callback(callback),
-		  m_userData(userData)
-	{
-		m_result.status = -1;
-		m_result.errorCode = 0;
-		m_result.hostKind = 0;
-		m_result.localAccount.isBound = false;
-		m_result.localAccount.accountId = 0;
-		sce_paf_memset(m_result.localAccount.signInId, 0,
-			       sizeof(m_result.localAccount.signInId));
-		m_result.hostAccount.hasAccount = false;
-		m_result.hostAccount.isOnlineUser = false;
-		m_result.hostAccount.accountId = 0;
-		sce_paf_memset(m_result.hostAccount.signInId, 0,
-			       sizeof(m_result.hostAccount.signInId));
-		sce_paf_memset(m_result.hostAccount.countryCode, 0,
-			       sizeof(m_result.hostAccount.countryCode));
-		sce_paf_memset(m_result.hostAccount.langCode, 0,
-			       sizeof(m_result.hostAccount.langCode));
-		m_result.hostAccount.birthYear = 0;
-		m_result.hostAccount.birthMonth = 0;
-		m_result.hostAccount.birthDay = 0;
-	}
+	ConnectJob(AccountLinkFinishedCallback callback, void *userData);
 
 	/* 0x813C0250 / 0x813C026C */
 	virtual ~ConnectJob() {}
 
-	/* 0x813BFDF8 */
-	int Run_Impl()
-	{
-		if (IsCanceled())
-			return 0;
-
-		int connected = 0;
-		mtpr3GetConnectionInfo(&connected);
-		if (connected != 1) {
-			sceClibPrintf("%s %s():%d ", bindJobBasename(kBindJobSourcePath),
-				      "Run_Impl", 184);
-			sceClibPrintf("MTPR3GetConnectionInfo() NOT CONNECTED.\n");
-			m_result.status = -1;
-			return -1;
-		}
-
-		if (IsCanceled())
-			return 0;
-
-		int hostKind = 0;
-		int ret = mtpr3GetHostInfo(&hostKind);
-		if (ret != 0) {
-			sceClibPrintf("%s %s():%d ", bindJobBasename(kBindJobSourcePath),
-				      "Run_Impl", 196);
-			sceClibPrintf("MTPR3GetHostInfo() failed %X.\n", ret);
-			m_result.errorCode = ret;
-			m_result.status = -1;
-			return ret;
-		}
-
-		if (IsCanceled())
-			return 0;
-
-		int currentInterface = 0;
-		ret = mtpr3GetCurrentInterface(&currentInterface);
-		if (ret != 0) {
-			sceClibPrintf("%s %s():%d ", bindJobBasename(kBindJobSourcePath),
-				      "Run_Impl", 207);
-			sceClibPrintf("MTPR3GetCurrentInterface() failed %X.\n", ret);
-			m_result.errorCode = ret;
-			m_result.status = -1;
-			return ret;
-		}
-
-		if (currentInterface == MTP_IF_TYPE_USB)
-			m_result.interfaceKind = 1;
-		else if (currentInterface == MTP_IF_TYPE_TCPIP)
-			m_result.interfaceKind = 2;
-		else
-			m_result.interfaceKind = 0;
-
-		m_result.hostKind = (hostKind == MTPR3_HOST_KIND_PS3) ? MTPR3_HOST_KIND_PS3
-								      : MTPR3_HOST_KIND_PC;
-
-		if (IsCanceled())
-			return 0;
-
-		if (m_result.hostKind == MTPR3_HOST_KIND_PS3) {
-			Mtpr3HostAccountXmlInfo hostXmlInfo;
-			ret = mtpr3GetNpAccountInfo(&hostXmlInfo);
-			if (ret != 0) {
-				sceClibPrintf("%s %s():%d ", bindJobBasename(kBindJobSourcePath),
-					      "Run_Impl", 226);
-				sceClibPrintf("MTPR3GetNpAccountInfo() failed %X.\n", ret);
-				m_result.errorCode = ret;
-				m_result.status = -1;
-				return ret;
-			}
-
-			if (hostXmlInfo.status == MTPR3_ACCOUNT_STATUS_ONLINE) {
-				m_result.hostAccount.hasAccount = true;
-				m_result.hostAccount.isOnlineUser = true;
-				copyRemoteAccountFromXml(&m_result.hostAccount, &hostXmlInfo);
-			} else if (hostXmlInfo.status == MTPR3_ACCOUNT_STATUS_OFFLINE) {
-				m_result.hostAccount.hasAccount = true;
-				m_result.hostAccount.isOnlineUser = false;
-				copyRemoteAccountFromXml(&m_result.hostAccount, &hostXmlInfo);
-			} else {
-				m_result.hostAccount.hasAccount = false;
-				m_result.hostAccount.isOnlineUser = false;
-			}
-		}
-
-		loadLocalNpAccountSummary(&m_result.localAccount);
-		if (m_result.hostKind == MTPR3_HOST_KIND_PC && vshSysconIsIduMode() != 0) {
-			m_result.localAccount.isBound = true;
-			m_result.localAccount.accountId = 0;
-		}
-
-		if (m_result.hostKind == MTPR3_HOST_KIND_PC && m_result.localAccount.isBound) {
-			SceUInt8 accountIdBytes[8];
-			sce_paf_memcpy(accountIdBytes, &m_result.localAccount.accountId,
-				       sizeof(accountIdBytes));
-			ret = mtpr3SetAccountId(accountIdBytes);
-			if (ret != MTPR3_MTP_ERROR_UNSUPPORTED_SETTING && ret != 0) {
-				sceClibPrintf("%s %s():%d ", bindJobBasename(kBindJobSourcePath),
-					      "Run_Impl", 290);
-				sceClibPrintf("MTPR3SetAccountId() failed %X.\n", ret);
-				m_result.errorCode = ret;
-				m_result.status = -1;
-				return ret;
-			}
-		}
-
-		m_result.status = 0;
-		return 0;
-	}
+	int Run_Impl();
 
 	/* 0x813C0196 */
 	virtual int Run()
@@ -754,6 +628,141 @@ private:
 	AccountLinkFinishedCallback m_callback;
 	void *m_userData;
 };
+
+/* 0x813BFD40 */
+ConnectJob::ConnectJob(AccountLinkFinishedCallback callback, void *userData)
+	: paf::job::JobItem("ConnectJob", NULL),
+	  m_callback(callback),
+	  m_userData(userData)
+{
+	m_result.status = -1;
+	m_result.errorCode = 0;
+	m_result.hostKind = 0;
+	m_result.localAccount.isBound = false;
+	m_result.localAccount.accountId = 0;
+	sce_paf_memset(m_result.localAccount.signInId, 0,
+		       sizeof(m_result.localAccount.signInId));
+	m_result.hostAccount.hasAccount = false;
+	m_result.hostAccount.isOnlineUser = false;
+	m_result.hostAccount.accountId = 0;
+	sce_paf_memset(m_result.hostAccount.signInId, 0,
+		       sizeof(m_result.hostAccount.signInId));
+	sce_paf_memset(m_result.hostAccount.countryCode, 0,
+		       sizeof(m_result.hostAccount.countryCode));
+	sce_paf_memset(m_result.hostAccount.langCode, 0,
+		       sizeof(m_result.hostAccount.langCode));
+	m_result.hostAccount.birthYear = 0;
+	m_result.hostAccount.birthMonth = 0;
+	m_result.hostAccount.birthDay = 0;
+}
+
+/* 0x813BFDF8 */
+int ConnectJob::Run_Impl()
+{
+	if (IsCanceled())
+		return 0;
+
+	int connected = 0;
+	mtpr3GetConnectionInfo(&connected);
+	if (connected != 1) {
+		sceClibPrintf("%s %s():%d ", bindJobBasename(kBindJobSourcePath),
+			      "Run_Impl", 184);
+		sceClibPrintf("MTPR3GetConnectionInfo() NOT CONNECTED.\n");
+		m_result.status = -1;
+		return -1;
+	}
+
+	if (IsCanceled())
+		return 0;
+
+	int hostKind = 0;
+	int ret = mtpr3GetHostInfo(&hostKind);
+	if (ret != 0) {
+		sceClibPrintf("%s %s():%d ", bindJobBasename(kBindJobSourcePath),
+			      "Run_Impl", 196);
+		sceClibPrintf("MTPR3GetHostInfo() failed %X.\n", ret);
+		m_result.errorCode = ret;
+		m_result.status = -1;
+		return ret;
+	}
+
+	if (IsCanceled())
+		return 0;
+
+	int currentInterface = 0;
+	ret = mtpr3GetCurrentInterface(&currentInterface);
+	if (ret != 0) {
+		sceClibPrintf("%s %s():%d ", bindJobBasename(kBindJobSourcePath),
+			      "Run_Impl", 207);
+		sceClibPrintf("MTPR3GetCurrentInterface() failed %X.\n", ret);
+		m_result.errorCode = ret;
+		m_result.status = -1;
+		return ret;
+	}
+
+	if (currentInterface == MTP_IF_TYPE_USB)
+		m_result.interfaceKind = 1;
+	else if (currentInterface == MTP_IF_TYPE_TCPIP)
+		m_result.interfaceKind = 2;
+	else
+		m_result.interfaceKind = 0;
+
+	m_result.hostKind = (hostKind == MTPR3_HOST_KIND_PS3) ? MTPR3_HOST_KIND_PS3
+							      : MTPR3_HOST_KIND_PC;
+
+	if (IsCanceled())
+		return 0;
+
+	if (m_result.hostKind == MTPR3_HOST_KIND_PS3) {
+		Mtpr3HostAccountXmlInfo hostXmlInfo;
+		ret = mtpr3GetNpAccountInfo(&hostXmlInfo);
+		if (ret != 0) {
+			sceClibPrintf("%s %s():%d ", bindJobBasename(kBindJobSourcePath),
+				      "Run_Impl", 226);
+			sceClibPrintf("MTPR3GetNpAccountInfo() failed %X.\n", ret);
+			m_result.errorCode = ret;
+			m_result.status = -1;
+			return ret;
+		}
+
+		if (hostXmlInfo.status == MTPR3_ACCOUNT_STATUS_ONLINE) {
+			m_result.hostAccount.hasAccount = true;
+			m_result.hostAccount.isOnlineUser = true;
+			copyRemoteAccountFromXml(&m_result.hostAccount, &hostXmlInfo);
+		} else if (hostXmlInfo.status == MTPR3_ACCOUNT_STATUS_OFFLINE) {
+			m_result.hostAccount.hasAccount = true;
+			m_result.hostAccount.isOnlineUser = false;
+			copyRemoteAccountFromXml(&m_result.hostAccount, &hostXmlInfo);
+		} else {
+			m_result.hostAccount.hasAccount = false;
+			m_result.hostAccount.isOnlineUser = false;
+		}
+	}
+
+	loadLocalNpAccountSummary(&m_result.localAccount);
+	if (m_result.hostKind == MTPR3_HOST_KIND_PC && vshSysconIsIduMode() != 0) {
+		m_result.localAccount.isBound = true;
+		m_result.localAccount.accountId = 0;
+	}
+
+	if (m_result.hostKind == MTPR3_HOST_KIND_PC && m_result.localAccount.isBound) {
+		SceUInt8 accountIdBytes[8];
+		sce_paf_memcpy(accountIdBytes, &m_result.localAccount.accountId,
+			       sizeof(accountIdBytes));
+		ret = mtpr3SetAccountId(accountIdBytes);
+		if (ret != MTPR3_MTP_ERROR_UNSUPPORTED_SETTING && ret != 0) {
+			sceClibPrintf("%s %s():%d ", bindJobBasename(kBindJobSourcePath),
+				      "Run_Impl", 290);
+			sceClibPrintf("MTPR3SetAccountId() failed %X.\n", ret);
+			m_result.errorCode = ret;
+			m_result.status = -1;
+			return ret;
+		}
+	}
+
+	m_result.status = 0;
+	return 0;
+}
 
 /* 0x813BFC7A */
 static void bindJobEnqueue(paf::job::JobItem *jobItem)

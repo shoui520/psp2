@@ -212,6 +212,7 @@ static int npOAuthOnNpssoJsonToken(NpOAuthJsonStreamLexer *lexer, int event, int
 	return 0;
 }
 
+/* 0x813AACD0 */
 static int npOAuthOnIdTokenJsonToken(NpOAuthJsonLexer *lexer, int event, int depth, int node,
 				     const char *keyName, const NpOAuthJsonLexerToken *token,
 				     int arrayIndex, void *context)
@@ -224,12 +225,26 @@ static int npOAuthOnIdTokenJsonToken(NpOAuthJsonLexer *lexer, int event, int dep
 	if (result == NULL)
 		return NP_OAUTH_ERR_COMMON_INVALID_ARG;
 
-	if (depth == 1 && event == NP_OAUTH_JSON_EVENT_VALUE && keyName != NULL && token != NULL) {
+	if (depth == 1 && event == NP_OAUTH_JSON_EVENT_VALUE && keyName != NULL && token != NULL &&
+	    sceClibStrncasecmp(keyName, "auth_time", 32U) != 0 &&
+	    sceClibStrncasecmp(keyName, "iat", 32U) != 0 &&
+	    sceClibStrncasecmp(keyName, "exp", 32U) != 0 &&
+	    sceClibStrncasecmp(keyName, "iss", 32U) != 0) {
 		if (sceClibStrncasecmp(keyName, "env_iss_id", 32U) == 0) {
 			int issuerId = (int)sceClibStrtoll(token->text, NULL, 10);
 			if (result->outIssuerId != NULL)
 				*result->outIssuerId = issuerId;
 			result->header.presentMask |= 1U;
+		} else if (sceClibStrncasecmp(keyName, "user_id", 32U) != 0 &&
+			   sceClibStrncasecmp(keyName, "aud", 32U) != 0 &&
+			   sceClibStrncasecmp(keyName, "acr", 32U) != 0 &&
+			   sceClibStrncasecmp(keyName, "acct_id", 32U) != 0 &&
+			   sceClibStrncasecmp(keyName, "ctry_code", 32U) != 0 &&
+			   sceClibStrncasecmp(keyName, "lang", 32U) != 0 &&
+			   sceClibStrncasecmp(keyName, "comm_domain", 32U) != 0 &&
+			   sceClibStrncasecmp(keyName, "online_id", 32U) != 0 &&
+			   sceClibStrncasecmp(keyName, "dob", 32U) != 0) {
+			(void)sceClibStrncasecmp(keyName, "age", 32U);
 		}
 	}
 	return 0;

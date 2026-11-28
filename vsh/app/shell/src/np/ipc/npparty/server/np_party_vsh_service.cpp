@@ -489,25 +489,7 @@ static const sce::Json::Value &partyJsonNullAccessCallback(
 /* Job: fetch friends currently in a party via NP WebAPI (0x81384E12..0x81387F7D) */
 class PartyGetFriendsInPartyJob : public paf::job::JobItem {
 public:
-	/* 0x81384E12 */
-	PartyGetFriendsInPartyJob(int webApiLibCtx)
-		: paf::job::JobItem("SceNpPartyGetFriendsInParty", NULL),
-		  m_webApiLibCtx(webApiLibCtx),
-		  m_requestId(-1),
-		  m_pageSize(0),
-		  m_accumulatedCount(0),
-		  m_totalResults(0),
-		  m_friendsInPartyCount(0),
-		  m_singleFriendOnlineId()
-	{
-		char titleIdWithSuffix[32];
-		sce_paf_snprintf(titleIdWithSuffix, sizeof(titleIdWithSuffix), "%s" "_00",
-				 NP_PARTY_TITLE_ID);
-		sce_paf_snprintf(
-			m_apiPath, sizeof(m_apiPath),
-			"/v" "1/users/me/friends/sessions?relatedNpTitleId=%s&limit=%d&fields=friends&availablePlatforms=PS4,PSVITA",
-			titleIdWithSuffix, NP_PARTY_FRIENDS_QUERY_LIMIT);
-	}
+	PartyGetFriendsInPartyJob(int webApiLibCtx);
 
 	/* 0x81387A2C / 0x81387A66 */
 	virtual ~PartyGetFriendsInPartyJob()
@@ -577,6 +559,26 @@ private:
 	int m_friendsInPartyCount;
 	paf::string m_singleFriendOnlineId;
 };
+
+/* 0x81384E12 */
+PartyGetFriendsInPartyJob::PartyGetFriendsInPartyJob(int webApiLibCtx)
+	: paf::job::JobItem("SceNpPartyGetFriendsInParty", NULL),
+	  m_webApiLibCtx(webApiLibCtx),
+	  m_requestId(-1),
+	  m_pageSize(0),
+	  m_accumulatedCount(0),
+	  m_totalResults(0),
+	  m_friendsInPartyCount(0),
+	  m_singleFriendOnlineId()
+{
+	char titleIdWithSuffix[32];
+	sce_paf_snprintf(titleIdWithSuffix, sizeof(titleIdWithSuffix), "%s" "_00",
+			 NP_PARTY_TITLE_ID);
+	sce_paf_snprintf(
+		m_apiPath, sizeof(m_apiPath),
+		"/v" "1/users/me/friends/sessions?relatedNpTitleId=%s&limit=%d&fields=friends&availablePlatforms=PS4,PSVITA",
+		titleIdWithSuffix, NP_PARTY_FRIENDS_QUERY_LIMIT);
+}
 
 /* 0x813875A6 */
 int PartyGetFriendsInPartyJob::ParseResponseJson(const char *json, SceSize jsonSize)

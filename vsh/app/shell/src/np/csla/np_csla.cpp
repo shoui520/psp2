@@ -980,6 +980,87 @@ static int CslaFetchOrReuseToken(CslaContext *ctx, CslaRequestNode *reqNode,
 	return ret;
 }
 
+/* 0x813BBDAC */
+static int CslaContextInit(NpOAuthAllocator *allocator)
+{
+	if (s_cslaContext != NULL)
+		return NP_CSLA_ERR_CONTEXT_ALREADY_EXISTS;
+
+	s_cslaAllocator = *allocator;
+	CslaContext *ctx = static_cast<CslaContext *>(
+		SceNpCommonPs4_0C922423(sizeof(CslaContext), &s_cslaAllocator));
+	if (ctx == NULL)
+		return NP_CSLA_ERR_OUT_OF_MEMORY;
+
+	sceClibMemset(ctx, 0, sizeof(*ctx));
+	ctx->cache = static_cast<CslaTokenCache *>(
+		SceNpCommonPs4_0C922423(sizeof(CslaTokenCache), &s_cslaAllocator));
+	if (ctx->cache == NULL) {
+		SceNpCommonPs4_6B428829(&s_cslaAllocator, ctx);
+		return NP_CSLA_ERR_OUT_OF_MEMORY;
+	}
+
+	sceClibMemset(ctx->cache, 0, sizeof(*ctx->cache));
+	int ret = SceNpCommonPs4_4858EFB6(&ctx->lock, "SceNpCslaClientLock", 1);
+	if (ret < 0) {
+		SceNpCommonPs4_6B428829(&s_cslaAllocator, ctx->cache);
+		SceNpCommonPs4_6B428829(&s_cslaAllocator, ctx);
+		return ret;
+	}
+
+	s_cslaContext = ctx;
+	return 0;
+}
+
+/* 0x813BAE2C */
+static CslaRequestNode *CslaRequestNodeInit(CslaRequestNode *node, NpOAuthAllocator *allocator,
+					    CslaContext *ctx)
+{
+	sceClibMemset(node, 0, sizeof(*node));
+	for (;;) {
+		s_cslaNextReqId++;
+		if (s_cslaNextReqId > 0xEFFFFFFFU)
+			s_cslaNextReqId = 1;
+		bool duplicate = false;
+		for (CslaRequestNode *cur = ctx->requestListHead; cur != NULL; cur = cur->next) {
+			if (cur->requestId == static_cast<int>(s_cslaNextReqId)) {
+				duplicate = true;
+				break;
+			}
+		}
+		if (!duplicate)
+			break;
+	}
+
+	node->requestId = static_cast<int>(s_cslaNextReqId);
+	node->allocator = allocator;
+	return node;
+}
+
+/* 0x813BA92E */
+static int CslaCreateRequestInternal(const NpCslaCreateRequestOption *option)
+{
+	CslaContext *ctx = s_cslaContext;
+	NpOAuthAllocator *alloc = (option != NULL && option->allocator != NULL)
+					  ? option->allocator
+					  : &s_cslaAllocator;
+
+	SceNpCommonPs4_F5840D6E(&ctx->lock);
+	CslaRequestNode *node = static_cast<CslaRequestNode *>(
+		SceNpCommonPs4_0C922423(sizeof(CslaRequestNode), alloc));
+	if (node == NULL) {
+		SceNpCommonPs4_4A1C1C3C(&ctx->lock);
+		return NP_CSLA_ERR_OUT_OF_MEMORY;
+	}
+
+	CslaRequestNodeInit(node, alloc, ctx);
+	node->next = ctx->requestListHead;
+	ctx->requestListHead = node;
+	int assignedId = node->requestId;
+	SceNpCommonPs4_4A1C1C3C(&ctx->lock);
+	return assignedId;
+}
+
 /* ============================================================================
  * Public Entry Points (0x813BA81C..0x813BA8FF)
  * ============================================================================ */
@@ -1004,35 +1085,10 @@ int npCslaInit(NpOAuthAllocator *allocator)
 	ret = SceNpCommonPs4_A25DA29A(&seed);
 	if (ret >= 0) {
 		sceMt19937Init(&s_cslaRng, seed);
-		if (s_cslaContext != NULL) {
-			ret = NP_CSLA_ERR_CONTEXT_ALREADY_EXISTS;
-		} else {
-			s_cslaAllocator = *allocator;
-			CslaContext *ctx = static_cast<CslaContext *>(
-				SceNpCommonPs4_0C922423(sizeof(CslaContext), &s_cslaAllocator));
-			if (ctx == NULL) {
-				ret = NP_CSLA_ERR_OUT_OF_MEMORY;
-			} else {
-				sceClibMemset(ctx, 0, sizeof(*ctx));
-				ctx->cache = static_cast<CslaTokenCache *>(
-					SceNpCommonPs4_0C922423(sizeof(CslaTokenCache),
-								&s_cslaAllocator));
-				if (ctx->cache == NULL) {
-					SceNpCommonPs4_6B428829(&s_cslaAllocator, ctx);
-					ret = NP_CSLA_ERR_OUT_OF_MEMORY;
-				} else {
-					sceClibMemset(ctx->cache, 0, sizeof(*ctx->cache));
-					ret = SceNpCommonPs4_4858EFB6(&ctx->lock,
-								      "SceNpCslaClientLock", 1);
-					if (ret >= 0) {
-						s_cslaContext = ctx;
-						s_cslaInitialized = 1;
-						return 0;
-					}
-					SceNpCommonPs4_6B428829(&s_cslaAllocator, ctx->cache);
-					SceNpCommonPs4_6B428829(&s_cslaAllocator, ctx);
-				}
-			}
+		ret = CslaContextInit(allocator);
+		if (ret >= 0) {
+			s_cslaInitialized = 1;
+			return 0;
 		}
 	}
 
@@ -1047,42 +1103,7 @@ int npCslaCreateRequest(const NpCslaCreateRequestOption *option)
 	if (s_cslaInitialized == 0 || s_cslaContext == NULL)
 		return NP_CSLA_ERR_NOT_INITIALIZED;
 
-	NpOAuthAllocator *alloc = (option != NULL && option->allocator != NULL)
-					  ? option->allocator
-					  : &s_cslaAllocator;
-
-	SceNpCommonPs4_F5840D6E(&s_cslaContext->lock);
-	CslaRequestNode *node = static_cast<CslaRequestNode *>(
-		SceNpCommonPs4_0C922423(sizeof(CslaRequestNode), alloc));
-	if (node == NULL) {
-		SceNpCommonPs4_4A1C1C3C(&s_cslaContext->lock);
-		return NP_CSLA_ERR_OUT_OF_MEMORY;
-	}
-
-	sceClibMemset(node, 0, sizeof(*node));
-	for (;;) {
-		s_cslaNextReqId++;
-		if (s_cslaNextReqId > 0xEFFFFFFFU)
-			s_cslaNextReqId = 1;
-		bool duplicate = false;
-		for (CslaRequestNode *cur = s_cslaContext->requestListHead; cur != NULL;
-		     cur = cur->next) {
-			if (cur->requestId == static_cast<int>(s_cslaNextReqId)) {
-				duplicate = true;
-				break;
-			}
-		}
-		if (!duplicate)
-			break;
-	}
-
-	node->requestId = static_cast<int>(s_cslaNextReqId);
-	node->allocator = alloc;
-	node->next = s_cslaContext->requestListHead;
-	s_cslaContext->requestListHead = node;
-	int assignedId = node->requestId;
-	SceNpCommonPs4_4A1C1C3C(&s_cslaContext->lock);
-	return assignedId;
+	return CslaCreateRequestInternal(option);
 }
 
 /* 0x813BA876 */

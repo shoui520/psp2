@@ -664,10 +664,11 @@ static int npOAuthRequestAuthCode(NpOAuthRequest *request, const char *consoleTo
 	return ret;
 }
 
-/* 0x813A89E4 */
-static int npOAuthExecuteAuthCodeGrant(NpOAuthRequest *request, const char *clientId,
-				       const char *redirectUri, const char *scope,
-				       SceNpAuthorizationCode *outCode, int *outIssuerId)
+/* Shared inline body of npOAuthGetAuthorizationCode (0x813A89E4) and
+ * npOAuthGetAuthorizationCodeWithRedirect (0x813A96E6). */
+static inline int npOAuthExecuteAuthCodeGrant(NpOAuthRequest *request, const char *clientId,
+					      const char *redirectUri, const char *scope,
+					      SceNpAuthorizationCode *outCode, int *outIssuerId)
 {
 	NpOAuthContext *ctx = &g_npOAuthContext;
 	char consoleToken[NP_OAUTH_CONSOLE_TOKEN_BUF_SIZE];
@@ -727,6 +728,7 @@ static int npOAuthExecuteAuthCodeGrant(NpOAuthRequest *request, const char *clie
 	return ret;
 }
 
+/* 0x813A89E4 */
 int npOAuthGetAuthorizationCode(int reqHandle, const NpOAuthAuthCodeRequest *req,
 				SceNpAuthorizationCode *outCode, int *outIssuerId)
 {
