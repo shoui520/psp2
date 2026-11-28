@@ -643,6 +643,7 @@ target_link_options(${PSP2_TARGET} PRIVATE
 	-Wl,-u,sceZlibIsValid
 	-Wl,-u,sceZlibGetCompressedData
 	-Wl,-u,png_create_read_struct
+	-Wl,-u,__aeabi_drsub
 	-Wl,--defsym=sceProcessParam=__sce_process_param
 	-Wl,--defsym=__stack_chk_guard=__sce_process_param
 	-Wl,--defsym=SceFt2_04DCBE87=FT_New_Memory
