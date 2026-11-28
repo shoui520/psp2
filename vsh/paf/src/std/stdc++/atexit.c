@@ -15,7 +15,7 @@ typedef char PafAtexitEntrySizeCheck[sizeof(PafAtexitEntry) == 16 ? 1 : -1];
 static PafAtexitEntry atexitEntries[8];
 static PafAtexitEntry *atexitList;
 
-#ifndef PAF_STATIC_BUILD
+#ifndef PAF_BUILD_2014
 int __cxa_atexit(void (*func)(void *), void *arg, void *dso)
 {
 	PafAtexitEntry *entry = NULL;
