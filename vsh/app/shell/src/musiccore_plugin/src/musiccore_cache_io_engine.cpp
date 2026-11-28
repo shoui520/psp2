@@ -59,7 +59,6 @@ extern void bufferPoolFreeSyncBlock(void *pool, void *buf);
 extern void *getWorkerThreadPool();
 extern int workerPoolSpawn(void *pool, int workerKind, void *entryFn, void *arg, SceUID *outThreadId);
 extern int workerPoolJoin(void *pool, SceUID threadId);
-extern int isWorkerThreadValid(SceUID threadId);
 
 struct PrefetchWorkerArg;
 
@@ -314,7 +313,7 @@ int CacheIoEngine::destroyAsyncCaches()
 
     if (m_asyncLocks != NULL) {
         for (int idx = (int)m_asyncStreamCount - 1; idx >= 0; --idx) {
-            syncMutexDestroy(&m_asyncLocks[idx]);
+            (m_asyncLocks[idx]).~SyncMutex();
         }
         localFree(m_asyncLocks);
         m_asyncLocks = NULL;
@@ -331,15 +330,15 @@ int CacheIoEngine::destroyAsyncWorkers()
         m_asyncThreadIds != NULL && m_asyncWakeRequested != NULL &&
         m_asyncWorkerExiting != NULL && m_asyncWorkerBusy != NULL) {
         for (uint8_t idx = 0; idx < m_asyncStreamCount; ++idx) {
-            if (isWorkerThreadValid(m_asyncThreadIds[idx]) != 0) {
-                syncMutexLock(&m_asyncLocks[idx]);
+            if (isValidWorkerThreadId(m_asyncThreadIds[idx]) != 0) {
+                m_asyncLocks[idx].lock();
                 m_asyncWorkerExiting[idx] = 1;
-                syncEventSignal(&m_asyncWakeEvents[idx], 0xFFFFFFFFu);
-                syncMutexUnlock(&m_asyncLocks[idx]);
+                m_asyncWakeEvents[idx].signal(0xFFFFFFFFu);
+                m_asyncLocks[idx].unlock();
             }
         }
         for (uint8_t idx = 0; idx < m_asyncStreamCount; ++idx) {
-            if (isWorkerThreadValid(m_asyncThreadIds[idx]) != 0) {
+            if (isValidWorkerThreadId(m_asyncThreadIds[idx]) != 0) {
                 workerPoolJoin(getWorkerThreadPool(), m_asyncThreadIds[idx]);
             }
         }
@@ -347,7 +346,7 @@ int CacheIoEngine::destroyAsyncWorkers()
 
     if (m_asyncWakeEvents != NULL) {
         for (int idx = (int)m_asyncStreamCount - 1; idx >= 0; --idx) {
-            syncEventDestroy(&m_asyncWakeEvents[idx]);
+            (m_asyncWakeEvents[idx]).~SyncCond();
         }
         localFree(m_asyncWakeEvents);
         m_asyncWakeEvents = NULL;
@@ -372,7 +371,7 @@ int CacheIoEngine::initAsyncWorkers(const AsyncRingConfig *asyncConfigs)
     m_asyncWakeEvents = (SyncEvent *)ScePafStdc_3CF19248(sizeof(SyncEvent) * m_asyncStreamCount, getLocalHeap());
     if (m_asyncWakeEvents != NULL) {
         for (uint8_t idx = 0; idx < m_asyncStreamCount; ++idx) {
-            syncEventConstruct(&m_asyncWakeEvents[idx], "SceShellMusicCoreCommonCond");
+            new (&m_asyncWakeEvents[idx]) SyncCond("SceShellMusicCoreCommonCond");
         }
     }
     m_asyncThreadIds = (SceUID *)allocWordArray(m_asyncStreamCount);
@@ -481,7 +480,7 @@ int CacheIoEngine::initAsyncCaches(const AsyncRingConfig *asyncConfigs)
     m_asyncLocks = (SyncMutex *)ScePafStdc_3CF19248(sizeof(SyncMutex) * m_asyncStreamCount, getLocalHeap());
     if (m_asyncLocks != NULL) {
         for (uint8_t idx = 0; idx < m_asyncStreamCount; ++idx) {
-            syncMutexConstruct(&m_asyncLocks[idx], "SceShellMusicCoreCommonLock");
+            new (&m_asyncLocks[idx]) SyncMutex("SceShellMusicCoreCommonLock");
         }
     }
 
@@ -577,6 +576,7 @@ CacheIoEngine::CacheIoEngine(uint8_t syncStreamCount, const uint32_t *syncBlockS
     , m_asyncWakeRequested(NULL)
     , m_asyncWorkerExiting(NULL)
     , m_asyncWorkerBusy(NULL)
+    , m_fileSeekLock("SceShellMusicCoreCacheIoFileSeekLock")
     , m_streamPath(NULL)
     , m_streamHandle(NULL)
     , m_padFileSize(0)
@@ -599,8 +599,6 @@ CacheIoEngine::CacheIoEngine(uint8_t syncStreamCount, const uint32_t *syncBlockS
     , m_userCtx(userCtx)
     , m_extraCtx(extraCtx)
 {
-    syncMutexConstruct(&m_fileSeekLock, "SceShellMusicCoreCacheIoFileSeekLock");
-
     if (initAsyncCaches(asyncConfigs) != 0 || initSyncCaches(syncBlockSizes) != 0) {
         destroyAsyncCaches();
         destroySyncCaches();
@@ -624,7 +622,6 @@ CacheIoEngine::~CacheIoEngine()
     destroyAsyncCaches();
     destroySyncCaches();
     m_isInitialized = 0;
-    syncMutexDestroy(&m_fileSeekLock);
 }
 
 /* 0x812040B6 */
@@ -699,11 +696,11 @@ int CacheIoEngine::closeStream()
 
     if (m_workersInitialized != 0) {
         for (uint8_t idx = 0; idx < m_asyncStreamCount; ++idx) {
-            syncMutexLock(&m_asyncLocks[idx]);
+            m_asyncLocks[idx].lock();
             m_closingStream = 1;
             while (m_asyncWorkerBusy[idx] != 0) {
-                syncEventSignal(&m_asyncWakeEvents[idx], 1u);
-                syncEventWait(&m_asyncWakeEvents[idx], &m_asyncLocks[idx], 16u, 0);
+                m_asyncWakeEvents[idx].signal(1u);
+                m_asyncWakeEvents[idx].wait(&m_asyncLocks[idx], 16u, NULL);
             }
         }
     }
@@ -715,7 +712,7 @@ int CacheIoEngine::closeStream()
     if (m_workersInitialized != 0) {
         m_closingStream = 0;
         for (uint8_t idx = 0; idx < m_asyncStreamCount; ++idx) {
-            syncMutexUnlock(&m_asyncLocks[idx]);
+            m_asyncLocks[idx].unlock();
         }
     }
 
@@ -808,17 +805,17 @@ int CacheIoEngine::loadSyncBlock(uint8_t slotIdx, bool useSecondHalf, int64_t al
         bytesRead = foundSecondHalf ? m_syncSecondValidBytes[foundStream] : m_syncFirstValidBytes[foundStream];
         sce_paf_memcpy(dstBuf, srcBuf, (SceSize)bytesRead);
     } else {
-        syncMutexLock(&m_fileSeekLock);
+        m_fileSeekLock.lock();
         int64_t seekPos = m_seekCb(m_streamHandle, alignedOffset, 0, m_userCtx, m_extraCtx);
         if (seekPos < 0) {
-            syncMutexUnlock(&m_fileSeekLock);
+            m_fileSeekLock.unlock();
             if (outAvail != NULL)
                 *outAvail = 0;
             return (int)seekPos;
         }
         *outDidIo = 1;
         bytesRead = m_readCb(m_streamHandle, dstBuf, m_syncBlockSizes[slotIdx], 1, m_userCtx, m_extraCtx);
-        syncMutexUnlock(&m_fileSeekLock);
+        m_fileSeekLock.unlock();
         if (bytesRead < 0) {
             *dstOffset = -1;
             *dstValid = -1;
@@ -953,7 +950,7 @@ int CacheIoEngine::readSync(uint8_t streamId, int64_t offset, uint32_t length,
     }
 
     if (m_directionMode < 0 || m_directionMode > 2) {
-        syncMutexUnlock(&m_fileSeekLock);
+        m_fileSeekLock.unlock();
         *outPtr = NULL;
         return -1;
     }
@@ -1259,7 +1256,7 @@ int CacheIoEngine::fetchAsyncBlocks(uint8_t streamId, int64_t offset, uint32_t l
 
     uint8_t idx = (uint8_t)(streamId - 1);
     SyncMutex *ringLock = &m_asyncLocks[idx];
-    syncMutexLock(ringLock);
+    ringLock->lock();
 
     uint32_t blockSize = m_asyncBlockSizes[idx];
     uint32_t blockCount = m_asyncBlockCounts[idx];
@@ -1388,7 +1385,7 @@ int CacheIoEngine::fetchAsyncBlocks(uint8_t streamId, int64_t offset, uint32_t l
     }
     if (prepErr != 0) {
         *outErr = prepErr;
-        syncMutexUnlock(ringLock);
+        ringLock->unlock();
         return -1;
     }
 
@@ -1437,11 +1434,11 @@ int CacheIoEngine::fetchAsyncBlocks(uint8_t streamId, int64_t offset, uint32_t l
         }
     }
 
-    syncMutexUnlock(ringLock);
+    ringLock->unlock();
 
     /* Perform any synchronous loads flagged above */
     if (needSyncLoad == 1) {
-        syncMutexLock(&m_fileSeekLock);
+        m_fileSeekLock.lock();
         for (int slot = 0; slot < totalSlots; ++slot) {
             if (slotStates[slot] != CACHE_BLOCK_SYNC_LOAD)
                 continue;
@@ -1465,12 +1462,12 @@ int CacheIoEngine::fetchAsyncBlocks(uint8_t streamId, int64_t offset, uint32_t l
             }
             slotRefCounts[slot] = 0;
         }
-        syncMutexUnlock(&m_fileSeekLock);
+        m_fileSeekLock.unlock();
     }
 
     if ((needAsyncWake == 1 || m_forcePrefetch != 0) && prefetchEnabled) {
         *wakeReqFlag = 1;
-        syncEventSignal(wakeEvent, 1u);
+        wakeEvent->signal(1u);
         *outWokeWorker = 1;
     }
 
@@ -1651,10 +1648,10 @@ void CacheIoEngine::drainPendingAsyncLoads(uint8_t streamId)
 
     uint8_t idx = (uint8_t)(streamId - 1);
     SyncMutex *ringLock = &m_asyncLocks[idx];
-    syncMutexLock(ringLock);
+    ringLock->lock();
     m_asyncWakeRequested[idx] = 0;
     int slot = m_asyncLastSlots[idx];
-    syncMutexUnlock(ringLock);
+    ringLock->unlock();
 
     uint32_t blockCount = m_asyncBlockCounts[idx];
     uint32_t totalSlots = blockCount + 1u;
@@ -1667,19 +1664,19 @@ void CacheIoEngine::drainPendingAsyncLoads(uint8_t streamId)
 
         if (m_asyncSlotStates[idx][slot] == CACHE_BLOCK_ASYNC_LOAD) {
             int bytesRead = -1;
-            syncMutexLock(&m_fileSeekLock);
+            m_fileSeekLock.lock();
             int64_t seekPos = m_seekCb(m_streamHandle, m_asyncSlotOffsets[idx][slot], 0, m_userCtx, m_extraCtx);
             if (seekPos >= 0) {
                 bytesRead = m_readCb(m_streamHandle, m_asyncSlotPtrs[idx][slot],
                                      m_asyncBlockSizes[idx], 0, m_userCtx, m_extraCtx);
             }
-            syncMutexUnlock(&m_fileSeekLock);
+            m_fileSeekLock.unlock();
 
             if (bytesRead < 0) {
-                syncMutexLock(ringLock);
+                ringLock->lock();
                 m_asyncSlotOffsets[idx][slot] = -1;
                 m_asyncSlotStates[idx][slot] = CACHE_BLOCK_EMPTY;
-                syncMutexUnlock(ringLock);
+                ringLock->unlock();
             } else {
                 m_asyncSlotValidBytes[idx][slot] = bytesRead;
                 m_asyncSlotStates[idx][slot] = CACHE_BLOCK_READY;
@@ -1708,26 +1705,26 @@ void CacheIoEngine::runPrefetchWorker(uint8_t streamId)
     SyncEvent *wakeEvent = &m_asyncWakeEvents[idx];
 
     for (;;) {
-        syncMutexLock(ringLock);
+        ringLock->lock();
         m_asyncWorkerBusy[idx] = 0;
         if (m_asyncWorkerExiting[idx] != 0)
             break;
 
         if (m_closingStream == 0 && m_asyncWakeRequested[idx] != 0) {
             m_asyncWorkerBusy[idx] = 1;
-            syncMutexUnlock(ringLock);
+            ringLock->unlock();
             drainPendingAsyncLoads(streamId);
         } else {
             m_asyncWorkerBusy[idx] = 0;
-            syncEventSignal(wakeEvent, 16u);
-            syncEventWait(wakeEvent, ringLock, 1u, 0);
-            syncMutexUnlock(ringLock);
+            wakeEvent->signal(16u);
+            wakeEvent->wait(ringLock, 1u, NULL);
+            ringLock->unlock();
         }
     }
 
     m_asyncWorkerBusy[idx] = 0;
-    syncEventSignal(wakeEvent, 16u);
-    syncMutexUnlock(ringLock);
+    wakeEvent->signal(16u);
+    ringLock->unlock();
 }
 
 /* 0x81206DA4 */
@@ -1746,7 +1743,7 @@ int CacheIoEngine::prefetchWorkerEntry(SceSize args, void *argp)
         return 0;
 
     engine->runPrefetchWorker(streamId);
-    exitCurrentWorkerThread();
+    exitWorkerThread();
     return 1;
 }
 

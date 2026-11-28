@@ -65,9 +65,9 @@ static int activeFilterThreadEntry(SceSize args, void *argp)
     ActiveFilterBase **holder = (ActiveFilterBase **)argp;
     ActiveFilterBase *self = *holder;
     if (self == NULL)
-        exitCurrentWorkerThread();
+        exitWorkerThread();
     self->workerThreadMain();
-    exitCurrentWorkerThread();
+    exitWorkerThread();
     return 1;
 }
 
@@ -76,14 +76,13 @@ static int activeFilterThreadEntry(SceSize args, void *argp)
 /* 0x81206E14 / 0x81206EA4 */
 ActiveFilterBase::ActiveFilterBase(int workerKind, const char *threadName)
     : m_eventListener(NULL)
+    , m_wakeEvent(threadName)
+    , m_lock(threadName)
     , m_workerId(-1)
     , m_runState(FILTER_STATE_STOPPED)
     , m_workerSelfArg(NULL)
     , m_useWorkerPool(1)
 {
-    syncEventConstruct(&m_wakeEvent, threadName);
-    syncMutexConstruct(&m_lock, threadName);
-
     m_workerSelfArg = (ActiveFilterBase **)musiccoreAllocFromPafHeap(sizeof(ActiveFilterBase *), getLocalHeap());
     if (m_workerSelfArg != NULL) {
         *m_workerSelfArg = this;
@@ -99,23 +98,20 @@ ActiveFilterBase::ActiveFilterBase(int workerKind, const char *threadName)
 /* 0x81206EAC / 0x81206F1C / 0x81206F2C */
 ActiveFilterBase::~ActiveFilterBase()
 {
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     m_runState = FILTER_STATE_EXITING;
-    syncEventSignal(&m_wakeEvent, 0xFFFFFFFFu);
-    syncMutexUnlock(&m_lock);
+    m_wakeEvent.signal(0xFFFFFFFFu);
+    m_lock.unlock();
 
     if (m_useWorkerPool == 1)
         workerPoolJoin(getWorkerThreadPool(), m_workerId);
     else
-        joinDetachedWorker(m_workerId);
+        joinAndDeleteWorkerThread(m_workerId);
 
     if (m_workerSelfArg != NULL) {
         localFree(m_workerSelfArg);
         m_workerSelfArg = NULL;
     }
-
-    syncMutexDestroy(&m_lock);
-    syncEventDestroy(&m_wakeEvent);
 }
 
 /* 0x81206F34 */
@@ -129,32 +125,32 @@ bool ActiveFilterBase::isInitialized() const
 {
     if (m_workerId < 0)
         return false;
-    if (syncMutexIsValid(&m_lock) == 0)
+    if (!m_lock.isValid())
         return false;
-    return syncEventIsValid(&m_wakeEvent) != 0;
+    return m_wakeEvent.isValid();
 }
 
 /* 0x81206F64 */
 int ActiveFilterBase::start()
 {
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (m_runState != FILTER_STATE_RUNNING) {
         m_runState = FILTER_STATE_RUNNING;
-        syncEventSignal(&m_wakeEvent, 1u);
+        m_wakeEvent.signal(1u);
     }
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
     return 0;
 }
 
 /* 0x81206F9A */
 int ActiveFilterBase::stop()
 {
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (m_runState != FILTER_STATE_STOPPED) {
         m_runState = FILTER_STATE_STOPPED;
-        syncEventSignal(&m_wakeEvent, 1u);
+        m_wakeEvent.signal(1u);
     }
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
     return 0;
 }
 
@@ -170,20 +166,20 @@ void ActiveFilterBase::workerThreadMain()
     int lastReportedState = FILTER_STATE_STOPPED;
 
     for (;;) {
-        syncMutexLock(&m_lock);
+        m_lock.lock();
         while (m_runState == FILTER_STATE_STOPPED) {
             if (lastReportedState != FILTER_STATE_STOPPED) {
                 lastReportedState = FILTER_STATE_STOPPED;
                 if (m_eventListener != NULL)
                     m_eventListener->onFilterEvent(FILTER_EVENT_STOPPED, this, 0);
             }
-            syncEventWait(&m_wakeEvent, &m_lock, 1u, 0);
-            syncMutexUnlock(&m_lock);
-            syncMutexLock(&m_lock);
+            m_wakeEvent.wait(&m_lock, 1u, NULL);
+            m_lock.unlock();
+            m_lock.lock();
         }
 
         if (m_runState == FILTER_STATE_EXITING) {
-            syncMutexUnlock(&m_lock);
+            m_lock.unlock();
             return;
         }
 
@@ -193,10 +189,10 @@ void ActiveFilterBase::workerThreadMain()
                 if (m_eventListener != NULL)
                     m_eventListener->onFilterEvent(FILTER_EVENT_STARTED, this, 0);
             }
-            syncMutexUnlock(&m_lock);
+            m_lock.unlock();
             runLoop();
         } else {
-            syncMutexUnlock(&m_lock);
+            m_lock.unlock();
         }
     }
 }
@@ -230,28 +226,28 @@ void DecoderFilterBase::setOutputPipe(PipeInterface *pipe)
 /* 0x81207162 */
 int DecoderFilterBase::onPipeConsumed(int frameFlags)
 {
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     int ret = onFrameConsumed(frameFlags);
-    syncEventSignal(&m_wakeEvent, 4u);
-    syncMutexUnlock(&m_lock);
+    m_wakeEvent.signal(4u);
+    m_lock.unlock();
     return ret;
 }
 
 /* 0x81207192 */
 int DecoderFilterBase::onPipeUnderflow()
 {
-    syncMutexLock(&m_lock);
-    syncEventSignal(&m_wakeEvent, 4u);
-    syncMutexUnlock(&m_lock);
+    m_lock.lock();
+    m_wakeEvent.signal(4u);
+    m_lock.unlock();
     return 0;
 }
 
 /* 0x812071B4 */
 int DecoderFilterBase::onPipeProduced()
 {
-    syncMutexLock(&m_lock);
-    syncEventSignal(&m_wakeEvent, 2u);
-    syncMutexUnlock(&m_lock);
+    m_lock.lock();
+    m_wakeEvent.signal(2u);
+    m_lock.unlock();
     return 0;
 }
 
@@ -268,12 +264,12 @@ int DecoderFilterBase::runLoop()
 
     int openErr = openDecoder();
     if (openErr != 0) {
-        syncMutexLock(&m_lock);
+        m_lock.lock();
         if (m_eventListener != NULL)
             m_eventListener->onFilterEvent(FILTER_EVENT_ERROR, static_cast<ActiveFilterBase *>(this), openErr);
         if (isRunning())
-            syncEventWait(&m_wakeEvent, &m_lock, 1u, 0);
-        syncMutexUnlock(&m_lock);
+            m_wakeEvent.wait(&m_lock, 1u, NULL);
+        m_lock.unlock();
         return openErr;
     }
 
@@ -282,15 +278,15 @@ int DecoderFilterBase::runLoop()
     bool stalled = false;
 
     for (;;) {
-        syncMutexLock(&m_lock);
+        m_lock.lock();
         if (!isRunning()) {
-            syncMutexUnlock(&m_lock);
+            m_lock.unlock();
             break;
         }
 
         if (m_outputPipe->acquireWriteSlot(&outFrame) == PIPE_ERR_FULL) {
-            syncEventWait(&m_wakeEvent, &m_lock, 5u, 0);
-            syncMutexUnlock(&m_lock);
+            m_wakeEvent.wait(&m_lock, 5u, NULL);
+            m_lock.unlock();
             continue;
         }
 
@@ -298,8 +294,8 @@ int DecoderFilterBase::runLoop()
             stalled = true;
             if (m_eventListener != NULL)
                 m_eventListener->onFilterEvent(FILTER_EVENT_STALLED, static_cast<ActiveFilterBase *>(this), 0);
-            syncEventWait(&m_wakeEvent, &m_lock, 3u, 0);
-            syncMutexUnlock(&m_lock);
+            m_wakeEvent.wait(&m_lock, 3u, NULL);
+            m_lock.unlock();
             continue;
         }
 
@@ -308,47 +304,47 @@ int DecoderFilterBase::runLoop()
             if (m_eventListener != NULL)
                 m_eventListener->onFilterEvent(FILTER_EVENT_RESUMED, static_cast<ActiveFilterBase *>(this), 0);
         }
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
 
         int decErr = decodeFrame(inFrame, outFrame);
         if (decErr != 0) {
-            syncMutexLock(&m_lock);
+            m_lock.lock();
             if (m_eventListener != NULL)
                 m_eventListener->onFilterEvent(FILTER_EVENT_ERROR, static_cast<ActiveFilterBase *>(this), decErr);
             if (!isRunning()) {
-                syncMutexUnlock(&m_lock);
+                m_lock.unlock();
                 break;
             }
-            syncEventWait(&m_wakeEvent, &m_lock, 1u, 0);
-            syncMutexUnlock(&m_lock);
+            m_wakeEvent.wait(&m_lock, 1u, NULL);
+            m_lock.unlock();
             continue;
         }
 
         int commitErr = m_outputPipe->commitWriteSlot(outFrame);
         if (commitErr != 0) {
-            syncMutexLock(&m_lock);
+            m_lock.lock();
             if (m_eventListener != NULL)
                 m_eventListener->onFilterEvent(FILTER_EVENT_ERROR, static_cast<ActiveFilterBase *>(this), commitErr);
             if (!isRunning()) {
-                syncMutexUnlock(&m_lock);
+                m_lock.unlock();
                 break;
             }
-            syncEventWait(&m_wakeEvent, &m_lock, 5u, 0);
-            syncMutexUnlock(&m_lock);
+            m_wakeEvent.wait(&m_lock, 5u, NULL);
+            m_lock.unlock();
             continue;
         }
 
         int relErr = m_inputPipe->releaseReadSlot(inFrame);
         if (relErr != 0) {
-            syncMutexLock(&m_lock);
+            m_lock.lock();
             if (m_eventListener != NULL)
                 m_eventListener->onFilterEvent(FILTER_EVENT_ERROR, static_cast<ActiveFilterBase *>(this), relErr);
             if (!isRunning()) {
-                syncMutexUnlock(&m_lock);
+                m_lock.unlock();
                 break;
             }
-            syncEventWait(&m_wakeEvent, &m_lock, 3u, 0);
-            syncMutexUnlock(&m_lock);
+            m_wakeEvent.wait(&m_lock, 3u, NULL);
+            m_lock.unlock();
         }
     }
 
@@ -390,19 +386,19 @@ void ParserFilterBase::setOutputPipe(PipeInterface *pipe)
 /* 0x81207520 */
 int ParserFilterBase::onPipeConsumed(int frameFlags)
 {
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     int ret = onFrameConsumed(frameFlags);
-    syncEventSignal(&m_wakeEvent, 4u);
-    syncMutexUnlock(&m_lock);
+    m_wakeEvent.signal(4u);
+    m_lock.unlock();
     return ret;
 }
 
 /* 0x81207550 */
 int ParserFilterBase::onPipeUnderflow()
 {
-    syncMutexLock(&m_lock);
-    syncEventSignal(&m_wakeEvent, 4u);
-    syncMutexUnlock(&m_lock);
+    m_lock.lock();
+    m_wakeEvent.signal(4u);
+    m_lock.unlock();
     return 0;
 }
 
@@ -414,12 +410,12 @@ int ParserFilterBase::runLoop()
 
     int openErr = openStream();
     if (openErr != 0) {
-        syncMutexLock(&m_lock);
+        m_lock.lock();
         if (m_eventListener != NULL)
             m_eventListener->onFilterEvent(FILTER_EVENT_ERROR, static_cast<ActiveFilterBase *>(this), openErr);
         if (isRunning())
-            syncEventWait(&m_wakeEvent, &m_lock, 1u, 0);
-        syncMutexUnlock(&m_lock);
+            m_wakeEvent.wait(&m_lock, 1u, NULL);
+        m_lock.unlock();
         return openErr;
     }
 
@@ -428,22 +424,22 @@ int ParserFilterBase::runLoop()
     bool stalled = false;
 
     for (;;) {
-        syncMutexLock(&m_lock);
+        m_lock.lock();
         if (!firstIteration && !isRunning()) {
-            syncMutexUnlock(&m_lock);
+            m_lock.unlock();
             break;
         }
 
         if (m_outputPipe->acquireWriteSlot(&outFrame) == PIPE_ERR_FULL) {
-            syncEventWait(&m_wakeEvent, &m_lock, 5u, 0);
-            syncMutexUnlock(&m_lock);
+            m_wakeEvent.wait(&m_lock, 5u, NULL);
+            m_lock.unlock();
             continue;
         }
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
 
         int prodErr = produceFrame(outFrame);
         if (prodErr != 0) {
-            syncMutexLock(&m_lock);
+            m_lock.lock();
             if (prodErr == PARSER_ERR_UNDERFLOW) {
                 if (!stalled) {
                     stalled = true;
@@ -455,11 +451,11 @@ int ParserFilterBase::runLoop()
                     m_eventListener->onFilterEvent(FILTER_EVENT_ERROR, static_cast<ActiveFilterBase *>(this), prodErr);
             }
             if (!isRunning()) {
-                syncMutexUnlock(&m_lock);
+                m_lock.unlock();
                 break;
             }
-            syncEventWait(&m_wakeEvent, &m_lock, 1u, 0);
-            syncMutexUnlock(&m_lock);
+            m_wakeEvent.wait(&m_lock, 1u, NULL);
+            m_lock.unlock();
             firstIteration = false;
             continue;
         }
@@ -530,8 +526,8 @@ FixedFramePipe::FixedFramePipe(uint32_t frameBytes, int slotCount,
     , m_consumer(consumer)
     , m_posListener(NULL)
     , m_playPositionMs(-1)
+    , m_lock("SceShellMusicCorePipe")
 {
-    syncMutexConstruct(&m_lock, "SceShellMusicCorePipe");
     m_framePool = bufferPoolAllocTagged(getBufferPool(), 6, 2);
     m_slots = (MediaFrameBuffer *)ScePafStdc_3CF19248(sizeof(MediaFrameBuffer) * (SceSize)slotCount,
                                                       getLocalHeap());
@@ -577,23 +573,22 @@ FixedFramePipe::~FixedFramePipe()
         delete[] m_slots;
         m_slots = NULL;
     }
-    syncMutexDestroy(&m_lock);
 }
 
 /* 0x81207A78 */
 bool FixedFramePipe::isInitialized() const
 {
-    return syncMutexIsValid(&m_lock) != 0 && m_framePool != NULL && m_slots != NULL;
+    return m_lock.isValid() && m_framePool != NULL && m_slots != NULL;
 }
 
 /* 0x81207A9C */
 void FixedFramePipe::reset()
 {
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     m_readIndex = -1;
     m_writeIndex = 0;
     m_playPositionMs = -1;
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
 }
 
 /* 0x81207ACA */
@@ -606,21 +601,21 @@ int FixedFramePipe::acquireWriteSlot(MediaFrameBuffer **outBuf)
         return -1;
     }
 
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (m_writeIndex < 0) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         *outBuf = NULL;
         m_consumer->onPipeFull();
         return PIPE_ERR_FULL;
     }
     if (m_writeIndex >= m_slotCount) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         *outBuf = NULL;
         return -1;
     }
 
     *outBuf = &m_slots[m_writeIndex];
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
     return 0;
 }
 
@@ -641,9 +636,9 @@ int FixedFramePipe::commitWriteSlot(MediaFrameBuffer *buf)
     if (slotIdx >= m_slotCount)
         return PIPE_ERR_INVALID_ARG;
 
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (slotIdx != m_writeIndex) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return PIPE_ERR_OUT_OF_ORDER;
     }
 
@@ -655,7 +650,7 @@ int FixedFramePipe::commitWriteSlot(MediaFrameBuffer *buf)
         if (m_readIndex < 0)
             m_readIndex = slotIdx;
     }
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
 
     m_consumer->onPipeProduced();
     if (m_posListener != NULL) {
@@ -678,21 +673,21 @@ int FixedFramePipe::acquireReadSlot(MediaFrameBuffer **outBuf)
         return -1;
     }
 
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (m_readIndex < 0) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         *outBuf = NULL;
         return PIPE_ERR_EMPTY;
     }
     if (m_readIndex >= m_slotCount) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         *outBuf = NULL;
         m_producer->onPipeUnderflow();
         return -1;
     }
 
     *outBuf = &m_slots[m_readIndex];
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
     return 0;
 }
 
@@ -711,9 +706,9 @@ int FixedFramePipe::releaseReadSlot(MediaFrameBuffer *buf)
     if (slotIdx >= m_slotCount)
         return PIPE_ERR_INVALID_ARG;
 
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (slotIdx != m_readIndex) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return PIPE_ERR_OUT_OF_ORDER;
     }
 
@@ -726,7 +721,7 @@ int FixedFramePipe::releaseReadSlot(MediaFrameBuffer *buf)
             m_writeIndex = slotIdx;
     }
     int frameFlags = buf->frameFlags;
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
 
     m_producer->onPipeConsumed(frameFlags);
     return 0;

@@ -8,6 +8,8 @@
 #include <std/new>
 #include <stddef.h>
 #include <stdint.h>
+
+#include "musiccore_sync.h"
 #include <string.h>
 
 #include <thread/thread.h>
@@ -53,25 +55,6 @@ static const uint32_t FOURCC_MP4 = 0x2034504Du; /* "MP4 " (little-endian "4PM ")
 static const uint32_t FOURCC_WAV = 0x20574156u; /* "WAV " (little-endian "VAW ") */
 static const uint32_t FOURCC_AT9 = 0x20395441u; /* "AT9 " (little-endian "9TA ") */
 
-struct SyncMutex {
-    SceUID mutexId;
-    int reserved;
-};
-
-struct SyncCond {
-    SceUID condId;
-    int reserved;
-};
-
-extern void syncMutexInit(SyncMutex *mtx, const char *name);
-extern void syncMutexDestroy(SyncMutex *mtx);
-extern int syncMutexLock(SyncMutex *mtx);
-extern int syncMutexUnlock(SyncMutex *mtx);
-
-extern void syncCondInit(SyncCond *cond, const char *name);
-extern void syncCondDestroy(SyncCond *cond);
-extern int syncCondWait(SyncCond *cond, SyncMutex *mtx, unsigned int mask, unsigned int timeout);
-extern int syncCondSignal(SyncCond *cond, unsigned int mask);
 
 extern int createWorkerThread(const char *name, SceUID *outThreadId, SceKernelThreadEntry entry,
                               int initPriority, SceSize stackSize);
@@ -303,17 +286,15 @@ CodecAdapter::CodecAdapter(const char *mutexName, const char *condName)
       lastPositionMs(-1),
       lastAsyncStatus(-1),
       lastAsyncParam(-1),
-      lastEventType(0)
+      lastEventType(0),
+      waitMutex(mutexName),
+      waitCond(condName)
 {
-    syncMutexInit(&waitMutex, mutexName);
-    syncCondInit(&waitCond, condName);
 }
 
 /* 0x811E9F2C */
 CodecAdapter::~CodecAdapter()
 {
-    syncCondDestroy(&waitCond);
-    syncMutexDestroy(&waitMutex);
 }
 
 /* 0x811E9F88 */
@@ -350,17 +331,17 @@ int CodecAdapter::startPlay(MediaInfoBase *mediaInfo, int startMs, int endMs,
         return MUSICCORE_ERR_INVALID_ARG;
     }
 
-    syncMutexLock(&waitMutex);
+    waitMutex.lock();
     pendingUserCtx = userCtx;
     unsigned int decErr = decoderRequestStart(decoder, mediaInfo, startMs, endMs, playSpeed);
     if (decErr != 0) {
-        syncMutexUnlock(&waitMutex);
+        waitMutex.unlock();
         return mapDecoderError(decErr);
     }
 
-    syncCondWait(&waitCond, &waitMutex, 1u, 0);
+    waitCond.wait(&waitMutex, 1u, NULL);
     int status = mapDecoderError((unsigned int)lastAsyncStatus);
-    syncMutexUnlock(&waitMutex);
+    waitMutex.unlock();
 
     if (status == 0 && mediaReadyCb != NULL) {
         return mediaReadyCb(eventCbCtx, pendingUserCtx);
@@ -387,16 +368,16 @@ int CodecAdapter::stopPlay()
         return MUSICCORE_ERR_FAILED;
     }
 
-    syncMutexLock(&waitMutex);
+    waitMutex.lock();
     unsigned int decErr = decoderRequestStop(decoder);
     if (decErr != 0) {
-        syncMutexUnlock(&waitMutex);
+        waitMutex.unlock();
         return mapDecoderError(decErr);
     }
 
-    syncCondWait(&waitCond, &waitMutex, 2u, 0);
+    waitCond.wait(&waitMutex, 2u, NULL);
     int status = mapDecoderError((unsigned int)lastAsyncStatus);
-    syncMutexUnlock(&waitMutex);
+    waitMutex.unlock();
     return status;
 }
 
@@ -408,16 +389,16 @@ int CodecAdapter::seekPlay(int mode, int posMs)
         return MUSICCORE_ERR_FAILED;
     }
 
-    syncMutexLock(&waitMutex);
+    waitMutex.lock();
     unsigned int decErr = decoderRequestSeek(decoder, posMs);
     if (decErr != 0) {
-        syncMutexUnlock(&waitMutex);
+        waitMutex.unlock();
         return mapDecoderError(decErr);
     }
 
-    syncCondWait(&waitCond, &waitMutex, 16u, 0);
+    waitCond.wait(&waitMutex, 16u, NULL);
     int status = mapDecoderError((unsigned int)lastAsyncStatus);
-    syncMutexUnlock(&waitMutex);
+    waitMutex.unlock();
     return status;
 }
 
@@ -431,16 +412,16 @@ int CodecAdapter::getPosition(int *outPosMs)
         return MUSICCORE_ERR_INVALID_ARG;
     }
 
-    syncMutexLock(&waitMutex);
+    waitMutex.lock();
     if (decoderRequestPosition(decoder) != 0) {
-        syncMutexUnlock(&waitMutex);
+        waitMutex.unlock();
         return MUSICCORE_ERR_FAILED;
     }
 
-    syncCondWait(&waitCond, &waitMutex, 32u, 0);
+    waitCond.wait(&waitMutex, 32u, NULL);
     *outPosMs = lastPositionMs;
     int status = mapDecoderError((unsigned int)lastAsyncStatus);
-    syncMutexUnlock(&waitMutex);
+    waitMutex.unlock();
     return status;
 }
 
@@ -499,53 +480,53 @@ void CodecAdapter::onDecodeError(int stage, unsigned int decErr)
 /* 0x811EA266 */
 void CodecAdapter::onOpenComplete(int status, int param)
 {
-    syncMutexLock(&waitMutex);
+    waitMutex.lock();
     lastAsyncStatus = status;
     lastAsyncParam = param;
     lastEventType = 1;
-    syncCondSignal(&waitCond, 1u);
-    syncMutexUnlock(&waitMutex);
+    waitCond.signal(1u);
+    waitMutex.unlock();
 }
 
 /* 0x811EA298 */
 void CodecAdapter::onStopComplete(int status)
 {
-    syncMutexLock(&waitMutex);
+    waitMutex.lock();
     lastAsyncStatus = status;
     lastEventType = 2;
-    syncCondSignal(&waitCond, 2u);
-    syncMutexUnlock(&waitMutex);
+    waitCond.signal(2u);
+    waitMutex.unlock();
 }
 
 /* 0x811EA2C2 */
 void CodecAdapter::onPauseComplete(int status)
 {
-    syncMutexLock(&waitMutex);
+    waitMutex.lock();
     lastAsyncStatus = status;
     lastEventType = 3;
-    syncCondSignal(&waitCond, 4u);
-    syncMutexUnlock(&waitMutex);
+    waitCond.signal(4u);
+    waitMutex.unlock();
 }
 
 /* 0x811EA2EC */
 void CodecAdapter::onSeekComplete(int status)
 {
-    syncMutexLock(&waitMutex);
+    waitMutex.lock();
     lastAsyncStatus = status;
     lastEventType = 4;
-    syncCondSignal(&waitCond, 16u);
-    syncMutexUnlock(&waitMutex);
+    waitCond.signal(16u);
+    waitMutex.unlock();
 }
 
 /* 0x811EA316 */
 void CodecAdapter::onPositionReady(int posMs, int status)
 {
-    syncMutexLock(&waitMutex);
+    waitMutex.lock();
     lastPositionMs = posMs;
     lastAsyncStatus = status;
     lastEventType = 5;
-    syncCondSignal(&waitCond, 32u);
-    syncMutexUnlock(&waitMutex);
+    waitCond.signal(32u);
+    waitMutex.unlock();
 }
 
 /* ===== CodecAdapterAt9 (0x811EA348 - 0x811EA4A7) ===== */
@@ -615,11 +596,11 @@ int CodecAdapterAt9::closeDecoder()
     if (factory == NULL) {
         return MUSICCORE_ERR_NO_MEMORY;
     }
-    syncMutexLock(&waitMutex);
+    waitMutex.lock();
     decoderRequestStop(decoder);
-    syncCondWait(&waitCond, &waitMutex, 2u, 0);
+    waitCond.wait(&waitMutex, 2u, NULL);
     int status = mapDecoderError((unsigned int)lastAsyncStatus);
-    syncMutexUnlock(&waitMutex);
+    waitMutex.unlock();
     if (status != 0) {
         return status;
     }
@@ -702,11 +683,11 @@ int CodecAdapterMp3::closeDecoder()
     if (factory == NULL) {
         return MUSICCORE_ERR_NO_MEMORY;
     }
-    syncMutexLock(&waitMutex);
+    waitMutex.lock();
     decoderRequestStop(decoder);
-    syncCondWait(&waitCond, &waitMutex, 2u, 0);
+    waitCond.wait(&waitMutex, 2u, NULL);
     int status = mapDecoderError((unsigned int)lastAsyncStatus);
-    syncMutexUnlock(&waitMutex);
+    waitMutex.unlock();
     if (status != 0) {
         return status;
     }
@@ -789,11 +770,11 @@ int CodecAdapterMp4::closeDecoder()
     if (factory == NULL) {
         return MUSICCORE_ERR_NO_MEMORY;
     }
-    syncMutexLock(&waitMutex);
+    waitMutex.lock();
     decoderRequestStop(decoder);
-    syncCondWait(&waitCond, &waitMutex, 2u, 0);
+    waitCond.wait(&waitMutex, 2u, NULL);
     int status = mapDecoderError((unsigned int)lastAsyncStatus);
-    syncMutexUnlock(&waitMutex);
+    waitMutex.unlock();
     if (status != 0) {
         return status;
     }
@@ -857,11 +838,11 @@ int CodecAdapterWav::closeDecoder()
     if (decoder == NULL) {
         return 0;
     }
-    syncMutexLock(&waitMutex);
+    waitMutex.lock();
     decoderRequestStop(decoder);
-    syncCondWait(&waitCond, &waitMutex, 2u, 0);
+    waitCond.wait(&waitMutex, 2u, NULL);
     int status = mapDecoderError((unsigned int)lastAsyncStatus);
-    syncMutexUnlock(&waitMutex);
+    waitMutex.unlock();
     if (status != 0) {
         return status;
     }

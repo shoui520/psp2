@@ -241,14 +241,14 @@ WavParser::~WavParser()
 int WavParser::onPipeConsumed(int frameFlags)
 {
     int ret = onFrameConsumed(frameFlags);
-    syncEventSignal(&m_wakeEvent, 4u);
+    m_wakeEvent.signal(4u);
     return ret;
 }
 
 /* 0x811FADFA */
 int WavParser::onPipeUnderflow()
 {
-    syncEventSignal(&m_wakeEvent, 4u);
+    m_wakeEvent.signal(4u);
     return 0;
 }
 
@@ -260,18 +260,18 @@ int WavParser::findCachedMediaInfo(const char *path, MediaInfoHandle **outInfo)
         return PARSER_ERR_BAD_PARAM;
     }
 
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (m_activeCacheIo != NULL && sce_paf_strcmp(m_activeCacheIo->getPath(), path) == 0) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         *outInfo = m_activeMedia;
         return 0;
     }
     if (m_nextCacheIo != NULL && sce_paf_strcmp(m_nextCacheIo->getPath(), path) == 0) {
         *outInfo = m_nextMedia;
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return 0;
     }
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
     *outInfo = NULL;
     return 0;
 }
@@ -289,16 +289,16 @@ int WavParser::setMediaInfo(MediaInfoHandle *handle)
         return -1;
     }
 
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (m_runState != 2) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return PARSER_ERR_BAD_STATE;
     }
 
     const char *newPath = mediaInfo->cacheIo->getPath();
     if (m_activeCacheIo != NULL) {
         if (sce_paf_strcmp(m_activeCacheIo->getPath(), newPath) == 0) {
-            syncMutexUnlock(&m_lock);
+            m_lock.unlock();
             delayWorkerThread(20000u);
             return 0;
         }
@@ -325,7 +325,7 @@ int WavParser::setMediaInfo(MediaInfoHandle *handle)
         }
         m_nextCacheIo = NULL;
         m_nextMedia = NULL;
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return 0;
     }
 
@@ -341,7 +341,7 @@ int WavParser::setMediaInfo(MediaInfoHandle *handle)
     mediaInfo->sharedFlag = 1u;
     m_activeMedia = mediaInfo;
     m_activeCacheIo = mediaInfo->cacheIo;
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
     return 0;
 }
 
@@ -356,17 +356,17 @@ int WavParser::prefetchMediaInfo(MediaInfoHandle *handle)
         return -1;
     }
 
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     const char *newPath = mediaInfo->cacheIo->getPath();
     if (m_nextCacheIo != NULL) {
         if (sce_paf_strcmp(m_nextCacheIo->getPath(), newPath) == 0) {
-            syncMutexUnlock(&m_lock);
+            m_lock.unlock();
             return 0;
         }
         if (sce_paf_strcmp(m_nextCacheIo->getPath(), m_activeCacheIo->getPath()) == 0) {
             m_nextCacheIo = m_activeCacheIo;
             m_nextMedia = m_activeMedia;
-            syncMutexUnlock(&m_lock);
+            m_lock.unlock();
             return 0;
         }
     }
@@ -381,12 +381,12 @@ int WavParser::prefetchMediaInfo(MediaInfoHandle *handle)
     m_nextCacheIo->setPriorityMode(1);
 
     if (m_nextCacheIo->isOpen() != 1 && m_nextCacheIo->open() < 0) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return PARSER_ERR_OPEN_FAIL;
     }
 
     int scanErr = wavCacheScanChunks(m_nextCacheIo, 3u);
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
     if (scanErr == 0) {
         return 0;
     }
@@ -396,41 +396,41 @@ int WavParser::prefetchMediaInfo(MediaInfoHandle *handle)
 /* 0x811FA7FA */
 int WavParser::setStartPosition(int startMs)
 {
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (m_runState != 2) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return PARSER_ERR_BAD_STATE;
     }
     m_startPosMs = startMs;
     m_currentChunkIdx = -1;
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
     return 0;
 }
 
 /* 0x811FA82C */
 int WavParser::setEndPosition(int endMs)
 {
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (m_runState != 2) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return PARSER_ERR_BAD_STATE;
     }
     m_endPosMs = endMs;
     m_currentChunkIdx = -1;
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
     return 0;
 }
 
 /* 0x811FA85E */
 int WavParser::resetPosition()
 {
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (m_runState != 2) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return PARSER_ERR_BAD_STATE;
     }
     m_currentChunkIdx = -1;
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
     return 0;
 }
 
@@ -474,24 +474,24 @@ int WavParser::parseWaveHeader()
 /* 0x811FA9FA */
 int WavParser::getDurationMs()
 {
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (m_activeCacheIo == NULL) {
         return 0;
     }
 
     if (m_formatTag < 0) {
         if (m_activeCacheIo->isOpen() != 1 && m_activeCacheIo->open() < 0) {
-            syncMutexUnlock(&m_lock);
+            m_lock.unlock();
             return 0;
         }
         if (parseWaveHeader() != 0) {
-            syncMutexUnlock(&m_lock);
+            m_lock.unlock();
             return 0;
         }
     }
 
     int durationMs = (int)((float)m_activeCacheIo->dataSize / m_bytesPerMs);
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
     return durationMs;
 }
 
@@ -565,9 +565,9 @@ int WavParser::produceFrame(MediaFrameBuffer *outBuf)
         }
     }
 
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (m_requestedSpeed == 0) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return PARSER_ERR_BAD_PARAM;
     }
     if (m_requestedSpeed != m_activeSpeed) {
@@ -580,7 +580,7 @@ int WavParser::produceFrame(MediaFrameBuffer *outBuf)
         }
         m_activeSpeed = m_requestedSpeed;
     }
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
 
     uint32_t byteOffset = m_chunkBytes * (uint32_t)m_currentChunkIdx;
     void *rawData = NULL;

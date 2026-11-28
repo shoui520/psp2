@@ -11,6 +11,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "musiccore_sync.h"
+
 namespace sce {
 namespace MusicCore {
 
@@ -19,32 +21,7 @@ extern void *getLocalHeap();
 extern void *localAlloc(SceSize size);
 extern void localFree(void *ptr);
 
-/* Synchronization primitives (musiccore_sync_cache_io.cpp) */
-struct SyncEvent {
-    void *vtablePtr;
-    SceUID evfId;
-};
-
-struct SyncMutex {
-    void *vtablePtr;
-    SceUID semaId;
-};
-
-extern void syncEventConstruct(SyncEvent *ev, const char *name);
-extern void syncEventDestroy(SyncEvent *ev);
-extern int syncEventWait(SyncEvent *ev, SyncMutex *mutex, uint32_t waitBits, int timeoutMode);
-extern int syncEventSignal(SyncEvent *ev, uint32_t signalBits);
-extern int syncEventIsValid(const SyncEvent *ev);
-
-extern void syncMutexConstruct(SyncMutex *mutex, const char *name);
-extern void syncMutexDestroy(SyncMutex *mutex);
-extern int syncMutexIsValid(const SyncMutex *mutex);
-extern int syncMutexLock(SyncMutex *mutex);
-extern int syncMutexUnlock(SyncMutex *mutex);
-
-extern void delayWorkerThread(SceUInt delayUs);
-extern int joinDetachedWorker(SceUID threadId);
-extern void exitCurrentWorkerThread();
+typedef SyncCond SyncEvent;
 
 /* Audio output callbacks passed into AudioOutputFilter ("SceShellMusicCoreAIF") */
 typedef int (*AudioBufferConsumedCallback)(void *pcmBuffer);

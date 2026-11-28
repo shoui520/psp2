@@ -268,18 +268,18 @@ int Mp3Parser::findCachedMediaInfo(const char *path, MediaInfoHandle **outInfo)
         return PARSER_ERR_BAD_PARAM;
     }
 
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (m_activeStream != NULL && sce_paf_strcmp(mp3StreamGetPath(m_activeStream), path) == 0) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         *outInfo = m_activeMedia;
         return 0;
     }
     if (m_nextStream != NULL && sce_paf_strcmp(mp3StreamGetPath(m_nextStream), path) == 0) {
         *outInfo = m_nextMedia;
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return 0;
     }
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
     *outInfo = NULL;
     return 0;
 }
@@ -295,9 +295,9 @@ int Mp3Parser::setMediaInfo(MediaInfoHandle *handle)
         return -1;
     }
 
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (m_runState != 2) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return PARSER_ERR_BAD_STATE;
     }
 
@@ -309,7 +309,7 @@ int Mp3Parser::setMediaInfo(MediaInfoHandle *handle)
                 m_nextCacheIo = NULL;
                 m_nextMedia = NULL;
             }
-            syncMutexUnlock(&m_lock);
+            m_lock.unlock();
             delayWorkerThread(20000u);
             return 0;
         }
@@ -339,7 +339,7 @@ int Mp3Parser::setMediaInfo(MediaInfoHandle *handle)
         m_nextCacheIo = NULL;
         m_nextMedia = NULL;
         m_durationMs = -1;
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return 0;
     }
 
@@ -362,7 +362,7 @@ int Mp3Parser::setMediaInfo(MediaInfoHandle *handle)
     m_activeStream = mediaInfo->streamParser;
     m_activeCacheIo = (CachedStreamIo *)mediaInfo->cacheIo;
     m_durationMs = -1;
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
     return 0;
 }
 
@@ -377,23 +377,23 @@ int Mp3Parser::prefetchMediaInfo(MediaInfoHandle *handle)
         return -1;
     }
 
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (m_playMode == MODE_STREAM_PLAY) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return 0;
     }
 
     const char *newPath = mp3StreamGetPath(mediaInfo->streamParser);
     if (m_nextStream != NULL) {
         if (sce_paf_strcmp(mp3StreamGetPath(m_nextStream), newPath) == 0) {
-            syncMutexUnlock(&m_lock);
+            m_lock.unlock();
             return 0;
         }
         if (sce_paf_strcmp(mp3StreamGetPath(m_nextStream), mp3StreamGetPath(m_activeStream)) == 0) {
             m_nextStream = m_activeStream;
             m_nextCacheIo = m_activeCacheIo;
             m_nextMedia = m_activeMedia;
-            syncMutexUnlock(&m_lock);
+            m_lock.unlock();
             return 0;
         }
         if (m_activeStream == m_nextStream) {
@@ -418,19 +418,19 @@ int Mp3Parser::prefetchMediaInfo(MediaInfoHandle *handle)
     m_nextCacheIo->setPriorityMode(1);
 
     if (mp3StreamOpen(m_nextStream) < 0) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return PARSER_ERR_OPEN_FAIL;
     }
 
     int durationOut = 0;
     int parserErr = -1;
     if (mp3StreamGetDurationMs(m_nextStream, &durationOut, &parserErr) != 0) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return 0;
     }
 
     int mapped = mapMp3ParserError((uint32_t)parserErr);
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
     return mapped;
 }
 
@@ -444,59 +444,59 @@ void Mp3Parser::setPlaySpeed(int speed)
 /* 0x811F7EC0 */
 int Mp3Parser::setStartPosition(int startMs)
 {
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (m_runState != 2) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return PARSER_ERR_BAD_STATE;
     }
     m_startPosMs = startMs;
     m_currentPosMs = -1.0f;
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
     return 0;
 }
 
 /* 0x811F7EF4 */
 int Mp3Parser::setEndPosition(int endMs)
 {
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (m_runState != 2) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return PARSER_ERR_BAD_STATE;
     }
     m_endPosMs = endMs;
     m_currentPosMs = -1.0f;
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
     return 0;
 }
 
 /* 0x811F7F28 */
 int Mp3Parser::getDurationMs()
 {
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (m_durationMs >= 0) {
         int cached = m_durationMs;
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return cached;
     }
     if (m_activeStream == NULL) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return -1;
     }
 
     int openRet = mp3StreamOpen(m_activeStream);
     if (openRet < 0) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return openRet;
     }
 
     int parserErr = -1;
     if (mp3StreamGetDurationMs(m_activeStream, &m_durationMs, &parserErr) != 0) {
         int dur = m_durationMs;
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return dur;
     }
 
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
     if ((uint32_t)parserErr == 0x80280016u || (uint32_t)parserErr == 0x80280018u) {
         return 0;
     }
@@ -506,9 +506,9 @@ int Mp3Parser::getDurationMs()
 /* 0x811F7FDA */
 int Mp3Parser::seekPosition(int positionMs)
 {
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (m_runState != 2) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return PARSER_ERR_BAD_STATE;
     }
     if (positionMs >= 0) {
@@ -520,20 +520,20 @@ int Mp3Parser::seekPosition(int positionMs)
         m_seekPending = 1u;
         m_currentPosMs = -1.0f;
     }
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
     return 0;
 }
 
 /* 0x811F8052 */
 int Mp3Parser::resetPosition()
 {
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (m_runState != 2) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return PARSER_ERR_BAD_STATE;
     }
     m_currentPosMs = -1.0f;
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
     return 0;
 }
 
@@ -580,10 +580,10 @@ int Mp3Parser::produceFrame(MediaFrameBuffer *outBuf)
     bool fastSkipMode = (m_playMode == MODE_STREAM_PLAY
                          && (m_requestedSpeed > 20 || m_requestedSpeed < -20));
 
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (m_requestedSpeed == 0
         || (m_playMode != MODE_STREAM_PLAY && m_playMode != MODE_LOCAL_PLAY && m_playMode != MODE_DIRECT_PLAY)) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return PARSER_ERR_BAD_PARAM;
     }
 
@@ -598,7 +598,7 @@ int Mp3Parser::produceFrame(MediaFrameBuffer *outBuf)
         }
         m_activeSpeed = m_requestedSpeed;
     }
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
 
     Mp3FramePacket framePkt;
     framePkt.frameSize = outPkt->maxBufferSize;

@@ -359,19 +359,19 @@ int Mp4Parser::findCachedMediaInfo(const char *path, MediaInfoHandle **outInfo)
         return PARSER_ERR_BAD_PARAM;
     }
 
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (m_activeStream != NULL && sce_paf_strcmp(mp4StreamGetPath(m_activeStream), path) == 0) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         *outInfo = m_activeMedia;
         return PARSER_ERR_OK;
     }
     if (m_nextStream != NULL && sce_paf_strcmp(mp4StreamGetPath(m_nextStream), path) == 0) {
         *outInfo = m_nextMedia;
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return PARSER_ERR_OK;
     }
 
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
     *outInfo = NULL;
     return PARSER_ERR_OK;
 }
@@ -387,9 +387,9 @@ int Mp4Parser::setMediaInfo(MediaInfoHandle *handle)
         return -1;
     }
 
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (m_runState != 2) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return PARSER_ERR_BAD_STATE;
     }
 
@@ -401,7 +401,7 @@ int Mp4Parser::setMediaInfo(MediaInfoHandle *handle)
                 m_nextCacheIo = NULL;
                 m_nextMedia = NULL;
             }
-            syncMutexUnlock(&m_lock);
+            m_lock.unlock();
             delayWorkerThread(20000u);
             return PARSER_ERR_OK;
         }
@@ -433,7 +433,7 @@ int Mp4Parser::setMediaInfo(MediaInfoHandle *handle)
             m_nextCacheIo = NULL;
             m_nextMedia = NULL;
             m_durationMs = -1;
-            syncMutexUnlock(&m_lock);
+            m_lock.unlock();
             return PARSER_ERR_OK;
         }
 
@@ -447,7 +447,7 @@ int Mp4Parser::setMediaInfo(MediaInfoHandle *handle)
     }
 
     if (m_activeMedia != NULL || m_nextMedia != NULL) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return -1;
     }
 
@@ -456,7 +456,7 @@ int Mp4Parser::setMediaInfo(MediaInfoHandle *handle)
     m_activeStream = mediaInfo->streamParser;
     m_activeCacheIo = mediaInfo->cacheIo;
     m_durationMs = -1;
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
     return PARSER_ERR_OK;
 }
 
@@ -471,16 +471,16 @@ int Mp4Parser::prefetchMediaInfo(MediaInfoHandle *handle)
         return -1;
     }
 
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (m_playMode == MODE_STREAM_PLAY) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return PARSER_ERR_OK;
     }
 
     const char *newPath = mp4StreamGetPath(mediaInfo->streamParser);
     if (m_nextStream != NULL) {
         if (sce_paf_strcmp(mp4StreamGetPath(m_nextStream), newPath) == 0) {
-            syncMutexUnlock(&m_lock);
+            m_lock.unlock();
             return PARSER_ERR_OK;
         }
 
@@ -489,7 +489,7 @@ int Mp4Parser::prefetchMediaInfo(MediaInfoHandle *handle)
             m_nextStream = m_activeStream;
             m_nextCacheIo = m_activeCacheIo;
             m_nextMedia = m_activeMedia;
-            syncMutexUnlock(&m_lock);
+            m_lock.unlock();
             return PARSER_ERR_OK;
         }
 
@@ -505,7 +505,7 @@ int Mp4Parser::prefetchMediaInfo(MediaInfoHandle *handle)
     }
 
     if (m_nextMedia != NULL) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return -1;
     }
 
@@ -518,17 +518,17 @@ int Mp4Parser::prefetchMediaInfo(MediaInfoHandle *handle)
     uint32_t streamErr = 0xFFFFFFFFu;
     int durationMs = 0;
     if (mp4StreamOpen(m_nextStream, &streamErr) < 0) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return mapMp4OpenError(streamErr);
     }
 
     if (mp4StreamGetDurationMs(m_nextStream, &durationMs, &streamErr) != 0) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return PARSER_ERR_OK;
     }
 
     int mappedErr = mapMp4ReadIoError(streamErr);
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
     return mappedErr;
 }
 
@@ -591,48 +591,48 @@ void Mp4Parser::setPlaySpeed(int speed)
 /* 0x811F95CC */
 int Mp4Parser::setStartPosition(int startMs)
 {
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (m_runState != 2) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return PARSER_ERR_BAD_STATE;
     }
     m_startPosMs = startMs;
     m_currentFrameIndex = -1;
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
     return PARSER_ERR_OK;
 }
 
 /* 0x811F95FE */
 int Mp4Parser::setEndPosition(int endMs)
 {
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (m_runState != 2) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return PARSER_ERR_BAD_STATE;
     }
     m_endPosMs = endMs;
     m_currentFrameIndex = -1;
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
     return PARSER_ERR_OK;
 }
 
 /* 0x811F9630 */
 int Mp4Parser::getDurationMs()
 {
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (m_durationMs >= 0) {
         int cached = m_durationMs;
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return cached;
     }
     if (m_activeStream == NULL) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return -1;
     }
 
     uint32_t streamErr = 0xFFFFFFFFu;
     if (mp4StreamOpen(m_activeStream, &streamErr) < 0) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         if (streamErr == 0x80280021u) {
             return PARSER_ERR_UNSUPPORTED;
         }
@@ -644,11 +644,11 @@ int Mp4Parser::getDurationMs()
 
     if (mp4StreamGetDurationMs(m_activeStream, &m_durationMs, &streamErr) != 0) {
         int duration = m_durationMs;
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return duration;
     }
 
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
     if (streamErr == 0x80280021u || streamErr == 0x80280022u || streamErr == 0x80280028u) {
         return 0;
     }
@@ -658,9 +658,9 @@ int Mp4Parser::getDurationMs()
 /* 0x811F9706 */
 int Mp4Parser::seekPosition(int positionMs)
 {
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (m_runState != 2) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return PARSER_ERR_BAD_STATE;
     }
 
@@ -677,20 +677,20 @@ int Mp4Parser::seekPosition(int positionMs)
         }
     }
 
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
     return PARSER_ERR_OK;
 }
 
 /* 0x811F9794 */
 int Mp4Parser::resetPosition()
 {
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (m_runState != 2) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return PARSER_ERR_BAD_STATE;
     }
     m_currentFrameIndex = -1;
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
     return PARSER_ERR_OK;
 }
 
@@ -758,12 +758,12 @@ int Mp4Parser::produceFrame(MediaFrameBuffer *outBuf)
     bool fastStreamSkip = (m_playMode == MODE_STREAM_PLAY
                            && (m_requestedSpeed > 20 || m_requestedSpeed < -20));
 
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     Mp4StreamParser *stream = m_activeStream;
     if (m_requestedSpeed == 0
         || (m_playMode != MODE_DIRECT_PLAY && m_playMode != MODE_STREAM_PLAY
             && m_playMode != MODE_LOCAL_PLAY)) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return PARSER_ERR_BAD_PARAM;
     }
 
@@ -778,7 +778,7 @@ int Mp4Parser::produceFrame(MediaFrameBuffer *outBuf)
         }
         m_activeSpeed = m_requestedSpeed;
     }
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
 
     stream = m_activeStream;
     int readOk = 0;

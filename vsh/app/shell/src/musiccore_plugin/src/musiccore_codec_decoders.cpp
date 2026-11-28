@@ -116,14 +116,14 @@ AudioDecoderBase::~AudioDecoderBase()
 int AudioDecoderBase::onPipeConsumed(int frameFlags)
 {
     int ret = onFrameConsumed(frameFlags);
-    syncEventSignal(&m_wakeEvent, 4u);
+    m_wakeEvent.signal(4u);
     return ret;
 }
 
 /* 0x81207F4E */
 int AudioDecoderBase::onPipeUnderflow()
 {
-    syncEventSignal(&m_wakeEvent, 4u);
+    m_wakeEvent.signal(4u);
     return 0;
 }
 
@@ -1185,8 +1185,8 @@ BufRefPipe::BufRefPipe(int slotCount, PipeProducerControl *producer, PipeConsume
     , m_consumer(consumer)
     , m_posListener(NULL)
     , m_playPositionMs(-1)
+    , m_lock("SceShellMusicCoreBufRefPipe")
 {
-    syncMutexConstruct(&m_lock, "SceShellMusicCoreBufRefPipe");
     m_slots = (MediaFrameBuffer *)ScePafStdc_3CF19248(sizeof(MediaFrameBuffer) * (SceSize)slotCount,
                                                       getLocalHeap());
     if (m_slots == NULL)
@@ -1215,19 +1215,18 @@ BufRefPipe::~BufRefPipe()
         delete[] m_slots;
         m_slots = NULL;
     }
-    syncMutexDestroy(&m_lock);
 }
 
 /* 0x81209708 */
 bool BufRefPipe::isInitialized() const
 {
-    return syncMutexIsValid(&m_lock) != 0 && m_slots != NULL;
+    return m_lock.isValid() && m_slots != NULL;
 }
 
 /* 0x81209728 */
 void BufRefPipe::reset()
 {
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (m_readIndex >= 0 && m_slots != NULL && m_producer != NULL) {
         int cursor = m_readIndex;
         for (;;) {
@@ -1241,7 +1240,7 @@ void BufRefPipe::reset()
     m_readIndex = -1;
     m_writeIndex = 0;
     m_playPositionMs = -1;
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
 }
 
 /* 0x812097A0 */
@@ -1254,21 +1253,21 @@ int BufRefPipe::acquireWriteSlot(MediaFrameBuffer **outBuf)
         return -1;
     }
 
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (m_writeIndex < 0) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         *outBuf = NULL;
         m_consumer->onPipeFull();
         return PIPE_ERR_FULL;
     }
     if (m_writeIndex >= m_slotCount) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         *outBuf = NULL;
         return -1;
     }
 
     *outBuf = &m_slots[m_writeIndex];
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
     return 0;
 }
 
@@ -1289,9 +1288,9 @@ int BufRefPipe::commitWriteSlot(MediaFrameBuffer *buf)
     if (slotIdx >= m_slotCount)
         return DEC_ERR_INVALID_ARG;
 
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (slotIdx != m_writeIndex) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return PIPE_ERR_OUT_OF_ORDER;
     }
 
@@ -1303,7 +1302,7 @@ int BufRefPipe::commitWriteSlot(MediaFrameBuffer *buf)
         if (m_readIndex < 0)
             m_readIndex = slotIdx;
     }
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
 
     m_consumer->onPipeProduced();
     if (m_posListener != NULL) {
@@ -1326,21 +1325,21 @@ int BufRefPipe::acquireReadSlot(MediaFrameBuffer **outBuf)
         return -1;
     }
 
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (m_readIndex < 0) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         *outBuf = NULL;
         return PIPE_ERR_EMPTY;
     }
     if (m_readIndex >= m_slotCount) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         *outBuf = NULL;
         m_producer->onPipeUnderflow();
         return -1;
     }
 
     *outBuf = &m_slots[m_readIndex];
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
     return 0;
 }
 
@@ -1359,9 +1358,9 @@ int BufRefPipe::releaseReadSlot(MediaFrameBuffer *buf)
     if (slotIdx >= m_slotCount)
         return DEC_ERR_INVALID_ARG;
 
-    syncMutexLock(&m_lock);
+    m_lock.lock();
     if (slotIdx != m_readIndex) {
-        syncMutexUnlock(&m_lock);
+        m_lock.unlock();
         return PIPE_ERR_OUT_OF_ORDER;
     }
 
@@ -1374,7 +1373,7 @@ int BufRefPipe::releaseReadSlot(MediaFrameBuffer *buf)
             m_writeIndex = slotIdx;
     }
     int frameFlags = buf->frameFlags;
-    syncMutexUnlock(&m_lock);
+    m_lock.unlock();
 
     m_producer->onPipeConsumed(frameFlags);
     return 0;
