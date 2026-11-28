@@ -225,20 +225,26 @@ namespace {
 /* bXCe allocator backed by SceTriggerMgrHeap (0x812A5888, 0x812A589A) */
 class TriggerXmlAllocator : public bXCe::MemAllocator {
 public:
-	virtual ~TriggerXmlAllocator() {}
-
-	virtual void *allocate(size_t size, void *userData)
-	{
-		(void)userData;
-		return g_triggerMgrHeap->sce_paf_malloc(size);
-	}
-
-	virtual void deallocate(void *ptr, void *userData)
-	{
-		(void)userData;
-		g_triggerMgrHeap->sce_paf_free(ptr);
-	}
+	virtual ~TriggerXmlAllocator();
+	virtual void *allocate(size_t size, void *userData);
+	virtual void deallocate(void *ptr, void *userData);
 };
+
+TriggerXmlAllocator::~TriggerXmlAllocator()
+{
+}
+
+void *TriggerXmlAllocator::allocate(size_t size, void *userData)
+{
+	(void)userData;
+	return g_triggerMgrHeap->sce_paf_malloc(size);
+}
+
+void TriggerXmlAllocator::deallocate(void *ptr, void *userData)
+{
+	(void)userData;
+	g_triggerMgrHeap->sce_paf_free(ptr);
+}
 
 /* SAX document handler for sce_sys/incoming_dialog[_XX].xml (0x812A58AC-0x812A5BC8) */
 class IncomingDialogXmlHandler : public bXCe::Sax::DocumentHandler {
@@ -249,115 +255,123 @@ public:
 		STAGE_TEXT_CONTENTS = 2
 	};
 
-	IncomingDialogXmlHandler(SceIncomingDialogParam *dialogParam)
-		: m_dialogParam(dialogParam),
-		  m_error(0),
-		  m_stage(STAGE_ROOT)
-	{
-	}
-
-	virtual ~IncomingDialogXmlHandler() {}
-
+	IncomingDialogXmlHandler(SceIncomingDialogParam *dialogParam);
+	virtual ~IncomingDialogXmlHandler();
 	virtual int startElement(void *userData, const char *name, int length,
-				 const bXCe::AttributeList *attrList)
-	{
-		(void)userData;
-		if (m_stage == STAGE_ROOT) {
-			if (sce_paf_strncmp(name, "IncomingDialog", (SceSize)length) == 0 &&
-			    attrList->getLength() == 1) {
-				const bXCe::Attr *attr = (const bXCe::Attr *)attrList->getAttribute(0);
-				if (sce_paf_strncmp("version", attr->getName(),
-						    (SceSize)attr->getNameLength()) == 0 &&
-				    sce_paf_strncmp("1.5", attr->getValue(),
-						    (SceSize)attr->getValueLength()) == 0) {
-					m_stage = STAGE_INCOMING_DIALOG;
-					return 0;
-				}
-			}
-		} else if (m_stage == STAGE_INCOMING_DIALOG) {
-			if (sce_paf_strncmp(name, "Ringtone", (SceSize)length) == 0 &&
-			    attrList->getLength() == 1) {
-				const bXCe::Attr *attr = (const bXCe::Attr *)attrList->getAttribute(0);
-				if (sce_paf_strncmp("path", attr->getName(),
-						    (SceSize)attr->getNameLength()) == 0) {
-					sce_paf_strlcpy(m_dialogParam->audioPath,
-							attr->getValue(),
-							sizeof(m_dialogParam->audioPath));
-					return 0;
-				}
-			}
-			if (sce_paf_strncmp(name, "BypassPasscode", (SceSize)length) == 0 &&
-			    attrList->getLength() == 0) {
-				m_dialogParam->launchFlag = true;
-				return 0;
-			}
-			if (sce_paf_strncmp(name, "TextContents", (SceSize)length) == 0 &&
-			    attrList->getLength() == 0) {
-				m_stage = STAGE_TEXT_CONTENTS;
-				return 0;
-			}
-		} else if (m_stage == STAGE_TEXT_CONTENTS) {
-			if (attrList->getLength() == 1) {
-				const bXCe::Attr *attr = (const bXCe::Attr *)attrList->getAttribute(0);
-				if (sce_paf_strncmp("string", attr->getName(),
-						    (SceSize)attr->getNameLength()) == 0) {
-					wstring wideText;
-					common::Utf8ToUtf16(attr->getValue(), &wideText);
-					bool matched = false;
-					if (sce_paf_strncmp(name, "AcceptButton",
-							    (SceSize)length) == 0) {
-						sce_paf_wcsncpy(m_dialogParam->acceptText,
-								wideText.c_str(), 31);
-						matched = true;
-					} else if (sce_paf_strncmp(name, "RejectButton",
-								   (SceSize)length) == 0) {
-						sce_paf_wcsncpy(m_dialogParam->rejectText,
-								wideText.c_str(), 31);
-						matched = true;
-					} else if (sce_paf_strncmp(name, "MessageBox",
-								   (SceSize)length) == 0) {
-						sce_paf_wcsncpy(m_dialogParam->dialogText,
-								wideText.c_str(), 63);
-						matched = true;
-					} else if (sce_paf_strncmp(name, "PostNotification",
-								   (SceSize)length) == 0) {
-						sce_paf_wcsncpy(m_dialogParam->noticeText,
-								wideText.c_str(), 63);
-						matched = true;
-					}
-					if (matched)
-						return 0;
-				}
-			}
-		}
-
-		m_error = TRIGGER_MGR_ERROR_DIALOG_XML_INVALID;
-		return -1;
-	}
-
-	virtual int endElement(void *userData, const char *name, int length)
-	{
-		(void)userData;
-		if (m_stage == STAGE_INCOMING_DIALOG &&
-		    sce_paf_strncmp("IncomingDialog", name, (SceSize)length) == 0) {
-			m_stage = STAGE_ROOT;
-		} else if (m_stage == STAGE_TEXT_CONTENTS &&
-			   sce_paf_strncmp("TextContents", name, (SceSize)length) == 0) {
-			m_stage = STAGE_INCOMING_DIALOG;
-		}
-		return 0;
-	}
-
-	virtual void fatalError(void *userData, int errCode)
-	{
-		(void)userData;
-		m_error = errCode;
-	}
+				 const bXCe::AttributeList *attrList);
+	virtual int endElement(void *userData, const char *name, int length);
+	virtual void fatalError(void *userData, int errCode);
 
 	SceIncomingDialogParam *m_dialogParam;
 	int m_error;
 	ParseStage m_stage;
 };
+
+IncomingDialogXmlHandler::IncomingDialogXmlHandler(SceIncomingDialogParam *dialogParam)
+	: m_dialogParam(dialogParam),
+	  m_error(0),
+	  m_stage(STAGE_ROOT)
+{
+}
+
+IncomingDialogXmlHandler::~IncomingDialogXmlHandler()
+{
+}
+
+int IncomingDialogXmlHandler::startElement(void *userData, const char *name, int length,
+					   const bXCe::AttributeList *attrList)
+{
+	(void)userData;
+	if (m_stage == STAGE_ROOT) {
+		if (sce_paf_strncmp(name, "IncomingDialog", (SceSize)length) == 0 &&
+		    attrList->getLength() == 1) {
+			const bXCe::Attr *attr = (const bXCe::Attr *)attrList->getAttribute(0);
+			if (sce_paf_strncmp("version", attr->getName(),
+					    (SceSize)attr->getNameLength()) == 0 &&
+			    sce_paf_strncmp("1.5", attr->getValue(),
+					    (SceSize)attr->getValueLength()) == 0) {
+				m_stage = STAGE_INCOMING_DIALOG;
+				return 0;
+			}
+		}
+	} else if (m_stage == STAGE_INCOMING_DIALOG) {
+		if (sce_paf_strncmp(name, "Ringtone", (SceSize)length) == 0 &&
+		    attrList->getLength() == 1) {
+			const bXCe::Attr *attr = (const bXCe::Attr *)attrList->getAttribute(0);
+			if (sce_paf_strncmp("path", attr->getName(),
+					    (SceSize)attr->getNameLength()) == 0) {
+				sce_paf_strlcpy(m_dialogParam->audioPath, attr->getValue(),
+						sizeof(m_dialogParam->audioPath));
+				return 0;
+			}
+		}
+		if (sce_paf_strncmp(name, "BypassPasscode", (SceSize)length) == 0 &&
+		    attrList->getLength() == 0) {
+			m_dialogParam->launchFlag = true;
+			return 0;
+		}
+		if (sce_paf_strncmp(name, "TextContents", (SceSize)length) == 0 &&
+		    attrList->getLength() == 0) {
+			m_stage = STAGE_TEXT_CONTENTS;
+			return 0;
+		}
+	} else if (m_stage == STAGE_TEXT_CONTENTS) {
+		if (attrList->getLength() == 1) {
+			const bXCe::Attr *attr = (const bXCe::Attr *)attrList->getAttribute(0);
+			if (sce_paf_strncmp("string", attr->getName(),
+					    (SceSize)attr->getNameLength()) == 0) {
+				wstring wideText;
+				common::Utf8ToUtf16(attr->getValue(), &wideText);
+				bool matched = false;
+				if (sce_paf_strncmp(name, "AcceptButton",
+						    (SceSize)length) == 0) {
+					sce_paf_wcsncpy(m_dialogParam->acceptText,
+							wideText.c_str(), 31);
+					matched = true;
+				} else if (sce_paf_strncmp(name, "RejectButton",
+							   (SceSize)length) == 0) {
+					sce_paf_wcsncpy(m_dialogParam->rejectText,
+							wideText.c_str(), 31);
+					matched = true;
+				} else if (sce_paf_strncmp(name, "MessageBox",
+							   (SceSize)length) == 0) {
+					sce_paf_wcsncpy(m_dialogParam->dialogText,
+							wideText.c_str(), 63);
+					matched = true;
+				} else if (sce_paf_strncmp(name, "PostNotification",
+							   (SceSize)length) == 0) {
+					sce_paf_wcsncpy(m_dialogParam->noticeText,
+							wideText.c_str(), 63);
+					matched = true;
+				}
+				if (matched)
+					return 0;
+			}
+		}
+	}
+
+	m_error = TRIGGER_MGR_ERROR_DIALOG_XML_INVALID;
+	return -1;
+}
+
+int IncomingDialogXmlHandler::endElement(void *userData, const char *name, int length)
+{
+	(void)userData;
+	if (m_stage == STAGE_INCOMING_DIALOG &&
+	    sce_paf_strncmp("IncomingDialog", name, (SceSize)length) == 0) {
+		m_stage = STAGE_ROOT;
+	} else if (m_stage == STAGE_TEXT_CONTENTS &&
+		   sce_paf_strncmp("TextContents", name, (SceSize)length) == 0) {
+		m_stage = STAGE_INCOMING_DIALOG;
+	}
+	return 0;
+}
+
+void IncomingDialogXmlHandler::fatalError(void *userData, int errCode)
+{
+	(void)userData;
+	m_error = errCode;
+}
 
 /* Opens the incoming dialog server UI and waits for user response (0x812A28D8) */
 static int showIncomingDialog(const SceIncomingDialogParam *dialogParam)
@@ -775,393 +789,446 @@ static int loadDatabase(void)
 /* Job to query trigger policy for the calling application (0x812A356E, 0x812A38DA) */
 class GetPolicyJob : public TriggerIpcJobBase {
 public:
-	GetPolicyJob(IPMI::Session *session, SceUInt32 requestId, bool useCallback)
-		: TriggerIpcJobBase("SceTriggerMgrJob", session, requestId, useCallback)
-	{
+	GetPolicyJob(IPMI::Session *session, SceUInt32 requestId, bool useCallback);
+	virtual ~GetPolicyJob();
+	void Complete(int result, SceUInt8 policy);
+	virtual int Run();
+};
+
+GetPolicyJob::GetPolicyJob(IPMI::Session *session, SceUInt32 requestId, bool useCallback)
+	: TriggerIpcJobBase("SceTriggerMgrJob", session, requestId, useCallback)
+{
+}
+
+GetPolicyJob::~GetPolicyJob()
+{
+}
+
+void GetPolicyJob::Complete(int result, SceUInt8 policy)
+{
+	g_triggerMgrIpcLock.Lock();
+	if (!IsCanceled()) {
+		int respErr = triggerMgrRespondPolicy(m_session, m_requestId, result, &policy);
+		if (respErr != 0)
+			triggerMgrAssertFail(NULL, respErr);
+		if (m_useCallback) {
+			int notifyErr = shellSvcNotifyEvent(
+				m_session, TRIGGER_MGR_NOTIFY_EVENT_FLAG);
+			if (notifyErr != 0)
+				triggerMgrAssertFail(NULL, notifyErr);
+		}
+		TriggerIpcJobSlot *slot = triggerMgrFindIpcSlot(m_session, m_requestId);
+		if (slot == NULL)
+			triggerMgrAssertFailNoCode();
+		triggerMgrClearIpcSlot(slot);
 	}
+	g_triggerMgrIpcLock.Unlock();
+}
 
-	virtual ~GetPolicyJob() {}
-
-	void Complete(int result, SceUInt8 policy)
-	{
-		g_triggerMgrIpcLock.Lock();
-		if (!IsCanceled()) {
-			int respErr = triggerMgrRespondPolicy(
-				m_session, m_requestId, result, &policy);
-			if (respErr != 0)
-				triggerMgrAssertFail(NULL, respErr);
-			if (m_useCallback) {
-				int notifyErr = shellSvcNotifyEvent(
-					m_session, TRIGGER_MGR_NOTIFY_EVENT_FLAG);
-				if (notifyErr != 0)
-					triggerMgrAssertFail(NULL, notifyErr);
-			}
-			TriggerIpcJobSlot *slot = triggerMgrFindIpcSlot(m_session, m_requestId);
-			if (slot == NULL)
-				triggerMgrAssertFailNoCode();
-			triggerMgrClearIpcSlot(slot);
-		}
-		g_triggerMgrIpcLock.Unlock();
-	}
-
-	virtual int Run()
-	{
-		char callerTitleId[12];
-		SceUID clientPid = m_session->getProcessId();
-		int resolveErr = triggerMgrResolveProcessTitleId(clientPid, callerTitleId);
-		if (resolveErr != 0) {
-			Complete(resolveErr, 0);
-			return 0;
-		}
-
-		g_triggerMgrTableLock.ReaderLock();
-		int result = TRIGGER_MGR_ERROR_TIMER_NOT_FOUND;
-		SceUInt8 policy = 0;
-		int appIdx = triggerMgrFindAppIndex(callerTitleId);
-		if (appIdx >= 0) {
-			result = 0;
-			policy = ((g_triggerDb.apps[appIdx].flags & TRIGGER_APP_FLAG_ENABLED) != 0)
-					 ? 1u
-					 : 0u;
-		}
-		Complete(result, policy);
-		g_triggerMgrTableLock.ReaderUnlock();
+int GetPolicyJob::Run()
+{
+	char callerTitleId[12];
+	SceUID clientPid = m_session->getProcessId();
+	int resolveErr = triggerMgrResolveProcessTitleId(clientPid, callerTitleId);
+	if (resolveErr != 0) {
+		Complete(resolveErr, 0);
 		return 0;
 	}
-};
+
+	g_triggerMgrTableLock.ReaderLock();
+	int result = TRIGGER_MGR_ERROR_TIMER_NOT_FOUND;
+	SceUInt8 policy = 0;
+	int appIdx = triggerMgrFindAppIndex(callerTitleId);
+	if (appIdx >= 0) {
+		result = 0;
+		policy = ((g_triggerDb.apps[appIdx].flags & TRIGGER_APP_FLAG_ENABLED) != 0)
+				 ? 1u
+				 : 0u;
+	}
+	Complete(result, policy);
+	g_triggerMgrTableLock.ReaderUnlock();
+	return 0;
+}
 
 /* Job to fetch localized title and icon path for an app (0x812A39A0, 0x812A3BAA, 0x812A3EA8) */
 class GetAppInfoJob : public TriggerIpcJobBase {
 public:
 	GetAppInfoJob(IPMI::Session *session, SceUInt32 requestId,
-		      const char *titleId, SceUInt32 language, bool useCallback)
-		: TriggerIpcJobBase("SceTriggerMgrGetAppInfoJob", session, requestId, useCallback),
-		  m_language(language)
-	{
-		sce_paf_strncpy(m_titleId, titleId, TRIGGER_MGR_TITLE_ID_LEN);
-		m_titleId[TRIGGER_MGR_TITLE_ID_LEN] = '\0';
-	}
-
-	virtual ~GetAppInfoJob() {}
-
-	void Complete(int result, const TriggerAppInfoResponse *appInfo)
-	{
-		g_triggerMgrIpcLock.Lock();
-		if (!IsCanceled()) {
-			int respErr = triggerMgrRespondAppInfo(
-				m_session, m_requestId, result, appInfo);
-			if (respErr != 0)
-				triggerMgrAssertFail(NULL, respErr);
-			if (m_useCallback) {
-				int notifyErr = shellSvcNotifyEvent(
-					m_session, TRIGGER_MGR_NOTIFY_EVENT_FLAG);
-				if (notifyErr != 0)
-					triggerMgrAssertFail(NULL, notifyErr);
-			}
-			TriggerIpcJobSlot *slot = triggerMgrFindIpcSlot(m_session, m_requestId);
-			if (slot == NULL)
-				triggerMgrAssertFailNoCode();
-			triggerMgrClearIpcSlot(slot);
-		}
-		g_triggerMgrIpcLock.Unlock();
-	}
-
-	int FetchFromLsdb(TriggerAppInfoResponse *outInfo)
-	{
-		AppInfoQClient lsdbClient;
-		SceLsdb_A6D8772C(&lsdbClient);
-		LsdbAppInfoPtr appInfo(new LsdbAppInfo());
-		LsdbIconPtr iconInfo(new LsdbIcon());
-
-		SceLsdb_E90B81CD(&lsdbClient);
-		string titleKey(m_titleId);
-		int infoErr = SceLsdb_D239031A(&lsdbClient, &titleKey, &appInfo);
-		int iconErr = SceLsdb_7AF9008C(&lsdbClient, &titleKey, &iconInfo, false);
-
-		int result;
-		if ((infoErr | iconErr) != 0) {
-			result = TRIGGER_MGR_ERROR_APP_NOT_FOUND;
-		} else {
-			SceUInt32 localizedKey = getLocalizedStitleKey(m_language);
-			LsdbValue &localizedVal = (*appInfo)[localizedKey];
-			const char *titleUtf8 = "";
-			if (localizedVal.type == LSDB_VALUE_TEXT && localizedVal.text != NULL)
-				titleUtf8 = localizedVal.text->c_str();
-
-			wstring wideTitle;
-			common::Utf8ToUtf16(titleUtf8, &wideTitle);
-			if (wideTitle.size() == 0) {
-				LsdbValue &fallbackVal = (*appInfo)[LSDB_KEY_STITLE];
-				const char *fallbackUtf8 = "";
-				if (fallbackVal.type == LSDB_VALUE_TEXT &&
-				    fallbackVal.text != NULL)
-					fallbackUtf8 = fallbackVal.text->c_str();
-				common::Utf8ToUtf16(fallbackUtf8, &wideTitle);
-			}
-
-			sce_paf_wcsncpy(outInfo->title, wideTitle.c_str(), 52);
-			sce_paf_strncpy(outInfo->iconPath, iconInfo->iconPath.c_str(),
-					sizeof(outInfo->iconPath));
-			result = 0;
-		}
-
-		SceLsdb_DEF5C3F9(&lsdbClient);
-		SceLsdb_E2101B03(&lsdbClient);
-		return result;
-	}
-
-	virtual int Run()
-	{
-		TriggerAppInfoResponse response;
-		sce_paf_memset(&response, 0, sizeof(response));
-
-		g_triggerMgrTableLock.ReaderLock();
-		int appIdx = triggerMgrFindAppIndex(m_titleId);
-		if (appIdx < 0) {
-			Complete(TRIGGER_MGR_ERROR_APP_NOT_FOUND, &response);
-			g_triggerMgrTableLock.ReaderUnlock();
-			return 0;
-		}
-		bool enabled = (g_triggerDb.apps[appIdx].flags & TRIGGER_APP_FLAG_ENABLED) != 0;
-		g_triggerMgrTableLock.ReaderUnlock();
-
-		int result = 0;
-		if (sce_paf_strncmp(m_titleId, "NPXS10999", TRIGGER_MGR_TITLE_ID_LEN) == 0) {
-			sce_paf_wcsncpy(response.title, L"DEBUGGER", 52);
-		} else if (sce_paf_strncmp(m_titleId, "NPXS10998", TRIGGER_MGR_TITLE_ID_LEN) == 0) {
-			sce_paf_wcsncpy(response.title, L"APP_HOME", 52);
-		} else {
-			result = FetchFromLsdb(&response);
-		}
-
-		if (result == 0)
-			response.enabled = enabled;
-
-		Complete(result, &response);
-		return 0;
-	}
+		      const char *titleId, SceUInt32 language, bool useCallback);
+	virtual ~GetAppInfoJob();
+	void Complete(int result, const TriggerAppInfoResponse *appInfo);
+	int FetchFromLsdb(TriggerAppInfoResponse *outInfo);
+	virtual int Run();
 
 	char m_titleId[12];
 	SceUInt32 m_language;
 };
+
+GetAppInfoJob::GetAppInfoJob(IPMI::Session *session, SceUInt32 requestId,
+			     const char *titleId, SceUInt32 language, bool useCallback)
+	: TriggerIpcJobBase("SceTriggerMgrGetAppInfoJob", session, requestId, useCallback),
+	  m_language(language)
+{
+	sce_paf_strncpy(m_titleId, titleId, TRIGGER_MGR_TITLE_ID_LEN);
+	m_titleId[TRIGGER_MGR_TITLE_ID_LEN] = '\0';
+}
+
+GetAppInfoJob::~GetAppInfoJob()
+{
+}
+
+void GetAppInfoJob::Complete(int result, const TriggerAppInfoResponse *appInfo)
+{
+	g_triggerMgrIpcLock.Lock();
+	if (!IsCanceled()) {
+		int respErr = triggerMgrRespondAppInfo(m_session, m_requestId, result, appInfo);
+		if (respErr != 0)
+			triggerMgrAssertFail(NULL, respErr);
+		if (m_useCallback) {
+			int notifyErr = shellSvcNotifyEvent(
+				m_session, TRIGGER_MGR_NOTIFY_EVENT_FLAG);
+			if (notifyErr != 0)
+				triggerMgrAssertFail(NULL, notifyErr);
+		}
+		TriggerIpcJobSlot *slot = triggerMgrFindIpcSlot(m_session, m_requestId);
+		if (slot == NULL)
+			triggerMgrAssertFailNoCode();
+		triggerMgrClearIpcSlot(slot);
+	}
+	g_triggerMgrIpcLock.Unlock();
+}
+
+int GetAppInfoJob::FetchFromLsdb(TriggerAppInfoResponse *outInfo)
+{
+	AppInfoQClient lsdbClient;
+	SceLsdb_A6D8772C(&lsdbClient);
+	LsdbAppInfoPtr appInfo(new LsdbAppInfo());
+	LsdbIconPtr iconInfo(new LsdbIcon());
+
+	SceLsdb_E90B81CD(&lsdbClient);
+	string titleKey(m_titleId);
+	int infoErr = SceLsdb_D239031A(&lsdbClient, &titleKey, &appInfo);
+	int iconErr = SceLsdb_7AF9008C(&lsdbClient, &titleKey, &iconInfo, false);
+
+	int result;
+	if ((infoErr | iconErr) != 0) {
+		result = TRIGGER_MGR_ERROR_APP_NOT_FOUND;
+	} else {
+		SceUInt32 localizedKey = getLocalizedStitleKey(m_language);
+		LsdbValue &localizedVal = (*appInfo)[localizedKey];
+		const char *titleUtf8 = "";
+		if (localizedVal.type == LSDB_VALUE_TEXT && localizedVal.text != NULL)
+			titleUtf8 = localizedVal.text->c_str();
+
+		wstring wideTitle;
+		common::Utf8ToUtf16(titleUtf8, &wideTitle);
+		if (wideTitle.size() == 0) {
+			LsdbValue &fallbackVal = (*appInfo)[LSDB_KEY_STITLE];
+			const char *fallbackUtf8 = "";
+			if (fallbackVal.type == LSDB_VALUE_TEXT && fallbackVal.text != NULL)
+				fallbackUtf8 = fallbackVal.text->c_str();
+			common::Utf8ToUtf16(fallbackUtf8, &wideTitle);
+		}
+
+		sce_paf_wcsncpy(outInfo->title, wideTitle.c_str(), 52);
+		sce_paf_strncpy(outInfo->iconPath, iconInfo->iconPath.c_str(),
+				sizeof(outInfo->iconPath));
+		result = 0;
+	}
+
+	SceLsdb_DEF5C3F9(&lsdbClient);
+	SceLsdb_E2101B03(&lsdbClient);
+	return result;
+}
+
+int GetAppInfoJob::Run()
+{
+	TriggerAppInfoResponse response;
+	sce_paf_memset(&response, 0, sizeof(response));
+
+	g_triggerMgrTableLock.ReaderLock();
+	int appIdx = triggerMgrFindAppIndex(m_titleId);
+	if (appIdx < 0) {
+		Complete(TRIGGER_MGR_ERROR_APP_NOT_FOUND, &response);
+		g_triggerMgrTableLock.ReaderUnlock();
+		return 0;
+	}
+	bool enabled = (g_triggerDb.apps[appIdx].flags & TRIGGER_APP_FLAG_ENABLED) != 0;
+	g_triggerMgrTableLock.ReaderUnlock();
+
+	int result = 0;
+	if (sce_paf_strncmp(m_titleId, "NPXS10999", TRIGGER_MGR_TITLE_ID_LEN) == 0) {
+		sce_paf_wcsncpy(response.title, L"DEBUGGER", 52);
+	} else if (sce_paf_strncmp(m_titleId, "NPXS10998", TRIGGER_MGR_TITLE_ID_LEN) == 0) {
+		sce_paf_wcsncpy(response.title, L"APP_HOME", 52);
+	} else {
+		result = FetchFromLsdb(&response);
+	}
+
+	if (result == 0)
+		response.enabled = enabled;
+
+	Complete(result, &response);
+	return 0;
+}
 
 /* Job to fetch localized name and icon path for a built-in service (0x812A3FEA-0x812A429C) */
 class GetServiceInfoJob : public TriggerIpcJobBase {
 public:
 	GetServiceInfoJob(IPMI::Session *session, SceUInt32 requestId,
-			  const char *serviceId, SceUInt32 language, bool useCallback)
-		: TriggerIpcJobBase("SceTriggerMgrGetServiceInfoJob",
-				    session, requestId, useCallback),
-		  m_language(language)
-	{
-		sce_paf_strncpy(m_serviceId, serviceId, TRIGGER_MGR_TITLE_ID_LEN);
-		m_serviceId[TRIGGER_MGR_TITLE_ID_LEN] = '\0';
-	}
-
-	virtual ~GetServiceInfoJob() {}
-
-	void Complete(int result, const TriggerServiceInfoResponse *serviceInfo)
-	{
-		g_triggerMgrIpcLock.Lock();
-		if (!IsCanceled()) {
-			int respErr = triggerMgrRespondServiceInfo(
-				m_session, m_requestId, result, serviceInfo);
-			if (respErr != 0)
-				triggerMgrAssertFail(NULL, respErr);
-			if (m_useCallback) {
-				int notifyErr = shellSvcNotifyEvent(
-					m_session, TRIGGER_MGR_NOTIFY_EVENT_FLAG);
-				if (notifyErr != 0)
-					triggerMgrAssertFail(NULL, notifyErr);
-			}
-			TriggerIpcJobSlot *slot = triggerMgrFindIpcSlot(m_session, m_requestId);
-			if (slot == NULL)
-				triggerMgrAssertFailNoCode();
-			triggerMgrClearIpcSlot(slot);
-		}
-		g_triggerMgrIpcLock.Unlock();
-	}
-
-	int LoadFromRco(TriggerServiceInfoResponse *outInfo)
-	{
-		resource::ResourceObj::Option rcoOpt;
-		rcoOpt.load_type = 0;
-		rcoOpt.allocator = g_triggerMgrHeap;
-		rcoOpt.cxml_allocator_func = cxml::DefaultAllocator;
-
-		void *rcoMem = triggerMgrHeapAlloc(sizeof(resource::ResourceObj));
-		if (rcoMem == NULL)
-			return TRIGGER_MGR_ERROR_NO_MEMORY;
-
-		resource::ResourceObj *rco =
-			new (rcoMem) resource::ResourceObj(s_builtinRcoPath, &rcoOpt);
-
-		const BuiltinServiceMeta *meta = NULL;
-		for (int idx = 0; s_builtinServices[idx].serviceId != NULL; ++idx) {
-			if (sce_paf_strncmp(s_builtinServices[idx].serviceId, m_serviceId,
-					    TRIGGER_MGR_TITLE_ID_LEN) == 0) {
-				meta = &s_builtinServices[idx];
-				break;
-			}
-		}
-
-		SceInt32 rcoLocale = -1;
-		for (unsigned int idx = 0; idx < 20; ++idx) {
-			if (s_languageToLocale[idx].language == m_language) {
-				rcoLocale = s_languageToLocale[idx].rcoLocale;
-				break;
-			}
-		}
-
-		ScePafResource_42E4E566(rco, rcoLocale, g_triggerMgrHeap);
-
-		const wchar_t *nameStr = NULL;
-		uint32_t nameLen = 0;
-		if (meta != NULL) {
-			rco->GetString(meta->rcoTitleHash, &nameStr, &nameLen);
-			if (nameStr != NULL) {
-				sce_paf_wcsncpy(outInfo->name, nameStr, 256);
-				sce_paf_strncpy(outInfo->iconPath, meta->iconPath,
-						sizeof(outInfo->iconPath));
-			}
-		}
-
-		rco->~ResourceObj();
-		triggerMgrHeapFree(rco);
-		return 0;
-	}
-
-	virtual int Run()
-	{
-		TriggerServiceInfoResponse response;
-		sce_paf_memset(&response, 0, sizeof(response));
-
-		g_triggerMgrTableLock.ReaderLock();
-		TriggerServiceRecord *record = NULL;
-		BuiltinServiceRuntime *runtime = NULL;
-		if (findBuiltinService(m_serviceId, &record, &runtime) != 0) {
-			Complete(TRIGGER_MGR_ERROR_SERVICE_NOT_FOUND, &response);
-			g_triggerMgrTableLock.ReaderUnlock();
-			return 0;
-		}
-		bool enabled = (record->flags & TRIGGER_APP_FLAG_ENABLED) != 0;
-		g_triggerMgrTableLock.ReaderUnlock();
-
-		int result = LoadFromRco(&response);
-		if (result == 0)
-			response.enabled = enabled;
-
-		Complete(result, &response);
-		return 0;
-	}
+			  const char *serviceId, SceUInt32 language, bool useCallback);
+	virtual ~GetServiceInfoJob();
+	void Complete(int result, const TriggerServiceInfoResponse *serviceInfo);
+	int LoadFromRco(TriggerServiceInfoResponse *outInfo);
+	virtual int Run();
 
 	char m_serviceId[12];
 	SceUInt32 m_language;
 };
 
+GetServiceInfoJob::GetServiceInfoJob(IPMI::Session *session, SceUInt32 requestId,
+				     const char *serviceId, SceUInt32 language, bool useCallback)
+	: TriggerIpcJobBase("SceTriggerMgrGetServiceInfoJob", session, requestId, useCallback),
+	  m_language(language)
+{
+	sce_paf_strncpy(m_serviceId, serviceId, TRIGGER_MGR_TITLE_ID_LEN);
+	m_serviceId[TRIGGER_MGR_TITLE_ID_LEN] = '\0';
+}
+
+GetServiceInfoJob::~GetServiceInfoJob()
+{
+}
+
+void GetServiceInfoJob::Complete(int result, const TriggerServiceInfoResponse *serviceInfo)
+{
+	g_triggerMgrIpcLock.Lock();
+	if (!IsCanceled()) {
+		int respErr = triggerMgrRespondServiceInfo(
+			m_session, m_requestId, result, serviceInfo);
+		if (respErr != 0)
+			triggerMgrAssertFail(NULL, respErr);
+		if (m_useCallback) {
+			int notifyErr = shellSvcNotifyEvent(
+				m_session, TRIGGER_MGR_NOTIFY_EVENT_FLAG);
+			if (notifyErr != 0)
+				triggerMgrAssertFail(NULL, notifyErr);
+		}
+		TriggerIpcJobSlot *slot = triggerMgrFindIpcSlot(m_session, m_requestId);
+		if (slot == NULL)
+			triggerMgrAssertFailNoCode();
+		triggerMgrClearIpcSlot(slot);
+	}
+	g_triggerMgrIpcLock.Unlock();
+}
+
+int GetServiceInfoJob::LoadFromRco(TriggerServiceInfoResponse *outInfo)
+{
+	resource::ResourceObj::Option rcoOpt;
+	rcoOpt.load_type = 0;
+	rcoOpt.allocator = g_triggerMgrHeap;
+	rcoOpt.cxml_allocator_func = cxml::DefaultAllocator;
+
+	void *rcoMem = triggerMgrHeapAlloc(sizeof(resource::ResourceObj));
+	if (rcoMem == NULL)
+		return TRIGGER_MGR_ERROR_NO_MEMORY;
+
+	resource::ResourceObj *rco = new (rcoMem) resource::ResourceObj(s_builtinRcoPath, &rcoOpt);
+
+	const BuiltinServiceMeta *meta = NULL;
+	for (int idx = 0; s_builtinServices[idx].serviceId != NULL; ++idx) {
+		if (sce_paf_strncmp(s_builtinServices[idx].serviceId, m_serviceId,
+				    TRIGGER_MGR_TITLE_ID_LEN) == 0) {
+			meta = &s_builtinServices[idx];
+			break;
+		}
+	}
+
+	SceInt32 rcoLocale = -1;
+	for (unsigned int idx = 0; idx < 20; ++idx) {
+		if (s_languageToLocale[idx].language == m_language) {
+			rcoLocale = s_languageToLocale[idx].rcoLocale;
+			break;
+		}
+	}
+
+	ScePafResource_42E4E566(rco, rcoLocale, g_triggerMgrHeap);
+
+	const wchar_t *nameStr = NULL;
+	uint32_t nameLen = 0;
+	if (meta != NULL) {
+		rco->GetString(meta->rcoTitleHash, &nameStr, &nameLen);
+		if (nameStr != NULL) {
+			sce_paf_wcsncpy(outInfo->name, nameStr, 256);
+			sce_paf_strncpy(outInfo->iconPath, meta->iconPath,
+					sizeof(outInfo->iconPath));
+		}
+	}
+
+	rco->~ResourceObj();
+	triggerMgrHeapFree(rco);
+	return 0;
+}
+
+int GetServiceInfoJob::Run()
+{
+	TriggerServiceInfoResponse response;
+	sce_paf_memset(&response, 0, sizeof(response));
+
+	g_triggerMgrTableLock.ReaderLock();
+	TriggerServiceRecord *record = NULL;
+	BuiltinServiceRuntime *runtime = NULL;
+	if (findBuiltinService(m_serviceId, &record, &runtime) != 0) {
+		Complete(TRIGGER_MGR_ERROR_SERVICE_NOT_FOUND, &response);
+		g_triggerMgrTableLock.ReaderUnlock();
+		return 0;
+	}
+	bool enabled = (record->flags & TRIGGER_APP_FLAG_ENABLED) != 0;
+	g_triggerMgrTableLock.ReaderUnlock();
+
+	int result = LoadFromRco(&response);
+	if (result == 0)
+		response.enabled = enabled;
+
+	Complete(result, &response);
+	return 0;
+}
+
 /* Job to remove all timers for an uninstalled application (0x812A434E) */
 class AppUninstallJob : public job::JobItem {
 public:
-	AppUninstallJob(const char *titleId)
-		: job::JobItem("SceTriggerMgrAppUninstallJob", NULL)
-	{
-		sce_paf_strncpy(m_titleId, titleId, TRIGGER_MGR_TITLE_ID_LEN);
-		m_titleId[TRIGGER_MGR_TITLE_ID_LEN] = '\0';
-	}
-
-	virtual ~AppUninstallJob() {}
-	virtual void Finish(int result) { (void)result; }
-
-	virtual int Run()
-	{
-		g_triggerMgrTableLock.WriterLock();
-		int appIdx = triggerMgrFindAppIndex(m_titleId);
-		if (appIdx >= 0) {
-			triggerPeriodicTimerCancelAllForApp(appIdx);
-			triggerTimeOfDayTimerCancelAllForApp(appIdx);
-			sce_paf_memset(&g_triggerDb.apps[appIdx], 0, sizeof(TriggerAppRecord));
-			g_triggerMgrTableLock.WriterUnlock();
-
-			g_triggerMgrTableLock.ReaderLock();
-			triggerMgrSaveDatabase();
-			g_triggerMgrTableLock.ReaderUnlock();
-			return 0;
-		}
-		g_triggerMgrTableLock.WriterUnlock();
-		return 0;
-	}
+	AppUninstallJob(const char *titleId);
+	virtual ~AppUninstallJob();
+	virtual void Finish(int result);
+	virtual int Run();
 
 	char m_titleId[12];
 };
+
+AppUninstallJob::AppUninstallJob(const char *titleId)
+	: job::JobItem("SceTriggerMgrAppUninstallJob", NULL)
+{
+	sce_paf_strncpy(m_titleId, titleId, TRIGGER_MGR_TITLE_ID_LEN);
+	m_titleId[TRIGGER_MGR_TITLE_ID_LEN] = '\0';
+}
+
+AppUninstallJob::~AppUninstallJob()
+{
+}
+
+void AppUninstallJob::Finish(int result)
+{
+	(void)result;
+}
+
+int AppUninstallJob::Run()
+{
+	g_triggerMgrTableLock.WriterLock();
+	int appIdx = triggerMgrFindAppIndex(m_titleId);
+	if (appIdx >= 0) {
+		triggerPeriodicTimerCancelAllForApp(appIdx);
+		triggerTimeOfDayTimerCancelAllForApp(appIdx);
+		sce_paf_memset(&g_triggerDb.apps[appIdx], 0, sizeof(TriggerAppRecord));
+		g_triggerMgrTableLock.WriterUnlock();
+
+		g_triggerMgrTableLock.ReaderLock();
+		triggerMgrSaveDatabase();
+		g_triggerMgrTableLock.ReaderUnlock();
+		return 0;
+	}
+	g_triggerMgrTableLock.WriterUnlock();
+	return 0;
+}
 
 /* Job to start/resume or suspend the trigger manager service (0x814316B8) */
 class SvcCtrlJob : public job::JobItem {
 public:
 	typedef void (*SvcCtrlResultCallback)(int result, void *userData);
 
-	SvcCtrlJob(int command, SvcCtrlResultCallback callback, void *userData)
-		: job::JobItem("SceTriggerMgrSvcCtrlJob", NULL),
-		  m_command(command),
-		  m_callback(callback),
-		  m_userData(userData)
-	{
-	}
-
-	virtual ~SvcCtrlJob() {}
-	virtual void Finish(int result) { (void)result; }
-
-	virtual int Run()
-	{
-		int result = TRIGGER_MGR_ERROR_INTERNAL;
-		bool firstStart = false;
-
-		s_stateLock.Lock();
-		if (m_command == 0) {
-			firstStart = (s_serviceState == TRIGGER_SVC_STATE_UNSTARTED);
-			s_serviceState = TRIGGER_SVC_STATE_RUNNING;
-			result = 0;
-		} else if (m_command == 1) {
-			s_serviceState = TRIGGER_SVC_STATE_SUSPENDED;
-			result = 0;
-		}
-		s_stateLock.Unlock();
-
-		if (firstStart) {
-			g_triggerMgrTableLock.ReaderLock();
-			triggerPeriodicTimerRegisterAll();
-			triggerTimeOfDayTimerRegisterAll();
-			g_triggerMgrTableLock.ReaderUnlock();
-		}
-
-		if (m_callback != NULL)
-			m_callback(result, m_userData);
-		return 0;
-	}
+	SvcCtrlJob(int command, SvcCtrlResultCallback callback, void *userData);
+	virtual ~SvcCtrlJob();
+	virtual void Finish(int result);
+	virtual int Run();
 
 	int m_command;
 	SvcCtrlResultCallback m_callback;
 	void *m_userData;
 };
 
+SvcCtrlJob::SvcCtrlJob(int command, SvcCtrlResultCallback callback, void *userData)
+	: job::JobItem("SceTriggerMgrSvcCtrlJob", NULL),
+	  m_command(command),
+	  m_callback(callback),
+	  m_userData(userData)
+{
+}
+
+SvcCtrlJob::~SvcCtrlJob()
+{
+}
+
+void SvcCtrlJob::Finish(int result)
+{
+	(void)result;
+}
+
+int SvcCtrlJob::Run()
+{
+	int result = TRIGGER_MGR_ERROR_INTERNAL;
+	bool firstStart = false;
+
+	s_stateLock.Lock();
+	if (m_command == 0) {
+		firstStart = (s_serviceState == TRIGGER_SVC_STATE_UNSTARTED);
+		s_serviceState = TRIGGER_SVC_STATE_RUNNING;
+		result = 0;
+	} else if (m_command == 1) {
+		s_serviceState = TRIGGER_SVC_STATE_SUSPENDED;
+		result = 0;
+	}
+	s_stateLock.Unlock();
+
+	if (firstStart) {
+		g_triggerMgrTableLock.ReaderLock();
+		triggerPeriodicTimerRegisterAll();
+		triggerTimeOfDayTimerRegisterAll();
+		g_triggerMgrTableLock.ReaderUnlock();
+	}
+
+	if (m_callback != NULL)
+		m_callback(result, m_userData);
+	return 0;
+}
+
 /* Job to persist the database asynchronously after a toggle (0x81431784) */
 class SaveDatabaseJob : public job::JobItem {
 public:
-	SaveDatabaseJob()
-		: job::JobItem("SceTriggerMgrSavaDatabaseJob", NULL)
-	{
-	}
-
-	virtual ~SaveDatabaseJob() {}
-	virtual void Finish(int result) { (void)result; }
-
-	virtual int Run()
-	{
-		g_triggerMgrTableLock.ReaderLock();
-		triggerMgrSaveDatabase();
-		g_triggerMgrTableLock.ReaderUnlock();
-		return 0;
-	}
+	SaveDatabaseJob();
+	virtual ~SaveDatabaseJob();
+	virtual void Finish(int result);
+	virtual int Run();
 };
+
+SaveDatabaseJob::SaveDatabaseJob()
+	: job::JobItem("SceTriggerMgrSavaDatabaseJob", NULL)
+{
+}
+
+SaveDatabaseJob::~SaveDatabaseJob()
+{
+}
+
+void SaveDatabaseJob::Finish(int result)
+{
+	(void)result;
+}
+
+int SaveDatabaseJob::Run()
+{
+	g_triggerMgrTableLock.ReaderLock();
+	triggerMgrSaveDatabase();
+	g_triggerMgrTableLock.ReaderUnlock();
+	return 0;
+}
 
 /* Enqueues an AppUninstallJob for the given title ID (0x812A471C) */
 static void enqueueAppUninstallJob(const char *titleId)
