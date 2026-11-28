@@ -77,17 +77,18 @@ uint64_t sceNetNtohll(uint64_t netllong);
 int npTrophyVerifyCommSign(const TrophyCommId *commId, const void *commSignBuf);
 int npTrophyResolvePidTitleId(SceUID pid, char *outTitleId);
 
-class TrophyMount {
+class TrophyMount : public TrophyHeapObject {
 public:
 	TrophyMount();
-	~TrophyMount();
+	virtual ~TrophyMount();
 
 	int MountForPid(SceUID pid);
 	void Unmount();
-	bool IsMounted() const { return m_mountPoint[0] != '\0'; }
-	const char *GetMountPoint() const { return m_mountPoint; }
+	bool IsMounted() const { return m_mounted != 0; }
+	const char *GetMountPoint() const;
 
 private:
+	uint8_t m_mounted;
 	char m_mountPoint[16];
 };
 
@@ -119,8 +120,9 @@ public:
 	virtual ~TrophyTrpFileStream();
 
 	int OpenEntry(TrophyTrpArchive *archive, const TrophyTrpEntry *entry);
+	int OpenByName(TrophyHandle *handle, TrophyTrpArchive *archive, const char *name);
 	virtual int Close();
-	virtual bool IsOpen() const { return m_archive != NULL; }
+	virtual bool IsOpen() const;
 	virtual int GetSize(SceOff *outSize);
 	virtual int Seek(TrophyHandle *handle, SceOff offset, int whence, SceOff *outPos);
 	virtual int Truncate(TrophyHandle *handle, SceOff length);
@@ -145,14 +147,18 @@ public:
 
 	int Open(TrophyHandle *handle, const char *trpPath, bool verifySha1);
 	int Close();
-	bool IsOpen() const { return m_file.IsOpen(); }
+	bool IsOpen() const;
 	const TrophyTrpHeader &GetHeader() const { return m_header; }
 	uint32_t GetEntryCount() const { return m_header.entryCount; }
 	int GetEntryByIndex(uint32_t index, TrophyTrpEntry *outEntry) const;
+	int GetEntryPtr(uint32_t index, const TrophyTrpEntry **outEntry) const;
 	int FindEntryByName(const char *name, TrophyTrpEntry *outEntry) const;
 	int OpenEntryStream(const char *name, TrophyTrpFileStream *outStream);
 	int OpenEntryStreamByIndex(uint32_t index, TrophyTrpFileStream *outStream);
 	int VerifyArchiveSha1(TrophyHandle *handle);
+	int EnsureHeaderAndGetDevFlag(TrophyHandle *handle, bool *outIsDev);
+	int ReadDefaultConfOrExtract(TrophyHandle *handle, const TrophyCommId *commId,
+				     TrophyConfMeta *outMeta, TrophyConfData **outConf);
 
 private:
 	int ReadAndParseHeader(TrophyHandle *handle);
@@ -199,8 +205,12 @@ public:
 			  TrophyTrpFileStream *outStream, SceSize *outHeaderSize);
 	int OpenTitleIconStream(TrophyHandle *handle, int lang, bool fallbackDefault,
 				TrophyTrpFileStream *outStream);
+	int OpenOwnedTitleIconStream(TrophyHandle *handle, int lang, int smallFlag,
+				     bool fallbackDefault, TrophyConfSourceStream **outStream);
 	int OpenGroupIconStream(TrophyHandle *handle, int groupId, int lang, bool fallbackDefault,
 				TrophyTrpFileStream *outStream);
+	int OpenOwnedGroupIconStream(TrophyHandle *handle, int groupId, int lang, int smallFlag,
+				     bool fallbackDefault, TrophyConfSourceStream **outStream);
 	int OpenTrophyIconStream(TrophyHandle *handle, int trophyId,
 				 TrophyTrpFileStream *outStream);
 
@@ -223,6 +233,8 @@ public:
 	TrophyStorageArbiterClient(TrophyStorageArbiter *arbiter, uint32_t accessFlags);
 	virtual ~TrophyStorageArbiterClient();
 
+	int Open(TrophyHandle *handle, uint32_t accessFlags);
+	int CheckHandle(TrophyHandle *handle) const;
 	int CheckPreempted() const;
 	uint32_t GetAccessFlags() const { return m_accessFlags; }
 	void SetPreemptError(int errorCode);
@@ -231,8 +243,58 @@ public:
 private:
 	TrophyStorageArbiter *m_arbiter;
 	uint32_t m_accessFlags;
+	TrophyHandle *m_boundHandle;
 	int m_preemptError;
 	uint8_t m_registered;
+};
+
+class TrophyMountBase {
+public:
+	TrophyMountBase();
+	virtual ~TrophyMountBase();
+	virtual int Unmount();
+
+	const char *GetMountPoint() const;
+	bool IsMounted() const { return m_mounted != 0; }
+
+protected:
+	uint8_t m_mounted;
+	char m_mountPoint[16];
+	int m_refCount;
+};
+
+class TrophyUserRootMount : public TrophyMountBase {
+public:
+	TrophyUserRootMount();
+	virtual ~TrophyUserRootMount();
+	int Mount();
+	virtual int Unmount();
+};
+
+class TrophyTitleMount : public TrophyMountBase {
+public:
+	TrophyTitleMount();
+	virtual ~TrophyTitleMount();
+	int MatchesCommId(const TrophyCommId *commId) const;
+	int MountData(const TrophyCommId *commId);
+	int MountBackup(const TrophyCommId *commId);
+	virtual int Unmount();
+
+private:
+	TrophyCommId m_commId;
+};
+
+class TrophyMountGuard {
+public:
+	TrophyMountGuard();
+	~TrophyMountGuard();
+
+	const char *GetPath() const;
+	void Attach(TrophyStorageArbiterClient *client, TrophyMountBase **mountPtr);
+
+private:
+	TrophyStorageArbiterClient *m_client;
+	TrophyMountBase **m_mountPtr;
 };
 
 struct TrophyMountSlot {
@@ -246,10 +308,13 @@ struct TrophyMountSlot {
 	bool Matches(int kind, int uid, const TrophyCommId *id) const;
 };
 
-class TrophyStorageArbiter {
+class TrophyStorageArbiter : public TrophyHeapObject {
 public:
 	TrophyStorageArbiter();
-	~TrophyStorageArbiter();
+	virtual ~TrophyStorageArbiter();
+
+	static void TermGlobal();
+	static int GetGlobal(TrophyStorageArbiter **outArbiter);
 
 	int Init();
 	void Term();
@@ -275,6 +340,9 @@ private:
 	TrophyLwMutex m_mutex;
 	TrophyLwCond m_cond;
 	TrophyStorageArbiterClient *m_clients[16];
+	TrophyUserRootMount m_userRootMount;
+	TrophyTitleMount m_titleDataMount;
+	TrophyTitleMount m_titleBackupMount;
 	TrophyMountSlot m_mounts[3];
 	uint8_t m_initialized;
 };
@@ -289,7 +357,8 @@ public:
 	int Open(TrophyHandle *handle, TrophyStorageArbiter *arbiter, int userId,
 		 uint32_t accessFlags);
 	int Close();
-	bool IsOpen() const { return m_isOpen != 0; }
+	bool IsOpen() const;
+	int EnsureIndexOpen(TrophyHandle *handle);
 	int EnsureReady(TrophyHandle *handle, int requiredMode);
 
 	int GetUserId() const { return m_userId; }
@@ -303,6 +372,20 @@ public:
 
 	int PurgeTitle(TrophyHandle *handle, const TrophyCommId *commId);
 	int RemoveAllTitles(TrophyHandle *handle);
+	int RemoveAllTitlesData(TrophyHandle *handle);
+	int FindOrRecoverTitleRecord(TrophyHandle *handle, const TrophyCommId *commId,
+				     bool *outExists, TrophyTitleRecord *outRecord);
+	int GetTitleInstallState(TrophyHandle *handle, const TrophyCommId *commId, int *outState);
+	int CheckTitleAgainstTrp(TrophyHandle *handle, const TrophyCommId *commId,
+				 TrophyTrpConfSource *trpSource, int *outState,
+				 TrophyGradeBitsets *outBitsets);
+	int GetTitleCount(TrophyHandle *handle, uint32_t *outCount);
+	int GetInstalledCount(TrophyHandle *handle, uint32_t *outCount);
+	int EnumerateTitleInfo(TrophyHandle *handle, uint32_t startIndex,
+			       uint32_t *outFoundIndex, void *outTitleInfo);
+	int GetOldestTitleInfo(TrophyHandle *handle, void *outTitleInfo, void *outSyncInfo,
+			       void *outTitleDetails);
+	static int DebugMarkTitleBroken(const TrophyCommId *commId, int brokenKind);
 
 private:
 	uint8_t m_isOpen;
@@ -324,6 +407,8 @@ public:
 	int SyncTitles(TrophyHandle *handle, uint64_t options);
 
 private:
+	int PrepareModifiedTitleFetcher(TrophyHandle *handle, const SceRtcTick *sinceUtc,
+					TrophyProgress *progress);
 	int UploadDirtyTitles(TrophyHandle *handle, uint32_t *outUploadedCount);
 	int InstallTitleFromNet(TrophyHandle *handle, const TrophyCommId *commId, int lang);
 	int DownloadModifiedTitles(TrophyHandle *handle, const SceNpId *npId,
@@ -332,6 +417,7 @@ private:
 	int SyncFull(TrophyHandle *handle);
 
 	TrophyUserSession *m_session;
+	TrophyNetTitleListFetcher *m_titleListFetcher;
 };
 
 class TrophyRecoveryController : public TrophyHeapObject {
@@ -342,6 +428,8 @@ public:
 	int CheckRecoveryRequired(TrophyHandle *handle, bool *outRequired);
 	int RecoverAllTitles(TrophyHandle *handle);
 	int RecoverTitleIfExists(TrophyHandle *handle, const TrophyCommId *commId);
+	int RecoverTitleEntry(TrophyHandle *handle, const TrophyCommId *commId);
+	int ScanAndRecoverAllTitles(TrophyHandle *handle);
 
 private:
 	int RecoverSingleTitle(TrophyHandle *handle, const TrophyCommId *commId,
@@ -378,6 +466,7 @@ public:
 	TrophyConfHandle *GetStorageConfHandle() const { return m_storageConfHandle; }
 	int SetTrpConfHandle(TrophyConfHandle **ioHandle);
 	int SetStorageConfHandle(TrophyConfHandle **ioHandle);
+	int SetGradeBitsets(const TrophyGradeBitsets *bitsets);
 	const TrophyGradeBitsets &GetGradeBitsets() const { return m_gradeBitsets; }
 
 	static bool IsTrialExemptTitleId(const char *titleId);
@@ -514,6 +603,9 @@ private:
 	uint8_t m_trpLoadedFlag;
 };
 
+class TrophyTitleStoragePoolObj;
+class TrophyConfSourcePoolObj;
+
 class TrophyTitleSessionPoolObj : public TrophyPooledObject {
 public:
 	TrophyTitleSessionPoolObj();
@@ -521,12 +613,20 @@ public:
 
 	int Init(TrophyHandle *handle, TrophyStorageArbiter *arbiter, int userId,
 		 uint32_t accessFlags);
+	int OpenSession(TrophyHandle *handle, uint32_t accessFlags, int userId);
+	int CloseSession();
 	virtual void OnRemoved();
 
 	TrophyUserSession *GetUserSession() const { return m_userSession; }
+	TrophyTitleStoragePoolObj *GetBoundStorage() const { return m_boundStorage; }
+	TrophyConfSourcePoolObj *GetBoundConfSource() const { return m_boundConfSource; }
+	void SetBoundStorage(TrophyTitleStoragePoolObj *storage);
+	void SetBoundConfSource(TrophyConfSourcePoolObj *source);
 
 private:
 	TrophyUserSession *m_userSession;
+	TrophyTitleStoragePoolObj *m_boundStorage;
+	TrophyConfSourcePoolObj *m_boundConfSource;
 };
 
 class TrophyTitleStoragePoolObj : public TrophyPooledObject {
@@ -537,12 +637,25 @@ public:
 	int Init(TrophyUserSession *session, const TrophyCommId *commId);
 	virtual void OnRemoved();
 
+	bool IsStorageOpen() const;
+	bool IsOpenForMode(int openMode) const;
+	int CloseStorage();
+	int CloseIfOpen();
+	int PurgeStorage(TrophyHandle *handle, TrophyUserSession *session);
+	int OpenForMode(int openMode, TrophyHandle *handle, TrophyUserSession *session);
+	int InstallFromTrp(int openMode, TrophyHandle *handle, TrophyUserSession *session,
+			   TrophyContext *context, TrophyConfSource *source, int *outPlatinumId);
+	int UpgradeFromTrp(int openMode, TrophyHandle *handle, TrophyUserSession *session,
+			   TrophyContext *context, TrophyConfSource *source, int *outPlatinumId);
+	bool MatchesCommId(const TrophyTitleStoragePoolObj *other) const;
+
 	TrophyTitleStorage *GetTitleStorage() const { return m_titleStorage; }
 	const TrophyCommId &GetCommId() const { return m_commId; }
 	TrophyUserSession *GetOwnerSession() const { return m_ownerSession; }
 
 private:
 	TrophyTitleStorage *m_titleStorage;
+	int m_openMode;
 	TrophyCommId m_commId;
 	TrophyUserSession *m_ownerSession;
 };
@@ -554,6 +667,11 @@ public:
 
 	int Init(const TrophyCommId *commId);
 	virtual void OnRemoved();
+
+	bool IsSourceOpen() const;
+	int CloseSource();
+	int CloseIfOpen();
+	bool MatchesCommId(const TrophyConfSourcePoolObj *other) const;
 
 	TrophyTrpConfSource *GetConfSource() const { return m_confSource; }
 	const TrophyCommId &GetCommId() const { return m_commId; }
@@ -572,10 +690,28 @@ public:
 		 TrophyConfSourcePoolObj *heldConfSource);
 	virtual void OnRemoved();
 
+	int OpenStorageSfmStream(TrophyHandle *handle, TrophyTitleStorage *storage,
+				 SceOff *outSize);
+	int OpenStorageTitleIconStream(TrophyHandle *handle, TrophyTitleStorage *storage,
+				       SceOff *outSize);
+	int OpenStorageGroupIconStream(TrophyHandle *handle, TrophyTitleStorage *storage,
+				       int groupId, SceOff *outSize);
+	int OpenStorageTrophyIconStream(TrophyHandle *handle, TrophyTitleStorage *storage,
+					int trophyId, SceOff *outSize);
+	int OpenTrpTitleIconStream(TrophyHandle *handle, TrophyTrpConfSource *trpSource,
+				   int lang, SceOff *outSize);
+	int OpenTrpGroupIconStream(TrophyHandle *handle, TrophyTrpConfSource *trpSource,
+				   int groupId, int lang, SceOff *outSize);
+	int OpenTrpTrophyIconStream(TrophyHandle *handle, TrophyTrpConfSource *trpSource,
+				    int trophyId, SceOff *outSize);
+
 	TrophyStreamWrapper *GetStream() const { return m_stream; }
 
 private:
 	TrophyStreamWrapper *m_stream;
+	TrophyInputStream *m_activeInput;
+	TrophyFileBase *m_ownedStorageFile;
+	TrophyConfSourceStream *m_ownedTrpStream;
 	TrophyTitleStoragePoolObj *m_heldStorage;
 	TrophyConfSourcePoolObj *m_heldConfSource;
 };
@@ -585,12 +721,14 @@ public:
 	explicit TrophyClientState(TrophyLwMutex *mutex);
 	virtual ~TrophyClientState();
 
+	int InitPools(SceUID pid, IPMI::Session *session, TrophyLwMutex *mutex);
 	int Connect(SceUID pid, IPMI::Session *session);
 	void Disconnect(int reason);
 	void Suspend(int reason);
 	void Resume();
 
 	bool IsActive() const { return m_active != 0; }
+	bool HasActiveRefs() const;
 	SceUID GetPid() const { return m_pid; }
 	IPMI::Session *GetSession() const { return m_session; }
 	TrophyMount *GetMount() { return &m_mount; }
@@ -603,6 +741,15 @@ public:
 	TrophyPoolBase &GetConfSourcePool() { return m_confSourcePool; }
 	TrophyPoolBase &GetStreamPool() { return m_streamPool; }
 
+	int CreateHandle(int handleType, TrophyHandlePoolObj **outObj);
+	int CreateContext(int titleIdMode, SceUID pid, const TrophyCommId *commId,
+			  const void *commSign, uint64_t options,
+			  TrophyContextPoolObj **outObj);
+	int CreateTitleSession(TrophyTitleSessionPoolObj **outObj);
+	int CreateStream(TrophyStreamPoolObj **outObj);
+	int EnsureConfSourceOpen(TrophyTitleSessionPoolObj **sessionSlot,
+				 const TrophyCommId *commId);
+
 	int AcquireHandle(int handleId, TrophyHandlePoolObj **outObj);
 	int AcquireContext(int ctxId, TrophyContextPoolObj **outObj);
 	int AcquireTitleSession(int sessionId, TrophyTitleSessionPoolObj **outObj);
@@ -612,6 +759,10 @@ public:
 	int AcquireOrCreateConfSource(const TrophyCommId *commId, TrophyConfSourcePoolObj **outObj);
 	int AcquireStream(int streamId, TrophyStreamPoolObj **outObj);
 
+	void SuspendTitleSessions(int reason);
+	void SuspendStreams(int reason);
+	void CloseAllOpenConfSources();
+	void CloseAllOpenTitleStorages();
 	void EvictTitleStorageForCommId(const TrophyCommId *commId);
 	void EvictAllTitleStorage();
 
@@ -619,6 +770,7 @@ private:
 	uint8_t m_active;
 	SceUID m_pid;
 	IPMI::Session *m_session;
+	TrophyLwMutex *m_poolMutex;
 	TrophyPooledObject *m_handleSlots[16];
 	TrophyPooledObject *m_contextSlots[4];
 	TrophyPooledObject *m_titleSessionSlots[16];
@@ -634,15 +786,17 @@ private:
 	TrophyMount m_mount;
 };
 
-class SceNpTrophyService {
+class SceNpTrophyService : public TrophyHeapObject {
 public:
 	SceNpTrophyService();
-	~SceNpTrophyService();
+	virtual ~SceNpTrophyService();
 
 	int Init();
 	int Term();
 	bool IsInitialized() const { return m_initialized != 0; }
 
+	int RegisterClient(SceUID pid, IPMI::Session *session, TrophyClientState **outClient);
+	int UnregisterClient(SceUID pid, IPMI::Session *session);
 	int OnClientConnect(SceUID pid, IPMI::Session *session);
 	int OnClientDisconnect(SceUID pid, IPMI::Session *session, int reason);
 	int SuspendPid(SceUID pid);

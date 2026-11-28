@@ -76,26 +76,177 @@ struct TrpDiskEntry {
 /* Owned stream wrapper exposing a TrophyTrpFileStream as TrophyConfSourceStream */
 class TrophyTrpOwnedAssetStream : public TrophyConfSourceStream {
 public:
-	TrophyTrpOwnedAssetStream() {}
-	virtual ~TrophyTrpOwnedAssetStream() { m_stream.Close(); }
+	TrophyTrpOwnedAssetStream();
+	virtual ~TrophyTrpOwnedAssetStream();
 
 	TrophyTrpFileStream *GetTrpStream() { return &m_stream; }
-
-	virtual int Read(TrophyHandle *handle, void *outBuf, SceSize size, SceSize *outRead)
-	{
-		return m_stream.Read(handle, outBuf, size, outRead);
-	}
-
-	virtual int CloseAndRelease()
-	{
-		int ret = m_stream.Close();
-		delete this;
-		return ret;
-	}
+	int GetSize(SceOff *outSize);
+	virtual int Read(TrophyHandle *handle, void *outBuf, SceSize size, SceSize *outRead);
+	virtual int CloseAndRelease();
 
 private:
 	TrophyTrpFileStream m_stream;
 };
+
+TrophyTrpOwnedAssetStream::TrophyTrpOwnedAssetStream()
+{
+}
+
+TrophyTrpOwnedAssetStream::~TrophyTrpOwnedAssetStream()
+{
+	m_stream.Close();
+}
+
+/* 0x812CC3A4 */
+int TrophyTrpOwnedAssetStream::GetSize(SceOff *outSize)
+{
+	int ret = m_stream.GetSize(outSize);
+	return (ret >= 0) ? 0 : ret;
+}
+
+int TrophyTrpOwnedAssetStream::Read(TrophyHandle *handle, void *outBuf, SceSize size,
+				    SceSize *outRead)
+{
+	return m_stream.Read(handle, outBuf, size, outRead);
+}
+
+int TrophyTrpOwnedAssetStream::CloseAndRelease()
+{
+	int ret = m_stream.Close();
+	delete this;
+	return ret;
+}
+
+/* Result holder for TRP archive extraction (0x812CCFC0, 0x812CD778) */
+struct TrophyTrpExtractResult {
+	TrophyConfHandle *defaultConfHandle;
+	TrophyConfHandle *localizedConfHandle;
+
+	TrophyTrpExtractResult();
+	~TrophyTrpExtractResult();
+	int TakeDefaultConf(TrophyConfData **outConf);
+};
+
+TrophyTrpExtractResult::TrophyTrpExtractResult()
+	: defaultConfHandle(NULL), localizedConfHandle(NULL)
+{
+}
+
+/* 0x812CCFC0 */
+TrophyTrpExtractResult::~TrophyTrpExtractResult()
+{
+	if (defaultConfHandle != NULL)
+		delete defaultConfHandle;
+	if (localizedConfHandle != NULL)
+		delete localizedConfHandle;
+}
+
+/* 0x812CD778 */
+int TrophyTrpExtractResult::TakeDefaultConf(TrophyConfData **outConf)
+{
+	if (defaultConfHandle == NULL)
+		return NP_TROPHY_ERR_GENERIC;
+	*outConf = defaultConfHandle->DetachConfData();
+	delete defaultConfHandle;
+	defaultConfHandle = NULL;
+	return 0;
+}
+
+/* 0x812CCFE0 */
+static int shouldExtractTrpEntry(TrophyHandle *handle, TrophyTrpArchive *archive,
+				 const TrophyExtractOptions *options, uint32_t entryIndex,
+				 bool *outShouldExtract, TrophyAssetDesc *outDesc)
+{
+	TrophyTrpEntry entry;
+	int ret = archive->GetEntryByIndex(entryIndex, &entry);
+	if (ret < 0)
+		return ret;
+
+	ret = npTrophyParseAssetFilename(entry.name, outDesc);
+	if (ret < 0)
+		return ret;
+
+	if (outDesc->IsDefaultLang()) {
+		TrophyAssetDesc localizedDesc = *outDesc;
+		localizedDesc.SetLang(options->lang);
+		char localizedName[32];
+		ret = npTrophyFormatAssetFilename(localizedName, &localizedDesc);
+		if (ret < 0)
+			return ret;
+
+		TrophyTrpEntry foundEntry;
+		int findRet = archive->FindEntryByName(localizedName, &foundEntry);
+		if (findRet == NP_TROPHY_ERR_TRP_ENTRY_NOT_FOUND)
+			*outShouldExtract = TrophyAssetExtractor::ShouldExtractAsset(entry.name,
+										     options);
+		else if (findRet < 0)
+			return findRet;
+		else
+			*outShouldExtract = false;
+	} else if (outDesc->HasSpecificLang()) {
+		if (outDesc->IsValidLang() && outDesc->GetLang() == options->lang)
+			*outShouldExtract = TrophyAssetExtractor::ShouldExtractAsset(entry.name,
+										     options);
+		else
+			*outShouldExtract = false;
+	} else {
+		*outShouldExtract = TrophyAssetExtractor::ShouldExtractAsset(entry.name, options);
+	}
+	(void)handle;
+	return 0;
+}
+
+/* 0x812CD2EA */
+static int hashTrpEntryBytes(TrophyHandle *handle, TrophyTrpArchive *archive, uint32_t entryIndex,
+			     TrophyHashSink *hashSink, uint64_t *ioTotalBytes)
+{
+	TrophyTrpFileStream entryStream;
+	int ret = archive->OpenEntryStreamByIndex(entryIndex, &entryStream);
+	if (ret >= 0) {
+		TrophyTeeStream teeStream;
+		teeStream.Init(&entryStream, NULL, hashSink);
+		ret = teeStream.DrainAll(handle);
+		if (ret >= 0)
+			*ioTotalBytes += teeStream.GetTotalBytes();
+	}
+	if (entryStream.IsOpen())
+		entryStream.Close();
+	return ret;
+}
+
+/* 0x812CD394 */
+static int extractTrpEntry(TrophyHandle *handle, TrophyTrpArchive *archive, uint32_t entryIndex,
+			   const TrophyExtractOptions *options, TrophyHashSink *hashSink,
+			   uint64_t *ioTotalBytes, TrophyAssetDesc *outDesc,
+			   TrophyConfHandle **outConfHandle)
+{
+	TrophyTrpEntry entry;
+	int ret = archive->GetEntryByIndex(entryIndex, &entry);
+	if (ret < 0)
+		return ret;
+
+	TrophyTrpFileStream entryStream;
+	TrophyAssetExtractor extractor;
+
+	ret = archive->OpenEntryStreamByIndex(entryIndex, &entryStream);
+	if (ret >= 0) {
+		ret = extractor.Begin(entry.name, &entryStream, options, hashSink);
+		if (ret >= 0) {
+			ret = extractor.Process(handle, outDesc);
+			if (ret >= 0) {
+				*ioTotalBytes += extractor.GetBytesProcessed();
+				if (outConfHandle != NULL)
+					ret = extractor.TakeConfHandle(outConfHandle);
+			}
+		}
+	}
+
+	if (extractor.IsActive())
+		extractor.End();
+	if (entryStream.IsOpen())
+		entryStream.Close();
+	return ret;
+}
 
 static bool isAllZeroDigest(const TrophySha1Digest &digest)
 {
@@ -177,13 +328,23 @@ int npTrophyVerifyCommSign(const TrophyCommId *commId, const void *commSignBuf)
  * ========================================================================= */
 
 TrophyMount::TrophyMount()
+	: m_mounted(0)
 {
 	sceClibMemset(m_mountPoint, 0, sizeof(m_mountPoint));
 }
 
+/* 0x812CC468 */
 TrophyMount::~TrophyMount()
 {
 	Unmount();
+}
+
+/* 0x812CC4C0 */
+const char *TrophyMount::GetMountPoint() const
+{
+	if (m_mounted != 0)
+		return m_mountPoint;
+	return NULL;
 }
 
 int TrophyMount::MountForPid(SceUID pid)
@@ -198,6 +359,7 @@ int TrophyMount::MountForPid(SceUID pid)
 		return ret;
 
 	npTrophyStrlcpy(m_mountPoint, mountBuf, sizeof(m_mountPoint));
+	m_mounted = 1;
 	return 0;
 }
 
@@ -205,8 +367,10 @@ void TrophyMount::Unmount()
 {
 	if (!IsMounted())
 		return;
-	sceAppMgrUmount(m_mountPoint);
-	sceClibMemset(m_mountPoint, 0, sizeof(m_mountPoint));
+	if (sceAppMgrUmount(m_mountPoint) >= 0) {
+		sceClibMemset(m_mountPoint, 0, sizeof(m_mountPoint));
+		m_mounted = 0;
+	}
 }
 
 /* =========================================================================
@@ -243,6 +407,27 @@ int TrophyTrpFileStream::OpenEntry(TrophyTrpArchive *archive, const TrophyTrpEnt
 	m_cursor = 0;
 	archive->m_openStreamCount++;
 	return 0;
+}
+
+/* 0x812CD8DA */
+int TrophyTrpFileStream::OpenByName(TrophyHandle *handle, TrophyTrpArchive *archive,
+				    const char *name)
+{
+	(void)handle;
+	TrophyTrpEntry entry;
+	int ret = archive->FindEntryByName(name, &entry);
+	if (ret < 0) {
+		if (ret == NP_TROPHY_ERR_TRP_ENTRY_NOT_FOUND)
+			return NP_TROPHY_ERR_TRP_NOT_OPEN;
+		return ret;
+	}
+	return OpenEntry(archive, &entry);
+}
+
+/* 0x812CDB8C */
+bool TrophyTrpFileStream::IsOpen() const
+{
+	return m_archive != NULL;
 }
 
 int TrophyTrpFileStream::Close()
@@ -376,6 +561,13 @@ void TrophyTrpArchive::NotifyStreamClosed()
 		m_openStreamCount--;
 }
 
+/* 0x812CC80E */
+bool TrophyTrpArchive::IsOpen() const
+{
+	return m_file.IsOpen();
+}
+
+/* 0x812CCF18 */
 int TrophyTrpArchive::Close()
 {
 	if (m_openStreamCount != 0)
@@ -600,6 +792,90 @@ int TrophyTrpArchive::GetEntryByIndex(uint32_t index, TrophyTrpEntry *outEntry) 
 		return NP_TROPHY_ERR_INVALID_ARGUMENT;
 	*outEntry = m_entries[index];
 	return 0;
+}
+
+/* 0x812CCF78 */
+int TrophyTrpArchive::GetEntryPtr(uint32_t index, const TrophyTrpEntry **outEntry) const
+{
+	if (index >= m_header.entryCount)
+		return NP_TROPHY_ERR_INVALID_ARGUMENT;
+	*outEntry = &m_entries[index];
+	return 0;
+}
+
+/* 0x812CCBB6 */
+int TrophyTrpArchive::EnsureHeaderAndGetDevFlag(TrophyHandle *handle, bool *outIsDev)
+{
+	if (!IsOpen())
+		return NP_TROPHY_ERR_TRP_NOT_OPEN;
+	(void)handle;
+	*outIsDev = (m_header.flags & 1u) != 0;
+	return 0;
+}
+
+/* 0x812CCD36 */
+int TrophyTrpArchive::ReadDefaultConfOrExtract(TrophyHandle *handle, const TrophyCommId *commId,
+					       TrophyConfMeta *outMeta, TrophyConfData **outConf)
+{
+	if (!IsOpen())
+		return NP_TROPHY_ERR_TRP_NOT_OPEN;
+
+	if (isAllZeroDigest(m_header.sha1)) {
+		TrophyExtractOptions opts;
+		opts.userId = 0;
+		opts.commId = commId;
+		opts.parseOptions = 1u;
+		opts.lang = -2;
+		opts.assetMask = 1u;
+		opts.flags = 0x10000u;
+
+		TrophyTrpExtractResult result;
+		uint64_t totalBytes = 0;
+		uint32_t count = m_header.entryCount;
+		for (uint32_t i = 0; i < count; ++i) {
+			bool shouldExtract = false;
+			TrophyAssetDesc desc;
+			int ret = shouldExtractTrpEntry(handle, this, &opts, i, &shouldExtract,
+							&desc);
+			if (ret < 0)
+				return ret;
+			if (shouldExtract) {
+				ret = extractTrpEntry(handle, this, i, &opts, NULL, &totalBytes,
+						      &desc, &result.defaultConfHandle);
+				if (ret < 0)
+					return ret;
+			} else {
+				ret = hashTrpEntryBytes(handle, this, i, NULL, &totalBytes);
+				if (ret < 0)
+					return ret;
+			}
+		}
+		if (outMeta != NULL) {
+			outMeta->sourceType = 1u;
+			outMeta->confVersion = m_header.flags;
+			outMeta->sha1 = m_header.sha1;
+		}
+		return result.TakeDefaultConf(outConf);
+	}
+
+	if (outMeta != NULL) {
+		outMeta->confVersion = m_header.flags;
+		outMeta->sha1 = m_header.sha1;
+	}
+
+	TrophyTrpFileStream sfmStream;
+	int ret = sfmStream.OpenByName(handle, this, "TROPCONF.SFM");
+	if (ret < 0)
+		return ret;
+
+	TrophySignedSfmReader reader;
+	ret = reader.Init(0);
+	if (ret >= 0)
+		ret = reader.Parse(handle, &sfmStream);
+	if (ret >= 0)
+		ret = reader.TakeConfData(commId, outConf);
+	sfmStream.Close();
+	return ret;
 }
 
 int TrophyTrpArchive::FindEntryByName(const char *name, TrophyTrpEntry *outEntry) const
@@ -992,6 +1268,29 @@ int TrophyTrpConfSource::OpenTitleIconStream(TrophyHandle *handle, int lang, boo
 	return ret;
 }
 
+/* 0x812CBCBE */
+int TrophyTrpConfSource::OpenOwnedTitleIconStream(TrophyHandle *handle, int lang, int smallFlag,
+						  bool fallbackDefault,
+						  TrophyConfSourceStream **outStream)
+{
+	(void)smallFlag;
+	TrophyTrpOwnedAssetStream *stream = new TrophyTrpOwnedAssetStream();
+	if (stream == NULL)
+		return NP_TROPHY_ERR_OUT_OF_MEMORY;
+
+	int ret = OpenTitleIconStream(handle, lang, fallbackDefault, stream->GetTrpStream());
+	if (ret >= 0) {
+		*outStream = stream;
+		return 0;
+	}
+
+	delete stream;
+	*outStream = NULL;
+	if (ret == NP_TROPHY_ERR_TRP_NOT_OPEN)
+		return NP_TROPHY_ERR_ASSET_NOT_FOUND;
+	return ret;
+}
+
 /* 0x812CBCC8 */
 int TrophyTrpConfSource::OpenGroupIconStream(TrophyHandle *handle, int groupId, int lang,
 					     bool fallbackDefault, TrophyTrpFileStream *outStream)
@@ -1008,6 +1307,30 @@ int TrophyTrpConfSource::OpenGroupIconStream(TrophyHandle *handle, int groupId, 
 	int ret = OpenAssetWithLangFallback(&desc, fallbackDefault, outStream);
 	if (ret == NP_TROPHY_ERR_ASSET_NOT_FOUND)
 		return NP_TROPHY_ERR_ICON_NOT_FOUND;
+	return ret;
+}
+
+/* 0x812CBECE */
+int TrophyTrpConfSource::OpenOwnedGroupIconStream(TrophyHandle *handle, int groupId, int lang,
+						  int smallFlag, bool fallbackDefault,
+						  TrophyConfSourceStream **outStream)
+{
+	(void)smallFlag;
+	TrophyTrpOwnedAssetStream *stream = new TrophyTrpOwnedAssetStream();
+	if (stream == NULL)
+		return NP_TROPHY_ERR_OUT_OF_MEMORY;
+
+	int ret = OpenGroupIconStream(handle, groupId, lang, fallbackDefault,
+				      stream->GetTrpStream());
+	if (ret >= 0) {
+		*outStream = stream;
+		return 0;
+	}
+
+	delete stream;
+	*outStream = NULL;
+	if (ret == NP_TROPHY_ERR_TRP_NOT_OPEN)
+		return NP_TROPHY_ERR_ASSET_NOT_FOUND;
 	return ret;
 }
 

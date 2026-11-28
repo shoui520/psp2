@@ -41,6 +41,74 @@ struct TrophyDebugMarkBrokenArg {
 	int brokenKind;
 };
 
+/* 0x81545BC8..0x81545BDC: per-pool monotonic ID counters */
+static int s_nextHandleId = TROPHY_ID_BASE_HANDLE - 1;
+static int s_nextContextId = TROPHY_ID_BASE_CONTEXT - 1;
+static int s_nextTitleSessionId = TROPHY_ID_BASE_TITLE_SESSION - 1;
+static int s_nextTitleStorageId = TROPHY_ID_BASE_TITLE_STORAGE - 1;
+static int s_nextConfSourceId = TROPHY_ID_BASE_CONF_SOURCE - 1;
+static int s_nextStreamId = TROPHY_ID_BASE_STREAM - 1;
+
+/* 0x812C9F22 */
+static int allocNextHandleId()
+{
+	int nextId = TROPHY_ID_BASE_HANDLE;
+	if (s_nextHandleId != TROPHY_ID_BASE_HANDLE + TROPHY_ID_SPAN - 1)
+		nextId = s_nextHandleId + 1;
+	s_nextHandleId = nextId;
+	return nextId;
+}
+
+/* 0x812C9F44 */
+static int allocNextContextId()
+{
+	int nextId = TROPHY_ID_BASE_CONTEXT;
+	if (s_nextContextId != TROPHY_ID_BASE_CONTEXT + TROPHY_ID_SPAN - 1)
+		nextId = s_nextContextId + 1;
+	s_nextContextId = nextId;
+	return nextId;
+}
+
+/* 0x812C9F66 */
+static int allocNextTitleSessionId()
+{
+	int nextId = TROPHY_ID_BASE_TITLE_SESSION;
+	if (s_nextTitleSessionId != TROPHY_ID_BASE_TITLE_SESSION + TROPHY_ID_SPAN - 1)
+		nextId = s_nextTitleSessionId + 1;
+	s_nextTitleSessionId = nextId;
+	return nextId;
+}
+
+/* 0x812C9F88 */
+static int allocNextTitleStorageId()
+{
+	int nextId = TROPHY_ID_BASE_TITLE_STORAGE;
+	if (s_nextTitleStorageId != TROPHY_ID_BASE_TITLE_STORAGE + TROPHY_ID_SPAN - 1)
+		nextId = s_nextTitleStorageId + 1;
+	s_nextTitleStorageId = nextId;
+	return nextId;
+}
+
+/* 0x812C9FAA */
+static int allocNextConfSourceId()
+{
+	int nextId = TROPHY_ID_BASE_CONF_SOURCE;
+	if (s_nextConfSourceId != TROPHY_ID_BASE_CONF_SOURCE + TROPHY_ID_SPAN - 1)
+		nextId = s_nextConfSourceId + 1;
+	s_nextConfSourceId = nextId;
+	return nextId;
+}
+
+/* 0x812C9FCC */
+static int allocNextStreamId()
+{
+	int nextId = TROPHY_ID_BASE_STREAM;
+	if (s_nextStreamId != TROPHY_ID_BASE_STREAM + TROPHY_ID_SPAN - 1)
+		nextId = s_nextStreamId + 1;
+	s_nextStreamId = nextId;
+	return nextId;
+}
+
 static int lookupDebugParamIndex(const char *name)
 {
 	if (name == NULL)
@@ -257,6 +325,13 @@ int TrophyContext::SetStorageConfHandle(TrophyConfHandle **ioHandle)
 		delete m_storageConfHandle;
 	m_storageConfHandle = *ioHandle;
 	*ioHandle = NULL;
+	return 0;
+}
+
+/* 0x812CB410 */
+int TrophyContext::SetGradeBitsets(const TrophyGradeBitsets *bitsets)
+{
+	sceClibMemcpy_safe(&m_gradeBitsets, bitsets, sizeof(m_gradeBitsets));
 	return 0;
 }
 
@@ -768,7 +843,9 @@ int TrophyContextPoolObj::EnsureStorageConfLoaded(TrophyHandle *handle,
 }
 
 TrophyTitleSessionPoolObj::TrophyTitleSessionPoolObj()
-	: m_userSession(NULL)
+	: m_userSession(NULL),
+	  m_boundStorage(NULL),
+	  m_boundConfSource(NULL)
 {
 }
 
@@ -793,17 +870,75 @@ int TrophyTitleSessionPoolObj::Init(TrophyHandle *handle, TrophyStorageArbiter *
 	return 0;
 }
 
-void TrophyTitleSessionPoolObj::OnRemoved()
+/* 0x812CA218 */
+int TrophyTitleSessionPoolObj::OpenSession(TrophyHandle *handle, uint32_t accessFlags, int userId)
 {
+	if (m_userSession == NULL) {
+		m_userSession = new TrophyUserSession();
+		if (m_userSession == NULL)
+			return NP_TROPHY_ERR_OUT_OF_MEMORY;
+	}
+	int ret = m_userSession->Open(handle, &g_trophyStorageArbiter, userId, accessFlags);
+	return (ret >= 0) ? 0 : ret;
+}
+
+/* 0x812CA24E */
+int TrophyTitleSessionPoolObj::CloseSession()
+{
+	if (m_boundConfSource != NULL) {
+		if (m_boundConfSource->IsSourceOpen()) {
+			int ret = m_boundConfSource->CloseSource();
+			if (ret < 0)
+				return ret;
+		}
+		m_boundConfSource->ReleaseRef();
+		m_boundConfSource = NULL;
+	}
+	if (m_boundStorage != NULL) {
+		if (m_boundStorage->IsStorageOpen()) {
+			int ret = m_boundStorage->CloseStorage();
+			if (ret < 0)
+				return ret;
+		}
+		m_boundStorage->ReleaseRef();
+		m_boundStorage = NULL;
+	}
 	if (m_userSession != NULL) {
-		m_userSession->Close();
+		int ret = m_userSession->Close();
+		if (ret < 0)
+			return ret;
 		delete m_userSession;
 		m_userSession = NULL;
 	}
+	return 0;
+}
+
+void TrophyTitleSessionPoolObj::SetBoundStorage(TrophyTitleStoragePoolObj *storage)
+{
+	if (m_boundStorage != NULL)
+		m_boundStorage->ReleaseRef();
+	m_boundStorage = storage;
+	if (m_boundStorage != NULL)
+		m_boundStorage->AddRef();
+}
+
+void TrophyTitleSessionPoolObj::SetBoundConfSource(TrophyConfSourcePoolObj *source)
+{
+	if (m_boundConfSource != NULL)
+		m_boundConfSource->ReleaseRef();
+	m_boundConfSource = source;
+	if (m_boundConfSource != NULL)
+		m_boundConfSource->AddRef();
+}
+
+void TrophyTitleSessionPoolObj::OnRemoved()
+{
+	CloseSession();
 }
 
 TrophyTitleStoragePoolObj::TrophyTitleStoragePoolObj()
 	: m_titleStorage(NULL),
+	  m_openMode(0),
 	  m_ownerSession(NULL)
 {
 	m_commId.Clear();
@@ -829,6 +964,152 @@ int TrophyTitleStoragePoolObj::Init(TrophyUserSession *session, const TrophyComm
 	return 0;
 }
 
+/* 0x812CA84C */
+bool TrophyTitleStoragePoolObj::IsStorageOpen() const
+{
+	return (m_titleStorage != NULL) && m_titleStorage->IsOpen();
+}
+
+/* 0x812CA61E */
+bool TrophyTitleStoragePoolObj::IsOpenForMode(int openMode) const
+{
+	return (m_openMode == openMode) && (m_titleStorage != NULL) && m_titleStorage->IsOpen();
+}
+
+/* 0x812CA542 */
+int TrophyTitleStoragePoolObj::CloseStorage()
+{
+	if (m_titleStorage == NULL)
+		return NP_TROPHY_ERR_STORAGE_NOT_OPEN;
+	if (m_titleStorage->IsOpen()) {
+		int ret = m_titleStorage->Close();
+		if (ret < 0)
+			return ret;
+	}
+	delete m_titleStorage;
+	m_titleStorage = NULL;
+	m_openMode = 0;
+	return 0;
+}
+
+/* 0x812CA894 */
+int TrophyTitleStoragePoolObj::CloseIfOpen()
+{
+	if (m_titleStorage != NULL && m_titleStorage->IsOpen())
+		return CloseStorage();
+	return 0;
+}
+
+/* 0x812CA57A */
+int TrophyTitleStoragePoolObj::PurgeStorage(TrophyHandle *handle, TrophyUserSession *session)
+{
+	int ret = 0;
+	if (m_titleStorage != NULL && m_titleStorage->IsOpen()) {
+		ret = CloseStorage();
+		if (ret < 0)
+			return ret;
+	}
+
+	m_titleStorage = new TrophyTitleStorage(session, &m_commId);
+	if (m_titleStorage == NULL)
+		return NP_TROPHY_ERR_OUT_OF_MEMORY;
+
+	ret = m_titleStorage->Uninstall(handle);
+	if (ret >= 0)
+		return 0;
+
+	delete m_titleStorage;
+	m_titleStorage = NULL;
+	return ret;
+}
+
+/* 0x812CA63A */
+int TrophyTitleStoragePoolObj::OpenForMode(int openMode, TrophyHandle *handle,
+					   TrophyUserSession *session)
+{
+	if (m_openMode == openMode && m_titleStorage != NULL && m_titleStorage->IsOpen())
+		return 0;
+
+	if (m_titleStorage != NULL) {
+		delete m_titleStorage;
+		m_titleStorage = NULL;
+	}
+
+	m_titleStorage = new TrophyTitleStorage(session, &m_commId);
+	if (m_titleStorage == NULL)
+		return NP_TROPHY_ERR_OUT_OF_MEMORY;
+
+	int ret = m_titleStorage->Open(handle, 7u);
+	if (ret >= 0) {
+		m_openMode = openMode;
+		return 0;
+	}
+
+	delete m_titleStorage;
+	m_titleStorage = NULL;
+	return ret;
+}
+
+/* 0x812CA6C8 */
+int TrophyTitleStoragePoolObj::InstallFromTrp(int openMode, TrophyHandle *handle,
+					      TrophyUserSession *session, TrophyContext *context,
+					      TrophyConfSource *source, int *outPlatinumId)
+{
+	if (m_titleStorage != NULL && m_titleStorage->IsOpen()) {
+		int ret = CloseStorage();
+		if (ret < 0)
+			return ret;
+	}
+
+	m_titleStorage = new TrophyTitleStorage(session, &m_commId);
+	if (m_titleStorage == NULL)
+		return NP_TROPHY_ERR_OUT_OF_MEMORY;
+
+	int ret = m_titleStorage->InstallFromContext(handle, context, source,
+						     context->GetInstallLang(), outPlatinumId);
+	if (ret >= 0) {
+		m_openMode = openMode;
+		return 0;
+	}
+
+	delete m_titleStorage;
+	m_titleStorage = NULL;
+	return ret;
+}
+
+/* 0x812CA78A */
+int TrophyTitleStoragePoolObj::UpgradeFromTrp(int openMode, TrophyHandle *handle,
+					      TrophyUserSession *session, TrophyContext *context,
+					      TrophyConfSource *source, int *outPlatinumId)
+{
+	if (m_titleStorage != NULL && m_titleStorage->IsOpen()) {
+		int ret = CloseStorage();
+		if (ret < 0)
+			return ret;
+	}
+
+	m_titleStorage = new TrophyTitleStorage(session, &m_commId);
+	if (m_titleStorage == NULL)
+		return NP_TROPHY_ERR_OUT_OF_MEMORY;
+
+	int ret = m_titleStorage->UpgradeFromContext(handle, context, source,
+						     context->GetInstallLang(), outPlatinumId);
+	if (ret >= 0) {
+		m_openMode = openMode;
+		return 0;
+	}
+
+	delete m_titleStorage;
+	m_titleStorage = NULL;
+	return ret;
+}
+
+/* 0x812CA862 */
+bool TrophyTitleStoragePoolObj::MatchesCommId(const TrophyTitleStoragePoolObj *other) const
+{
+	return m_commId.Equals(other->m_commId);
+}
+
 void TrophyTitleStoragePoolObj::OnRemoved()
 {
 	if (m_titleStorage != NULL) {
@@ -836,6 +1117,7 @@ void TrophyTitleStoragePoolObj::OnRemoved()
 		delete m_titleStorage;
 		m_titleStorage = NULL;
 	}
+	m_openMode = 0;
 	m_ownerSession = NULL;
 }
 
@@ -864,6 +1146,41 @@ int TrophyConfSourcePoolObj::Init(const TrophyCommId *commId)
 	return 0;
 }
 
+/* 0x812C8564 */
+bool TrophyConfSourcePoolObj::IsSourceOpen() const
+{
+	return (m_confSource != NULL) && (m_confSource->IsOpen() != 0);
+}
+
+/* 0x812C85FC */
+int TrophyConfSourcePoolObj::CloseSource()
+{
+	if (m_confSource == NULL)
+		return NP_TROPHY_ERR_CONF_SOURCE_NOT_OPEN;
+	if (m_confSource->IsOpen() != 0) {
+		int ret = m_confSource->Close();
+		if (ret < 0)
+			return ret;
+	}
+	delete m_confSource;
+	m_confSource = NULL;
+	return 0;
+}
+
+/* 0x812C8636 */
+bool TrophyConfSourcePoolObj::MatchesCommId(const TrophyConfSourcePoolObj *other) const
+{
+	return m_commId.Equals(other->m_commId);
+}
+
+/* 0x812C8668 */
+int TrophyConfSourcePoolObj::CloseIfOpen()
+{
+	if (m_confSource != NULL && m_confSource->IsOpen() != 0)
+		return CloseSource();
+	return 0;
+}
+
 void TrophyConfSourcePoolObj::OnRemoved()
 {
 	if (m_confSource != NULL) {
@@ -875,6 +1192,9 @@ void TrophyConfSourcePoolObj::OnRemoved()
 
 TrophyStreamPoolObj::TrophyStreamPoolObj()
 	: m_stream(NULL),
+	  m_activeInput(NULL),
+	  m_ownedStorageFile(NULL),
+	  m_ownedTrpStream(NULL),
 	  m_heldStorage(NULL),
 	  m_heldConfSource(NULL)
 {
@@ -897,8 +1217,196 @@ int TrophyStreamPoolObj::Init(TrophyStreamWrapper *stream, TrophyTitleStoragePoo
 	return 0;
 }
 
+/* 0x812CA95E */
+int TrophyStreamPoolObj::OpenStorageSfmStream(TrophyHandle *handle, TrophyTitleStorage *storage,
+					      SceOff *outSize)
+{
+	if (m_activeInput != NULL)
+		return NP_TROPHY_ERR_AES_ALREADY_OPEN;
+
+	TrophyConfStream *confStream = new TrophyConfStream();
+	if (confStream == NULL)
+		return NP_TROPHY_ERR_OUT_OF_MEMORY;
+
+	TrophyInputStream *strippedInput = NULL;
+	int ret = storage->OpenSfmStream(handle, confStream);
+	if (ret >= 0)
+		ret = confStream->GetStrippedStream(handle, &strippedInput);
+	if (ret >= 0 && outSize != NULL)
+		ret = confStream->GetSize(outSize);
+	if (ret < 0) {
+		delete confStream;
+		return ret;
+	}
+
+	m_activeInput = strippedInput;
+	m_ownedStorageFile = confStream;
+	return 0;
+}
+
+/* 0x812CAA14 */
+int TrophyStreamPoolObj::OpenStorageTitleIconStream(TrophyHandle *handle,
+						    TrophyTitleStorage *storage, SceOff *outSize)
+{
+	if (m_activeInput != NULL)
+		return NP_TROPHY_ERR_AES_ALREADY_OPEN;
+
+	TrophyConfIconFile *iconFile = new TrophyConfIconFile();
+	if (iconFile == NULL)
+		return NP_TROPHY_ERR_OUT_OF_MEMORY;
+
+	int ret = storage->OpenTitleIcon(handle, iconFile);
+	if (ret >= 0 && outSize != NULL)
+		ret = iconFile->GetSize(outSize);
+	if (ret < 0) {
+		delete iconFile;
+		return ret;
+	}
+
+	m_ownedStorageFile = iconFile;
+	m_activeInput = iconFile;
+	return 0;
+}
+
+/* 0x812CAAB8 */
+int TrophyStreamPoolObj::OpenStorageGroupIconStream(TrophyHandle *handle,
+						    TrophyTitleStorage *storage, int groupId,
+						    SceOff *outSize)
+{
+	if (m_activeInput != NULL)
+		return NP_TROPHY_ERR_AES_ALREADY_OPEN;
+
+	TrophyConfIconFile *iconFile = new TrophyConfIconFile();
+	if (iconFile == NULL)
+		return NP_TROPHY_ERR_OUT_OF_MEMORY;
+
+	int ret = storage->OpenGroupIcon(handle, groupId, iconFile);
+	if (ret >= 0 && outSize != NULL)
+		ret = iconFile->GetSize(outSize);
+	if (ret < 0) {
+		delete iconFile;
+		return ret;
+	}
+
+	m_ownedStorageFile = iconFile;
+	m_activeInput = iconFile;
+	return 0;
+}
+
+/* 0x812CAB66 */
+int TrophyStreamPoolObj::OpenStorageTrophyIconStream(TrophyHandle *handle,
+						     TrophyTitleStorage *storage, int trophyId,
+						     SceOff *outSize)
+{
+	if (m_activeInput != NULL)
+		return NP_TROPHY_ERR_AES_ALREADY_OPEN;
+
+	TrophyConfIconFile *iconFile = new TrophyConfIconFile();
+	if (iconFile == NULL)
+		return NP_TROPHY_ERR_OUT_OF_MEMORY;
+
+	int ret = storage->OpenTrophyIcon(handle, trophyId, iconFile);
+	if (ret >= 0 && outSize != NULL)
+		ret = iconFile->GetSize(outSize);
+	if (ret < 0) {
+		delete iconFile;
+		return ret;
+	}
+
+	m_ownedStorageFile = iconFile;
+	m_activeInput = iconFile;
+	return 0;
+}
+
+/* 0x812CAC14 */
+int TrophyStreamPoolObj::OpenTrpTitleIconStream(TrophyHandle *handle,
+						TrophyTrpConfSource *trpSource, int lang,
+						SceOff *outSize)
+{
+	if (m_activeInput != NULL)
+		return NP_TROPHY_ERR_AES_ALREADY_OPEN;
+
+	TrophyConfSourceStream *stream = NULL;
+	int ret = trpSource->OpenOwnedTitleIconStream(handle, lang, 0, true, &stream);
+	if (ret == NP_TROPHY_ERR_ASSET_NOT_FOUND)
+		return NP_TROPHY_ERR_ICON_NOT_FOUND;
+	if (ret >= 0 && outSize != NULL)
+		*outSize = 0;
+	if (ret >= 0) {
+		m_ownedTrpStream = stream;
+		m_activeInput = stream;
+		return 0;
+	}
+	if (stream != NULL)
+		stream->CloseAndRelease();
+	return ret;
+}
+
+/* 0x812CACB6 */
+int TrophyStreamPoolObj::OpenTrpGroupIconStream(TrophyHandle *handle,
+						TrophyTrpConfSource *trpSource, int groupId,
+						int lang, SceOff *outSize)
+{
+	if (m_activeInput != NULL)
+		return NP_TROPHY_ERR_AES_ALREADY_OPEN;
+
+	TrophyConfSourceStream *stream = NULL;
+	int ret = trpSource->OpenOwnedGroupIconStream(handle, groupId, lang, 0, true, &stream);
+	if (ret == NP_TROPHY_ERR_ASSET_NOT_FOUND)
+		return NP_TROPHY_ERR_ICON_NOT_FOUND;
+	if (ret >= 0 && outSize != NULL)
+		*outSize = 0;
+	if (ret >= 0) {
+		m_ownedTrpStream = stream;
+		m_activeInput = stream;
+		return 0;
+	}
+	if (stream != NULL)
+		stream->CloseAndRelease();
+	return ret;
+}
+
+/* 0x812CAD5E */
+int TrophyStreamPoolObj::OpenTrpTrophyIconStream(TrophyHandle *handle,
+						 TrophyTrpConfSource *trpSource, int trophyId,
+						 SceOff *outSize)
+{
+	if (m_activeInput != NULL)
+		return NP_TROPHY_ERR_AES_ALREADY_OPEN;
+
+	char iconName[32];
+	int ret = npTrophyFormatTrophyIconFilename(iconName, trophyId, 0);
+	if (ret < 0)
+		return ret;
+
+	TrophyConfSourceStream *stream = NULL;
+	ret = trpSource->OpenOwnedAssetStream(handle, iconName, &stream);
+	if (ret == NP_TROPHY_ERR_ASSET_NOT_FOUND)
+		return NP_TROPHY_ERR_ICON_NOT_FOUND;
+	if (ret >= 0 && outSize != NULL)
+		*outSize = 0;
+	if (ret >= 0) {
+		m_ownedTrpStream = stream;
+		m_activeInput = stream;
+		return 0;
+	}
+	if (stream != NULL)
+		stream->CloseAndRelease();
+	return ret;
+}
+
 void TrophyStreamPoolObj::OnRemoved()
 {
+	if (m_ownedStorageFile != NULL) {
+		m_ownedStorageFile->Close();
+		delete m_ownedStorageFile;
+		m_ownedStorageFile = NULL;
+	}
+	if (m_ownedTrpStream != NULL) {
+		m_ownedTrpStream->CloseAndRelease();
+		m_ownedTrpStream = NULL;
+	}
+	m_activeInput = NULL;
 	if (m_stream != NULL) {
 		m_stream->Close();
 		delete m_stream;
@@ -922,6 +1430,7 @@ TrophyClientState::TrophyClientState(TrophyLwMutex *mutex)
 	: m_active(0),
 	  m_pid(-1),
 	  m_session(NULL),
+	  m_poolMutex(mutex),
 	  m_handlePool(mutex, TROPHY_ID_BASE_HANDLE, TROPHY_ID_SPAN, 16, m_handleSlots),
 	  m_contextPool(mutex, TROPHY_ID_BASE_CONTEXT, TROPHY_ID_SPAN, 4, m_contextSlots),
 	  m_titleSessionPool(mutex, TROPHY_ID_BASE_TITLE_SESSION, TROPHY_ID_SPAN, 16,
@@ -937,6 +1446,251 @@ TrophyClientState::TrophyClientState(TrophyLwMutex *mutex)
 TrophyClientState::~TrophyClientState()
 {
 	Disconnect(NP_TROPHY_ERR_CLIENT_CLOSED);
+}
+
+/* 0x812C87EA */
+int TrophyClientState::InitPools(SceUID pid, IPMI::Session *session, TrophyLwMutex *mutex)
+{
+	m_active = 1;
+	m_pid = pid;
+	m_session = session;
+	m_poolMutex = mutex;
+	sceClibMemset(m_handleSlots, 0, sizeof(m_handleSlots));
+	sceClibMemset(m_contextSlots, 0, sizeof(m_contextSlots));
+	sceClibMemset(m_titleSessionSlots, 0, sizeof(m_titleSessionSlots));
+	sceClibMemset(m_titleStorageSlots, 0, sizeof(m_titleStorageSlots));
+	sceClibMemset(m_confSourceSlots, 0, sizeof(m_confSourceSlots));
+	sceClibMemset(m_streamSlots, 0, sizeof(m_streamSlots));
+	return 0;
+}
+
+/* 0x812C8AE6 */
+bool TrophyClientState::HasActiveRefs() const
+{
+	if (m_poolMutex == NULL)
+		return false;
+
+	m_poolMutex->Lock();
+	int handleRefs = 0;
+	for (uint32_t i = 0; i < 16u; ++i) {
+		TrophyPooledObject *obj = m_handlePool.GetSlot(i);
+		if (obj != NULL && obj->IsValid())
+			handleRefs++;
+	}
+	m_poolMutex->Unlock();
+	if (handleRefs > 0)
+		return true;
+
+	m_poolMutex->Lock();
+	int ctxRefs = 0;
+	for (uint32_t i = 0; i < 4u; ++i) {
+		TrophyPooledObject *obj = m_contextPool.GetSlot(i);
+		if (obj != NULL && obj->IsValid())
+			ctxRefs++;
+	}
+	m_poolMutex->Unlock();
+	if (ctxRefs > 0)
+		return true;
+
+	m_poolMutex->Lock();
+	int sessionRefs = 0;
+	for (uint32_t i = 0; i < 16u; ++i) {
+		TrophyPooledObject *obj = m_titleSessionPool.GetSlot(i);
+		if (obj != NULL && obj->IsValid())
+			sessionRefs++;
+	}
+	m_poolMutex->Unlock();
+	if (sessionRefs > 0)
+		return true;
+
+	m_poolMutex->Lock();
+	int streamRefs = 0;
+	for (uint32_t i = 0; i < 4u; ++i) {
+		TrophyPooledObject *obj = m_streamPool.GetSlot(i);
+		if (obj != NULL && obj->IsValid())
+			streamRefs++;
+	}
+	m_poolMutex->Unlock();
+	return streamRefs > 0;
+}
+
+/* 0x812C8A98 */
+void TrophyClientState::SuspendTitleSessions(int reason)
+{
+	m_titleSessionPool.SuspendAll(reason);
+}
+
+/* 0x812C9D48 */
+void TrophyClientState::SuspendStreams(int reason)
+{
+	m_streamPool.SuspendAll(reason);
+}
+
+/* 0x812C8642 */
+void TrophyClientState::CloseAllOpenConfSources()
+{
+	if (m_poolMutex == NULL)
+		return;
+	m_poolMutex->Lock();
+	for (uint32_t i = 0; i < m_confSourcePool.GetCapacity(); ++i) {
+		TrophyConfSourcePoolObj *entry =
+			static_cast<TrophyConfSourcePoolObj *>(m_confSourcePool.GetSlot(i));
+		if (entry != NULL)
+			entry->CloseIfOpen();
+	}
+	m_poolMutex->Unlock();
+}
+
+/* 0x812CA86E */
+void TrophyClientState::CloseAllOpenTitleStorages()
+{
+	if (m_poolMutex == NULL)
+		return;
+	m_poolMutex->Lock();
+	for (uint32_t i = 0; i < m_titleStoragePool.GetCapacity(); ++i) {
+		TrophyTitleStoragePoolObj *entry =
+			static_cast<TrophyTitleStoragePoolObj *>(m_titleStoragePool.GetSlot(i));
+		if (entry != NULL)
+			entry->CloseIfOpen();
+	}
+	m_poolMutex->Unlock();
+}
+
+/* 0x812C8B9E */
+int TrophyClientState::CreateHandle(int handleType, TrophyHandlePoolObj **outObj)
+{
+	TrophyHandlePoolObj *obj = new TrophyHandlePoolObj();
+	if (obj == NULL)
+		return NP_TROPHY_ERR_OUT_OF_MEMORY;
+
+	int ret = obj->Init(handleType);
+	if (ret < 0) {
+		delete obj;
+		return ret;
+	}
+
+	int newId = allocNextHandleId();
+	ret = m_handlePool.Add(obj, &newId);
+	if (ret < 0) {
+		delete obj;
+		return NP_TROPHY_ERR_ALREADY_REGISTERED;
+	}
+
+	if (outObj != NULL) {
+		TrophyPooledObject *acquired = NULL;
+		if (m_handlePool.AcquireById(newId, &acquired) >= 0)
+			*outObj = static_cast<TrophyHandlePoolObj *>(acquired);
+	}
+	return 0;
+}
+
+/* 0x812C8E66 */
+int TrophyClientState::CreateContext(int titleIdMode, SceUID pid, const TrophyCommId *commId,
+				     const void *commSign, uint64_t options,
+				     TrophyContextPoolObj **outObj)
+{
+	TrophyContextPoolObj *obj = new TrophyContextPoolObj();
+	if (obj == NULL)
+		return NP_TROPHY_ERR_OUT_OF_MEMORY;
+
+	int ret = obj->Init(titleIdMode, pid, commId, commSign, options);
+	if (ret < 0) {
+		delete obj;
+		return ret;
+	}
+
+	int newId = allocNextContextId();
+	ret = m_contextPool.Add(obj, &newId);
+	if (ret < 0) {
+		delete obj;
+		return NP_TROPHY_ERR_ALREADY_REGISTERED;
+	}
+
+	if (outObj != NULL) {
+		TrophyPooledObject *acquired = NULL;
+		if (m_contextPool.AcquireById(newId, &acquired) >= 0)
+			*outObj = static_cast<TrophyContextPoolObj *>(acquired);
+	}
+	return 0;
+}
+
+/* 0x812C933C */
+int TrophyClientState::EnsureConfSourceOpen(TrophyTitleSessionPoolObj **sessionSlot,
+					    const TrophyCommId *commId)
+{
+	if (!m_mount.IsMounted()) {
+		int ret = m_mount.MountForPid(m_pid);
+		if (ret < 0)
+			return ret;
+	}
+
+	TrophyTitleSessionPoolObj *sessionObj = *sessionSlot;
+	TrophyConfSourcePoolObj *current = sessionObj->GetBoundConfSource();
+	if (current != NULL && current->IsSourceOpen() && current->GetCommId().Equals(*commId))
+		return 0;
+
+	if (current != NULL) {
+		if (current->IsSourceOpen()) {
+			int ret = current->CloseSource();
+			if (ret < 0)
+				return ret;
+		}
+		sessionObj->SetBoundConfSource(NULL);
+	}
+
+	TrophyConfSourcePoolObj *acquired = NULL;
+	int ret = AcquireOrCreateConfSource(commId, &acquired);
+	if (ret < 0)
+		return ret;
+
+	sessionObj->SetBoundConfSource(acquired);
+	acquired->ReleaseRef();
+	CloseAllOpenConfSources();
+	return 0;
+}
+
+/* 0x812C9428 */
+int TrophyClientState::CreateTitleSession(TrophyTitleSessionPoolObj **outObj)
+{
+	TrophyTitleSessionPoolObj *obj = new TrophyTitleSessionPoolObj();
+	if (obj == NULL)
+		return NP_TROPHY_ERR_OUT_OF_MEMORY;
+
+	int newId = allocNextTitleSessionId();
+	int ret = m_titleSessionPool.Add(obj, &newId);
+	if (ret < 0) {
+		delete obj;
+		return NP_TROPHY_ERR_ALREADY_REGISTERED;
+	}
+
+	if (outObj != NULL) {
+		TrophyPooledObject *acquired = NULL;
+		if (m_titleSessionPool.AcquireById(newId, &acquired) >= 0)
+			*outObj = static_cast<TrophyTitleSessionPoolObj *>(acquired);
+	}
+	return 0;
+}
+
+/* 0x812C9A28 */
+int TrophyClientState::CreateStream(TrophyStreamPoolObj **outObj)
+{
+	TrophyStreamPoolObj *obj = new TrophyStreamPoolObj();
+	if (obj == NULL)
+		return NP_TROPHY_ERR_OUT_OF_MEMORY;
+
+	int newId = allocNextStreamId();
+	int ret = m_streamPool.Add(obj, &newId);
+	if (ret < 0) {
+		delete obj;
+		return NP_TROPHY_ERR_ALREADY_REGISTERED;
+	}
+
+	if (outObj != NULL) {
+		TrophyPooledObject *acquired = NULL;
+		if (m_streamPool.AcquireById(newId, &acquired) >= 0)
+			*outObj = static_cast<TrophyStreamPoolObj *>(acquired);
+	}
+	return 0;
 }
 
 int TrophyClientState::Connect(SceUID pid, IPMI::Session *session)
@@ -1063,7 +1817,7 @@ int TrophyClientState::AcquireOrCreateTitleStorage(TrophyTitleSessionPoolObj *ti
 		return ret;
 	}
 
-	int storageId = 0;
+	int storageId = allocNextTitleStorageId();
 	ret = m_titleStoragePool.Add(created, &storageId);
 	if (ret < 0) {
 		delete created;
@@ -1113,7 +1867,7 @@ int TrophyClientState::AcquireOrCreateConfSource(const TrophyCommId *commId,
 		return ret;
 	}
 
-	int sourceId = 0;
+	int sourceId = allocNextConfSourceId();
 	ret = m_confSourcePool.Add(created, &sourceId);
 	if (ret < 0) {
 		delete created;
@@ -1172,6 +1926,7 @@ SceNpTrophyService::SceNpTrophyService()
 	sceClibMemset(m_clients, 0, sizeof(m_clients));
 }
 
+/* 0x812C7FEC */
 SceNpTrophyService::~SceNpTrophyService()
 {
 	Term();
@@ -1228,6 +1983,67 @@ TrophyClientState *SceNpTrophyService::FindClientLocked(SceUID pid, IPMI::Sessio
 		}
 	}
 	return NULL;
+}
+
+/* 0x812C9DFE */
+int SceNpTrophyService::RegisterClient(SceUID pid, IPMI::Session *session,
+				       TrophyClientState **outClient)
+{
+	for (int i = 0; i < 8; ++i) {
+		if (m_clients[i] != NULL && m_clients[i]->IsActive() &&
+		    m_clients[i]->GetPid() == pid) {
+			return NP_TROPHY_ERR_CONTEXT_LIMIT;
+		}
+	}
+	for (int i = 0; i < 8; ++i) {
+		if (m_clients[i] != NULL && m_clients[i]->IsActive() &&
+		    m_clients[i]->GetPid() == pid && m_clients[i]->GetSession() == session) {
+			return NP_TROPHY_ERR_CONTEXT_LIMIT;
+		}
+	}
+
+	int freeSlot = -1;
+	for (int i = 0; i < 8; ++i) {
+		if (m_clients[i] == NULL) {
+			freeSlot = i;
+			break;
+		}
+	}
+	if (freeSlot < 0)
+		return NP_TROPHY_ERR_ALREADY_REGISTERED;
+
+	TrophyClientState *client = new TrophyClientState(&m_mutex);
+	if (client == NULL)
+		return NP_TROPHY_ERR_OUT_OF_MEMORY;
+
+	int ret = client->InitPools(pid, session, &m_mutex);
+	if (ret < 0) {
+		delete client;
+		return ret;
+	}
+
+	m_clients[freeSlot] = client;
+	if (outClient != NULL)
+		*outClient = client;
+	return 0;
+}
+
+/* 0x812C9EC4 */
+int SceNpTrophyService::UnregisterClient(SceUID pid, IPMI::Session *session)
+{
+	for (int i = 0; i < 8; ++i) {
+		TrophyClientState *client = m_clients[i];
+		if (client != NULL && client->IsActive() && client->GetPid() == pid &&
+		    client->GetSession() == session) {
+			if (client->HasActiveRefs())
+				return NP_TROPHY_ERR_HANDLE_LIMIT;
+			client->Disconnect(NP_TROPHY_ERR_CLIENT_CLOSED);
+			delete client;
+			m_clients[i] = NULL;
+			return 0;
+		}
+	}
+	return NP_TROPHY_ERR_HANDLE_LIMIT;
 }
 
 int SceNpTrophyService::OnClientConnect(SceUID pid, IPMI::Session *session)

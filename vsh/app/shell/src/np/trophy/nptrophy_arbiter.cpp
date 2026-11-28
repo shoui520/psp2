@@ -23,15 +23,17 @@
 #define TROPHY_MOUNT_KIND_TITLE_BACKUP	3
 
 TrophyStorageArbiter g_trophyStorageArbiter;
+static TrophyStorageArbiter *s_globalArbiter = NULL;
 
 /* =========================================================================
- * TrophyStorageArbiterClient (0x812CDB98..0x812CDC5F)
+ * TrophyStorageArbiterClient (0x812CDB98..0x812CDC5F, 0x812CE318..0x812CE3B7)
  * ========================================================================= */
 
 TrophyStorageArbiterClient::TrophyStorageArbiterClient(TrophyStorageArbiter *arbiter,
 						       uint32_t accessFlags)
 	: m_arbiter(arbiter),
 	  m_accessFlags(accessFlags),
+	  m_boundHandle(NULL),
 	  m_preemptError(0),
 	  m_registered(0)
 {
@@ -41,6 +43,50 @@ TrophyStorageArbiterClient::~TrophyStorageArbiterClient()
 {
 	if (m_registered != 0 && m_arbiter != NULL)
 		m_arbiter->ReleaseClient(this);
+	if (m_boundHandle != NULL) {
+		m_boundHandle->ReleaseRef();
+		m_boundHandle = NULL;
+	}
+}
+
+/* 0x812CE318 */
+int TrophyStorageArbiterClient::Open(TrophyHandle *handle, uint32_t accessFlags)
+{
+	if (m_accessFlags != 0 && m_registered != 0)
+		return NP_TROPHY_ERR_INVALID_ARGUMENT;
+
+	TrophyStorageArbiter *arbiter = NULL;
+	int ret = TrophyStorageArbiter::GetGlobal(&arbiter);
+	if (ret < 0)
+		return ret;
+
+	m_boundHandle = handle;
+	if (handle != NULL)
+		handle->AddRef();
+	m_accessFlags = accessFlags;
+
+	TrophyStorageArbiterClient *acquired = NULL;
+	ret = arbiter->AcquireClient(handle, accessFlags, &acquired);
+	if (ret >= 0) {
+		m_arbiter = arbiter;
+		if (acquired != NULL)
+			delete acquired;
+		return 0;
+	}
+
+	if (m_boundHandle != NULL) {
+		m_boundHandle->ReleaseRef();
+		m_boundHandle = NULL;
+	}
+	return ret;
+}
+
+/* 0x812CE3A4 */
+int TrophyStorageArbiterClient::CheckHandle(TrophyHandle *handle) const
+{
+	if (m_boundHandle == handle)
+		return 0;
+	return NP_TROPHY_ERR_INVALID_ARGUMENT;
 }
 
 int TrophyStorageArbiterClient::CheckPreempted() const
@@ -58,6 +104,203 @@ void TrophyStorageArbiterClient::Detach()
 {
 	m_registered = 0;
 	m_arbiter = NULL;
+}
+
+/* =========================================================================
+ * TrophyMountBase, TrophyUserRootMount, TrophyTitleMount & Guard
+ * (0x812CE3B8..0x812CE827)
+ * ========================================================================= */
+
+TrophyMountBase::TrophyMountBase()
+	: m_mounted(0), m_refCount(0)
+{
+	sceClibMemset(m_mountPoint, 0, sizeof(m_mountPoint));
+}
+
+/* 0x812CE486 / 0x812CE4AC */
+TrophyMountBase::~TrophyMountBase()
+{
+	if (m_mounted != 0 && sceAppMgrUmount(m_mountPoint) >= 0)
+		m_mounted = 0;
+}
+
+/* 0x812CE470 */
+int TrophyMountBase::Unmount()
+{
+	int ret = sceAppMgrUmount(m_mountPoint);
+	if (ret >= 0) {
+		m_mounted = 0;
+		return 0;
+	}
+	return ret;
+}
+
+const char *TrophyMountBase::GetMountPoint() const
+{
+	return (m_mounted != 0) ? m_mountPoint : NULL;
+}
+
+/* 0x812CE4D8 */
+TrophyUserRootMount::TrophyUserRootMount()
+{
+}
+
+TrophyUserRootMount::~TrophyUserRootMount()
+{
+}
+
+/* 0x812CE50C */
+int TrophyUserRootMount::Mount()
+{
+	if (m_mounted != 0) {
+		m_refCount++;
+		return 0;
+	}
+
+	int ret = sceAppMgrTrophyMount(TROPHY_MOUNT_ID_USER_ROOT, -1, m_mountPoint);
+	if (ret < 0)
+		return ret;
+
+	m_mounted = 1;
+	m_refCount = 0;
+	return 0;
+}
+
+/* 0x812CE53A */
+int TrophyUserRootMount::Unmount()
+{
+	if (m_refCount != 0) {
+		m_refCount--;
+		return 0;
+	}
+
+	int ret = sceAppMgrUmount(m_mountPoint);
+	if (ret >= 0) {
+		m_mounted = 0;
+		sceClibMemset(m_mountPoint, 0, sizeof(m_mountPoint));
+		return 0;
+	}
+	return ret;
+}
+
+/* 0x812CE570 */
+TrophyTitleMount::TrophyTitleMount()
+{
+	m_commId.Clear();
+}
+
+/* 0x812CE5AA / 0x812CE5E6 */
+TrophyTitleMount::~TrophyTitleMount()
+{
+}
+
+/* 0x812CE626 */
+int TrophyTitleMount::MatchesCommId(const TrophyCommId *commId) const
+{
+	if (m_mounted == 0)
+		return NP_TROPHY_ERR_DATA_DIR_MISSING;
+	if (m_commId.Equals(*commId))
+		return 0;
+	return NP_TROPHY_ERR_DATA_DIR_MISSING;
+}
+
+/* 0x812CE64E */
+int TrophyTitleMount::MountData(const TrophyCommId *commId)
+{
+	if (m_mounted != 0) {
+		int ret = MatchesCommId(commId);
+		if (ret < 0)
+			return ret;
+		m_refCount++;
+		return 0;
+	}
+
+	char commStr[16];
+	int ret = npTrophyFormatCommId(commId, commStr, sizeof(commStr));
+	if (ret < 0)
+		return ret;
+
+	ret = sceAppMgrTrophyMountById(TROPHY_MOUNT_ID_TITLE_DATA, commStr, m_mountPoint);
+	if (ret < 0)
+		return ret;
+
+	m_commId = *commId;
+	m_mounted = 1;
+	m_refCount = 0;
+	return 0;
+}
+
+/* 0x812CE71C */
+int TrophyTitleMount::MountBackup(const TrophyCommId *commId)
+{
+	if (m_mounted != 0) {
+		int ret = MatchesCommId(commId);
+		if (ret < 0)
+			return ret;
+		m_refCount++;
+		return 0;
+	}
+
+	char commStr[16];
+	int ret = npTrophyFormatCommId(commId, commStr, sizeof(commStr));
+	if (ret < 0)
+		return ret;
+
+	ret = sceAppMgrTrophyMountById(TROPHY_MOUNT_ID_TITLE_BACKUP, commStr, m_mountPoint);
+	if (ret < 0)
+		return ret;
+
+	m_commId = *commId;
+	m_mounted = 1;
+	m_refCount = 0;
+	return 0;
+}
+
+/* 0x812CE7EA */
+int TrophyTitleMount::Unmount()
+{
+	if (m_refCount != 0) {
+		m_refCount--;
+		return 0;
+	}
+
+	int ret = sceAppMgrUmount(m_mountPoint);
+	if (ret >= 0) {
+		m_mounted = 0;
+		sceClibMemset(m_mountPoint, 0, sizeof(m_mountPoint));
+		m_commId.Clear();
+		return 0;
+	}
+	return ret;
+}
+
+TrophyMountGuard::TrophyMountGuard()
+	: m_client(NULL), m_mountPtr(NULL)
+{
+}
+
+/* 0x812CE3B8 */
+TrophyMountGuard::~TrophyMountGuard()
+{
+	if (m_client != NULL && m_mountPtr != NULL && *m_mountPtr != NULL) {
+		(*m_mountPtr)->Unmount();
+		m_client = NULL;
+		m_mountPtr = NULL;
+	}
+}
+
+/* 0x812CE464 */
+const char *TrophyMountGuard::GetPath() const
+{
+	if (m_mountPtr == NULL || *m_mountPtr == NULL)
+		return NULL;
+	return (*m_mountPtr)->GetMountPoint();
+}
+
+void TrophyMountGuard::Attach(TrophyStorageArbiterClient *client, TrophyMountBase **mountPtr)
+{
+	m_client = client;
+	m_mountPtr = mountPtr;
 }
 
 /* =========================================================================
@@ -96,9 +339,28 @@ TrophyStorageArbiter::TrophyStorageArbiter()
 		m_mounts[i].Clear();
 }
 
+/* 0x812CDCE0 */
 TrophyStorageArbiter::~TrophyStorageArbiter()
 {
 	Term();
+}
+
+/* 0x812CDC56 */
+void TrophyStorageArbiter::TermGlobal()
+{
+	if (s_globalArbiter != NULL) {
+		delete s_globalArbiter;
+		s_globalArbiter = NULL;
+	}
+}
+
+/* 0x812CDC7C */
+int TrophyStorageArbiter::GetGlobal(TrophyStorageArbiter **outArbiter)
+{
+	if (s_globalArbiter == NULL)
+		return NP_TROPHY_ERR_NOT_INITIALIZED;
+	*outArbiter = s_globalArbiter;
+	return 0;
 }
 
 int TrophyStorageArbiter::Init()
@@ -549,6 +811,39 @@ int TrophyUserSession::Close()
 	return 0;
 }
 
+/* 0x812CE9C0 */
+bool TrophyUserSession::IsOpen() const
+{
+	return m_isOpen != 0;
+}
+
+/* 0x812CEA3C */
+int TrophyUserSession::EnsureIndexOpen(TrophyHandle *handle)
+{
+	if (m_indexStorage->IsOpen())
+		return 0;
+
+	TrophyDualTick nowTicks;
+	nowTicks.Clear();
+	int ret = npTrophyGetDualTick(&nowTicks);
+	if (ret >= 0) {
+		if (m_indexStorage->IsOpen())
+			ret = m_indexStorage->Close();
+		if (ret >= 0) {
+			int openMode = ((m_accessFlags & TROPHY_ARBITER_MODE_MASK) ==
+					TROPHY_ARBITER_MODE_EXCLUSIVE)
+					       ? 2
+					       : 1;
+			ret = m_indexStorage->Open(handle, openMode, &nowTicks);
+			if (ret >= 0)
+				return 0;
+		}
+	}
+	if (m_indexStorage->IsOpen())
+		m_indexStorage->Close();
+	return ret;
+}
+
 int TrophyUserSession::EnsureReady(TrophyHandle *handle, int requiredMode)
 {
 	if (!IsOpen())
@@ -624,6 +919,254 @@ int TrophyUserSession::RemoveAllTitles(TrophyHandle *handle)
 	return ret;
 }
 
+/* 0x812CEBEA */
+int TrophyUserSession::RemoveAllTitlesData(TrophyHandle *handle)
+{
+	int ret = EnsureReady(handle, 1);
+	if (ret < 0)
+		return ret;
+	ret = npTrophyRemoveUr0ConfRoot(m_userId);
+	if (ret < 0)
+		return ret;
+	ret = npTrophyRemoveUr0DataRoot(m_userId);
+	if (ret < 0)
+		return ret;
+	return npTrophyRemoveUx0ConfRoot(m_userId);
+}
+
+/* 0x812CEC1C */
+int TrophyUserSession::FindOrRecoverTitleRecord(TrophyHandle *handle, const TrophyCommId *commId,
+						bool *outExists, TrophyTitleRecord *outRecord)
+{
+	bool attemptedRecovery = false;
+	for (;;) {
+		int ret = m_indexStorage->HasTitle(handle, commId, outExists, outRecord);
+		if (ret < 0)
+			return ret;
+		if (*outExists)
+			return 0;
+
+		bool needsRecovery = false;
+		ret = m_indexStorage->GetNeedsRecovery(handle, &needsRecovery);
+		if (ret < 0)
+			return ret;
+		if (!needsRecovery || attemptedRecovery) {
+			*outExists = false;
+			return 0;
+		}
+		if (!IsOpen() ||
+		    (m_accessFlags & TROPHY_ARBITER_MODE_MASK) != TROPHY_ARBITER_MODE_EXCLUSIVE) {
+			return NP_TROPHY_ERR_USER_SESSION_NOT_OPEN;
+		}
+
+		TrophyRecoveryController recovery(this);
+		ret = recovery.RecoverTitleIfExists(handle, commId);
+		if (ret < 0)
+			return ret;
+		attemptedRecovery = true;
+	}
+}
+
+/* 0x812CECEE */
+int TrophyUserSession::GetTitleInstallState(TrophyHandle *handle, const TrophyCommId *commId,
+					    int *outState)
+{
+	TrophyTitleRecord record;
+	record.Clear();
+	bool exists = false;
+	int ret = FindOrRecoverTitleRecord(handle, commId, &exists, &record);
+	if (ret < 0)
+		return ret;
+
+	if (!exists)
+		*outState = 2;
+	else if (record.IsBroken())
+		*outState = 1;
+	else
+		*outState = 3;
+	return 0;
+}
+
+/* 0x812CED90 */
+int TrophyUserSession::CheckTitleAgainstTrp(TrophyHandle *handle, const TrophyCommId *commId,
+					    TrophyTrpConfSource *trpSource, int *outState,
+					    TrophyGradeBitsets *outBitsets)
+{
+	int ret = EnsureReady(handle, 2);
+	if (ret < 0)
+		return ret;
+
+	sceClibMemset(outBitsets, 0, sizeof(*outBitsets));
+
+	bool isDev = false;
+	trpSource->IsDevFlagSet(&isDev);
+
+	TrophyConfMeta trpMeta;
+	trpMeta.Clear();
+	TrophyConfData *trpConf = NULL;
+	ret = trpSource->ReadDefaultConf(handle, &trpConf);
+	if (ret < 0)
+		return ret;
+
+	if ((trpConf->GetPlatformMask() & TROPHY_PLATFORM_PSP2) == 0) {
+		delete trpConf;
+		return NP_TROPHY_ERR_INVALID_PLATFORM;
+	}
+
+	ret = trpConf->BuildGradeBitsets(outBitsets);
+	if (ret >= 0) {
+		TrophyTitleRecord record;
+		record.Clear();
+		bool exists = false;
+		ret = FindOrRecoverTitleRecord(handle, commId, &exists, &record);
+		if (ret >= 0) {
+			if (!exists) {
+				*outState = 2;
+			} else if (record.IsBroken()) {
+				*outState = 1;
+			} else if (record.titleSnapshot.confMeta.sourceType != 1u) {
+				*outState = 2;
+			} else if (record.titleSnapshot.summary.trophySetVersion <
+				   trpConf->GetTrophySetVersion()) {
+				*outState = 4;
+			} else if (isDev &&
+				   !trpMeta.sha1.Equals(record.titleSnapshot.confMeta.sha1)) {
+				*outState = 5;
+			} else {
+				*outState = 3;
+			}
+			ret = 0;
+		}
+	}
+
+	delete trpConf;
+	return ret;
+}
+
+/* 0x812CEF1C */
+int TrophyUserSession::GetTitleCount(TrophyHandle *handle, uint32_t *outCount)
+{
+	int ret = EnsureReady(handle, 2);
+	if (ret < 0)
+		return ret;
+	uint32_t counts[4];
+	ret = m_indexStorage->GetCounts(handle, counts);
+	if (ret < 0)
+		return ret;
+	*outCount = counts[0];
+	return 0;
+}
+
+/* 0x812CEF42 */
+int TrophyUserSession::GetInstalledCount(TrophyHandle *handle, uint32_t *outCount)
+{
+	int ret = EnsureReady(handle, 2);
+	if (ret < 0)
+		return ret;
+	uint32_t counts[4];
+	ret = m_indexStorage->GetCounts(handle, counts);
+	if (ret < 0)
+		return ret;
+	*outCount = counts[1];
+	return 0;
+}
+
+/* 0x812CEF68 */
+int TrophyUserSession::EnumerateTitleInfo(TrophyHandle *handle, uint32_t startIndex,
+					  uint32_t *outFoundIndex, void *outTitleInfo)
+{
+	int ret = EnsureReady(handle, 2);
+	if (ret < 0)
+		return ret;
+	ret = m_indexStorage->EnumerateTitle(handle, startIndex, outFoundIndex, outTitleInfo, NULL);
+	return (ret >= 0) ? 0 : ret;
+}
+
+/* 0x812CEFA4 */
+int TrophyUserSession::GetOldestTitleInfo(TrophyHandle *handle, void *outTitleInfo,
+					  void *outSyncInfo, void *outTitleDetails)
+{
+	int ret = EnsureReady(handle, 2);
+	if (ret < 0)
+		return ret;
+
+	TrophyTitleRecord oldest;
+	oldest.Clear();
+	ret = m_indexStorage->FindOldestOrBrokenTitle(handle, &oldest);
+	if (ret < 0)
+		return ret;
+	if (!oldest.HasInstalledFlag())
+		return NP_TROPHY_ERR_CLIENT_NOT_FOUND;
+
+	TrophyConfHandle *confHandle = NULL;
+	TrophyTitleStorage *titleStorage = NULL;
+
+	if (!oldest.IsBroken()) {
+		titleStorage = new TrophyTitleStorage(this, &oldest.commId);
+		if (titleStorage == NULL)
+			return NP_TROPHY_ERR_OUT_OF_MEMORY;
+
+		int openRet = titleStorage->Open(handle, 7u);
+		if (openRet >= 0)
+			openRet = titleStorage->ReadConfHandle(handle, &confHandle);
+		if (openRet >= 0)
+			openRet = titleStorage->ExtractTitleText(handle, confHandle,
+								 outTitleDetails);
+		if (openRet < 0) {
+			oldest.MarkBroken(0);
+			sceClibMemset(outTitleDetails, 0, 1180);
+		}
+	}
+
+	if (outTitleInfo != NULL)
+		oldest.ExportTitleInfo(outTitleInfo);
+	if (outSyncInfo != NULL)
+		oldest.ExportSyncInfo(outSyncInfo);
+
+	if (confHandle != NULL)
+		delete confHandle;
+	if (titleStorage != NULL) {
+		if (titleStorage->IsOpen())
+			titleStorage->Close();
+		delete titleStorage;
+	}
+	return 0;
+}
+
+/* 0x812CF130 */
+int TrophyUserSession::DebugMarkTitleBroken(const TrophyCommId *commId, int brokenKind)
+{
+	TrophyHandle *tempHandle = new TrophyHandle();
+	if (tempHandle == NULL)
+		return NP_TROPHY_ERR_OUT_OF_MEMORY;
+
+	int ret = tempHandle->Init();
+	if (ret >= 0) {
+		TrophyUserSession *tempSession = new TrophyUserSession();
+		if (tempSession == NULL) {
+			ret = NP_TROPHY_ERR_OUT_OF_MEMORY;
+		} else {
+			ret = tempSession->Open(tempHandle, &g_trophyStorageArbiter, 0,
+						0x00230002u);
+			if (ret >= 0) {
+				TrophyTitleStorage *storage =
+					new TrophyTitleStorage(tempSession, commId);
+				if (storage == NULL) {
+					ret = NP_TROPHY_ERR_OUT_OF_MEMORY;
+				} else {
+					ret = storage->MarkBroken(tempHandle, brokenKind);
+					if (ret >= 0)
+						ret = tempSession->Close();
+					delete storage;
+				}
+			}
+			delete tempSession;
+		}
+	}
+	delete tempHandle;
+	return ret;
+}
+
 /* UserSession bridge functions declared in nptrophy_storage.h */
 int npTrophyUserSessionEnsureReady(TrophyUserSession *session, TrophyHandle *handle, int mode)
 {
@@ -680,12 +1223,57 @@ int npTrophyUserSessionPurgeTitle(TrophyUserSession *session, TrophyHandle *hand
  * ========================================================================= */
 
 TrophySyncController::TrophySyncController(TrophyUserSession *session)
-	: m_session(session)
+	: m_session(session),
+	  m_titleListFetcher(NULL)
 {
 }
 
 TrophySyncController::~TrophySyncController()
 {
+	if (m_titleListFetcher != NULL) {
+		delete m_titleListFetcher;
+		m_titleListFetcher = NULL;
+	}
+}
+
+/* 0x812CF8FE */
+int TrophySyncController::PrepareModifiedTitleFetcher(TrophyHandle *handle,
+						      const SceRtcTick *sinceUtc,
+						      TrophyProgress *progress)
+{
+	SceNpId npId;
+	int ret = TrophyTicketClient::FetchNpId(handle, &npId);
+	if (ret < 0)
+		return ret;
+
+	SceNpId copiedNpId;
+	ret = npTrophyCopyNonEmptyNpId(&npId, &copiedNpId);
+	if (ret < 0)
+		return ret;
+
+	TrophyNetTitleListFetcher *fetcher = new TrophyNetTitleListFetcher();
+	if (fetcher == NULL)
+		return NP_TROPHY_ERR_OUT_OF_MEMORY;
+
+	ret = fetcher->Init(&copiedNpId, sinceUtc);
+	if (ret < 0) {
+		delete fetcher;
+		return ret;
+	}
+
+	ret = fetcher->FetchNextPage(handle, m_session->GetNetClient());
+	if (ret < 0) {
+		delete fetcher;
+		return ret;
+	}
+
+	if (progress != NULL)
+		progress->AddTotal(static_cast<int>(fetcher->GetTotalCount()) * 5);
+
+	if (m_titleListFetcher != NULL)
+		delete m_titleListFetcher;
+	m_titleListFetcher = fetcher;
+	return 0;
 }
 
 int TrophySyncController::CheckNetSync(TrophyHandle *handle, uint64_t options, int *outNeedSync)
@@ -1117,6 +1705,100 @@ int TrophyRecoveryController::ScanAndRebuildUserIndex(TrophyHandle *handle)
 		ret = RecoverSingleTitle(handle, &commId, exists ? &existingRec : NULL);
 		if (ret < 0)
 			break;
+	}
+
+	dir.Close();
+	return ret;
+}
+
+/* 0x812CFDD6 */
+int TrophyRecoveryController::RecoverTitleEntry(TrophyHandle *handle, const TrophyCommId *commId)
+{
+	TrophyTitleRecord record;
+	record.Clear();
+
+	TrophyUserIndexStorage *indexStorage = m_session->GetIndexStorage();
+	int ret = RecoverSingleTitle(handle, commId, NULL);
+	if (ret >= 0) {
+		uint32_t counts[4];
+		ret = indexStorage->GetCounts(handle, counts);
+		if (ret >= 0 && counts[1] >= TROPHY_MAX_INSTALLED_TITLES) {
+			TrophyTitleRecord oldest;
+			oldest.Clear();
+			ret = indexStorage->FindOldestOrBrokenTitle(handle, &oldest);
+			if (ret >= 0 && oldest.HasInstalledFlag()) {
+				TrophyTitleStorage evictStorage(m_session, &oldest.commId);
+				ret = evictStorage.Uninstall(handle);
+			}
+		}
+		if (ret >= 0) {
+			record.commId = *commId;
+			ret = indexStorage->AddTitle(handle, &record);
+			if (ret >= 0)
+				return 0;
+		}
+	}
+
+	record.Clear();
+	record.commId = *commId;
+	record.MarkBroken(1);
+	return indexStorage->AddTitle(handle, &record);
+}
+
+/* 0x812CFF32 */
+int TrophyRecoveryController::ScanAndRecoverAllTitles(TrophyHandle *handle)
+{
+	int ret = m_session->EnsureReady(handle, 1);
+	if (ret < 0)
+		return ret;
+
+	int userId = m_session->GetUserId();
+	ret = npTrophyRemoveUr0SceTropDir(userId);
+	if (ret < 0)
+		return ret;
+
+	ret = m_session->EnsureIndexOpen(handle);
+	if (ret < 0)
+		return ret;
+
+	char dataRoot[256];
+	ret = npTrophyUr0DataRootPath(dataRoot, userId);
+	if (ret < 0)
+		return ret;
+
+	bool rootExists = false;
+	ret = npTrophyPathExists(dataRoot, &rootExists);
+	if (ret < 0 || !rootExists)
+		return ret;
+
+	TrophyDir dir;
+	ret = dir.Open(dataRoot, false);
+	if (ret < 0)
+		return ret;
+
+	for (;;) {
+		TrophyDirEntry entry;
+		bool hasEntry = false;
+		ret = dir.Read(&entry, &hasEntry);
+		if (ret < 0)
+			break;
+		if (!hasEntry) {
+			ret = dir.Close();
+			if (ret >= 0)
+				ret = m_session->GetIndexStorage()->ClearNeedsRecovery(handle);
+			return ret;
+		}
+		if (entry.kind == TROPHY_DIR_ENTRY_DIR &&
+		    sceClibStrncmp(entry.name, ".", 2) != 0 &&
+		    sceClibStrncmp(entry.name, "..", 3) != 0 &&
+		    !npTrophyIsSceTropDirName(entry.name)) {
+			TrophyCommId commId;
+			if (npTrophyParseCommDirName(entry.name, &commId)) {
+				ret = RecoverTitleEntry(handle, &commId);
+				if (ret < 0)
+					break;
+			}
+		}
 	}
 
 	dir.Close();
