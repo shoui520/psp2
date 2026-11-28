@@ -52,11 +52,16 @@ enum {
 	TEMPLATE_STATUS_DIALOG_HEADER    =  2135074743,
 	WIDGET_STATUS_DIALOG_HEADER_ROOT =   526555210,
 	WIDGET_STATUS_DIALOG_COMMENT_BOX =  -230985351,
-	WIDGET_STATUS_DIALOG_COMMENT_BAR =   548899213,
+	WIDGET_STATUS_DIALOG_SEND_BTN    =   548899213,
+	TEMPLATE_POST_COMMENT_OVERLAY    =  1498982009,
+	WIDGET_POST_COMMENT_OVERLAY      =  -800904207,
+	WIDGET_BUSY_FOOTER_TARGET        = -1361887340,
 
+	TEMPLATE_GOODJOB_HEADER_BOX      =  -571882114,
 	WIDGET_GOODJOB_HEADER_BOX        =   619555798,
 	TEMPLATE_GOODJOB_VOTE_BTN        =  1423544944,
 	WIDGET_GOODJOB_VOTE_BTN          =  -113409995,
+	WIDGET_GOODJOB_VOTE_ICON         = -1907206792,
 	WIDGET_GOODJOB_VOTE_LABEL        =  -196625912,
 	TEMPLATE_GOODJOB_AREA            =  2057018850,
 	WIDGET_GOODJOB_AREA              = -1245339371,
@@ -76,7 +81,8 @@ enum {
 	STR_DELETE_COMMENT_CONFIRM       = -1529301176,
 	STR_TOO_MANY_JOBS                = -1463023626,
 	STR_POPUP_DELETE                 =  -243196622,
-	STR_POPUP_REPORT                 =  1528059821
+	STR_POPUP_REPORT                 =  1528059821,
+	MSG_STATUS_NOT_FOUND             =   482989490
 };
 
 /* Lv1 status panel DrawObj slot indices */
@@ -100,19 +106,25 @@ enum {
 	EVENT_BUTTON_DECIDE        = 0x10000008,
 	EVENT_TEXTBOX_EDIT_BEGIN   = 0x10000007,
 	EVENT_TEXTBOX_EDIT_END     = 0x10000008,
+	EVENT_TEXTBOX_IME_OPEN     = 0x10000009,
 	EVENT_TEXTBOX_ENTER        = 0x1000000B,
 	EVENT_TEXTBOX_CHANGED      = 0x1000000C,
 	TIMER_ID_DIALOG_CLIP       = 0x0123,
-	TIMER_ID_POST_COMMENT_ANIM = 0x0124,
-	ANIM_CHANNEL_COLOR         = 0x00010002,
+	TIMER_ID_POST_COMMENT_ANIM = 0x0000,
+	ANIM_CHANNEL_COLOR         = 0x00010001,
+	ANIM_CHANNEL_ALPHA         = 0x00010002,
 	ANIM_CHANNEL_META_ALPHA    = 0x00010003,
 	ANIM_CHANNEL_SIZE          = 0x00010004,
-	ANIM_CHANNEL_POS           = 0x00010005
+	ANIM_CHANNEL_POS           = 0x00010000,
+	OBJ_ANIM_COLOR             = 0x00020300
 };
 
 enum {
-	ACTIVITY_ERR_NOT_FOUND = (int)0x80101005,
+	ACTIVITY_ERR_NOT_FOUND = (int)0x80558A65,
+	ACTIVITY_ERR_SYS_UPDATE = (int)0x80550412,
+	ACTIVITY_ERR_POST_CANCELED = (int)0x80101048,
 	ACTIVITY_MAX_PENDING_JOBS = 10,
+	ACTIVITY_MAX_COMMENTS = 20,
 	ACTIVITY_MAX_GOODJOB_VOTES = 100,
 	ACTIVITY_MAX_GOODJOB_NAMES = 15,
 	ACTIVITY_COMMENT_MAX_LENGTH = 140
@@ -146,20 +158,79 @@ struct ActivityFileListRegistry {
 };
 
 struct ActivityDialogManager {
-	ActivityDialogManager() : nextDialogId(1)
-	{
-	}
+	ActivityDialogManager();
+	~ActivityDialogManager();
+
+	void UnregisterDialog(int dialogId);
+	ActivityStatusDialog *FindById(int dialogId);
+	ActivityStatusDialog *FindByStatusRowid(const SceInt64 *statusRowid);
+	void NotifyCacheInfoUpdated();
 
 	paf::map<int, ActivityStatusDialog *> dialogs;
 	int nextDialogId;
 };
 
-struct ActivityServiceManager {
-	ActivityServiceManager()
-		: syncHandle(),
-		  postJobQueue(NULL)
-	{
+/* 0x8135A10C */
+ActivityDialogManager::ActivityDialogManager()
+	: dialogs(),
+	  nextDialogId(0)
+{
+}
+
+ActivityDialogManager::~ActivityDialogManager()
+{
+}
+
+/* 0x81352888 */
+void ActivityDialogManager::UnregisterDialog(int dialogId)
+{
+	paf::map<int, ActivityStatusDialog *>::iterator it = dialogs.find(dialogId);
+	if (it != dialogs.end())
+		dialogs.erase(it);
+}
+
+/* 0x81353DB4 */
+ActivityStatusDialog *ActivityDialogManager::FindById(int dialogId)
+{
+	paf::map<int, ActivityStatusDialog *>::iterator it = dialogs.find(dialogId);
+	if (it == dialogs.end())
+		return NULL;
+	return it->second;
+}
+
+/* 0x813564A2 */
+ActivityStatusDialog *ActivityDialogManager::FindByStatusRowid(const SceInt64 *statusRowid)
+{
+	if (statusRowid == NULL)
+		return NULL;
+
+	for (paf::map<int, ActivityStatusDialog *>::iterator it = dialogs.begin();
+	     it != dialogs.end(); ++it) {
+		ActivityStatusDialog *dialog = it->second;
+		if (dialog != NULL && dialog->m_record.get() != NULL &&
+		    dialog->m_record->GetRecordKind() == LIVE2_RECORD_STATUS) {
+			Live2StatusRecord *statusRec =
+				static_cast<Live2StatusRecord *>(dialog->m_record.get());
+			if (statusRec->m_status.rowid == *statusRowid)
+				return dialog;
+		}
 	}
+	return NULL;
+}
+
+/* 0x8135AAA6 */
+void ActivityDialogManager::NotifyCacheInfoUpdated()
+{
+	for (paf::map<int, ActivityStatusDialog *>::iterator it = dialogs.begin();
+	     it != dialogs.end(); ++it) {
+		if (it->second != NULL)
+			it->second->OnCacheInfoUpdated();
+	}
+}
+
+struct ActivityServiceManager {
+	ActivityServiceManager();
+	~ActivityServiceManager();
 
 	paf::common::SharedPtr<ActivitySyncHandle> syncHandle;
 	paf::job::JobQueue *postJobQueue;
@@ -170,9 +241,41 @@ struct ActivityServiceManager {
 	paf::vector<SceInt64> deletingStatusRowids;
 };
 
+/* 0x8135A01E */
+ActivityServiceManager::ActivityServiceManager()
+	: syncHandle(new ActivitySyncHandle()),
+	  postJobQueue(NULL),
+	  votingRowids(),
+	  cancelingVoteRowids(),
+	  postingCommentRowids(),
+	  deletingCommentRowids(),
+	  deletingStatusRowids()
+{
+	paf::job::JobQueue::Option queueOpt;
+	int priority = (paf::Framework::Instance()->GetMode() == 1)
+			       ? 0x10000105
+			       : 0x100000FB;
+	queueOpt.priority = priority;
+	queueOpt.stackSize = 0x3000;
+	queueOpt.numThreads = 1;
+	postJobQueue = new paf::job::JobQueue("SceActivityPostJob", &queueOpt);
+}
+
+/* 0x8135A17A */
+ActivityServiceManager::~ActivityServiceManager()
+{
+	if (syncHandle.get() != NULL)
+		SceActivityDb_5B44F019(syncHandle.get());
+	if (postJobQueue != NULL) {
+		postJobQueue->CancelAllItems();
+		delete postJobQueue;
+	}
+}
+
 ActivityFileListRegistry *s_fileListRegistry = NULL;
 ActivityDialogManager *s_dialogManager = NULL;
 ActivityServiceManager *s_serviceManager = NULL;
+paf::thread::RMutex s_detailSyncMutex("SceActivityDetailSync", 0);
 
 size_t CountPendingNetworkJobs()
 {
@@ -295,6 +398,17 @@ void HideStatusBusyByRowid(SceInt64 statusRowid)
 		vis->HideBusy();
 }
 
+/* 0x81350C36 */
+paf::ui::Widget *FindStatusCardWidgetByRowid(const SceInt64 *statusRowid)
+{
+	if (statusRowid == NULL)
+		return NULL;
+	Lv1StatusActivityVisualizer *vis = FindStatusVisualizerByRowid(*statusRowid);
+	if (vis != NULL)
+		return vis->GetListItem();
+	return NULL;
+}
+
 /* 0x81350C5A */
 void ShowStatusErrorByRowid(SceInt64 statusRowid, int errorCode)
 {
@@ -327,30 +441,123 @@ public:
 	SceInt64 m_statusRowid;
 };
 
-/* 0x814449C0 / 0x81444A48: error dialog handlers for ActivityStatusDialog */
-class StatusDialogErrorHandler : public CommonGuiDialogHandler {
+/* 0x814449C0: not-found error handler (closes dialog on dismiss) */
+class StatusNotFoundErrorHandler : public CommonGuiDialogHandler {
 public:
-	StatusDialogErrorHandler(int dialogId, bool closeDialogOnDismiss)
-		: m_dialogId(dialogId),
-		  m_closeOnDismiss(closeDialogOnDismiss)
+	explicit StatusNotFoundErrorHandler(SceInt64 statusRowid)
+		: m_statusRowid(statusRowid)
 	{
 	}
 
-	virtual void operator()(SceInt32 value, SceInt32 button)
+	virtual void operator()(SceInt32 dialogId, SceInt32 button)
 	{
-		(void)value;
-		(void)button;
-		ActivityStatusDialog *dialog = activityUiFindDialogById(m_dialogId);
-		if (dialog != NULL) {
-			dialog->m_commonDialogId = -1;
-			if (m_closeOnDismiss)
+		if (button == 2) {
+			if (s_dialogManager == NULL) {
+				SceCommonGuiDialog_BC311DC0(dialogId);
+				return;
+			}
+			ActivityStatusDialog *dialog =
+				s_dialogManager->FindByStatusRowid(&m_statusRowid);
+			if (dialog == NULL) {
+				SceCommonGuiDialog_BC311DC0(dialogId);
+				return;
+			}
+			if (dialogId >= 0) {
+				SceCommonGuiDialog_BC311DC0(dialogId);
+				if (dialog->m_commonDialogId == dialogId)
+					dialog->m_commonDialogId = -1;
+			}
+			dialog->Close();
+		} else if (button == 0 && s_dialogManager != NULL) {
+			ActivityStatusDialog *dialog =
+				s_dialogManager->FindByStatusRowid(&m_statusRowid);
+			if (dialog != NULL) {
+				if (dialogId >= 0) {
+					SceCommonGuiDialog_BC311DC0(dialogId);
+					if (dialog->m_commonDialogId == dialogId)
+						dialog->m_commonDialogId = -1;
+				}
 				dialog->Close();
+			}
 		}
 	}
 
-	int m_dialogId;
-	bool m_closeOnDismiss;
+	SceInt64 m_statusRowid;
 };
+
+/* 0x81444A48: error dialog handler for ActivityStatusDialog */
+class StatusDialogErrorHandler : public CommonGuiDialogHandler {
+public:
+	explicit StatusDialogErrorHandler(SceInt64 statusRowid)
+		: m_statusRowid(statusRowid)
+	{
+	}
+
+	virtual void operator()(SceInt32 dialogId, SceInt32 button)
+	{
+		(void)button;
+		ActivityStatusDialog *dialog = activityUiFindDialogByStatusRowid(&m_statusRowid);
+		if (dialog != NULL && dialog->m_commonDialogId == dialogId)
+			dialog->m_commonDialogId = -1;
+	}
+
+	SceInt64 m_statusRowid;
+};
+
+/* 0x81356590 */
+int ShowStatusNotFoundErrorDialog(const SceInt64 *statusRowid)
+{
+	if (statusRowid == NULL)
+		return -1;
+
+	CommonGuiMessageDialogParam param;
+	param.messageId = MSG_STATUS_NOT_FOUND;
+	param.type = ACTIVITY_ERR_NOT_FOUND;
+	param.priority = activityUiGetDialogPriority();
+	param.handler = new StatusNotFoundErrorHandler(*statusRowid);
+	int dialogId = SceCommonGuiDialog_20B141F1(&param);
+	if (s_dialogManager != NULL) {
+		ActivityStatusDialog *dialog = s_dialogManager->FindByStatusRowid(statusRowid);
+		if (dialog != NULL && dialogId >= 0 && dialog->m_commonDialogId != dialogId) {
+			if (dialog->m_commonDialogId >= 0)
+				SceCommonGuiDialog_BC311DC0(dialog->m_commonDialogId);
+			dialog->m_commonDialogId = dialogId;
+		}
+	}
+	return dialogId;
+}
+
+/* 0x813566FC */
+int ShowStatusDialogError(const SceInt64 *statusRowid, int errorCode, bool suppressDialog)
+{
+	if (errorCode == 0 || s_dialogManager == NULL || statusRowid == NULL)
+		return -1;
+
+	ActivityStatusDialog *dialog = s_dialogManager->FindByStatusRowid(statusRowid);
+	if (dialog == NULL)
+		return -1;
+
+	if (errorCode == ACTIVITY_ERR_NOT_FOUND)
+		return ShowStatusNotFoundErrorDialog(statusRowid);
+
+	if (errorCode == ACTIVITY_ERR_SYS_UPDATE && dialog->HandleSysUpdateError(errorCode))
+		return -1;
+
+	if (suppressDialog)
+		return -1;
+
+	CommonGuiMessageDialogParam param;
+	param.type = errorCode;
+	param.priority = activityUiGetDialogPriority();
+	param.handler = new StatusDialogErrorHandler(*statusRowid);
+	int dialogId = SceCommonGuiDialog_20B141F1(&param);
+	if (dialogId >= 0 && dialog->m_commonDialogId != dialogId) {
+		if (dialog->m_commonDialogId >= 0)
+			SceCommonGuiDialog_BC311DC0(dialog->m_commonDialogId);
+		dialog->m_commonDialogId = dialogId;
+	}
+	return dialogId;
+}
 
 /* 0x81444174: too-many-jobs notice handler */
 class TooManyJobsDialogHandler : public CommonGuiDialogHandler {
@@ -427,50 +634,10 @@ public:
 class GetVoteInfoJob : public paf::common::SlotJobItem {
 public:
 	GetVoteInfoJob(SceInt64 statusRowid, const paf::string &titleId,
-		       const paf::string &ownerId, int dialogId, int queryType)
-		: paf::common::SlotJobItem("GetVoteInfoJob", NULL),
-		  m_statusRowid(statusRowid),
-		  m_ownerId(ownerId),
-		  m_titleId(titleId),
-		  m_dialogId(dialogId),
-		  m_queryType(queryType),
-		  m_goodJob()
-	{
-		m_goodJob.mainRowid = 0;
-		m_goodJob.isVoted = false;
-		m_goodJob.reserved = 0;
-		m_goodJob.numOfVotes = 0;
-	}
-
-	virtual ~GetVoteInfoJob()
-	{
-	}
-
-	virtual int32_t Run()
-	{
-		void *queryHandle = NULL;
-		SceActivityDb_6C98B745(&queryHandle);
-
-		ActivityDbQueryCondition condition;
-		condition.type = m_queryType;
-		int err = SceActivityDb_F65C0C21(&queryHandle, &condition);
-		if (err == 0)
-			err = SceActivityDb_8D4B7F73(&queryHandle, &m_statusRowid, &m_goodJob);
-
-		SceActivityDb_6E198FFA(&queryHandle);
-		return err;
-	}
-
-	virtual void Finish(int32_t err)
-	{
-		paf::common::SlotJobItem::Finish(err);
-		if (IsCanceled())
-			return;
-
-		ActivityStatusDialog *dialog = activityUiFindDialogById(m_dialogId);
-		if (dialog != NULL && err == 0)
-			dialog->OnVoteInfoReady(err, m_goodJob);
-	}
+		       const paf::string &ownerId, int dialogId, int queryType);
+	virtual ~GetVoteInfoJob();
+	virtual int32_t Run();
+	virtual void Finish(int32_t err);
 
 	SceInt64 m_statusRowid;
 	paf::string m_ownerId;
@@ -479,6 +646,60 @@ public:
 	int m_queryType;
 	ActivityDbGoodJob m_goodJob;
 };
+
+/* 0x81355D50 */
+GetVoteInfoJob::GetVoteInfoJob(SceInt64 statusRowid, const paf::string &titleId,
+			       const paf::string &ownerId, int dialogId, int queryType)
+	: paf::common::SlotJobItem("GetVoteInfoJob", NULL),
+	  m_statusRowid(statusRowid),
+	  m_ownerId(ownerId),
+	  m_titleId(titleId),
+	  m_dialogId(dialogId),
+	  m_queryType(queryType),
+	  m_goodJob()
+{
+	m_goodJob.mainRowid = 0;
+	m_goodJob.isVoted = false;
+	m_goodJob.reserved = 0;
+	m_goodJob.numOfVotes = 0;
+}
+
+/* 0x8135AB08 */
+GetVoteInfoJob::~GetVoteInfoJob()
+{
+}
+
+/* 0x8135ABC4 */
+int32_t GetVoteInfoJob::Run()
+{
+	void *queryHandle = NULL;
+	SceActivityDb_6C98B745(&queryHandle);
+
+	ActivityDbQueryCondition condition;
+	condition.type = m_queryType;
+	int err = SceActivityDb_F65C0C21(&queryHandle, &condition);
+	if (err == 0)
+		err = SceActivityDb_8D4B7F73(&queryHandle, &m_statusRowid, &m_goodJob);
+
+	SceActivityDb_6E198FFA(&queryHandle);
+	return err;
+}
+
+/* 0x8135AC9E */
+void GetVoteInfoJob::Finish(int32_t err)
+{
+	paf::common::SlotJobItem::Finish(err);
+	if (IsCanceled())
+		return;
+
+	if (s_dialogManager != NULL) {
+		ActivityStatusDialog *dialog = s_dialogManager->FindById(m_dialogId);
+		if (dialog != NULL && err == 0) {
+			dialog->m_voteInfo = m_goodJob;
+			dialog->UpdateGoodJobArea(m_goodJob.numOfVotes, true);
+		}
+	}
+}
 
 /* 0x814441E8 / 0x81444208 */
 class VoteGoodJob : public paf::job::JobItem {
@@ -770,29 +991,157 @@ public:
 };
 
 /* -------------------------------------------------------------------------- */
-/* ActivityStatusDialog static callbacks                                      */
+/* ActivityStatusDialog static callbacks & layouters                          */
 /* -------------------------------------------------------------------------- */
 
-/* 0x81358DC2 */
-void OnDetailSyncCallback(int errorCode, int dialogId)
+/* 0x8135B27A */
+void OnShowFocusAfterAnim(paf::Timer *timer, paf::ui::AnimListener *listener,
+			  void *widgetArg, void *userdataArg, void *extraArg)
 {
-	activityUiInvokeNetRelease();
+	(void)timer;
+	(void)listener;
+	(void)extraArg;
+	paf::ui::Widget *widget = static_cast<paf::ui::Widget *>(widgetArg);
+	if (userdataArg != NULL && widget != NULL) {
+		widget->SetFocus(0);
+		paf::ui::Environment *env = paf::Framework::Instance()->GetEnvironmentInstance();
+		env->ShowFocus(-1);
+	}
+}
+
+/* 0x81359EAA */
+int32_t DialogUnreadBadgeLayoutCallback(paf::ui::Layouter *layouter, paf::ui::Widget *widget,
+					void *firstData, void *secondData, void *thirdData)
+{
+	(void)layouter;
+	(void)firstData;
+	(void)secondData;
+	(void)thirdData;
+	paf::graph::DrawObj *unreadObj = widget->GetDrawObj(1);
+	if (unreadObj != NULL) {
+		const PafVec4 *size = widget->GetSize(0);
+		PafVec3 nextPos(size->extract_x() * -0.5f + 25.0f,
+				size->extract_y() * 0.5f - 25.0f,
+				unreadObj->m_pos.extract_z());
+		unreadObj->SetPos(nextPos);
+	}
+	return 0;
+}
+
+/* 0x81359C4E */
+int32_t CommentEditLayoutCallback(paf::ui::Layouter *layouter, paf::ui::Widget *widget,
+				  void *firstData, void *secondData, void *thirdData)
+{
+	(void)firstData;
+	(void)secondData;
+	(void)thirdData;
+	if (!layouter->IsDirty(0xFF))
+		return 0;
+
+	paf::ui::Text *textWidget = static_cast<paf::ui::Text *>(widget);
+	paf::ui::Widget *commentBar = widget->m_parent;
+	paf::ui::Widget *dialogRoot = commentBar->m_parent;
+
+	PafVec4 zeroOffset(0.0f, 0.0f, 0.0f, 0.0f);
+	PafVec4 curBarPos = commentBar->GetPos(0, NULL, zeroOffset);
+	PafVec4 nextBarPos = commentBar->GetPos(0, NULL, zeroOffset);
+	PafVec4 textPos = widget->GetPos(0, NULL, zeroOffset);
+	(void)widget->GetSize(0);
+
+	float baseY = -135.0f;
+	if (dialogRoot != NULL) {
+		paf::ui::Widget *listWidget =
+			dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_LIST), 0);
+		if (listWidget != NULL) {
+			PafVec4 listPos = listWidget->GetPos(0, NULL, zeroOffset);
+			const PafVec4 *listSize = listWidget->GetSize(0);
+			baseY = (listPos.extract_y() - listSize->extract_y()) + 3.0f + 305.0f;
+		}
+	}
+
+	if (commentBar->FindAnim(ANIM_CHANNEL_POS) == NULL) {
+		uint32_t lineCount = 0;
+		textWidget->GetLineCount(lineCount);
+		if (lineCount != 0) {
+			float linePitch = 0.0f;
+			textWidget->GetLayoutAttribute(paf::graph::TextLayoutAttribute_LinePitch,
+						       linePitch);
+			float targetY = (lineCount <= 1)
+						? baseY
+						: (baseY + static_cast<float>(lineCount - 1) * linePitch);
+			nextBarPos.set_y(targetY);
+			if (curBarPos.extract_y() != nextBarPos.extract_y()) {
+				commentBar->SetPos(nextBarPos, NULL, ANIM_CHANNEL_POS, 0,
+						   0.0f, NULL, NULL);
+				textPos.set_y(textPos.extract_y() -
+					      (nextBarPos.extract_y() - curBarPos.extract_y()));
+				widget->SetPos(textPos, NULL, ANIM_CHANNEL_POS, 0,
+					       0.0f, NULL, NULL);
+			}
+		}
+	}
+	return 0;
+}
+
+/* 0x81358DC2 */
+void OnDetailSyncCallback(int errorCode, int unusedArg, int dialogId)
+{
+	(void)unusedArg;
+	s_detailSyncMutex.Lock();
 	ActivityStatusDialog *dialog = activityUiFindDialogById(dialogId);
-	if (dialog != NULL)
-		dialog->OnDetailSyncFinished(errorCode);
+	if (dialog != NULL) {
+		dialog->m_syncingDetail = false;
+		activityUiInvokeNetRelease();
+		if (errorCode != 0 && dialog->m_record.get() != NULL &&
+		    dialog->m_record->GetRecordKind() == LIVE2_RECORD_STATUS) {
+			Live2StatusRecord *statusRec =
+				static_cast<Live2StatusRecord *>(dialog->m_record.get());
+			ShowStatusDialogError(&statusRec->m_status.rowid, errorCode, false);
+		}
+	}
+	s_detailSyncMutex.Unlock();
 }
 
 /* 0x81358E0C */
 void OnCommentCountCallback(int count, int dialogId)
 {
 	ActivityStatusDialog *dialog = activityUiFindDialogById(dialogId);
-	if (dialog != NULL)
+	if (dialog != NULL) {
+		if (!dialog->m_postingComment)
+			dialog->m_busyFooter.HideBusyHeader();
 		dialog->OnCommentCountChanged(count);
+		dialog->RequestVoteInfo();
+	}
 }
 
 /* 0x81358E42 */
-void OnCommentBoxEnterCallback(int eventId, paf::ui::Handler *handler,
+void OnBackButtonEventCallback(int eventId, paf::ui::Handler *handler,
 			       paf::ui::Event *event, void *userdata)
+{
+	(void)eventId;
+	(void)handler;
+	(void)event;
+	int dialogId = static_cast<int>(reinterpret_cast<intptr_t>(userdata));
+	ActivityStatusDialog *dialog = activityUiFindDialogById(dialogId);
+	if (dialog != NULL)
+		dialog->OnBackButtonDecide();
+}
+
+/* 0x81358E60 */
+void OnOptionButtonEventCallback(int eventId, paf::ui::Handler *handler,
+				 paf::ui::Event *event, void *userdata)
+{
+	(void)eventId;
+	(void)event;
+	int dialogId = static_cast<int>(reinterpret_cast<intptr_t>(userdata));
+	ActivityStatusDialog *dialog = activityUiFindDialogById(dialogId);
+	if (dialog != NULL)
+		dialog->OpenStatusOptionMenu(static_cast<paf::ui::Widget *>(handler));
+}
+
+/* 0x81358E82 */
+void OnSendCommentButtonCallback(int eventId, paf::ui::Handler *handler,
+				 paf::ui::Event *event, void *userdata)
 {
 	(void)eventId;
 	(void)handler;
@@ -803,28 +1152,159 @@ void OnCommentBoxEnterCallback(int eventId, paf::ui::Handler *handler,
 		dialog->OnSendComment();
 }
 
-/* 0x81358E60 */
+/* 0x81358ECA */
 void OnCommentBoxBeginEditCallback(int eventId, paf::ui::Handler *handler,
 				   paf::ui::Event *event, void *userdata)
 {
 	(void)eventId;
 	(void)event;
+	paf::ui::Text *textBox = static_cast<paf::ui::Text *>(handler);
 	int dialogId = static_cast<int>(reinterpret_cast<intptr_t>(userdata));
 	ActivityStatusDialog *dialog = activityUiFindDialogById(dialogId);
-	if (dialog != NULL)
-		dialog->OnCommentBoxBeginEdit(static_cast<paf::ui::Widget *>(handler));
+	paf::ui::Widget *commentBar = textBox->m_parent;
+
+	float editBaseY = (dialog != NULL) ? dialog->GetEditCommentBarY() : -135.0f;
+
+	textBox->SetLayoutAttribute(paf::graph::TextLayoutAttribute_MaxLineCount, 5);
+	uint32_t currentLineCount = 0;
+	textBox->GetLineCount(currentLineCount);
+
+	PafVec4 zeroOffset(0.0f, 0.0f, 0.0f, 0.0f);
+	PafVec4 barPos = commentBar->GetPos(0, NULL, zeroOffset);
+	PafVec4 barSize = *commentBar->GetSize(0);
+	barSize.set_y(384.0f);
+	commentBar->SetSize(barSize, NULL, ANIM_CHANNEL_SIZE, 0, 0.0f, NULL, NULL);
+
+	uint32_t savedLineCount =
+		static_cast<uint32_t>(reinterpret_cast<uintptr_t>(textBox->m_user_data[0]));
+	float linePitch = 0.0f;
+	textBox->GetLayoutAttribute(paf::graph::TextLayoutAttribute_LinePitch, linePitch);
+
+	float targetBarY = (savedLineCount <= 1)
+				   ? editBaseY
+				   : (editBaseY + static_cast<float>(savedLineCount - 1) * linePitch);
+	barPos.set_y(targetBarY);
+	commentBar->SetPos(barPos, new paf::Timer(200.0f, paf::Timer::FUNC_EXPONENT),
+			   ANIM_CHANNEL_POS, 2, 0.0f, NULL, NULL);
+
+	PafVec4 textPos = textBox->GetPos(0, NULL, zeroOffset);
+	textPos.set_y(textPos.extract_y() - (barPos.extract_y() - editBaseY));
+	textBox->SetPos(textPos, NULL, ANIM_CHANNEL_POS, 0, 0.0f, NULL, NULL);
+
+	textPos.set_x(-404.0f);
+	textBox->SetPos(textPos, new paf::Timer(200.0f, paf::Timer::FUNC_EXPONENT),
+			ANIM_CHANNEL_POS, 2, 0.0f, NULL, NULL);
+
+	PafVec4 textSize = *textBox->GetSize(0);
+	textSize.set_x(640.0f);
+	if (savedLineCount > 1)
+		textSize.set_y(linePitch * static_cast<float>(savedLineCount) + 16.0f);
+	textBox->SetSize(textSize, new paf::Timer(200.0f, paf::Timer::FUNC_EXPONENT),
+			 ANIM_CHANNEL_SIZE, 2, 0.0f, NULL, NULL);
+
+	paf::ui::Widget *sendBtn =
+		commentBar->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_SEND_BTN), 0);
+	if (sendBtn != NULL) {
+		PafVec4 sendPos = sendBtn->GetPos(0, NULL, zeroOffset);
+		sendPos.set_x(404.0f);
+		sendBtn->SetPos(sendPos, new paf::Timer(200.0f, paf::Timer::FUNC_EXPONENT),
+				ANIM_CHANNEL_POS, 2, 0.0f, NULL, NULL);
+	}
+
+	if (dialog != NULL && dialog->m_listView != NULL) {
+		PafVec2 viewFocus = dialog->m_listView->GetViewFocus();
+		viewFocus.set_y(viewFocus.extract_y() - 304.0f);
+		dialog->m_listView->SetViewFocus(
+			viewFocus, new paf::Timer(200.0f, paf::Timer::FUNC_EXPONENT), false, false);
+		PafVec2 pad(0.0f, 304.0f);
+		dialog->m_listView->ScePafWidget_5B94F2B4(
+			pad, new paf::Timer(200.0f, paf::Timer::FUNC_EXPONENT));
+	}
+
+	textBox->SetLayouter(new paf::ui::Layouter(&CommentEditLayoutCallback, NULL));
 }
 
-/* 0x81358E82 */
+/* 0x813594BC */
 void OnCommentBoxEndEditCallback(int eventId, paf::ui::Handler *handler,
 				 paf::ui::Event *event, void *userdata)
 {
 	(void)eventId;
 	(void)event;
+	paf::ui::Text *textBox = static_cast<paf::ui::Text *>(handler);
 	int dialogId = static_cast<int>(reinterpret_cast<intptr_t>(userdata));
 	ActivityStatusDialog *dialog = activityUiFindDialogById(dialogId);
+	paf::ui::Widget *commentBar = textBox->m_parent;
+
+	PafVec4 zeroOffset(0.0f, 0.0f, 0.0f, 0.0f);
+	PafVec4 barPos = commentBar->GetPos(0, NULL, zeroOffset);
+	PafVec4 barSize = *commentBar->GetSize(0);
 	if (dialog != NULL)
-		dialog->OnCommentBoxEndEdit(static_cast<paf::ui::Widget *>(handler));
+		(void)dialog->GetEditCommentBarY();
+
+	textBox->SetLayouter(new paf::ui::Layouter(NULL, NULL));
+
+	PafVec4 textPos = textBox->GetPos(0, NULL, zeroOffset);
+	textPos.set_y(-57.0f);
+	textBox->SetPos(textPos, NULL, ANIM_CHANNEL_POS, 0, 0.0f, NULL, NULL);
+
+	bool wideBox = (dialog != NULL && dialog->UseWideCommentBox());
+	textPos.set_x(wideBox ? -377.0f : -318.0f);
+
+	paf::ui::Environment *env = paf::Framework::Instance()->GetEnvironmentInstance();
+	bool wasFocusShown = ScePafWidget_529FB877(env, -1);
+	paf::Framework::Instance()->GetEnvironmentInstance()->HideFocus(-1);
+	textBox->SetFocus(0);
+	textBox->SetPos(textPos, new paf::Timer(200.0f, paf::Timer::FUNC_EXPONENT),
+			ANIM_CHANNEL_POS, 2, 0.0f, &OnShowFocusAfterAnim,
+			reinterpret_cast<void *>(static_cast<uintptr_t>(wasFocusShown ? 1 : 0)));
+
+	uint32_t lineCount = 0;
+	textBox->GetLineCount(lineCount);
+	textBox->m_user_data[0] = reinterpret_cast<void *>(static_cast<uintptr_t>(lineCount));
+	textBox->SetLayoutAttribute(paf::graph::TextLayoutAttribute_MaxLineCount, 1);
+
+	PafVec4 textSize = *textBox->GetSize(0);
+	textSize.set_x((dialog != NULL && dialog->UseWideCommentBox()) ? 576.0f : 448.0f);
+	float linePitch = 0.0f;
+	textBox->GetLayoutAttribute(paf::graph::TextLayoutAttribute_LinePitch, linePitch);
+	textSize.set_y(linePitch + 16.0f);
+	textBox->SetSize(textSize, new paf::Timer(200.0f, paf::Timer::FUNC_EXPONENT),
+			 ANIM_CHANNEL_SIZE, 2, 0.0f, NULL, NULL);
+
+	paf::ui::Widget *sendBtn =
+		commentBar->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_SEND_BTN), 0);
+	if (sendBtn != NULL) {
+		PafVec4 sendPos = sendBtn->GetPos(0, NULL, zeroOffset);
+		sendPos.set_x((dialog != NULL && dialog->UseWideCommentBox()) ? 373.0f : 312.0f);
+		sendBtn->SetPos(sendPos, new paf::Timer(200.0f, paf::Timer::FUNC_EXPONENT),
+				ANIM_CHANNEL_POS, 2, 0.0f, NULL, NULL);
+	}
+
+	if (dialog != NULL) {
+		float collapsedY = (-13.0f - dialog->GetListViewHeight()) + 3.0f;
+		barPos.set_y(collapsedY);
+	}
+	commentBar->SetPos(barPos, new paf::Timer(0.1f, paf::Timer::FUNC_EXPONENT),
+			   ANIM_CHANNEL_POS, 0, 0.0f, NULL, NULL);
+
+	barSize.set_y(66.0f);
+	commentBar->SetSize(barSize, new paf::Timer(0.1f, paf::Timer::FUNC_EXPONENT),
+			    ANIM_CHANNEL_SIZE, 2, 200.0f, NULL, NULL);
+
+	if (dialog != NULL && dialog->m_listView != NULL) {
+		const PafVec4 *listSize = dialog->m_listView->GetSize(0);
+		if (dialog->m_listView->m_view_box_size.extract_y() != listSize->extract_y() &&
+		    dialog->m_busyFooter.m_state != 1) {
+			PafVec2 viewFocus = dialog->m_listView->GetViewFocus();
+			viewFocus.set_y(viewFocus.extract_y() + 304.0f);
+			dialog->m_listView->SetViewFocus(
+				viewFocus, new paf::Timer(200.0f, paf::Timer::FUNC_EXPONENT),
+				false, false);
+		}
+		PafVec2 zeroPad(0.0f, 0.0f);
+		dialog->m_listView->ScePafWidget_5B94F2B4(
+			zeroPad, new paf::Timer(200.0f, paf::Timer::FUNC_EXPONENT));
+	}
 }
 
 /* 0x81359BF8 */
@@ -832,12 +1312,18 @@ void OnCommentBoxTextChangedCallback(int eventId, paf::ui::Handler *handler,
 				     paf::ui::Event *event, void *userdata)
 {
 	(void)eventId;
-	(void)handler;
 	(void)event;
+	paf::ui::Text *textBox = static_cast<paf::ui::Text *>(handler);
 	int dialogId = static_cast<int>(reinterpret_cast<intptr_t>(userdata));
 	ActivityStatusDialog *dialog = activityUiFindDialogById(dialogId);
-	if (dialog != NULL)
-		dialog->RefreshCommentBoxState(false);
+	if (dialog != NULL) {
+		uint32_t textLen = 0;
+		textBox->GetLength(textLen);
+		if (textLen != 0)
+			dialog->EnableSendButtonIfReady();
+		else
+			dialog->DisableSendButton();
+	}
 }
 
 /* 0x813589C4 thunk */
@@ -867,15 +1353,34 @@ void OnCancelGoodJobCallback(int eventId, paf::ui::Handler *handler,
 }
 
 /* 0x8135886E */
-void OnHeaderOptionDecideCallback(int eventId, paf::ui::Handler *handler,
-				  paf::ui::Event *event, void *userdata)
+void OnHeaderTextSizeReadyCallback(int eventId, paf::ui::Handler *handler,
+				   paf::ui::Event *event, void *userdata)
 {
 	(void)eventId;
 	(void)event;
+	paf::ui::Widget *textWidget = static_cast<paf::ui::Widget *>(handler);
+	paf::graph::DrawObj *bodyObj = textWidget->GetDrawObj(0);
+	paf::graph::DrawObj *timeObj = textWidget->GetDrawObj(1);
+	if (bodyObj == NULL || timeObj == NULL)
+		return;
+	if (!bodyObj->m_flags.m_visible && bodyObj->m_flags.m_prepare)
+		return;
+
+	float origY = bodyObj->m_pos.extract_y();
+	float textHeight = bodyObj->m_size.extract_y();
+	PafVec3 nextPos(bodyObj->m_pos.extract_x(), origY - textHeight * 0.5f,
+			bodyObj->m_pos.extract_z());
+	bodyObj->SetPos(nextPos);
+	bodyObj->SetVisible(true);
+	timeObj->SetVisible(true);
+
+	float minHeight = (textHeight < 72.0f) ? 72.0f : textHeight;
+	float goodJobY = (origY - minHeight) - 24.0f;
+
 	int dialogId = static_cast<int>(reinterpret_cast<intptr_t>(userdata));
 	ActivityStatusDialog *dialog = activityUiFindDialogById(dialogId);
 	if (dialog != NULL)
-		dialog->OpenStatusOptionMenu(static_cast<paf::ui::Widget *>(handler));
+		dialog->SetupGoodJobContainer(textWidget->m_parent, goodJobY);
 }
 
 /* 0x8135A92A */
@@ -912,53 +1417,84 @@ void OnGoodJobButtonSizeChanged(int eventId, paf::ui::Handler *handler,
 	paf::ui::Widget *btn = static_cast<paf::ui::Widget *>(handler);
 	if (btn == NULL)
 		return;
+
+	paf::graph::DrawObj *iconObj = btn->GetDrawObj(0);
+	paf::graph::TextObj *labelObj = static_cast<paf::graph::TextObj *>(btn->GetDrawObj(1));
+	if (iconObj == NULL || labelObj == NULL || labelObj->m_flags.m_prepare)
+		return;
+
+	float totalHeight = iconObj->m_size.extract_y() + labelObj->m_size.extract_y();
+	uint32_t lineCount = 0;
+	labelObj->GetLineCount(lineCount);
+	float gap = (lineCount <= 1) ? 10.0f : 14.0f;
+	float span = totalHeight - gap;
+
+	float iconY = (span * 0.5f - iconObj->m_size.extract_y() * 0.5f) - 3.0f;
+	float labelY = (labelObj->m_size.extract_y() * 0.5f - span * 0.5f) - 3.0f;
+	iconObj->SetPos(PafVec3(iconObj->m_pos.extract_x(), iconY, iconObj->m_pos.extract_z()));
+	labelObj->SetPos(PafVec3(labelObj->m_pos.extract_x(), labelY, labelObj->m_pos.extract_z()));
 	btn->Show(0xff, NULL, NULL, 0.0f);
-	btn->AddEventCallback(EVENT_WIDGET_SIZE_CHANGED, NULL, NULL);
 }
 
-/* 0x81359F7E */
-void OnStatusOptionMenuSelect(int index, int value, void *userdata)
+/* 0x81359F40 */
+void OnStatusOptionMenuDeleteCallback(int index, int value, void *userdata)
 {
 	(void)index;
+	(void)value;
 	int dialogId = static_cast<int>(reinterpret_cast<intptr_t>(userdata));
 	ActivityStatusDialog *dialog = activityUiFindDialogById(dialogId);
-	if (dialog != NULL && value == 0)
+	if (dialog != NULL && dialog->m_record.get() != NULL &&
+	    dialog->m_record->GetRecordKind() == LIVE2_RECORD_STATUS)
 		dialog->ShowDeleteStatusConfirmDialog();
 }
 
-/* 0x81359FA0 */
-void OnDeleteCommentMenuSelect(int index, int value, void *userdata)
-{
-	(void)index;
-	int dialogId = static_cast<int>(reinterpret_cast<intptr_t>(userdata));
-	ActivityStatusDialog *dialog = activityUiFindDialogById(dialogId);
-	if (dialog != NULL && value == 0 && dialog->m_selectedCommentVis != NULL)
-		dialog->ShowDeleteCommentConfirmDialog(dialog->m_selectedCommentVis->m_record);
-}
-
-/* 0x81359FBC */
-void OnDeleteOrReportCommentMenuSelect(int index, int value, void *userdata)
-{
-	(void)index;
-	int dialogId = static_cast<int>(reinterpret_cast<intptr_t>(userdata));
-	ActivityStatusDialog *dialog = activityUiFindDialogById(dialogId);
-	if (dialog == NULL || dialog->m_selectedCommentVis == NULL)
-		return;
-
-	if (value == 0)
-		dialog->ShowDeleteCommentConfirmDialog(dialog->m_selectedCommentVis->m_record);
-	else if (value == 1)
-		dialog->StartGriefReport(dialog->m_selectedCommentVis->m_record);
-}
-
-/* 0x81359FE6 */
-void OnPopupMenuClosed(int result, void *userdata)
+/* 0x81359F7E */
+void OnStatusOptionMenuCloseCallback(int result, void *userdata)
 {
 	(void)result;
 	int dialogId = static_cast<int>(reinterpret_cast<intptr_t>(userdata));
 	ActivityStatusDialog *dialog = activityUiFindDialogById(dialogId);
 	if (dialog != NULL) {
 		dialog->m_popupMenuOpen = false;
+		dialog->OnPopupMenuClosed();
+	}
+}
+
+/* 0x81359FA0 */
+void OnDeleteCommentMenuSelect(int index, int value, void *userdata)
+{
+	(void)index;
+	(void)value;
+	int dialogId = static_cast<int>(reinterpret_cast<intptr_t>(userdata));
+	ActivityStatusDialog *dialog = activityUiFindDialogById(dialogId);
+	if (dialog != NULL)
+		dialog->OnDeleteCommentMenuSelected();
+}
+
+/* 0x81359FBC */
+void OnDeleteOrReportCommentMenuSelect(int index, int value, void *userdata)
+{
+	(void)value;
+	int dialogId = static_cast<int>(reinterpret_cast<intptr_t>(userdata));
+	ActivityStatusDialog *dialog = activityUiFindDialogById(dialogId);
+	if (dialog == NULL)
+		return;
+
+	if (index == 0)
+		dialog->OnDeleteCommentMenuSelected();
+	else if (index == 1)
+		dialog->OnGriefReportMenuSelected();
+}
+
+/* 0x81359FE6 */
+void OnCommentPopupMenuClosedCallback(int result, void *userdata)
+{
+	(void)result;
+	int dialogId = static_cast<int>(reinterpret_cast<intptr_t>(userdata));
+	ActivityStatusDialog *dialog = activityUiFindDialogById(dialogId);
+	if (dialog != NULL) {
+		dialog->m_popupMenuOpen = false;
+		dialog->OnPopupMenuClosed();
 		dialog->m_selectedCommentVis = NULL;
 	}
 }
@@ -1008,7 +1544,7 @@ void OnDialogOpenTransitionDone(paf::Timer *timer, paf::ui::AnimListener *listen
 
 	ActivityStatusDialog *dialog = activityUiFindDialogById(dialogId);
 	if (dialog != NULL)
-		dialog->SetInputEnabled(true);
+		dialog->OnDialogOpened();
 }
 
 /* 0x8135A908 */
@@ -1035,7 +1571,7 @@ void OnPostCommentAnimTimer(int eventId, paf::ui::Handler *handler,
 	int dialogId = static_cast<int>(reinterpret_cast<intptr_t>(userdata));
 	ActivityStatusDialog *dialog = activityUiFindDialogById(dialogId);
 	if (dialog != NULL)
-		dialog->UpdateDialogLayout();
+		dialog->UpdatePostCommentAnimation();
 }
 
 /* 0x8135B25A */
@@ -1046,21 +1582,6 @@ void OnDialogRootDeleteCallback(paf::ui::Widget *widget, void *userdata)
 	ActivityStatusDialog *dialog = activityUiFindDialogById(dialogId);
 	if (dialog != NULL)
 		dialog->OnBackButtonDecide();
-}
-
-/* 0x8135B27A */
-void OnShowFocusAfterAnim(paf::Timer *timer, paf::ui::AnimListener *listener,
-			  void *widgetArg, void *userdataArg, void *extraArg)
-{
-	(void)timer;
-	(void)listener;
-	(void)extraArg;
-	paf::ui::Widget *widget = static_cast<paf::ui::Widget *>(widgetArg);
-	if (userdataArg != NULL && widget != NULL) {
-		widget->SetFocus(0);
-		paf::ui::Environment *env = paf::Framework::Instance()->GetEnvironmentInstance();
-		env->ShowFocus(-1);
-	}
 }
 
 } /* namespace */
@@ -1188,44 +1709,87 @@ void Lv1StatusActivityVisualizer::LayoutCountsCallback(int eventId, paf::ui::Han
 {
 	(void)eventId;
 	(void)event;
-	(void)userdata;
 	paf::ui::Widget *panel = static_cast<paf::ui::Widget *>(handler);
 	if (panel == NULL)
 		return;
 
-	paf::graph::DrawObj *commentIcon = panel->GetDrawObj(STATUS_DRAWOBJ_COMMENT_ICON);
-	paf::graph::DrawObj *commentText = panel->GetDrawObj(STATUS_DRAWOBJ_COMMENT_COUNT);
-	paf::graph::DrawObj *voteIcon = panel->GetDrawObj(STATUS_DRAWOBJ_VOTE_ICON);
-	paf::graph::DrawObj *voteText = panel->GetDrawObj(STATUS_DRAWOBJ_VOTE_COUNT);
+	unsigned int packedCounts = static_cast<unsigned int>(reinterpret_cast<uintptr_t>(userdata));
+	unsigned int commentCount = packedCounts >> 16;
+	unsigned int voteCount = packedCounts & 0xFFFFU;
 
-	PafVec4 panelSize = *panel->GetSize(0);
-	float rightEdge = panelSize.extract_x() * 0.5f - 24.0f;
+	paf::graph::DrawObj *commentTextRaw = panel->GetDrawObj(STATUS_DRAWOBJ_COMMENT_COUNT);
+	paf::graph::TextObj *commentText =
+		(commentTextRaw != NULL && commentTextRaw->IsInherit(paf::graph::TextObj::DrawObjType()))
+			? static_cast<paf::graph::TextObj *>(commentTextRaw)
+			: NULL;
+	paf::graph::DrawObj *voteTextRaw = panel->GetDrawObj(STATUS_DRAWOBJ_VOTE_COUNT);
+	paf::graph::TextObj *voteText =
+		(voteTextRaw != NULL && voteTextRaw->IsInherit(paf::graph::TextObj::DrawObjType()))
+			? static_cast<paf::graph::TextObj *>(voteTextRaw)
+			: NULL;
 
-	if (commentText != NULL && commentIcon != NULL && commentText->m_flags.m_visible) {
-		float textX = rightEdge - commentText->m_size.extract_x() * 0.5f;
-		commentText->SetPos(PafVec3(textX,
-					    commentText->m_pos.extract_y(),
-					    commentText->m_pos.extract_z()));
+	if (commentCount != 0 && commentText != NULL &&
+	    !commentText->m_flags.m_visible && commentText->m_flags.m_prepare)
+		return;
+	if (voteCount != 0 && voteText != NULL &&
+	    !voteText->m_flags.m_visible && voteText->m_flags.m_prepare)
+		return;
 
-		float iconX = textX - commentText->m_size.extract_x() * 0.5f -
-			      commentIcon->m_size.extract_x() * 0.5f - 6.0f;
-		commentIcon->SetPos(PafVec3(iconX,
-					    commentIcon->m_pos.extract_y(),
-					    commentIcon->m_pos.extract_z()));
-		rightEdge = iconX - commentIcon->m_size.extract_x() * 0.5f - 16.0f;
-	}
+	if (commentCount != 0) {
+		float rightEdge = panel->GetSize(0)->extract_x() * 0.5f - 10.0f;
+		paf::graph::DrawObj *commentIconRaw = panel->GetDrawObj(STATUS_DRAWOBJ_COMMENT_ICON);
+		paf::graph::PlaneObj *commentIcon =
+			(commentIconRaw != NULL &&
+			 commentIconRaw->IsInherit(paf::graph::PlaneObj::DrawObjType()))
+				? static_cast<paf::graph::PlaneObj *>(commentIconRaw)
+				: NULL;
+		paf::graph::DrawObj *voteIconRaw = panel->GetDrawObj(STATUS_DRAWOBJ_VOTE_ICON);
+		paf::graph::PlaneObj *voteIcon =
+			(voteIconRaw != NULL &&
+			 voteIconRaw->IsInherit(paf::graph::PlaneObj::DrawObjType()))
+				? static_cast<paf::graph::PlaneObj *>(voteIconRaw)
+				: NULL;
 
-	if (voteText != NULL && voteIcon != NULL && voteText->m_flags.m_visible) {
-		float textX = rightEdge - voteText->m_size.extract_x() * 0.5f;
-		voteText->SetPos(PafVec3(textX,
-					 voteText->m_pos.extract_y(),
-					 voteText->m_pos.extract_z()));
+		if (commentText != NULL && commentIcon != NULL) {
+			float badgeWidth = commentText->m_size.extract_x() + 32.0f;
+			if (badgeWidth < 110.0f)
+				badgeWidth = 110.0f;
+			commentIcon->SetSize(PafVec3(badgeWidth, commentIcon->m_size.extract_y(),
+						     0.0f));
+			float iconWidth = commentIcon->m_size.extract_x();
+			float iconX = rightEdge - iconWidth * 0.5f;
+			commentIcon->SetPos(PafVec3(iconX, commentIcon->m_pos.extract_y(), 0.0f));
+			commentText->SetPos(PafVec3(iconX + 4.0f,
+						    commentText->m_pos.extract_y(), 0.0f));
+			commentIcon->SetVisible(true);
+			commentText->SetVisible(true);
+			rightEdge -= (iconWidth - 5.0f);
+		}
 
-		float iconX = textX - voteText->m_size.extract_x() * 0.5f -
-			      voteIcon->m_size.extract_x() * 0.5f - 6.0f;
-		voteIcon->SetPos(PafVec3(iconX,
-					 voteIcon->m_pos.extract_y(),
-					 voteIcon->m_pos.extract_z()));
+		if (voteCount != 0 && voteIcon != NULL && voteText != NULL) {
+			float voteIconX = rightEdge - voteIcon->m_size.extract_x() * 0.5f;
+			voteIcon->SetPos(PafVec3(voteIconX, voteIcon->m_pos.extract_y(), 0.0f));
+			voteText->SetPos(PafVec3(voteIconX + 11.0f,
+						 voteText->m_pos.extract_y(), 0.0f));
+			voteText->SetVisible(true);
+			voteIcon->SetVisible(true);
+		}
+	} else if (voteCount != 0) {
+		float rightEdge = panel->GetSize(0)->extract_x() * 0.5f - 10.0f;
+		paf::graph::DrawObj *voteIconRaw = panel->GetDrawObj(STATUS_DRAWOBJ_VOTE_ICON);
+		paf::graph::PlaneObj *voteIcon =
+			(voteIconRaw != NULL &&
+			 voteIconRaw->IsInherit(paf::graph::PlaneObj::DrawObjType()))
+				? static_cast<paf::graph::PlaneObj *>(voteIconRaw)
+				: NULL;
+		if (voteIcon != NULL && voteText != NULL) {
+			float voteIconX = rightEdge - voteIcon->m_size.extract_x() * 0.5f;
+			voteIcon->SetPos(PafVec3(voteIconX, voteIcon->m_pos.extract_y(), 0.0f));
+			voteText->SetPos(PafVec3(voteIconX + 11.0f,
+						 voteText->m_pos.extract_y(), 0.0f));
+			voteText->SetVisible(true);
+			voteIcon->SetVisible(true);
+		}
 	}
 
 	panel->AddEventCallback(EVENT_WIDGET_SIZE_CHANGED, NULL, NULL);
@@ -1258,8 +1822,8 @@ void Lv1StatusActivityVisualizer::UpdateVoteAndCommentCounts(paf::ui::Widget *pa
 				m_plugin->GetString(paf::IDParam(STR_COMMENT_COUNT_FMT));
 			paf::wstring formatted = shellFormatText(fmt, numBuf);
 			commentText->SetString(formatted);
-			commentIcon->SetVisible(true);
-			commentText->SetVisible(true);
+			commentIcon->SetVisible(false);
+			commentText->SetVisible(false);
 		} else {
 			commentIcon->SetVisible(false);
 			commentText->SetVisible(false);
@@ -1271,19 +1835,23 @@ void Lv1StatusActivityVisualizer::UpdateVoteAndCommentCounts(paf::ui::Widget *pa
 			wchar_t numBuf[32];
 			sce_paf_swprintf(numBuf, 32, L"%d", voteCount);
 			voteText->SetString(paf::wstring(numBuf));
-			voteIcon->SetVisible(true);
-			voteText->SetVisible(true);
+			voteIcon->SetVisible(false);
+			voteText->SetVisible(false);
 		} else {
 			voteIcon->SetVisible(false);
 			voteText->SetVisible(false);
 		}
 	}
 
+	uintptr_t packedCounts =
+		(static_cast<uintptr_t>(commentCount & 0xFFFF) << 16) |
+		static_cast<uintptr_t>(voteCount & 0xFFFF);
 	if (panel->m_prepare_count != 0) {
 		panel->AddEventCallback(EVENT_WIDGET_SIZE_CHANGED,
-					&Lv1StatusActivityVisualizer::LayoutCountsCallback, NULL);
+					&Lv1StatusActivityVisualizer::LayoutCountsCallback,
+					reinterpret_cast<void *>(packedCounts));
 	} else {
-		LayoutCountsCallback(0, panel, NULL, NULL);
+		LayoutCountsCallback(0, panel, NULL, reinterpret_cast<void *>(packedCounts));
 	}
 }
 
@@ -1454,6 +2022,18 @@ void Lv1StatusActivityVisualizer::UpdatePanel(paf::ui::Widget *listItem,
 		if (!CustomizeActionIcon(actionBtn))
 			ApplyActionIcon(actionBtn);
 	}
+	UpdatePanelFocusShape(panel);
+}
+
+/* 0x8134F9F2 */
+void Lv1StatusActivityVisualizer::UpdatePanelFocusShape(paf::ui::Widget *panel)
+{
+	if (panel == NULL)
+		return;
+	paf::ui::FocusShape shape;
+	const PafVec4 *size = panel->GetSize(0);
+	shape.m_size = PafVec2(size->extract_x() - 16.0f, size->extract_y() - 18.0f);
+	ScePafWidget_13B246E0(panel, &shape);
 }
 
 /* 0x81350306 */
@@ -1810,7 +2390,7 @@ ActivityStatusDialog::ActivityStatusDialog(
 		Live2StatusRecord *statusRec =
 			static_cast<Live2StatusRecord *>(m_record.get());
 		ActivityDetailSyncCallback cb;
-		cb.func = &OnDetailSyncCallback;
+		cb.func = reinterpret_cast<void (*)(int, int)>(&OnDetailSyncCallback);
 		cb.dialogId = m_dialogId;
 		activityUiInvokeNetAcquire();
 		m_syncingDetail = true;
@@ -1848,28 +2428,27 @@ ActivityStatusDialog::ActivityStatusDialog(
 /* 0x813528EC / 0x81352A64 / 0x81352A6C */
 ActivityStatusDialog::~ActivityStatusDialog()
 {
-	if (s_dialogManager != NULL) {
-		paf::map<int, ActivityStatusDialog *>::iterator it =
-			s_dialogManager->dialogs.find(m_dialogId);
-		if (it != s_dialogManager->dialogs.end())
-			s_dialogManager->dialogs.erase(it);
+	SceActivityDb_5B44F019(&m_syncHandle);
+	if (m_syncingDetail) {
+		activityUiInvokeNetRelease();
+		m_syncingDetail = false;
 	}
-
+	if (m_commonDialogId >= 0) {
+		int dlgId = m_commonDialogId;
+		SceCommonGuiDialog_BC311DC0(dlgId);
+		if (m_commonDialogId == dlgId)
+			m_commonDialogId = -1;
+	}
 	if (m_popupMenuOpen) {
 		shellPopupListClose(0);
 		m_popupMenuOpen = false;
 	}
-	if (m_commonDialogId >= 0) {
-		SceCommonGuiDialog_BC311DC0(m_commonDialogId);
-		m_commonDialogId = -1;
+	if (s_dialogManager != NULL)
+		s_dialogManager->UnregisterDialog(m_dialogId);
+	if (m_dialogRoot != NULL) {
+		m_dialogRoot->m_name = paf::IDParam("");
+		m_dialogRoot->DestroyWidget();
 	}
-	if (m_syncingDetail) {
-		SceActivityDb_5B44F019(&m_syncHandle);
-		activityUiInvokeNetRelease();
-		m_syncingDetail = false;
-	}
-
-	m_jobSlots.CancelAll();
 }
 
 /* 0x81350E74 */
@@ -1960,13 +2539,12 @@ void ActivityStatusDialog::SetupHeader(paf::ui::Widget *headerWidget)
 	paf::ui::Widget *optionBtn =
 		headerWidget->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_OPTION_BTN), 0);
 	if (optionBtn != NULL) {
-		if (statusRec->m_status.ownerType == ACTIVITY_DB_OWNER_SELF) {
-			optionBtn->AddEventCallback(
-				EVENT_BUTTON_DECIDE,
-				&OnHeaderOptionDecideCallback,
-				reinterpret_cast<void *>(static_cast<intptr_t>(m_dialogId)));
+		void *idArg = reinterpret_cast<void *>(static_cast<intptr_t>(m_dialogId));
+		if (optionBtn->m_prepare_count != 0) {
+			optionBtn->AddEventCallback(EVENT_WIDGET_SIZE_CHANGED,
+						    &OnHeaderTextSizeReadyCallback, idArg);
 		} else {
-			optionBtn->Hide(0xff, NULL, NULL, 0.0f);
+			OnHeaderTextSizeReadyCallback(0, optionBtn, NULL, idArg);
 		}
 	}
 
@@ -2039,7 +2617,106 @@ void ActivityStatusDialog::SetupCommentList(
 	m_listView->BlockSync();
 	m_listView->UnblockSync();
 	if (isPosting)
-		StartPostCommentAnimation(NULL);
+		StartPostCommentAnimation(false);
+}
+
+/* 0x8135134A */
+void ActivityStatusDialog::SyncPostAnimOverlayToCommentBox()
+{
+	if (m_dialogRoot == NULL || m_postAnimWidget == NULL)
+		return;
+
+	paf::ui::Widget *commentBox =
+		m_dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_COMMENT_BOX), 0);
+	if (commentBox == NULL)
+		return;
+
+	m_postAnimWidget->SetSize(*commentBox->GetSize(0), NULL, ANIM_CHANNEL_SIZE, 0,
+				  0.0f, NULL, NULL);
+	PafVec4 rootOrigin = m_dialogRoot->GetOriginWorldMatrix().w();
+	PafVec4 boxWorld = commentBox->GetWorldMatrix().w();
+	PafVec4 relPos(boxWorld.extract_x() - rootOrigin.extract_x(),
+		       boxWorld.extract_y() - rootOrigin.extract_y(), 0.0f, 0.0f);
+	m_postAnimWidget->SetPos(relPos, NULL, ANIM_CHANNEL_POS, 0, 0.0f, NULL, NULL);
+}
+
+/* 0x81351462 */
+void ActivityStatusDialog::CreatePostCommentOverlay()
+{
+	if (m_postAnimWidget != NULL || m_dialogRoot == NULL)
+		return;
+
+	paf::Plugin::TemplateOpenParam openParam;
+	m_plugin->TemplateOpen(m_dialogRoot, paf::IDParam(TEMPLATE_POST_COMMENT_OVERLAY),
+			       openParam);
+	m_postAnimWidget =
+		m_dialogRoot->FindChild(paf::IDParam(WIDGET_POST_COMMENT_OVERLAY), 0);
+	SyncPostAnimOverlayToCommentBox();
+	m_postAnimTime = 0.0f;
+	if (m_postAnimWidget != NULL) {
+		void *idArg = reinterpret_cast<void *>(static_cast<intptr_t>(m_dialogId));
+		m_postAnimWidget->SetIntervalEvent(TIMER_ID_POST_COMMENT_ANIM, 0.0f,
+						   &OnPostCommentAnimTimer, idArg);
+		m_postAnimWidget->SetMetaAlpha(0.0f, NULL, ANIM_CHANNEL_META_ALPHA, 0,
+					       0.0f, NULL, NULL);
+	}
+}
+
+/* 0x813515E4 */
+void ActivityStatusDialog::DisableCommentBox()
+{
+	if (m_dialogRoot == NULL)
+		return;
+
+	paf::ui::Widget *commentBox =
+		m_dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_COMMENT_BOX), 0);
+	if (commentBox == NULL || m_inputDisabled)
+		return;
+
+	paf::ui::ButtonBase *sendBtn = static_cast<paf::ui::ButtonBase *>(
+		m_dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_SEND_BTN), 0));
+	ScePafWidget_A96A0B4A(commentBox, 1);
+	if (sendBtn != NULL) {
+		PafVec4 dimColor(1.0f, 1.0f, 1.0f, 0.3f);
+		if (sendBtn->m_disable_color != NULL)
+			dimColor = *sendBtn->m_disable_color;
+		commentBox->SetColor(dimColor, NULL, ANIM_CHANNEL_COLOR, 0, 0.0f, NULL, NULL);
+	}
+	m_inputDisabled = true;
+}
+
+/* 0x81351744 */
+void ActivityStatusDialog::DisableSendButton()
+{
+	if (m_dialogRoot == NULL)
+		return;
+
+	paf::ui::ButtonBase *sendBtn = static_cast<paf::ui::ButtonBase *>(
+		m_dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_SEND_BTN), 0));
+	(void)m_dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_COMMENT_BOX), 0);
+	if (sendBtn != NULL && sendBtn->IsButtonEnabled())
+		sendBtn->Disable(false);
+}
+
+/* 0x81352A7E */
+void ActivityStatusDialog::UpdateHeaderTimeText(paf::graph::TextObj *timeText)
+{
+	if (timeText == NULL)
+		return;
+
+	paf::intrusive_ptr<Live2Record> rec = m_record;
+	if (rec.get() == NULL || rec->GetRecordKind() != LIVE2_RECORD_STATUS)
+		return;
+
+	Live2StatusRecord *statusRec = static_cast<Live2StatusRecord *>(rec.get());
+	paf::wstring timeStr = BaseActivityVisualizer::FormatActivityTime(
+		static_cast<SceUInt64>(statusRec->m_status.creationTime));
+	if (ShouldShowTitleName()) {
+		paf::wstring titleWide;
+		paf::common::Utf8ToUtf16(statusRec->m_status.titleName.c_str(), &titleWide);
+		timeStr = titleWide + L"  " + timeStr;
+	}
+	timeText->SetString(timeStr);
 }
 
 /* 0x81352C14 */
@@ -2047,6 +2724,8 @@ void ActivityStatusDialog::SetupControls()
 {
 	if (m_dialogRoot == NULL)
 		return;
+
+	void *idArg = reinterpret_cast<void *>(static_cast<intptr_t>(m_dialogId));
 
 	paf::ui::Widget *panelWidget =
 		m_dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_PANEL), 0);
@@ -2061,96 +2740,238 @@ void ActivityStatusDialog::SetupControls()
 		panelWidget->SetColor(colorVec, NULL, ANIM_CHANNEL_COLOR, 0, 0.0f, NULL, NULL);
 	}
 
-	paf::ui::TextBox *commentBox = static_cast<paf::ui::TextBox *>(
-		m_dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_COMMENT_BOX), 0));
+	if (HasBackButton()) {
+		paf::Plugin::TemplateOpenParam openParam;
+		m_plugin->TemplateOpen(m_dialogRoot, GetBackButtonTemplateId(), openParam);
+	}
+	if (HasOptionButton()) {
+		paf::Plugin::TemplateOpenParam openParam;
+		m_plugin->TemplateOpen(m_dialogRoot, GetOptionButtonTemplateId(), openParam);
+	}
+
+	paf::ui::Widget *backBtn = m_dialogRoot->FindChild(GetBackButtonId(), 0);
+	paf::ui::Widget *optionBtn = m_dialogRoot->FindChild(GetOptionButtonId(), 0);
+	if (backBtn != NULL)
+		backBtn->AddEventCallback(EVENT_BUTTON_DECIDE, &OnBackButtonEventCallback, idArg);
+	if (optionBtn != NULL) {
+		if (m_displayMode == ACTIVITY_DB_OWNER_SELF) {
+			optionBtn->AddEventCallback(EVENT_BUTTON_DECIDE,
+						    &OnOptionButtonEventCallback, idArg);
+		} else {
+			optionBtn->DestroyWidget();
+		}
+	}
+
+	PafVec4 zeroOffset(0.0f, 0.0f, 0.0f, 0.0f);
+	paf::ui::Widget *commentBox =
+		m_dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_COMMENT_BOX), 0);
 	if (commentBox != NULL) {
-		commentBox->m_max_length = ACTIVITY_COMMENT_MAX_LENGTH;
-		void *idArg = reinterpret_cast<void *>(static_cast<intptr_t>(m_dialogId));
-		commentBox->AddEventCallback(EVENT_TEXTBOX_ENTER,
-					     &OnCommentBoxEnterCallback, idArg);
-		commentBox->AddEventCallback(EVENT_TEXTBOX_EDIT_BEGIN,
+		commentBox->AddEventCallback(EVENT_TEXTBOX_IME_OPEN,
 					     &OnCommentBoxBeginEditCallback, idArg);
 		commentBox->AddEventCallback(EVENT_TEXTBOX_EDIT_END,
 					     &OnCommentBoxEndEditCallback, idArg);
 		commentBox->AddEventCallback(EVENT_TEXTBOX_CHANGED,
 					     &OnCommentBoxTextChangedCallback, idArg);
-		RefreshCommentBoxState(true);
+		commentBox->m_user_data[0] = reinterpret_cast<void *>(static_cast<uintptr_t>(1));
+
+		PafVec4 boxPos = commentBox->GetPos(0, NULL, zeroOffset);
+		PafVec4 boxSize = *commentBox->GetSize(0);
+		if (UseWideCommentBox()) {
+			boxPos.set_x(-377.0f);
+			boxSize.set_x(576.0f);
+		} else {
+			boxPos.set_x(-318.0f);
+			boxSize.set_x(448.0f);
+		}
+		commentBox->SetPos(boxPos, NULL, ANIM_CHANNEL_POS, 0, 0.0f, NULL, NULL);
+		commentBox->SetSize(boxSize, NULL, ANIM_CHANNEL_SIZE, 0, 0.0f, NULL, NULL);
 	}
-}
 
-/* 0x81351744 */
-void ActivityStatusDialog::RefreshCommentBoxState(bool immediate)
-{
-	if (m_dialogRoot == NULL)
-		return;
+	paf::ui::Widget *sendBtn =
+		m_dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_SEND_BTN), 0);
+	if (sendBtn != NULL) {
+		sendBtn->AddEventCallback(EVENT_BUTTON_DECIDE,
+					  &OnSendCommentButtonCallback, idArg);
+		PafVec4 sendPos = sendBtn->GetPos(0, NULL, zeroOffset);
+		sendPos.set_x(UseWideCommentBox() ? 373.0f : 312.0f);
+		sendBtn->SetPos(sendPos, NULL, ANIM_CHANNEL_POS, 0, 0.0f, NULL, NULL);
+	}
 
-	paf::ui::TextBox *commentBox = static_cast<paf::ui::TextBox *>(
-		m_dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_COMMENT_BOX), 0));
-	if (commentBox == NULL)
-		return;
-
-	bool canEdit = !m_postingComment && !m_inputDisabled && (m_commentCount < 100);
-	commentBox->SetEditMode(canEdit);
-	(void)immediate;
+	DisableSendButton();
 }
 
 /* 0x813531DA */
 void ActivityStatusDialog::Open(paf::ui::ListItem *anchorItem)
 {
-	if (m_dialogRoot == NULL)
-		return;
+	float scale = (anchorItem == NULL) ? 1.5f : 1.0f;
+	static float s_openPosDuration = scale * 150.0f;
+	static float s_openDoneDuration = scale * 150.0f;
+	static float s_openFadeDuration = scale * 50.0f;
+	static float s_openBarDuration = scale * 150.0f;
+	static float s_openBtnDelay = s_openPosDuration;
+	(void)s_openDoneDuration;
 
 	SetupControls();
 
-	if (anchorItem != NULL)
-		m_anchorSize = *anchorItem->GetSize(0);
-
-	paf::ui::Widget *headerWidget =
-		m_dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_HEADER_ROOT), 0);
-	if (headerWidget != NULL && m_record.get() != NULL &&
-	    m_record->GetRecordKind() == LIVE2_RECORD_STATUS) {
-		Live2StatusRecord *statusRec =
-			static_cast<Live2StatusRecord *>(m_record.get());
-		paf::graph::TextObj *timeText = static_cast<paf::graph::TextObj *>(
-			headerWidget->GetDrawObj(STATUS_DRAWOBJ_TIME));
-		if (timeText != NULL) {
-			paf::wstring formatted = BaseActivityVisualizer::FormatActivityTime(
-				static_cast<SceUInt64>(statusRec->m_status.creationTime));
-			if (ShouldShowTitleName() && !statusRec->m_status.titleName.empty()) {
-				paf::wstring titleWide;
-				paf::common::Utf8ToUtf16(statusRec->m_status.titleName.c_str(),
-							 &titleWide);
-				formatted = titleWide + L"  " + formatted;
-			}
-			timeText->SetString(formatted);
+	paf::ui::Widget *headerWidget = NULL;
+	if (m_listView != NULL) {
+		headerWidget =
+			m_listView->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_HEADER_ROOT), 0);
+		if (headerWidget == NULL)
+			headerWidget = m_listView->GetSegmentHeader(0);
+	}
+	if (headerWidget != NULL) {
+		paf::ui::Widget *textWidget =
+			headerWidget->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_OPTION_BTN), 0);
+		if (textWidget != NULL) {
+			paf::graph::TextObj *timeText =
+				static_cast<paf::graph::TextObj *>(textWidget->GetDrawObj(1));
+			UpdateHeaderTimeText(timeText);
+			if (timeText != NULL)
+				timeText->SetVisible(false);
 		}
 	}
 
+	PafVec4 targetPos(0.0f, GetDialogCenterY(), 0.0f, 0.0f);
+	PafVec4 targetSize(852.0f, GetDialogHeight(), 0.0f, 0.0f);
+	(void)GetListViewHeight();
+
 	paf::ui::Widget *bgWidget =
-		m_dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_BG), 0);
-	paf::ui::Widget *panelWidget =
-		m_dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_PANEL), 0);
-
-	ScePafWidget_A96A0B4A(m_dialogRoot, 1);
-	m_dialogRoot->SetIntervalEvent(TIMER_ID_DIALOG_CLIP, 16.0f, &OnDialogClipTimer, NULL);
-
+		(m_dialogRoot != NULL)
+			? m_dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_BG), 0)
+			: NULL;
 	if (bgWidget != NULL) {
-		ScePafWidget_44B22ACA(bgWidget, paf::common::transition::Type_FadeinFast,
-				      0.0f, NULL, NULL);
+		if (IsUnread()) {
+			bgWidget->SetLayouter(
+				new paf::ui::Layouter(&DialogUnreadBadgeLayoutCallback, NULL));
+		} else {
+			paf::graph::DrawObj *unreadObj = bgWidget->GetDrawObj(1);
+			if (unreadObj != NULL)
+				unreadObj->SetVisible(false);
+		}
 	}
+
+	if (m_dialogRoot != NULL) {
+		PafVec4 startPos(0.0f, 0.0f, 0.0f, 0.0f);
+		PafVec4 startSize(832.0f, 144.0f, 0.0f, 0.0f);
+		paf::ui::Widget *parentWidget = m_dialogRoot->m_parent;
+		if (anchorItem != NULL) {
+			startPos = anchorItem->GetWorldMatrix().w();
+			startSize = *anchorItem->GetSize(0);
+		}
+		m_anchorSize = startSize;
+
+		if (ShouldAnimateOpen()) {
+			m_dialogRoot->Hide(0xff, NULL, NULL, 0.0f);
+			if (s_openFadeDuration > 0.0f) {
+				m_dialogRoot->Show(0xff, new paf::Timer(s_openFadeDuration),
+						   NULL, 0.0f);
+			} else {
+				m_dialogRoot->Show(0xff, NULL, NULL, 0.0f);
+			}
+
+			m_dialogRoot->SetSize(startSize, NULL, ANIM_CHANNEL_SIZE, 0,
+					      0.0f, NULL, NULL);
+			PafVec4 parentOrigin = parentWidget->GetOriginWorldMatrix().w();
+			PafVec4 alignOffs = m_dialogRoot->GetAlignOffsetToCenter(0);
+			PafVec4 initPos(startPos.extract_x() - parentOrigin.extract_x() -
+						alignOffs.extract_x(),
+					startPos.extract_y() - parentOrigin.extract_y() -
+						alignOffs.extract_y(),
+					0.0f, 0.0f);
+			m_dialogRoot->SetPos(initPos, NULL, ANIM_CHANNEL_POS, 0, 0.0f, NULL, NULL);
+			m_dialogRoot->SetPos(targetPos,
+					     new paf::Timer(s_openPosDuration,
+							    paf::Timer::FUNC_QUAD_OUT),
+					     ANIM_CHANNEL_POS, 0, 0.0f, NULL, NULL);
+
+			void *idArg =
+				reinterpret_cast<void *>(static_cast<intptr_t>(m_dialogId));
+			m_dialogRoot->SetSize(targetSize,
+					      new paf::Timer(s_openPosDuration,
+							     paf::Timer::FUNC_QUAD_OUT),
+					      ANIM_CHANNEL_SIZE, 0, 0.0f,
+					      &OnDialogOpenTransitionDone, idArg);
+
+			ScePafWidget_A96A0B4A(m_dialogRoot, 1);
+			if (m_listView != NULL)
+				m_listView->m_clip_mode = 1;
+			m_dialogRoot->SetIntervalEvent(TIMER_ID_DIALOG_CLIP, 0.0f,
+						       &OnDialogClipTimer, NULL);
+		} else {
+			m_dialogRoot->SetPos(targetPos, NULL, ANIM_CHANNEL_POS, 0,
+					     0.0f, NULL, NULL);
+			m_dialogRoot->SetSize(targetSize, NULL, ANIM_CHANNEL_SIZE, 0,
+					      0.0f, NULL, NULL);
+		}
+	}
+
+	if (m_listView != NULL) {
+		PafVec4 listPos(0.0f, -13.0f, 0.0f, 0.0f);
+		m_listView->SetPos(listPos, NULL, ANIM_CHANNEL_POS, 0, 0.0f, NULL, NULL);
+		PafVec4 listSize(832.0f, GetListViewHeight(), 0.0f, 0.0f);
+		m_listView->SetSize(listSize, NULL, ANIM_CHANNEL_SIZE, 0, 0.0f, NULL, NULL);
+	}
+
+	float commentBarY = (-13.0f - GetListViewHeight()) + 3.0f;
+	PafVec4 commentBarPos(0.0f, commentBarY, 0.0f, 0.0f);
+	paf::ui::Widget *panelWidget =
+		(m_dialogRoot != NULL)
+			? m_dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_PANEL), 0)
+			: NULL;
 	if (panelWidget != NULL) {
-		ScePafWidget_44B22ACA(panelWidget, paf::common::transition::Type_Popup4,
-				      0.0f, NULL, NULL);
+		if (m_displayMode == ACTIVITY_DB_OWNER_TITLE) {
+			panelWidget->Hide(0xff, NULL, NULL, 0.0f);
+		} else if (ShouldAnimateOpen()) {
+			PafVec4 slideStart = commentBarPos;
+			slideStart.set_y(commentBarY - panelWidget->GetSize(0)->extract_y());
+			panelWidget->SetPos(slideStart, NULL, ANIM_CHANNEL_POS, 0,
+					    0.0f, NULL, NULL);
+			panelWidget->SetPos(commentBarPos,
+					    new paf::Timer(s_openBarDuration,
+							   paf::Timer::FUNC_QUAD_OUT),
+					    ANIM_CHANNEL_SIZE, 0, s_openBtnDelay, NULL, NULL);
+		} else {
+			panelWidget->SetPos(commentBarPos, NULL, ANIM_CHANNEL_POS, 0,
+					    0.0f, NULL, NULL);
+		}
 	}
 
-	void *idArg = reinterpret_cast<void *>(static_cast<intptr_t>(m_dialogId));
-	PafVec4 finalSize = *m_dialogRoot->GetSize(0);
-	m_dialogRoot->SetSize(finalSize, new paf::Timer(250.0f), ANIM_CHANNEL_SIZE, 0, 0.0f,
-			      &OnDialogOpenTransitionDone, idArg);
+	float btnY = commentBarY - 66.0f;
+	PafVec4 zeroOffset(0.0f, 0.0f, 0.0f, 0.0f);
+	if (HasBackButton() && m_dialogRoot != NULL) {
+		paf::ui::Widget *backBtn = m_dialogRoot->FindChild(GetBackButtonId(), 0);
+		if (backBtn != NULL) {
+			if (ShouldAnimateOpen()) {
+				ScePafWidget_44B22ACA(
+					backBtn,
+					static_cast<paf::common::transition::Type>(0xff),
+					s_openBtnDelay, NULL, NULL);
+			} else {
+				backBtn->Show(0xff, NULL, NULL, 0.0f);
+			}
+			PafVec4 pos = backBtn->GetPos(0, NULL, zeroOffset);
+			pos.set_y(btnY);
+			backBtn->SetPos(pos, NULL, ANIM_CHANNEL_POS, 0, 0.0f, NULL, NULL);
+		}
+	}
+	if (HasOptionButton() && m_dialogRoot != NULL) {
+		paf::ui::Widget *optionBtn = m_dialogRoot->FindChild(GetOptionButtonId(), 0);
+		if (optionBtn != NULL) {
+			if (ShouldAnimateOpen()) {
+				ScePafWidget_44B22ACA(
+					optionBtn,
+					static_cast<paf::common::transition::Type>(0xff),
+					s_openBtnDelay, NULL, NULL);
+			} else {
+				optionBtn->Show(0xff, NULL, NULL, 0.0f);
+			}
+			PafVec4 pos = optionBtn->GetPos(0, NULL, zeroOffset);
+			pos.set_y(btnY);
+			optionBtn->SetPos(pos, NULL, ANIM_CHANNEL_POS, 0, 0.0f, NULL, NULL);
+		}
+	}
 
-	int voteCount = BaseActivityVisualizer::GetVoteCount(m_record);
-	UpdateGoodJobArea(voteCount, false);
-	RequestVoteInfo();
 	if (!ShouldAnimateOpen())
 		OnDialogOpened();
 }
@@ -2159,39 +2980,111 @@ void ActivityStatusDialog::Open(paf::ui::ListItem *anchorItem)
 void ActivityStatusDialog::Close()
 {
 	OnDialogClosed();
-	if (m_dialogRoot == NULL) {
-		delete this;
-		return;
-	}
-
 	if (m_popupMenuOpen) {
 		shellPopupListClose(0);
 		m_popupMenuOpen = false;
 	}
 
-	paf::ui::Widget *bgWidget =
-		m_dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_BG), 0);
-	paf::ui::Widget *panelWidget =
-		m_dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_PANEL), 0);
-
-	if (bgWidget != NULL) {
-		ScePafWidget_F1176ACC(bgWidget, paf::common::transition::Type_FadeinFast,
-				      0.0f, NULL, NULL);
-	}
-	if (panelWidget != NULL) {
-		ScePafWidget_F1176ACC(panelWidget, paf::common::transition::Type_Popup4,
-				      0.0f, NULL, NULL);
+	if (!ShouldAnimateClose()) {
+		ActivityStatusDialog *self = activityUiFindDialogById(m_dialogId);
+		if (self != NULL)
+			delete self;
+		return;
 	}
 
-	void *idArg = reinterpret_cast<void *>(static_cast<intptr_t>(m_dialogId));
-	m_dialogRoot->SetSize(m_anchorSize, new paf::Timer(250.0f), ANIM_CHANNEL_SIZE, 0, 0.0f,
-			      &OnDialogCloseTransitionDone, idArg);
+	PafVec4 targetPos(0.0f, 0.0f, 0.0f, 0.0f);
+	PafVec4 targetSize = m_anchorSize;
+	if (m_record.get() != NULL && m_record->GetRecordKind() == LIVE2_RECORD_STATUS) {
+		Live2StatusRecord *statusRec =
+			static_cast<Live2StatusRecord *>(m_record.get());
+		paf::ui::Widget *cardWidget =
+			FindStatusCardWidgetByRowid(&statusRec->m_status.rowid);
+		if (cardWidget != NULL) {
+			targetSize = *cardWidget->GetSize(0);
+			targetPos = cardWidget->GetWorldMatrix().w();
+		}
+	}
+
+	if (m_dialogRoot != NULL) {
+		ScePafWidget_A96A0B4A(m_dialogRoot, 1);
+
+		paf::ui::Widget *bgWidget =
+			m_dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_BG), 0);
+		if (bgWidget != NULL) {
+			paf::ui::Widget *bgParent = bgWidget->m_parent;
+			bgWidget->Hide(0xff, new paf::Timer(200.0f, paf::Timer::FUNC_CUBIC_IN),
+				       NULL, 0.0f);
+
+			PafVec4 alignOffs = m_dialogRoot->GetAlignOffsetToCenter(0);
+			bgWidget->SetAlign(0, 0, 0, NULL);
+			PafVec4 zeroOffset(0.0f, 0.0f, 0.0f, 0.0f);
+			PafVec4 bgPos = bgWidget->GetPos(0, NULL, zeroOffset);
+			PafVec4 centeredPos(bgPos.extract_x() + alignOffs.extract_x(),
+					    bgPos.extract_y() + alignOffs.extract_y(),
+					    bgPos.extract_z() + alignOffs.extract_z(),
+					    bgPos.extract_w() + alignOffs.extract_w());
+			bgWidget->SetPos(centeredPos, NULL, ANIM_CHANNEL_POS, 0,
+					 0.0f, NULL, NULL);
+			bgWidget->SetAdjust(0, 0, 0);
+
+			PafVec4 parentOrigin = bgParent->GetOriginWorldMatrix().w();
+			PafVec4 destPos(targetPos.extract_x() - parentOrigin.extract_x(),
+					targetPos.extract_y() - parentOrigin.extract_y(),
+					0.0f, 0.0f);
+			bgWidget->SetPos(destPos, new paf::Timer(250.0f, paf::Timer::FUNC_CUBIC_IN),
+					 ANIM_CHANNEL_POS, 2, 0.0f, NULL, NULL);
+
+			void *idArg =
+				reinterpret_cast<void *>(static_cast<intptr_t>(m_dialogId));
+			bgWidget->SetSize(targetSize,
+					  new paf::Timer(250.0f, paf::Timer::FUNC_CUBIC_IN),
+					  ANIM_CHANNEL_SIZE, 2, 0.0f,
+					  &OnDialogCloseTransitionDone, idArg);
+
+			if (m_listView != NULL)
+				m_listView->m_clip_mode = 1;
+			m_dialogRoot->SetIntervalEvent(TIMER_ID_DIALOG_CLIP, 0.0f,
+						       &OnDialogClipTimer, NULL);
+		}
+
+		paf::ui::Widget *panelWidget =
+			m_dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_PANEL), 0);
+		if (panelWidget != NULL && m_displayMode != ACTIVITY_DB_OWNER_TITLE) {
+			PafVec4 zeroOffset(0.0f, 0.0f, 0.0f, 0.0f);
+			PafVec4 barPos = panelWidget->GetPos(0, NULL, zeroOffset);
+			barPos.set_y(barPos.extract_y() - panelWidget->GetSize(0)->extract_y());
+			panelWidget->SetPos(barPos,
+					    new paf::Timer(250.0f, paf::Timer::FUNC_QUAD_IN),
+					    ANIM_CHANNEL_POS, 0, 0.0f, NULL, NULL);
+		}
+
+		paf::ui::Widget *backBtn = m_dialogRoot->FindChild(GetBackButtonId(), 0);
+		if (backBtn != NULL)
+			ScePafWidget_F1176ACC(
+				backBtn,
+				static_cast<paf::common::transition::Type>(0xff),
+				0.0f, NULL, NULL);
+		paf::ui::Widget *optionBtn = m_dialogRoot->FindChild(GetOptionButtonId(), 0);
+		if (optionBtn != NULL)
+			ScePafWidget_F1176ACC(
+				optionBtn,
+				static_cast<paf::common::transition::Type>(0xff),
+				0.0f, NULL, NULL);
+	}
 }
 
 void ActivityStatusDialog::CloseWithReason(int reason)
 {
 	(void)reason;
 	Close();
+}
+
+void ActivityStatusDialog::OnPopupMenuOpened()
+{
+}
+
+void ActivityStatusDialog::OnPopupMenuClosed()
+{
 }
 
 bool ActivityStatusDialog::HandleSysUpdateError(int errorCode)
@@ -2318,6 +3211,74 @@ bool ActivityStatusDialog::CustomizeStatusActionIcon(paf::ui::Widget *iconWidget
 {
 	(void)iconWidget;
 	return false;
+}
+
+/* 0x81354504 */
+void ActivityStatusDialog::StartVoteBusyIndicator(paf::ui::Widget *target)
+{
+	if (target == NULL)
+		return;
+	if (target->FindChild(paf::IDParam(WIDGET_STATUS_BUSY_INDICATOR), 0) != NULL)
+		return;
+
+	paf::Plugin::TemplateOpenParam openParam;
+	m_plugin->TemplateOpen(target, paf::IDParam(TEMPLATE_STATUS_BUSY_OVERLAY), openParam);
+	paf::ui::BusyIndicator *indicator = static_cast<paf::ui::BusyIndicator *>(
+		target->FindChild(paf::IDParam(WIDGET_STATUS_BUSY_INDICATOR), 0));
+	if (indicator != NULL)
+		indicator->Start();
+}
+
+/* 0x81354660 */
+void ActivityStatusDialog::ShowVoteBusy(bool isZeroVotesButton)
+{
+	if (m_listView == NULL)
+		return;
+	paf::ui::Widget *segmentHeader = m_listView->GetSegmentHeader(0);
+	if (segmentHeader == NULL)
+		return;
+	paf::ui::Widget *headerBox =
+		segmentHeader->FindChild(paf::IDParam(WIDGET_GOODJOB_HEADER_BOX), 0);
+	if (headerBox == NULL)
+		return;
+
+	if (isZeroVotesButton) {
+		paf::ui::ButtonBase *voteBtn = static_cast<paf::ui::ButtonBase *>(
+			headerBox->FindChild(paf::IDParam(WIDGET_GOODJOB_VOTE_BTN), 0));
+		if (voteBtn != NULL) {
+			voteBtn->Disable(false);
+			paf::ui::Widget *iconWidget =
+				voteBtn->FindChild(paf::IDParam(WIDGET_GOODJOB_VOTE_ICON), 0);
+			if (iconWidget != NULL) {
+				PafVec4 dimColor(1.0f, 1.0f, 1.0f, 0.3f);
+				if (voteBtn->m_disable_color != NULL)
+					dimColor = *voteBtn->m_disable_color;
+				iconWidget->SetColor(dimColor, NULL, ANIM_CHANNEL_COLOR, 0,
+						     0.0f, NULL, NULL);
+				StartVoteBusyIndicator(iconWidget);
+			}
+			paf::ui::Widget *labelWidget =
+				voteBtn->FindChild(paf::IDParam(WIDGET_GOODJOB_VOTE_LABEL), 0);
+			if (labelWidget != NULL) {
+				PafVec4 dimColor(1.0f, 1.0f, 1.0f, 0.3f);
+				if (voteBtn->m_disable_color != NULL)
+					dimColor = *voteBtn->m_disable_color;
+				labelWidget->SetColor(dimColor, NULL, ANIM_CHANNEL_COLOR, 0,
+						      0.0f, NULL, NULL);
+			}
+		}
+	} else {
+		paf::ui::Widget *areaWidget =
+			headerBox->FindChild(paf::IDParam(WIDGET_GOODJOB_AREA), 0);
+		if (areaWidget != NULL) {
+			paf::ui::ButtonBase *actionBtn = static_cast<paf::ui::ButtonBase *>(
+				areaWidget->FindChild(paf::IDParam(WIDGET_GOODJOB_ACTION_BTN), 0));
+			if (actionBtn != NULL) {
+				actionBtn->Disable(false);
+				StartVoteBusyIndicator(actionBtn);
+			}
+		}
+	}
 }
 
 /* 0x813549C8 */
@@ -2533,34 +3494,156 @@ void ActivityStatusDialog::OnVoteInfoReady(int errorCode, const ActivityDbGoodJo
 	UpdateGoodJobArea(m_voteInfo.numOfVotes, true);
 }
 
-/* 0x81355FE6 */
-void ActivityStatusDialog::OnVoteFinished(int errorCode, bool isNewVote)
+/* 0x81355EE8 */
+void ActivityStatusDialog::StopVoteBusyIndicator(paf::ui::Widget *container)
 {
-	(void)isNewVote;
-	if (errorCode != 0)
-		ShowErrorDialog(errorCode, errorCode == ACTIVITY_ERR_NOT_FOUND);
-	RequestVoteInfo();
+	if (container == NULL)
+		return;
+	paf::ui::BusyIndicator *indicator = static_cast<paf::ui::BusyIndicator *>(
+		container->FindChild(paf::IDParam(WIDGET_STATUS_BUSY_INDICATOR), 0));
+	if (indicator != NULL) {
+		indicator->Stop();
+		ScePafWidget_5A9793B0(indicator, 0.0f);
+		indicator->m_name = paf::IDParam("");
+	}
+}
+
+/* 0x81355FE6 */
+void ActivityStatusDialog::OnVoteFinished(int errorCode, bool isZeroVotesButton)
+{
+	if (m_listView == NULL)
+		return;
+	paf::ui::Widget *segmentHeader = m_listView->GetSegmentHeader(0);
+	if (segmentHeader == NULL)
+		return;
+	paf::ui::Widget *headerBox =
+		segmentHeader->FindChild(paf::IDParam(WIDGET_GOODJOB_HEADER_BOX), 0);
+	if (headerBox == NULL)
+		return;
+
+	StopVoteBusyIndicator(headerBox);
+	if (errorCode != 0) {
+		if (isZeroVotesButton) {
+			paf::ui::ButtonBase *voteBtn = static_cast<paf::ui::ButtonBase *>(
+				headerBox->FindChild(paf::IDParam(WIDGET_GOODJOB_VOTE_BTN), 0));
+			if (voteBtn != NULL) {
+				voteBtn->Enable(false);
+				paf::ui::Widget *iconWidget =
+					voteBtn->FindChild(paf::IDParam(WIDGET_GOODJOB_VOTE_ICON),
+							   0);
+				if (iconWidget != NULL) {
+					PafVec4 fullColor(1.0f, 1.0f, 1.0f, 1.0f);
+					iconWidget->SetColor(fullColor, NULL, ANIM_CHANNEL_COLOR,
+							     0, 0.0f, NULL, NULL);
+				}
+			}
+			paf::ui::Widget *labelWidget =
+				headerBox->FindChild(paf::IDParam(WIDGET_GOODJOB_VOTE_LABEL), 0);
+			if (labelWidget != NULL) {
+				PafVec4 fullColor(1.0f, 1.0f, 1.0f, 1.0f);
+				labelWidget->SetColor(fullColor, NULL, ANIM_CHANNEL_COLOR, 0,
+						      0.0f, NULL, NULL);
+			}
+		} else {
+			paf::ui::ButtonBase *actionBtn = static_cast<paf::ui::ButtonBase *>(
+				headerBox->FindChild(paf::IDParam(WIDGET_GOODJOB_ACTION_BTN), 0));
+			if (actionBtn != NULL)
+				actionBtn->Enable(false);
+		}
+	}
+}
+
+/* 0x813562A8 */
+void ActivityStatusDialog::EnableCommentBox()
+{
+	if (m_dialogRoot == NULL)
+		return;
+	paf::ui::Widget *commentBox =
+		m_dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_COMMENT_BOX), 0);
+	if (commentBox != NULL && m_inputDisabled) {
+		ScePafWidget_A96A0B4A(commentBox, -1);
+		PafVec4 fullColor(1.0f, 1.0f, 1.0f, 1.0f);
+		commentBox->SetColor(fullColor, NULL, ANIM_CHANNEL_COLOR, 0, 0.0f, NULL, NULL);
+		m_inputDisabled = false;
+	}
+}
+
+/* 0x81356370 */
+void ActivityStatusDialog::EnableSendButtonIfReady()
+{
+	if (m_dialogRoot == NULL)
+		return;
+	paf::ui::ButtonBase *sendBtn = static_cast<paf::ui::ButtonBase *>(
+		m_dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_SEND_BTN), 0));
+	if (m_commentCount < ACTIVITY_MAX_COMMENTS && !m_postingComment && sendBtn != NULL) {
+		paf::ui::Text *commentBox = static_cast<paf::ui::Text *>(
+			m_dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_COMMENT_BOX), 0));
+		if (commentBox != NULL) {
+			uint32_t textLen = 0;
+			commentBox->GetLength(textLen);
+			if (!sendBtn->IsButtonEnabled() && textLen != 0)
+				sendBtn->Enable(false);
+		}
+	}
 }
 
 /* 0x8135689A */
 void ActivityStatusDialog::OnPostCommentFinished(int errorCode)
 {
-	m_postingComment = false;
-	m_busyFooter.HideBusyHeader();
-	RefreshCommentBoxState(false);
+	if (m_dialogRoot != NULL) {
+		paf::ui::ButtonBase *sendBtn = static_cast<paf::ui::ButtonBase *>(
+			m_dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_SEND_BTN), 0));
+		if (sendBtn != NULL) {
+			m_postingComment = false;
+			bool listFillsView = false;
+			if (m_listView != NULL) {
+				listFillsView =
+					(m_listView->GetSize(0)->extract_y() <
+					 m_listView->m_view_box_size.extract_y());
+			}
+			if (!listFillsView || errorCode != 0)
+				m_busyFooter.HideBusyHeader();
 
-	if (errorCode != 0) {
-		ShowErrorDialog(errorCode, errorCode == ACTIVITY_ERR_NOT_FOUND);
-		return;
+			paf::ui::Widget *commentBox = m_dialogRoot->FindChild(
+				paf::IDParam(WIDGET_STATUS_DIALOG_COMMENT_BOX), 0);
+			if (commentBox != NULL) {
+				PafVec4 fullColor(1.0f, 1.0f, 1.0f, 1.0f);
+				commentBox->SetObjAnim(
+					0, OBJ_ANIM_COLOR, fullColor,
+					new paf::Timer(250.0f, paf::Timer::FUNC_SINE_IN), 2);
+			}
+
+			if (!sendBtn->IsButtonEnabled()) {
+				paf::ui::Text *textBox = static_cast<paf::ui::Text *>(
+					m_dialogRoot->FindChild(
+						paf::IDParam(WIDGET_STATUS_DIALOG_COMMENT_BOX), 0));
+				if (textBox != NULL) {
+					if (errorCode != 0 &&
+					    errorCode != ACTIVITY_ERR_POST_CANCELED) {
+						if (m_record.get() != NULL &&
+						    m_record->GetRecordKind() == LIVE2_RECORD_STATUS) {
+							Live2StatusRecord *statusRec =
+								static_cast<Live2StatusRecord *>(
+									m_record.get());
+							ShowStatusDialogError(
+								&statusRec->m_status.rowid,
+								errorCode, false);
+						}
+					} else {
+						textBox->SetString(paf::wstring(L""));
+						textBox->m_user_data[0] = reinterpret_cast<void *>(
+							static_cast<uintptr_t>(1));
+					}
+				}
+			}
+		}
 	}
 
-	m_animateNewComment = true;
-
-	if (m_dialogRoot != NULL) {
-		paf::ui::TextBox *commentBox = static_cast<paf::ui::TextBox *>(
-			m_dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_COMMENT_BOX), 0));
-		if (commentBox != NULL)
-			commentBox->SetString(paf::wstring());
+	if (errorCode != 0) {
+		EnableSendButtonIfReady();
+		EnableCommentBox();
+	} else {
+		m_animateNewComment = true;
 	}
 }
 
@@ -2584,7 +3667,6 @@ void ActivityStatusDialog::OnGriefReportFinished(int errorCode, SceInt64 comment
 		ShowErrorDialog(errorCode, false);
 }
 
-/* 0x8135743A */
 void ActivityStatusDialog::OnDetailSyncFinished(int errorCode)
 {
 	m_syncingDetail = false;
@@ -2595,15 +3677,114 @@ void ActivityStatusDialog::OnDetailSyncFinished(int errorCode)
 /* 0x81356B6C */
 void ActivityStatusDialog::OnCacheInfoUpdated()
 {
-	SetupPanel();
-	SetupControls();
+	if (m_record.get() == NULL || m_record->GetRecordKind() != LIVE2_RECORD_STATUS)
+		return;
+
+	Live2StatusRecord *statusRec = static_cast<Live2StatusRecord *>(m_record.get());
+	statusRec->m_status.announcePanelBgColor = activityUiGetCachedPanelBgColor();
+	statusRec->m_status.announcePanelUrl = activityUiGetCachedPanelUrl();
+	statusRec->m_status.announceAvatarUrl = activityUiGetCachedAvatarUrl();
+
+	paf::ui::Widget *bgWidget =
+		(m_dialogRoot != NULL)
+			? m_dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_BG), 0)
+			: NULL;
+	if (bgWidget == NULL)
+		return;
+
+	SceUInt32 swappedColor = 0;
+	BaseActivityVisualizer::SwapColorEndian(statusRec->m_status.announcePanelBgColor,
+						&swappedColor);
+	if (m_displayMode == ACTIVITY_DB_OWNER_SELF) {
+		ActivityDrawObj *panelObj =
+			static_cast<ActivityDrawObj *>(bgWidget->GetDrawObj(STATUS_DRAWOBJ_PANEL));
+		if (panelObj != NULL)
+			panelObj->m_color = swappedColor;
+
+		paf::intrusive_ptr<paf::cache::CacheImageInterface> imageCache;
+		BaseActivityVisualizer::CreateActivityImageCache(
+			statusRec->m_status.announcePanelUrl, imageCache, m_cacheManager);
+		bgWidget->SetDrawObjMaskBit(&imageCache, STATUS_DRAWOBJ_PANEL, 2);
+	}
+
+	paf::ui::Widget *panelWidget =
+		m_dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_PANEL), 0);
+	if (panelWidget != NULL) {
+		PafVec4 colorVec(static_cast<float>(swappedColor & 0xFF) / 255.0f,
+				 static_cast<float>((swappedColor >> 8) & 0xFF) / 255.0f,
+				 static_cast<float>((swappedColor >> 16) & 0xFF) / 255.0f,
+				 static_cast<float>((swappedColor >> 24) & 0xFF) / 255.0f);
+		panelWidget->SetColor(colorVec, NULL, ANIM_CHANNEL_COLOR, 0, 0.0f, NULL, NULL);
+	}
+
+	if (m_displayMode == ACTIVITY_DB_OWNER_SELF && m_listView != NULL) {
+		paf::ui::Widget *segmentHeader = m_listView->GetSegmentHeader(0);
+		if (segmentHeader != NULL) {
+			paf::ui::Widget *avatarBtn = segmentHeader->FindChild(
+				paf::IDParam(WIDGET_STATUS_AVATAR_BTN), 0);
+			if (avatarBtn != NULL) {
+				BaseActivityVisualizer::ApplyAvatarIconForRecord(
+					m_record, avatarBtn, m_cacheManager);
+			}
+		}
+	}
+}
+
+/* 0x8135743A */
+void ActivityStatusDialog::SetupGoodJobContainer(paf::ui::Widget *headerRoot, float goodJobY)
+{
+	m_goodJobY = goodJobY;
+	if (m_displayMode == ACTIVITY_DB_OWNER_SELF || m_displayMode == 0) {
+		paf::Plugin::TemplateOpenParam openParam;
+		m_plugin->TemplateOpen(headerRoot, paf::IDParam(TEMPLATE_GOODJOB_HEADER_BOX),
+				       openParam);
+		int voteCount = BaseActivityVisualizer::GetVoteCount(m_record);
+		UpdateGoodJobArea(voteCount, false);
+		RequestVoteInfo();
+	}
 }
 
 /* 0x813576C6 */
 void ActivityStatusDialog::OnCommentCountChanged(int count)
 {
+	if (m_commentCount == count)
+		return;
+
+	if (m_commentCount > 0 && m_commentCount < count &&
+	    m_selectedCommentVis.get() == NULL && m_listView != NULL) {
+		PafVec2 curFocus = m_listView->GetViewFocus();
+		PafVec2 targetFocus(0.0f, 0.0f);
+		m_listView->ScePafWidget_B3B40B75(
+			&targetFocus, 0, m_commentCount - 1,
+			static_cast<paf::ui::ListView::FocusAlignType>(0));
+		float deltaY = __builtin_fabsf(curFocus.extract_y() - targetFocus.extract_y());
+		if (deltaY < 1.0f)
+			deltaY = 1.0f;
+		float root = __builtin_sqrtf(deltaY);
+		float duration = __builtin_sqrtf(root) * 100.0f;
+		m_listView->SetFocus(
+			0, m_commentCount - 1,
+			static_cast<paf::ui::ListView::FocusAlignType>(0),
+			new paf::Timer(duration, paf::Timer::FUNC_QUART_OUT));
+	}
+
 	m_commentCount = count;
-	RefreshCommentBoxState(false);
+	if (count < ACTIVITY_MAX_COMMENTS) {
+		if (!m_postingComment) {
+			EnableSendButtonIfReady();
+			EnableCommentBox();
+		}
+	} else {
+		DisableSendButton();
+		DisableCommentBox();
+		if (m_dialogRoot != NULL) {
+			paf::ui::TextBox *commentBox = static_cast<paf::ui::TextBox *>(
+				m_dialogRoot->FindChild(
+					paf::IDParam(WIDGET_STATUS_DIALOG_COMMENT_BOX), 0));
+			if (commentBox != NULL && commentBox->IsEditing())
+				commentBox->EndEdit();
+		}
+	}
 }
 
 /* 0x81356B66 */
@@ -2615,7 +3796,7 @@ void ActivityStatusDialog::SetAnimateNewComment(bool animate)
 /* 0x81356DD0 */
 void ActivityStatusDialog::ClosePopupIfSelectedComment(Lv2CommentActivityVisualizer *visualizer)
 {
-	if (m_popupMenuOpen && m_selectedCommentVis == visualizer) {
+	if (m_popupMenuOpen && m_selectedCommentVis.get() == visualizer) {
 		shellPopupListClose(0);
 		m_popupMenuOpen = false;
 		m_selectedCommentVis = NULL;
@@ -2639,7 +3820,7 @@ void ActivityStatusDialog::OpenDeleteCommentMenu(paf::ui::Widget *anchorWidget,
 
 	void *idArg = reinterpret_cast<void *>(static_cast<intptr_t>(m_dialogId));
 	param.SetSelectCallback(&OnDeleteCommentMenuSelect, idArg);
-	param.SetCloseCallback(&OnPopupMenuClosed, idArg);
+	param.SetCloseCallback(&OnCommentPopupMenuClosedCallback, idArg);
 
 	m_selectedCommentVis = visualizer;
 	m_popupMenuOpen = true;
@@ -2669,11 +3850,51 @@ void ActivityStatusDialog::OpenDeleteOrReportCommentMenu(paf::ui::Widget *anchor
 	param.anchor = anchorWidget;
 	void *idArg = reinterpret_cast<void *>(static_cast<intptr_t>(m_dialogId));
 	param.SetSelectCallback(&OnDeleteOrReportCommentMenuSelect, idArg);
-	param.SetCloseCallback(&OnPopupMenuClosed, idArg);
+	param.SetCloseCallback(&OnCommentPopupMenuClosedCallback, idArg);
 
 	m_selectedCommentVis = visualizer;
 	m_popupMenuOpen = true;
 	shellPopupListOpen(&param, 0, 0);
+}
+
+/* 0x81357A46 */
+void ActivityStatusDialog::OnDeleteCommentMenuSelected()
+{
+	if (m_selectedCommentVis.get() == NULL)
+		return;
+
+	if (m_dialogRoot != NULL) {
+		paf::ui::TextBox *commentBox = static_cast<paf::ui::TextBox *>(
+			m_dialogRoot->FindChild(
+				paf::IDParam(WIDGET_STATUS_DIALOG_COMMENT_BOX), 0));
+		if (commentBox != NULL && commentBox->IsEditing())
+			commentBox->EndEdit();
+	}
+
+	paf::intrusive_ptr<Live2Record> commentRec = m_selectedCommentVis->m_record;
+	if (commentRec.get() != NULL && commentRec->GetRecordKind() == LIVE2_RECORD_COMMENT)
+		ShowDeleteCommentConfirmDialog(commentRec);
+	m_selectedCommentVis = NULL;
+}
+
+/* 0x81357C9C */
+void ActivityStatusDialog::OnGriefReportMenuSelected()
+{
+	if (m_selectedCommentVis.get() == NULL)
+		return;
+
+	if (m_dialogRoot != NULL) {
+		paf::ui::TextBox *commentBox = static_cast<paf::ui::TextBox *>(
+			m_dialogRoot->FindChild(
+				paf::IDParam(WIDGET_STATUS_DIALOG_COMMENT_BOX), 0));
+		if (commentBox != NULL && commentBox->IsEditing())
+			commentBox->EndEdit();
+	}
+
+	paf::intrusive_ptr<Live2Record> commentRec = m_selectedCommentVis->m_record;
+	if (commentRec.get() != NULL && commentRec->GetRecordKind() == LIVE2_RECORD_COMMENT)
+		StartGriefReport(commentRec);
+	m_selectedCommentVis = NULL;
 }
 
 /* 0x81357E20 */
@@ -2691,8 +3912,8 @@ void ActivityStatusDialog::OpenStatusOptionMenu(paf::ui::Widget *anchorWidget)
 	param.anchor = anchorWidget;
 
 	void *idArg = reinterpret_cast<void *>(static_cast<intptr_t>(m_dialogId));
-	param.SetSelectCallback(&OnStatusOptionMenuSelect, idArg);
-	param.SetCloseCallback(&OnPopupMenuClosed, idArg);
+	param.SetSelectCallback(&OnStatusOptionMenuDeleteCallback, idArg);
+	param.SetCloseCallback(&OnStatusOptionMenuCloseCallback, idArg);
 
 	m_popupMenuOpen = true;
 	shellPopupListOpen(&param, 0, 0);
@@ -2733,19 +3954,14 @@ void ActivityStatusDialog::ShowDeleteCommentConfirmDialog(
 	m_commonDialogId = SceCommonGuiDialog_CCFCD9A6(&param);
 }
 
-/* 0x813566FC */
+/* 0x813566FC wrapper */
 void ActivityStatusDialog::ShowErrorDialog(int errorCode, bool closeStatusDialogOnDismiss)
 {
-	if (m_commonDialogId >= 0) {
-		SceCommonGuiDialog_BC311DC0(m_commonDialogId);
-		m_commonDialogId = -1;
-	}
-
-	CommonGuiMessageDialogParam param;
-	param.type = errorCode;
-	param.priority = activityUiGetDialogPriority();
-	param.handler = new StatusDialogErrorHandler(m_dialogId, closeStatusDialogOnDismiss);
-	m_commonDialogId = SceCommonGuiDialog_20B141F1(&param);
+	(void)closeStatusDialogOnDismiss;
+	if (m_record.get() == NULL || m_record->GetRecordKind() != LIVE2_RECORD_STATUS)
+		return;
+	Live2StatusRecord *statusRec = static_cast<Live2StatusRecord *>(m_record.get());
+	ShowStatusDialogError(&statusRec->m_status.rowid, errorCode, false);
 }
 
 /* 0x813580AC */
@@ -2884,9 +4100,7 @@ void ActivityStatusDialog::OnSendComment()
 	Live2StatusRecord *statusRec = static_cast<Live2StatusRecord *>(m_record.get());
 	SceInt64 statusRowid = statusRec->m_status.rowid;
 
-	m_postingComment = true;
-	RefreshCommentBoxState(false);
-	StartPostCommentAnimation(commentBox);
+	StartPostCommentAnimation(true);
 
 	s_serviceManager->postingCommentRowids.push_back(statusRowid);
 	paf::common::SharedPtr<paf::job::JobItem> job(
@@ -2909,6 +4123,7 @@ void ActivityStatusDialog::OnVoteGoodJob()
 	Live2StatusRecord *statusRec = static_cast<Live2StatusRecord *>(m_record.get());
 	SceInt64 statusRowid = statusRec->m_status.rowid;
 	s_serviceManager->votingRowids.push_back(statusRowid);
+	ShowVoteBusy(m_voteInfo.numOfVotes == 0);
 
 	paf::common::SharedPtr<paf::job::JobItem> job(
 		new VoteGoodJob(s_serviceManager->syncHandle, statusRowid));
@@ -2930,107 +4145,189 @@ void ActivityStatusDialog::OnCancelGoodJob()
 	Live2StatusRecord *statusRec = static_cast<Live2StatusRecord *>(m_record.get());
 	SceInt64 statusRowid = statusRec->m_status.rowid;
 	s_serviceManager->cancelingVoteRowids.push_back(statusRowid);
+	ShowVoteBusy(false);
 
 	paf::common::SharedPtr<paf::job::JobItem> job(
 		new CancelGoodJob(s_serviceManager->syncHandle, statusRowid));
 	s_serviceManager->postJobQueue->Enqueue(job);
 }
 
-/* 0x81358ECA */
-void ActivityStatusDialog::OnCommentBoxBeginEdit(paf::ui::Widget *textBox)
-{
-	if (m_dialogRoot == NULL || textBox == NULL)
-		return;
-
-	paf::ui::Widget *commentBar =
-		m_dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_COMMENT_BAR), 0);
-	if (commentBar != NULL) {
-		PafVec4 zeroOffset(0.0f, 0.0f, 0.0f, 0.0f);
-		PafVec4 curPos = commentBar->GetPos(0, NULL, zeroOffset);
-		PafVec4 nextPos(curPos.extract_x(), curPos.extract_y() + 16.0f,
-				curPos.extract_z(), curPos.extract_w());
-		commentBar->SetPos(nextPos, new paf::Timer(200.0f), ANIM_CHANNEL_POS, 0,
-				   0.0f, NULL, NULL);
-	}
-}
-
-/* 0x813594BC */
-void ActivityStatusDialog::OnCommentBoxEndEdit(paf::ui::Widget *textBox)
-{
-	if (m_dialogRoot == NULL || textBox == NULL)
-		return;
-
-	paf::ui::Widget *commentBar =
-		m_dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_COMMENT_BAR), 0);
-	if (commentBar != NULL) {
-		PafVec4 zeroOffset(0.0f, 0.0f, 0.0f, 0.0f);
-		PafVec4 curPos = commentBar->GetPos(0, NULL, zeroOffset);
-		PafVec4 nextPos(curPos.extract_x(), curPos.extract_y() - 16.0f,
-				curPos.extract_z(), curPos.extract_w());
-		commentBar->SetPos(nextPos, new paf::Timer(200.0f), ANIM_CHANNEL_POS, 0,
-				   0.0f, &OnShowFocusAfterAnim,
-				   reinterpret_cast<void *>(1));
-	}
-}
-
 void ActivityStatusDialog::SetInputEnabled(bool enabled)
 {
-	m_inputDisabled = !enabled;
-	RefreshCommentBoxState(false);
+	if (enabled) {
+		EnableSendButtonIfReady();
+		EnableCommentBox();
+	} else {
+		DisableSendButton();
+		DisableCommentBox();
+	}
 }
 
 /* 0x81351848 */
-void ActivityStatusDialog::StartPostCommentAnimation(paf::ui::Widget *commentWidget)
-{
-	m_busyFooter.ShowBusyHeader();
-	m_busyFooter.StartBusyIndicator();
-
-	if (commentWidget != NULL && m_dialogRoot != NULL) {
-		PafVec4 zeroOffset(0.0f, 0.0f, 0.0f, 0.0f);
-		m_postAnimWidget = commentWidget;
-		m_postAnimTime = 0.0f;
-		m_postAnimStartPos = commentWidget->GetPos(0, NULL, zeroOffset);
-		m_postAnimStartSize = *commentWidget->GetSize(0);
-		void *idArg = reinterpret_cast<void *>(static_cast<intptr_t>(m_dialogId));
-		m_dialogRoot->SetIntervalEvent(TIMER_ID_POST_COMMENT_ANIM, 16.0f,
-					       &OnPostCommentAnimTimer, idArg);
-	}
-}
-
-/* 0x8135A29A */
-void ActivityStatusDialog::UpdateDialogLayout()
+void ActivityStatusDialog::StartPostCommentAnimation(bool animateOverlay)
 {
 	if (m_dialogRoot == NULL)
 		return;
-	m_postAnimTime += 16.0f;
-	if (m_postAnimTime >= 250.0f) {
-		m_dialogRoot->KillIntervalEvent(TIMER_ID_POST_COMMENT_ANIM);
-		m_postAnimWidget = NULL;
+
+	paf::ui::Widget *sendBtn =
+		m_dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_SEND_BTN), 0);
+	if (sendBtn == NULL)
+		return;
+
+	m_postingComment = true;
+	DisableSendButton();
+	DisableCommentBox();
+
+	paf::ui::TextBox *commentBox = static_cast<paf::ui::TextBox *>(
+		m_dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_COMMENT_BOX), 0));
+	if (commentBox != NULL && commentBox->IsEditing())
+		commentBox->EndEdit();
+
+	m_busyFooter.ShowBusyHeader();
+	if (m_listView != NULL) {
+		m_listView->BlockSync();
+		m_listView->UnblockSync();
 	}
+
+	paf::ui::Widget *boxWidget =
+		m_dialogRoot->FindChild(paf::IDParam(WIDGET_STATUS_DIALOG_COMMENT_BOX), 0);
+	if (boxWidget != NULL) {
+		PafVec4 fadeColor(1.0f, 1.0f, 1.0f, 0.0f);
+		boxWidget->SetObjAnim(0, OBJ_ANIM_COLOR, fadeColor,
+				      new paf::Timer(250.0f, paf::Timer::FUNC_SINE_IN), 2);
+	}
+
+	if (animateOverlay)
+		CreatePostCommentOverlay();
+	else
+		m_busyFooter.StartBusyIndicator();
+
+	if (m_selectedCommentVis.get() == NULL && animateOverlay && m_listView != NULL) {
+		PafVec2 curFocus = m_listView->GetViewFocus();
+		PafVec2 targetFocus(0.0f, 0.0f);
+		m_listView->ScePafWidget_B3B40B75(
+			&targetFocus, 1, -1,
+			static_cast<paf::ui::ListView::FocusAlignType>(0));
+		float deltaY = __builtin_fabsf(curFocus.extract_y() - targetFocus.extract_y());
+		if (deltaY < 1.0f)
+			deltaY = 1.0f;
+		float root = __builtin_sqrtf(deltaY);
+		float duration = __builtin_sqrtf(root) * 100.0f;
+		m_listView->SetFocus(
+			1, -1,
+			static_cast<paf::ui::ListView::FocusAlignType>(0),
+			new paf::Timer(duration, paf::Timer::FUNC_QUART_OUT));
+	}
+}
+
+/* 0x81358EA0 */
+float ActivityStatusDialog::GetEditCommentBarY()
+{
+	return ((-13.0f - GetListViewHeight()) + 3.0f) + 305.0f;
+}
+
+/* 0x8135A29A */
+void ActivityStatusDialog::UpdatePostCommentAnimation()
+{
+	if (m_postAnimWidget == NULL)
+		return;
+
+	float prevTime = m_postAnimTime;
+	float curTime = prevTime + paf::Timer::s_tick_unit * paf::Timer::s_tick_interval;
+	m_postAnimTime = curTime;
+
+	if (curTime < 0.23f) {
+		float alpha = paf::Timer::DoFuncSineIn(curTime / 0.23f) * 0.7f;
+		m_postAnimWidget->SetMetaAlpha(alpha, NULL, ANIM_CHANNEL_META_ALPHA, 0,
+					       0.0f, NULL, NULL);
+	} else if (curTime < 0.36f) {
+		float eased = paf::Timer::DoFuncSineOut((curTime - 0.23f) / (0.36f - 0.23f));
+		float alpha = 0.7f + eased * -0.2f;
+		m_postAnimWidget->SetMetaAlpha(alpha, NULL, ANIM_CHANNEL_META_ALPHA, 0,
+					       0.0f, NULL, NULL);
+	} else if (curTime < 0.66f) {
+		m_postAnimWidget->SetMetaAlpha(0.5f, NULL, ANIM_CHANNEL_META_ALPHA, 0,
+					       0.0f, NULL, NULL);
+	} else if (curTime < 0.93f) {
+		float eased = paf::Timer::DoFuncLinear((curTime - 0.66f) / (0.93f - 0.66f));
+		float alpha = 0.5f + eased * -0.5f;
+		m_postAnimWidget->SetMetaAlpha(alpha, NULL, ANIM_CHANNEL_META_ALPHA, 0,
+					       0.0f, NULL, NULL);
+	} else {
+		m_postAnimWidget->DestroyWidget();
+		m_postAnimWidget = NULL;
+		return;
+	}
+
+	if (m_postAnimTime < 0.36f) {
+		SyncPostAnimOverlayToCommentBox();
+		return;
+	}
+
+	if (m_listView == NULL || m_dialogRoot == NULL)
+		return;
+
+	paf::ui::Widget *footerHeader = m_listView->GetSegmentHeader(1);
+	if (footerHeader == NULL)
+		return;
+
+	paf::ui::Widget *targetWidget =
+		footerHeader->FindChild(paf::IDParam(WIDGET_BUSY_FOOTER_TARGET), 0);
+	if (targetWidget == NULL)
+		return;
+
+	if (prevTime <= 0.73f && m_postAnimTime >= 0.73f)
+		m_busyFooter.StartBusyIndicator();
+
+	if (prevTime <= 0.36f && m_postAnimTime >= 0.36f) {
+		m_postAnimStartPos = m_postAnimWidget->GetWorldMatrix().w();
+		m_postAnimStartSize = *m_postAnimWidget->GetSize(0);
+	}
+
+	PafVec4 destPos = targetWidget->GetWorldMatrix().w();
+	PafVec4 destSize = *targetWidget->GetSize(0);
+	if (m_postAnimTime > 0.36f && m_postAnimTime < 0.76f) {
+		float ratio = (m_postAnimTime - 0.36f) / (0.76f - 0.36f);
+		float posEase = paf::Timer::DoFuncCubicOut(ratio);
+		float sizeEase = paf::Timer::DoFuncQuadOut(ratio);
+		destPos = PafVec4(
+			m_postAnimStartPos.extract_x() +
+				(destPos.extract_x() - m_postAnimStartPos.extract_x()) * posEase,
+			m_postAnimStartPos.extract_y() +
+				(destPos.extract_y() - m_postAnimStartPos.extract_y()) * posEase,
+			m_postAnimStartPos.extract_z() +
+				(destPos.extract_z() - m_postAnimStartPos.extract_z()) * posEase,
+			m_postAnimStartPos.extract_w() +
+				(destPos.extract_w() - m_postAnimStartPos.extract_w()) * posEase);
+		destSize = PafVec4(
+			m_postAnimStartSize.extract_x() +
+				(destSize.extract_x() - m_postAnimStartSize.extract_x()) * sizeEase,
+			m_postAnimStartSize.extract_y() +
+				(destSize.extract_y() - m_postAnimStartSize.extract_y()) * sizeEase,
+			m_postAnimStartSize.extract_z() +
+				(destSize.extract_z() - m_postAnimStartSize.extract_z()) * sizeEase,
+			m_postAnimStartSize.extract_w() +
+				(destSize.extract_w() - m_postAnimStartSize.extract_w()) * sizeEase);
+	}
+
+	PafVec4 rootOrigin = m_dialogRoot->GetOriginWorldMatrix().w();
+	PafVec4 relPos(destPos.extract_x() - rootOrigin.extract_x(),
+		       destPos.extract_y() - rootOrigin.extract_y(), 0.0f, 0.0f);
+	PafVec4 finalSize(destSize.extract_x(), destSize.extract_y(), 0.0f, 0.0f);
+	m_postAnimWidget->SetPos(relPos, NULL, ANIM_CHANNEL_POS, 0, 0.0f, NULL, NULL);
+	m_postAnimWidget->SetSize(finalSize, NULL, ANIM_CHANNEL_SIZE, 0, 0.0f, NULL, NULL);
 }
 
 /* -------------------------------------------------------------------------- */
 /* Cross-unit Activity UI Registry & Service APIs                             */
 /* -------------------------------------------------------------------------- */
 
-/* 0x813564A2 / 0x81356576 */
+/* 0x81356576 */
 ActivityStatusDialog *activityUiFindDialogByStatusRowid(const SceInt64 *statusRowid)
 {
-	if (s_dialogManager == NULL || statusRowid == NULL)
+	if (s_dialogManager == NULL)
 		return NULL;
-
-	for (paf::map<int, ActivityStatusDialog *>::iterator it = s_dialogManager->dialogs.begin();
-	     it != s_dialogManager->dialogs.end(); ++it) {
-		ActivityStatusDialog *dialog = it->second;
-		if (dialog != NULL && dialog->m_record.get() != NULL &&
-		    dialog->m_record->GetRecordKind() == LIVE2_RECORD_STATUS) {
-			Live2StatusRecord *statusRec =
-				static_cast<Live2StatusRecord *>(dialog->m_record.get());
-			if (statusRec->m_status.rowid == *statusRowid)
-				return dialog;
-		}
-	}
-	return NULL;
+	return s_dialogManager->FindByStatusRowid(statusRowid);
 }
 
 /* 0x8135B002 */
@@ -3038,11 +4335,7 @@ ActivityStatusDialog *activityUiFindDialogById(int dialogId)
 {
 	if (s_dialogManager == NULL)
 		return NULL;
-	paf::map<int, ActivityStatusDialog *>::iterator it =
-		s_dialogManager->dialogs.find(dialogId);
-	if (it == s_dialogManager->dialogs.end())
-		return NULL;
-	return it->second;
+	return s_dialogManager->FindById(dialogId);
 }
 
 /* 0x8135B01C */
@@ -3101,7 +4394,7 @@ void activityUiCloseDialog(int dialogId)
 {
 	ActivityStatusDialog *dialog = activityUiFindDialogById(dialogId);
 	if (dialog != NULL)
-		dialog->Close();
+		delete dialog;
 }
 
 /* 0x8135B0BA */
@@ -3129,17 +4422,11 @@ void activityUiDialogManagerInit(void)
 {
 	if (filelist::s_fileListRegistry == NULL)
 		filelist::s_fileListRegistry = new filelist::ActivityFileListRegistry();
-	if (filelist::s_dialogManager == NULL)
-		filelist::s_dialogManager = new filelist::ActivityDialogManager();
 }
 
 /* 0x81350B0C */
 void activityUiDialogManagerTerm(void)
 {
-	if (filelist::s_dialogManager != NULL) {
-		delete filelist::s_dialogManager;
-		filelist::s_dialogManager = NULL;
-	}
 	if (filelist::s_fileListRegistry != NULL) {
 		delete filelist::s_fileListRegistry;
 		filelist::s_fileListRegistry = NULL;
@@ -3149,39 +4436,23 @@ void activityUiDialogManagerTerm(void)
 /* 0x8135A13E */
 void activityUiServiceInit(void)
 {
-	if (filelist::s_serviceManager != NULL)
-		return;
-
-	filelist::s_serviceManager = new filelist::ActivityServiceManager();
-	filelist::s_serviceManager->syncHandle =
-		paf::common::SharedPtr<filelist::ActivitySyncHandle>(
-			new filelist::ActivitySyncHandle());
-
-	paf::job::JobQueue::Option queueOpt;
-	queueOpt.priority = 0x10000105;
-	queueOpt.stackSize = 0x10000;
-	queueOpt.numThreads = 1;
-	filelist::s_serviceManager->postJobQueue =
-		new paf::job::JobQueue("SceActivityPostJob", &queueOpt);
+	if (filelist::s_dialogManager == NULL)
+		filelist::s_dialogManager = new filelist::ActivityDialogManager();
+	if (filelist::s_serviceManager == NULL)
+		filelist::s_serviceManager = new filelist::ActivityServiceManager();
 }
 
 /* 0x8135A244 */
 void activityUiServiceTerm(void)
 {
-	if (filelist::s_serviceManager == NULL)
-		return;
-
-	if (filelist::s_serviceManager->syncHandle.get() != NULL)
-		SceActivityDb_5B44F019(filelist::s_serviceManager->syncHandle.get());
-
-	if (filelist::s_serviceManager->postJobQueue != NULL) {
-		filelist::s_serviceManager->postJobQueue->WaitEmpty();
-		delete filelist::s_serviceManager->postJobQueue;
-		filelist::s_serviceManager->postJobQueue = NULL;
+	if (filelist::s_serviceManager != NULL) {
+		delete filelist::s_serviceManager;
+		filelist::s_serviceManager = NULL;
 	}
-
-	delete filelist::s_serviceManager;
-	filelist::s_serviceManager = NULL;
+	if (filelist::s_dialogManager != NULL) {
+		delete filelist::s_dialogManager;
+		filelist::s_dialogManager = NULL;
+	}
 }
 
 /* 0x8135B0AC */
@@ -3192,18 +4463,11 @@ paf::job::JobQueue *activityUiGetNetworkJobQueue(void)
 	return filelist::s_serviceManager->postJobQueue;
 }
 
-/* 0x8135B248 / 0x8135AAA6 */
+/* 0x8135B248 */
 void activityUiNotifyCacheInfoUpdated(void)
 {
-	if (filelist::s_dialogManager == NULL)
-		return;
-
-	for (paf::map<int, filelist::ActivityStatusDialog *>::iterator it =
-		     filelist::s_dialogManager->dialogs.begin();
-	     it != filelist::s_dialogManager->dialogs.end(); ++it) {
-		if (it->second != NULL)
-			it->second->OnCacheInfoUpdated();
-	}
+	if (filelist::s_dialogManager != NULL)
+		filelist::s_dialogManager->NotifyCacheInfoUpdated();
 }
 
 void activityUiInitFileList(paf::ui::FileList *fileList)

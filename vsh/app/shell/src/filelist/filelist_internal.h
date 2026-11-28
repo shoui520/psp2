@@ -804,6 +804,7 @@ public:
 				     paf::ui::Event *event, void *userdata);
 	static void OnPanelImageLoaded(int eventId, paf::ui::Handler *handler,
 				       paf::ui::Event *event, void *userdata);
+	static void UpdatePanelFocusShape(paf::ui::Widget *panel);
 
 	int m_errorDialogId;
 };
@@ -845,8 +846,8 @@ public:
 	virtual void OnBackButtonDecide();
 	virtual void OpenStatusOptionMenu(paf::ui::Widget *anchorWidget);
 	virtual void OnSendComment();
-	virtual void OnCommentBoxBeginEdit(paf::ui::Widget *textBox);
-	virtual void OnCommentBoxEndEdit(paf::ui::Widget *textBox);
+	virtual void OnPopupMenuOpened();
+	virtual void OnPopupMenuClosed();
 	virtual float GetDialogHeight();
 	virtual float GetDialogCenterY();
 	virtual float GetListViewHeight();
@@ -873,11 +874,21 @@ public:
 	void SetupCommentList(const paf::common::SharedPtr<Live2AccessorProxy> &accessorProxy,
 			      const paf::common::SharedPtr<Live2VisualizerFactory> &commentFactory);
 	void SetupControls();
-	void RefreshCommentBoxState(bool immediate);
+	void SyncPostAnimOverlayToCommentBox();
+	void CreatePostCommentOverlay();
+	void DisableCommentBox();
+	void DisableSendButton();
+	void EnableCommentBox();
+	void EnableSendButtonIfReady();
+	void UpdateHeaderTimeText(paf::graph::TextObj *timeText);
+	void StartVoteBusyIndicator(paf::ui::Widget *target);
+	void ShowVoteBusy(bool isZeroVotesButton);
+	void StopVoteBusyIndicator(paf::ui::Widget *container);
 	void UpdateGoodJobArea(int voteCount, bool hasVoteInfo);
+	void SetupGoodJobContainer(paf::ui::Widget *headerRoot, float goodJobY);
 	void RequestVoteInfo();
 	void OnVoteInfoReady(int errorCode, const ActivityDbGoodJob &goodJob);
-	void OnVoteFinished(int errorCode, bool isNewVote);
+	void OnVoteFinished(int errorCode, bool isZeroVotesButton);
 	void OnPostCommentFinished(int errorCode);
 	void OnDeleteStatusFinished(int errorCode);
 	void OnDeleteCommentFinished(int errorCode, SceInt64 commentRowid);
@@ -891,6 +902,8 @@ public:
 				   Lv2CommentActivityVisualizer *visualizer);
 	void OpenDeleteOrReportCommentMenu(paf::ui::Widget *anchorWidget,
 					   Lv2CommentActivityVisualizer *visualizer);
+	void OnDeleteCommentMenuSelected();
+	void OnGriefReportMenuSelected();
 	void ShowDeleteStatusConfirmDialog();
 	void ShowDeleteCommentConfirmDialog(const paf::intrusive_ptr<Live2Record> &commentRecord);
 	void ShowErrorDialog(int errorCode, bool closeStatusDialogOnDismiss);
@@ -901,8 +914,9 @@ public:
 	void OnVoteGoodJob();
 	void OnCancelGoodJob();
 	void SetInputEnabled(bool enabled);
-	void StartPostCommentAnimation(paf::ui::Widget *commentWidget);
-	void UpdateDialogLayout();
+	void StartPostCommentAnimation(bool animateOverlay);
+	float GetEditCommentBarY();
+	void UpdatePostCommentAnimation();
 
 	int m_dialogId;
 	paf::Plugin *m_plugin;
@@ -923,7 +937,7 @@ public:
 	bool m_inputDisabled;
 	bool m_animateNewComment;
 	int m_commentCount;
-	Lv2CommentActivityVisualizer *m_selectedCommentVis;
+	paf::intrusive_ptr<Lv2CommentActivityVisualizer> m_selectedCommentVis;
 	paf::ui::Widget *m_postAnimWidget;
 	float m_postAnimTime;
 	PafVec4 m_postAnimStartPos;
