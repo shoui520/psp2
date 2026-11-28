@@ -9,6 +9,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "musiccore_media.h"
 #include "musiccore_pipeline_types.h"
 
 extern "C" {
@@ -49,73 +50,6 @@ static const int MODE_DIRECT_PLAY = 16;
 extern void *allocFromHeap(size_t size);
 
 extern void decoderManagerReleaseMediaInfo(MediaInfoHandle **ioHandle, int forceRelease);
-extern void *at9MediaInfoConstruct(void *mem, const char *path, int loopMode);
-
-struct At9FmtHeader {
-    uint16_t formatTag;
-    uint16_t channels;
-    uint32_t sampleRate;
-    uint32_t avgBytesPerSec;
-    uint16_t blockAlign;
-    uint16_t bitsPerSample;
-    uint16_t cbSize;
-    uint16_t samplesPerBlock;
-    uint32_t channelMask;
-    uint8_t subFormatGuid[16];
-    uint32_t versionInfo;
-    uint8_t configData[4];
-};
-
-struct At9SmplLoopInfo {
-    uint32_t loopStart;
-    uint32_t loopEnd;
-};
-
-class At9CacheIo {
-public:
-    virtual ~At9CacheIo() {}
-    virtual int initialize() = 0;
-    virtual int open() = 0;
-    virtual int close() = 0;
-    virtual int isOpen() = 0;
-    virtual int getFileSize() = 0;
-    virtual const char *getPath() = 0;
-    virtual int setPath(const char *path) = 0;
-    virtual int setPriorityMode(int mode) = 0;
-    virtual int applyOpenFilePriority(int mode) = 0;
-    virtual int flushCache() = 0;
-    virtual int setCacheHint(int hintMode, int extra) = 0;
-
-    void *m_cacheHandle;
-    uint8_t m_initialized;
-    uint8_t m_padInit[3];
-    char *m_filePath;
-    void *m_fileObj;
-    void *m_fileRefCount;
-    int m_priorityMode;
-    int m_padPriority;
-    int64_t m_filePos;
-    int m_chunkSize;
-    int m_blockCount;
-    uint8_t m_foundChunks;
-    uint8_t m_padChunks[3];
-    uint32_t m_fmtOffset;
-    uint32_t m_fmtSize;
-    uint32_t m_dataOffset;
-    uint32_t dataSize; /* +64 */
-};
-
-extern int at9CacheScanChunks(At9CacheIo *io, uint8_t targetMask);
-extern int at9CacheReadFmtHeader(At9CacheIo *io, At9FmtHeader *outFmt);
-extern int at9CacheReadSmplLoop(At9CacheIo *io, At9SmplLoopInfo *outLoop);
-extern int wavCacheReadDataRange(void *io, uint32_t offset, uint32_t size,
-                                 void **outPtr, uint32_t *outSize);
-
-struct At9MediaInfo : public MediaInfoHandle {
-    char mediaPath[2049]; /* +9..+2057 */
-    uint8_t padPath[6];   /* +2058..+2063 */
-    At9CacheIo *cacheIo;  /* +2064 */
-};
 
 struct At9PacketOut {
     void *frameBuffer;        /* +0 */
@@ -278,13 +212,13 @@ At9Parser::At9Parser(const char *threadName, int playMode, int loopCount)
 At9Parser::~At9Parser()
 {
     if (m_nextMedia != NULL) {
-        MediaInfoHandle *nextHandle = m_nextMedia;
+        MediaInfoHandle *nextHandle = reinterpret_cast<MediaInfoHandle *>(m_nextMedia);
         decoderManagerReleaseMediaInfo(&nextHandle, 1);
         m_nextMedia = NULL;
         m_nextCacheIo = NULL;
     }
     if (m_activeMedia != NULL) {
-        MediaInfoHandle *curHandle = m_activeMedia;
+        MediaInfoHandle *curHandle = reinterpret_cast<MediaInfoHandle *>(m_activeMedia);
         decoderManagerReleaseMediaInfo(&curHandle, 1);
         m_activeMedia = NULL;
         m_activeCacheIo = NULL;
@@ -304,11 +238,11 @@ int At9Parser::findCachedMediaInfo(const char *path, MediaInfoHandle **outInfo)
     m_lock.lock();
     if (m_activeCacheIo != NULL && sce_paf_strcmp(m_activeCacheIo->getPath(), path) == 0) {
         m_lock.unlock();
-        *outInfo = m_activeMedia;
+        *outInfo = reinterpret_cast<MediaInfoHandle *>(m_activeMedia);
         return 0;
     }
     if (m_nextCacheIo != NULL && sce_paf_strcmp(m_nextCacheIo->getPath(), path) == 0) {
-        *outInfo = m_nextMedia;
+        *outInfo = reinterpret_cast<MediaInfoHandle *>(m_nextMedia);
         m_lock.unlock();
         return 0;
     }
@@ -323,9 +257,9 @@ int At9Parser::setMediaInfo(MediaInfoHandle *handle)
     if (handle == NULL || handle->mediaFourcc != FOURCC_AT9) {
         return PARSER_ERR_BAD_PARAM;
     }
-    At9MediaInfo *mediaInfo = static_cast<At9MediaInfo *>(handle);
-    if (mediaInfo->cacheIo == NULL) {
-        MediaInfoHandle *badHandle = mediaInfo;
+    At9MediaInfo *mediaInfo = reinterpret_cast<At9MediaInfo *>(handle);
+    if (mediaInfo->m_cacheIo == NULL) {
+        MediaInfoHandle *badHandle = reinterpret_cast<MediaInfoHandle *>(mediaInfo);
         decoderManagerReleaseMediaInfo(&badHandle, 1);
         return -1;
     }
@@ -336,7 +270,7 @@ int At9Parser::setMediaInfo(MediaInfoHandle *handle)
         return PARSER_ERR_BAD_STATE;
     }
 
-    const char *newPath = mediaInfo->cacheIo->getPath();
+    const char *newPath = mediaInfo->m_cacheIo->getPath();
     if (m_activeCacheIo != NULL) {
         if (sce_paf_strcmp(m_activeCacheIo->getPath(), newPath) == 0) {
             m_lock.unlock();
@@ -348,7 +282,7 @@ int At9Parser::setMediaInfo(MediaInfoHandle *handle)
             m_nextCacheIo = NULL;
         }
         if (m_activeMedia != NULL) {
-            MediaInfoHandle *oldHandle = m_activeMedia;
+            MediaInfoHandle *oldHandle = reinterpret_cast<MediaInfoHandle *>(m_activeMedia);
             decoderManagerReleaseMediaInfo(&oldHandle, 1);
             m_activeMedia = NULL;
         }
@@ -373,16 +307,16 @@ int At9Parser::setMediaInfo(MediaInfoHandle *handle)
 
     if (m_nextCacheIo != NULL) {
         if (m_nextMedia != NULL) {
-            MediaInfoHandle *nextHandle = m_nextMedia;
+            MediaInfoHandle *nextHandle = reinterpret_cast<MediaInfoHandle *>(m_nextMedia);
             decoderManagerReleaseMediaInfo(&nextHandle, 1);
             m_nextMedia = NULL;
         }
         m_nextCacheIo = NULL;
     }
 
-    mediaInfo->sharedFlag = 1u;
+    mediaInfo->m_sharedFlag = 1u;
     m_activeMedia = mediaInfo;
-    m_activeCacheIo = mediaInfo->cacheIo;
+    m_activeCacheIo = mediaInfo->m_cacheIo;
     m_lock.unlock();
     return 0;
 }
@@ -393,13 +327,13 @@ int At9Parser::prefetchMediaInfo(MediaInfoHandle *handle)
     if (handle == NULL || handle->mediaFourcc != FOURCC_AT9) {
         return PARSER_ERR_BAD_PARAM;
     }
-    At9MediaInfo *mediaInfo = static_cast<At9MediaInfo *>(handle);
-    if (mediaInfo->cacheIo == NULL) {
+    At9MediaInfo *mediaInfo = reinterpret_cast<At9MediaInfo *>(handle);
+    if (mediaInfo->m_cacheIo == NULL) {
         return -1;
     }
 
     m_lock.lock();
-    const char *newPath = mediaInfo->cacheIo->getPath();
+    const char *newPath = mediaInfo->m_cacheIo->getPath();
     if (m_nextCacheIo != NULL) {
         if (sce_paf_strcmp(m_nextCacheIo->getPath(), newPath) == 0) {
             m_lock.unlock();
@@ -418,9 +352,9 @@ int At9Parser::prefetchMediaInfo(MediaInfoHandle *handle)
         return -1;
     }
 
-    mediaInfo->sharedFlag = 1u;
+    mediaInfo->m_sharedFlag = 1u;
     m_nextMedia = mediaInfo;
-    m_nextCacheIo = mediaInfo->cacheIo;
+    m_nextCacheIo = mediaInfo->m_cacheIo;
     m_nextCacheIo->setPriorityMode(1);
 
     if (m_nextCacheIo->isOpen() != 1 && m_nextCacheIo->open() < 0) {
@@ -428,7 +362,7 @@ int At9Parser::prefetchMediaInfo(MediaInfoHandle *handle)
         return PARSER_ERR_OPEN_FAIL;
     }
 
-    int scanErr = at9CacheScanChunks(m_nextCacheIo, 7u);
+    int scanErr = m_nextCacheIo->scanChunks(7u);
     m_lock.unlock();
     if (scanErr == 0) {
         return 0;
@@ -455,7 +389,7 @@ int At9Parser::setStartPosition(int startMs)
 /* 0x811FB59E */
 int At9Parser::parseAt9Header(uint8_t scanMask)
 {
-    int err = at9CacheScanChunks(m_activeCacheIo, scanMask);
+    int err = m_activeCacheIo->scanChunks(scanMask);
     if (err != 0) {
         return err;
     }
@@ -474,7 +408,7 @@ int At9Parser::parseAt9Header(uint8_t scanMask)
     sce_paf_memset(fmt.subFormatGuid, 0, sizeof(fmt.subFormatGuid));
     sce_paf_memset(fmt.configData, 0, sizeof(fmt.configData));
 
-    err = at9CacheReadFmtHeader(m_activeCacheIo, &fmt);
+    err = m_activeCacheIo->readFmtHeader(&fmt);
     if (err != 0) {
         return err;
     }
@@ -487,7 +421,7 @@ int At9Parser::parseAt9Header(uint8_t scanMask)
     }
 
     m_blockAlign = fmt.blockAlign;
-    uint32_t dataSize = m_activeCacheIo->dataSize;
+    uint32_t dataSize = m_activeCacheIo->m_dataSize;
     m_totalFrames = (dataSize / m_blockAlign) + ((dataSize % m_blockAlign != 0u) ? 1u : 0u);
     m_sampleRate = 48000u;
     m_samplesPerBlock = fmt.samplesPerBlock;
@@ -500,7 +434,7 @@ int At9Parser::parseAt9Header(uint8_t scanMask)
     At9SmplLoopInfo loopInfo;
     loopInfo.loopStart = 0;
     loopInfo.loopEnd = 0;
-    err = at9CacheReadSmplLoop(m_activeCacheIo, &loopInfo);
+    err = m_activeCacheIo->readSmplLoop(&loopInfo);
     if (err == 0 || err == WAVE_ERR_CORRUPT) {
         m_loopStartSample = loopInfo.loopStart;
         m_loopEndSample = loopInfo.loopEnd;
@@ -565,7 +499,7 @@ int At9Parser::getDurationMs()
             return 0;
         }
     }
-    int durationMs = (int)((float)m_activeCacheIo->dataSize / m_bytesPerMs);
+    int durationMs = (int)((float)m_activeCacheIo->m_dataSize / m_bytesPerMs);
     m_lock.unlock();
     return durationMs;
 }
@@ -632,7 +566,7 @@ int At9Parser::produceFrame(MediaFrameBuffer *outBuf)
             return mapAt9ParserError((uint32_t)err);
         }
     }
-    if (m_activeCacheIo->dataSize == 0u) {
+    if (m_activeCacheIo->m_dataSize == 0u) {
         return PARSER_ERR_EOS;
     }
 
@@ -678,7 +612,7 @@ int At9Parser::produceFrame(MediaFrameBuffer *outBuf)
         return PARSER_ERR_BAD_PARAM;
     }
     if (m_requestedSpeed != m_activeSpeed) {
-        m_activeCacheIo->setCacheHint(1, 0);
+        m_activeCacheIo->setCacheHint(1);
         m_activeSpeed = m_requestedSpeed;
     }
     m_lock.unlock();
@@ -686,7 +620,8 @@ int At9Parser::produceFrame(MediaFrameBuffer *outBuf)
     uint32_t byteOffset = m_blockAlign * (uint32_t)m_currentFrameIdx;
     void *rawData = NULL;
     uint32_t readBytes = 0;
-    int readErr = wavCacheReadDataRange(m_activeCacheIo, byteOffset, m_blockAlign, &rawData, &readBytes);
+    int readErr = reinterpret_cast<WavCacheIo *>(m_activeCacheIo)->readDataRange(
+        byteOffset, m_blockAlign, &rawData, &readBytes);
     if (readErr != 0) {
         if (readErr == IO_ERR_READ_IO) {
             return PARSER_ERR_READ_IO;
@@ -775,7 +710,7 @@ void *At9Parser::getCodecConfig(uint32_t *outSize)
     sce_paf_memset(fmt.subFormatGuid, 0, sizeof(fmt.subFormatGuid));
     sce_paf_memset(fmt.configData, 0, sizeof(fmt.configData));
 
-    if (at9CacheReadFmtHeader(m_activeCacheIo, &fmt) != 0) {
+    if (m_activeCacheIo->readFmtHeader(&fmt) != 0) {
         m_codecCfg.status = IO_ERR_OPEN_FAIL;
         sce_paf_memset(m_codecCfg.configData, 0, sizeof(m_codecCfg.configData));
     } else {
@@ -893,15 +828,14 @@ PipelineEventListener *At9Factory::createPipeline(int mode, AudioOpenCallback op
 /* 0x811FB0AA */
 void *At9Factory::createMediaInfo(const char *path, int loopMode)
 {
-    void *mem = allocFromHeap(2068u);
+    void *mem = allocFromHeap(sizeof(At9MediaInfo));
     if (mem == NULL) {
         return NULL;
     }
-    return at9MediaInfoConstruct(mem, path, loopMode);
+    return new (mem) At9MediaInfo(path, loopMode);
 }
 
 struct CodecFactory;
-struct MediaInfoBase;
 struct DecoderInstance;
 
 DecoderInstance *createAt9Decoder(CodecFactory *factory, int mode, void *outCtx,

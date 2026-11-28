@@ -321,32 +321,6 @@ extern DecoderFilterBase *decoderPipelineGetDecoder(PipelineEventListener *pipel
 extern AudioOutputFilter *decoderPipelineGetAudio(PipelineEventListener *pipeline);
 extern PipeInterface *decoderPipelineGetPipe(PipelineEventListener *pipeline);
 
-/* Cached stream I/O interface (implemented by LocalCacheIo and CacheIoEngine) */
-class CachedStreamIo {
-public:
-    virtual ~CachedStreamIo() {}
-    virtual int isInitialized() const = 0;
-    virtual int open() = 0;
-    virtual int close() = 0;
-    virtual int isOpen() const = 0;
-    virtual int getFileSize() const = 0;
-    virtual const char *getPath() const = 0;
-    virtual int setPath(const char *path) = 0;
-    virtual int setPriorityMode(uint32_t mode) = 0;
-    virtual int applyOpenFilePriority(int mode) = 0;
-    virtual void flushCache() = 0;
-    virtual int setCacheHint(int hintMode) = 0;
-    virtual void *mapRangeSimple(int offset, int size, int unusedFlag, int *outErr,
-                                 int *outMappedSize) = 0;
-    virtual void *mapRangePinned(int offset, uint32_t size, int pinFlag,
-                                 int *outPinToken, int *outErr, uint32_t *outMappedSize) = 0;
-    virtual int unpinRange(int pinToken, int *outErr) = 0;
-    virtual int getCacheGeometry(int *outBlockCount, uint32_t *outChunkSize) = 0;
-    virtual int checkRangeReadable(int sizeBytes, int *outErr) = 0;
-    virtual void *mapStreamRange(int streamIdx, uint32_t offset, uint32_t size,
-                                 int *outErr) = 0;
-};
-
 } /* namespace MusicCore */
 } /* namespace sce */
 

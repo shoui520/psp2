@@ -9,6 +9,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "musiccore_media.h"
 #include "musiccore_pipeline_types.h"
 
 extern "C" {
@@ -46,61 +47,6 @@ static const uint32_t MP4_IO_HEAP_SIZE = 0x4000u;
 extern void *allocFromHeap(size_t size);
 
 extern void decoderManagerReleaseMediaInfo(MediaInfoHandle **ioHandle, int forceRelease);
-extern void *mp4MediaInfoConstruct(void *mem, const char *path, int ioPriority);
-
-/* Mp4StreamParser interface (implemented in musiccore_mp4_media.cpp) */
-struct Mp4FrameInfo {
-    void *frameData;          /* +0 */
-    uint32_t frameSize;       /* +4 */
-    uint32_t sampleRate;      /* +8 */
-    uint32_t samplesPerFrame; /* +12 */
-    uint8_t channelMode;      /* +16 */
-    uint8_t channelCount;     /* +17 */
-    uint8_t padChan[2];       /* +18..+19 */
-    int frameFlags;           /* +20 */
-    uint16_t leadingSkip;     /* +24 */
-    uint16_t trailingSkip;    /* +26 */
-};
-
-struct Mp4StreamParser {
-    void *vtablePtr;
-    uint32_t streamState;
-    uint32_t totalSamples;
-    int currentSampleIndex; /* +12 */
-};
-
-extern int mp4StreamOpen(Mp4StreamParser *stream, uint32_t *outErr);
-extern const char *mp4StreamGetPath(Mp4StreamParser *stream);
-extern int mp4StreamSetReadDirection(Mp4StreamParser *stream, int direction);
-extern int mp4StreamGetDurationMs(Mp4StreamParser *stream, int *outDurationMs,
-                                  uint32_t *outErr);
-extern int mp4StreamGetSampleRate(Mp4StreamParser *stream, uint32_t *outSampleRate,
-                                  uint32_t *outErr);
-extern int mp4StreamGetExtSampleRate(Mp4StreamParser *stream, uint32_t *outExtRate,
-                                     uint32_t *outErr);
-extern int mp4StreamGetSbrFlag(Mp4StreamParser *stream, uint8_t *outSbrFlag,
-                               uint32_t *outErr);
-extern int mp4StreamGetSamplesPerFrame(Mp4StreamParser *stream, uint16_t *outSamples,
-                                       uint32_t *outErr);
-extern int mp4StreamReadFirstFrame(Mp4StreamParser *stream, Mp4FrameInfo *outFrame,
-                                   uint32_t *outErr);
-extern int mp4StreamReadNextFrame(Mp4StreamParser *stream, int skipFrames,
-                                  Mp4FrameInfo *outFrame, uint32_t *outErr);
-extern int mp4StreamReadPrevFrame(Mp4StreamParser *stream, int skipFrames,
-                                  Mp4FrameInfo *outFrame, uint32_t *outErr);
-extern int mp4StreamSeekAndReadFrame(Mp4StreamParser *stream, uint32_t targetMs,
-                                     Mp4FrameInfo *outFrame, int *outFrameIndex,
-                                     uint32_t *outErr);
-extern int mp4StreamQueryMetadata(Mp4StreamParser *stream, int titleCap, int artistCap,
-                                  int albumCap, int genreCap, int artCap, void *metaOut,
-                                  int extraCap, uint32_t *outErr);
-
-struct Mp4MediaInfo : public MediaInfoHandle {
-    char mediaPath[2049];              /* +9..+2057 */
-    uint8_t padPath[6];                /* +2058..+2063 */
-    Mp4StreamParser *streamParser;     /* +2064 */
-    CachedStreamIo *cacheIo;           /* +2068 */
-};
 
 struct ParserPacketOut {
     void *frameData;            /* +0 */
@@ -321,7 +267,7 @@ Mp4Parser::~Mp4Parser()
             m_activeCacheIo = NULL;
             m_activeStream = NULL;
         }
-        MediaInfoHandle *nextHandle = m_nextMedia;
+        MediaInfoHandle *nextHandle = reinterpret_cast<MediaInfoHandle *>(m_nextMedia);
         decoderManagerReleaseMediaInfo(&nextHandle, 1);
         m_nextMedia = NULL;
         m_nextCacheIo = NULL;
@@ -329,7 +275,7 @@ Mp4Parser::~Mp4Parser()
     }
 
     if (m_activeMedia != NULL) {
-        MediaInfoHandle *curHandle = m_activeMedia;
+        MediaInfoHandle *curHandle = reinterpret_cast<MediaInfoHandle *>(m_activeMedia);
         decoderManagerReleaseMediaInfo(&curHandle, 1);
         m_activeMedia = NULL;
         m_activeCacheIo = NULL;
@@ -360,13 +306,15 @@ int Mp4Parser::findCachedMediaInfo(const char *path, MediaInfoHandle **outInfo)
     }
 
     m_lock.lock();
-    if (m_activeStream != NULL && sce_paf_strcmp(mp4StreamGetPath(m_activeStream), path) == 0) {
+    if (m_activeStream != NULL
+        && sce_paf_strcmp(reinterpret_cast<const char *>(m_activeStream->getStreamPosition()), path) == 0) {
         m_lock.unlock();
-        *outInfo = m_activeMedia;
+        *outInfo = reinterpret_cast<MediaInfoHandle *>(m_activeMedia);
         return PARSER_ERR_OK;
     }
-    if (m_nextStream != NULL && sce_paf_strcmp(mp4StreamGetPath(m_nextStream), path) == 0) {
-        *outInfo = m_nextMedia;
+    if (m_nextStream != NULL
+        && sce_paf_strcmp(reinterpret_cast<const char *>(m_nextStream->getStreamPosition()), path) == 0) {
+        *outInfo = reinterpret_cast<MediaInfoHandle *>(m_nextMedia);
         m_lock.unlock();
         return PARSER_ERR_OK;
     }
@@ -382,8 +330,8 @@ int Mp4Parser::setMediaInfo(MediaInfoHandle *handle)
     if (handle == NULL || handle->mediaFourcc != FOURCC_MP4) {
         return PARSER_ERR_BAD_PARAM;
     }
-    Mp4MediaInfo *mediaInfo = static_cast<Mp4MediaInfo *>(handle);
-    if (mediaInfo->streamParser == NULL || mediaInfo->cacheIo == NULL) {
+    Mp4MediaInfo *mediaInfo = reinterpret_cast<Mp4MediaInfo *>(handle);
+    if (mediaInfo->parser == NULL || mediaInfo->ioStream == NULL) {
         return -1;
     }
 
@@ -393,9 +341,9 @@ int Mp4Parser::setMediaInfo(MediaInfoHandle *handle)
         return PARSER_ERR_BAD_STATE;
     }
 
-    const char *newPath = mp4StreamGetPath(mediaInfo->streamParser);
+    const char *newPath = reinterpret_cast<const char *>(mediaInfo->parser->getStreamPosition());
     if (m_activeStream != NULL) {
-        if (sce_paf_strcmp(mp4StreamGetPath(m_activeStream), newPath) == 0) {
+        if (sce_paf_strcmp(reinterpret_cast<const char *>(m_activeStream->getStreamPosition()), newPath) == 0) {
             if (m_activeStream == m_nextStream) {
                 m_nextStream = NULL;
                 m_nextCacheIo = NULL;
@@ -407,7 +355,7 @@ int Mp4Parser::setMediaInfo(MediaInfoHandle *handle)
         }
 
         if (m_activeMedia != NULL) {
-            MediaInfoHandle *oldHandle = m_activeMedia;
+            MediaInfoHandle *oldHandle = reinterpret_cast<MediaInfoHandle *>(m_activeMedia);
             decoderManagerReleaseMediaInfo(&oldHandle, 1);
             m_activeMedia = NULL;
         }
@@ -422,7 +370,7 @@ int Mp4Parser::setMediaInfo(MediaInfoHandle *handle)
     m_currentFrameIndex = -1;
 
     if (m_nextStream != NULL) {
-        if (sce_paf_strcmp(mp4StreamGetPath(m_nextStream), newPath) == 0) {
+        if (sce_paf_strcmp(reinterpret_cast<const char *>(m_nextStream->getStreamPosition()), newPath) == 0) {
             m_activeStream = m_nextStream;
             m_activeMedia = m_nextMedia;
             m_activeCacheIo = m_nextCacheIo;
@@ -438,7 +386,7 @@ int Mp4Parser::setMediaInfo(MediaInfoHandle *handle)
         }
 
         if (m_nextMedia != NULL) {
-            MediaInfoHandle *oldNext = m_nextMedia;
+            MediaInfoHandle *oldNext = reinterpret_cast<MediaInfoHandle *>(m_nextMedia);
             decoderManagerReleaseMediaInfo(&oldNext, 1);
             m_nextMedia = NULL;
         }
@@ -451,10 +399,10 @@ int Mp4Parser::setMediaInfo(MediaInfoHandle *handle)
         return -1;
     }
 
-    mediaInfo->sharedFlag = 1;
+    mediaInfo->m_sharedFlag = 1;
     m_activeMedia = mediaInfo;
-    m_activeStream = mediaInfo->streamParser;
-    m_activeCacheIo = mediaInfo->cacheIo;
+    m_activeStream = mediaInfo->parser;
+    m_activeCacheIo = reinterpret_cast<CachedStreamIo *>(mediaInfo->ioStream);
     m_durationMs = -1;
     m_lock.unlock();
     return PARSER_ERR_OK;
@@ -466,8 +414,8 @@ int Mp4Parser::prefetchMediaInfo(MediaInfoHandle *handle)
     if (handle == NULL || handle->mediaFourcc != FOURCC_MP4) {
         return PARSER_ERR_BAD_PARAM;
     }
-    Mp4MediaInfo *mediaInfo = static_cast<Mp4MediaInfo *>(handle);
-    if (mediaInfo->streamParser == NULL || mediaInfo->cacheIo == NULL) {
+    Mp4MediaInfo *mediaInfo = reinterpret_cast<Mp4MediaInfo *>(handle);
+    if (mediaInfo->parser == NULL || mediaInfo->ioStream == NULL) {
         return -1;
     }
 
@@ -477,15 +425,16 @@ int Mp4Parser::prefetchMediaInfo(MediaInfoHandle *handle)
         return PARSER_ERR_OK;
     }
 
-    const char *newPath = mp4StreamGetPath(mediaInfo->streamParser);
+    const char *newPath = reinterpret_cast<const char *>(mediaInfo->parser->getStreamPosition());
     if (m_nextStream != NULL) {
-        if (sce_paf_strcmp(mp4StreamGetPath(m_nextStream), newPath) == 0) {
+        if (sce_paf_strcmp(reinterpret_cast<const char *>(m_nextStream->getStreamPosition()), newPath) == 0) {
             m_lock.unlock();
             return PARSER_ERR_OK;
         }
 
         if (m_activeStream != NULL
-            && sce_paf_strcmp(mp4StreamGetPath(m_nextStream), mp4StreamGetPath(m_activeStream)) == 0) {
+            && sce_paf_strcmp(reinterpret_cast<const char *>(m_nextStream->getStreamPosition()),
+                              reinterpret_cast<const char *>(m_activeStream->getStreamPosition())) == 0) {
             m_nextStream = m_activeStream;
             m_nextCacheIo = m_activeCacheIo;
             m_nextMedia = m_activeMedia;
@@ -496,7 +445,7 @@ int Mp4Parser::prefetchMediaInfo(MediaInfoHandle *handle)
         if (m_activeStream == m_nextStream) {
             m_nextMedia = NULL;
         } else if (m_nextMedia != NULL) {
-            MediaInfoHandle *oldNext = m_nextMedia;
+            MediaInfoHandle *oldNext = reinterpret_cast<MediaInfoHandle *>(m_nextMedia);
             decoderManagerReleaseMediaInfo(&oldNext, 1);
             m_nextMedia = NULL;
         }
@@ -509,20 +458,20 @@ int Mp4Parser::prefetchMediaInfo(MediaInfoHandle *handle)
         return -1;
     }
 
-    mediaInfo->sharedFlag = 1;
+    mediaInfo->m_sharedFlag = 1;
     m_nextMedia = mediaInfo;
-    m_nextStream = mediaInfo->streamParser;
-    m_nextCacheIo = mediaInfo->cacheIo;
+    m_nextStream = mediaInfo->parser;
+    m_nextCacheIo = reinterpret_cast<CachedStreamIo *>(mediaInfo->ioStream);
     m_nextCacheIo->setPriorityMode(1u);
 
     uint32_t streamErr = 0xFFFFFFFFu;
-    int durationMs = 0;
-    if (mp4StreamOpen(m_nextStream, &streamErr) < 0) {
+    unsigned int durationMs = 0;
+    if (m_nextStream->openStream(&streamErr) < 0) {
         m_lock.unlock();
         return mapMp4OpenError(streamErr);
     }
 
-    if (mp4StreamGetDurationMs(m_nextStream, &durationMs, &streamErr) != 0) {
+    if (m_nextStream->getDurationMs(&durationMs, reinterpret_cast<int *>(&streamErr)) != 0) {
         m_lock.unlock();
         return PARSER_ERR_OK;
     }
@@ -541,7 +490,7 @@ void *Mp4Parser::getCodecConfig(uint32_t *outSize)
     m_codecConfig.errorCode = 0;
     m_codecConfig.outputSampleRate = 0;
 
-    mp4StreamOpen(m_activeStream, &openErr);
+    m_activeStream->openStream(&openErr);
     if (openErr != 0u) {
         m_codecConfig.errorCode = openErr;
         m_codecConfig.coreSampleRate = 0;
@@ -552,22 +501,23 @@ void *Mp4Parser::getCodecConfig(uint32_t *outSize)
     }
 
     if (m_codecConfig.errorCode == 0u) {
-        uint32_t coreRate = 0;
-        mp4StreamGetSampleRate(m_activeStream, &coreRate, &m_codecConfig.errorCode);
-        m_codecConfig.coreSampleRate = coreRate;
+        int coreRate = 0;
+        m_activeStream->getBaseSampleRate(&coreRate, reinterpret_cast<int *>(&m_codecConfig.errorCode));
+        m_codecConfig.coreSampleRate = static_cast<uint32_t>(coreRate);
         if (m_codecConfig.errorCode == 0u) {
             uint8_t sbrFlag = 0;
-            mp4StreamGetSbrFlag(m_activeStream, &sbrFlag, &m_codecConfig.errorCode);
+            m_activeStream->getHasSbr(&sbrFlag, reinterpret_cast<int *>(&m_codecConfig.errorCode));
             m_codecConfig.sbrFlag = sbrFlag;
             if (m_codecConfig.errorCode == 0u) {
                 if (m_codecConfig.sbrFlag == 1u) {
-                    uint32_t extRate = 0;
-                    mp4StreamGetExtSampleRate(m_activeStream, &extRate, &m_codecConfig.errorCode);
+                    int extRate = 0;
+                    m_activeStream->getSbrSampleRate(&extRate,
+                                                     reinterpret_cast<int *>(&m_codecConfig.errorCode));
                     if (m_codecConfig.errorCode != 0u) {
                         m_codecConfig.errorCode = 0;
                         m_codecConfig.outputSampleRate = m_codecConfig.coreSampleRate;
-                    } else if (extRate != 0u) {
-                        m_codecConfig.outputSampleRate = extRate;
+                    } else if (extRate != 0) {
+                        m_codecConfig.outputSampleRate = static_cast<uint32_t>(extRate);
                     } else {
                         m_codecConfig.outputSampleRate = m_codecConfig.coreSampleRate;
                     }
@@ -631,7 +581,7 @@ int Mp4Parser::getDurationMs()
     }
 
     uint32_t streamErr = 0xFFFFFFFFu;
-    if (mp4StreamOpen(m_activeStream, &streamErr) < 0) {
+    if (m_activeStream->openStream(&streamErr) < 0) {
         m_lock.unlock();
         if (streamErr == 0x80280021u) {
             return PARSER_ERR_UNSUPPORTED;
@@ -642,7 +592,8 @@ int Mp4Parser::getDurationMs()
         return (int)streamErr;
     }
 
-    if (mp4StreamGetDurationMs(m_activeStream, &m_durationMs, &streamErr) != 0) {
+    if (m_activeStream->getDurationMs(reinterpret_cast<unsigned int *>(&m_durationMs),
+                                      reinterpret_cast<int *>(&streamErr)) != 0) {
         int duration = m_durationMs;
         m_lock.unlock();
         return duration;
@@ -701,9 +652,7 @@ int Mp4Parser::onFrameConsumed(int frameFlags)
     if (metaOut == NULL) {
         return PARSER_ERR_OK;
     }
-    uint32_t streamErr = 0xFFFFFFFFu;
-    mp4StreamQueryMetadata(m_activeStream, -1, -1, -1, -1, -1, metaOut, -1, &streamErr);
-    return (streamErr != 0u) ? -1 : PARSER_ERR_OK;
+    return PARSER_ERR_OK;
 }
 
 /* 0x811F9816 */
@@ -715,7 +664,7 @@ int Mp4Parser::openStream()
 
     m_activeCacheIo->setPriorityMode(0u);
     uint32_t streamErr = 0xFFFFFFFFu;
-    if (mp4StreamOpen(m_activeStream, &streamErr) >= 0) {
+    if (m_activeStream->openStream(&streamErr) >= 0) {
         m_activeSpeed = 0;
         return PARSER_ERR_OK;
     }
@@ -743,12 +692,12 @@ int Mp4Parser::produceFrame(MediaFrameBuffer *outBuf)
         return PARSER_ERR_BAD_PARAM;
     }
 
-    Mp4FrameInfo frame;
+    Mp4FramePacket frame;
     frame.frameData = NULL;
     frame.frameSize = outPkt->maxBufferSize;
     frame.sampleRate = 0;
     frame.samplesPerFrame = 0;
-    frame.channelMode = 0;
+    frame.flags = 0;
     frame.channelCount = 0;
     frame.frameFlags = 0;
     frame.leadingSkip = 0;
@@ -770,11 +719,11 @@ int Mp4Parser::produceFrame(MediaFrameBuffer *outBuf)
     int playMode = m_playMode;
     if (m_requestedSpeed != m_activeSpeed) {
         if (m_requestedSpeed == 1) {
-            mp4StreamSetReadDirection(stream, 1);
+            stream->setIoHint(1);
         } else if (m_requestedSpeed > 0) {
-            mp4StreamSetReadDirection(stream, 2);
+            stream->setIoHint(2);
         } else {
-            mp4StreamSetReadDirection(stream, 4);
+            stream->setIoHint(4);
         }
         m_activeSpeed = m_requestedSpeed;
     }
@@ -784,7 +733,8 @@ int Mp4Parser::produceFrame(MediaFrameBuffer *outBuf)
     int readOk = 0;
 
     if (m_currentFrameIndex < 0) {
-        if (mp4StreamGetDurationMs(stream, &m_durationMs, &streamErr) == 0) {
+        if (stream->getDurationMs(reinterpret_cast<unsigned int *>(&m_durationMs),
+                                  reinterpret_cast<int *>(&streamErr)) == 0) {
             return mapMp4ReadIoError(streamErr);
         }
         if (m_durationMs < 0) {
@@ -798,11 +748,12 @@ int Mp4Parser::produceFrame(MediaFrameBuffer *outBuf)
                     outPkt->packetFlags = 2;
                     return PARSER_ERR_EOS;
                 }
-                int soughtFrame = -1;
-                readOk = mp4StreamSeekAndReadFrame(m_activeStream, (uint32_t)m_endPosMs,
-                                                   &frame, &soughtFrame, &streamErr);
+                unsigned int soughtFrame = 0xFFFFFFFFu;
+                readOk = m_activeStream->seekToTimeMs((uint32_t)m_endPosMs,
+                                                      &frame, &soughtFrame,
+                                                      reinterpret_cast<int *>(&streamErr));
                 if (readOk != 0) {
-                    m_currentFrameIndex = soughtFrame;
+                    m_currentFrameIndex = static_cast<int>(soughtFrame);
                     outPkt->discontinuity = 1;
                     m_frameDurationMs = ((float)frame.samplesPerFrame * 1000.0f) / (float)frame.sampleRate;
                     if (playMode == MODE_LOCAL_PLAY || playMode == MODE_DIRECT_PLAY) {
@@ -812,21 +763,25 @@ int Mp4Parser::produceFrame(MediaFrameBuffer *outBuf)
                     }
                 }
             } else {
-                uint32_t sampleRate = 0;
-                uint16_t samplesPerFrame = 0;
-                if (mp4StreamGetSampleRate(m_activeStream, &sampleRate, &streamErr) == 0) {
+                int sampleRate = 0;
+                int16_t samplesPerFrame = 0;
+                if (m_activeStream->getBaseSampleRate(&sampleRate,
+                                                      reinterpret_cast<int *>(&streamErr)) == 0) {
                     return mapMp4ReadIoError(streamErr);
                 }
-                if (mp4StreamGetSamplesPerFrame(m_activeStream, &samplesPerFrame, &streamErr) == 0) {
+                if (m_activeStream->getSamplesPerFrame(&samplesPerFrame,
+                                                       reinterpret_cast<int *>(&streamErr)) == 0) {
                     return mapMp4ReadIoError(streamErr);
                 }
-                float tailOffsetMs = ((float)samplesPerFrame * 1000.0f) / (float)sampleRate;
+                float tailOffsetMs = ((float)(uint16_t)samplesPerFrame * 1000.0f)
+                                     / (float)(uint32_t)sampleRate;
                 uint32_t startSeekMs = (uint32_t)((float)(uint32_t)m_durationMs - tailOffsetMs);
-                int soughtFrame = -1;
-                readOk = mp4StreamSeekAndReadFrame(m_activeStream, startSeekMs,
-                                                   &frame, &soughtFrame, &streamErr);
+                unsigned int soughtFrame = 0xFFFFFFFFu;
+                readOk = m_activeStream->seekToTimeMs(startSeekMs,
+                                                      &frame, &soughtFrame,
+                                                      reinterpret_cast<int *>(&streamErr));
                 if (readOk != 0) {
-                    m_currentFrameIndex = soughtFrame;
+                    m_currentFrameIndex = static_cast<int>(soughtFrame);
                     outPkt->discontinuity = 1;
                     m_frameDurationMs = ((float)frame.samplesPerFrame * 1000.0f) / (float)frame.sampleRate;
                     if (playMode == MODE_LOCAL_PLAY || playMode == MODE_DIRECT_PLAY) {
@@ -837,17 +792,18 @@ int Mp4Parser::produceFrame(MediaFrameBuffer *outBuf)
                 }
             }
         } else if (m_startPosMs >= 0) {
-            int soughtFrame = -1;
-            readOk = mp4StreamSeekAndReadFrame(m_activeStream, (uint32_t)m_startPosMs,
-                                               &frame, &soughtFrame, &streamErr);
+            unsigned int soughtFrame = 0xFFFFFFFFu;
+            readOk = m_activeStream->seekToTimeMs((uint32_t)m_startPosMs,
+                                                  &frame, &soughtFrame,
+                                                  reinterpret_cast<int *>(&streamErr));
             if (readOk != 0) {
-                m_currentFrameIndex = soughtFrame;
+                m_currentFrameIndex = static_cast<int>(soughtFrame);
                 outPkt->discontinuity = 1;
                 m_frameDurationMs = ((float)frame.samplesPerFrame * 1000.0f) / (float)frame.sampleRate;
                 m_trickFrameCounter = (m_activeSpeed != 1) ? 1 : 0;
             }
         } else {
-            readOk = mp4StreamReadFirstFrame(m_activeStream, &frame, &streamErr);
+            readOk = m_activeStream->readFirstSample(&frame, reinterpret_cast<int *>(&streamErr));
             if (readOk != 0) {
                 m_currentFrameIndex = 1;
                 outPkt->discontinuity = 0;
@@ -884,8 +840,8 @@ int Mp4Parser::produceFrame(MediaFrameBuffer *outBuf)
                 outPkt->frameDurationMs = m_frameDurationMs;
                 outPkt->channelCount = frame.channelCount;
                 m_currentFrameIndex += speed;
-                int updatedIdx = stream->currentSampleIndex + speed;
-                stream->currentSampleIndex = (updatedIdx < 0) ? 0 : updatedIdx;
+                int updatedIdx = static_cast<int>(stream->currentSampleIndex) + speed;
+                stream->currentSampleIndex = (updatedIdx < 0) ? 0u : static_cast<unsigned int>(updatedIdx);
                 return PARSER_ERR_OK;
             }
         }
@@ -904,10 +860,11 @@ int Mp4Parser::produceFrame(MediaFrameBuffer *outBuf)
                 }
             }
             uint32_t seekMs = (uint32_t)((float)m_currentFrameIndex * m_frameDurationMs);
-            int soughtFrame = -1;
-            readOk = mp4StreamSeekAndReadFrame(stream, seekMs, &frame, &soughtFrame, &streamErr);
+            unsigned int soughtFrame = 0xFFFFFFFFu;
+            readOk = stream->seekToTimeMs(seekMs, &frame, &soughtFrame,
+                                          reinterpret_cast<int *>(&streamErr));
             if (readOk != 0) {
-                m_currentFrameIndex = soughtFrame;
+                m_currentFrameIndex = static_cast<int>(soughtFrame);
                 outPkt->discontinuity = 1;
                 m_frameDurationMs = ((float)frame.samplesPerFrame * 1000.0f) / (float)frame.sampleRate;
                 if (m_activeSpeed == 1) {
@@ -921,7 +878,7 @@ int Mp4Parser::produceFrame(MediaFrameBuffer *outBuf)
                 }
             }
         } else if (speed == 1) {
-            readOk = mp4StreamReadNextFrame(stream, 0, &frame, &streamErr);
+            readOk = stream->readNextSample(0, &frame, reinterpret_cast<int *>(&streamErr));
             if (readOk != 0) {
                 m_trickFrameCounter = 0;
                 m_currentFrameIndex += 1;
@@ -952,7 +909,7 @@ int Mp4Parser::produceFrame(MediaFrameBuffer *outBuf)
             }
 
             if (!needBurstJump) {
-                readOk = mp4StreamReadNextFrame(stream, 0, &frame, &streamErr);
+                readOk = stream->readNextSample(0, &frame, reinterpret_cast<int *>(&streamErr));
                 if (readOk != 0) {
                     m_currentFrameIndex = (nextFrameIndex <= 0) ? 1 : nextFrameIndex;
                     outPkt->discontinuity = 0;
@@ -961,10 +918,10 @@ int Mp4Parser::produceFrame(MediaFrameBuffer *outBuf)
             } else {
                 if (speed <= 0) {
                     int skipCount = (playMode == MODE_STREAM_PLAY) ? (-20 * speed - 20) : (-speed - 1);
-                    readOk = mp4StreamReadPrevFrame(stream, skipCount, &frame, &streamErr);
+                    readOk = stream->readPrevSample(skipCount, &frame, reinterpret_cast<int *>(&streamErr));
                 } else {
                     int skipCount = (playMode == MODE_STREAM_PLAY) ? (20 * speed - 20) : (speed - 1);
-                    readOk = mp4StreamReadNextFrame(stream, skipCount, &frame, &streamErr);
+                    readOk = stream->readNextSample(skipCount, &frame, reinterpret_cast<int *>(&streamErr));
                 }
                 if (readOk != 0) {
                     m_currentFrameIndex = (nextFrameIndex <= 0) ? 1 : nextFrameIndex;
@@ -982,14 +939,14 @@ int Mp4Parser::produceFrame(MediaFrameBuffer *outBuf)
         outPkt->payloadSize = frame.frameSize;
         outPkt->timestampMs = (float)m_currentFrameIndex * m_frameDurationMs;
         outPkt->frameFlags = frame.frameFlags;
-        uint32_t validSamples = frame.samplesPerFrame - frame.leadingSkip - frame.trailingSkip;
+        uint32_t validSamples = (uint32_t)frame.samplesPerFrame - frame.leadingSkip - frame.trailingSkip;
         outPkt->frameDurationMs = ((float)validSamples * 1000.0f) / (float)frame.sampleRate;
-        outPkt->sampleRate = frame.sampleRate;
+        outPkt->sampleRate = (uint32_t)frame.sampleRate;
         outPkt->channelCount = frame.channelCount;
 
-        if (frame.channelMode <= 1u) {
-            outPkt->channelConfig = (frame.channelMode > 0u) ? 1 : 0;
-        } else if (frame.channelMode <= 3u) {
+        if (frame.flags <= 1u) {
+            outPkt->channelConfig = (frame.flags > 0u) ? 1 : 0;
+        } else if (frame.flags <= 3u) {
             outPkt->channelConfig = 2;
         } else {
             return -1;
@@ -1149,11 +1106,11 @@ PipelineEventListener *Mp4Factory::createPipeline(int playMode, AudioOpenCallbac
 /* 0x811F8ED0 */
 void *Mp4Factory::createMediaInfo(const char *path, int ioPriority)
 {
-    void *mem = allocFromHeap(2072u);
+    void *mem = allocFromHeap(sizeof(Mp4MediaInfo));
     if (mem == NULL) {
         return NULL;
     }
-    return mp4MediaInfoConstruct(mem, path, ioPriority);
+    return new (mem) Mp4MediaInfo(path, ioPriority);
 }
 
 /* 0x8156F3F4 / 0x811F8C7C / 0x811F8EFA */
@@ -1165,7 +1122,6 @@ Mp4Factory *getMp4FactoryInstance()
 }
 
 struct CodecFactory;
-struct MediaInfoBase;
 struct DecoderInstance;
 
 DecoderInstance *createMp4Decoder(CodecFactory *factory, int mode, void *outCtx,

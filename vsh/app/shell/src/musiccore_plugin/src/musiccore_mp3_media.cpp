@@ -9,7 +9,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "musiccore_mp3_readers.h"
+#include "musiccore_media.h"
 
 extern "C" {
 int sce_paf_memcmp(const void *lhs, const void *rhs, size_t len);
@@ -263,70 +263,6 @@ uint16_t VbriHeaderData::getTocFramesPerEntry() const
 {
     return readBigEndian16(rawBytes + 24);
 }
-
-struct StreamIoInterface;
-extern StreamIoInterface *createLocalCacheIo(const char *path, int chunkSize, int blockCount, int readAhead);
-
-struct TrackMetadataResult {
-    int channels;
-    uint8_t hasChannels;
-    uint8_t padChannels[3];
-    int bitRate;
-    uint8_t hasBitRate;
-    uint8_t padBitRate[3];
-    unsigned int durationMs;
-    uint8_t hasDuration;
-    uint8_t padDuration[3];
-    int sampleRate;
-    uint8_t hasSampleRate;
-    uint8_t padSampleRate[3];
-    int codecProfile;
-    uint8_t hasCodecProfile;
-    uint8_t padCodecProfile[3];
-    int codecSubType;
-    uint8_t hasCodecSubType;
-    uint8_t padCodecSubType[3];
-};
-
-struct Mp3ParserInterface {
-    virtual ~Mp3ParserInterface();
-    virtual int readFirstFrame(Mp3FramePacket *outPacket, int *outErr) = 0;
-    virtual int readNextFrame(Mp3FramePacket *outPacket, int *outErr) = 0;
-    virtual int seekToTimeMs(unsigned int targetMs, Mp3FramePacket *outPacket, int *outErr) = 0;
-};
-
-class Mp3StreamParser : public Mp3ParserInterface, public Mp3FrameRecord {
-public:
-    CachedStreamIo *ioStream;
-    int openStatus;
-    Id3v1Reader id3v1Reader;
-    Id3v2Reader id3v2Reader;
-    Mp3FrameScanner frameScanner;
-    Mp3FirstFrameFinder firstFrame;
-    Mp3NextFrameLocator nextFrameIter;
-    Mp3CbrSeeker cbrSeeker;
-    XingTagReader xingReader;
-    Mp3XingSeeker xingSeeker;
-    VbriTagReader vbriReader;
-    Mp3VbriSeeker vbriSeeker;
-    Mp3SeekRouter compositeSeeker;
-    Mp3FrameReader packetReader;
-    int audioDataSize;
-
-    explicit Mp3StreamParser(CachedStreamIo *io);
-    virtual ~Mp3StreamParser();
-    int openStream();
-    int getStreamPosition();
-    int setIoHint(int mode);
-    int computeAudioDataSize(int *outErr);
-    int getDurationMs(unsigned int *outDurationMs, int *outErr);
-    int getSampleRate(int *outRate, int *outErr);
-    int getSamplesPerFrame(uint16_t *outSamples, int *outErr);
-    virtual int readFirstFrame(Mp3FramePacket *outPacket, int *outErr);
-    virtual int readNextFrame(Mp3FramePacket *outPacket, int *outErr);
-    virtual int seekToTimeMs(unsigned int targetMs, Mp3FramePacket *outPacket, int *outErr);
-    int checkFrameReadable(const Mp3FramePacket *packet, int *outErr);
-};
 
 /* 0x811EAB1C */
 Mp3StreamParser::Mp3StreamParser(CachedStreamIo *io)
@@ -732,17 +668,6 @@ int Mp3StreamParser::checkFrameReadable(const Mp3FramePacket *packet, int *outEr
     return 0;
 }
 
-class Mp3MediaInfo : public MediaInfoBase {
-public:
-    int ioMode;
-    Mp3StreamParser *parser;
-    CachedStreamIo *ioStream;
-
-    Mp3MediaInfo(const char *path, int mode);
-    virtual ~Mp3MediaInfo();
-    virtual int parseMetadata(TrackMetadataResult *outMeta);
-};
-
 /* 0x811EA894 */
 Mp3MediaInfo::Mp3MediaInfo(const char *path, int mode)
     : MediaInfoBase(path, FOURCC_MP3),
@@ -856,59 +781,6 @@ int Mp3MediaInfo::parseMetadata(TrackMetadataResult *outMeta)
     outMeta->hasCodecProfile = 0;
     outMeta->hasCodecSubType = 0;
     return result;
-}
-
-void *mp3MediaInfoConstruct(void *mem, const char *path, int ioPriority)
-{
-    return new (mem) Mp3MediaInfo(path, ioPriority);
-}
-
-int mp3StreamOpen(Mp3StreamParser *stream)
-{
-    return (stream != NULL) ? stream->openStream() : -1;
-}
-
-const char *mp3StreamGetPath(Mp3StreamParser *stream)
-{
-    return (stream != NULL && stream->ioStream != NULL)
-        ? reinterpret_cast<const char *>(stream->getStreamPosition())
-        : NULL;
-}
-
-int mp3StreamSetReadDirection(Mp3StreamParser *stream, int direction)
-{
-    return (stream != NULL) ? stream->setIoHint(direction) : -1;
-}
-
-int mp3StreamGetDurationMs(Mp3StreamParser *stream, int *outDurationMs, int *outErr)
-{
-    unsigned int duration = 0;
-    int ret = (stream != NULL) ? stream->getDurationMs(&duration, outErr) : -1;
-    if (outDurationMs != NULL)
-        *outDurationMs = static_cast<int>(duration);
-    return ret;
-}
-
-int mp3StreamGetSampleRate(Mp3StreamParser *stream, uint32_t *outSampleRate, int *outErr)
-{
-    int rate = 0;
-    int ret = (stream != NULL) ? stream->getSampleRate(&rate, outErr) : -1;
-    if (outSampleRate != NULL)
-        *outSampleRate = static_cast<uint32_t>(rate);
-    return ret;
-}
-
-int mp3StreamGetSamplesPerFrame(Mp3StreamParser *stream, uint16_t *outSamples, int *outErr)
-{
-    return (stream != NULL) ? stream->getSamplesPerFrame(outSamples, outErr) : -1;
-}
-
-int mp3StreamQueryTag(Mp3StreamParser *stream, void *tagOut, void *extraOut)
-{
-    (void)stream;
-    (void)tagOut;
-    (void)extraOut;
-    return 0;
 }
 
 Mp3ParserInterface::~Mp3ParserInterface() {}

@@ -8,8 +8,7 @@
 #include <std/new>
 #include <stddef.h>
 #include <stdint.h>
-#include "musiccore_mp3_readers.h"
-#include "musiccore_mp4_boxes.h"
+#include "musiccore_media.h"
 
 namespace sce {
 namespace MusicCore {
@@ -28,63 +27,6 @@ static const int MP4_ERR_UNSUPPORTED = -2144862175; /* 0x80280021 */
 static const int MP4_ERR_CORRUPT = -2144862174;     /* 0x80280022 */
 static const int MP4_ERR_BOX_EOF = -2144862168;     /* 0x80280028 */
 
-struct TrackMetadataResult {
-    int channels;
-    uint8_t hasChannels;
-    uint8_t padChannels[3];
-    int bitRate;
-    uint8_t hasBitRate;
-    uint8_t padBitRate[3];
-    unsigned int durationMs;
-    uint8_t hasDuration;
-    uint8_t padDuration[3];
-    int sampleRate;
-    uint8_t hasSampleRate;
-    uint8_t padSampleRate[3];
-    int codecProfile;
-    uint8_t hasCodecProfile;
-    uint8_t padCodecProfile[3];
-    int codecSubType;
-    uint8_t hasCodecSubType;
-    uint8_t padCodecSubType[3];
-};
-
-struct StreamIoInterface {
-    virtual ~StreamIoInterface() {}
-    virtual int isInitialized() = 0;
-    virtual int open() = 0;
-    virtual int close() = 0;
-    virtual int isOpen() = 0;
-    virtual int getSize() = 0;
-    virtual int getPosition() = 0;
-    virtual int setPath(const char *path) = 0;
-    virtual int setPriorityMode(uint32_t priorityMode) = 0;
-    virtual int applyOpenFilePriority(int priorityMode) = 0;
-    virtual int flushCache() = 0;
-    virtual int setIoHint(int hintMode, int hintParam) = 0;
-    virtual void *mapRangeSimple(int offset, int size, int unusedFlag, int *outErr, int *outMapped) = 0;
-    virtual int mapRange(int offset, unsigned int size, int flags, int *outMapped,
-                         int *outErr, int extra) = 0;
-    virtual int unpinRange(int pinToken, int *outErr) = 0;
-    virtual int getCacheGeometry(int *outBlockCount, uint32_t *outChunkSize) = 0;
-    virtual int checkRangeReadable(int sizeBytes, int *outErr) = 0;
-};
-
-extern StreamIoInterface *createLocalCacheIoEx(const char *path, int chunkSize, int blockCount,
-                                               int readAhead, int extraChunk, int extraBlocks);
-
-struct Mp4FramePacket {
-    void *frameData;
-    unsigned int frameSize;
-    int sampleRate;
-    int samplesPerFrame;
-    uint8_t flags;
-    uint8_t channelCount;
-    uint8_t padChannel[6];
-    uint16_t leadingSkip;
-    uint16_t trailingSkip;
-};
-
 static inline void normalizeBoxIoError(unsigned int *err)
 {
     if (*err == (unsigned int)MP4_ERR_EOF || *err == (unsigned int)MP4_ERR_BOX_EOF) {
@@ -92,90 +34,54 @@ static inline void normalizeBoxIoError(unsigned int *err)
     }
 }
 
-class Mp4StreamParser {
-public:
-    StreamIoInterface *ioStream;
-    int openStatus;
-    unsigned int currentSampleIndex;
-    Mp4MdhdBoxReader mdhdReader;
-    Mp4ContainerReader stblReader;
-    Mp4SttsReader sttsReader;
-    Mp4StszReader stszReader;
-    Mp4StscReader stscReader;
-    Mp4StcoReader stcoReader;
-    Mp4MdhdBox mdhdBox;
-    Mp4ContainerBox stblBox;
-    Mp4TableBox sttsBox;
-    Mp4StszBox stszBox;
-    Mp4TableBox stscBox;
-    Mp4TableBox stcoBox;
-    Mp4DecoderConfigDescriptor decoderConfigBox;
-    Mp4AudioSpecificConfig audioSpecConfig;
-    Mp4SampleTableNavigator sampleTable;
-
-    explicit Mp4StreamParser(StreamIoInterface *io);
-    virtual ~Mp4StreamParser();
-    int closeStream();
-    int openStream(unsigned int *outErr);
-    int getStreamPosition();
-    int setIoHint(int mode);
-    inline int resolveEffectiveSampleRate() const
-    {
-        int rate = 0;
-        if (audioSpecConfig.m_sbrPresentFlag != 0) {
-            rate = static_cast<int>(audioSpecConfig.m_extSampleRate);
-        }
-        if (rate == 0) {
-            rate = static_cast<int>(audioSpecConfig.getSamplingFrequency());
-        }
-        return rate;
+int Mp4StreamParser::resolveEffectiveSampleRate() const
+{
+    int rate = 0;
+    if (audioSpecConfig.m_sbrPresentFlag != 0) {
+        rate = static_cast<int>(audioSpecConfig.m_extSampleRate);
     }
-    inline int loadSampleAtIndex(unsigned int sampleIdx, int effectiveRate, Mp4FramePacket *outPacket, int *outErr)
-    {
-        uint32_t fileOffset = 0;
-        uint32_t sampleSize = 0;
-        uint32_t sampleDescIdx = 0;
-        uint32_t err = 0;
-        if (sampleTable.lookupSampleLocation(sampleIdx, &fileOffset, &sampleSize, &sampleDescIdx, &err) == 0) {
-            *outErr = static_cast<int>(err);
-            return 0;
-        }
-        if (sampleSize > 0x7FFFFFFFu) {
-            *outErr = MP4_ERR_UNSUPPORTED;
-            return 0;
-        }
-
-        int mappedLen = 0;
-        int ioErr = -1;
-        int dataPtr = ioStream->mapRange(static_cast<int>(fileOffset), sampleSize, 0, &mappedLen, &ioErr, 0);
-        if (dataPtr == 0) {
-            *outErr = (ioErr == MP4_ERR_EOF) ? MP4_ERR_CORRUPT : ioErr;
-            return 0;
-        }
-
-        outPacket->frameData = reinterpret_cast<void *>(dataPtr);
-        outPacket->frameSize = sampleSize;
-        outPacket->sampleRate = effectiveRate;
-        outPacket->samplesPerFrame = (audioSpecConfig.m_sbrPresentFlag != 0) ? 2048 : 1024;
-        outPacket->flags = 0;
-        outPacket->leadingSkip = 0;
-        outPacket->trailingSkip = 0;
-        outPacket->channelCount = audioSpecConfig.getChannelConfig();
-        currentSampleIndex = sampleIdx;
-        *outErr = 0;
-        return 1;
+    if (rate == 0) {
+        rate = static_cast<int>(audioSpecConfig.getSamplingFrequency());
     }
-    int getDurationMs(unsigned int *outDurationMs, int *outErr);
-    int getBaseSampleRate(int *outRate, int *outErr);
-    int getSbrSampleRate(int *outRate, int *outErr);
-    int getHasSbr(uint8_t *outHasSbr, int *outErr);
-    int getSamplesPerFrame(int16_t *outSamples, int *outErr);
-    int readFirstSample(Mp4FramePacket *outPacket, int *outErr);
-    int readNextSample(int skipCount, Mp4FramePacket *outPacket, int *outErr);
-    int readPrevSample(int skipCount, Mp4FramePacket *outPacket, int *outErr);
-    int seekToTimeMs(unsigned int targetMs, Mp4FramePacket *outPacket, unsigned int *outSampleIdx, int *outErr);
-    int checkSampleReadable(const Mp4FramePacket *packet, int *outErr);
-};
+    return rate;
+}
+
+int Mp4StreamParser::loadSampleAtIndex(unsigned int sampleIdx, int effectiveRate,
+                                       Mp4FramePacket *outPacket, int *outErr)
+{
+    uint32_t fileOffset = 0;
+    uint32_t sampleSize = 0;
+    uint32_t sampleDescIdx = 0;
+    uint32_t err = 0;
+    if (sampleTable.lookupSampleLocation(sampleIdx, &fileOffset, &sampleSize, &sampleDescIdx, &err) == 0) {
+        *outErr = static_cast<int>(err);
+        return 0;
+    }
+    if (sampleSize > 0x7FFFFFFFu) {
+        *outErr = MP4_ERR_UNSUPPORTED;
+        return 0;
+    }
+
+    int mappedLen = 0;
+    int ioErr = -1;
+    int dataPtr = ioStream->mapRange(static_cast<int>(fileOffset), sampleSize, 0, &mappedLen, &ioErr, 0);
+    if (dataPtr == 0) {
+        *outErr = (ioErr == MP4_ERR_EOF) ? MP4_ERR_CORRUPT : ioErr;
+        return 0;
+    }
+
+    outPacket->frameData = reinterpret_cast<void *>(dataPtr);
+    outPacket->frameSize = sampleSize;
+    outPacket->sampleRate = effectiveRate;
+    outPacket->samplesPerFrame = (audioSpecConfig.m_sbrPresentFlag != 0) ? 2048 : 1024;
+    outPacket->flags = 0;
+    outPacket->leadingSkip = 0;
+    outPacket->trailingSkip = 0;
+    outPacket->channelCount = audioSpecConfig.getChannelConfig();
+    currentSampleIndex = sampleIdx;
+    *outErr = 0;
+    return 1;
+}
 
 /* 0x811EBCCC */
 Mp4StreamParser::Mp4StreamParser(StreamIoInterface *io)
@@ -720,17 +626,6 @@ int Mp4StreamParser::checkSampleReadable(const Mp4FramePacket *packet, int *outE
     return 0;
 }
 
-class Mp4MediaInfo : public MediaInfoBase {
-public:
-    int ioMode;
-    Mp4StreamParser *parser;
-    StreamIoInterface *ioStream;
-
-    Mp4MediaInfo(const char *path, int mode);
-    virtual ~Mp4MediaInfo();
-    virtual int parseMetadata(TrackMetadataResult *outMeta);
-};
-
 /* 0x811EBA70 */
 Mp4MediaInfo::Mp4MediaInfo(const char *path, int mode)
     : MediaInfoBase(path, FOURCC_MP4),
@@ -838,157 +733,6 @@ int Mp4MediaInfo::parseMetadata(TrackMetadataResult *outMeta)
     outMeta->hasCodecProfile = 0;
     outMeta->hasCodecSubType = 0;
     return result;
-}
-
-struct Mp4FrameInfo;
-
-void *mp4MediaInfoConstruct(void *mem, const char *path, int ioPriority)
-{
-    return new (mem) Mp4MediaInfo(path, ioPriority);
-}
-
-int mp4StreamOpen(Mp4StreamParser *stream, uint32_t *outErr)
-{
-    unsigned int err = 0;
-    int ret = (stream != NULL) ? stream->openStream(&err) : -1;
-    if (outErr != NULL)
-        *outErr = err;
-    return ret;
-}
-
-const char *mp4StreamGetPath(Mp4StreamParser *stream)
-{
-    return (stream != NULL) ? reinterpret_cast<const char *>(stream->getStreamPosition()) : NULL;
-}
-
-int mp4StreamSetReadDirection(Mp4StreamParser *stream, int direction)
-{
-    return (stream != NULL) ? stream->setIoHint(direction) : -1;
-}
-
-int mp4StreamGetDurationMs(Mp4StreamParser *stream, int *outDurationMs, uint32_t *outErr)
-{
-    unsigned int duration = 0;
-    int err = 0;
-    int ret = (stream != NULL) ? stream->getDurationMs(&duration, &err) : -1;
-    if (outDurationMs != NULL)
-        *outDurationMs = static_cast<int>(duration);
-    if (outErr != NULL)
-        *outErr = static_cast<uint32_t>(err);
-    return ret;
-}
-
-int mp4StreamGetSampleRate(Mp4StreamParser *stream, uint32_t *outSampleRate, uint32_t *outErr)
-{
-    int rate = 0;
-    int err = 0;
-    int ret = (stream != NULL) ? stream->getBaseSampleRate(&rate, &err) : -1;
-    if (outSampleRate != NULL)
-        *outSampleRate = static_cast<uint32_t>(rate);
-    if (outErr != NULL)
-        *outErr = static_cast<uint32_t>(err);
-    return ret;
-}
-
-int mp4StreamGetExtSampleRate(Mp4StreamParser *stream, uint32_t *outExtRate, uint32_t *outErr)
-{
-    int rate = 0;
-    int err = 0;
-    int ret = (stream != NULL) ? stream->getSbrSampleRate(&rate, &err) : -1;
-    if (outExtRate != NULL)
-        *outExtRate = static_cast<uint32_t>(rate);
-    if (outErr != NULL)
-        *outErr = static_cast<uint32_t>(err);
-    return ret;
-}
-
-int mp4StreamGetSbrFlag(Mp4StreamParser *stream, uint8_t *outSbrFlag, uint32_t *outErr)
-{
-    int err = 0;
-    int ret = (stream != NULL) ? stream->getHasSbr(outSbrFlag, &err) : -1;
-    if (outErr != NULL)
-        *outErr = static_cast<uint32_t>(err);
-    return ret;
-}
-
-int mp4StreamGetSamplesPerFrame(Mp4StreamParser *stream, uint16_t *outSamples, uint32_t *outErr)
-{
-    int16_t samples = 0;
-    int err = 0;
-    int ret = (stream != NULL) ? stream->getSamplesPerFrame(&samples, &err) : -1;
-    if (outSamples != NULL)
-        *outSamples = static_cast<uint16_t>(samples);
-    if (outErr != NULL)
-        *outErr = static_cast<uint32_t>(err);
-    return ret;
-}
-
-int mp4StreamReadFirstFrame(Mp4StreamParser *stream, Mp4FrameInfo *outFrame, uint32_t *outErr)
-{
-    int err = 0;
-    int ret = (stream != NULL)
-        ? stream->readFirstSample(reinterpret_cast<Mp4FramePacket *>(outFrame), &err)
-        : -1;
-    if (outErr != NULL)
-        *outErr = static_cast<uint32_t>(err);
-    return ret;
-}
-
-int mp4StreamReadNextFrame(Mp4StreamParser *stream, int skipFrames, Mp4FrameInfo *outFrame,
-                           uint32_t *outErr)
-{
-    int err = 0;
-    int ret = (stream != NULL)
-        ? stream->readNextSample(skipFrames, reinterpret_cast<Mp4FramePacket *>(outFrame), &err)
-        : -1;
-    if (outErr != NULL)
-        *outErr = static_cast<uint32_t>(err);
-    return ret;
-}
-
-int mp4StreamReadPrevFrame(Mp4StreamParser *stream, int skipFrames, Mp4FrameInfo *outFrame,
-                           uint32_t *outErr)
-{
-    int err = 0;
-    int ret = (stream != NULL)
-        ? stream->readPrevSample(skipFrames, reinterpret_cast<Mp4FramePacket *>(outFrame), &err)
-        : -1;
-    if (outErr != NULL)
-        *outErr = static_cast<uint32_t>(err);
-    return ret;
-}
-
-int mp4StreamSeekAndReadFrame(Mp4StreamParser *stream, uint32_t targetMs, Mp4FrameInfo *outFrame,
-                              int *outFrameIndex, uint32_t *outErr)
-{
-    unsigned int sampleIdx = 0;
-    int err = 0;
-    int ret = (stream != NULL)
-        ? stream->seekToTimeMs(targetMs, reinterpret_cast<Mp4FramePacket *>(outFrame),
-                               &sampleIdx, &err)
-        : -1;
-    if (outFrameIndex != NULL)
-        *outFrameIndex = static_cast<int>(sampleIdx);
-    if (outErr != NULL)
-        *outErr = static_cast<uint32_t>(err);
-    return ret;
-}
-
-int mp4StreamQueryMetadata(Mp4StreamParser *stream, int titleCap, int artistCap,
-                           int albumCap, int genreCap, int artCap, void *metaOut,
-                           int extraCap, uint32_t *outErr)
-{
-    (void)stream;
-    (void)titleCap;
-    (void)artistCap;
-    (void)albumCap;
-    (void)genreCap;
-    (void)artCap;
-    (void)metaOut;
-    (void)extraCap;
-    if (outErr != NULL)
-        *outErr = 0;
-    return 0;
 }
 
 } // namespace MusicCore

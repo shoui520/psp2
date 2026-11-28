@@ -9,6 +9,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "musiccore_media.h"
 #include "musiccore_pipeline_types.h"
 
 extern "C" {
@@ -40,61 +41,6 @@ static const int WAVE_ERR_CORRUPT = -2144862158;     /* 0x80280032 */
 extern void *allocFromHeap(size_t size);
 
 extern void decoderManagerReleaseMediaInfo(MediaInfoHandle **ioHandle, int forceRelease);
-extern void *wavMediaInfoConstruct(void *mem, const char *path);
-
-struct WavFmtHeader {
-    uint16_t formatTag;
-    uint16_t channels;
-    uint32_t sampleRate;
-    uint32_t avgBytesPerSec;
-    uint16_t blockAlign;
-    uint16_t bitsPerSample;
-};
-
-class WavCacheIo {
-public:
-    virtual ~WavCacheIo() {}
-    virtual int initialize() = 0;
-    virtual int open() = 0;
-    virtual int close() = 0;
-    virtual int isOpen() = 0;
-    virtual int getFileSize() = 0;
-    virtual const char *getPath() = 0;
-    virtual int setPath(const char *path) = 0;
-    virtual int setPriorityMode(int mode) = 0;
-    virtual int applyOpenFilePriority(int mode) = 0;
-    virtual int flushCache() = 0;
-    virtual int setCacheHint(int hintMode, int extra) = 0;
-
-    void *m_cacheHandle;
-    uint8_t m_initialized;
-    uint8_t m_padInit[3];
-    char *m_filePath;
-    void *m_fileObj;
-    void *m_fileRefCount;
-    int m_priorityMode;
-    int m_padPriority;
-    int64_t m_filePos;
-    int m_chunkSize;
-    int m_blockCount;
-    uint8_t m_foundChunks;
-    uint8_t m_padChunks[3];
-    uint32_t m_fmtOffset;
-    uint32_t m_fmtSize;
-    uint32_t m_dataOffset;
-    uint32_t dataSize; /* +64 */
-};
-
-extern int wavCacheScanChunks(WavCacheIo *io, uint8_t targetMask);
-extern int wavCacheReadFmtHeader(WavCacheIo *io, WavFmtHeader *outFmt);
-extern int wavCacheReadDataRange(WavCacheIo *io, uint32_t offset, uint32_t size,
-                                 void **outPtr, uint32_t *outSize);
-
-struct WavMediaInfo : public MediaInfoHandle {
-    char mediaPath[2049]; /* +9..+2057 */
-    uint8_t padPath[2];   /* +2058..+2059 */
-    WavCacheIo *cacheIo;  /* +2060 */
-};
 
 struct WavPcmPacketOut {
     void *pcmBuffer;        /* +0 */
@@ -224,13 +170,13 @@ WavParser::WavParser(const char *threadName)
 WavParser::~WavParser()
 {
     if (m_nextMedia != NULL) {
-        MediaInfoHandle *nextHandle = m_nextMedia;
+        MediaInfoHandle *nextHandle = reinterpret_cast<MediaInfoHandle *>(m_nextMedia);
         decoderManagerReleaseMediaInfo(&nextHandle, 1);
         m_nextMedia = NULL;
         m_nextCacheIo = NULL;
     }
     if (m_activeMedia != NULL) {
-        MediaInfoHandle *curHandle = m_activeMedia;
+        MediaInfoHandle *curHandle = reinterpret_cast<MediaInfoHandle *>(m_activeMedia);
         decoderManagerReleaseMediaInfo(&curHandle, 1);
         m_activeMedia = NULL;
         m_activeCacheIo = NULL;
@@ -263,11 +209,11 @@ int WavParser::findCachedMediaInfo(const char *path, MediaInfoHandle **outInfo)
     m_lock.lock();
     if (m_activeCacheIo != NULL && sce_paf_strcmp(m_activeCacheIo->getPath(), path) == 0) {
         m_lock.unlock();
-        *outInfo = m_activeMedia;
+        *outInfo = reinterpret_cast<MediaInfoHandle *>(m_activeMedia);
         return 0;
     }
     if (m_nextCacheIo != NULL && sce_paf_strcmp(m_nextCacheIo->getPath(), path) == 0) {
-        *outInfo = m_nextMedia;
+        *outInfo = reinterpret_cast<MediaInfoHandle *>(m_nextMedia);
         m_lock.unlock();
         return 0;
     }
@@ -282,9 +228,9 @@ int WavParser::setMediaInfo(MediaInfoHandle *handle)
     if (handle == NULL || handle->mediaFourcc != FOURCC_WAV) {
         return PARSER_ERR_BAD_PARAM;
     }
-    WavMediaInfo *mediaInfo = static_cast<WavMediaInfo *>(handle);
-    if (mediaInfo->cacheIo == NULL) {
-        MediaInfoHandle *badHandle = mediaInfo;
+    WavMediaInfo *mediaInfo = reinterpret_cast<WavMediaInfo *>(handle);
+    if (mediaInfo->m_cacheIo == NULL) {
+        MediaInfoHandle *badHandle = reinterpret_cast<MediaInfoHandle *>(mediaInfo);
         decoderManagerReleaseMediaInfo(&badHandle, 1);
         return -1;
     }
@@ -295,7 +241,7 @@ int WavParser::setMediaInfo(MediaInfoHandle *handle)
         return PARSER_ERR_BAD_STATE;
     }
 
-    const char *newPath = mediaInfo->cacheIo->getPath();
+    const char *newPath = mediaInfo->m_cacheIo->getPath();
     if (m_activeCacheIo != NULL) {
         if (sce_paf_strcmp(m_activeCacheIo->getPath(), newPath) == 0) {
             m_lock.unlock();
@@ -307,7 +253,7 @@ int WavParser::setMediaInfo(MediaInfoHandle *handle)
             m_nextCacheIo = NULL;
         }
         if (m_activeMedia != NULL) {
-            MediaInfoHandle *oldHandle = m_activeMedia;
+            MediaInfoHandle *oldHandle = reinterpret_cast<MediaInfoHandle *>(m_activeMedia);
             decoderManagerReleaseMediaInfo(&oldHandle, 1);
             m_activeMedia = NULL;
         }
@@ -331,16 +277,16 @@ int WavParser::setMediaInfo(MediaInfoHandle *handle)
 
     if (m_nextCacheIo != NULL) {
         if (m_nextMedia != NULL) {
-            MediaInfoHandle *nextHandle = m_nextMedia;
+            MediaInfoHandle *nextHandle = reinterpret_cast<MediaInfoHandle *>(m_nextMedia);
             decoderManagerReleaseMediaInfo(&nextHandle, 1);
             m_nextMedia = NULL;
         }
         m_nextCacheIo = NULL;
     }
 
-    mediaInfo->sharedFlag = 1u;
+    mediaInfo->m_sharedFlag = 1u;
     m_activeMedia = mediaInfo;
-    m_activeCacheIo = mediaInfo->cacheIo;
+    m_activeCacheIo = mediaInfo->m_cacheIo;
     m_lock.unlock();
     return 0;
 }
@@ -351,13 +297,13 @@ int WavParser::prefetchMediaInfo(MediaInfoHandle *handle)
     if (handle == NULL || handle->mediaFourcc != FOURCC_WAV) {
         return PARSER_ERR_BAD_PARAM;
     }
-    WavMediaInfo *mediaInfo = static_cast<WavMediaInfo *>(handle);
-    if (mediaInfo->cacheIo == NULL) {
+    WavMediaInfo *mediaInfo = reinterpret_cast<WavMediaInfo *>(handle);
+    if (mediaInfo->m_cacheIo == NULL) {
         return -1;
     }
 
     m_lock.lock();
-    const char *newPath = mediaInfo->cacheIo->getPath();
+    const char *newPath = mediaInfo->m_cacheIo->getPath();
     if (m_nextCacheIo != NULL) {
         if (sce_paf_strcmp(m_nextCacheIo->getPath(), newPath) == 0) {
             m_lock.unlock();
@@ -375,9 +321,9 @@ int WavParser::prefetchMediaInfo(MediaInfoHandle *handle)
         return -1;
     }
 
-    mediaInfo->sharedFlag = 1u;
+    mediaInfo->m_sharedFlag = 1u;
     m_nextMedia = mediaInfo;
-    m_nextCacheIo = mediaInfo->cacheIo;
+    m_nextCacheIo = mediaInfo->m_cacheIo;
     m_nextCacheIo->setPriorityMode(1);
 
     if (m_nextCacheIo->isOpen() != 1 && m_nextCacheIo->open() < 0) {
@@ -385,7 +331,7 @@ int WavParser::prefetchMediaInfo(MediaInfoHandle *handle)
         return PARSER_ERR_OPEN_FAIL;
     }
 
-    int scanErr = wavCacheScanChunks(m_nextCacheIo, 3u);
+    int scanErr = m_nextCacheIo->scanChunks(3u);
     m_lock.unlock();
     if (scanErr == 0) {
         return 0;
@@ -445,11 +391,11 @@ int WavParser::parseWaveHeader()
     fmt.blockAlign = 0;
     fmt.bitsPerSample = 0;
 
-    int err = wavCacheScanChunks(m_activeCacheIo, 3u);
+    int err = m_activeCacheIo->scanChunks(3u);
     if (err != 0) {
         return err;
     }
-    err = wavCacheReadFmtHeader(m_activeCacheIo, &fmt);
+    err = m_activeCacheIo->readFmtHeader(&fmt);
     if (err != 0) {
         return err;
     }
@@ -462,7 +408,7 @@ int WavParser::parseWaveHeader()
     }
 
     m_chunkBytes = (uint32_t)((int)((float)fmt.sampleRate * 0.02f)) * fmt.blockAlign;
-    m_lastChunkIdx = (m_activeCacheIo->dataSize - 1u) / m_chunkBytes;
+    m_lastChunkIdx = (m_activeCacheIo->m_dataSize - 1u) / m_chunkBytes;
     m_formatTag = 1;
     m_channels = fmt.channels;
     m_sampleRate = fmt.sampleRate;
@@ -490,7 +436,7 @@ int WavParser::getDurationMs()
         }
     }
 
-    int durationMs = (int)((float)m_activeCacheIo->dataSize / m_bytesPerMs);
+    int durationMs = (int)((float)m_activeCacheIo->m_dataSize / m_bytesPerMs);
     m_lock.unlock();
     return durationMs;
 }
@@ -536,7 +482,7 @@ int WavParser::produceFrame(MediaFrameBuffer *outBuf)
             return mapWavParserError(err);
         }
     }
-    if (m_activeCacheIo->dataSize == 0u) {
+    if (m_activeCacheIo->m_dataSize == 0u) {
         return PARSER_ERR_EOS;
     }
 
@@ -572,11 +518,11 @@ int WavParser::produceFrame(MediaFrameBuffer *outBuf)
     }
     if (m_requestedSpeed != m_activeSpeed) {
         if (m_requestedSpeed == 1) {
-            m_activeCacheIo->setCacheHint(1, 0);
+            m_activeCacheIo->setCacheHint(1);
         } else if (m_requestedSpeed < 0) {
-            m_activeCacheIo->setCacheHint(3, 0);
+            m_activeCacheIo->setCacheHint(3);
         } else {
-            m_activeCacheIo->setCacheHint(2, 0);
+            m_activeCacheIo->setCacheHint(2);
         }
         m_activeSpeed = m_requestedSpeed;
     }
@@ -585,7 +531,7 @@ int WavParser::produceFrame(MediaFrameBuffer *outBuf)
     uint32_t byteOffset = m_chunkBytes * (uint32_t)m_currentChunkIdx;
     void *rawData = NULL;
     uint32_t readBytes = 0;
-    int readErr = wavCacheReadDataRange(m_activeCacheIo, byteOffset, m_chunkBytes, &rawData, &readBytes);
+    int readErr = m_activeCacheIo->readDataRange(byteOffset, m_chunkBytes, &rawData, &readBytes);
     if (readErr != 0) {
         if (readErr == IO_ERR_READ_FAIL) {
             return PARSER_ERR_READ_IO;
@@ -730,15 +676,14 @@ int WavFactory::destroyPipeline(PipelineEventListener *pipeline)
 /* 0x811FA3A4 */
 void *WavFactory::createMediaInfo(const char *path)
 {
-    void *mem = allocFromHeap(2064u);
+    void *mem = allocFromHeap(sizeof(WavMediaInfo));
     if (mem == NULL) {
         return NULL;
     }
-    return wavMediaInfoConstruct(mem, path);
+    return new (mem) WavMediaInfo(path);
 }
 
 struct CodecFactory;
-struct MediaInfoBase;
 struct DecoderInstance;
 
 WavFactory gWavFactory;

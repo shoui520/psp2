@@ -4,8 +4,7 @@
  * Original address range (3.65-CEX): 0x811EDBD4 - 0x811EEC3F
  */
 
-#include "musiccore_local_cache_io.h"
-#include "musiccore_mp3_readers.h"
+#include "musiccore_media.h"
 #include <kernel.h>
 #include <std/new>
 #include <stddef.h>
@@ -42,56 +41,6 @@ static const uint8_t CHUNK_MASK_SMPL = 0x05u;
 static const uint8_t AT9_SUBFORMAT_GUID[16] = {
     0xD2u, 0x42u, 0xE1u, 0x47u, 0xBAu, 0x36u, 0x8Du, 0x4Du,
     0x88u, 0xFCu, 0x61u, 0x65u, 0x4Fu, 0x8Cu, 0x83u, 0x6Cu
-};
-
-struct TrackMetadataResult {
-    int channels;
-    uint8_t hasChannels;
-    uint8_t padChannels[3];
-    int bitRate;
-    uint8_t hasBitRate;
-    uint8_t padBitRate[3];
-    unsigned int durationMs;
-    uint8_t hasDuration;
-    uint8_t padDuration[3];
-    int sampleRate;
-    uint8_t hasSampleRate;
-    uint8_t padSampleRate[3];
-    int codecProfile;
-    uint8_t hasCodecProfile;
-    uint8_t padCodecProfile[3];
-    int codecSubType;
-    uint8_t hasCodecSubType;
-    uint8_t padCodecSubType[3];
-};
-
-struct WavFmtHeader {
-    uint16_t formatTag;
-    uint16_t channels;
-    uint32_t sampleRate;
-    uint32_t avgBytesPerSec;
-    uint16_t blockAlign;
-    uint16_t bitsPerSample;
-};
-
-struct At9FmtHeader {
-    uint16_t formatTag;
-    uint16_t channels;
-    uint32_t sampleRate;
-    uint32_t avgBytesPerSec;
-    uint16_t blockAlign;
-    uint16_t bitsPerSample;
-    uint16_t cbSize;
-    uint16_t samplesPerBlock;
-    uint32_t channelMask;
-    uint8_t subFormatGuid[16];
-    uint32_t versionInfo;
-    uint8_t configData[4];
-};
-
-struct At9SmplLoopInfo {
-    uint32_t loopStart;
-    uint32_t loopEnd;
 };
 
 static uint16_t readLe16(const uint8_t *src)
@@ -135,39 +84,18 @@ static void clearMetadataValidityFlags(TrackMetadataResult *meta)
     meta->hasCodecSubType = 0;
 }
 
-class WavCacheIo : public LocalCacheIo {
-public:
-    WavCacheIo(const char *path, int chunkSize, int blockCount, int readAhead,
-               int extraChunk, int extraBlocks);
-    virtual ~WavCacheIo();
-
-    virtual int setPath(const char *path);
-
-    int scanChunks(uint8_t targetMask);
-    int readFmtHeader(WavFmtHeader *outFmt);
-    int readDataRange(uint32_t offset, uint32_t size, void **outPtr, uint32_t *outSize);
-
-    uint32_t getDataSize() const { return m_dataSize; }
-
-private:
-    void resetChunkState();
-
-    uint8_t m_foundChunks;
-    uint8_t m_padFlags[3];
-    uint32_t m_fmtOffset;
-    uint32_t m_fmtSize;
-    uint32_t m_dataOffset;
-    uint32_t m_dataSize;
-    uint32_t m_infoOffset;
-    uint32_t m_infoSize;
-};
-
 /* 0x811EDE90 */
 WavCacheIo::WavCacheIo(const char *path, int chunkSize, int blockCount, int readAhead,
                        int extraChunk, int extraBlocks)
     : LocalCacheIo(path, chunkSize, blockCount, (uint8_t)readAhead, extraChunk, extraBlocks)
+    , m_foundChunks(0)
+    , m_fmtOffset(0)
+    , m_fmtSize(0)
+    , m_dataOffset(0)
+    , m_dataSize(0)
+    , m_infoOffset(0)
+    , m_infoSize(0)
 {
-    resetChunkState();
 }
 
 /* 0x811EDED0 / 0x811EDEEC */
@@ -175,23 +103,18 @@ WavCacheIo::~WavCacheIo()
 {
 }
 
-void WavCacheIo::resetChunkState()
-{
-    m_foundChunks = 0;
-    m_fmtOffset = 0;
-    m_fmtSize = 0;
-    m_dataOffset = 0;
-    m_dataSize = 0;
-    m_infoOffset = 0;
-    m_infoSize = 0;
-}
-
 /* 0x811EDF0C */
 int WavCacheIo::setPath(const char *path)
 {
     int ret = LocalCacheIo::setPath(path);
     if (ret >= 0) {
-        resetChunkState();
+        m_foundChunks = 0;
+        m_fmtOffset = 0;
+        m_fmtSize = 0;
+        m_dataOffset = 0;
+        m_dataSize = 0;
+        m_infoOffset = 0;
+        m_infoSize = 0;
     }
     return ret;
 }
@@ -357,17 +280,6 @@ int WavCacheIo::readDataRange(uint32_t offset, uint32_t size, void **outPtr, uin
     return 0;
 }
 
-class WavMediaInfo : public MediaInfoBase {
-public:
-    explicit WavMediaInfo(const char *path);
-    virtual ~WavMediaInfo();
-
-    virtual int parseMetadata(TrackMetadataResult *outMeta);
-
-private:
-    WavCacheIo *m_cacheIo;
-};
-
 /* 0x811EDBD4 */
 WavMediaInfo::WavMediaInfo(const char *path)
     : MediaInfoBase(path, FOURCC_WAV)
@@ -472,41 +384,20 @@ int WavMediaInfo::parseMetadata(TrackMetadataResult *outMeta)
     return status;
 }
 
-class At9CacheIo : public LocalCacheIo {
-public:
-    At9CacheIo(const char *path, int chunkSize, int blockCount, int readAhead,
-               int extraChunk, int extraBlocks);
-    virtual ~At9CacheIo();
-
-    virtual int setPath(const char *path);
-
-    int scanChunks(uint8_t targetMask);
-    int readFmtHeader(At9FmtHeader *outFmt);
-    int readSmplLoop(At9SmplLoopInfo *outLoop);
-
-    uint32_t getDataSize() const { return m_dataSize; }
-
-private:
-    void resetChunkState();
-
-    uint8_t m_foundChunks;
-    uint8_t m_padFlags[3];
-    uint32_t m_fmtOffset;
-    uint32_t m_fmtSize;
-    uint32_t m_dataOffset;
-    uint32_t m_dataSize;
-    uint32_t m_infoOffset;
-    uint32_t m_infoSize;
-    uint32_t m_smplOffset;
-    uint32_t m_smplSize;
-};
-
 /* 0x811EE6DC */
 At9CacheIo::At9CacheIo(const char *path, int chunkSize, int blockCount, int readAhead,
                        int extraChunk, int extraBlocks)
     : LocalCacheIo(path, chunkSize, blockCount, (uint8_t)readAhead, extraChunk, extraBlocks)
+    , m_foundChunks(0)
+    , m_fmtOffset(0)
+    , m_fmtSize(0)
+    , m_dataOffset(0)
+    , m_dataSize(0)
+    , m_infoOffset(0)
+    , m_infoSize(0)
+    , m_smplOffset(0)
+    , m_smplSize(0)
 {
-    resetChunkState();
 }
 
 /* 0x811EE720 / 0x811EE74C */
@@ -517,25 +408,20 @@ At9CacheIo::~At9CacheIo()
     }
 }
 
-void At9CacheIo::resetChunkState()
-{
-    m_foundChunks = 0;
-    m_fmtOffset = 0;
-    m_fmtSize = 0;
-    m_dataOffset = 0;
-    m_dataSize = 0;
-    m_infoOffset = 0;
-    m_infoSize = 0;
-    m_smplOffset = 0;
-    m_smplSize = 0;
-}
-
 /* 0x811EE77C */
 int At9CacheIo::setPath(const char *path)
 {
     int ret = LocalCacheIo::setPath(path);
     if (ret >= 0) {
-        resetChunkState();
+        m_foundChunks = 0;
+        m_fmtOffset = 0;
+        m_fmtSize = 0;
+        m_dataOffset = 0;
+        m_dataSize = 0;
+        m_infoOffset = 0;
+        m_infoSize = 0;
+        m_smplOffset = 0;
+        m_smplSize = 0;
     }
     return ret;
 }
@@ -707,18 +593,6 @@ int At9CacheIo::readSmplLoop(At9SmplLoopInfo *outLoop)
     return 0;
 }
 
-class At9MediaInfo : public MediaInfoBase {
-public:
-    At9MediaInfo(const char *path, int loopMode);
-    virtual ~At9MediaInfo();
-
-    virtual int parseMetadata(TrackMetadataResult *outMeta, int loopCount);
-
-private:
-    int m_loopMode;
-    At9CacheIo *m_cacheIo;
-};
-
 /* 0x811EE30C */
 At9MediaInfo::At9MediaInfo(const char *path, int loopMode)
     : MediaInfoBase(path, FOURCC_AT9)
@@ -870,53 +744,6 @@ int At9MediaInfo::parseMetadata(TrackMetadataResult *outMeta, int loopCount)
 
     clearMetadataValidityFlags(outMeta);
     return status;
-}
-
-void *wavMediaInfoConstruct(void *mem, const char *path)
-{
-    return new (mem) WavMediaInfo(path);
-}
-
-int wavCacheScanChunks(WavCacheIo *io, uint8_t targetMask)
-{
-    return (io != NULL) ? io->scanChunks(targetMask) : -1;
-}
-
-int wavCacheReadFmtHeader(WavCacheIo *io, WavFmtHeader *outFmt)
-{
-    return (io != NULL) ? io->readFmtHeader(outFmt) : -1;
-}
-
-int wavCacheReadDataRange(WavCacheIo *io, uint32_t offset, uint32_t size,
-                          void **outPtr, uint32_t *outSize)
-{
-    return (io != NULL) ? io->readDataRange(offset, size, outPtr, outSize) : -1;
-}
-
-int wavCacheReadDataRange(void *io, uint32_t offset, uint32_t size,
-                          void **outPtr, uint32_t *outSize)
-{
-    return wavCacheReadDataRange(static_cast<WavCacheIo *>(io), offset, size, outPtr, outSize);
-}
-
-void *at9MediaInfoConstruct(void *mem, const char *path, int loopMode)
-{
-    return new (mem) At9MediaInfo(path, loopMode);
-}
-
-int at9CacheScanChunks(At9CacheIo *io, uint8_t targetMask)
-{
-    return (io != NULL) ? io->scanChunks(targetMask) : -1;
-}
-
-int at9CacheReadFmtHeader(At9CacheIo *io, At9FmtHeader *outFmt)
-{
-    return (io != NULL) ? io->readFmtHeader(outFmt) : -1;
-}
-
-int at9CacheReadSmplLoop(At9CacheIo *io, At9SmplLoopInfo *outLoop)
-{
-    return (io != NULL) ? io->readSmplLoop(outLoop) : -1;
 }
 
 } /* namespace MusicCore */

@@ -9,6 +9,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "musiccore_media.h"
 #include "musiccore_pipeline_types.h"
 
 extern "C" {
@@ -41,44 +42,6 @@ static const int MODE_DIRECT_PLAY = 16;
 extern void *allocFromHeap(size_t size);
 
 extern void decoderManagerReleaseMediaInfo(MediaInfoHandle **ioHandle, int forceRelease);
-extern void *mp3MediaInfoConstruct(void *mem, const char *path, int ioPriority);
-
-/* Mp3StreamParser interface (implemented in musiccore_mp3_media.cpp) */
-struct Mp3FramePacket {
-    void *frameData;
-    uint32_t frameSize;
-    uint32_t sampleRate;
-    uint32_t samplesPerFrame;
-    uint8_t channelMode;
-    uint16_t leadingSkip;
-    uint16_t trailingSkip;
-    uint8_t mpegVersion;
-    int frameFlags;
-};
-
-class Mp3StreamParser {
-public:
-    virtual ~Mp3StreamParser() {}
-    virtual int readFirstFrame(Mp3FramePacket *outPkt, int *outErr) = 0;
-    virtual int readNextFrame(Mp3FramePacket *outPkt, int *outErr) = 0;
-    virtual int readPrevFrame(Mp3FramePacket *outPkt, int *outErr) = 0;
-    virtual int seekAndReadFrame(int targetMs, Mp3FramePacket *outPkt, int *outErr) = 0;
-};
-
-extern int mp3StreamOpen(Mp3StreamParser *stream);
-extern const char *mp3StreamGetPath(Mp3StreamParser *stream);
-extern int mp3StreamSetReadDirection(Mp3StreamParser *stream, int direction);
-extern int mp3StreamGetDurationMs(Mp3StreamParser *stream, int *outDurationMs, int *outErr);
-extern int mp3StreamGetSampleRate(Mp3StreamParser *stream, uint32_t *outSampleRate, int *outErr);
-extern int mp3StreamGetSamplesPerFrame(Mp3StreamParser *stream, uint16_t *outSamples, int *outErr);
-extern int mp3StreamQueryTag(Mp3StreamParser *stream, void *tagOut, void *tagOut2);
-
-struct Mp3MediaInfo : public MediaInfoHandle {
-    char mediaPath[2049];              /* +9..+2057 */
-    uint8_t padPath[6];                /* +2058..+2063 */
-    Mp3StreamParser *streamParser;     /* +2064 */
-    CachedStreamIo *cacheIo;           /* +2068 */
-};
 
 struct ParserPacketOut {
     void *frameData;            /* +0 */
@@ -225,14 +188,14 @@ Mp3Parser::~Mp3Parser()
             m_activeCacheIo = NULL;
             m_activeStream = NULL;
         }
-        MediaInfoHandle *nextHandle = m_nextMedia;
+        MediaInfoHandle *nextHandle = reinterpret_cast<MediaInfoHandle *>(m_nextMedia);
         decoderManagerReleaseMediaInfo(&nextHandle, 1);
         m_nextMedia = NULL;
         m_nextCacheIo = NULL;
         m_nextStream = NULL;
     }
     if (m_activeMedia != NULL) {
-        MediaInfoHandle *curHandle = m_activeMedia;
+        MediaInfoHandle *curHandle = reinterpret_cast<MediaInfoHandle *>(m_activeMedia);
         decoderManagerReleaseMediaInfo(&curHandle, 1);
         m_activeMedia = NULL;
         m_activeCacheIo = NULL;
@@ -256,7 +219,6 @@ int Mp3Parser::onFrameConsumed(int frameFlags)
     if (metaOut == NULL) {
         return 0;
     }
-    mp3StreamQueryTag(m_activeStream, metaOut, metaOut);
     return -1;
 }
 
@@ -269,13 +231,15 @@ int Mp3Parser::findCachedMediaInfo(const char *path, MediaInfoHandle **outInfo)
     }
 
     m_lock.lock();
-    if (m_activeStream != NULL && sce_paf_strcmp(mp3StreamGetPath(m_activeStream), path) == 0) {
+    if (m_activeStream != NULL
+        && sce_paf_strcmp(reinterpret_cast<const char *>(m_activeStream->getStreamPosition()), path) == 0) {
         m_lock.unlock();
-        *outInfo = m_activeMedia;
+        *outInfo = reinterpret_cast<MediaInfoHandle *>(m_activeMedia);
         return 0;
     }
-    if (m_nextStream != NULL && sce_paf_strcmp(mp3StreamGetPath(m_nextStream), path) == 0) {
-        *outInfo = m_nextMedia;
+    if (m_nextStream != NULL
+        && sce_paf_strcmp(reinterpret_cast<const char *>(m_nextStream->getStreamPosition()), path) == 0) {
+        *outInfo = reinterpret_cast<MediaInfoHandle *>(m_nextMedia);
         m_lock.unlock();
         return 0;
     }
@@ -290,8 +254,8 @@ int Mp3Parser::setMediaInfo(MediaInfoHandle *handle)
     if (handle == NULL || handle->mediaFourcc != FOURCC_MP3) {
         return PARSER_ERR_BAD_PARAM;
     }
-    Mp3MediaInfo *mediaInfo = static_cast<Mp3MediaInfo *>(handle);
-    if (mediaInfo->streamParser == NULL || mediaInfo->cacheIo == NULL) {
+    Mp3MediaInfo *mediaInfo = reinterpret_cast<Mp3MediaInfo *>(handle);
+    if (mediaInfo->parser == NULL || mediaInfo->ioStream == NULL) {
         return -1;
     }
 
@@ -301,9 +265,9 @@ int Mp3Parser::setMediaInfo(MediaInfoHandle *handle)
         return PARSER_ERR_BAD_STATE;
     }
 
-    const char *newPath = mp3StreamGetPath(mediaInfo->streamParser);
+    const char *newPath = reinterpret_cast<const char *>(mediaInfo->parser->getStreamPosition());
     if (m_activeStream != NULL) {
-        if (sce_paf_strcmp(mp3StreamGetPath(m_activeStream), newPath) == 0) {
+        if (sce_paf_strcmp(reinterpret_cast<const char *>(m_activeStream->getStreamPosition()), newPath) == 0) {
             if (m_activeStream == m_nextStream) {
                 m_nextStream = NULL;
                 m_nextCacheIo = NULL;
@@ -314,7 +278,7 @@ int Mp3Parser::setMediaInfo(MediaInfoHandle *handle)
             return 0;
         }
         if (m_activeMedia != NULL) {
-            MediaInfoHandle *oldHandle = m_activeMedia;
+            MediaInfoHandle *oldHandle = reinterpret_cast<MediaInfoHandle *>(m_activeMedia);
             decoderManagerReleaseMediaInfo(&oldHandle, 1);
             m_activeMedia = NULL;
         }
@@ -328,7 +292,8 @@ int Mp3Parser::setMediaInfo(MediaInfoHandle *handle)
     }
 
     m_currentPosMs = -1.0f;
-    if (m_nextStream != NULL && sce_paf_strcmp(mp3StreamGetPath(m_nextStream), newPath) == 0) {
+    if (m_nextStream != NULL
+        && sce_paf_strcmp(reinterpret_cast<const char *>(m_nextStream->getStreamPosition()), newPath) == 0) {
         m_activeStream = m_nextStream;
         m_activeMedia = m_nextMedia;
         m_activeCacheIo = m_nextCacheIo;
@@ -345,7 +310,7 @@ int Mp3Parser::setMediaInfo(MediaInfoHandle *handle)
 
     if (m_nextStream != NULL) {
         if (m_nextMedia != NULL) {
-            MediaInfoHandle *nextHandle = m_nextMedia;
+            MediaInfoHandle *nextHandle = reinterpret_cast<MediaInfoHandle *>(m_nextMedia);
             decoderManagerReleaseMediaInfo(&nextHandle, 1);
             m_nextMedia = NULL;
         }
@@ -357,10 +322,10 @@ int Mp3Parser::setMediaInfo(MediaInfoHandle *handle)
         return -1;
     }
 
-    mediaInfo->sharedFlag = 1u;
+    mediaInfo->m_sharedFlag = 1u;
     m_activeMedia = mediaInfo;
-    m_activeStream = mediaInfo->streamParser;
-    m_activeCacheIo = (CachedStreamIo *)mediaInfo->cacheIo;
+    m_activeStream = mediaInfo->parser;
+    m_activeCacheIo = mediaInfo->ioStream;
     m_durationMs = -1;
     m_lock.unlock();
     return 0;
@@ -372,8 +337,8 @@ int Mp3Parser::prefetchMediaInfo(MediaInfoHandle *handle)
     if (handle == NULL || handle->mediaFourcc != FOURCC_MP3) {
         return PARSER_ERR_BAD_PARAM;
     }
-    Mp3MediaInfo *mediaInfo = static_cast<Mp3MediaInfo *>(handle);
-    if (mediaInfo->streamParser == NULL || mediaInfo->cacheIo == NULL) {
+    Mp3MediaInfo *mediaInfo = reinterpret_cast<Mp3MediaInfo *>(handle);
+    if (mediaInfo->parser == NULL || mediaInfo->ioStream == NULL) {
         return -1;
     }
 
@@ -383,13 +348,14 @@ int Mp3Parser::prefetchMediaInfo(MediaInfoHandle *handle)
         return 0;
     }
 
-    const char *newPath = mp3StreamGetPath(mediaInfo->streamParser);
+    const char *newPath = reinterpret_cast<const char *>(mediaInfo->parser->getStreamPosition());
     if (m_nextStream != NULL) {
-        if (sce_paf_strcmp(mp3StreamGetPath(m_nextStream), newPath) == 0) {
+        if (sce_paf_strcmp(reinterpret_cast<const char *>(m_nextStream->getStreamPosition()), newPath) == 0) {
             m_lock.unlock();
             return 0;
         }
-        if (sce_paf_strcmp(mp3StreamGetPath(m_nextStream), mp3StreamGetPath(m_activeStream)) == 0) {
+        if (sce_paf_strcmp(reinterpret_cast<const char *>(m_nextStream->getStreamPosition()),
+                           reinterpret_cast<const char *>(m_activeStream->getStreamPosition())) == 0) {
             m_nextStream = m_activeStream;
             m_nextCacheIo = m_activeCacheIo;
             m_nextMedia = m_activeMedia;
@@ -399,7 +365,7 @@ int Mp3Parser::prefetchMediaInfo(MediaInfoHandle *handle)
         if (m_activeStream == m_nextStream) {
             m_nextMedia = NULL;
         } else if (m_nextMedia != NULL) {
-            MediaInfoHandle *oldNext = m_nextMedia;
+            MediaInfoHandle *oldNext = reinterpret_cast<MediaInfoHandle *>(m_nextMedia);
             decoderManagerReleaseMediaInfo(&oldNext, 1);
             m_nextMedia = NULL;
         }
@@ -411,20 +377,20 @@ int Mp3Parser::prefetchMediaInfo(MediaInfoHandle *handle)
         return -1;
     }
 
-    mediaInfo->sharedFlag = 1u;
+    mediaInfo->m_sharedFlag = 1u;
     m_nextMedia = mediaInfo;
-    m_nextStream = mediaInfo->streamParser;
-    m_nextCacheIo = (CachedStreamIo *)mediaInfo->cacheIo;
+    m_nextStream = mediaInfo->parser;
+    m_nextCacheIo = mediaInfo->ioStream;
     m_nextCacheIo->setPriorityMode(1);
 
-    if (mp3StreamOpen(m_nextStream) < 0) {
+    if (m_nextStream->openStream() < 0) {
         m_lock.unlock();
         return PARSER_ERR_OPEN_FAIL;
     }
 
-    int durationOut = 0;
+    unsigned int durationOut = 0;
     int parserErr = -1;
-    if (mp3StreamGetDurationMs(m_nextStream, &durationOut, &parserErr) != 0) {
+    if (m_nextStream->getDurationMs(&durationOut, &parserErr) != 0) {
         m_lock.unlock();
         return 0;
     }
@@ -483,14 +449,14 @@ int Mp3Parser::getDurationMs()
         return -1;
     }
 
-    int openRet = mp3StreamOpen(m_activeStream);
+    int openRet = m_activeStream->openStream();
     if (openRet < 0) {
         m_lock.unlock();
         return openRet;
     }
 
     int parserErr = -1;
-    if (mp3StreamGetDurationMs(m_activeStream, &m_durationMs, &parserErr) != 0) {
+    if (m_activeStream->getDurationMs(reinterpret_cast<unsigned int *>(&m_durationMs), &parserErr) != 0) {
         int dur = m_durationMs;
         m_lock.unlock();
         return dur;
@@ -546,7 +512,7 @@ int Mp3Parser::openStream()
     if (m_activeCacheIo != NULL) {
         m_activeCacheIo->setPriorityMode(0);
     }
-    int openRet = mp3StreamOpen(m_activeStream);
+    int openRet = m_activeStream->openStream();
     if (openRet < 0) {
         return mapMp3ParserError((uint32_t)openRet);
     }
@@ -590,11 +556,11 @@ int Mp3Parser::produceFrame(MediaFrameBuffer *outBuf)
     int mode = m_playMode;
     if (m_requestedSpeed != m_activeSpeed) {
         if (m_requestedSpeed == 1) {
-            mp3StreamSetReadDirection(m_activeStream, 1);
+            m_activeStream->setIoHint(1);
         } else if (m_requestedSpeed < 0) {
-            mp3StreamSetReadDirection(m_activeStream, 4);
+            m_activeStream->setIoHint(4);
         } else {
-            mp3StreamSetReadDirection(m_activeStream, 2);
+            m_activeStream->setIoHint(2);
         }
         m_activeSpeed = m_requestedSpeed;
     }
@@ -659,7 +625,8 @@ int Mp3Parser::produceFrame(MediaFrameBuffer *outBuf)
                     seekTarget = 0.0f;
                 }
             }
-            gotFrame = m_activeStream->seekAndReadFrame((int)seekTarget, &framePkt, &parserErr);
+            gotFrame = m_activeStream->seekToTimeMs(static_cast<unsigned int>((int)seekTarget),
+                                                    &framePkt, &parserErr);
             if (gotFrame != 0) {
                 m_lastDiscontinuity = 1u;
                 outPkt->discontinuity = 1u;
@@ -688,7 +655,8 @@ int Mp3Parser::produceFrame(MediaFrameBuffer *outBuf)
                     outPkt->packetFlags = 2;
                     return PARSER_ERR_EOS;
                 }
-                gotFrame = m_activeStream->seekAndReadFrame(targetMs, &framePkt, &parserErr);
+                gotFrame = m_activeStream->seekToTimeMs(static_cast<unsigned int>(targetMs),
+                                                        &framePkt, &parserErr);
                 if (gotFrame != 0) {
                     m_currentPosMs = (targetMs < 0) ? 0.0f : (float)targetMs;
                     m_lastDiscontinuity = 1u;
@@ -717,7 +685,7 @@ int Mp3Parser::produceFrame(MediaFrameBuffer *outBuf)
             }
         }
     } else {
-        if (mp3StreamGetDurationMs(m_activeStream, &m_durationMs, &parserErr) == 0) {
+        if (m_activeStream->getDurationMs(reinterpret_cast<unsigned int *>(&m_durationMs), &parserErr) == 0) {
             return mapMp3ParserError((uint32_t)parserErr);
         }
         if (m_durationMs < 0) {
@@ -726,7 +694,8 @@ int Mp3Parser::produceFrame(MediaFrameBuffer *outBuf)
 
         if (m_activeSpeed > 0) {
             if (m_startPosMs >= 0) {
-                gotFrame = m_activeStream->seekAndReadFrame(m_startPosMs, &framePkt, &parserErr);
+                gotFrame = m_activeStream->seekToTimeMs(static_cast<unsigned int>(m_startPosMs),
+                                                        &framePkt, &parserErr);
                 if (gotFrame != 0) {
                     m_lastDiscontinuity = 1u;
                     outPkt->discontinuity = 1u;
@@ -745,15 +714,15 @@ int Mp3Parser::produceFrame(MediaFrameBuffer *outBuf)
                 }
             }
         } else {
-            uint32_t sampleRate = 0;
+            int sampleRate = 0;
             uint16_t samplesPerFrame = 0;
-            if (mp3StreamGetSampleRate(m_activeStream, &sampleRate, &parserErr) == 0) {
+            if (m_activeStream->getSampleRate(&sampleRate, &parserErr) == 0) {
                 return mapMp3ParserError((uint32_t)parserErr);
             }
-            if (mp3StreamGetSamplesPerFrame(m_activeStream, &samplesPerFrame, &parserErr) == 0) {
+            if (m_activeStream->getSamplesPerFrame(&samplesPerFrame, &parserErr) == 0) {
                 return mapMp3ParserError((uint32_t)parserErr);
             }
-            float estFrameMs = ((float)samplesPerFrame * 1000.0f) / (float)sampleRate;
+            float estFrameMs = ((float)samplesPerFrame * 1000.0f) / (float)(uint32_t)sampleRate;
             float backSpan = (mode == MODE_STREAM_PLAY) ? (estFrameMs * 20.0f) : (estFrameMs * 2.0f);
 
             if (m_endPosMs < 0) {
@@ -761,7 +730,7 @@ int Mp3Parser::produceFrame(MediaFrameBuffer *outBuf)
                 if (seekPos < 0.0f) {
                     seekPos = 0.0f;
                 }
-                gotFrame = m_activeStream->seekAndReadFrame((int)(uint32_t)seekPos, &framePkt, &parserErr);
+                gotFrame = m_activeStream->seekToTimeMs((uint32_t)seekPos, &framePkt, &parserErr);
                 if (gotFrame != 0) {
                     m_lastDiscontinuity = 1u;
                     outPkt->discontinuity = 1u;
@@ -779,7 +748,7 @@ int Mp3Parser::produceFrame(MediaFrameBuffer *outBuf)
                 if (seekPos < 0.0f) {
                     seekPos = 0.0f;
                 }
-                gotFrame = m_activeStream->seekAndReadFrame((int)(uint32_t)seekPos, &framePkt, &parserErr);
+                gotFrame = m_activeStream->seekToTimeMs((uint32_t)seekPos, &framePkt, &parserErr);
                 if (gotFrame != 0) {
                     m_lastDiscontinuity = 1u;
                     outPkt->discontinuity = 1u;
@@ -804,13 +773,14 @@ int Mp3Parser::produceFrame(MediaFrameBuffer *outBuf)
         return mapMp3ParserError((uint32_t)parserErr);
     }
 
-    uint32_t activeSamples = framePkt.samplesPerFrame - framePkt.leadingSkip - framePkt.trailingSkip;
+    uint32_t activeSamples = framePkt.samplesPerFrame - framePkt.leadingSkipSamples
+                             - framePkt.trailingSkipSamples;
     g_lastMp3SampleRate = framePkt.sampleRate;
     m_seekPending = 0u;
     outPkt->frameData = framePkt.frameData;
     outPkt->payloadSize = framePkt.frameSize;
     outPkt->timestampMs = m_currentPosMs;
-    outPkt->frameFlags = framePkt.frameFlags;
+    outPkt->frameFlags = framePkt.packetSize;
     outPkt->frameDurationMs = ((float)activeSamples * 1000.0f) / (float)framePkt.sampleRate;
     outPkt->sampleRate = framePkt.sampleRate;
 
@@ -822,8 +792,8 @@ int Mp3Parser::produceFrame(MediaFrameBuffer *outBuf)
         return -1;
     }
 
-    outPkt->leadingSkip = framePkt.leadingSkip;
-    outPkt->trailingSkip = framePkt.trailingSkip;
+    outPkt->leadingSkip = framePkt.leadingSkipSamples;
+    outPkt->trailingSkip = framePkt.trailingSkipSamples;
 
     if (framePkt.mpegVersion <= 2u) {
         outPkt->channelCount = 2u;
@@ -965,11 +935,11 @@ int Mp3Factory::destroyPipeline(PipelineEventListener *pipeline)
 /* 0x811F78C2 */
 void *Mp3Factory::createMediaInfo(const char *path, int ioPriority)
 {
-    void *mem = allocFromHeap(2072u);
+    void *mem = allocFromHeap(sizeof(Mp3MediaInfo));
     if (mem == NULL) {
         return NULL;
     }
-    return mp3MediaInfoConstruct(mem, path, ioPriority);
+    return new (mem) Mp3MediaInfo(path, ioPriority);
 }
 
 /* 0x811F78EC */
@@ -984,7 +954,6 @@ int Mp3Factory::destroyMediaInfo(void **ioMediaInfo)
 }
 
 struct CodecFactory;
-struct MediaInfoBase;
 struct DecoderInstance;
 
 static Mp3Factory s_mp3FactoryInstance;
