@@ -56,18 +56,6 @@ static const char *kPowerRegCategory = "/CONFIG/POWER_SAVING";
 namespace sce {
 namespace MusicCore {
 
-extern void *localAlloc(SceSize size);
-extern void localFree(void *ptr);
-extern void enterWorkerThread();
-extern void leaveWorkerThread(int unused);
-extern SceSize cmdQueueCalcSize(SceSize inCap, SceSize outCap, int count);
-extern void *cmdQueueCreate(void *mem, const char *name, SceSize inCap, SceSize outCap,
-                            int count, int *outErr, SceSize totalSize);
-extern int cmdQueueEnqueue(void *queue, uint64_t cmdHdr, const void *inBuf, SceSize inSize,
-                           int waitFlag);
-extern int cmdQueueDequeue(void *queue, void **outNode, SceUInt *timeout);
-extern int cmdQueueRelease(void *queue, void *node);
-
 extern int reportDbFileError(int sqliteErr, const char *dbPath, unsigned int flags);
 extern int checkTrackListValid(const void *req, int trackCount, int trackOpt);
 extern void invalidateAllMediaCaches();
@@ -556,7 +544,19 @@ int DbManager::enqueueCmd(uint64_t cmdHdr, const void *inBuf, SceSize inSize)
         return MUSICCORE_ERR_FAILED;
     if (inSize != 0 && inBuf == NULL)
         return MUSICCORE_ERR_INVALID_ARG;
-    int ret = cmdQueueEnqueue(m_cmdQueue, cmdHdr, inBuf, inSize, 0);
+    CmdNode *node = NULL;
+    int ret = m_cmdQueue->allocNode(&node, NULL);
+    if (ret == 0 && node != NULL) {
+        node->param = static_cast<uint32_t>(cmdHdr & 0xFFFFFFFFULL);
+        node->flagsAndTarget = static_cast<uint16_t>((cmdHdr >> 32) & 0xFFFFu);
+        node->cmdCode = static_cast<uint16_t>(cmdHdr >> 48);
+        if (inBuf != NULL && inSize != 0 && node->inBuf != NULL) {
+            SceSize copyBytes = (inSize <= node->inCap) ? inSize : node->inCap;
+            sce_paf_memcpy(node->inBuf, inBuf, copyBytes);
+            node->inSize = static_cast<unsigned int>(copyBytes);
+        }
+        ret = m_cmdQueue->enqueue(node, NULL, NULL);
+    }
     return (ret == 0) ? MUSICCORE_ERR_FAILED : ret;
 }
 
@@ -578,9 +578,7 @@ int DbManager::stop()
     }
 
     if (m_cmdQueue != NULL) {
-        typedef void (*DtorFn)(void *);
-        DtorFn *vtable = *(DtorFn **)m_cmdQueue;
-        vtable[1](m_cmdQueue);
+        m_cmdQueue->~CmdQueue();
         localFree(m_cmdQueue);
         m_cmdQueue = NULL;
     }
@@ -617,13 +615,13 @@ int DbManager::start(const DbCallbacks *cbs)
         }
     }
 
-    SceSize queueBytes = cmdQueueCalcSize(176u, 0u, 16);
+    SceSize queueBytes = CmdQueue::calcRequiredSize(176u, 0u, 16u);
     void *queueMem = localAlloc(queueBytes);
     if (queueMem == NULL) {
         err = MUSICCORE_ERR_NO_MEMORY;
     } else {
-        void *queue = cmdQueueCreate(queueMem, "SceShellMusicCoreDbThr", 176u, 0u, 16,
-                                     &err, queueBytes);
+        CmdQueue *queue = new (queueMem) CmdQueue("SceShellMusicCoreDbThr", 176u, 0u, 16u,
+                                                  &err, queueBytes);
         if (queue == NULL) {
             err = MUSICCORE_ERR_NO_MEMORY;
         } else if (err == 0) {
@@ -1244,8 +1242,6 @@ int DbManager::runThreadLoop()
     if (sigErr < 0)
         return sigErr;
 
-    enterWorkerThread();
-
     if (paf::LocalFile::Exists("ux0:")) {
         paf::string musicDir("ux0:/music/");
         ensureDirectoryExists(musicDir);
@@ -1253,10 +1249,10 @@ int DbManager::runThreadLoop()
 
     bool running = true;
     while (running) {
-        void *nodePtr = NULL;
+        CmdNode *rawNode = NULL;
         SceUInt timeoutUs = 200000u;
         SceUInt *timeoutPtr = (m_activeSlotCount != 0) ? &timeoutUs : NULL;
-        int deqErr = cmdQueueDequeue(m_cmdQueue, &nodePtr, timeoutPtr);
+        int deqErr = m_cmdQueue->dequeue(&rawNode, timeoutPtr);
         if (deqErr != 0) {
             if (deqErr == MUSICCORE_ERR_QUEUE_RETRY)
                 continue;
@@ -1267,12 +1263,12 @@ int DbManager::runThreadLoop()
             break;
         }
 
-        if (nodePtr == NULL)
+        if (rawNode == NULL)
             continue;
 
-        DbCmdQueueNode *node = (DbCmdQueueNode *)nodePtr;
+        DbCmdQueueNode *node = reinterpret_cast<DbCmdQueueNode *>(rawNode);
         if (node->inSize > 176u) {
-            cmdQueueRelease(m_cmdQueue, nodePtr);
+            m_cmdQueue->freeNode(rawNode, NULL);
             continue;
         }
 
@@ -1280,7 +1276,7 @@ int DbManager::runThreadLoop()
         unsigned char reqBuf[176];
         sce_paf_memset(reqBuf, 0, sizeof(reqBuf));
         sce_paf_memcpy(reqBuf, node->inBuf, sizeof(reqBuf));
-        cmdQueueRelease(m_cmdQueue, nodePtr);
+        m_cmdQueue->freeNode(rawNode, NULL);
 
         if ((int64_t)cmdHdr < 0) {
             uint16_t stopCode = (uint16_t)(cmdHdr >> 48);
@@ -1309,7 +1305,6 @@ int DbManager::runThreadLoop()
     }
 
     m_dbConn.close();
-    leaveWorkerThread(0);
     m_initResult = MUSICCORE_ERR_FAILED;
     return 0;
 }

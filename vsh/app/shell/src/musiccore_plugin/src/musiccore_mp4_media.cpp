@@ -8,6 +8,7 @@
 #include <std/new>
 #include <stddef.h>
 #include <stdint.h>
+#include "musiccore_heap.h"
 #include "musiccore_media.h"
 
 namespace sce {
@@ -634,9 +635,10 @@ Mp4MediaInfo::Mp4MediaInfo(const char *path, int mode)
       ioStream(NULL)
 {
     if (mode == 16) {
-        ioStream = createLocalCacheIoEx(m_path, 0x4000, 32, 1, 0x4000, 4);
+        ioStream = reinterpret_cast<StreamIoInterface *>(
+            createLocalCacheIoEx(m_path, 0x4000, 32, 1, 0x4000, 4));
         if (ioStream != NULL) {
-            void *mem = allocFromHeap(sizeof(Mp4StreamParser));
+            void *mem = localAlloc(sizeof(Mp4StreamParser));
             if (mem != NULL) {
                 parser = new (mem) Mp4StreamParser(ioStream);
             }

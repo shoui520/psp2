@@ -10,6 +10,7 @@
 #include <stdint.h>
 
 #include "musiccore_cache_io_engine.h"
+#include "musiccore_heap.h"
 #include "musiccore_pipeline_types.h"
 
 #include <memory/heap_allocator.h>
@@ -49,13 +50,7 @@ enum CacheDirectionMode {
     CACHE_DIR_REVERSE = 2
 };
 
-/* Global buffer pool and worker pool helpers (musiccore_heap.cpp, musiccore_decoder_manager.cpp) */
-extern void *getBufferPool();
-extern void *bufferPoolAllocPrefetchRing(void *pool);
-extern void bufferPoolFreePrefetchRing(void *pool, void *buf);
-extern void *bufferPoolAllocSyncBlock(void *pool);
-extern void bufferPoolFreeSyncBlock(void *pool, void *buf);
-
+/* Worker pool helpers (musiccore_decoder_manager.cpp) */
 extern void *getWorkerThreadPool();
 extern int workerPoolSpawn(void *pool, int workerKind, void *entryFn, void *arg, SceUID *outThreadId);
 extern int workerPoolJoin(void *pool, SceUID threadId);
@@ -221,7 +216,7 @@ int CacheIoEngine::destroySyncCaches()
         m_syncFirstValidBytes != NULL && m_syncSecondValidBytes != NULL) {
         for (uint8_t idx = 0; idx < m_syncStreamCount; ++idx) {
             if (m_syncRawBuffers[idx] != NULL) {
-                bufferPoolFreeSyncBlock(getBufferPool(), m_syncRawBuffers[idx]);
+                BufferPool::getInstance()->releaseMedium(m_syncRawBuffers[idx]);
             }
         }
     }
@@ -293,7 +288,7 @@ int CacheIoEngine::destroyAsyncCaches()
                 m_asyncSlotRefCounts[idx] = NULL;
             }
             if (m_asyncRingRawBufs[idx] != NULL) {
-                bufferPoolFreePrefetchRing(getBufferPool(), m_asyncRingRawBufs[idx]);
+                BufferPool::getInstance()->releaseLarge(m_asyncRingRawBufs[idx]);
             }
         }
     }
@@ -437,7 +432,7 @@ int CacheIoEngine::initSyncCaches(const uint32_t *syncBlockSizes)
     int status = 0;
     for (uint8_t idx = 0; idx < m_syncStreamCount; ++idx) {
         m_syncBlockSizes[idx] = syncBlockSizes[idx];
-        void *rawBuf = bufferPoolAllocSyncBlock(getBufferPool());
+        void *rawBuf = BufferPool::getInstance()->acquireMedium();
         m_syncRawBuffers[idx] = rawBuf;
         if (rawBuf != NULL) {
             uintptr_t alignedAddr = ((uintptr_t)rawBuf + 63u) & ~(uintptr_t)63u;
@@ -509,7 +504,7 @@ int CacheIoEngine::initAsyncCaches(const AsyncRingConfig *asyncConfigs)
         m_asyncSlotStates[idx] = (int *)allocWordArray(slotTotal);
         m_asyncSlotOffsets[idx] = allocInt64Array(slotTotal);
         m_asyncSlotRefCounts[idx] = (int *)allocWordArray(slotTotal);
-        m_asyncRingRawBufs[idx] = bufferPoolAllocPrefetchRing(getBufferPool());
+        m_asyncRingRawBufs[idx] = BufferPool::getInstance()->acquireLarge();
 
         if (m_asyncSlotPtrs[idx] == NULL || m_asyncSlotValidBytes[idx] == NULL ||
             m_asyncSlotStates[idx] == NULL || m_asyncSlotOffsets[idx] == NULL ||
@@ -520,7 +515,7 @@ int CacheIoEngine::initAsyncCaches(const AsyncRingConfig *asyncConfigs)
             if (m_asyncSlotOffsets[idx] != NULL) { delete[] m_asyncSlotOffsets[idx]; m_asyncSlotOffsets[idx] = NULL; }
             if (m_asyncSlotRefCounts[idx] != NULL) { delete[] m_asyncSlotRefCounts[idx]; m_asyncSlotRefCounts[idx] = NULL; }
             if (m_asyncRingRawBufs[idx] != NULL) {
-                bufferPoolFreePrefetchRing(getBufferPool(), m_asyncRingRawBufs[idx]);
+                BufferPool::getInstance()->releaseLarge(m_asyncRingRawBufs[idx]);
                 m_asyncRingRawBufs[idx] = NULL;
             }
             return CACHE_ERR_NO_MEMORY;

@@ -9,6 +9,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "musiccore_heap.h"
 #include "musiccore_media.h"
 
 extern "C" {
@@ -678,7 +679,7 @@ Mp3MediaInfo::Mp3MediaInfo(const char *path, int mode)
     if (mode == 16) {
         ioStream = reinterpret_cast<CachedStreamIo *>(createLocalCacheIo(m_path, 0x4000, 32, 1));
         if (ioStream != NULL) {
-            void *mem = allocFromHeap(sizeof(Mp3StreamParser));
+            void *mem = localAlloc(sizeof(Mp3StreamParser));
             if (mem != NULL) {
                 parser = new (mem) Mp3StreamParser(ioStream);
             }
@@ -713,7 +714,7 @@ int Mp3MediaInfo::parseMetadata(TrackMetadataResult *outMeta)
     outMeta->hasBitRate = 0;
     outMeta->hasChannels = 0;
 
-    if (parser == NULL || !checkCodecServiceReady()) {
+    if (parser == NULL || !isAudioCodecModuleLoaded()) {
         return 33;
     }
     if (parser->openStream() != 0) {

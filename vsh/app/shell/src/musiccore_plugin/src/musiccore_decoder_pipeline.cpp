@@ -9,12 +9,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "musiccore_heap.h"
 #include "musiccore_sync.h"
 
 namespace sce {
 namespace MusicCore {
 
-extern void *allocFromHeap(size_t size);
 extern void *getWorkerThreadPool();
 extern int workerThreadPoolStart(void *pool, int slotType, void *entryFn,
                                  size_t argSize, void *argData, int *outWorkerId);
@@ -382,7 +382,7 @@ DecoderPipeline::DecoderPipeline(ParserFilter *parser, BufRefPipe *pipe,
         g_startedStageMask &= (uint16_t)~0x40u;
     }
 
-    m_threadArg = (DecoderPipeline **)allocFromHeap(sizeof(DecoderPipeline *));
+    m_threadArg = (DecoderPipeline **)localAlloc(sizeof(DecoderPipeline *));
     if (m_threadArg != NULL) {
         *m_threadArg = this;
         void *pool = getWorkerThreadPool();

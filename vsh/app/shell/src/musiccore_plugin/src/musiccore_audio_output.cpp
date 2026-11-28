@@ -42,11 +42,10 @@ int sceKernelDelayThread(SceUInt delay);
 int sceKernelExitThread(int status);
 }
 
+#include "musiccore_heap.h"
+
 namespace sce {
 namespace MusicCore {
-
-extern void *allocMem(size_t size);
-extern void freeMem(void *ptr);
 
 static const int MUSICCORE_ERR_FAILED = -1879113726;      /* 0x8FFF0002 */
 static const int MUSICCORE_ERR_NO_MEMORY = -1879113724;   /* 0x8FFF0004 */
@@ -572,21 +571,21 @@ int AudioOutput::initialize(const AudioOutputInitParam *initParam, int skipPcmAl
     }
     stoppedFlagId = stopEvfId;
 
-    pcmQueue = static_cast<AudioPcmSlot *>(allocMem(sizeof(AudioPcmSlot) * AUDIOOUT_MAX_SLOTS));
+    pcmQueue = static_cast<AudioPcmSlot *>(localAlloc(sizeof(AudioPcmSlot) * AUDIOOUT_MAX_SLOTS));
     if (pcmQueue == NULL) {
         return MUSICCORE_ERR_NO_MEMORY;
     }
 
     if (skipPcmAlloc == 0) {
-        pcmOutBuf[0] = allocMem(AUDIOOUT_PCM_BUF_SIZE);
+        pcmOutBuf[0] = localAlloc(AUDIOOUT_PCM_BUF_SIZE);
         if (pcmOutBuf[0] == NULL) {
             return MUSICCORE_ERR_NO_MEMORY;
         }
-        pcmOutBuf[1] = allocMem(AUDIOOUT_PCM_BUF_SIZE);
+        pcmOutBuf[1] = localAlloc(AUDIOOUT_PCM_BUF_SIZE);
         if (pcmOutBuf[1] == NULL) {
             return MUSICCORE_ERR_NO_MEMORY;
         }
-        pcmOutBuf[2] = allocMem(AUDIOOUT_PCM_BUF_SIZE);
+        pcmOutBuf[2] = localAlloc(AUDIOOUT_PCM_BUF_SIZE);
         if (pcmOutBuf[2] == NULL) {
             return MUSICCORE_ERR_NO_MEMORY;
         }
@@ -620,10 +619,10 @@ int AudioOutput::finalize()
         sceAudioOutReleasePort(port);
     }
 
-    freeMem(pcmQueue);
-    freeMem(pcmOutBuf[0]);
-    freeMem(pcmOutBuf[1]);
-    freeMem(pcmOutBuf[2]);
+    localFree(pcmQueue);
+    localFree(pcmOutBuf[0]);
+    localFree(pcmOutBuf[1]);
+    localFree(pcmOutBuf[2]);
     pcmQueue = NULL;
     pcmOutBuf[0] = NULL;
     pcmOutBuf[1] = NULL;

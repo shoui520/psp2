@@ -12,6 +12,7 @@
 #include <plugin.h>
 #include <inputdevice/inputdevice.h>
 
+#include "musiccore_heap.h"
 #include "musiccore_main_thread.h"
 
 extern "C" {
@@ -25,10 +26,6 @@ extern int SceShell_E3D3A162(int id, void *cb, void *arg);
 typedef void (*ShellEventCallback)(int event, const void *data, SceSize size, void *arg);
 extern int shellAppEventServerAddListener(int event, ShellEventCallback callback, void *arg); /* 0x810E17DE */
 extern int shellAppEventServerRemoveListener(int event, ShellEventCallback callback, void *arg); /* 0x810E17E6 */
-
-extern void musicCoreHeapInit(void);				/* 0x811D34C0 */
-extern void musicCoreHeapFini(void);				/* 0x811D3552 */
-extern void *musicCoreHeapAlloc(SceSize size);			/* 0x811D3490 */
 
 typedef void (*MusicCoreEventCb)(int eventId, int eventData, int eventDetail, int eventFlags);
 
@@ -212,12 +209,12 @@ static void *s_musicCoreInterface[33] = {			/* 0x81544E38 */
 /* 0x811CA5A2 */
 void musiccorePluginInit(paf::Plugin *plugin)
 {
-	musicCoreHeapInit();
+	sce::MusicCore::initLocalHeap();
 	s_musicCorePlugin = plugin;
 	plugin->SetInterface(1, s_musicCoreInterface);
 	s_eventCallbacks.clear();
 
-	void *mem = musicCoreHeapAlloc(0x68);
+	void *mem = sce::MusicCore::localAlloc(0x68);
 	int err = 0;
 	s_musicCoreMain = (mem != NULL) ? new (mem) MusicCoreMain(&err) : NULL;
 	if (s_musicCoreMain != NULL) {
@@ -281,7 +278,7 @@ void musicCorePluginFini(void)
 	}
 	s_eventCallbacks.clear();
 	s_musicCorePlugin = NULL;
-	musicCoreHeapFini();
+	sce::MusicCore::termLocalHeap();
 }
 
 void musiccorePluginExit(paf::Plugin *plugin)

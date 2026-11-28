@@ -8,6 +8,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "musiccore_heap.h"
+#include "musiccore_queue.h"
+
 extern "C" {
 void *sce_paf_memset(void *dst, int val, size_t size);
 void *sce_paf_memcpy(void *dst, const void *src, size_t size);
@@ -26,21 +29,6 @@ static const int MUSICCORE_ERR_QUEUE_TIMEOUT = -1879113714; /* 0x8FFF000E */
 namespace sce {
 namespace MusicCore {
 
-extern void *localAlloc(SceSize size);
-extern void localFree(void *ptr);
-extern SceSize cmdQueueCalcSize(SceSize inCap, SceSize outCap, int count);
-extern void *cmdQueueCreate(void *mem, const char *name, SceSize inCap, SceSize outCap,
-                            int count, int *outErr, SceSize totalSize);
-extern int cmdQueueEnqueue(void *queue, uint64_t cmdHdr, const void *inBuf, SceSize inSize,
-                           int waitFlag);
-extern int cmdQueueDequeue(void *queue, void **outNode, SceUInt *timeout);
-extern int cmdQueueRelease(void *queue, void *node);
-extern int cmdQueuePeekAt(void *queue, void **outNode, int index);
-extern int cmdQueueRemoveNode(void *queue, void *node, int flag);
-extern int cmdQueuePushBack(void *queue, void *node, int flag);
-extern void *cmdQueuePopFront(void *queue);
-extern void cmdQueueFreeNode(void *queue, void *node);
-
 extern void stateMachineInit(void *sm, void *owner);
 extern void stateMachineTerm(void *sm);
 extern int stateMachineAttach(void *sm, void *audioOut, void *decoderMgr, void *sharedSync);
@@ -55,7 +43,6 @@ extern int decoderMgrConfigure(void *decMgr, int sampleRate, int channels, int g
 extern int decoderMgrSetCallbacks(void *decMgr, void *onTrackReady, void *onTrackInfo,
                                   void *onBufferReady, void *userData);
 extern int audioOutputSetStateCallback(void *audioOut, void *cb, void *userData);
-extern int sharedSyncInit();
 
 struct StateMediaSnapshot {
     int stateId;
@@ -318,7 +305,7 @@ public:
 private:
     SceUID m_initSema;
     SceUID m_threadId;
-    void *m_cmdQueue;
+    CmdQueue *m_cmdQueue;
     StateManagerCallbacks m_cbs;
     int m_padAlign;
     struct StateMachineStorage {
@@ -364,7 +351,19 @@ int StateManager::enqueueCmd(uint64_t cmdHdr, const StateCmdPayload *req)
         return MUSICCORE_ERR_FAILED;
     if (req == NULL)
         return MUSICCORE_ERR_INVALID_ARG;
-    int ret = cmdQueueEnqueue(m_cmdQueue, cmdHdr, req, sizeof(*req), 0);
+    CmdNode *node = NULL;
+    int ret = m_cmdQueue->allocNode(&node, NULL);
+    if (ret == 0 && node != NULL) {
+        node->param = static_cast<uint32_t>(cmdHdr & 0xFFFFFFFFULL);
+        node->flagsAndTarget = static_cast<uint16_t>((cmdHdr >> 32) & 0xFFFFu);
+        node->cmdCode = static_cast<uint16_t>(cmdHdr >> 48);
+        if (node->inBuf != NULL) {
+            SceSize copyBytes = (sizeof(*req) <= node->inCap) ? sizeof(*req) : node->inCap;
+            sce_paf_memcpy(node->inBuf, req, copyBytes);
+            node->inSize = static_cast<unsigned int>(copyBytes);
+        }
+        ret = m_cmdQueue->enqueue(node, NULL, NULL);
+    }
     return (ret == 0) ? MUSICCORE_ERR_FAILED : ret;
 }
 
@@ -382,20 +381,17 @@ int StateManager::stop()
     }
 
     if (m_cmdQueue != NULL) {
-        typedef void (*DtorFn)(void *);
-        DtorFn *vtable = *(DtorFn **)m_cmdQueue;
-        vtable[1](m_cmdQueue);
+        m_cmdQueue->~CmdQueue();
         localFree(m_cmdQueue);
         m_cmdQueue = NULL;
     }
 
     decoderMgrSetCallbacks(m_decoderMgrStorage, NULL, NULL, NULL, NULL);
     decoderMgrConfigure(m_decoderMgrStorage, 0, 0, 0, 0, NULL);
-    int ret = sharedSyncInit();
     m_cbs.onResult = NULL;
     m_cbs.onMessage = NULL;
     m_cbs.userData = NULL;
-    return ret;
+    return 0;
 }
 
 int StateManager::start(const StateManagerCallbacks *cbs, const int *audioCfg)
@@ -405,10 +401,6 @@ int StateManager::start(const StateManagerCallbacks *cbs, const int *audioCfg)
 
     m_cbs = *cbs;
     int ret = audioOutputSetStateCallback((void *)audioCfg, (void *)thunkAudioError, this);
-    if (ret != 0)
-        return ret;
-
-    ret = sharedSyncInit();
     if (ret != 0)
         return ret;
 
@@ -428,13 +420,13 @@ int StateManager::start(const StateManagerCallbacks *cbs, const int *audioCfg)
         return ret;
 
     int err = 0;
-    SceSize queueBytes = cmdQueueCalcSize(sizeof(StateCmdPayload), 0u, 64);
+    SceSize queueBytes = CmdQueue::calcRequiredSize(sizeof(StateCmdPayload), 0u, 64u);
     void *queueMem = localAlloc(queueBytes);
     if (queueMem == NULL)
         return MUSICCORE_ERR_NO_MEMORY;
 
-    void *queue = cmdQueueCreate(queueMem, "SceShellMusicCoreStateMgrThr",
-                                 sizeof(StateCmdPayload), 0u, 64, &err, queueBytes);
+    CmdQueue *queue = new (queueMem) CmdQueue("SceShellMusicCoreStateMgrThr",
+                                              sizeof(StateCmdPayload), 0u, 64u, &err, queueBytes);
     if (queue == NULL)
         return MUSICCORE_ERR_NO_MEMORY;
     if (err != 0)
@@ -730,23 +722,21 @@ int StateManager::checkAndDeferNode(StateQueueNode *node, unsigned char *outDefe
     if (defer == 0)
         return 0;
 
-    int ret = cmdQueuePushBack(m_cmdQueue, node, 1);
+    int ret = m_cmdQueue->requeue(reinterpret_cast<CmdNode *>(node), 1u);
     if (ret != 0)
         return ret;
 
     for (int idx = 1; ; ++idx) {
-        void *peekPtr = NULL;
-        ret = cmdQueuePeekAt(m_cmdQueue, &peekPtr, idx);
+        CmdNode *peekRaw = NULL;
+        ret = m_cmdQueue->peekAt(&peekRaw, idx);
         if (ret != 0)
             break;
-        StateQueueNode *peekNode = (StateQueueNode *)peekPtr;
+        StateQueueNode *peekNode = reinterpret_cast<StateQueueNode *>(peekRaw);
         uint16_t peekCode = (uint16_t)(peekNode->cmdHdr >> 48);
         if (peekCode == waitCode) {
-            ret = cmdQueueRemoveNode(m_cmdQueue, peekNode, 0);
+            ret = m_cmdQueue->moveToFront(peekRaw, 0u);
             if (ret == 0) {
-                void *front = cmdQueuePopFront(m_cmdQueue);
-                if (front != NULL)
-                    cmdQueueFreeNode(m_cmdQueue, front);
+                m_cmdQueue->flushRequeued(1);
             }
             return ret;
         }
@@ -766,8 +756,8 @@ int StateManager::runThreadLoop()
     bool stopping = false;
 
     while (true) {
-        void *nodePtr = NULL;
-        int deqErr = cmdQueueDequeue(m_cmdQueue, &nodePtr, NULL);
+        CmdNode *rawNode = NULL;
+        int deqErr = m_cmdQueue->dequeue(&rawNode, NULL);
         if (deqErr != 0) {
             if (deqErr == MUSICCORE_ERR_QUEUE_RETRY || deqErr == MUSICCORE_ERR_QUEUE_TIMEOUT) {
                 sceKernelDelayThread(5000);
@@ -776,12 +766,12 @@ int StateManager::runThreadLoop()
             return 0;
         }
 
-        if (nodePtr == NULL)
+        if (rawNode == NULL)
             continue;
 
-        StateQueueNode *node = (StateQueueNode *)nodePtr;
+        StateQueueNode *node = reinterpret_cast<StateQueueNode *>(rawNode);
         if (node->inSize > sizeof(StateCmdPayload)) {
-            cmdQueueRelease(m_cmdQueue, nodePtr);
+            m_cmdQueue->freeNode(rawNode, NULL);
             continue;
         }
 
@@ -795,7 +785,7 @@ int StateManager::runThreadLoop()
         if (deferred == 1)
             continue;
 
-        cmdQueueRelease(m_cmdQueue, nodePtr);
+        m_cmdQueue->freeNode(rawNode, NULL);
 
         if ((int64_t)cmdHdr < 0) {
             uint16_t stopCode = (uint16_t)(cmdHdr >> 48);

@@ -10,7 +10,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "musiccore_pipeline_types.h"
+#include "musiccore_codec_decoders.h"
+#include "musiccore_heap.h"
 
 extern "C" {
 void *sce_paf_memset(void *dst, int val, SceSize size);
@@ -46,56 +47,8 @@ static const int MC_ERR_AUDIO_DROPPED = -1879113710;/* 0x8FFF0012 */
 static const uint32_t SILENCE_GRAIN_BYTES = 0x4000u;
 static const int MAX_INFLIGHT_AUDIO_BUFS = 16;
 
-extern int isAudiocodecModuleReady();
-extern void *getBufferPool();
-extern void *bufferPoolAllocTagged(void *pool, int poolKind, int alignKind);
-extern void bufferPoolFreeTagged(void *pool, void *buf);
 extern int mapMp4ParserError(uint32_t errCode);
 extern int mapAt9ParserError(uint32_t errCode);
-
-/* SceAudiocodecCtrl layout (96 bytes) */
-struct AudiocodecCtrl {
-    uint32_t size;              /* +0: struct size or decode status */
-    void *workMem;              /* +4: 4-byte aligned codec work memory */
-    uint32_t workMemSize;       /* +8 */
-    int decodeError;            /* +12 */
-    void *inputBuf;             /* +16 */
-    int inputUsedBytes;         /* +20 */
-    void *outputBuf;            /* +24 */
-    int outputBytes;            /* +28 */
-    union {
-        struct {
-            int inputBytes;     /* +32 */
-            uint32_t reserved[15];
-        } mp3;
-        struct {
-            uint8_t isAdts;     /* +32 */
-            uint8_t padAdts[3];
-            uint32_t reserved;  /* +36 */
-            uint32_t sampleRate;/* +40 */
-            uint8_t isSbr;      /* +44 */
-            uint8_t padTail[51];
-        } aac;
-        struct {
-            uint8_t configData[4]; /* +32 */
-            uint8_t padTail[60];
-        } at9;
-        uint8_t raw[64];
-    } config;
-};
-
-struct Mp4DecoderConfig {
-    uint32_t outputSampleRate;
-    uint32_t inputSampleRate;
-    uint32_t parserErrorCode;
-    uint8_t isSbrEnabled;
-    uint8_t padTail[3];
-};
-
-struct At9DecoderConfig {
-    uint32_t parserErrorCode;
-    uint8_t configBytes[4];
-};
 
 static AudioOutputFilter *g_activeAudioOutputFilter = NULL; /* 0x81545060 */
 
@@ -136,24 +89,6 @@ int AudioDecoderBase::onFrameConsumed(int frameFlags)
 
 /* ===== Mp3Decoder (168 bytes, 0x81207E74 - 0x8120825B) ===== */
 
-class Mp3Decoder : public AudioDecoderBase {
-public:
-    explicit Mp3Decoder(const char *threadName);
-    virtual ~Mp3Decoder();
-
-    virtual int openDecoder();
-    virtual int closeDecoder();
-    virtual int decodeFrame(MediaFrameBuffer *inBuf, MediaFrameBuffer *outBuf);
-    virtual void configureDecoder(const void *configData, uint32_t configSize);
-
-private:
-    AudiocodecCtrl *m_ctrl;             /* +56 */
-    uint8_t m_ctrlArena[100];           /* +60..+159 */
-    void *m_workMemPool;                /* +160 */
-    uint8_t m_resetPending;             /* +164 */
-    uint8_t m_padTail[3];               /* +165..+167 */
-};
-
 /* 0x81207E74 */
 Mp3Decoder::Mp3Decoder(const char *threadName)
     : AudioDecoderBase(2, threadName)
@@ -169,7 +104,7 @@ Mp3Decoder::Mp3Decoder(const char *threadName)
 Mp3Decoder::~Mp3Decoder()
 {
     if (m_workMemPool != NULL) {
-        bufferPoolFreeTagged(getBufferPool(), m_workMemPool);
+        BufferPool::getInstance()->releaseTyped(m_workMemPool);
         m_workMemPool = NULL;
     }
     m_ctrl = NULL;
@@ -184,14 +119,14 @@ void Mp3Decoder::configureDecoder(const void *configData, uint32_t configSize)
 /* 0x81207F5E */
 int Mp3Decoder::openDecoder()
 {
-    if (isAudiocodecModuleReady() == 0)
+    if (!isAudioCodecModuleLoaded())
         return -1;
     if (m_ctrl == NULL)
         return DEC_ERR_NO_MEMORY;
     if (SceAudiocodec_E2AF3A54(m_ctrl, CODEC_TYPE_MP3) < 0)
         return DEC_ERR_CODEC_FAIL;
 
-    m_workMemPool = bufferPoolAllocTagged(getBufferPool(), 2, 4);
+    m_workMemPool = BufferPool::getInstance()->acquireTyped(2);
     if (m_workMemPool == NULL)
         return DEC_ERR_NO_MEMORY;
 
@@ -204,7 +139,7 @@ int Mp3Decoder::openDecoder()
 int Mp3Decoder::closeDecoder()
 {
     if (m_workMemPool != NULL) {
-        bufferPoolFreeTagged(getBufferPool(), m_workMemPool);
+        BufferPool::getInstance()->releaseTyped(m_workMemPool);
         m_workMemPool = NULL;
     }
     return 0;
@@ -314,29 +249,6 @@ int Mp3Decoder::decodeFrame(MediaFrameBuffer *inBuf, MediaFrameBuffer *outBuf)
 
 /* ===== Mp4Decoder (208 bytes, 0x8120825C - 0x81208793) ===== */
 
-class Mp4Decoder : public AudioDecoderBase {
-public:
-    explicit Mp4Decoder(const char *threadName);
-    virtual ~Mp4Decoder();
-
-    virtual int openDecoder();
-    virtual int closeDecoder();
-    virtual int decodeFrame(MediaFrameBuffer *inBuf, MediaFrameBuffer *outBuf);
-    virtual void configureDecoder(const void *configData, uint32_t configSize);
-
-private:
-    AudiocodecCtrl *m_ctrl;             /* +56 */
-    uint8_t m_ctrlArena[100];           /* +60..+159 */
-    void *m_workMemPool;                /* +160 */
-    uint8_t m_resetPending;             /* +164 */
-    uint8_t m_padReset[3];              /* +165..+167 */
-    Mp4DecoderConfig m_pendingCfg;      /* +168..+183 */
-    Mp4DecoderConfig m_activeCfg;       /* +184..+199 */
-    int m_lastPacketFlags;              /* +200 */
-    uint8_t m_consecutiveErrors;        /* +204 */
-    uint8_t m_padTail[3];               /* +205..+207 */
-};
-
 /* 0x8120825C */
 Mp4Decoder::Mp4Decoder(const char *threadName)
     : AudioDecoderBase(2, threadName)
@@ -365,7 +277,7 @@ Mp4Decoder::Mp4Decoder(const char *threadName)
 Mp4Decoder::~Mp4Decoder()
 {
     if (m_workMemPool != NULL) {
-        bufferPoolFreeTagged(getBufferPool(), m_workMemPool);
+        BufferPool::getInstance()->releaseTyped(m_workMemPool);
         m_workMemPool = NULL;
     }
     m_ctrl = NULL;
@@ -389,7 +301,7 @@ void Mp4Decoder::configureDecoder(const void *configData, uint32_t configSize)
 /* 0x81208382 */
 int Mp4Decoder::openDecoder()
 {
-    if (isAudiocodecModuleReady() == 0)
+    if (!isAudioCodecModuleLoaded())
         return -1;
 
     uint32_t parserErr = m_pendingCfg.parserErrorCode;
@@ -420,10 +332,10 @@ int Mp4Decoder::openDecoder()
         return DEC_ERR_CODEC_FAIL;
 
     if (m_workMemPool != NULL) {
-        bufferPoolFreeTagged(getBufferPool(), m_workMemPool);
+        BufferPool::getInstance()->releaseTyped(m_workMemPool);
         m_workMemPool = NULL;
     }
-    m_workMemPool = bufferPoolAllocTagged(getBufferPool(), 2, 4);
+    m_workMemPool = BufferPool::getInstance()->acquireTyped(2);
     if (m_workMemPool == NULL)
         return DEC_ERR_NO_MEMORY;
 
@@ -573,25 +485,6 @@ int Mp4Decoder::decodeFrame(MediaFrameBuffer *inBuf, MediaFrameBuffer *outBuf)
 
 /* ===== At9Decoder (1196 bytes, 0x81208794 - 0x81208C33) ===== */
 
-class At9Decoder : public AudioDecoderBase {
-public:
-    explicit At9Decoder(const char *threadName);
-    virtual ~At9Decoder();
-
-    virtual int openDecoder();
-    virtual int closeDecoder();
-    virtual int decodeFrame(MediaFrameBuffer *inBuf, MediaFrameBuffer *outBuf);
-    virtual void configureDecoder(const void *configData, uint32_t configSize);
-
-private:
-    AudiocodecCtrl *m_ctrl;             /* +56 */
-    uint8_t m_ctrlArena[100];           /* +60..+159 */
-    void *m_workMemPool;                /* +160 */
-    uint32_t m_parserErrorCode;         /* +164 */
-    uint8_t m_at9ConfigBytes[4];        /* +168..+171 */
-    int16_t m_planarPcm[2][256];        /* +172..+1195 */
-};
-
 /* 0x81208794 */
 At9Decoder::At9Decoder(const char *threadName)
     : AudioDecoderBase(2, threadName)
@@ -609,7 +502,7 @@ At9Decoder::At9Decoder(const char *threadName)
 At9Decoder::~At9Decoder()
 {
     if (m_workMemPool != NULL) {
-        bufferPoolFreeTagged(getBufferPool(), m_workMemPool);
+        BufferPool::getInstance()->releaseTyped(m_workMemPool);
         m_workMemPool = NULL;
     }
     m_ctrl = NULL;
@@ -633,7 +526,7 @@ void At9Decoder::configureDecoder(const void *configData, uint32_t configSize)
 /* 0x812088AC */
 int At9Decoder::openDecoder()
 {
-    if (isAudiocodecModuleReady() == 0)
+    if (!isAudioCodecModuleLoaded())
         return -1;
 
     if (m_parserErrorCode != 0) {
@@ -656,10 +549,10 @@ int At9Decoder::openDecoder()
         return DEC_ERR_CODEC_FAIL;
 
     if (m_workMemPool != NULL) {
-        bufferPoolFreeTagged(getBufferPool(), m_workMemPool);
+        BufferPool::getInstance()->releaseTyped(m_workMemPool);
         m_workMemPool = NULL;
     }
-    m_workMemPool = bufferPoolAllocTagged(getBufferPool(), 2, 4);
+    m_workMemPool = BufferPool::getInstance()->acquireTyped(2);
     if (m_workMemPool == NULL)
         return DEC_ERR_NO_MEMORY;
 
@@ -794,21 +687,21 @@ AudioOutputFilter::AudioOutputFilter(uint32_t grainBytes, int slotCount, PipePro
         return;
     m_mutexId = mutexId;
 
-    m_pcmPool = bufferPoolAllocTagged(getBufferPool(), 3, 2);
-    m_silenceBuf = bufferPoolAllocTagged(getBufferPool(), 4, 2);
-    m_slots = (MediaFrameBuffer *)bufferPoolAllocTagged(getBufferPool(), 5, 2);
+    m_pcmPool = BufferPool::getInstance()->acquireTyped(3);
+    m_silenceBuf = BufferPool::getInstance()->acquireTyped(4);
+    m_slots = (MediaFrameBuffer *)BufferPool::getInstance()->acquireTyped(5);
 
     if (m_pcmPool == NULL || m_slots == NULL || m_silenceBuf == NULL) {
         if (m_pcmPool != NULL) {
-            bufferPoolFreeTagged(getBufferPool(), m_pcmPool);
+            BufferPool::getInstance()->releaseTyped(m_pcmPool);
             m_pcmPool = NULL;
         }
         if (m_slots != NULL) {
-            bufferPoolFreeTagged(getBufferPool(), m_slots);
+            BufferPool::getInstance()->releaseTyped(m_slots);
             m_slots = NULL;
         }
         if (m_silenceBuf != NULL) {
-            bufferPoolFreeTagged(getBufferPool(), m_silenceBuf);
+            BufferPool::getInstance()->releaseTyped(m_silenceBuf);
             m_silenceBuf = NULL;
         }
         return;
@@ -837,15 +730,15 @@ AudioOutputFilter::AudioOutputFilter(uint32_t grainBytes, int slotCount, PipePro
 AudioOutputFilter::~AudioOutputFilter()
 {
     if (m_pcmPool != NULL) {
-        bufferPoolFreeTagged(getBufferPool(), m_pcmPool);
+        BufferPool::getInstance()->releaseTyped(m_pcmPool);
         m_pcmPool = NULL;
     }
     if (m_slots != NULL) {
-        bufferPoolFreeTagged(getBufferPool(), m_slots);
+        BufferPool::getInstance()->releaseTyped(m_slots);
         m_slots = NULL;
     }
     if (m_silenceBuf != NULL) {
-        bufferPoolFreeTagged(getBufferPool(), m_silenceBuf);
+        BufferPool::getInstance()->releaseTyped(m_silenceBuf);
         m_silenceBuf = NULL;
     }
     if (m_mutexId != -1) {
@@ -1146,35 +1039,6 @@ int AudioOutputFilter::handleBufferConsumed(void *pcmBuffer)
 
 /* ===== BufRefPipe ("SceShellMusicCoreBufRefPipe", 44 bytes, 0x81209610 - 0x81209AA7) ===== */
 
-class BufRefPipe : public PipeInterface {
-public:
-    BufRefPipe(int slotCount, PipeProducerControl *producer, PipeConsumerControl *consumer);
-    virtual ~BufRefPipe();
-
-    virtual void setPositionListener(PositionChangeListener *listener) { m_posListener = listener; }
-    virtual bool isInitialized() const;
-    virtual int getPlayPositionMs() const { return m_playPositionMs; }
-    virtual void setPlayPositionMs(int posMs) { m_playPositionMs = posMs; }
-    virtual void reset();
-    virtual bool hasQueuedFrame() const { return m_readIndex >= 0; }
-    virtual bool hasReadableFrame() const { return m_readIndex >= 0; }
-    virtual int acquireWriteSlot(MediaFrameBuffer **outBuf);
-    virtual int commitWriteSlot(MediaFrameBuffer *buf);
-    virtual int acquireReadSlot(MediaFrameBuffer **outBuf);
-    virtual int releaseReadSlot(MediaFrameBuffer *buf);
-
-private:
-    int m_slotCount;                        /* +4 */
-    MediaFrameBuffer *m_slots;              /* +8 */
-    int m_readIndex;                        /* +12 */
-    int m_writeIndex;                       /* +16 */
-    PipeProducerControl *m_producer;        /* +20 */
-    PipeConsumerControl *m_consumer;        /* +24 */
-    PositionChangeListener *m_posListener;  /* +28 */
-    int m_playPositionMs;                   /* +32 */
-    SyncMutex m_lock;                       /* +36 */
-};
-
 /* 0x81209610 */
 BufRefPipe::BufRefPipe(int slotCount, PipeProducerControl *producer, PipeConsumerControl *consumer)
     : m_slotCount(slotCount)
@@ -1377,45 +1241,6 @@ int BufRefPipe::releaseReadSlot(MediaFrameBuffer *buf)
 
     m_producer->onPipeConsumed(frameFlags);
     return 0;
-}
-
-/* Placement helper invoked by createBufRefPipe in musiccore_filter_base.cpp */
-PipeInterface *constructBufRefPipe(void *mem, int slotCount,
-                                   PipeProducerControl *producer,
-                                   PipeConsumerControl *consumer)
-{
-    return new (mem) BufRefPipe(slotCount, producer, consumer);
-}
-
-/* Decoder factory helpers invoked by musiccore_{mp3,mp4,at9}_codec.cpp */
-AudioDecoderBase *constructMp3Decoder(void *mem, const char *threadName)
-{
-    return new (mem) Mp3Decoder(threadName);
-}
-
-AudioDecoderBase *constructMp4Decoder(void *mem, const char *threadName)
-{
-    return new (mem) Mp4Decoder(threadName);
-}
-
-AudioDecoderBase *constructAt9Decoder(void *mem, const char *threadName)
-{
-    return new (mem) At9Decoder(threadName);
-}
-
-AudioDecoderBase *mp3DecoderConstruct(void *mem, const char *threadName)
-{
-    return constructMp3Decoder(mem, threadName);
-}
-
-AudioDecoderBase *mp4DecoderConstruct(void *mem, const char *threadName)
-{
-    return constructMp4Decoder(mem, threadName);
-}
-
-AudioDecoderBase *at9DecoderConstruct(void *mem, const char *threadName)
-{
-    return constructAt9Decoder(mem, threadName);
 }
 
 } /* namespace MusicCore */

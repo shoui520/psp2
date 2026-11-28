@@ -9,6 +9,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "musiccore_codec_decoders.h"
 #include "musiccore_media.h"
 #include "musiccore_pipeline_types.h"
 
@@ -43,8 +44,6 @@ static const int MODE_DIRECT_PLAY = 16;
 static const uint32_t MP4_PARSER_HEAP_SIZE = 54272u;
 static const uint32_t MP4_DECODER_HEAP_SIZE = 74752u;
 static const uint32_t MP4_IO_HEAP_SIZE = 0x4000u;
-
-extern void *allocFromHeap(size_t size);
 
 extern void decoderManagerReleaseMediaInfo(MediaInfoHandle **ioHandle, int forceRelease);
 
@@ -1038,15 +1037,15 @@ PipelineEventListener *Mp4Factory::createPipeline(int playMode, AudioOpenCallbac
                                                   AudioFlushCallback flushCb, void *userContext)
 {
     Mp4Parser *parser = NULL;
-    void *parserMem = allocFromHeap(sizeof(Mp4Parser));
+    void *parserMem = localAlloc(sizeof(Mp4Parser));
     if (parserMem != NULL) {
         parser = new (parserMem) Mp4Parser("SceShellMusicCoreMp4Parser", playMode);
     }
 
     AudioDecoderBase *decoder = NULL;
-    void *decoderMem = localAlloc(0xD0u);
+    void *decoderMem = localAlloc(sizeof(Mp4Decoder));
     if (decoderMem != NULL) {
-        decoder = mp4DecoderConstruct(decoderMem, "SceShellMusicCoreMp4Decoder");
+        decoder = new (decoderMem) Mp4Decoder("SceShellMusicCoreMp4Decoder");
     }
 
     int pipeSlots = 0;
@@ -1106,7 +1105,7 @@ PipelineEventListener *Mp4Factory::createPipeline(int playMode, AudioOpenCallbac
 /* 0x811F8ED0 */
 void *Mp4Factory::createMediaInfo(const char *path, int ioPriority)
 {
-    void *mem = allocFromHeap(sizeof(Mp4MediaInfo));
+    void *mem = localAlloc(sizeof(Mp4MediaInfo));
     if (mem == NULL) {
         return NULL;
     }

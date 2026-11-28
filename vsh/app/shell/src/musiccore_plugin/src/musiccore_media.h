@@ -57,9 +57,11 @@ struct StreamIoInterface {
     virtual int checkRangeReadable(int sizeBytes, int *outErr) = 0;
 };
 
-extern StreamIoInterface *createLocalCacheIo(const char *path, int chunkSize, int blockCount, int readAhead);
-extern StreamIoInterface *createLocalCacheIoEx(const char *path, int chunkSize, int blockCount,
-                                               int readAhead, int extraChunk, int extraBlocks);
+extern LocalCacheIo *createLocalCacheIo(const char *path, int chunkSize, int blockCount,
+                                        uint8_t readAhead);
+extern LocalCacheIo *createLocalCacheIoEx(const char *path, int chunkSize, int blockCount,
+                                          uint8_t readAhead, int extraChunkSize,
+                                          int extraBlockCount);
 
 /* ===== MP3 media & stream parser (musiccore_mp3_media.cpp) ===== */
 

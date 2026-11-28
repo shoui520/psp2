@@ -39,28 +39,6 @@ public:
     virtual ~BaseObject() {}
 };
 
-struct CmdAckWaiter {
-    virtual ~CmdAckWaiter() {}
-    paf::thread::Cond *cond;
-    paf::thread::Mutex *mutex;
-    int signalCount;
-};
-
-class CmdQueue {
-public:
-    static unsigned int calcRequiredSize(unsigned int inSize, unsigned int outSize, unsigned int count);
-    CmdQueue(const char *name, unsigned int inSize, unsigned int outSize,
-             unsigned int count, SceUID *outErr, unsigned int totalBytes);
-    virtual ~CmdQueue();
-
-    int allocNode(CmdNode **outNode, SceUInt *timeout);
-    int freeNode(CmdNode *node, SceUInt *timeout);
-    int enqueue(CmdNode *node, CmdAckWaiter *waiter, SceUInt *timeout);
-    int dequeue(CmdNode **outNode, SceUInt *timeout);
-    int complete(CmdNode *node);
-    int peekAt(CmdNode **outNode, int index);
-};
-
 class PlayerPool {
 public:
     void *getPlayer(unsigned char index);

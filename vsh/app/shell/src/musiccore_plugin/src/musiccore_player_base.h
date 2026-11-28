@@ -14,29 +14,10 @@
 
 #include <thread/thread.h>
 
+#include "musiccore_queue.h"
+
 namespace sce {
 namespace MusicCore {
-
-struct CmdAckWaiter;
-
-struct CmdNode {
-    void *vtable;
-    unsigned int padAlign;
-    uint32_t param;
-    uint8_t targetChannel;
-    uint8_t flagsByte;
-    uint16_t cmdCode;
-    void *inBuf;
-    unsigned int inSize;
-    unsigned int inCap;
-    void *outBuf;
-    unsigned int outSize;
-    unsigned int outCap;
-    int state;
-    CmdAckWaiter *waiter;
-    CmdNode *next;
-    CmdNode *prev;
-};
 
 struct PlayerPriorityInfo {
     char bgmStatus;

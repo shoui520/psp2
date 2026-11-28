@@ -9,6 +9,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "musiccore_codec_decoders.h"
 #include "musiccore_media.h"
 #include "musiccore_pipeline_types.h"
 
@@ -38,8 +39,6 @@ static const int PARSER_ERR_BAD_PARAM = 241;
 static const int MODE_LOCAL_PLAY = 1;
 static const int MODE_STREAM_PLAY = 5;
 static const int MODE_DIRECT_PLAY = 16;
-
-extern void *allocFromHeap(size_t size);
 
 extern void decoderManagerReleaseMediaInfo(MediaInfoHandle **ioHandle, int forceRelease);
 
@@ -849,15 +848,15 @@ PipelineEventListener *Mp3Factory::createPipeline(int mode, AudioOpenCallback op
                                                   AudioFlushCallback flushCb, void *userContext)
 {
     Mp3Parser *parser = NULL;
-    void *parserMem = allocFromHeap(sizeof(Mp3Parser));
+    void *parserMem = localAlloc(sizeof(Mp3Parser));
     if (parserMem != NULL) {
         parser = new (parserMem) Mp3Parser("SceShellMusicCoreMp3Parser", mode);
     }
 
     AudioDecoderBase *decoder = NULL;
-    void *decMem = localAlloc(168u);
+    void *decMem = localAlloc(sizeof(Mp3Decoder));
     if (decMem != NULL) {
-        decoder = mp3DecoderConstruct(decMem, "SceShellMusicCoreMp3Decoder");
+        decoder = new (decMem) Mp3Decoder("SceShellMusicCoreMp3Decoder");
     }
 
     if (mode != MODE_LOCAL_PLAY && mode != MODE_STREAM_PLAY && mode != MODE_DIRECT_PLAY) {
@@ -935,7 +934,7 @@ int Mp3Factory::destroyPipeline(PipelineEventListener *pipeline)
 /* 0x811F78C2 */
 void *Mp3Factory::createMediaInfo(const char *path, int ioPriority)
 {
-    void *mem = allocFromHeap(sizeof(Mp3MediaInfo));
+    void *mem = localAlloc(sizeof(Mp3MediaInfo));
     if (mem == NULL) {
         return NULL;
     }

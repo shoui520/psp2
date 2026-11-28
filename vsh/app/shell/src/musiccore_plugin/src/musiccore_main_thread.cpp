@@ -13,8 +13,12 @@
 #include <system/system.h>
 #include <inputdevice/inputdevice.h>
 
+#include <std/new>
+
 #include "musiccore_ctrl_client.h"
+#include "musiccore_heap.h"
 #include "musiccore_main_thread.h"
+#include "musiccore_queue.h"
 
 extern "C" {
 extern int sceAppMgrGetStatusByName(const char *name, void *status);
@@ -24,16 +28,6 @@ extern int sceBtAvrcpSetPlayStatus(int status);
 extern int sceBtAvrcpSetTitle(const char *title, SceSize len);
 extern int SceThreadmgrCoredumpTime_sceKernelExitThread(int status);
 }
-
-extern void *musicCoreHeapAlloc(SceSize size);			/* 0x811D3490 */
-extern void musicCoreHeapFree(void *ptr);			/* 0x811D34AA */
-extern SceSize musicCoreQueueGetSize(SceSize itemSz, int count, int mode); /* 0x811D3A26 */
-extern void *musicCoreQueueCreate(void *mem, const char *name, SceSize itemSz,
-	int count, int mode, int *outErr, SceSize bufSize);	/* 0x811D3A50 */
-extern int musicCoreQueueSend(void *queue, int seqId, SceUInt32 cmd,
-	const void *payload, SceSize payloadSize);		/* 0x811D3C80 */
-extern int musicCoreQueueRecv(void *queue, void **outMsg, SceUInt *timeout); /* 0x811D499E */
-extern int musicCoreQueueRelease(void *queue, void *msg);	/* 0x811D4AAA */
 
 struct MusicCoreAppSlot {
 	int seqId;						/* +0 */
@@ -253,13 +247,14 @@ MusicCoreMain::MusicCoreMain(int *outErr)
 	}
 	m_semaId = sema;
 
-	SceSize qSize = musicCoreQueueGetSize(2304, 4, 1);
-	void *qMem = musicCoreHeapAlloc(qSize);
+	SceSize qSize = sce::MusicCore::CmdQueue::calcRequiredSize(2304u, 4u, 1u);
+	void *qMem = sce::MusicCore::localAlloc(qSize);
 	if (qMem == NULL) {
 		*outErr = (int)0x8FFF0004;
 		return;
 	}
-	void *q = musicCoreQueueCreate(qMem, "SceShellMusicCorePluginMainThr", 2304, 4, 1, outErr, qSize);
+	sce::MusicCore::CmdQueue *q = new (qMem) sce::MusicCore::CmdQueue(
+		"SceShellMusicCorePluginMainThr", 2304u, 4u, 1u, outErr, qSize);
 	if (q == NULL) {
 		*outErr = (int)0x8FFF0004;
 		return;
@@ -296,7 +291,20 @@ int MusicCoreMain::SendCmd(SceUInt32 cmdTag, int seqId, SceUInt32 packedCmd,
 		return (int)0x8FFF0002;
 	if (payloadSize != 0 && payload == NULL)
 		return (int)0x8FFF0005;
-	int ret = musicCoreQueueSend(m_queue, seqId, packedCmd, payload, payloadSize);
+	sce::MusicCore::CmdQueue *cmdQueue = static_cast<sce::MusicCore::CmdQueue *>(m_queue);
+	sce::MusicCore::CmdNode *node = NULL;
+	int ret = cmdQueue->allocNode(&node, NULL);
+	if (ret == 0 && node != NULL) {
+		node->param = static_cast<uint32_t>(seqId);
+		node->flagsAndTarget = static_cast<uint16_t>(packedCmd & 0xFFFFu);
+		node->cmdCode = static_cast<uint16_t>(packedCmd >> 16);
+		if (payload != NULL && payloadSize != 0 && node->inBuf != NULL) {
+			SceSize copyBytes = (payloadSize <= node->inCap) ? payloadSize : node->inCap;
+			sce_paf_memcpy(node->inBuf, payload, copyBytes);
+			node->inSize = static_cast<unsigned int>(copyBytes);
+		}
+		ret = cmdQueue->enqueue(node, NULL, NULL);
+	}
 	return (ret == 0) ? (int)0x8FFF0002 : ret;
 }
 
@@ -311,11 +319,10 @@ MusicCoreMain::~MusicCoreMain()
 		m_threadId = -1;
 	}
 	if (m_queue != NULL) {
-		typedef void (*DtorFn)(void *);
-		(*(DtorFn **)(*(void **)m_queue))[1](m_queue);
-		void *q = m_queue;
+		sce::MusicCore::CmdQueue *q = static_cast<sce::MusicCore::CmdQueue *>(m_queue);
+		q->~CmdQueue();
 		m_queue = NULL;
-		musicCoreHeapFree(q);
+		sce::MusicCore::localFree(q);
 	}
 	s_notifyCb = NULL;
 	sceKernelDeleteSema(m_semaId);
@@ -1509,19 +1516,20 @@ int MusicCoreMain::MainLoop()
 			}
 			lastTrackId = curTrackId;
 
-			void *msgPtr = NULL;
+			sce::MusicCore::CmdQueue *cmdQueue = static_cast<sce::MusicCore::CmdQueue *>(m_queue);
+			sce::MusicCore::CmdNode *rawNode = NULL;
 			SceUInt timeout = 100000;
-			int r = musicCoreQueueRecv(m_queue, &msgPtr, &timeout);
+			int r = cmdQueue->dequeue(&rawNode, &timeout);
 			if (r != 0 && r != (int)0x8FFF0003 && r != (int)0x8FFF000E)
 				break;
-			if (msgPtr != NULL) {
-				MusicCoreQueueMsg *msg = (MusicCoreQueueMsg *)msgPtr;
+			if (rawNode != NULL) {
+				MusicCoreQueueMsg *msg = reinterpret_cast<MusicCoreQueueMsg *>(rawNode);
 				if ((msg->cmdId & 0x8000u) == 0) {
 					DispatchMsg(msg);
-					musicCoreQueueRelease(m_queue, msgPtr);
+					cmdQueue->freeNode(rawNode, NULL);
 				} else if (msg->cmdId == 0x8000u) {
 					m_stopping = 1;
-					musicCoreQueueRelease(m_queue, msgPtr);
+					cmdQueue->freeNode(rawNode, NULL);
 				}
 			}
 		} while (m_stopping != 1);

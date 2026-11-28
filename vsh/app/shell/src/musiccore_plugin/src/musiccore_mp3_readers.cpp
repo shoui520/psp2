@@ -10,6 +10,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "musiccore_heap.h"
 #include "musiccore_mp3_readers.h"
 
 extern "C" {
@@ -706,7 +707,7 @@ int VbriTagReader::readToc(int fileLimit, int *outErr)
     }
 
     uint16_t entryCount = m_vbriHeader.getTocEntryCount();
-    m_tocTable = allocUint32ArrayCount((size_t)entryCount + 1u);
+    m_tocTable = static_cast<uint32_t *>(localAlloc(((size_t)entryCount + 1u) * sizeof(uint32_t)));
     if (m_tocTable == NULL) {
         *outErr = MP3_ERR_NO_MEMORY;
         return 0;
@@ -899,7 +900,7 @@ int XingTagReader::readToc(int fileLimit, int *outErr)
         return 0;
     }
 
-    m_tocBytes = allocUint8Array(100u);
+    m_tocBytes = static_cast<uint8_t *>(localAlloc(100u));
     if (m_tocBytes == NULL) {
         *outErr = MP3_ERR_NO_MEMORY;
         return 0;

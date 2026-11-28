@@ -4,6 +4,7 @@
  * Original address range (3.65-CEX): 0x811EDBD4 - 0x811EEC3F
  */
 
+#include "musiccore_heap.h"
 #include "musiccore_media.h"
 #include <kernel.h>
 #include <std/new>
@@ -285,7 +286,7 @@ WavMediaInfo::WavMediaInfo(const char *path)
     : MediaInfoBase(path, FOURCC_WAV)
     , m_cacheIo(NULL)
 {
-    void *mem = allocFromHeap(sizeof(WavCacheIo));
+    void *mem = localAlloc(sizeof(WavCacheIo));
     if (mem != NULL) {
         m_cacheIo = new (mem) WavCacheIo(m_path, 0x10000, 8, 1, 0, 0);
     }
@@ -599,7 +600,7 @@ At9MediaInfo::At9MediaInfo(const char *path, int loopMode)
     , m_loopMode(loopMode)
     , m_cacheIo(NULL)
 {
-    void *mem = allocFromHeap(sizeof(At9CacheIo));
+    void *mem = localAlloc(sizeof(At9CacheIo));
     if (mem != NULL) {
         m_cacheIo = new (mem) At9CacheIo(m_path, 0x4000, 32, 1, 0, 0);
     }

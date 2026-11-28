@@ -9,6 +9,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "musiccore_heap.h"
 #include "musiccore_sync.h"
 #include <string.h>
 
@@ -1015,7 +1016,7 @@ int DecoderManager::openCodec(int codecType, int sourceMode, int extraParam)
     CodecAdapter *codec = NULL;
     switch (codecType) {
     case CODEC_FORMAT_WAV: {
-        void *mem = allocFromHeap(sizeof(CodecAdapterWav));
+        void *mem = localAlloc(sizeof(CodecAdapterWav));
         if (mem != NULL) {
             codec = new (mem) CodecAdapterWav("SceShellMusicCoreCodecWav", "SceShellMusicCoreCodecWav");
         }
@@ -1024,7 +1025,7 @@ int DecoderManager::openCodec(int codecType, int sourceMode, int extraParam)
         break;
     }
     case CODEC_FORMAT_MP3: {
-        void *mem = allocFromHeap(sizeof(CodecAdapterMp3));
+        void *mem = localAlloc(sizeof(CodecAdapterMp3));
         if (mem != NULL) {
             codec = new (mem) CodecAdapterMp3("SceShellMusicCoreCodecMp3", "SceShellMusicCoreCodecMp3");
         }
@@ -1033,7 +1034,7 @@ int DecoderManager::openCodec(int codecType, int sourceMode, int extraParam)
         break;
     }
     case CODEC_FORMAT_MP4: {
-        void *mem = allocFromHeap(sizeof(CodecAdapterMp4));
+        void *mem = localAlloc(sizeof(CodecAdapterMp4));
         if (mem != NULL) {
             codec = new (mem) CodecAdapterMp4("SceShellMusicCoreCodecMp4", "SceShellMusicCoreCodecMp4");
         }
@@ -1042,7 +1043,7 @@ int DecoderManager::openCodec(int codecType, int sourceMode, int extraParam)
         break;
     }
     case CODEC_FORMAT_AT9: {
-        void *mem = allocFromHeap(sizeof(CodecAdapterAt9));
+        void *mem = localAlloc(sizeof(CodecAdapterAt9));
         if (mem != NULL) {
             codec = new (mem) CodecAdapterAt9("SceShellMusicCoreCodecAt9", "SceShellMusicCoreCodecAt9");
         }

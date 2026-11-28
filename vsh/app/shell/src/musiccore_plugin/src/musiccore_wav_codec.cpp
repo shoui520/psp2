@@ -38,8 +38,6 @@ static const int IO_ERR_READ_FAIL = -2146394108;     /* 0x8010A004 */
 static const int WAVE_ERR_UNSUPPORTED = -2144862159; /* 0x80280031 */
 static const int WAVE_ERR_CORRUPT = -2144862158;     /* 0x80280032 */
 
-extern void *allocFromHeap(size_t size);
-
 extern void decoderManagerReleaseMediaInfo(MediaInfoHandle **ioHandle, int forceRelease);
 
 struct WavPcmPacketOut {
@@ -622,7 +620,7 @@ PipelineEventListener *WavFactory::createPipeline(AudioOpenCallback openCb,
                                                   AudioWriteCallback writeCb,
                                                   AudioFlushCallback flushCb, void *userContext)
 {
-    void *parserMem = allocFromHeap(sizeof(WavParser));
+    void *parserMem = localAlloc(sizeof(WavParser));
     WavParser *parser = NULL;
     if (parserMem != NULL) {
         parser = new (parserMem) WavParser("SceShellMusicCoreWavParser");
@@ -676,7 +674,7 @@ int WavFactory::destroyPipeline(PipelineEventListener *pipeline)
 /* 0x811FA3A4 */
 void *WavFactory::createMediaInfo(const char *path)
 {
-    void *mem = allocFromHeap(sizeof(WavMediaInfo));
+    void *mem = localAlloc(sizeof(WavMediaInfo));
     if (mem == NULL) {
         return NULL;
     }

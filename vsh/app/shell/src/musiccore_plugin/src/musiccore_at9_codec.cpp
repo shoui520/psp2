@@ -9,6 +9,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "musiccore_codec_decoders.h"
 #include "musiccore_media.h"
 #include "musiccore_pipeline_types.h"
 
@@ -46,8 +47,6 @@ static const int WAVE_ERR_CORRUPT = -2144862158;     /* 0x80280032 */
 static const int MODE_LOCAL_PLAY = 1;
 static const int MODE_STREAM_PLAY = 5;
 static const int MODE_DIRECT_PLAY = 16;
-
-extern void *allocFromHeap(size_t size);
 
 extern void decoderManagerReleaseMediaInfo(MediaInfoHandle **ioHandle, int forceRelease);
 
@@ -761,15 +760,15 @@ PipelineEventListener *At9Factory::createPipeline(int mode, AudioOpenCallback op
                                                   int loopCount)
 {
     At9Parser *parser = NULL;
-    void *parserMem = allocFromHeap(sizeof(At9Parser));
+    void *parserMem = localAlloc(sizeof(At9Parser));
     if (parserMem != NULL) {
         parser = new (parserMem) At9Parser("SceShellMusicCoreAt9Parser", mode, loopCount);
     }
 
     AudioDecoderBase *decoder = NULL;
-    void *decMem = localAlloc(1196u);
+    void *decMem = localAlloc(sizeof(At9Decoder));
     if (decMem != NULL) {
-        decoder = at9DecoderConstruct(decMem, "SceShellMusicCoreAt9Decoder");
+        decoder = new (decMem) At9Decoder("SceShellMusicCoreAt9Decoder");
     }
 
     if (mode != MODE_LOCAL_PLAY && mode != MODE_STREAM_PLAY && mode != MODE_DIRECT_PLAY) {
@@ -828,7 +827,7 @@ PipelineEventListener *At9Factory::createPipeline(int mode, AudioOpenCallback op
 /* 0x811FB0AA */
 void *At9Factory::createMediaInfo(const char *path, int loopMode)
 {
-    void *mem = allocFromHeap(sizeof(At9MediaInfo));
+    void *mem = localAlloc(sizeof(At9MediaInfo));
     if (mem == NULL) {
         return NULL;
     }

@@ -9,6 +9,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "musiccore_codec_decoders.h"
 #include "musiccore_pipeline_types.h"
 
 #include <memory/heap_allocator.h>
@@ -46,16 +47,10 @@ enum FilterEventCode {
     FILTER_EVENT_RESUMED = 4
 };
 
-extern void *getBufferPool();
-extern void *bufferPoolAllocTagged(void *pool, int poolKind, int alignKind);
-extern void bufferPoolFreeTagged(void *pool, void *buf);
 extern void *getWorkerThreadPool();
 extern int workerPoolSpawn(void *pool, int workerKind, void *entryFn, void *arg, SceUID *outThreadId);
 extern int workerPoolJoin(void *pool, SceUID threadId);
 
-extern PipeInterface *constructBufRefPipe(void *mem, int slotCount,
-                                          PipeProducerControl *producer,
-                                          PipeConsumerControl *consumer);
 extern void *constructDecoderPipeline(void *mem, int pipelineKind, int codecType,
                                       void *factory, void *audioOut);
 
@@ -528,12 +523,12 @@ FixedFramePipe::FixedFramePipe(uint32_t frameBytes, int slotCount,
     , m_playPositionMs(-1)
     , m_lock("SceShellMusicCorePipe")
 {
-    m_framePool = bufferPoolAllocTagged(getBufferPool(), 6, 2);
+    m_framePool = BufferPool::getInstance()->acquireTyped(6);
     m_slots = (MediaFrameBuffer *)ScePafStdc_3CF19248(sizeof(MediaFrameBuffer) * (SceSize)slotCount,
                                                       getLocalHeap());
     if (m_framePool == NULL || m_slots == NULL) {
         if (m_framePool != NULL) {
-            bufferPoolFreeTagged(getBufferPool(), m_framePool);
+            BufferPool::getInstance()->releaseTyped(m_framePool);
             m_framePool = NULL;
         }
         if (m_slots != NULL) {
@@ -566,7 +561,7 @@ FixedFramePipe::FixedFramePipe(uint32_t frameBytes, int slotCount,
 FixedFramePipe::~FixedFramePipe()
 {
     if (m_framePool != NULL) {
-        bufferPoolFreeTagged(getBufferPool(), m_framePool);
+        BufferPool::getInstance()->releaseTyped(m_framePool);
         m_framePool = NULL;
     }
     if (m_slots != NULL) {
@@ -745,10 +740,10 @@ PipeInterface *createBufRefPipe(int slotCount,
                                 PipeProducerControl *producer,
                                 PipeConsumerControl *consumer)
 {
-    void *mem = musiccoreAllocFromPafHeap(44, getLocalHeap());
+    void *mem = musiccoreAllocFromPafHeap(sizeof(BufRefPipe), getLocalHeap());
     if (mem == NULL)
         return NULL;
-    return constructBufRefPipe(mem, slotCount, producer, consumer);
+    return new (mem) BufRefPipe(slotCount, producer, consumer);
 }
 
 /* 0x812077BE */

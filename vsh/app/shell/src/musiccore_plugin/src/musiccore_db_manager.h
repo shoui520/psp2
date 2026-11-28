@@ -12,6 +12,9 @@
 #include <dbutil/connection.h>
 #include <thread/thread.h>
 
+#include "musiccore_heap.h"
+#include "musiccore_queue.h"
+
 namespace sce {
 namespace MusicCore {
 
@@ -205,7 +208,7 @@ private:
     SceUID m_initSema;
     SceUID m_threadId;
     int m_initResult;
-    void *m_cmdQueue;
+    CmdQueue *m_cmdQueue;
     DbCallbacks m_cbs;
     MediaListSlot *m_slots;
     int m_activeSlotCount;

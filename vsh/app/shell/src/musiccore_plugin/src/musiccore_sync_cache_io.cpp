@@ -6,6 +6,7 @@
  */
 
 #include "musiccore_cache_io_engine.h"
+#include "musiccore_heap.h"
 #include "musiccore_local_cache_io.h"
 #include "musiccore_sync.h"
 #include <kernel.h>
@@ -28,10 +29,6 @@ int SceThreadmgrCoredumpTime_sceKernelExitThread(int status);
 
 namespace sce {
 namespace MusicCore {
-
-extern void *allocFromHeap(size_t size);
-extern char *allocCharArray(size_t count);
-extern uint32_t *allocUint32Array(size_t count);
 
 static const int MC_ERR_INTERNAL = -1879113726;       /* 0x8FFF0002 */
 static const int MC_ERR_INVALID_ARG = -1879113723;    /* 0x8FFF0005 */
@@ -458,7 +455,7 @@ static int mapCacheEngineError(uint32_t engineErr)
 /* 0x811F3C98 */
 LocalCacheIo *createLocalCacheIo(const char *path, int chunkSize, int blockCount, uint8_t readAhead)
 {
-    void *mem = allocFromHeap(sizeof(LocalCacheIo));
+    void *mem = localAlloc(sizeof(LocalCacheIo));
     if (mem == NULL) {
         return NULL;
     }
@@ -469,7 +466,7 @@ LocalCacheIo *createLocalCacheIo(const char *path, int chunkSize, int blockCount
 LocalCacheIo *createLocalCacheIoEx(const char *path, int chunkSize, int blockCount,
                                    uint8_t readAhead, int extraChunkSize, int extraBlockCount)
 {
-    void *mem = allocFromHeap(sizeof(LocalCacheIo));
+    void *mem = localAlloc(sizeof(LocalCacheIo));
     if (mem == NULL) {
         return NULL;
     }
@@ -487,7 +484,7 @@ bool LocalCacheIo::copyPath(const char *path)
         return true;
     }
     SceSize len = sce_paf_strlen(path);
-    m_filePath = allocCharArray(len + 1u);
+    m_filePath = static_cast<char *>(localAlloc(len + 1u));
     if (m_filePath == NULL) {
         return false;
     }
@@ -555,7 +552,7 @@ LocalCacheIo::LocalCacheIo(const char *path, int chunkSize, int blockCount, uint
     cfg.blockSize = static_cast<uint32_t>(chunkSize);
     cfg.blockCount = static_cast<uint32_t>(blockCount);
 
-    uint32_t *extraSizes = allocUint32Array((size_t)extraBlockCount);
+    uint32_t *extraSizes = static_cast<uint32_t *>(localAlloc((size_t)extraBlockCount * sizeof(uint32_t)));
     if (extraSizes == NULL) {
         return;
     }
@@ -991,27 +988,6 @@ int LocalCacheIo::prefetchRange(uint8_t flags, int offset, int size, int *outErr
     }
     *outErr = 0;
     return 0;
-}
-
-struct StreamIoInterface;
-
-StreamIoInterface *createLocalCacheIo(const char *path, int chunkSize, int blockCount, int readAhead)
-{
-    void *mem = allocFromHeap(sizeof(LocalCacheIo));
-    if (mem == NULL)
-        return NULL;
-    return reinterpret_cast<StreamIoInterface *>(
-        new (mem) LocalCacheIo(path, chunkSize, blockCount, readAhead));
-}
-
-StreamIoInterface *createLocalCacheIoEx(const char *path, int chunkSize, int blockCount,
-                                        int readAhead, int extraChunk, int extraBlocks)
-{
-    void *mem = allocFromHeap(sizeof(LocalCacheIo));
-    if (mem == NULL)
-        return NULL;
-    return reinterpret_cast<StreamIoInterface *>(
-        new (mem) LocalCacheIo(path, chunkSize, blockCount, readAhead, extraChunk, extraBlocks));
 }
 
 } /* namespace MusicCore */

@@ -11,6 +11,8 @@
 #include <memory/heap_allocator.h>
 #include <std/new>
 
+#include "musiccore_heap.h"
+
 extern "C" {
 void *sce_paf_memset(void *dst, int val, size_t size);
 int sceSysmoduleLoadModuleInternal(uint32_t id);
@@ -57,45 +59,6 @@ void localFree(void *ptr)
     if (g_localHeap != NULL)
         g_localHeap->sce_paf_free(ptr);
 }
-
-struct BufferEntry {
-    int index;
-    bool inUse;
-    int kind;
-    void *data;
-    SceSize size;
-
-    BufferEntry(int idx, int bufKind, void *bufPtr, SceSize bufSize)
-        : index(idx), inUse(false), kind(bufKind), data(bufPtr), size(bufSize)
-    {
-    }
-
-    virtual ~BufferEntry() {}
-};
-
-class BufferPool {
-public:
-    BufferPool();
-    virtual ~BufferPool();
-
-    int init();
-    int term();
-
-    void *acquireLarge();
-    int releaseLarge(void *ptr);
-    void *acquireMedium();
-    int releaseMedium(void *ptr);
-    void *acquireTyped(int kind);
-    int releaseTyped(void *ptr);
-
-    static BufferPool *getInstance();
-
-private:
-    void *m_backingMem;
-    BufferEntry *m_largeSlots[2];
-    BufferEntry *m_mediumSlots[8];
-    BufferEntry *m_typedSlots[5];
-};
 
 static BufferPool g_bufferPool;
 
@@ -366,128 +329,5 @@ bool isAudioCodecModuleLoaded()
     return sceSysmoduleIsLoadedInternal(SCE_SYSMODULE_INTERNAL_AUDIOCODEC) == 0;
 }
 
-int isAudiocodecModuleReady()
-{
-    return isAudioCodecModuleLoaded() ? 1 : 0;
-}
-
-void *allocFromHeap(size_t size)
-{
-    return localAlloc(size);
-}
-
-char *allocCharArray(size_t count)
-{
-    return static_cast<char *>(localAlloc(count));
-}
-
-uint32_t *allocUint32Array(size_t count)
-{
-    return static_cast<uint32_t *>(localAlloc(count * sizeof(uint32_t)));
-}
-
-void *getBufferPool()
-{
-    return BufferPool::getInstance();
-}
-
-void *bufferPoolAllocTagged(void *pool, int poolKind, int alignKind)
-{
-    (void)alignKind;
-    BufferPool *bp = static_cast<BufferPool *>(pool);
-    return (bp != NULL) ? bp->acquireTyped(poolKind) : NULL;
-}
-
-void bufferPoolFreeTagged(void *pool, void *buf)
-{
-    BufferPool *bp = static_cast<BufferPool *>(pool);
-    if (bp != NULL)
-        bp->releaseTyped(buf);
-}
-
-void *bufferPoolAllocPrefetchRing(void *pool)
-{
-    BufferPool *bp = static_cast<BufferPool *>(pool);
-    return (bp != NULL) ? bp->acquireLarge() : NULL;
-}
-
-void *bufferPoolAllocSyncBlock(void *pool)
-{
-    BufferPool *bp = static_cast<BufferPool *>(pool);
-    return (bp != NULL) ? bp->acquireMedium() : NULL;
-}
-
-void bufferPoolFreePrefetchRing(void *pool, void *ptr)
-{
-    BufferPool *bp = static_cast<BufferPool *>(pool);
-    if (bp != NULL)
-        bp->releaseLarge(ptr);
-}
-
-void bufferPoolFreeSyncBlock(void *pool, void *ptr)
-{
-    BufferPool *bp = static_cast<BufferPool *>(pool);
-    if (bp != NULL)
-        bp->releaseMedium(ptr);
-}
-
-uint32_t *allocUint32ArrayCount(unsigned int count)
-{
-    return allocUint32Array(count);
-}
-
-uint8_t *allocUint8Array(unsigned int count)
-{
-    return static_cast<uint8_t *>(localAlloc(count));
-}
-
-int checkCodecServiceReady()
-{
-    return isAudioCodecModuleLoaded() ? 1 : 0;
-}
-
-void enterWorkerThread()
-{
-}
-
-void leaveWorkerThread(int exitCode)
-{
-    (void)exitCode;
-}
-
-void *allocMem(size_t size)
-{
-    return localAlloc(size);
-}
-
-void freeMem(void *ptr)
-{
-    localFree(ptr);
-}
-
-void sharedSyncInit()
-{
-}
-
 } /* namespace MusicCore */
 } /* namespace sce */
-
-void musicCoreHeapInit(void)
-{
-    sce::MusicCore::initLocalHeap();
-}
-
-void musicCoreHeapFini(void)
-{
-    sce::MusicCore::termLocalHeap();
-}
-
-void *musicCoreHeapAlloc(SceSize size)
-{
-    return sce::MusicCore::localAlloc(size);
-}
-
-void musicCoreHeapFree(void *ptr)
-{
-    sce::MusicCore::localFree(ptr);
-}

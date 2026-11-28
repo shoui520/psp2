@@ -11,15 +11,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "musiccore_heap.h"
 #include "musiccore_sync.h"
 
 namespace sce {
 namespace MusicCore {
-
-/* Common musiccore_plugin heap & buffer pool (musiccore_heap.cpp) */
-extern void *getLocalHeap();
-extern void *localAlloc(SceSize size);
-extern void localFree(void *ptr);
 
 typedef SyncCond SyncEvent;
 
@@ -308,11 +304,6 @@ extern PipelineEventListener *createDecoderPipeline(ParserFilterBase *parser,
                                                     PipeInterface *pipe,
                                                     DecoderFilterBase *decoder,
                                                     AudioOutputFilter *audioSink);
-
-/* Concrete codec decoders (musiccore_codec_decoders.cpp) */
-extern AudioDecoderBase *mp3DecoderConstruct(void *mem, const char *threadName);
-extern AudioDecoderBase *mp4DecoderConstruct(void *mem, const char *threadName);
-extern AudioDecoderBase *at9DecoderConstruct(void *mem, const char *threadName);
 
 /* DecoderPipeline helpers (musiccore_decoder_pipeline.cpp) */
 extern int decoderPipelineIsReady(const PipelineEventListener *pipeline);

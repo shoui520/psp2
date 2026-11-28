@@ -10,6 +10,8 @@
 
 #include <thread/thread.h>
 
+#include "musiccore_queue.h"
+
 static const int MUSICCORE_ERR_FAILED = -1879113726; /* 0x8FFF0002 */
 static const int MUSICCORE_ERR_TIMEOUT = -1879113725; /* 0x8FFF0003 */
 static const int MUSICCORE_ERR_NO_MEMORY = -1879113724; /* 0x8FFF0004 */
@@ -21,192 +23,78 @@ static const int KERNEL_ERR_WAIT_TIMEOUT = -2147319803; /* 0x80028005 */
 namespace sce {
 namespace MusicCore {
 
-struct CmdAckWaiter {
-    void *vtable;
-    paf::thread::Cond *cond;
-    paf::thread::Mutex *mutex;
-    int signalCount;
-};
+#define MUSICCORE_ALIGN_UP8(sz) ((((sz) - 1u) & ~7u) + 8u)
 
-enum CmdNodeState {
-    CMD_STATE_FREE = 0,
-    CMD_STATE_ALLOCATED = 1,
-    CMD_STATE_QUEUED = 2,
-    CMD_STATE_PROCESSING = 3,
-    CMD_STATE_DONE = 4,
-    CMD_STATE_DEFERRED = 5
-};
-
-static unsigned int alignUp8(unsigned int size)
-{
-    return ((size - 1) & ~7u) + 8;
-}
-
-class CmdNode {
-public:
-    CmdNode(unsigned int inCap, unsigned int outCap, int *outErr,
-            unsigned int totalBytes, unsigned int headerBytes);
-    virtual ~CmdNode();
-
-    int getState() const { return m_state; }
-
-public:
-    unsigned int m_alignPad;
-    uint32_t m_param;
-    uint16_t m_flagsAndTarget;
-    uint16_t m_cmdCode;
-    void *m_inBuf;
-    unsigned int m_inSize;
-    unsigned int m_inCap;
-    void *m_outBuf;
-    unsigned int m_outSize;
-    unsigned int m_outCap;
-    int m_state;
-    CmdAckWaiter *m_waiter;
-    CmdNode *m_next;
-    CmdNode *m_prev;
-};
-
-CmdNode::CmdNode(unsigned int inCap, unsigned int outCap, int *outErr,
+CmdNode::CmdNode(unsigned int inCapArg, unsigned int outCapArg, int *outErr,
                  unsigned int totalBytes, unsigned int headerBytes)
-    : m_alignPad(0),
-      m_param(0),
-      m_flagsAndTarget(0),
-      m_cmdCode(0),
-      m_inBuf(NULL),
-      m_inSize(0),
-      m_inCap(inCap),
-      m_outBuf(NULL),
-      m_outSize(0),
-      m_outCap(outCap),
-      m_state(CMD_STATE_FREE),
-      m_waiter(NULL),
-      m_next(NULL),
-      m_prev(NULL)
+    : padAlign(0),
+      param(0),
+      flagsAndTarget(0),
+      cmdCode(0),
+      inBuf(NULL),
+      inSize(0),
+      inCap(inCapArg),
+      outBuf(NULL),
+      outSize(0),
+      outCap(outCapArg),
+      state(CMD_STATE_FREE),
+      waiter(NULL),
+      next(NULL),
+      prev(NULL)
 {
-    unsigned int offset = alignUp8(headerBytes);
+    unsigned int offset = MUSICCORE_ALIGN_UP8(headerBytes);
     if (totalBytes < offset) {
         *outErr = MUSICCORE_ERR_NO_MEMORY;
         return;
     }
 
     *outErr = 0;
-    unsigned int afterIn = offset + m_inCap;
+    unsigned int afterIn = offset + inCap;
     if (totalBytes < afterIn) {
         *outErr = MUSICCORE_ERR_NO_MEMORY;
         return;
     }
 
     char *selfBytes = reinterpret_cast<char *>(this);
-    m_inBuf = selfBytes + offset;
-    if (totalBytes < afterIn + m_outCap) {
+    inBuf = selfBytes + offset;
+    if (totalBytes < afterIn + outCap) {
         *outErr = MUSICCORE_ERR_NO_MEMORY;
         return;
     }
-    m_outBuf = selfBytes + afterIn;
+    outBuf = selfBytes + afterIn;
 }
 
 CmdNode::~CmdNode()
 {
-    if (m_inBuf != NULL)
-        m_inBuf = NULL;
-    if (m_outBuf != NULL)
-        m_outBuf = NULL;
-    m_state = CMD_STATE_FREE;
+    if (inBuf != NULL)
+        inBuf = NULL;
+    if (outBuf != NULL)
+        outBuf = NULL;
+    state = CMD_STATE_FREE;
 }
 
-class CmdQueue {
-public:
-    static unsigned int calcRequiredSize(unsigned int inSize, unsigned int outSize, unsigned int count);
-
-    CmdQueue(const char *name, unsigned int inSize, unsigned int outSize,
-             unsigned int count, SceUID *outErr, unsigned int totalBytes);
-    virtual ~CmdQueue();
-
-    unsigned int getTotalBytes() const;
-    int allocNode(CmdNode **outNode, SceUInt *timeout);
-    int freeNode(CmdNode *node, SceUInt *timeout);
-    int enqueue(CmdNode *node, CmdAckWaiter *waiter, SceUInt *timeout);
-    int enqueueDeferred(CmdNode *node, SceUInt *timeout);
-    int dequeue(CmdNode **outNode, SceUInt *timeout);
-    int complete(CmdNode *node);
-    int peekAt(CmdNode **outNode, int index);
-    int moveToFront(CmdNode *node, unsigned int index);
-    int requeue(CmdNode *node, unsigned char deferSignal);
-    int flushRequeued(int maxCount);
-
-private:
-    bool mergeSeekDelta(unsigned int prevStep, unsigned int *curStep);
-    bool canCoalesce(CmdNode *existing, CmdNode *incoming);
-    int appendOrCoalesce(CmdNode *node, bool *outCoalesced);
-    int insertAtFront(CmdNode *node, unsigned int index);
-    int findByCmdCode(CmdNode *target, unsigned int *inOutIndex);
-
-    bool isValid() const
-    {
-        return m_freeSema != -1 && m_readySema != -1 &&
-               m_poolBase != NULL && m_mutex != -1;
+int CmdQueue::lockQueue(SceUInt *timeout)
+{
+    if (!isValid())
+        return MUSICCORE_ERR_FAILED;
+    int ret = sceKernelLockMutex(m_mutex, 1, timeout);
+    if (ret < 0) {
+        if (ret == KERNEL_ERR_WAIT_TIMEOUT)
+            return MUSICCORE_ERR_TIMEOUT;
+        return ret;
     }
+    return 0;
+}
 
-    bool isNodeInRange(const CmdNode *node) const
-    {
-        if (node == NULL || m_capacity == 0)
-            return false;
-        uintptr_t base = (uintptr_t)m_poolBase;
-        uintptr_t last = base + m_stride * m_capacity - m_stride;
-        return (uintptr_t)node <= last;
-    }
-
-    int lockQueue(SceUInt *timeout)
-    {
-        if (!isValid())
-            return MUSICCORE_ERR_FAILED;
-        int ret = sceKernelLockMutex(m_mutex, 1, timeout);
-        if (ret < 0) {
-            if (ret == KERNEL_ERR_WAIT_TIMEOUT)
-                return MUSICCORE_ERR_TIMEOUT;
-            return ret;
-        }
-        return 0;
-    }
-
-    void unlockQueue()
-    {
-        if (isValid())
-            sceKernelUnlockMutex(m_mutex, 1);
-    }
-
-    void unlinkNode(CmdNode *node)
-    {
-        CmdNode *next = node->m_next;
-        CmdNode *prev = node->m_prev;
-        if (next != NULL)
-            next->m_prev = prev;
-        if (prev != NULL)
-            prev->m_next = next;
-        if (m_head == node)
-            m_head = next;
-        node->m_next = NULL;
-        node->m_prev = NULL;
-    }
-
-private:
-    char *m_poolBase;
-    CmdNode *m_head;
-    unsigned int m_unusedC;
-    unsigned int m_unused10;
-    unsigned int m_capacity;
-    unsigned int m_stride;
-    SceUID m_freeSema;
-    SceUID m_readySema;
-    SceUID m_mutex;
-    int m_pendingRequeueCount;
-    int m_deferredWaitCount;
-};
+void CmdQueue::unlockQueue()
+{
+    if (isValid())
+        sceKernelUnlockMutex(m_mutex, 1);
+}
 
 unsigned int CmdQueue::calcRequiredSize(unsigned int inSize, unsigned int outSize, unsigned int count)
 {
-    unsigned int nodeStride = alignUp8(inSize) + alignUp8(outSize) + 64 + 8;
+    unsigned int nodeStride = MUSICCORE_ALIGN_UP8(inSize) + MUSICCORE_ALIGN_UP8(outSize) + 64 + 8;
     return nodeStride * count + 48;
 }
 
@@ -219,10 +107,10 @@ CmdQueue::CmdQueue(const char *name, unsigned int inSize, unsigned int outSize,
                    unsigned int count, SceUID *outErr, unsigned int totalBytes)
     : m_poolBase(NULL),
       m_head(NULL),
-      m_unusedC(0),
-      m_unused10(0),
+      m_reservedHead(0),
+      m_reservedTail(0),
       m_capacity(count),
-      m_stride(alignUp8(inSize) + alignUp8(outSize) + 64),
+      m_stride(MUSICCORE_ALIGN_UP8(inSize) + MUSICCORE_ALIGN_UP8(outSize) + 64),
       m_freeSema(-1),
       m_readySema(-1),
       m_mutex(-1),
@@ -328,8 +216,8 @@ int CmdQueue::allocNode(CmdNode **outNode, SceUInt *timeout)
             break;
 
         CmdNode *deferred = m_head;
-        while (deferred != NULL && deferred->m_state != CMD_STATE_DEFERRED)
-            deferred = deferred->m_next;
+        while (deferred != NULL && deferred->state != CMD_STATE_DEFERRED)
+            deferred = deferred->next;
 
         if (deferred == NULL) {
             needBlockingWait = true;
@@ -338,7 +226,7 @@ int CmdQueue::allocNode(CmdNode **outNode, SceUInt *timeout)
             if (lockRet != 0)
                 return lockRet;
             unlinkNode(deferred);
-            deferred->m_state = CMD_STATE_FREE;
+            deferred->state = CMD_STATE_FREE;
             unlockQueue();
         }
     } while (!needBlockingWait);
@@ -363,7 +251,7 @@ int CmdQueue::allocNode(CmdNode **outNode, SceUInt *timeout)
     CmdNode *found = NULL;
     for (unsigned int i = 0; i < m_capacity; ++i) {
         CmdNode *candidate = (CmdNode *)cursor;
-        if (candidate->m_state == CMD_STATE_FREE) {
+        if (candidate->state == CMD_STATE_FREE) {
             found = candidate;
             break;
         }
@@ -372,7 +260,7 @@ int CmdQueue::allocNode(CmdNode **outNode, SceUInt *timeout)
 
     int ret = 0;
     if (found != NULL) {
-        found->m_state = CMD_STATE_ALLOCATED;
+        found->state = CMD_STATE_ALLOCATED;
         *outNode = found;
     } else {
         ret = MUSICCORE_ERR_FAILED;
@@ -394,9 +282,9 @@ int CmdQueue::freeNode(CmdNode *node, SceUInt *timeout)
         return ret;
 
     bool released = false;
-    if (node->m_state != CMD_STATE_FREE) {
+    if (node->state != CMD_STATE_FREE) {
         unlinkNode(node);
-        node->m_state = CMD_STATE_FREE;
+        node->state = CMD_STATE_FREE;
         released = true;
     }
 
@@ -493,11 +381,11 @@ struct PlaylistSeekPayload {
 
 bool CmdQueue::canCoalesce(CmdNode *existing, CmdNode *incoming)
 {
-    if (existing == NULL || incoming == NULL || existing->m_state != CMD_STATE_QUEUED)
+    if (existing == NULL || incoming == NULL || existing->state != CMD_STATE_QUEUED)
         return false;
 
-    uint16_t existingCmd = existing->m_cmdCode;
-    uint16_t incomingCmd = incoming->m_cmdCode;
+    uint16_t existingCmd = existing->cmdCode;
+    uint16_t incomingCmd = incoming->cmdCode;
 
     switch (existingCmd) {
     case 0x1103:
@@ -521,8 +409,8 @@ bool CmdQueue::canCoalesce(CmdNode *existing, CmdNode *incoming)
     case 0x1107:
         if (incomingCmd == 0x1105 || incomingCmd == 0x1106 || incomingCmd == 0x1107) {
             if (existingCmd == 0x1106 && incomingCmd == 0x1106) {
-                SeekTrackPayload *existingPayload = (SeekTrackPayload *)existing->m_inBuf;
-                SeekTrackPayload *incomingPayload = (SeekTrackPayload *)incoming->m_inBuf;
+                SeekTrackPayload *existingPayload = (SeekTrackPayload *)existing->inBuf;
+                SeekTrackPayload *incomingPayload = (SeekTrackPayload *)incoming->inBuf;
                 if (existingPayload->pauseFlag == 1)
                     incomingPayload->pauseFlag = 1;
             }
@@ -532,8 +420,8 @@ bool CmdQueue::canCoalesce(CmdNode *existing, CmdNode *incoming)
 
     case 0x110B:
         if (incomingCmd == 0x110B) {
-            SeekTrackPayload *existingPayload = (SeekTrackPayload *)existing->m_inBuf;
-            SeekTrackPayload *incomingPayload = (SeekTrackPayload *)incoming->m_inBuf;
+            SeekTrackPayload *existingPayload = (SeekTrackPayload *)existing->inBuf;
+            SeekTrackPayload *incomingPayload = (SeekTrackPayload *)incoming->inBuf;
             unsigned int prevPos = existingPayload->seekPos;
             bool merged = mergeSeekDelta(existingPayload->stepDelta, &incomingPayload->stepDelta);
             if (incomingPayload->seekPos == 0x80000000u && prevPos != 0x80000000u)
@@ -543,8 +431,8 @@ bool CmdQueue::canCoalesce(CmdNode *existing, CmdNode *incoming)
         return false;
 
     case 0x2102: {
-        PlaylistSeekPayload *existingPl = (PlaylistSeekPayload *)existing->m_inBuf;
-        PlaylistSeekPayload *incomingPl = (PlaylistSeekPayload *)incoming->m_inBuf;
+        PlaylistSeekPayload *existingPl = (PlaylistSeekPayload *)existing->inBuf;
+        PlaylistSeekPayload *incomingPl = (PlaylistSeekPayload *)incoming->inBuf;
         if (existingPl->playlistId != 0 && incomingPl->playlistId == existingPl->playlistId &&
             incomingCmd == 0x2102 && (existingPl->stepDelta >> 16) != 0xFFFCu) {
             bool merged = mergeSeekDelta(existingPl->stepDelta, &incomingPl->stepDelta);
@@ -564,16 +452,16 @@ int CmdQueue::appendOrCoalesce(CmdNode *node, bool *outCoalesced)
 {
     CmdNode *tail = m_head;
     if (tail == NULL) {
-        node->m_next = NULL;
-        node->m_prev = NULL;
+        node->next = NULL;
+        node->prev = NULL;
         m_head = node;
-        node->m_state = CMD_STATE_QUEUED;
+        node->state = CMD_STATE_QUEUED;
         return 0;
     }
 
     unsigned int count = 1;
-    while (tail->m_next != NULL) {
-        tail = tail->m_next;
+    while (tail->next != NULL) {
+        tail = tail->next;
         ++count;
     }
 
@@ -584,13 +472,13 @@ int CmdQueue::appendOrCoalesce(CmdNode *node, bool *outCoalesced)
     int ret = 0;
 
     if (canCoalesce(tail, node)) {
-        node->m_prev = tail;
-        node->m_next = tail->m_next;
-        tail->m_next = node;
-        node->m_state = CMD_STATE_QUEUED;
+        node->prev = tail;
+        node->next = tail->next;
+        tail->next = node;
+        node->state = CMD_STATE_QUEUED;
 
         unlinkNode(tail);
-        tail->m_state = CMD_STATE_FREE;
+        tail->state = CMD_STATE_FREE;
 
         int sigRet = sceKernelSignalSema(m_freeSema, 1);
         if (sigRet >= 0)
@@ -601,10 +489,10 @@ int CmdQueue::appendOrCoalesce(CmdNode *node, bool *outCoalesced)
 
     if (ret == 0) {
         if (!coalesced) {
-            node->m_prev = tail;
-            node->m_next = tail->m_next;
-            tail->m_next = node;
-            node->m_state = CMD_STATE_QUEUED;
+            node->prev = tail;
+            node->next = tail->next;
+            tail->next = node;
+            node->state = CMD_STATE_QUEUED;
         }
         *outCoalesced = coalesced;
     }
@@ -618,16 +506,16 @@ int CmdQueue::insertAtFront(CmdNode *node, unsigned int index)
 
     CmdNode *head = m_head;
     if (head != NULL) {
-        CmdNode *prev = head->m_prev;
+        CmdNode *prev = head->prev;
         if (prev != NULL) {
-            prev->m_next = node;
-            node->m_prev = prev;
+            prev->next = node;
+            node->prev = prev;
         }
-        head->m_prev = node;
+        head->prev = node;
     } else {
-        node->m_prev = NULL;
+        node->prev = NULL;
     }
-    node->m_next = head;
+    node->next = head;
     m_head = node;
     return 0;
 }
@@ -640,14 +528,14 @@ int CmdQueue::findByCmdCode(CmdNode *target, unsigned int *inOutIndex)
     CmdNode *cursor = m_head;
     unsigned int idx = 0;
     while (idx != *inOutIndex) {
-        cursor = cursor->m_next;
+        cursor = cursor->next;
         ++idx;
         if (cursor == NULL)
             return MUSICCORE_ERR_INVALID_ARG;
     }
 
-    while (cursor->m_cmdCode != target->m_cmdCode) {
-        cursor = cursor->m_next;
+    while (cursor->cmdCode != target->cmdCode) {
+        cursor = cursor->next;
         ++idx;
         if (cursor == NULL)
             return MUSICCORE_ERR_INVALID_ARG;
@@ -673,7 +561,7 @@ int CmdQueue::enqueue(CmdNode *node, CmdAckWaiter *waiter, SceUInt *timeout)
     bool replacedDeferred = false;
     int deferredSignals = 0;
 
-    if (node->m_state != CMD_STATE_ALLOCATED) {
+    if (node->state != CMD_STATE_ALLOCATED) {
         ret = MUSICCORE_ERR_INVALID_ARG;
     } else {
         unsigned int searchIdx = 0;
@@ -685,10 +573,10 @@ int CmdQueue::enqueue(CmdNode *node, CmdAckWaiter *waiter, SceUInt *timeout)
                 CmdNode *cursor = m_head;
                 unsigned int idx = 0;
                 while (cursor != NULL && idx != searchIdx) {
-                    cursor = cursor->m_next;
+                    cursor = cursor->next;
                     ++idx;
                 }
-                if (cursor != NULL && cursor->m_state == CMD_STATE_DEFERRED) {
+                if (cursor != NULL && cursor->state == CMD_STATE_DEFERRED) {
                     deferredMatch = cursor;
                     break;
                 }
@@ -703,19 +591,19 @@ int CmdQueue::enqueue(CmdNode *node, CmdAckWaiter *waiter, SceUInt *timeout)
         if (deferredMatch != NULL) {
             replacedDeferred = true;
             unlinkNode(deferredMatch);
-            deferredMatch->m_state = CMD_STATE_FREE;
+            deferredMatch->state = CMD_STATE_FREE;
             if (searchIdx == 0) {
                 deferredSignals = m_deferredWaitCount;
                 m_deferredWaitCount = 0;
             }
             ret = insertAtFront(node, searchIdx);
             if (ret == 0)
-                node->m_state = CMD_STATE_QUEUED;
+                node->state = CMD_STATE_QUEUED;
         }
 
         if (ret == 0) {
             enqueued = true;
-            node->m_waiter = waiter;
+            node->waiter = waiter;
         }
     }
 
@@ -737,8 +625,8 @@ int CmdQueue::enqueue(CmdNode *node, CmdAckWaiter *waiter, SceUInt *timeout)
                 if (sigRet < 0)
                     return sigRet;
             }
-            if (node->m_waiter != NULL) {
-                CmdAckWaiter *ack = node->m_waiter;
+            if (node->waiter != NULL) {
+                CmdAckWaiter *ack = node->waiter;
                 ack->mutex->Lock();
                 if (ack->signalCount != 0) {
                     --ack->signalCount;
@@ -767,34 +655,34 @@ int CmdQueue::enqueueDeferred(CmdNode *node, SceUInt *timeout)
         return ret;
 
     bool signaled = false;
-    if (node->m_state != CMD_STATE_ALLOCATED) {
+    if (node->state != CMD_STATE_ALLOCATED) {
         ret = MUSICCORE_ERR_INVALID_ARG;
     } else {
         if (m_head != NULL) {
             CmdNode *tail = m_head;
             unsigned int count = 1;
-            while (tail->m_next != NULL) {
-                tail = tail->m_next;
+            while (tail->next != NULL) {
+                tail = tail->next;
                 ++count;
             }
             if (count >= m_capacity) {
                 ret = MUSICCORE_ERR_FAILED;
             } else {
-                node->m_prev = tail;
-                node->m_next = tail->m_next;
-                tail->m_next = node;
-                node->m_state = CMD_STATE_QUEUED;
+                node->prev = tail;
+                node->next = tail->next;
+                tail->next = node;
+                node->state = CMD_STATE_QUEUED;
             }
         } else {
-            node->m_next = NULL;
-            node->m_prev = NULL;
+            node->next = NULL;
+            node->prev = NULL;
             m_head = node;
-            node->m_state = CMD_STATE_QUEUED;
+            node->state = CMD_STATE_QUEUED;
         }
 
         if (ret == 0) {
-            node->m_waiter = NULL;
-            node->m_state = CMD_STATE_DEFERRED;
+            node->waiter = NULL;
+            node->state = CMD_STATE_DEFERRED;
             signaled = true;
         }
     }
@@ -830,7 +718,7 @@ int CmdQueue::dequeue(CmdNode **outNode, SceUInt *timeout)
     bool handled = false;
     CmdNode *cursor = m_head;
     if (cursor != NULL) {
-        int firstState = cursor->m_state;
+        int firstState = cursor->state;
         while (cursor != NULL) {
             if (firstState == CMD_STATE_DEFERRED) {
                 ret = MUSICCORE_ERR_TIMEOUT;
@@ -838,13 +726,13 @@ int CmdQueue::dequeue(CmdNode **outNode, SceUInt *timeout)
                 handled = true;
                 break;
             }
-            if (cursor->m_state == CMD_STATE_QUEUED) {
-                cursor->m_state = CMD_STATE_PROCESSING;
+            if (cursor->state == CMD_STATE_QUEUED) {
+                cursor->state = CMD_STATE_PROCESSING;
                 *outNode = cursor;
                 handled = true;
                 break;
             }
-            cursor = cursor->m_next;
+            cursor = cursor->next;
         }
     }
 
@@ -867,9 +755,9 @@ int CmdQueue::complete(CmdNode *node)
 
     sceKernelLockMutex(m_mutex, 1, NULL);
 
-    if (node->m_state == CMD_STATE_PROCESSING) {
-        CmdAckWaiter *ack = node->m_waiter;
-        node->m_state = CMD_STATE_DONE;
+    if (node->state == CMD_STATE_PROCESSING) {
+        CmdAckWaiter *ack = node->waiter;
+        node->state = CMD_STATE_DONE;
         if (ack != NULL) {
             ack->mutex->Lock();
             sceKernelDelayThread(200);
@@ -878,7 +766,7 @@ int CmdQueue::complete(CmdNode *node)
             ack->mutex->Unlock();
         } else {
             unlinkNode(node);
-            node->m_state = CMD_STATE_FREE;
+            node->state = CMD_STATE_FREE;
             released = true;
         }
     } else {
@@ -913,7 +801,7 @@ int CmdQueue::peekAt(CmdNode **outNode, int index)
             found = true;
             break;
         }
-        cursor = cursor->m_next;
+        cursor = cursor->next;
         ++curIdx;
     }
 
@@ -949,10 +837,10 @@ int CmdQueue::requeue(CmdNode *node, unsigned char deferSignal)
 
     sceKernelLockMutex(m_mutex, 1, NULL);
 
-    if (node->m_state != CMD_STATE_PROCESSING)
+    if (node->state != CMD_STATE_PROCESSING)
         return MUSICCORE_ERR_FAILED;
 
-    node->m_state = CMD_STATE_QUEUED;
+    node->state = CMD_STATE_QUEUED;
     unlockQueue();
 
     if (deferSignal == 1) {
@@ -980,150 +868,5 @@ int CmdQueue::flushRequeued(int maxCount)
     return 0;
 }
 
-SceSize cmdQueueCalcSize(SceSize inCap, SceSize outCap, int count)
-{
-    return CmdQueue::calcRequiredSize(inCap, outCap, static_cast<unsigned int>(count));
-}
-
-void *cmdQueueCreate(void *mem, const char *name, SceSize inCap, SceSize outCap,
-                     int count, int *outErr, SceSize bufSize)
-{
-    return new (mem) CmdQueue(name, inCap, outCap, static_cast<unsigned int>(count),
-                              outErr, bufSize);
-}
-
-int cmdQueueEnqueue(void *queue, uint64_t cmdHdr, const void *inBuf, SceSize inSize, int mode)
-{
-    (void)mode;
-    CmdQueue *cmdQueue = static_cast<CmdQueue *>(queue);
-    if (cmdQueue == NULL)
-        return MUSICCORE_ERR_INVALID_ARG;
-    CmdNode *node = NULL;
-    int ret = cmdQueue->allocNode(&node, NULL);
-    if (ret != 0 || node == NULL)
-        return ret;
-    node->m_param = static_cast<uint32_t>(cmdHdr & 0xFFFFFFFFULL);
-    node->m_flagsAndTarget = static_cast<uint16_t>((cmdHdr >> 32) & 0xFFFFu);
-    node->m_cmdCode = static_cast<uint16_t>(cmdHdr >> 48);
-    if (inBuf != NULL && inSize != 0 && node->m_inBuf != NULL) {
-        SceSize copyBytes = (inSize <= node->m_inCap) ? inSize : node->m_inCap;
-        sce_paf_memcpy(node->m_inBuf, inBuf, copyBytes);
-        node->m_inSize = static_cast<unsigned int>(copyBytes);
-    }
-    return cmdQueue->enqueue(node, NULL, NULL);
-}
-
-int cmdQueueDequeue(void *queue, void **outNode, SceUInt *timeout)
-{
-    CmdQueue *cmdQueue = static_cast<CmdQueue *>(queue);
-    if (cmdQueue == NULL || outNode == NULL)
-        return MUSICCORE_ERR_INVALID_ARG;
-    CmdNode *node = NULL;
-    int ret = cmdQueue->dequeue(&node, timeout);
-    *outNode = node;
-    return ret;
-}
-
-int cmdQueueRelease(void *queue, void *node)
-{
-    CmdQueue *cmdQueue = static_cast<CmdQueue *>(queue);
-    if (cmdQueue == NULL || node == NULL)
-        return MUSICCORE_ERR_INVALID_ARG;
-    return cmdQueue->freeNode(static_cast<CmdNode *>(node), NULL);
-}
-
-int cmdQueueFreeNode(void *queue, void *node)
-{
-    return cmdQueueRelease(queue, node);
-}
-
-int cmdQueuePeekAt(void *queue, void **outNode, int index)
-{
-    CmdQueue *cmdQueue = static_cast<CmdQueue *>(queue);
-    if (cmdQueue == NULL || outNode == NULL)
-        return MUSICCORE_ERR_INVALID_ARG;
-    CmdNode *node = NULL;
-    int ret = cmdQueue->peekAt(&node, index);
-    *outNode = node;
-    return ret;
-}
-
-int cmdQueuePopFront(void *queue)
-{
-    CmdQueue *cmdQueue = static_cast<CmdQueue *>(queue);
-    return (cmdQueue != NULL) ? cmdQueue->flushRequeued(1) : MUSICCORE_ERR_INVALID_ARG;
-}
-
-int cmdQueuePushBack(void *queue, void *node, int deferSignal)
-{
-    CmdQueue *cmdQueue = static_cast<CmdQueue *>(queue);
-    return (cmdQueue != NULL)
-        ? cmdQueue->requeue(static_cast<CmdNode *>(node), static_cast<unsigned char>(deferSignal))
-        : MUSICCORE_ERR_INVALID_ARG;
-}
-
-int cmdQueueRemoveNode(void *queue, void *node, int index)
-{
-    CmdQueue *cmdQueue = static_cast<CmdQueue *>(queue);
-    return (cmdQueue != NULL)
-        ? cmdQueue->moveToFront(static_cast<CmdNode *>(node), static_cast<unsigned int>(index))
-        : MUSICCORE_ERR_INVALID_ARG;
-}
-
 } /* namespace MusicCore */
 } /* namespace sce */
-
-SceSize musicCoreQueueGetSize(SceSize itemSz, int count, int mode)
-{
-    return sce::MusicCore::CmdQueue::calcRequiredSize(
-        static_cast<unsigned int>(itemSz), static_cast<unsigned int>(count),
-        static_cast<unsigned int>(mode));
-}
-
-void *musicCoreQueueCreate(void *mem, const char *name, SceSize itemSz,
-                           int count, int mode, int *outErr, SceSize bufSize)
-{
-    return new (mem) sce::MusicCore::CmdQueue(
-        name, static_cast<unsigned int>(itemSz), static_cast<unsigned int>(count),
-        static_cast<unsigned int>(mode), outErr, static_cast<unsigned int>(bufSize));
-}
-
-int musicCoreQueueSend(void *queue, int seqId, SceUInt32 cmd,
-                       const void *payload, SceSize payloadSize)
-{
-    sce::MusicCore::CmdQueue *cmdQueue = static_cast<sce::MusicCore::CmdQueue *>(queue);
-    if (cmdQueue == NULL)
-        return MUSICCORE_ERR_INVALID_ARG;
-    sce::MusicCore::CmdNode *node = NULL;
-    int ret = cmdQueue->allocNode(&node, NULL);
-    if (ret != 0 || node == NULL)
-        return ret;
-    node->m_param = static_cast<uint32_t>(seqId);
-    node->m_flagsAndTarget = static_cast<uint16_t>(cmd & 0xFFFFu);
-    node->m_cmdCode = static_cast<uint16_t>(cmd >> 16);
-    if (payload != NULL && payloadSize != 0 && node->m_inBuf != NULL) {
-        SceSize copyBytes = (payloadSize <= node->m_inCap) ? payloadSize : node->m_inCap;
-        sce_paf_memcpy(node->m_inBuf, payload, copyBytes);
-        node->m_inSize = static_cast<unsigned int>(copyBytes);
-    }
-    return cmdQueue->enqueue(node, NULL, NULL);
-}
-
-int musicCoreQueueRecv(void *queue, void **outMsg, SceUInt *timeout)
-{
-    sce::MusicCore::CmdQueue *cmdQueue = static_cast<sce::MusicCore::CmdQueue *>(queue);
-    if (cmdQueue == NULL || outMsg == NULL)
-        return MUSICCORE_ERR_INVALID_ARG;
-    sce::MusicCore::CmdNode *node = NULL;
-    int ret = cmdQueue->dequeue(&node, timeout);
-    *outMsg = node;
-    return ret;
-}
-
-int musicCoreQueueRelease(void *queue, void *msg)
-{
-    sce::MusicCore::CmdQueue *cmdQueue = static_cast<sce::MusicCore::CmdQueue *>(queue);
-    if (cmdQueue == NULL || msg == NULL)
-        return MUSICCORE_ERR_INVALID_ARG;
-    return cmdQueue->freeNode(static_cast<sce::MusicCore::CmdNode *>(msg), NULL);
-}
