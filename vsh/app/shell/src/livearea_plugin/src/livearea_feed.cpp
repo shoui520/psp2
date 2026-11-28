@@ -429,10 +429,77 @@ void LiveAreaFeed::LayoutNewsIcons(bool hasMore)
 				iconWidget->m_name = iconId;
 				paf::math::v4 pos(posX, -316.0f, 0.0f, 0.0f);
 				iconWidget->SetPos(pos, NULL, 0x10000, 0, 0.0f, NULL, NULL);
+				iconWidget->AddEventListener(
+					0x10000008,
+					new paf::ui::EventCBListener(liveareaFeedOnNewsClickCb, this),
+					true);
 				AnimateDropInNewsIcon(iconWidget);
 			}
 		}
 		posX += 92.0f;
+	}
+
+	paf::IDParam moreIconId((uint32_t)-969180840);
+	if (hasMore) {
+		paf::ui::Widget *moreWidget = container->FindChild(moreIconId, 0);
+		if (moreWidget != NULL) {
+			AnimateMoveNewsIcon(moreWidget, posX);
+		} else {
+			paf::Plugin::TemplateOpenParam openParam;
+			g_liveareaPlugin->TemplateOpen(container, paf::IDParam(158055897U), openParam);
+			moreWidget = container->FindChild(moreIconId, 0);
+			if (moreWidget != NULL) {
+				paf::math::v4 curPos = moreWidget->GetPos(
+					0, NULL, paf::math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+				curPos.set_x(posX);
+				moreWidget->SetPos(curPos, NULL, 0x10000, 0, 0.0f, NULL, NULL);
+				moreWidget->AddEventListener(
+					0x10000008,
+					new paf::ui::EventCBListener(liveareaFeedOnNewsClickCb, this),
+					true);
+				AnimateDropInNewsIcon(moreWidget);
+			}
+		}
+		posX += 92.0f;
+	} else {
+		paf::ui::Widget *moreWidget = container->FindChild(moreIconId, 0);
+		if (moreWidget != NULL)
+			AnimateOutNewsIcon(moreWidget);
+	}
+
+	paf::IDParam arrowId(1113775621U);
+	if (total != 0) {
+		paf::ui::Widget *arrowWidget = container->FindChild(arrowId, 0);
+		if (arrowWidget != NULL) {
+			AnimateMoveNewsIcon(arrowWidget, (posX - 46.0f) + 50.0f);
+		} else {
+			paf::Plugin::TemplateOpenParam openParam;
+			g_liveareaPlugin->TemplateOpen(container, paf::IDParam((uint32_t)-1955475427),
+						       openParam);
+			arrowWidget = container->FindChild(arrowId, 0);
+			if (arrowWidget != NULL) {
+				paf::math::v4 curPos = arrowWidget->GetPos(
+					0, NULL, paf::math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+				arrowWidget->AddEventListener(
+					0x10000008,
+					new paf::ui::EventCBListener(liveareaFeedOnNewsClickCb, this),
+					true);
+				curPos.set_x((posX - 46.0f) + 50.0f);
+				arrowWidget->SetPos(curPos, NULL, 0x10000, 0, 0.0f, NULL, NULL);
+				arrowWidget->SetTimerListener(
+					16777507, 0.0f,
+					new paf::ui::EventCBListener(
+						reinterpret_cast<paf::ui::HandlerCB>(
+							liveareaFeedOnArrowTimerCb),
+						NULL));
+			}
+		}
+	} else {
+		paf::ui::Widget *arrowWidget = container->FindChild(arrowId, 0);
+		if (arrowWidget != NULL) {
+			arrowWidget->KillTimer(16777507);
+			AnimateOutNewsIcon(arrowWidget);
+		}
 	}
 }
 
@@ -550,6 +617,18 @@ int LiveAreaFeed::HandleSysUpdateError(int err)
 	if (err != (int)0x80550D12)
 		return 0;
 	ShellSysupchkParam param;
+	param.caller = "livearea_plugin";
+	param.callback = reinterpret_cast<void (*)(int, void *)>(liveareaFeedOnSysupchkDone);
+	param.checkMode = 1;
+	param.dialogMode = 3;
+	param.launchMode = 1;
+	param.acceptedFlag = 0;
+	shellSysupchkInterface = &shellSysupchkDefaultInterface;
+
+	CommonGuiLayoutDialogParam dlgParam;
+	dlgParam.priority = 33;
+	param.msgDlgParam = &dlgParam;
+
 	ShellSysupchkInitParam checker;
 	checker.SetParam(param);
 	checker.Load(NULL, 0);

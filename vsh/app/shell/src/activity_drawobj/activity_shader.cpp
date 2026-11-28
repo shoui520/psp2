@@ -639,88 +639,91 @@ public:
 /* Mode 2 shader (0x8138EF6C..0x81390015) */
 class ActivityFullMaskShader : public Shader {
 public:
-	/* 0x8138EF6C */
-	ActivityFullMaskShader()
-		: m_vert(s_fullMaskVert), m_frag(s_fullMaskFrag)
-	{
-	}
-
-	/* 0x8138EFCE / 0x8138F08E */
-	virtual ~ActivityFullMaskShader()
-	{
-	}
-
-	/* 0x8138F09E */
-	virtual int32_t Draw(PlaneObjDrawParams &params)
-	{
-		ArlInstance *gl = paf::graph::arl::Gl();
-		if (s_fullMaskVert.get() == NULL || s_fullMaskFrag.get() == NULL)
-			return 0;
-
-		paf::intrusive_ptr<Surface> surfaces[3];
-		resolveTextures(params, surfaces, 3);
-
-		s_fullMaskVert->m_interface.m_regionFrame.Set(makeSurfaceRegion(surfaces[0].get()));
-		s_fullMaskVert->m_interface.m_regionImage.Set(makeSurfaceRegion(surfaces[1].get()));
-		s_fullMaskVert->m_interface.m_mvp.Set(gl->GetModelViewProjection());
-		s_fullMaskFrag->m_interface.m_color.Set(gl->m_color);
-		s_fullMaskFrag->m_interface.m_frameTexture.Set(makeSurfaceSource(surfaces[0]));
-		s_fullMaskFrag->m_interface.m_imageTexture.Set(makeSurfaceSource(surfaces[1]));
-		s_fullMaskFrag->m_interface.m_maskTexture.Set(makeSurfaceSource(surfaces[2]));
-
-		bindVertexStream(gl, params.m_vertices);
-
-		float scaleY = getModelScaleY(gl);
-
-		s_fullMaskVert->m_object.begin();
-		s_fullMaskFrag->m_object.begin();
-		uint32_t maskedCount = params.m_count;
-		if (scaleY > 256.0f)
-			maskedCount -= 84;
-		params.m_indices->draw(*gl, paf::graph::arl::TRIANGLES, maskedCount);
-		s_fullMaskFrag->m_object.end();
-		s_fullMaskVert->m_object.end();
-
-		if (scaleY > 256.0f) {
-			s_colorOnlyFullVert->m_interface.m_mvp.Set(gl->GetModelViewProjection());
-			s_colorOnlyFullVert->m_interface.m_regionFrame.Set(
-				makeSurfaceRegion(surfaces[0].get()));
-			s_colorOnlyFrag->m_interface.m_color.Set(gl->m_color);
-			s_colorOnlyFrag->m_interface.m_frameTexture.Set(
-				makeSurfaceSource(surfaces[0]));
-
-			s_colorOnlyFullVert->m_object.begin();
-			s_colorOnlyFrag->m_object.begin();
-			ActivityMeshIndexBuffer *lowerBorder =
-				activityDrawObjGetIndexBuffer(ACTIVITY_MESH_FULL_LOWER_BORDER);
-			if (lowerBorder != NULL)
-				lowerBorder->indices->draw(*gl, paf::graph::arl::TRIANGLES,
-							   lowerBorder->count);
-			s_colorOnlyFrag->m_object.end();
-			s_colorOnlyFullVert->m_object.end();
-
-			s_internalFullVert->m_interface.m_mvp.Set(gl->GetModelViewProjection());
-			s_internalFrag->m_interface.m_color.Set(gl->m_color);
-
-			s_internalFullVert->m_object.begin();
-			s_internalFrag->m_object.begin();
-			ActivityMeshIndexBuffer *lowerInterior =
-				activityDrawObjGetIndexBuffer(ACTIVITY_MESH_FULL_LOWER_INTERIOR);
-			if (lowerInterior != NULL)
-				lowerInterior->indices->draw(*gl, paf::graph::arl::TRIANGLES,
-							     lowerInterior->count);
-			s_internalFrag->m_object.end();
-			s_internalFullVert->m_object.end();
-		}
-
-		clearVertexStreamState(gl);
-		return 0;
-	}
+	ActivityFullMaskShader();
+	virtual ~ActivityFullMaskShader();
+	virtual int32_t Draw(PlaneObjDrawParams &params);
 
 private:
 	SharedPtr<FullMaskVertInst> m_vert;
 	SharedPtr<FullMaskFragInst> m_frag;
 };
+
+/* 0x8138EF6C */
+ActivityFullMaskShader::ActivityFullMaskShader()
+	: m_vert(s_fullMaskVert), m_frag(s_fullMaskFrag)
+{
+}
+
+/* 0x8138EFCE / 0x8138F08E */
+ActivityFullMaskShader::~ActivityFullMaskShader()
+{
+}
+
+/* 0x8138F09E */
+int32_t ActivityFullMaskShader::Draw(PlaneObjDrawParams &params)
+{
+	ArlInstance *gl = paf::graph::arl::Gl();
+	if (s_fullMaskVert.get() == NULL || s_fullMaskFrag.get() == NULL)
+		return 0;
+
+	paf::intrusive_ptr<Surface> surfaces[3];
+	resolveTextures(params, surfaces, 3);
+
+	s_fullMaskVert->m_interface.m_regionFrame.Set(makeSurfaceRegion(surfaces[0].get()));
+	s_fullMaskVert->m_interface.m_regionImage.Set(makeSurfaceRegion(surfaces[1].get()));
+	s_fullMaskVert->m_interface.m_mvp.Set(gl->GetModelViewProjection());
+	s_fullMaskFrag->m_interface.m_color.Set(gl->m_color);
+	s_fullMaskFrag->m_interface.m_frameTexture.Set(makeSurfaceSource(surfaces[0]));
+	s_fullMaskFrag->m_interface.m_imageTexture.Set(makeSurfaceSource(surfaces[1]));
+	s_fullMaskFrag->m_interface.m_maskTexture.Set(makeSurfaceSource(surfaces[2]));
+
+	bindVertexStream(gl, params.m_vertices);
+
+	float scaleY = getModelScaleY(gl);
+
+	s_fullMaskVert->m_object.begin();
+	s_fullMaskFrag->m_object.begin();
+	uint32_t maskedCount = params.m_count;
+	if (scaleY > 256.0f)
+		maskedCount -= 84;
+	params.m_indices->draw(*gl, paf::graph::arl::TRIANGLES, maskedCount);
+	s_fullMaskFrag->m_object.end();
+	s_fullMaskVert->m_object.end();
+
+	if (scaleY > 256.0f) {
+		s_colorOnlyFullVert->m_interface.m_mvp.Set(gl->GetModelViewProjection());
+		s_colorOnlyFullVert->m_interface.m_regionFrame.Set(
+			makeSurfaceRegion(surfaces[0].get()));
+		s_colorOnlyFrag->m_interface.m_color.Set(gl->m_color);
+		s_colorOnlyFrag->m_interface.m_frameTexture.Set(makeSurfaceSource(surfaces[0]));
+
+		s_colorOnlyFullVert->m_object.begin();
+		s_colorOnlyFrag->m_object.begin();
+		ActivityMeshIndexBuffer *lowerBorder =
+			activityDrawObjGetIndexBuffer(ACTIVITY_MESH_FULL_LOWER_BORDER);
+		if (lowerBorder != NULL)
+			lowerBorder->indices->draw(*gl, paf::graph::arl::TRIANGLES,
+						   lowerBorder->count);
+		s_colorOnlyFrag->m_object.end();
+		s_colorOnlyFullVert->m_object.end();
+
+		s_internalFullVert->m_interface.m_mvp.Set(gl->GetModelViewProjection());
+		s_internalFrag->m_interface.m_color.Set(gl->m_color);
+
+		s_internalFullVert->m_object.begin();
+		s_internalFrag->m_object.begin();
+		ActivityMeshIndexBuffer *lowerInterior =
+			activityDrawObjGetIndexBuffer(ACTIVITY_MESH_FULL_LOWER_INTERIOR);
+		if (lowerInterior != NULL)
+			lowerInterior->indices->draw(*gl, paf::graph::arl::TRIANGLES,
+						     lowerInterior->count);
+		s_internalFrag->m_object.end();
+		s_internalFullVert->m_object.end();
+	}
+
+	clearVertexStreamState(gl);
+	return 0;
+}
 
 /* Link icon shader (0x81390016) */
 class ActivityLinkIconShader : public Shader {
