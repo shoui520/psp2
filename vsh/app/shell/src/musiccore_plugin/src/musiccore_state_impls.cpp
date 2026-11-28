@@ -12,6 +12,7 @@
 
 #include "musiccore_audio_output.h"
 #include "musiccore_decoder_manager.h"
+#include "musiccore_media_list.h"
 #include "musiccore_state_machine.h"
 #include <stdlib.h>
 
@@ -222,13 +223,9 @@ struct StateMachineContext {
     void *m_activateToken;                 /* +4596 */
 };
 
-extern void clearRejectedIdList();
 
 extern void computePlaybackRange(int seekMode, int speedMode, int step, int durationMs,
                                  int volumeMode, int *outPrev, int *outNext, int *outCur);
-extern int trackInfoReleaseResources(void *info, int closeFlag);
-extern int trackInfoMoveTo(void *src, void *dst, int moveFlag);
-extern void trackInfoResetCounters(void *info);
 
 /* ===== PlaybackStateBase (0x811FCF14 - 0x811FCFBB) ===== */
 
@@ -468,7 +465,7 @@ int StateStarting::onEnter()
 
     if (m_owner->m_hasPendingError == 0) {
         ++m_owner->m_activeTrackInfo.playAttemptCount;
-        trackInfoResetCounters(&m_owner->m_activeTrackInfo);
+        reinterpret_cast<MediaItem *>(&m_owner->m_activeTrackInfo)->commitToList();
         ++m_owner->m_activeStartCount;
     }
     ++m_owner->m_hasPendingError;
@@ -766,8 +763,8 @@ int StateStopping::onAudioError(int errCode)
     if (hadPendingTrack == 1u) {
         m_owner->m_hasPendingTrack = 0;
         m_owner->m_activeMedia->getStatus(&m_owner->m_mediaListStatus);
-        if (trackInfoMoveTo(&m_owner->m_pendingTrackInfo, &m_owner->m_activeTrackInfo, 1) != 0) {
-            trackInfoReleaseResources(&m_owner->m_pendingTrackInfo, 1);
+        if (reinterpret_cast<MediaItem *>(&m_owner->m_pendingTrackInfo)->transferTo(reinterpret_cast<MediaItem *>(&m_owner->m_activeTrackInfo), static_cast<uint8_t>(1)) != 0) {
+            reinterpret_cast<MediaItem *>(&m_owner->m_pendingTrackInfo)->releaseToList(static_cast<uint8_t>(1));
             m_owner->m_hasPendingError = 2;
             nextState = STATE_STOPPED;
             commitFailed = true;
@@ -840,7 +837,7 @@ int StateStopping::onAudioError(int errCode)
 
     int extraSeekErr = (m_owner->m_extraSeekErr != 0) ? m_owner->m_extraSeekErr : 0;
     if (m_owner->m_hasPendingTrack == 1u) {
-        trackInfoReleaseResources(&m_owner->m_pendingTrackInfo, 0);
+        reinterpret_cast<MediaItem *>(&m_owner->m_pendingTrackInfo)->releaseToList(static_cast<uint8_t>(0));
     }
 
     m_owner->m_deactivateRequested = 0;
@@ -1174,7 +1171,7 @@ int StateIdle::onEnter()
     m_owner->m_playParam = -1;
     m_owner->m_needDecoderRestart = 1;
 
-    trackInfoReleaseResources(&m_owner->m_activeTrackInfo, 0);
+    reinterpret_cast<MediaItem *>(&m_owner->m_activeTrackInfo)->releaseToList(static_cast<uint8_t>(0));
     m_owner->m_activeMedia = NULL;
     m_owner->m_currentPosMs = -1;
     m_owner->m_prevTrackPos = -1;

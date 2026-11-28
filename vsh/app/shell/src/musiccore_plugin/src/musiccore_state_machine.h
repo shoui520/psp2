@@ -77,15 +77,40 @@ struct MediaListStatus {
     union {
         void *vtable;
         void *vtablePtr;
+        int reservedHeader;
     };
-    int playState;
-    int trackOrderIndex;
-    int padAlign;
-    int64_t currentTrackId;
-    int prevTrackIdx;
-    int nextTrackIdx;
-    int listMode;
-    int listFlags;
+    union {
+        int playState;
+        unsigned int itemCount;
+    };
+    union {
+        int trackOrderIndex;
+        int currentIndex;
+    };
+    union {
+        int padAlign;
+        int padIndex;
+    };
+    union {
+        int64_t currentTrackId;
+        int64_t anchorId;
+    };
+    union {
+        int prevTrackIdx;
+        int initialIndex;
+    };
+    union {
+        int nextTrackIdx;
+        int shuffleMode;
+    };
+    union {
+        int listMode;
+        int sortMode;
+    };
+    union {
+        int listFlags;
+        int tableCategory;
+    };
 };
 
 struct StateSnapshotOut {

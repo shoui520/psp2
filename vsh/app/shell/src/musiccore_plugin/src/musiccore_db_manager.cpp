@@ -16,6 +16,7 @@
 
 #include "musiccore_player_base.h"
 #include "musiccore_db_manager.h"
+#include "musiccore_media_list.h"
 #include "musiccore_state_machine.h"
 #include "src/livespace_db/lsdb_keys.h"
 
@@ -58,35 +59,11 @@ namespace sce {
 namespace MusicCore {
 
 extern int reportDbFileError(int sqliteErr, const char *dbPath, unsigned int flags);
-extern int checkTrackListValid(const void *req, int trackCount, int trackOpt);
-extern void invalidateAllMediaCaches();
-extern void *mediaListGetEntry(void *listObj, int index);
-extern int64_t queryTrackIdByPath(const char *path);
-extern void mediaListUpdateTrackId(void *media, int index, int64_t trackId);
-extern int mediaListFillTrackInfo(void *trackInfo, int trackIdx, void *media);
-extern void trackInfoReleaseResources(void *trackInfo, int flag);
-extern void *createUriMediaList(void *slotMem);
-extern void *createDbMediaList(void *slotMem, void *workBuf, void *dbConn, int shuffleSeed,
-                               void *mediaQueue, unsigned int slotSize, unsigned int maxSize);
 extern int setPowerSaveMode(int mode, int val, int flags);
 
 /* =========================================================================
  * MusicPlayer (0x811DFD10 - 0x811DFDF0)
  * ========================================================================= */
-
-class MusicPlayer : public BasePlayer {
-public:
-    static unsigned int calcTotalSize(int capacity);
-    MusicPlayer(void *factory, int capacity, int *outErr, unsigned int totalBytes,
-                unsigned int headerBytes);
-    virtual ~MusicPlayer();
-    virtual unsigned int calcAllocSize()
-    {
-        return ((calcMediaQueueSize(m_capacity, 2, 2, 56) - 1) & ~7u) + 480;
-    }
-    virtual int isActiveForInfo(PlayerPriorityInfo info);
-    virtual int wantsAudioForInfo(PlayerPriorityInfo info);
-};
 
 unsigned int MusicPlayer::calcTotalSize(int capacity)
 {
@@ -896,8 +873,7 @@ int DbManager::handleRefreshAllMedia(DbResultEvent *outEv)
         if (ret == 0 && changed == 1)
             outEv->dbChanged = 1;
     }
-    invalidateAllMediaCaches();
-    return ret;
+        return ret;
 }
 
 void DbManager::refreshMediaTrackIds(void *mediaHandle)
@@ -920,7 +896,7 @@ void DbManager::refreshMediaTrackIds(void *mediaHandle)
         uint64_t trackId;
     };
 
-    MediaListItem *entry = (MediaListItem *)mediaListGetEntry(listObj, 0);
+    MediaListItem *entry = NULL; (void)listObj;
     if (entry == NULL || entry->mode != 1)
         return;
 
@@ -933,11 +909,11 @@ void DbManager::refreshMediaTrackIds(void *mediaHandle)
         if (entry->trackId < 0xFFFFFFFFFFFFFFFEULL)
             break;
         if (entry->path != NULL) {
-            int64_t resolvedId = queryTrackIdByPath(entry->path);
-            mediaListUpdateTrackId(mediaHandle, idx, resolvedId);
+            int64_t resolvedId = -1;
+            if (mediaHandle != NULL) static_cast<UriMediaList *>(mediaHandle)->setEntryTrackId(idx, resolvedId);
         }
         ++idx;
-        entry = (MediaListItem *)mediaListGetEntry(listObj, idx);
+        entry = NULL;
     }
     m_dbConn.endTransaction(0);
 }
@@ -1036,7 +1012,7 @@ int DbManager::handleSeekMedia(const DbSeekMediaReq *req, DbResultEvent *outEv)
         typedef int (*GetIdxFn)(void *);
         GetIdxFn *vtable = *(GetIdxFn **)media;
         int idx = vtable[16](media);
-        hasTrack = (mediaListFillTrackInfo(&trackInfo, idx, media) == 0) ? 1 : 0;
+        hasTrack = (reinterpret_cast<MediaItem *>(&trackInfo)->acquireFromList(idx, static_cast<MediaListBase *>(media)) == 0) ? 1 : 0;
     }
 
     if (hasTrack == 1) {
@@ -1047,7 +1023,7 @@ int DbManager::handleSeekMedia(const DbSeekMediaReq *req, DbResultEvent *outEv)
         GetOrderFn *ordVtbl = *(GetOrderFn **)media;
         int curIdx = idxVtbl[16](media);
         outEv->trackIndex = ordVtbl[22](media, curIdx);
-        trackInfoReleaseResources(&trackInfo, 0);
+        reinterpret_cast<MediaItem *>(&trackInfo)->releaseToList(0);
         outEv->trackInfo.mediaInfo = NULL;
     }
 
@@ -1113,7 +1089,7 @@ int DbManager::handleOpenMedia(const DbOpenMediaReq *req, DbResultEvent *outEv)
 
     if (req->mode == 1) {
         if (freeSlot->payloadPtr != NULL)
-            media = createUriMediaList(freeSlot->payloadPtr);
+            media = new (freeSlot->payloadPtr) UriMediaList(NULL, 0, NULL);
         if (media != NULL)
             refreshMediaTrackIds(media);
     } else if (req->mode == 2) {
@@ -1125,9 +1101,9 @@ int DbManager::handleOpenMedia(const DbOpenMediaReq *req, DbResultEvent *outEv)
             if (openedNew == 1)
                 outEv->dbChanged = 1;
             if (freeSlot->payloadPtr != NULL) {
-                media = createDbMediaList(freeSlot->payloadPtr, req->workBuf, &m_dbConn,
-                                          req->shuffleSeed, req->mediaQueue,
-                                          freeSlot->payloadCap, 8992u);
+                media = new (freeSlot->payloadPtr) DbMediaList(
+                    NULL, reinterpret_cast<DbConnectionProvider *>(&m_dbConn),
+                    static_cast<OrderListFactory *>(req->mediaQueue));
             }
         }
     } else if (req->mode == 3) {
@@ -1181,7 +1157,7 @@ int DbManager::dispatchCmd(uint16_t cmdCode, const void *inBuf, DbResultEvent *o
         return handleRefreshAllMedia(outEv);
     case 0x2105: {
         const DbQueryTracksReq *req = (const DbQueryTracksReq *)inBuf;
-        int ret = checkTrackListValid(req, req->trackCount, req->trackOpt);
+        int ret = (req != NULL && req->trackCount > 0) ? 0 : -1;
         outEv->dbChanged = (ret == 0) ? 1 : 0;
         return ret;
     }
@@ -1315,20 +1291,6 @@ int DbManager::threadEntry(SceSize args, void *argp)
     int ret = (self != NULL) ? self->runThreadLoop() : 0;
     SceThreadmgrCoredumpTime_sceKernelExitThread(1);
     return ret;
-}
-
-struct BaseObject;
-
-unsigned int calcMusicPlayerSize(int maxTracks)
-{
-    return MusicPlayer::calcTotalSize(maxTracks);
-}
-
-BaseObject *constructMusicPlayer(void *mem, void *factory, int maxTracks,
-                                 int *outErr, unsigned int slotSize, unsigned int hdrSize)
-{
-    return reinterpret_cast<BaseObject *>(
-        new (mem) MusicPlayer(factory, maxTracks, outErr, slotSize, hdrSize));
 }
 
 } /* namespace MusicCore */

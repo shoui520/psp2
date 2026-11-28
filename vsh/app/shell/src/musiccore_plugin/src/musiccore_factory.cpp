@@ -7,6 +7,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "musiccore_controller.h"
+#include "musiccore_player_base.h"
 #include "musiccore_sync.h"
 
 static const int MUSICCORE_ERR_FAILED = -1879113726; /* 0x8FFF0002 */
@@ -16,25 +18,6 @@ static const int MUSICCORE_ERR_INVALID_ARG = -1879113723; /* 0x8FFF0005 */
 namespace sce {
 namespace MusicCore {
 
-class BaseObject {
-public:
-    virtual ~BaseObject() {}
-};
-
-extern unsigned int calcControllerSize();
-extern unsigned int calcMusicPlayerSize(int maxTracks);
-extern unsigned int calcPlaylistPlayerSize(int maxItems);
-extern unsigned int calcStreamPlayerSize(int maxStreams);
-
-extern BaseObject *constructMusicPlayer(void *mem, void *factory, int maxTracks,
-                                        int *outErr, unsigned int slotSize, unsigned int hdrSize);
-extern BaseObject *constructPlaylistPlayer(void *mem, void *factory, int maxItems,
-                                           int *outErr, unsigned int slotSize, unsigned int hdrSize);
-extern BaseObject *constructStreamPlayer(void *mem, void *factory, int maxStreams,
-                                         int *outErr, unsigned int slotSize, unsigned int hdrSize);
-extern BaseObject *constructController(void *mem, void *factory, int *outErr, unsigned int slotSize);
-extern BaseObject *constructWorkBuffer(void *mem, unsigned int bufSize, unsigned int slotSize);
-
 static unsigned int alignUp8(unsigned int size)
 {
     return ((size - 1) & ~7u) + 8;
@@ -43,11 +26,11 @@ static unsigned int alignUp8(unsigned int size)
 static unsigned int calcPlayerElemSize(char playerKind, int capacity)
 {
     if (playerKind == 0)
-        return calcMusicPlayerSize(capacity);
+        return MusicPlayer::calcTotalSize(capacity);
     if (playerKind == 1)
-        return calcPlaylistPlayerSize(capacity);
+        return static_cast<unsigned int>(MusicAppPlayer::calcRequiredSize(capacity));
     if (playerKind == 2)
-        return calcStreamPlayerSize(capacity);
+        return static_cast<unsigned int>(ExclusiveMusicPlayer::calcRequiredSize(capacity));
     return 0;
 }
 
@@ -103,11 +86,11 @@ PlayerPool::PlayerPool(void *factory, char playerKind, unsigned char count, int 
         unsigned int slotSize = getBlockPayloadSize();
 
         if (m_playerKind == 0) {
-            obj = constructMusicPlayer(slot, factory, m_capacity, &err, slotSize, 472);
+            obj = reinterpret_cast<BaseObject *>(new (slot) MusicPlayer(factory, m_capacity, &err, slotSize, 472));
         } else if (m_playerKind == 1) {
-            obj = constructPlaylistPlayer(slot, factory, m_capacity, &err, slotSize, 6648);
+            obj = reinterpret_cast<BaseObject *>(new (slot) MusicAppPlayer(factory, m_capacity, &err, slotSize, 6648));
         } else if (m_playerKind == 2) {
-            obj = constructStreamPlayer(slot, factory, m_capacity, &err, slotSize, 496);
+            obj = reinterpret_cast<BaseObject *>(new (slot) ExclusiveMusicPlayer(factory, m_capacity, &err, slotSize, 496));
         } else {
             err = MUSICCORE_ERR_INVALID_ARG;
         }
@@ -166,7 +149,7 @@ private:
 
 unsigned int ObjFactory::calcPayloadSize(int numMusic, int numPlaylist, int numStream)
 {
-    unsigned int ctrlPoolSz = CacheBufferPool::calcPoolTotalSize(calcControllerSize(), 1);
+    unsigned int ctrlPoolSz = CacheBufferPool::calcPoolTotalSize(sizeof(Controller) + Controller::calcQueueBytes(), 1);
     unsigned int musicSz = PlayerPool::calcSize(0, (unsigned char)numMusic, 1);
     unsigned int playlistSz = PlayerPool::calcSize(1, (unsigned char)numPlaylist, 10000);
     unsigned int streamSz = PlayerPool::calcSize(2, (unsigned char)numStream, 1);
@@ -197,7 +180,7 @@ ObjFactory::ObjFactory(int numMusic, int numPlaylist, int numStream,
 
     char *cursor = (char *)this + offset;
 
-    unsigned int ctrlElemSz = calcControllerSize();
+    unsigned int ctrlElemSz = sizeof(Controller) + Controller::calcQueueBytes();
     unsigned int ctrlPoolSz = CacheBufferPool::calcPoolTotalSize(ctrlElemSz, 1);
     if (offset + ctrlPoolSz > totalBytes)
         return;
@@ -274,7 +257,7 @@ int ObjFactory::createController(void **outCtrl)
         return MUSICCORE_ERR_NO_MEMORY;
 
     unsigned int slotSize = m_controllerPool->getBlockPayloadSize();
-    BaseObject *ctrl = constructController(slot, this, &err, slotSize);
+    BaseObject *ctrl = new (slot) Controller(this, &err, slotSize);
     *outCtrl = ctrl;
     if (ctrl == NULL) {
         err = MUSICCORE_ERR_FAILED;
@@ -310,8 +293,8 @@ int ObjFactory::createWorkBuf(void **outBuf)
     if (slot == NULL)
         return MUSICCORE_ERR_NO_MEMORY;
 
-    unsigned int slotSize = m_workBufPool->getBlockPayloadSize();
-    BaseObject *buf = constructWorkBuffer(slot, 4192, slotSize);
+    (void)m_workBufPool->getBlockPayloadSize();
+    BaseObject *buf = new (slot) WorkBufferObject(4192);
     *outBuf = buf;
     if (buf == NULL) {
         m_workBufPool->releaseBuffer(slot);

@@ -9,6 +9,7 @@
 
 #include <thread/thread.h>
 
+#include "musiccore_controller.h"
 #include "musiccore_player_base.h"
 #include "musiccore_state_machine.h"
 #include "musiccore_db_manager.h"
@@ -65,7 +66,6 @@ struct SeekCmdPayload {
 };
 
 extern unsigned int calcMediaQueueSize(int capacity, int a, int b, int c);
-extern void *workBufGetRegion(void *workBuf, int index);
 extern void computePlaybackRange(int repeatMode, int shuffleMode, int step, int totalTracks,
                                  int speedMode, int *outPrev, int *outNext, int *outCur);
 extern int factoryDestroyWorkBuf(void *factory, void *workBuf);
@@ -570,7 +570,7 @@ int BasePlayer::getExtraStatus(int *outMode, char onlyIfDirty, char *outBuf, uns
 
     *outDirty = m_uriDirty;
     m_uriDirty = 0;
-    void *region = workBufGetRegion(m_lastUriWorkBuf, 0);
+    void *region = (m_lastUriWorkBuf != NULL) ? static_cast<WorkBufferObject *>(m_lastUriWorkBuf)->getRegion() : NULL;
     return formatUriInfo(outBuf, outMode, region, &m_offlineState);
 }
 
@@ -1408,7 +1408,7 @@ int BasePlayer::onDecoderMediaChanged(CmdNode *node)
         if (m_metadataCb != NULL && upd->newMedia != NULL) {
             void *workBuf = upd->newMedia->getWorkBuf();
             if (workBuf != NULL) {
-                void *region = workBufGetRegion(workBuf, 0);
+                void *region = (workBuf != NULL) ? static_cast<WorkBufferObject *>(workBuf)->getRegion() : NULL;
                 int mode = 4;
                 char uriBuf[2088];
                 if (formatUriInfo(uriBuf, &mode, region, &upd->newState) == 0) {
@@ -1686,7 +1686,7 @@ int BasePlayer::onDbEvent(CmdNode *node, unsigned char *flags)
                             m_uriDirty = 1;
 
                         if (m_metadataCb != NULL && workBuf != NULL) {
-                            void *region = workBufGetRegion(workBuf, 0);
+                            void *region = (workBuf != NULL) ? static_cast<WorkBufferObject *>(workBuf)->getRegion() : NULL;
                             int mode = 4;
                             char uriBuf[2088];
                             if (formatUriInfo(uriBuf, &mode, region, &m_offlineState) == 0) {

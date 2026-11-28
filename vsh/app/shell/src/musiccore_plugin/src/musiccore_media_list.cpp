@@ -18,6 +18,7 @@
 #include <thread/thread.h>
 
 #include "musiccore_decoder_manager.h"
+#include "musiccore_media_list.h"
 
 extern "C" {
 void *sce_paf_memset(void *dst, int ch, SceSize len);
@@ -58,54 +59,7 @@ static const int REJECT_LIST_CAPACITY = 20;
 
 extern int convertToMusicDevicePath(const char *srcPath, char *dstBuf, SceSize dstCapacity);
 
-struct TrackMetadataResult {
-    int channels;
-    uint8_t hasChannels;
-    uint8_t padChannels[3];
-    int bitRate;
-    uint8_t hasBitRate;
-    uint8_t padBitRate[3];
-    unsigned int durationMs;
-    uint8_t hasDuration;
-    uint8_t padDuration[3];
-    int sampleRate;
-    uint8_t hasSampleRate;
-    uint8_t padSampleRate[3];
-    int codecProfile;
-    uint8_t hasCodecProfile;
-    uint8_t padCodecProfile[3];
-    int codecSubType;
-    uint8_t hasCodecSubType;
-    uint8_t padCodecSubType[3];
-};
-
-struct MediaInfoHandle {
-    void *vtablePtr;
-    uint32_t mediaFourcc;
-    uint8_t sharedFlag;
-};
-
-/* Database connection provider interface owned by DbManager */
-class DbConnectionProvider {
-public:
-    virtual ~DbConnectionProvider() {}
-    virtual void initialize() = 0;
-    virtual void finalize() = 0;
-    virtual int acquireConnection(int writeMode, dbutil::Connection **outConn) = 0;
-    virtual void releaseConnection(int writeMode) = 0;
-};
-
 /* MusicRowidResult (implemented in musiccore_players.cpp) */
-class MusicRowidResult : public dbutil::RowidResult {
-public:
-    MusicRowidResult();
-    virtual ~MusicRowidResult();
-    int generateShuffledOrder(uint32_t seed, int64_t anchorRowid,
-                              uint16_t *outIndices, uint32_t capacity);
-private:
-    uint32_t m_rngState;
-};
-
 /* ===== RejectedIdList globals (0x8156F1E0, 0x8156F3C0, 0x8156F3C8) ===== */
 
 struct RejectedIdTriplet {
@@ -211,15 +165,6 @@ enum DbColumnType {
     DB_COL_DATETIME = 3
 };
 
-struct DbColumnBinding {
-    const char *columnName;
-    int valueType;
-    uint8_t selected;
-    uint8_t padSelected[3];
-    void *valuePtr;
-    SceSize bufferCapacity;
-};
-
 static const DbColumnBinding kMusicTableColumns[15] = {
     { "rowid",              DB_COL_INT64, 0, { 0, 0, 0 }, NULL, 0 },
     { "mrid",               DB_COL_INT64, 0, { 0, 0, 0 }, NULL, 0 },
@@ -244,16 +189,6 @@ static const DbColumnBinding kContentItemTableColumns[2] = {
 };
 
 /* ===== MediaEntryNode / DbQueryEntryNode / UriEntryNode / MediaEntryPool ===== */
-
-class MediaEntryNode {
-public:
-    virtual ~MediaEntryNode();
-    virtual size_t getAllocatedSize() const = 0;
-
-    int m_entryKind;            /* +4: 1=URI, 2=DB query */
-    MediaEntryNode *m_prev;     /* +8 */
-    MediaEntryNode *m_next;     /* +12 */
-};
 
 MediaEntryNode::~MediaEntryNode() {}
 
@@ -376,25 +311,6 @@ size_t UriEntryNode::getAllocatedSize() const
 {
     return m_allocSize;
 }
-
-class MediaEntryPool {
-public:
-    MediaEntryPool(int minCapacity, unsigned int arenaBytes);
-    virtual ~MediaEntryPool();
-
-    void *reserveSlot(int neededBytes);
-    void appendNode(MediaEntryNode *node);
-    MediaEntryNode *getNodeAt(unsigned int index);
-    unsigned int getNodeCount() const;
-
-private:
-    void *m_arenaStart;         /* +4 */
-    MediaEntryNode *m_head;     /* +8 */
-    MediaEntryNode *m_tail;     /* +12 */
-    unsigned int m_freeBytes;   /* +16 */
-    unsigned int m_nodeCount;   /* +20 */
-    int m_poolSerial;           /* +24 */
-};
 
 unsigned int MediaEntryPool::getNodeCount() const
 {
@@ -623,34 +539,6 @@ unsigned int resolvePlaybackRange(unsigned int reqStart, unsigned int reqEnd,
 
 /* ===== OrderListFactory (0x811F29E2 - 0x811F2C17) ===== */
 
-struct OrderListSlotHeader {
-    uint8_t inUse;
-    uint8_t padSlot[7];
-    int ownerListId;
-    int poolPadding;
-};
-
-class OrderListFactory {
-public:
-    static unsigned int calcTotalSize(int maxItems, int slotCount, int elemBytes, int headerSize);
-
-    OrderListFactory(int maxItems, int slotCount, int elemBytes,
-                     unsigned int arenaSize, int headerSize);
-    virtual ~OrderListFactory();
-
-    virtual void *acquireOrderList(void *ownerList, int *outPrevOwnerId, SceUInt *timeout);
-    virtual void releaseOrderList(void *bufferPtr, uint8_t clearOwner);
-    virtual int getMaxItems() const;
-
-private:
-    uint8_t *m_slotsBase;          /* +4 */
-    int m_maxItems;                /* +8 */
-    int m_slotCount;               /* +12 */
-    int m_elemBytes;               /* +16 */
-    SceUID m_slotSema;             /* +20 */
-    paf::thread::Mutex m_lock;     /* +24 */
-};
-
 int OrderListFactory::getMaxItems() const
 {
     return m_maxItems;
@@ -716,57 +604,7 @@ OrderListFactory::~OrderListFactory()
     }
 }
 
-class MediaListBase;
-
-struct MetadataOutputRequest {
-    char *albumOut;
-    SceSize albumCapacity;
-    char *titleOut;
-    SceSize titleCapacity;
-    char *artistOut;
-    SceSize artistCapacity;
-    paf::thread::Mutex *lock;
-};
-
 /* ===== MediaItem (0x811F2DFA - 0x811F3467, size 2152 bytes) ===== */
-
-class MediaItem {
-public:
-    MediaItem();
-    virtual ~MediaItem();
-
-    void reset();
-    void copyFrom(const MediaItem &other);
-    int probe(int ioPriority, uint8_t parseMeta);
-    int acquireFromList(int navTarget, MediaListBase *listObj);
-    int releaseToList(uint8_t commitChanges);
-    int transferTo(MediaItem *dst, uint8_t commitDst);
-    int commitToList();
-    int readMetadata(MetadataOutputRequest *outMeta);
-
-    int m_codecSubType;                 /* +4 */
-    int m_status;                       /* +8 */
-    int m_padStatus;                    /* +12 */
-    int64_t m_rowId;                    /* +16 */
-    int64_t m_musicId;                  /* +24 */
-    int64_t m_listId;                   /* +32 */
-    char m_contentPath[2048];           /* +40..+2087 */
-    int m_sourceType;                   /* +2088 */
-    int m_codecProfile;                 /* +2092 */
-    int m_channels;                     /* +2096 */
-    int m_bitRate;                      /* +2100 */
-    int m_sampleRate;                   /* +2104 */
-    int m_durationMs;                   /* +2108 */
-    int64_t m_fileSize;                 /* +2112 */
-    int m_resumePositionMs;             /* +2120 */
-    int m_playCount;                    /* +2124 */
-    int m_loopMode;                     /* +2128 */
-    int m_slotSerial;                   /* +2132 */
-    MediaListBase *m_ownerList;         /* +2136 */
-    MediaInfoHandle *m_mediaInfo;       /* +2140 */
-    uint8_t m_mediaInfoShared;          /* +2144 */
-    uint8_t m_padTail[7];               /* +2145..+2151 */
-};
 
 MediaItem::MediaItem()
 {
@@ -934,76 +772,6 @@ static int classifyContentSourceType(const char *path)
 }
 
 /* ===== MediaListBase (0x811F21EC - 0x811F29E1) ===== */
-
-struct MediaListStatus {
-    int reservedHeader;
-    unsigned int itemCount;
-    int currentIndex;
-    int padIndex;
-    int64_t anchorId;
-    int initialIndex;
-    int shuffleMode;
-    int sortMode;
-    int tableCategory;
-};
-
-class MediaListBase {
-public:
-    MediaListBase(MediaEntryPool *entryPool, OrderListFactory *orderFactory);
-    virtual ~MediaListBase();
-
-    virtual int checkOrderListStatus(int *outPrevId, uint8_t *outAllocated);
-    virtual int releaseOrderList(uint8_t clearOwner);
-    virtual int getListId() const;
-    virtual MediaEntryPool *getEntryPool();
-    virtual int navigateTo(int navTarget, uint8_t *outValid);
-    virtual int resolveErrorNavigation(int unused, int repeatMode, int direction,
-                                       unsigned int *ioAttempts, int *ioErr,
-                                       uint8_t *outWrappedAll, uint8_t *outWrappedOne);
-    virtual int refreshAndKeepTrack(int64_t initialRowId, int64_t fallbackRowId,
-                                    int64_t *outKeptRowId);
-    virtual void setEntryTrackId(int index, int64_t trackId);
-    virtual int checkChangedFlag(uint8_t *outChanged, uint8_t queryLive);
-    virtual int checkValid();
-    virtual int checkPlayableAt(int index, int *outStatus) = 0;
-    virtual int getListStatus(MediaListStatus *outStatus);
-    virtual int getTableCategory() const;
-    virtual unsigned int getItemCount() const;
-    virtual int getCurrentIndex() const;
-    virtual int64_t getAnchorId() const;
-    virtual int rebuildOrderList(int shuffleMode, int64_t anchorRowId,
-                                 uint8_t *outChanged, uint8_t forceRebuild);
-    virtual int unlockOrderList(uint8_t clearOwner);
-    virtual int refreshOrderBuffer(int shuffleMode, int64_t anchorRowId);
-    virtual int fetchItemMetadata(int64_t musicId, const char *path, MetadataOutputRequest *outMeta);
-    virtual int getOrderedIndex(unsigned int orderPos) const;
-    virtual int loadItemAt(int navTarget, MediaItem *outItem, int unused, int64_t expectedRowId) = 0;
-    virtual int saveItemChanges(MediaItem *origItem, MediaItem *updatedItem) = 0;
-
-    int resolveNavigationIndex(int navTarget, int currentIdx, uint8_t *outValid) const;
-    void releaseItemSlot(const MediaItem *item);
-    MediaItem *allocateItemSlot();
-    MediaItem *findItemSlot(int slotSerial);
-
-    MediaEntryPool *m_entryPool;        /* +4 */
-    void *m_auxVtable;                  /* +8 */
-    unsigned int m_itemCount;           /* +12 */
-    int m_currentIndex;                 /* +16 */
-    int m_padIndex;                     /* +20 */
-    int64_t m_anchorId;                 /* +24 */
-    int m_initialIndex;                 /* +32 */
-    int m_shuffleMode;                  /* +36 */
-    int m_sortMode;                     /* +40 */
-    int m_tableCategory;                /* +44 */
-    MediaItem m_itemSlots[4];           /* +48..+8655 */
-    uint8_t m_isReady;                  /* +8656 */
-    uint8_t m_padReady[7];              /* +8657..+8663 */
-    paf::thread::Mutex m_listLock;      /* +8664 */
-    uint16_t *m_orderBuffer;            /* +8696 */
-    unsigned int m_orderCapacity;       /* +8700 */
-    OrderListFactory *m_orderFactory;   /* +8704 */
-    int m_listId;                       /* +8708 */
-};
 
 /* 0x811F27A2 / 0x811F293C */
 MediaListBase::MediaListBase(MediaEntryPool *entryPool, OrderListFactory *orderFactory)
@@ -1564,19 +1332,6 @@ int MediaItem::readMetadata(MetadataOutputRequest *outMeta)
 
 /* ===== UriMediaList (0x811F1CE0 - 0x811F2147) ===== */
 
-class UriMediaList : public MediaListBase {
-public:
-    UriMediaList(MediaEntryPool *entryPool, int shuffleMode, OrderListFactory *orderFactory);
-    virtual ~UriMediaList();
-
-    virtual void setEntryTrackId(int index, int64_t trackId);
-    virtual int checkPlayableAt(int index, int *outStatus);
-    virtual int loadItemAt(int navTarget, MediaItem *outItem, int unused, int64_t expectedRowId);
-    virtual int saveItemChanges(MediaItem *origItem, MediaItem *updatedItem);
-
-    int resolveEntryTrackId(int index, int64_t *ioTrackId);
-};
-
 /* 0x811F1CE0 */
 UriMediaList::UriMediaList(MediaEntryPool *entryPool, int shuffleMode, OrderListFactory *orderFactory)
     : MediaListBase(entryPool, orderFactory)
@@ -1760,40 +1515,6 @@ int UriMediaList::saveItemChanges(MediaItem *origItem, MediaItem *updatedItem)
 }
 
 /* ===== DbMediaList helpers & class (0x811EEC40 - 0x811F1C69) ===== */
-
-struct DbTrackRecordData {
-    void *vtablePtr;
-    char contentPath[2049];
-    uint8_t padPath[3];
-    int64_t musicId;
-    int64_t listId;
-    int64_t rowId;
-    int codecProfile;
-    int codecSubType;
-    int status;
-    int padMeta;
-    int64_t fileSize;
-    int channels;
-    int bitRate;
-    int sampleRate;
-    int durationMs;
-    int playCount;
-    int contentType;
-    int resumePositionMs;
-};
-
-struct MetadataRecordCache {
-    int64_t cachedMusicId;
-    dbutil::Record *record;
-    int padRecord;
-    paf::thread::Mutex lock;
-    SceRtcTick cachedCtime;
-    SceRtcTick cachedMtime;
-
-    MetadataRecordCache();
-    ~MetadataRecordCache();
-    void dropRecord();
-};
 
 MetadataRecordCache::MetadataRecordCache()
     : cachedMusicId(-1)
@@ -1979,44 +1700,6 @@ static int ensureMetadataRecordLoaded(MetadataRecordCache *cache, int64_t musicI
     }
     return ret;
 }
-
-class DbMediaList : public MediaListBase {
-public:
-    DbMediaList(MediaEntryPool *entryPool, DbConnectionProvider *dbProvider,
-                OrderListFactory *orderFactory);
-    virtual ~DbMediaList();
-
-    virtual int refreshAndKeepTrack(int64_t initialRowId, int64_t fallbackRowId,
-                                    int64_t *outKeptRowId);
-    virtual int checkChangedFlag(uint8_t *outChanged, uint8_t queryLive);
-    virtual int checkPlayableAt(int index, int *outStatus);
-    virtual int rebuildOrderList(int shuffleMode, int64_t anchorRowId,
-                                 uint8_t *outChanged, uint8_t forceRebuild);
-    virtual int unlockOrderList(uint8_t clearOwner);
-    virtual int refreshOrderBuffer(int shuffleMode, int64_t anchorRowId);
-    virtual int fetchItemMetadata(int64_t musicId, const char *path, MetadataOutputRequest *outMeta);
-    virtual int getOrderedIndex(unsigned int orderPos) const;
-    virtual int loadItemAt(int navTarget, MediaItem *outItem, int unused, int64_t expectedRowId);
-    virtual int saveItemChanges(MediaItem *origItem, MediaItem *updatedItem);
-
-    int executeInitialQuery(const char *sqlQuery);
-
-private:
-    paf::string formatQualifiedColumn(unsigned int tableCategory, int columnIndex) const;
-    int selectColumnsByRowId(int64_t rowId, DbColumnBinding *columns, unsigned int columnCount);
-    int updateColumnsByRowId(int64_t rowId, const DbColumnBinding *columns, unsigned int columnCount);
-    int loadFullTrackRecord(int64_t rowId, DbTrackRecordData *outData);
-    int findOrderPosForRowId(int64_t targetRowId, unsigned int rangeStart,
-                             unsigned int rangeEnd, unsigned int *outOrderPos);
-    int64_t resolveRowIdAtOrderPos(unsigned int orderPos, int64_t expectedRowId);
-
-    MusicRowidResult m_mainRowids;          /* +8712 */
-    dbutil::RowidResult m_auxRowids;        /* +8816 */
-    DbConnectionProvider *m_dbProvider;     /* +8920 */
-    uint8_t m_dbChangedFlag;                /* +8924 */
-    uint8_t m_padChanged[3];                /* +8925..+8927 */
-    MetadataRecordCache m_metaCache;        /* +8928 */
-};
 
 /* 0x811EEC40 */
 int DbMediaList::executeInitialQuery(const char *sqlQuery)
@@ -2910,113 +2593,10 @@ int DbMediaList::checkChangedFlag(uint8_t *outChanged, uint8_t queryLive)
     return 0;
 }
 
-size_t orderListFactoryCalcSize(void *heap, int maxLists, int listSlots, int entrySize)
-{
-    (void)heap;
-    return OrderListFactory::calcTotalSize(maxLists, listSlots, entrySize, 56);
-}
-
-void *orderListFactoryConstruct(void *mem, void *heap, int maxLists, int listSlots,
-                                unsigned int entrySize, int arenaSize)
-{
-    (void)heap;
-    return new (mem) OrderListFactory(maxLists, listSlots, static_cast<int>(entrySize),
-                                      static_cast<unsigned int>(arenaSize), 56);
-}
-
 int reportDbFileError(int sqliteErr, const char *dbPath, unsigned int flags)
 {
     (void)dbPath; (void)flags;
     return sqliteErr;
-}
-
-int checkTrackListValid(const void *req, int trackCount, int trackOpt)
-{
-    (void)trackOpt;
-    return (req != NULL && trackCount > 0) ? 0 : -1;
-}
-
-void invalidateAllMediaCaches()
-{
-}
-
-void *mediaListGetEntry(void *listObj, int index)
-{
-    (void)listObj; (void)index;
-    return NULL;
-}
-
-int64_t queryTrackIdByPath(const char *path)
-{
-    (void)path;
-    return -1;
-}
-
-void mediaListUpdateTrackId(void *media, int index, int64_t trackId)
-{
-    if (media != NULL)
-        static_cast<UriMediaList *>(media)->setEntryTrackId(index, trackId);
-}
-
-int mediaListFillTrackInfo(void *trackInfo, int trackIdx, void *media)
-{
-    return (trackInfo != NULL)
-        ? static_cast<MediaItem *>(trackInfo)->acquireFromList(trackIdx, static_cast<MediaListBase *>(media))
-        : MC_ERR_INVALID_ARG;
-}
-
-int trackInfoReleaseResources(void *trackInfo, int flag)
-{
-    return (trackInfo != NULL)
-        ? static_cast<MediaItem *>(trackInfo)->releaseToList(static_cast<uint8_t>(flag))
-        : 0;
-}
-
-int trackInfoOpenDecoder(void *trackInfo, int decoderArg, int checkFlag)
-{
-    return (trackInfo != NULL)
-        ? static_cast<MediaItem *>(trackInfo)->probe(decoderArg, static_cast<uint8_t>(checkFlag))
-        : MC_ERR_INVALID_ARG;
-}
-
-int trackInfoMoveTo(void *srcTrackInfo, void *dstTrackInfo, int moveFlag)
-{
-    return (srcTrackInfo != NULL)
-        ? static_cast<MediaItem *>(srcTrackInfo)->transferTo(
-              static_cast<MediaItem *>(dstTrackInfo), static_cast<uint8_t>(moveFlag))
-        : MC_ERR_INVALID_ARG;
-}
-
-int trackInfoPopulateMetadata(const void *trackInfo, void *metaBufs)
-{
-    return (trackInfo != NULL)
-        ? const_cast<MediaItem *>(static_cast<const MediaItem *>(trackInfo))->readMetadata(
-              static_cast<MetadataOutputRequest *>(metaBufs))
-        : MC_ERR_INVALID_ARG;
-}
-
-void trackInfoResetCounters(void *trackInfo)
-{
-    if (trackInfo != NULL)
-        static_cast<MediaItem *>(trackInfo)->commitToList();
-}
-
-int isTrackIdRemoved(int64_t trackId, void *listHandle)
-{
-    return isIdRejected(trackId, static_cast<unsigned int>(reinterpret_cast<uintptr_t>(listHandle)));
-}
-
-void *createUriMediaList(void *slotMem)
-{
-    return new (slotMem) UriMediaList(NULL, 0, NULL);
-}
-
-void *createDbMediaList(void *slotMem, void *workBuf, void *dbConn, int shuffleSeed,
-                        void *orderFactory, unsigned int flags, unsigned int reserved)
-{
-    (void)workBuf; (void)shuffleSeed; (void)flags; (void)reserved;
-    return new (slotMem) DbMediaList(NULL, static_cast<DbConnectionProvider *>(dbConn),
-                                     static_cast<OrderListFactory *>(orderFactory));
 }
 
 int setPowerSaveMode(int mode, int val, int flags)

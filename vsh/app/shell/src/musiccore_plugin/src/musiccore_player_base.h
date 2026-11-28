@@ -458,6 +458,84 @@ public:
     int m_seqNum;
 };
 
+class MusicPlayer : public BasePlayer {
+public:
+    static unsigned int calcTotalSize(int capacity);
+    MusicPlayer(void *factory, int capacity, int *outErr, unsigned int totalBytes,
+                unsigned int headerBytes);
+    virtual ~MusicPlayer();
+    virtual unsigned int calcAllocSize()
+    {
+        return ((calcMediaQueueSize(m_capacity, 2, 2, 56) - 1) & ~7u) + 480;
+    }
+    virtual int isActiveForInfo(PlayerPriorityInfo info);
+    virtual int wantsAudioForInfo(PlayerPriorityInfo info);
+};
+
+class ExclusiveMusicPlayer : public BasePlayer {
+public:
+    static size_t calcRequiredSize(int capacity);
+
+    ExclusiveMusicPlayer(void *controller, int capacity, int *outErr,
+                         unsigned int bufSize, int poolOffset);
+    virtual ~ExclusiveMusicPlayer();
+
+    virtual unsigned int calcAllocSize()
+    {
+        return BasePlayer::calcBaseExtraSize(m_capacity) + 496u;
+    }
+    virtual int open(const void *param, unsigned char *flags);
+    virtual int isActiveForInfo(PlayerPriorityInfo info);
+    virtual int wantsAudioForInfo(PlayerPriorityInfo info);
+
+private:
+    SoundOutExclusiveParam m_exclusiveParam;
+};
+
+class MusicAppPlayer : public BasePlayer {
+public:
+    static size_t calcRequiredSize(int capacity);
+
+    MusicAppPlayer(void *controller, int capacity, int *outErr,
+                   unsigned int bufSize, int poolOffset);
+    virtual ~MusicAppPlayer();
+
+    virtual unsigned int calcAllocSize()
+    {
+        return BasePlayer::calcBaseExtraSize(m_capacity) + 6648u;
+    }
+    virtual int detach();
+    virtual int open(const void *param, unsigned char *flags);
+    virtual int isActiveForInfo(PlayerPriorityInfo info);
+    virtual int wantsAudioForInfo(PlayerPriorityInfo info);
+    virtual int getContentInfo(MetadataBuffers *outMeta);
+    virtual void onIdleActive();
+    virtual void onIdlePlaylist();
+    virtual int cmdSetRepeat(CmdNode *node, unsigned char *flags);
+    virtual int cmdSetShuffle(CmdNode *node, unsigned char *flags);
+    virtual int cmdClearPlaylist(CmdNode *node, unsigned char *flags);
+    virtual int cmdSetAudioBalance(CmdNode *node, unsigned char *flags);
+    virtual int cmdSetEqualizer(CmdNode *node, unsigned char *flags);
+    virtual int cmdSetAudioNormalizer(CmdNode *node, unsigned char *flags);
+    virtual int cmdNotifyStatus(CmdNode *node, unsigned char *flags);
+    virtual int onDecoderEvent(CmdNode *node, unsigned char *flags);
+    virtual int onDecoderTrackInfo(CmdNode *node);
+    virtual int onDecoderAudioError(CmdNode *node, unsigned char *flags);
+    virtual int onDecoderStreamEnd(CmdNode *node, unsigned char *flags);
+
+private:
+    void clearAutoSuspendCountdown();
+
+    SceUInt64 m_playPowerTickUs;
+    int m_autoSuspendTimeoutSec;
+    int m_padAutoSuspend;
+    SceUInt64 m_autoSuspendStartUs;
+    SceUInt64 m_autoSuspendLastTickUs;
+    char m_titleStorage[2048];
+    char m_artistStorage[2048];
+    char m_albumStorage[2048];
+};
+
 } /* namespace MusicCore */
 } /* namespace sce */
 

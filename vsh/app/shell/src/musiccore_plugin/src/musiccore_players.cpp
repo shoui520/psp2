@@ -17,6 +17,7 @@
 
 #include "musiccore_player_base.h"
 #include "musiccore_db_manager.h"
+#include "musiccore_media_list.h"
 
 extern "C" {
 void *sce_paf_memset(void *dst, int ch, SceSize len);
@@ -85,36 +86,12 @@ struct EqualizerDbCommand {
     int bandHigh;
 };
 
-extern size_t orderListFactoryCalcSize(void *heap, int maxLists, int listSlots, int entrySize);
-extern void *orderListFactoryConstruct(void *mem, void *heap, int maxLists, int listSlots,
-                                       size_t allocSize, int entrySize);
-
 static uint32_t packCmdNodeHi(const CmdNode *node)
 {
     return static_cast<uint32_t>(node->targetChannel) |
            (static_cast<uint32_t>(node->flagsByte) << 8) |
            (static_cast<uint32_t>(node->cmdCode) << 16);
 }
-
-class ExclusiveMusicPlayer : public BasePlayer {
-public:
-    static size_t calcRequiredSize(int capacity);
-
-    ExclusiveMusicPlayer(void *controller, int capacity, int *outErr,
-                         unsigned int bufSize, int poolOffset);
-    virtual ~ExclusiveMusicPlayer();
-
-    virtual unsigned int calcAllocSize()
-    {
-        return BasePlayer::calcBaseExtraSize(m_capacity) + 496u;
-    }
-    virtual int open(const void *param, unsigned char *flags);
-    virtual int isActiveForInfo(PlayerPriorityInfo info);
-    virtual int wantsAudioForInfo(PlayerPriorityInfo info);
-
-private:
-    SoundOutExclusiveParam m_exclusiveParam; /* +472..+495 */
-};
 
 /* 0x811F51FC */
 size_t ExclusiveMusicPlayer::calcRequiredSize(int capacity)
@@ -189,50 +166,6 @@ int ExclusiveMusicPlayer::wantsAudioForInfo(PlayerPriorityInfo info)
     return 0;
 }
 
-class MusicAppPlayer : public BasePlayer {
-public:
-    static size_t calcRequiredSize(int capacity);
-
-    MusicAppPlayer(void *controller, int capacity, int *outErr,
-                   unsigned int bufSize, int poolOffset);
-    virtual ~MusicAppPlayer();
-
-    virtual unsigned int calcAllocSize()
-    {
-        return BasePlayer::calcBaseExtraSize(m_capacity) + 6648u;
-    }
-    virtual int detach();
-    virtual int open(const void *param, unsigned char *flags);
-    virtual int isActiveForInfo(PlayerPriorityInfo info);
-    virtual int wantsAudioForInfo(PlayerPriorityInfo info);
-    virtual int getContentInfo(MetadataBuffers *outMeta);
-    virtual void onIdleActive();
-    virtual void onIdlePlaylist();
-    virtual int cmdSetRepeat(CmdNode *node, unsigned char *flags);
-    virtual int cmdSetShuffle(CmdNode *node, unsigned char *flags);
-    virtual int cmdClearPlaylist(CmdNode *node, unsigned char *flags);
-    virtual int cmdSetAudioBalance(CmdNode *node, unsigned char *flags);
-    virtual int cmdSetEqualizer(CmdNode *node, unsigned char *flags);
-    virtual int cmdSetAudioNormalizer(CmdNode *node, unsigned char *flags);
-    virtual int cmdNotifyStatus(CmdNode *node, unsigned char *flags);
-    virtual int onDecoderEvent(CmdNode *node, unsigned char *flags);
-    virtual int onDecoderTrackInfo(CmdNode *node);
-    virtual int onDecoderAudioError(CmdNode *node, unsigned char *flags);
-    virtual int onDecoderStreamEnd(CmdNode *node, unsigned char *flags);
-
-private:
-    void clearAutoSuspendCountdown();
-
-    SceUInt64 m_playPowerTickUs;      /* +472 */
-    int m_autoSuspendTimeoutSec;      /* +480 */
-    int m_padAutoSuspend;             /* +484 */
-    SceUInt64 m_autoSuspendStartUs;   /* +488 */
-    SceUInt64 m_autoSuspendLastTickUs;/* +496 */
-    char m_titleStorage[2048];        /* +504 */
-    char m_artistStorage[2048];       /* +2552 */
-    char m_albumStorage[2048];        /* +4600 */
-};
-
 /* 0x811F5338 */
 size_t MusicAppPlayer::calcRequiredSize(int capacity)
 {
@@ -286,8 +219,7 @@ MusicAppPlayer::MusicAppPlayer(void *controller, int capacity, int *outErr,
         return;
     }
 
-    void *capacityArg = reinterpret_cast<void *>(static_cast<uintptr_t>(m_capacity));
-    size_t factorySize = orderListFactoryCalcSize(capacityArg, 2, 2, 56);
+    size_t factorySize = OrderListFactory::calcTotalSize(2, 2, 56, 56);
     if (factorySize + alignedOffset > bufSize) {
         *outErr = MC_ERR_NO_MEMORY;
         return;
@@ -295,7 +227,7 @@ MusicAppPlayer::MusicAppPlayer(void *controller, int capacity, int *outErr,
 
     uint8_t *selfBytes = reinterpret_cast<uint8_t *>(this);
     void *factoryMem = selfBytes + alignedOffset;
-    m_mediaQueue = orderListFactoryConstruct(factoryMem, capacityArg, 2, 2, factorySize, 56);
+    m_mediaQueue = new (factoryMem) OrderListFactory(2, 2, static_cast<int>(factorySize), 56u, 56);
 }
 
 /* 0x811F549E / 0x811F54BA */
@@ -725,18 +657,6 @@ struct RowidResultLayout {
     uint32_t tailWords[9];
 };
 
-class MusicRowidResult : public dbutil::RowidResult {
-public:
-    MusicRowidResult();
-    virtual ~MusicRowidResult();
-
-    int generateShuffledOrder(uint32_t seed, int64_t anchorRowid,
-                              uint16_t *outIndices, uint32_t capacity);
-
-private:
-    uint32_t m_rngState;
-};
-
 /* 0x811F5DA8 */
 MusicRowidResult::MusicRowidResult()
     : dbutil::RowidResult(), m_rngState(1u)
@@ -874,32 +794,6 @@ int convertMusicPath(const char *srcPath, char *dstBuf, SceSize dstCapacity, int
 int convertToMusicDevicePath(const char *srcPath, char *dstBuf, SceSize dstCapacity)
 {
     return convertMusicPath(srcPath, dstBuf, dstCapacity, 2);
-}
-
-struct BaseObject;
-
-unsigned int calcPlaylistPlayerSize(int maxItems)
-{
-    return static_cast<unsigned int>(MusicAppPlayer::calcRequiredSize(maxItems));
-}
-
-unsigned int calcStreamPlayerSize(int maxStreams)
-{
-    return static_cast<unsigned int>(ExclusiveMusicPlayer::calcRequiredSize(maxStreams));
-}
-
-BaseObject *constructPlaylistPlayer(void *mem, void *factory, int maxItems,
-                                    int *outErr, unsigned int slotSize, unsigned int hdrSize)
-{
-    return reinterpret_cast<BaseObject *>(
-        new (mem) MusicAppPlayer(factory, maxItems, outErr, slotSize, hdrSize));
-}
-
-BaseObject *constructStreamPlayer(void *mem, void *factory, int maxStreams,
-                                  int *outErr, unsigned int slotSize, unsigned int hdrSize)
-{
-    return reinterpret_cast<BaseObject *>(
-        new (mem) ExclusiveMusicPlayer(factory, maxStreams, outErr, slotSize, hdrSize));
 }
 
 } /* namespace MusicCore */

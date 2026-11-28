@@ -11,6 +11,7 @@
 #include <thread/thread.h>
 #include <memory/heap_allocator.h>
 
+#include "musiccore_controller.h"
 #include "musiccore_ctrl_client.h"
 
 extern "C" {
@@ -31,11 +32,6 @@ static const int MUSICCORE_ERR_INVALID_ARG = -1879113723; /* 0x8FFF0005 */
 namespace sce {
 namespace MusicCore {
 
-class BaseObject {
-public:
-    virtual ~BaseObject() {}
-};
-
 class ObjFactory : public BaseObject {
 public:
     static unsigned int calcTotalSize(int numMusic, int numPlaylist, int numStream);
@@ -49,13 +45,6 @@ extern void *getLocalHeap();
 extern void *localAlloc(SceSize size);
 extern void localFree(void *ptr);
 
-extern int controllerSendCommand(void *ctrl, uint64_t cmdHeader, const void *inBuf,
-                                 unsigned int inSize, SceUInt *timeout, void *outResult);
-extern int controllerGetContentInfo(void *ctrl, unsigned char channelId, void *infoBuf);
-extern int controllerGetStatus(void *ctrl, unsigned char channelId, void *statusBuf,
-                               void *outPos, void *outPosValid, int *outMode,
-                               void *workBuf, unsigned char *outFlag, int queryFlags);
-extern int controllerGetState(void *ctrl, unsigned char channelId, void *outState);
 
 /* Polymorphic command payloads (vtables 0x81532CB0..0x81532DF0) */
 
@@ -293,7 +282,7 @@ int ctrlOpenSimple(uint32_t seqId, unsigned char channelType, int priority,
     res.errCode = 0;
     res.outByte = 0;
     uint64_t hdr = makeCmdHeader(seqId, 0x810B0000u | channelType);
-    int ret = controllerSendCommand(g_ctrlInstance, hdr, &payload, sizeof(payload), NULL, &res);
+    int ret = static_cast<Controller *>(g_ctrlInstance)->sendCommand(hdr, &payload, sizeof(payload), NULL, &res);
     if (ret == 0)
         *outSlot = res.outByte;
     return ret;
@@ -320,7 +309,7 @@ int ctrlOpenWithParams(uint32_t seqId, unsigned char channelType, int priority,
     res.errCode = 0;
     res.outByte = 0;
     uint64_t hdr = makeCmdHeader(seqId, 0x810B0000u | channelType);
-    int ret = controllerSendCommand(g_ctrlInstance, hdr, &payload, sizeof(payload), NULL, &res);
+    int ret = static_cast<Controller *>(g_ctrlInstance)->sendCommand(hdr, &payload, sizeof(payload), NULL, &res);
     if (ret == 0)
         *outSlot = res.outByte;
     return ret;
@@ -334,7 +323,7 @@ int ctrlClose(uint32_t seqId, unsigned char channelId)
 
     CloseChannelCmdPayload payload;
     uint64_t hdr = makeCmdHeader(seqId, 0x810C0000u | channelId);
-    return controllerSendCommand(g_ctrlInstance, hdr, &payload, sizeof(payload), NULL, NULL);
+    return static_cast<Controller *>(g_ctrlInstance)->sendCommand(hdr, &payload, sizeof(payload), NULL, NULL);
 }
 
 /* 0x811D2372 */
@@ -345,7 +334,7 @@ int ctrlSetActiveSlot(uint32_t seqId, unsigned char channelId)
 
     unsigned char emptyPayload = 0;
     uint64_t hdr = makeCmdHeader(seqId, 0x810A0000u | channelId);
-    return controllerSendCommand(g_ctrlInstance, hdr, &emptyPayload, sizeof(emptyPayload),
+    return static_cast<Controller *>(g_ctrlInstance)->sendCommand(hdr, &emptyPayload, sizeof(emptyPayload),
                                  NULL, NULL);
 }
 
@@ -371,7 +360,7 @@ int ctrlSetUriData(uint32_t seqId, unsigned char channelId,
     payload.padTail = 0;
 
     uint64_t hdr = makeCmdHeader(seqId, 0x31110000u | channelId);
-    return controllerSendCommand(g_ctrlInstance, hdr, &payload, sizeof(payload), NULL, NULL);
+    return static_cast<Controller *>(g_ctrlInstance)->sendCommand(hdr, &payload, sizeof(payload), NULL, NULL);
 }
 
 /* 0x811D24A2 */
@@ -393,7 +382,7 @@ int ctrlSetUriString(uint32_t seqId, unsigned char channelId, const char *uri,
     payload.uriFlags = uriFlags;
 
     uint64_t hdr = makeCmdHeader(seqId, 0x31120000u | channelId);
-    return controllerSendCommand(g_ctrlInstance, hdr, &payload, sizeof(payload), NULL, NULL);
+    return static_cast<Controller *>(g_ctrlInstance)->sendCommand(hdr, &payload, sizeof(payload), NULL, NULL);
 }
 
 /* 0x811D2564 */
@@ -404,7 +393,7 @@ int ctrlResumeAudio(uint32_t seqId, unsigned char channelId)
 
     unsigned char emptyPayload = 0;
     uint64_t hdr = makeCmdHeader(seqId, 0x311A0000u | channelId);
-    return controllerSendCommand(g_ctrlInstance, hdr, &emptyPayload, sizeof(emptyPayload),
+    return static_cast<Controller *>(g_ctrlInstance)->sendCommand(hdr, &emptyPayload, sizeof(emptyPayload),
                                  NULL, NULL);
 }
 
@@ -418,7 +407,7 @@ int ctrlPlay(uint32_t seqId, unsigned char channelId, int fadeMs)
     payload.fadeMs = fadeMs;
 
     uint64_t hdr = makeCmdHeader(seqId, 0x310A0000u | channelId);
-    return controllerSendCommand(g_ctrlInstance, hdr, &payload, sizeof(payload), NULL, NULL);
+    return static_cast<Controller *>(g_ctrlInstance)->sendCommand(hdr, &payload, sizeof(payload), NULL, NULL);
 }
 
 /* 0x811D2658 */
@@ -433,7 +422,7 @@ int ctrlPause(uint32_t seqId, unsigned char channelId, unsigned char pauseMode,
     payload.fadeMs = fadeMs;
 
     uint64_t hdr = makeCmdHeader(seqId, 0x310B0000u | channelId);
-    return controllerSendCommand(g_ctrlInstance, hdr, &payload, sizeof(payload), NULL, NULL);
+    return static_cast<Controller *>(g_ctrlInstance)->sendCommand(hdr, &payload, sizeof(payload), NULL, NULL);
 }
 
 /* 0x811D26E0 */
@@ -453,7 +442,7 @@ int ctrlControl(uint32_t seqId, unsigned char channelId,
     payload.control = *ctrlParams;
 
     uint64_t hdr = makeCmdHeader(seqId, 0x310D0000u | channelId);
-    return controllerSendCommand(g_ctrlInstance, hdr, &payload, sizeof(payload), NULL, NULL);
+    return static_cast<Controller *>(g_ctrlInstance)->sendCommand(hdr, &payload, sizeof(payload), NULL, NULL);
 }
 
 /* 0x811D27B2 */
@@ -466,7 +455,7 @@ int ctrlSetRepeat(uint32_t seqId, unsigned char channelId, int repeatMode)
     payload.repeatMode = repeatMode;
 
     uint64_t hdr = makeCmdHeader(seqId, 0x310E0000u | channelId);
-    return controllerSendCommand(g_ctrlInstance, hdr, &payload, sizeof(payload), NULL, NULL);
+    return static_cast<Controller *>(g_ctrlInstance)->sendCommand(hdr, &payload, sizeof(payload), NULL, NULL);
 }
 
 /* 0x811D2834 */
@@ -485,7 +474,7 @@ int ctrlSetShuffle(uint32_t seqId, unsigned char channelId, int enableShuffle)
     }
 
     uint64_t hdr = makeCmdHeader(seqId, 0x310F0000u | channelId);
-    return controllerSendCommand(g_ctrlInstance, hdr, &payload, sizeof(payload), NULL, NULL);
+    return static_cast<Controller *>(g_ctrlInstance)->sendCommand(hdr, &payload, sizeof(payload), NULL, NULL);
 }
 
 /* 0x811D2902 */
@@ -499,7 +488,7 @@ int ctrlSetVolume(uint32_t seqId, unsigned char channelId, int volume)
     payload.rampMs = -1;
 
     uint64_t hdr = makeCmdHeader(seqId, 0x31140000u | channelId);
-    return controllerSendCommand(g_ctrlInstance, hdr, &payload, sizeof(payload), NULL, NULL);
+    return static_cast<Controller *>(g_ctrlInstance)->sendCommand(hdr, &payload, sizeof(payload), NULL, NULL);
 }
 
 /* 0x811D298C */
@@ -517,7 +506,7 @@ int ctrlSetEqualizer(uint32_t seqId, unsigned char channelId,
     payload.bandHigh = bandHigh;
 
     uint64_t hdr = makeCmdHeader(seqId, 0x31150000u | channelId);
-    return controllerSendCommand(g_ctrlInstance, hdr, &payload, sizeof(payload), NULL, NULL);
+    return static_cast<Controller *>(g_ctrlInstance)->sendCommand(hdr, &payload, sizeof(payload), NULL, NULL);
 }
 
 /* 0x811D2A3E */
@@ -530,7 +519,7 @@ int ctrlSetAudioNormalizer(uint32_t seqId, unsigned char channelId, int enableNo
     payload.enableNormalizer = enableNormalizer;
 
     uint64_t hdr = makeCmdHeader(seqId, 0x31160000u | channelId);
-    return controllerSendCommand(g_ctrlInstance, hdr, &payload, sizeof(payload), NULL, NULL);
+    return static_cast<Controller *>(g_ctrlInstance)->sendCommand(hdr, &payload, sizeof(payload), NULL, NULL);
 }
 
 /* 0x811D2AC0 */
@@ -543,7 +532,7 @@ int ctrlSetIdleCallback(uint32_t seqId, void *callback)
     payload.callback = callback;
 
     uint64_t hdr = makeCmdHeader(seqId, 0x810D000Fu);
-    return controllerSendCommand(g_ctrlInstance, hdr, &payload, sizeof(payload), NULL, NULL);
+    return static_cast<Controller *>(g_ctrlInstance)->sendCommand(hdr, &payload, sizeof(payload), NULL, NULL);
 }
 
 /* 0x811D2B3A */
@@ -556,7 +545,7 @@ int ctrlSetCapCallback(uint32_t seqId, void *callback)
     payload.callback = callback;
 
     uint64_t hdr = makeCmdHeader(seqId, 0x8101000Fu);
-    return controllerSendCommand(g_ctrlInstance, hdr, &payload, sizeof(payload), NULL, NULL);
+    return static_cast<Controller *>(g_ctrlInstance)->sendCommand(hdr, &payload, sizeof(payload), NULL, NULL);
 }
 
 /* 0x811D2BB4 */
@@ -569,7 +558,7 @@ int ctrlSetStatusCallback(uint32_t seqId, void *callback)
     payload.callback = callback;
 
     uint64_t hdr = makeCmdHeader(seqId, 0x810300FFu);
-    return controllerSendCommand(g_ctrlInstance, hdr, &payload, sizeof(payload), NULL, NULL);
+    return static_cast<Controller *>(g_ctrlInstance)->sendCommand(hdr, &payload, sizeof(payload), NULL, NULL);
 }
 
 /* 0x811D2C30 */
@@ -582,7 +571,7 @@ int ctrlSetExtraCallback(uint32_t seqId, void *callback)
     payload.callback = callback;
 
     uint64_t hdr = makeCmdHeader(seqId, 0x810400FFu);
-    return controllerSendCommand(g_ctrlInstance, hdr, &payload, sizeof(payload), NULL, NULL);
+    return static_cast<Controller *>(g_ctrlInstance)->sendCommand(hdr, &payload, sizeof(payload), NULL, NULL);
 }
 
 /* 0x811D2CAA */
@@ -596,7 +585,7 @@ int ctrlSetTimeCallback(uint32_t seqId, void *callback, int intervalUs)
     payload.intervalUs = intervalUs;
 
     uint64_t hdr = makeCmdHeader(seqId, 0x810500FFu);
-    return controllerSendCommand(g_ctrlInstance, hdr, &payload, sizeof(payload), NULL, NULL);
+    return static_cast<Controller *>(g_ctrlInstance)->sendCommand(hdr, &payload, sizeof(payload), NULL, NULL);
 }
 
 /* 0x811D2D2E */
@@ -609,7 +598,7 @@ int ctrlSetMediaCallback(uint32_t seqId, void *callback)
     payload.callback = callback;
 
     uint64_t hdr = makeCmdHeader(seqId, 0x810600FFu);
-    return controllerSendCommand(g_ctrlInstance, hdr, &payload, sizeof(payload), NULL, NULL);
+    return static_cast<Controller *>(g_ctrlInstance)->sendCommand(hdr, &payload, sizeof(payload), NULL, NULL);
 }
 
 /* 0x811D2DA8 */
@@ -622,7 +611,7 @@ int ctrlDbOpen(uint32_t seqId)
     payload.suspendFlag = 0;
 
     uint64_t hdr = makeCmdHeader(seqId, 0x810700FFu);
-    return controllerSendCommand(g_ctrlInstance, hdr, &payload, sizeof(payload), NULL, NULL);
+    return static_cast<Controller *>(g_ctrlInstance)->sendCommand(hdr, &payload, sizeof(payload), NULL, NULL);
 }
 
 /* 0x811D2E20 */
@@ -635,7 +624,7 @@ int ctrlDbSuspend(uint32_t seqId, unsigned char suspendFlag)
     payload.suspendFlag = suspendFlag;
 
     uint64_t hdr = makeCmdHeader(seqId, 0x810700FFu);
-    return controllerSendCommand(g_ctrlInstance, hdr, &payload, sizeof(payload), NULL, NULL);
+    return static_cast<Controller *>(g_ctrlInstance)->sendCommand(hdr, &payload, sizeof(payload), NULL, NULL);
 }
 
 /* 0x811D2E9C */
@@ -646,7 +635,7 @@ int ctrlDbClose(uint32_t seqId)
 
     unsigned char emptyPayload = 0;
     uint64_t hdr = makeCmdHeader(seqId, 0x810800FFu);
-    return controllerSendCommand(g_ctrlInstance, hdr, &emptyPayload, sizeof(emptyPayload),
+    return static_cast<Controller *>(g_ctrlInstance)->sendCommand(hdr, &emptyPayload, sizeof(emptyPayload),
                                  NULL, NULL);
 }
 
@@ -662,7 +651,7 @@ int ctrlDbQuery(uint32_t seqId, const void *trackIds, int trackCount, int queryO
     payload.queryOpt = queryOpt;
 
     uint64_t hdr = makeCmdHeader(seqId, 0x810900FFu);
-    return controllerSendCommand(g_ctrlInstance, hdr, &payload, sizeof(payload), NULL, NULL);
+    return static_cast<Controller *>(g_ctrlInstance)->sendCommand(hdr, &payload, sizeof(payload), NULL, NULL);
 }
 
 /* 0x811D2F86 */
@@ -680,7 +669,7 @@ int ctrlGetContentInfo(unsigned char channelId, ContentInfoBuffers *info)
         titlePtr = info->titleBuf;
         artistPtr = info->artistBuf;
         albumPtr = info->albumBuf;
-        ret = controllerGetContentInfo(g_ctrlInstance, channelId, info);
+        ret = static_cast<Controller *>(g_ctrlInstance)->getContentInfo(channelId, info);
     }
 
     if (info->titleBuf != NULL && info->titleLen != 0) {
@@ -721,7 +710,7 @@ int ctrlGetPlaybackStatus(unsigned char channelId, PlaybackStatusOut *outStatus,
     RawPlaybackStatus rawStatus;
     int mode = 4;
     unsigned char flag = 0;
-    int ret = controllerGetStatus(g_ctrlInstance, channelId, &rawStatus, outPos, outPosValid,
+    int ret = static_cast<Controller *>(g_ctrlInstance)->getStatus(channelId, reinterpret_cast<PlayerStatusSnapshot *>(&rawStatus), outPos, outPosValid,
                                   &mode, workBuf, &flag, 2);
     ::operator delete(workBuf);
     if (ret != 0)
@@ -755,7 +744,7 @@ int ctrlGetPlaybackMode(unsigned char channelId, int unusedMode, int *outMode,
     int zeroPos = 0;
     unsigned char flag = 0;
     int mode = 4;
-    int ret = controllerGetStatus(g_ctrlInstance, channelId, rawStatus, &zeroPos, &flag,
+    int ret = static_cast<Controller *>(g_ctrlInstance)->getStatus(channelId, reinterpret_cast<PlayerStatusSnapshot *>(rawStatus), &zeroPos, &flag,
                                   &mode, workBuf, outFlag, 0);
     if (ret == 0) {
         if (mode == 1) {
@@ -778,7 +767,7 @@ int ctrlGetState(unsigned char channelId, void *outState)
     g_ctrlObjMutex.Lock();
     int ret = MUSICCORE_ERR_FAILED;
     if (g_ctrlInstance != NULL)
-        ret = controllerGetState(g_ctrlInstance, channelId, outState);
+        if (outState != NULL) *static_cast<int *>(outState) = static_cast<Controller *>(g_ctrlInstance)->getAudioState(channelId); ret = 0;
     g_ctrlObjMutex.Unlock();
     return ret;
 }
@@ -791,7 +780,7 @@ int ctrlSuspendAudio(uint32_t seqId, unsigned char channelId)
 
     unsigned char emptyPayload = 0;
     uint64_t hdr = makeCmdHeader(seqId, 0x31180000u | channelId);
-    return controllerSendCommand(g_ctrlInstance, hdr, &emptyPayload, sizeof(emptyPayload),
+    return static_cast<Controller *>(g_ctrlInstance)->sendCommand(hdr, &emptyPayload, sizeof(emptyPayload),
                                  NULL, NULL);
 }
 
@@ -807,7 +796,7 @@ int ctrlSeekAndPlay(uint32_t seqId, unsigned char channelId,
     payload.fadeMs = fadeMs;
 
     uint64_t hdr = makeCmdHeader(seqId, 0x31170000u | channelId);
-    return controllerSendCommand(g_ctrlInstance, hdr, &payload, sizeof(payload), NULL, NULL);
+    return static_cast<Controller *>(g_ctrlInstance)->sendCommand(hdr, &payload, sizeof(payload), NULL, NULL);
 }
 
 /* 0x811D336C */
@@ -818,7 +807,7 @@ int ctrlStop(uint32_t seqId, unsigned char channelId)
 
     unsigned char emptyPayload = 0;
     uint64_t hdr = makeCmdHeader(seqId, 0x31190000u | channelId);
-    return controllerSendCommand(g_ctrlInstance, hdr, &emptyPayload, sizeof(emptyPayload),
+    return static_cast<Controller *>(g_ctrlInstance)->sendCommand(hdr, &emptyPayload, sizeof(emptyPayload),
                                  NULL, NULL);
 }
 
@@ -830,7 +819,7 @@ int ctrlClearAudio(uint32_t seqId, unsigned char channelId)
 
     unsigned char emptyPayload = 0;
     uint64_t hdr = makeCmdHeader(seqId, 0x311B0000u | channelId);
-    return controllerSendCommand(g_ctrlInstance, hdr, &emptyPayload, sizeof(emptyPayload),
+    return static_cast<Controller *>(g_ctrlInstance)->sendCommand(hdr, &emptyPayload, sizeof(emptyPayload),
                                  NULL, NULL);
 }
 

@@ -266,8 +266,9 @@ void musiccorePluginStop(paf::Plugin *plugin)
 }
 
 /* 0x811CAB74 */
-void musicCorePluginFini(void)
+void musiccorePluginExit(paf::Plugin *plugin)
 {
+	(void)plugin;
 	if (s_musicCoreMain != NULL) {
 		s_musicCoreMain->ClearCallback(reinterpret_cast<MusicCoreNotifyCb>(musicCoreDispatchEventCb));
 		if (s_musicCoreMain != NULL) {
@@ -279,12 +280,6 @@ void musicCorePluginFini(void)
 	s_eventCallbacks.clear();
 	s_musicCorePlugin = NULL;
 	sce::MusicCore::termLocalHeap();
-}
-
-void musiccorePluginExit(paf::Plugin *plugin)
-{
-	(void)plugin;
-	musicCorePluginFini();
 }
 
 /* 0x811CABEA */

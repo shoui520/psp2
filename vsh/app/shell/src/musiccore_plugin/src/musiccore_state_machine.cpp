@@ -10,6 +10,7 @@
 
 #include "musiccore_audio_output.h"
 #include "musiccore_decoder_manager.h"
+#include "musiccore_media_list.h"
 #include "musiccore_state_machine.h"
 #include <stdlib.h>
 
@@ -31,12 +32,6 @@ static const int MUSICCORE_ERR_END_REV = -1879113712;     /* 0x8FFF0010 */
 namespace sce {
 namespace MusicCore {
 
-extern int mediaListFillTrackInfo(void *trackInfo, int trackIdx, void *media);
-extern int trackInfoOpenDecoder(void *trackInfo, int decoderArg, int checkFlag);
-extern int trackInfoReleaseResources(void *trackInfo, int closeFlag);
-extern int trackInfoMoveTo(void *srcTrackInfo, void *dstTrackInfo, int moveFlag);
-extern int trackInfoPopulateMetadata(const void *trackInfo, void *metaBufs);
-extern int isTrackIdRemoved(int64_t trackId, void *listHandle);
 extern void computePlaybackRange(int seekMode, int speedMode, int step, int durationMs,
                                  int volumeMode, int *outPrev, int *outNext, int *outCur);
 
@@ -198,19 +193,19 @@ int dbSeekNormalTarget(unsigned int seekCmd, MediaListInterface *media,
             media->getStatus(&status);
 
             if (err == 0) {
-                err = mediaListFillTrackInfo(&candidate, status.trackOrderIndex, media);
+                err = reinterpret_cast<MediaItem *>(&candidate)->acquireFromList(status.trackOrderIndex, reinterpret_cast<MediaListBase *>(media));
                 if (err == 0) {
                     int decArg = (decMgr != NULL) ? static_cast<const DecoderManagerHandle *>(decMgr)->ioPriority : 0;
-                    err = trackInfoOpenDecoder(&candidate, decArg, 1);
+                    err = reinterpret_cast<MediaItem *>(&candidate)->probe(decArg, static_cast<uint8_t>(1));
                     if (err != 0)
-                        trackInfoReleaseResources(&candidate, 1);
+                        reinterpret_cast<MediaItem *>(&candidate)->releaseToList(static_cast<uint8_t>(1));
                 }
             }
 
             if (err == 0) {
                 if (reachedEnd == 1) {
                     err = (dir >= 0) ? MUSICCORE_ERR_END_FWD : MUSICCORE_ERR_END_REV;
-                    trackInfoReleaseResources(&candidate, 1);
+                    reinterpret_cast<MediaItem *>(&candidate)->releaseToList(static_cast<uint8_t>(1));
                 }
                 break;
             }
@@ -241,20 +236,20 @@ int dbSeekNormalTarget(unsigned int seekCmd, MediaListInterface *media,
 
         if (err != 0) {
             if (lastGoodIdx != -2) {
-                int restoreErr = mediaListFillTrackInfo(&candidate, lastGoodIdx, media);
+                int restoreErr = reinterpret_cast<MediaItem *>(&candidate)->acquireFromList(lastGoodIdx, reinterpret_cast<MediaListBase *>(media));
                 if (restoreErr != 0) {
                     *outExtraErr = err;
                     err = restoreErr;
                 } else {
                     int decArg = (decMgr != NULL) ? static_cast<const DecoderManagerHandle *>(decMgr)->ioPriority : 0;
-                    trackInfoOpenDecoder(&candidate, decArg, 0);
+                    reinterpret_cast<MediaItem *>(&candidate)->probe(decArg, static_cast<uint8_t>(0));
                     int seekErr = media->seekToIndex((unsigned int)lastGoodIdx, outChanged);
                     *outExtraErr = err;
                     if (seekErr == 0) {
                         err = 0;
                     } else {
                         err = seekErr;
-                        trackInfoReleaseResources(&candidate, 0);
+                        reinterpret_cast<MediaItem *>(&candidate)->releaseToList(static_cast<uint8_t>(0));
                     }
                 }
             }
@@ -266,13 +261,13 @@ int dbSeekNormalTarget(unsigned int seekCmd, MediaListInterface *media,
 
         lastGoodIdx = status.trackOrderIndex;
         --stepCount;
-        trackInfoReleaseResources(&candidate, 0);
+        reinterpret_cast<MediaItem *>(&candidate)->releaseToList(static_cast<uint8_t>(0));
     }
 
     if (err == 0) {
-        int moveErr = trackInfoMoveTo(&candidate, outTrackInfo, 1);
+        int moveErr = reinterpret_cast<MediaItem *>(&candidate)->transferTo(reinterpret_cast<MediaItem *>(outTrackInfo), static_cast<uint8_t>(1));
         if (moveErr != 0) {
-            trackInfoReleaseResources(&candidate, 1);
+            reinterpret_cast<MediaItem *>(&candidate)->releaseToList(static_cast<uint8_t>(1));
             return moveErr;
         }
         return 0;
@@ -298,7 +293,7 @@ int dbSeekSpecialTarget(MediaListInterface *media, int64_t prevPlaylistId,
     void *listHandle = media->getListHandle();
     int64_t expectedId = prevPlaylistId;
     unsigned int initialCmd = 0xFFFC0000u;
-    if (isTrackIdRemoved(prevPlaylistId, listHandle) == 1) {
+    if (isIdRejected(prevPlaylistId, static_cast<unsigned int>(reinterpret_cast<uintptr_t>(listHandle))) == 1) {
         expectedId = -1;
         initialCmd = 0xFFFFFFFDu;
     }
@@ -331,7 +326,7 @@ int dbSeekSpecialTarget(MediaListInterface *media, int64_t prevPlaylistId,
         if (curErr == 0) {
             currentId = queriedId;
         } else if (curErr != MUSICCORE_ERR_LIST_EMPTY) {
-            trackInfoReleaseResources(&candidate, 0);
+            reinterpret_cast<MediaItem *>(&candidate)->releaseToList(static_cast<uint8_t>(0));
             *outHasTrack = 0;
             return err;
         } else {
@@ -354,24 +349,24 @@ int dbSeekSpecialTarget(MediaListInterface *media, int64_t prevPlaylistId,
             *outStep = -2;
         if (keepIfSame == 1) {
             if (resolvedId != -1) {
-                err = trackInfoMoveTo(&candidate, outTrackInfo, 1);
+                err = reinterpret_cast<MediaItem *>(&candidate)->transferTo(reinterpret_cast<MediaItem *>(outTrackInfo), static_cast<uint8_t>(1));
                 if (err != 0) {
-                    trackInfoReleaseResources(&candidate, 0);
+                    reinterpret_cast<MediaItem *>(&candidate)->releaseToList(static_cast<uint8_t>(0));
                     *outHasTrack = 0;
                 } else {
                     *outHasTrack = 1;
                 }
             }
         } else {
-            trackInfoReleaseResources(&candidate, 0);
+            reinterpret_cast<MediaItem *>(&candidate)->releaseToList(static_cast<uint8_t>(0));
             *outHasTrack = 0;
             if (err == MUSICCORE_ERR_END_FWD || err == MUSICCORE_ERR_END_REV)
                 return 0;
         }
     } else if (resolvedId != -1) {
-        err = trackInfoMoveTo(&candidate, outTrackInfo, 1);
+        err = reinterpret_cast<MediaItem *>(&candidate)->transferTo(reinterpret_cast<MediaItem *>(outTrackInfo), static_cast<uint8_t>(1));
         if (err != 0) {
-            trackInfoReleaseResources(&candidate, 0);
+            reinterpret_cast<MediaItem *>(&candidate)->releaseToList(static_cast<uint8_t>(0));
             *outHasTrack = 0;
         } else {
             *outHasTrack = 1;
@@ -446,7 +441,7 @@ StateMachine::StateMachine(void *owner)
 StateMachine::~StateMachine()
 {
     if (m_hasPendingTrack == 1)
-        trackInfoReleaseResources(&m_pendingTrackInfo, 0);
+        reinterpret_cast<MediaItem *>(&m_pendingTrackInfo)->releaseToList(static_cast<uint8_t>(0));
     m_hasPendingTrack = 0;
 
     reinterpret_cast<StateDeactivating *>(m_stateStopping)->~StateDeactivating();
@@ -690,7 +685,7 @@ int StateMachine::transitionTo(int targetStateId)
 
 int StateMachine::populateMetadataSafe(const TrackInfoData *trackInfo, TrackMetadataBuffers *metaBufs)
 {
-    int ret = trackInfoPopulateMetadata(trackInfo, metaBufs);
+    int ret = const_cast<MediaItem *>(reinterpret_cast<const MediaItem *>(trackInfo))->readMetadata(reinterpret_cast<MetadataOutputRequest *>(metaBufs));
     if (ret != 0 && metaBufs != NULL) {
         if (metaBufs->mutex != NULL)
             metaBufs->mutex->Lock();
@@ -724,7 +719,7 @@ int StateMachine::seekActiveMedia(const unsigned int *seekParams, MediaListInter
         int prevOrderIdx = m_mediaListStatus.trackOrderIndex;
 
         if ((seekCmd >> 16) == 0xFFFCu) {
-            bool hadTrack = (trackInfoReleaseResources(&m_activeTrackInfo, 1) == 0);
+            bool hadTrack = (reinterpret_cast<MediaItem *>(&m_activeTrackInfo)->releaseToList(static_cast<uint8_t>(1)) == 0);
             unsigned char hasTrack = 0;
             media->setTrackPosition(prevOrderIdx, &m_activeTrackInfo.trackId);
             ret = dbSeekSpecialTarget(media, m_activeTrackInfo.playlistId, m_repeatMode,
@@ -733,9 +728,9 @@ int StateMachine::seekActiveMedia(const unsigned int *seekParams, MediaListInter
                                       &hasTrack);
             if (ret != 0) {
                 if (prevOrderIdx != -2 &&
-                    mediaListFillTrackInfo(&m_activeTrackInfo, prevOrderIdx, media) == 0) {
+                    reinterpret_cast<MediaItem *>(&m_activeTrackInfo)->acquireFromList(prevOrderIdx, reinterpret_cast<MediaListBase *>(media)) == 0) {
                     int decArg = (m_decoderMgr != NULL) ? static_cast<const DecoderManagerHandle *>(m_decoderMgr)->ioPriority : 0;
-                    trackInfoOpenDecoder(&m_activeTrackInfo, decArg, 0);
+                    reinterpret_cast<MediaItem *>(&m_activeTrackInfo)->probe(decArg, static_cast<uint8_t>(0));
                 } else {
                     if (hadTrack)
                         m_lastErrorType = 0;
@@ -750,7 +745,7 @@ int StateMachine::seekActiveMedia(const unsigned int *seekParams, MediaListInter
                     return ret;
             }
         } else if (seekCmd != 0xFFFFFFFFu || prevOrderIdx == -2) {
-            bool hadTrack = (trackInfoReleaseResources(&m_activeTrackInfo, 1) == 0);
+            bool hadTrack = (reinterpret_cast<MediaItem *>(&m_activeTrackInfo)->releaseToList(static_cast<uint8_t>(1)) == 0);
             unsigned char changed = 0;
             int extraErr = 0;
             ret = dbSeekNormalTarget(seekCmd, media, isNewMedia, m_volumeMode, m_repeatMode,
@@ -758,9 +753,9 @@ int StateMachine::seekActiveMedia(const unsigned int *seekParams, MediaListInter
                                      &m_activeTrackInfo, &extraErr, 1);
             if (ret != 0) {
                 if (prevOrderIdx != -2 &&
-                    mediaListFillTrackInfo(&m_activeTrackInfo, prevOrderIdx, m_activeMedia) == 0) {
+                    reinterpret_cast<MediaItem *>(&m_activeTrackInfo)->acquireFromList(prevOrderIdx, reinterpret_cast<MediaListBase *>(m_activeMedia)) == 0) {
                     int decArg = (m_decoderMgr != NULL) ? static_cast<const DecoderManagerHandle *>(m_decoderMgr)->ioPriority : 0;
-                    trackInfoOpenDecoder(&m_activeTrackInfo, decArg, 0);
+                    reinterpret_cast<MediaItem *>(&m_activeTrackInfo)->probe(decArg, static_cast<uint8_t>(0));
                 } else if (hadTrack) {
                     m_lastErrorType = 0;
                 }
@@ -814,7 +809,7 @@ int StateMachine::seekPendingMedia(const unsigned int *seekParams, MediaListInte
         if ((seekCmd >> 16) == 0xFFFCu) {
             unsigned char hadPending = 0;
             if (m_hasPendingTrack == 1) {
-                trackInfoReleaseResources(&m_pendingTrackInfo, 1);
+                reinterpret_cast<MediaItem *>(&m_pendingTrackInfo)->releaseToList(static_cast<uint8_t>(1));
                 m_hasPendingTrack = 0;
                 hadPending = 1;
             }
@@ -844,7 +839,7 @@ int StateMachine::seekPendingMedia(const unsigned int *seekParams, MediaListInte
         } else if (seekCmd != 0xFFFFFFFFu || m_mediaListStatus.trackOrderIndex == -2) {
             unsigned char hadPending = 0;
             if (m_hasPendingTrack == 1) {
-                trackInfoReleaseResources(&m_pendingTrackInfo, 1);
+                reinterpret_cast<MediaItem *>(&m_pendingTrackInfo)->releaseToList(static_cast<uint8_t>(1));
                 m_hasPendingTrack = 0;
                 hadPending = 1;
             }
@@ -855,14 +850,12 @@ int StateMachine::seekPendingMedia(const unsigned int *seekParams, MediaListInte
                                      &m_pendingTrackInfo, &m_extraSeekErr, 1);
             if (ret != 0) {
                 if (hadPending == 1) {
-                    if (mediaListFillTrackInfo(&m_pendingTrackInfo,
-                                               m_mediaListStatus.trackOrderIndex,
-                                               m_activeMedia) != 0) {
+                    if (reinterpret_cast<MediaItem *>(&m_pendingTrackInfo)->acquireFromList(m_mediaListStatus.trackOrderIndex, reinterpret_cast<MediaListBase *>(m_activeMedia)) != 0) {
                         m_hasPendingTrack = 0;
                         *outHasPending = 0;
                     } else {
                         int decArg = (m_decoderMgr != NULL) ? static_cast<const DecoderManagerHandle *>(m_decoderMgr)->ioPriority : 0;
-                        trackInfoOpenDecoder(&m_pendingTrackInfo, decArg, 0);
+                        reinterpret_cast<MediaItem *>(&m_pendingTrackInfo)->probe(decArg, static_cast<uint8_t>(0));
                         m_hasPendingTrack = 1;
                         *outHasPending = 1;
                     }
@@ -920,7 +913,7 @@ int StateMachine::swapActiveMedia(MediaListInterface *newMedia, unsigned char ha
     int savedExtraErr = 0;
 
     if (m_activeMedia != NULL) {
-        if (trackInfoReleaseResources(&m_activeTrackInfo, 1) == 0)
+        if (reinterpret_cast<MediaItem *>(&m_activeTrackInfo)->releaseToList(static_cast<uint8_t>(1)) == 0)
             m_lastErrorType = 0;
         savedPosMs = m_currentPosMs;
         savedPrevPos = m_prevTrackPos;

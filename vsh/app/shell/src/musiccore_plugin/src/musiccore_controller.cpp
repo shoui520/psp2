@@ -12,6 +12,7 @@
 #include <thread/thread.h>
 
 #include "musiccore_audio_output.h"
+#include "musiccore_controller.h"
 #include "musiccore_player_base.h"
 #include "musiccore_db_manager.h"
 #include "musiccore_state_manager.h"
@@ -36,11 +37,6 @@ static const int MUSICCORE_ERR_QUEUE_TIMEOUT = -1879113714; /* 0x8FFF000E */
 namespace sce {
 namespace MusicCore {
 
-class BaseObject {
-public:
-    virtual ~BaseObject() {}
-};
-
 class PlayerPool {
 public:
     void *getPlayer(unsigned char index);
@@ -50,21 +46,6 @@ class ObjFactory {
 public:
     int createWorkBuf(void **outBuf);
     int getPlayerPool(char playerKind, PlayerPool **outPool);
-};
-
-struct SystemStateReport {
-    unsigned char activeChannel;
-    unsigned char activeKind;
-    char overallStatus;
-    unsigned char padStatus;
-    int bgmPriority;
-    char dbState;
-    unsigned char dbBusy;
-    unsigned char musicChannelId;
-    unsigned char padChannel;
-    PlayerPriorityInfo musicInfo;
-    PlayerPriorityInfo playlistInfo;
-    PlayerPriorityInfo streamInfo;
 };
 
 struct AppMgrBgmState {
@@ -95,13 +76,6 @@ struct ExclusivePlayer : public BasePlayer {
     SoundOutExclusiveParam exclusiveParam;
 };
 
-struct IdleTimerTracker {
-    void (*callback)(int channel, int value, int mode);
-    char lastStatus;
-    unsigned char padStatus[3];
-    uint64_t pausedSinceUs;
-};
-
 struct DecoderEventHeader {
     int headerWord;
     uint16_t flagsWord;
@@ -120,146 +94,12 @@ extern int makeChannelId(char type, char slot);
 extern int getChannelType(char channelId);
 extern int getChannelSlot(unsigned char channelId);
 
-extern int queryAppFocusState(AppFocusInfo *outInfo, int priority);
 extern int getGlobalTrackTag();
-
-extern void *workBufAllocRegion(void *workBuf, size_t size);
-extern void workBufSetPayload(void *workBuf, void *payload);
-extern void *constructUriData(void *mem, int uriPtr, int listIndex, int trackIndex, int shuffleFlag, int contentKind,
-                              int totalCap, int headerCap, int playMode, int extraMeta);
-extern void *constructUriString(void *mem, char *str, int flags, int cap, int headerSize);
 
 static uint64_t makeCmdHeader(uint32_t param, uint32_t cmdHi)
 {
     return ((uint64_t)cmdHi << 32) | (uint64_t)param;
 }
-
-class Controller : public BaseObject {
-public:
-    static unsigned int calcQueueBytes();
-
-    Controller(ObjFactory *factory, int *outErr, unsigned int totalBytes);
-    virtual ~Controller();
-
-    int sendCommand(uint64_t cmdHeader, const void *inBuf, unsigned int inSize,
-                    SceUInt *timeout, void *outResult);
-    int getContentInfo(unsigned char channelId, void *infoBuf);
-    int getStatus(unsigned char channelId, PlayerStatusSnapshot *outStatus, void *outPos, void *outPosValid,
-                  int *outMode, void *workBuf, unsigned char *outFlag, int queryFlags);
-    int getAudioState(unsigned char channelId);
-
-    void initStatusSnapshot(PlayerStatusSnapshot *snap);
-    BasePlayer *findPlayerByChannel(unsigned char channelId, unsigned char requireOpen);
-    BasePlayer *findPlayerByKindSlot(char kind, unsigned char slot, char requireOpen);
-    BasePlayer *findFreePlayer(char kind);
-    BasePlayer *findBusyPlayer(char kind);
-    BasePlayer *selectHighestPriorityPlayer(int minPriority);
-
-    char computeBgmStatus(unsigned char channelId, char *outReason, int *outPriority);
-    bool hasSystemStateChanged(const SystemStateReport *report);
-    void updateIdleTrackerStatus(char newStatus, uint64_t nowUs);
-    void checkIdleTrackerTimeout(uint64_t nowUs);
-    void notifySystemState(unsigned char force);
-
-    int handleOpenChannel(CmdNode *node, void *outResult, unsigned char *flags);
-    int handleCloseChannel(CmdNode *node, unsigned char *flags);
-    int handleDbOpen(CmdNode *node, unsigned char *flags);
-    int handleDbQuery(CmdNode *node);
-    int handleSelectMusicChannel(CmdNode *node, unsigned char *flags);
-    int handleDbNotify(CmdNode *node, unsigned char *flags);
-    int handleAudioFocusEvent(CmdNode *node, unsigned char *flags);
-    int handleControllerCmd(CmdNode *node, void *outResult, unsigned char *flags);
-
-    bool isAnyPlayerLocked();
-    int updateAudioFocus();
-    int syncActivePlayer(unsigned char *flags, uint32_t param, uint32_t cmdHi, unsigned char syncFlag);
-    int pushToStoredQueue(CmdNode *node);
-    int prepareUriWorkBuf(CmdNode *node);
-    bool shouldDeferToStoredQueue(CmdNode *node);
-    int onIdleTick();
-    int runMainLoop();
-
-    int storeSnapshot(const PlayerStatusSnapshot *snap);
-    int hasTrackIdChanged(const PlayerStatusSnapshot *snap);
-    int hasSnapshotChanged(const PlayerStatusSnapshot *snap);
-    int mapErrorCode(int err);
-
-    static int threadEntry(SceSize args, void *argp);
-    static int onDecoderEvent(const void *ev, void *ctrlPtr, int eventParam, int16_t flags);
-    static int onDecoderMessage(const int *msg, void *ctrlPtr, SceUInt *timeout);
-    static int onAudioFocusCb(void *ctrlPtr, int priority, char granted);
-    static int onAudioErrorCb(void *ctrlPtr, int errType, int errVal);
-    static int onDbEvent(const void *ev, void *ctrlPtr);
-    static int onDbMessage(const void *msg, void *ctrlPtr);
-    static int onPlayerStatus(const PlayerStatusSnapshot *snap, void *ctrlPtr, unsigned char force);
-    static int onPlayerExtra(const unsigned char *data, void *ctrlPtr);
-    static int onPlayerMetadata(int type, const void *meta, PlayerStatusSnapshot *snap, void *ctrlPtr);
-    static int onPlayerCap(const unsigned char *data, void *ctrlPtr);
-    static int onShellSuspendEvent(int eventType, int eventParam, int eventExtra, void *ctrlPtr);
-    static int onShellResumeEvent(int eventType, int eventParam, int eventExtra, void *ctrlPtr);
-
-private:
-    PlayerStatusSnapshot *getSnapshotSlot(unsigned char channelId);
-
-public:
-    ObjFactory *m_factory;
-    SceUID m_threadId;
-    SceUID m_initSema;
-    int m_initResult;
-    int m_padInit;
-    paf::thread::Mutex m_ctrlMutex;
-    paf::thread::Mutex m_ackMutex;
-    paf::thread::Cond m_ackCond;
-    CmdAckWaiter m_ackWaiter;
-    CmdQueue *m_mainCmdQueue;
-    int (*m_statusCb)(PlayerStatusSnapshot snap);
-    unsigned int m_statusTimerInterval;
-    int (*m_extraCb)(unsigned int data);
-    unsigned int m_extraTimerInterval;
-    int (*m_metadataCb)(int type);
-    int (*m_capCb)(unsigned int data);
-    void (*m_systemStateCb)(SystemStateReport report);
-    int m_padCallbacks;
-
-    unsigned char m_decoderMgrArena[4752];
-    unsigned char m_dbMgrArena[400];
-
-    int m_activeSlotReserved[2];
-    BasePlayer *m_activePlayer;
-    unsigned char m_deactivatingActive;
-    unsigned char m_padDeactivating[3];
-    PlayerPool *m_playlistPool;
-    unsigned char m_playlistChannelId;
-    unsigned char m_padPlaylistCh[3];
-    PlayerPool *m_musicPool;
-    unsigned char m_musicChannelId;
-    unsigned char m_padMusicCh[3];
-    PlayerPool *m_streamPool;
-    unsigned char m_streamChannelId;
-    unsigned char m_padStreamCh[3];
-
-    unsigned char m_audioOutArena[224];
-    int m_grantedPriority;
-    int m_padPriority;
-
-    PlayerStatusSnapshot m_playlistSnapshot;
-    PlayerStatusSnapshot m_musicSnapshots[8];
-    PlayerStatusSnapshot m_streamSnapshots[2];
-
-    SystemStateReport m_lastSystemReport;
-    char m_dbState;
-    unsigned char m_padDbState[3];
-    int m_dbBusyCount;
-    unsigned char m_dbSuspendPending;
-    unsigned char m_padDbSuspend[3];
-    CmdQueue *m_storedCmdQueue;
-    unsigned char m_pendingChannelId;
-    unsigned char m_drainStoredQueue;
-    unsigned char m_padStoredQueue[6];
-    IdleTimerTracker m_idleTracker;
-    unsigned char m_shellSuspended;
-    unsigned char m_padTail[7];
-};
 
 void Controller::initStatusSnapshot(PlayerStatusSnapshot *snap)
 {
@@ -711,8 +551,7 @@ char Controller::computeBgmStatus(unsigned char channelId, char *outReason, int 
     }
 
     AppFocusInfo focusInfo;
-    if (queryAppFocusState(&focusInfo, targetInfo.priority) != 0)
-        return -1;
+    sce_paf_memset(&focusInfo, 0, sizeof(focusInfo));
     if (focusInfo.state == 2 && target->m_playerKind != 2)
         return 0;
 
@@ -981,7 +820,8 @@ void Controller::notifySystemState(unsigned char force)
         report.playlistInfo.isPlayable = (unsigned char)playlistPlayer->isPlayable();
 
         AppFocusInfo focusInfo;
-        if (queryAppFocusState(&focusInfo, 0) != 0 || focusInfo.state != 1)
+        sce_paf_memset(&focusInfo, 0, sizeof(focusInfo));
+        if (focusInfo.state != 1)
             updateIdleTrackerStatus(report.playlistInfo.bgmStatus, sceKernelGetProcessTimeWide());
     } else {
         clearPriorityInfo(&report.playlistInfo);
@@ -1600,14 +1440,11 @@ int Controller::prepareUriWorkBuf(CmdNode *node)
         int ret = m_factory->createWorkBuf(&workBuf);
         if (workBuf == NULL)
             return MUSICCORE_ERR_FAILED;
-        void *region = workBufAllocRegion(workBuf, 2096);
+        WorkBufferObject *wb = static_cast<WorkBufferObject *>(workBuf);
+        void *region = wb->allocRegion();
         if (region == NULL)
             return MUSICCORE_ERR_NO_MEMORY;
-        void *obj = constructUriData(region, payload[2], payload[3], payload[4],
-                                     payload[6], payload[7], 2096, 2096, payload[9], payload[10]);
-        if (obj == NULL)
-            return MUSICCORE_ERR_FAILED;
-        workBufSetPayload(workBuf, obj);
+        wb->setPayload(region);
         payload[1] = (int)(uintptr_t)workBuf;
 
         BasePlayer *p = findPlayerByChannel(node->targetChannel, 1);
@@ -1632,13 +1469,13 @@ int Controller::prepareUriWorkBuf(CmdNode *node)
         if (workBuf == NULL)
             return MUSICCORE_ERR_FAILED;
         size_t allocSz = (sce_paf_strlen(payload->uri) & ~7u) + 88;
-        void *region = workBufAllocRegion(workBuf, allocSz);
+        WorkBufferObject *wb = static_cast<WorkBufferObject *>(workBuf);
+        void *region = wb->allocRegion();
         if (region == NULL)
             return MUSICCORE_ERR_NO_MEMORY;
-        void *obj = constructUriString(region, payload->uri, payload->flags, (int)allocSz, 80);
-        if (obj == NULL)
-            return MUSICCORE_ERR_FAILED;
-        workBufSetPayload(workBuf, obj);
+        if (payload->uri != NULL && allocSz > 0)
+            sce_paf_memcpy(region, payload->uri, allocSz);
+        wb->setPayload(region);
         payload->workBuf = workBuf;
 
         BasePlayer *p = findPlayerByChannel(node->targetChannel, 1);
@@ -2363,106 +2200,6 @@ int Controller::onShellResumeEvent(int eventType, int eventParam, int eventExtra
         return reinterpret_cast<AudioOutput *>(ctrl->m_audioOutArena)->setBgmPriority(-1, 0);
     }
     return active->m_playerKind;
-}
-
-int controllerSendCommand(void *ctrl, uint64_t cmdHeader, const void *inBuf,
-                          unsigned int inSize, SceUInt *timeout, void *outResult)
-{
-    return static_cast<Controller *>(ctrl)->sendCommand(cmdHeader, inBuf, inSize, timeout, outResult);
-}
-
-int controllerGetContentInfo(void *ctrl, unsigned char channelId, void *infoBuf)
-{
-    return static_cast<Controller *>(ctrl)->getContentInfo(channelId, infoBuf);
-}
-
-int controllerGetStatus(void *ctrl, unsigned char channelId, void *statusBuf,
-                        void *outPos, void *outPosValid, int *outMode,
-                        void *workBuf, unsigned char *outFlag, int queryFlags)
-{
-    return static_cast<Controller *>(ctrl)->getStatus(
-        channelId, static_cast<PlayerStatusSnapshot *>(statusBuf), outPos, outPosValid,
-        outMode, workBuf, outFlag, queryFlags);
-}
-
-int controllerGetState(void *ctrl, unsigned char channelId, void *outState)
-{
-    int state = static_cast<Controller *>(ctrl)->getAudioState(channelId);
-    if (outState != NULL)
-        *static_cast<int *>(outState) = state;
-    return 0;
-}
-
-unsigned int calcControllerSize()
-{
-    return sizeof(Controller) + Controller::calcQueueBytes();
-}
-
-BaseObject *constructController(void *mem, void *factory, int *outErr, unsigned int slotSize)
-{
-    return new (mem) Controller(static_cast<ObjFactory *>(factory), outErr, slotSize);
-}
-
-class WorkBufferObject : public BaseObject {
-public:
-    WorkBufferObject(unsigned int bufSize) : m_bufSize(bufSize), m_payload(NULL) {}
-    virtual ~WorkBufferObject() {}
-    unsigned int m_bufSize;
-    void *m_payload;
-};
-
-BaseObject *constructWorkBuffer(void *mem, unsigned int bufSize, unsigned int slotSize)
-{
-    (void)slotSize;
-    return new (mem) WorkBufferObject(bufSize);
-}
-
-void *workBufAllocRegion(void *workBuf, size_t size)
-{
-    (void)size;
-    if (workBuf == NULL)
-        return NULL;
-    return static_cast<char *>(workBuf) + sizeof(WorkBufferObject);
-}
-
-void workBufSetPayload(void *workBuf, void *payload)
-{
-    if (workBuf != NULL)
-        static_cast<WorkBufferObject *>(workBuf)->m_payload = payload;
-}
-
-void *workBufGetRegion(void *workBuf, int index)
-{
-    (void)index;
-    if (workBuf == NULL)
-        return NULL;
-    WorkBufferObject *obj = static_cast<WorkBufferObject *>(workBuf);
-    return (obj->m_payload != NULL) ? obj->m_payload
-                                    : (static_cast<char *>(workBuf) + sizeof(WorkBufferObject));
-}
-
-void *constructUriData(void *mem, int uriPtr, int listIndex, int trackIndex, int shuffleFlag,
-                       int contentKind, int repeatFlag, int modeFlag, int extraFlag, int cap)
-{
-    (void)uriPtr; (void)listIndex; (void)trackIndex; (void)shuffleFlag;
-    (void)contentKind; (void)repeatFlag; (void)modeFlag; (void)extraFlag; (void)cap;
-    return mem;
-}
-
-void *constructUriString(void *mem, char *str, int flags, int cap, int headerSize)
-{
-    (void)flags; (void)headerSize;
-    if (mem != NULL && str != NULL && cap > 0)
-        sce_paf_memcpy(mem, str, static_cast<size_t>(cap));
-    return mem;
-}
-
-int queryAppFocusState(AppFocusInfo *outInfo, int priority)
-{
-    (void)priority;
-    if (outInfo != NULL)
-        sce_paf_memset(outInfo, 0, sizeof(*outInfo));
-    return 0;
 }
 
 } /* namespace MusicCore */
